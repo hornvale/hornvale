@@ -60,7 +60,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use hornvale_kernel::{Seed, Value, World};
+use hornvale_kernel::{KindId, Seed, Value, World};
 use hornvale_language::LexEntry;
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
 
@@ -168,7 +168,8 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
 fn kobold_phonology_is_a_pure_function_of_seed_and_envelope() {
     let world = default_generated_seed_42();
     let registry = hornvale_species::registry();
-    let kobold_articulation = &hornvale_worldgen::peopled(&registry["kobold"]).articulation;
+    let kobold_articulation =
+        &hornvale_worldgen::peopled(&registry[&KindId("kobold")]).articulation;
     let envelope = hornvale_worldgen::envelope_of(kobold_articulation);
     let direct = hornvale_language::draw_phonology(&world.seed, "kobold", &envelope);
     assert_eq!(

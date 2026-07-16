@@ -818,7 +818,9 @@ mod tests {
         // Model on the registry's real goblin def (BIO-2 Task 5) — the
         // helper is a pure function of `SpeciesDef`, no world needed.
         let registry = hornvale_species::registry();
-        let goblin = registry.get("goblin").expect("goblin is in the registry");
+        let goblin = registry
+            .get(&hornvale_kernel::KindId("goblin"))
+            .expect("goblin is in the registry");
         let line = render_life_history_line(goblin);
         assert!(line.contains("lifespan"), "missing lifespan figure: {line}");
         assert!(
@@ -833,7 +835,7 @@ mod tests {
         use hornvale_species::MetabolicClass;
 
         let mut construct = hornvale_species::registry()
-            .get("goblin")
+            .get(&hornvale_kernel::KindId("goblin"))
             .expect("goblin is in the registry")
             .clone();
         construct.biosphere.metabolic_class = MetabolicClass::Ametabolic;
