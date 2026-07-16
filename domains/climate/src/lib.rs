@@ -7,12 +7,14 @@ pub mod habitability;
 pub mod moisture;
 pub mod provider;
 pub mod render;
+pub mod substellar;
 pub mod temperature;
 
 pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for};
 pub use habitability::{habitable_fraction, is_habitable};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
+pub use substellar::{SUBSTELLAR, substellar_cosine};
 
 use hornvale_kernel::{
     ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position,
