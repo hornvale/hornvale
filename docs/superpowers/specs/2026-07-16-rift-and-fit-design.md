@@ -1,6 +1,10 @@
 # Rift-and-Fit — terrain epoch v4 (MAP-21)
 
-**Status:** Draft — awaiting G3 (spec review before planning)
+**Status:** Approved at G3 (Nathan, 2026-07-16) — epoch v4 and the
+`--supercontinent` supersession assented; the Earth-anchor procedure of §7
+approved as preregistered; sliver strings approved for the §6 probe-first
+path; the v3 canonical census regen runs **before** this campaign merges
+(census-sequencing fork resolved to option (a))
 **Campaign:** rift-and-fit (suggested campaign name: *The Sundering*)
 **Registry:** MAP-21 · **Baseline:** [The Census of Coasts III](../../../book/src/laboratory/census-of-coasts-iii.md)
 **Inherits:** the open shoreline-development band (probe 7.3202 vs floor 9.51),
@@ -61,9 +65,10 @@ deliverables and are staged separately.
   crust-field contract** (§8).
 - **Censuses never regenerate locally** (decision 0046). The tuning
   instrument is the 100-seed probe study; the canonical readout is one AWS
-  regeneration at close. Sequencing wrinkle flagged at G3: Census III's own
-  canonical cells are still unfilled (the last regen predates Sculpting's
-  merge), and if v4 merges first, v3 never gets a canonical census.
+  regeneration at close. Sequencing (resolved at G3): Census III's canonical
+  cells were unfilled at spec time; Nathan authorized running the
+  outstanding **v3 regen before this campaign merges**, so Census III
+  resolves to canonical and v4 is judged against a canonical baseline.
 - **No new workspace crates; models/data author offline** (decision 0009).
   The Earth mask of §7 is authored by a script outside the workspace
   (type-audit precedent) and committed as a drift-checked fixture.
