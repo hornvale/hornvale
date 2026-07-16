@@ -188,9 +188,19 @@ structured strife along their ecotones. It resolved to the
 moderate-confidence tier as predicted; it was architecture, not taste. The
 goblinoid roster also showed the model's honest limit: same-resource
 species differentiate only ~two ways on climate alone, so the fuller payoff
-(strongholds, refugia, a creature that owns the cold) waits on a roster with
-distinct resource niches — deferred, with the menagerie, into the
-entity-component program the model's own success surfaced. Naming both
-halves against the field that already exists is the honest state of the
-rescore — the packing win now banked alongside the field, the vary-time
-debt still open.
+(strongholds, refugia, a creature that owns the cold) was thought to wait on
+a roster with distinct resource niches. *The Menagerie* (the entity-component
+program's first campaign) built that roster — sixteen kinds spanning
+photosynthate to apex predator — and found the limit lies deeper than the
+roster: carrying capacity is `supply × fitness`, but supply is a **single**
+net-primary-productivity field scaled per species by uptake, so a resource
+niche changes a species' *magnitude* everywhere, never its *place*. Only the
+climate term is spatial, and climate alone differentiates ~two ways however
+many creatures compete. So the stronghold payoff now waits, precisely, on
+**per-axis spatial resource fields** (minerals in the mountains, prey where
+the prey is) and a way to read dominance as resource captured rather than
+headcount — a modeling increment named and set aside, with a preregistered
+`#[ignore]`d test standing as its target. Naming all three pieces against the
+field that already exists is the honest state of the rescore — the packing
+win banked, the stronghold debt now correctly attributed to the supply
+field's missing geography, the vary-time debt still open.

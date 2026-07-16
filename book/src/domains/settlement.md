@@ -103,13 +103,19 @@ the settlement with the highest population across every species that
 settled — the same "argmax, first fact committed" contract the retired
 mechanism kept, just read off the flow instead of a suitability score.
 
-**Joint condensation, four peoples (Campaign Y2-1; The Branches).** Every
-world places for the whole species registry by default — goblin,
-hobgoblin, bugbear, and kobold — rather than one fixed people, each
-condensing its own field independently. A `--species NAME` pin restricts
-placement to one species (used by the superset-contract test to reproduce
-a goblin-only world); the unpinned default places every species the
-registry holds. Population for any non-goblin species draws its
+**Joint condensation, the settling peoples (Campaign Y2-1; The Branches;
+recut by *The Menagerie*).** Every world places for the settling peoples —
+goblin, hobgoblin, bugbear, and kobold — filtered from a registry that now
+also holds a biosphere-only menagerie (fauna do not settle). Originally each
+people condensed its own carrying field independently; since *The Menagerie*
+cut genesis over onto the competitive niche-K coexistence stack, the peoples
+are packed *together* and a settlement is peopled by whichever people locally
+prevails, with the rest present in its composition — so on seed 42 goblin and
+hobgoblin flagship all sixty-six settlements while kobold and bugbear appear
+as minorities throughout. A `--species NAME` pin restricts the roster to one
+people; because the stack is competitive, a pinned world is a deterministic
+*restricted-roster* world (that people with no rivals), not an isolated slice
+of the full world. Population for any people draws its
 psychology-folded field from the same per-species machinery, so goblin's
 placement and population outcomes trace the same species substrate
 described fully in [Species](./species.md). The settlement noun itself is
@@ -167,21 +173,24 @@ grammar themselves.
   founded, fully formed, at genesis, its population an equilibrium
   snapshot rather than something that grew there.
 
-Seed 42 under a spinning sky condenses 182 settlements across all four
-peoples (goblin, hobgoblin, bugbear, and kobold, since [The
-Branches](../chronicle/the-branches.md) gave the goblinoids two new
-members); the world flagship, the kobold settlement **Roqrraxaxoqrrak**,
-holds 71 souls in temperate forest, with each other species' own chief
-settlement close behind (goblin's **Ngebvngadxnotnoaboo** and hobgoblin's
-**Gbeoveenoenoanoagoo** both at 67, bugbear's **Qvoashshngoashdoodoa** at
-64) — real,
-phonology-drawn names (Campaign Y2-3, The Tongues; Campaign 27, The Words),
-where earlier campaigns' editions of this same page named the pair from a
-syllable pool instead. The gallery holds the exit-demo pair: [The Peoples
-of Seed 42](../gallery/settlement-seed-42.md) against [its tidally-locked
-twin](../gallery/settlement-seed-42-locked.md), where habitability's
-collapse toward the terminator ring (Campaign 3c's biome map already
-predicted it) thins the same globe to 172 settlements. Chronicle: [4a,
+Seed 42 under a spinning sky condenses 66 settlements. Since [The
+Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
+competitive niche-K stack, the four peoples (goblin, hobgoblin, bugbear, and
+kobold, since [The Branches](../chronicle/the-branches.md) gave the
+goblinoids two new members) are packed *together* and only the locally
+prevailing one flagships each settlement: goblin and hobgoblin hold all
+sixty-six, with kobold and bugbear present in their compositions but never
+the majority. The world flagship, the hobgoblin settlement
+**Mjaamjaenoenoanoagoo**, holds 17 souls in temperate forest, and the chief
+goblin settlement **Nobzxekngatnoenoa** holds 2 — real, phonology-drawn
+names (Campaign Y2-3, The Tongues; Campaign 27, The Words). Populations run
+far smaller than the pre-cutover flat model's, because competition divides
+each cell's capacity among its rivals rather than handing it whole to one
+independently-condensed field. The gallery holds the exit-demo pair: [The
+Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (71
+settlements), where habitability's collapse toward the terminator ring
+(Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm
 Ground](../chronicle/campaign-y2-0.md) for the drainage field and freshwater
 fix this campaign's carrying-capacity term still reads, [Campaign Y2-1, The

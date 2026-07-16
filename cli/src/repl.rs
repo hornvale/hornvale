@@ -299,7 +299,14 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     if world.registry.concept(concept).is_none() {
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
-                        for species in hornvale_species::registry().keys() {
+                        // peopled-only: fauna never speak, so `lexicon_of`
+                        // is undefined for them (Task 4 widened
+                        // `registry()` to include biosphere-only kinds).
+                        for species in hornvale_species::registry()
+                            .iter()
+                            .filter(|(_, def)| def.peopled.is_some())
+                            .map(|(name, _)| name)
+                        {
                             match world_builder::lexicon_of(world, species) {
                                 Ok(lexicon) => match lexicon.entry(concept) {
                                     Some(entry) => writeln!(
@@ -548,11 +555,17 @@ mod tests {
         // Castes are emergent now (Campaign 4b): every settlement grows at
         // least a worker and a top rung (`structure`'s invariant), but
         // which higher roles appear depends on its actual environment.
-        // The settlement condensation (campaign the-gathering) reshuffled
-        // catchments; seed 42's constant-sky flagship (entity 2, village
-        // Xatxoxorroxaq) is now peopled by kobold, so the top rung reported
-        // here is kobold's own word, "elders".
-        assert!(out.contains("elders"));
+        // The niche-differentiated-K coexistence-stack cutover (The Niche)
+        // repacked settlement genesis onto a competitive per-species K:
+        // goblin and hobgoblin now win every settlement's dominance at seed
+        // 42 (bugbear and kobold are present in every settlement's
+        // composition but never dominant — see
+        // `bugbear_and_kobold_are_present_in_settlement_composition` in
+        // `cli/tests/branches_identity.rs`), so the constant-sky flagship
+        // (entity 2, village Ngjoangjoeqqeanoagoo) is now peopled by
+        // hobgoblin, and the top rung reported here is hobgoblin's own
+        // word, "warlord".
+        assert!(out.contains("warlord"));
         assert!(out.contains("1."));
     }
 
@@ -786,12 +799,19 @@ mod tests {
         // `BTreeMap`) in alphabetical order, and worldgen commits each
         // species' pantheon in that same roster order — so the pantheon
         // committed first, and thus first in `beliefs`' listing, is
-        // whichever placed species sorts first alphabetically. At seed 42
-        // that is bugbear (goblin, hobgoblin, and kobold all also place,
-        // but sort after it), so its pantheon's holding community
-        // (entity 5, Shngooshkvaoshgvoa) is who this recount hops to.
+        // whichever DOMINANT species sorts first alphabetically. Under the
+        // niche-differentiated-K coexistence-stack cutover (The Niche),
+        // `culture+religion+species` genesis runs only at a species' own
+        // flagship, and only goblin and hobgoblin win any settlement's
+        // dominance at seed 42 (bugbear and kobold are present in every
+        // settlement's composition but never dominant — see
+        // `bugbear_and_kobold_are_present_in_settlement_composition` in
+        // `cli/tests/branches_identity.rs`), so bugbear commits no pantheon
+        // at all this seed. Of the two peoples that do, goblin sorts first
+        // alphabetically, so its pantheon's holding community is who this
+        // recount hops to.
         assert!(
-            recounted.contains("Seen through bugbear eyes:"),
+            recounted.contains("Seen through goblin eyes:"),
             "the species hop is missing: {recounted}"
         );
         assert!(recounted.contains("night-sky acuity"));

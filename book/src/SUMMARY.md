@@ -84,6 +84,7 @@
 - [The Speakable](./chronicle/the-speakable.md)
 - [Goldengrove](./chronicle/goldengrove.md)
 - [The Helm](./chronicle/the-helm.md)
+- [The Menagerie](./chronicle/the-menagerie.md)
 
 # The Gallery
 

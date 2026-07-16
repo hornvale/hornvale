@@ -1243,8 +1243,9 @@ pub fn registry() -> Vec<Metric> {
                 let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) =
                     (0.0_f64, 0u32, 0.0_f64, 0u32);
                 for def in v.roster() {
+                    let psych = &hornvale_worldgen::peopled(def).psych;
                     let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
-                        hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
+                        hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });
                     let k = hornvale_demography::carrying_capacity(geo, &inputs);
                     for cell in geo.cells() {
@@ -3057,7 +3058,7 @@ fn independently_steeped_concepts(
     species: &str,
 ) -> Option<std::collections::BTreeSet<String>> {
     let def = v.roster().iter().find(|d| d.name == species)?;
-    let depths = hornvale_worldgen::pack_depths(&def.perception);
+    let depths = hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception);
     let mut steeped: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
     for entry in hornvale_language::universal_stratum() {
@@ -3166,7 +3167,7 @@ fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
 fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
     match v.roster.iter().find(|d| d.name == species) {
         Some(def) => MetricValue::Number(f64::from(
-            hornvale_worldgen::pack_depths(&def.perception).hue,
+            hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception).hue,
         )),
         None => MetricValue::Absent,
     }
@@ -3641,8 +3642,8 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
     let def = v.roster().iter().find(|d| d.name == species)?;
     Some(hornvale_species::life_history(
-        def.mass,
-        def.metabolic_class,
+        def.biosphere.mass,
+        def.biosphere.metabolic_class,
     ))
 }
 
@@ -4051,12 +4052,26 @@ mod tests {
     }
 
     #[test]
-    fn locked_world_first_belief_is_the_ambient_tide() {
-        // SEQ-1 realized by SKY-5: a locked world's sky is frozen, so for
-        // seed 42's low-sky-attention first observer the felt tide
-        // (Venue::Ambient) out-ranks the motionless sun — the pantheon's
-        // head is the tide, and its sentiment reads ambient (it used to be
-        // the eternal fixed sun before tides were surfaced).
+    fn locked_world_first_belief_is_the_eternal_celestial_body() {
+        // SEQ-1 realized by SKY-5: a locked world's sky is frozen, so a
+        // low-sky-attention first observer's felt tide (Venue::Ambient)
+        // out-ranks the motionless sun in ITS OWN pantheon — that
+        // observation is unchanged. What changed is WHICH species commits
+        // the world's first pantheon (and so whose ranking `beliefs_of`'s
+        // first entry reflects): under the niche-differentiated-K
+        // coexistence-stack cutover (The Niche), only goblin and hobgoblin
+        // win a settlement's dominance at seed 42 (bugbear — the
+        // low-sky-attention species this test used to observe through —
+        // never flagships anymore; see
+        // `bugbear_and_kobold_are_present_in_settlement_composition` in
+        // `cli/tests/branches_identity.rs`), and `culture+religion+species`
+        // genesis walks `species_set` in roster order, so goblin (the
+        // first alphabetically among the two that still flagship) commits
+        // the world's first pantheon now. Goblin's own perception ranks
+        // the motionless sun (Sentiment::Eternal, source_kind
+        // "celestial-body") ahead of the tide — the baseline sky-attention
+        // reading, not bugbear's low one — so the pantheon's head is the
+        // sun again, sentiment "eternal".
         let pins = SkyPins {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
@@ -4066,10 +4081,10 @@ mod tests {
             .into_iter()
             .next()
             .expect("locked world has beliefs");
-        assert_eq!(first.source_kind, "tide");
+        assert_eq!(first.source_kind, "celestial-body");
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind");
-        assert_eq!(value, MetricValue::Text("ambient".to_string()));
+        assert_eq!(value, MetricValue::Text("eternal".to_string()));
     }
 
     #[test]
@@ -4219,13 +4234,23 @@ mod tests {
         // re-derived from the same site concepts worldgen composed (see
         // `epithet_honorific`'s doc). Rank-status species commit
         // honorific-bearing epithets → true; Knowledge-status species
-        // commit plain glossed words → false. Since The Branches, all
-        // four peoples place a flagship at seed 42 (the founder floor,
-        // MAP-22 K=1); hobgoblin is Rank-status (per
-        // `hornvale_species::registry`) and placed, so it commits
-        // honorific-bearing epithets — this metric is per-species and
-        // does not depend on which OTHER Rank-status people (goblin) also
-        // places. kobold (Knowledge) is unaffected.
+        // commit plain glossed words → false; `epithet_honorific` reads
+        // `Absent` when the species has no flagship at all (no beliefs to
+        // read epithets from — see its own doc, `flagship_of(...).is_none()`
+        // short-circuits first). Under the niche-differentiated-K
+        // coexistence-stack cutover (The Niche), only goblin and hobgoblin
+        // win a settlement's dominance at seed 42 (bugbear and kobold are
+        // present in every settlement's composition but never dominant —
+        // see `bugbear_and_kobold_are_present_in_settlement_composition` in
+        // `cli/tests/branches_identity.rs`), so `religion::genesis` never
+        // fires for kobold this seed: hobgoblin is Rank-status (per
+        // `hornvale_species::registry`) and still places, so it still
+        // commits honorific-bearing epithets — this metric is per-species
+        // and does not depend on which OTHER Rank-status people (goblin)
+        // also places. kobold is the roster's ONLY Knowledge-status
+        // people, so the "false" (plain glossed word) branch has no live
+        // seed-42 witness anymore; what remains true and checkable is that
+        // a non-flagshipping species reads `Absent`, not a stale `false`.
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             epithet_honorific(&view, "hobgoblin"),
@@ -4234,8 +4259,10 @@ mod tests {
         );
         assert_eq!(
             epithet_honorific(&view, "kobold"),
-            MetricValue::Flag(false),
-            "kobold committed epithets must be plain glossed words"
+            MetricValue::Absent,
+            "kobold never flagships under the niche-differentiated-K \
+             coexistence stack at seed 42, so it commits no epithets to \
+             detect — Absent, not a stale true/false"
         );
     }
 
@@ -4401,12 +4428,15 @@ mod tests {
         // GOBLIN flagship's data (see their own doc comments above). Since
         // the founder floor (settlement's founder-reservation pass, MAP-22
         // K=1), goblin places its own flagship again at seed 42 —
-        // farming, temperate-forest, non-coastal, a 3-caste structure
-        // (farmer, shaman, chief; see `almanac`'s seed-42 output and
-        // `cli/tests/branches_identity.rs`). The settlement condensation
-        // (campaign the-gathering) relocated the flagship: it moved off
-        // the coast, its structure shrank from 5 castes to 3, and its
-        // biome moved from temperate-rainforest to temperate-forest.
+        // farming, temperate-forest, coastal, a 3-caste structure (farmer,
+        // shaman, chief; see `almanac`'s seed-42 output and
+        // `cli/tests/branches_identity.rs`). The niche-differentiated-K
+        // coexistence-stack cutover (The Niche) repacked settlement genesis
+        // onto a competitive per-species K, relocating which cell goblin's
+        // flagship wins world-wide: subsistence, biome, and structure size
+        // held (farming / temperate-forest / 3 castes), but the flagship's
+        // new cell now borders an ocean cell (coastal flipped from false
+        // to true).
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
@@ -4415,7 +4445,7 @@ mod tests {
             m("flagship-biome"),
             MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

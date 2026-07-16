@@ -1,35 +1,33 @@
 # The Peoples of Seed 42
 
-The land holds 172 settlement(s).
-The chief bugbear settlement, Vngoashngooshngooshtoadoo, holds 115 souls amid temperate-rainforest.
-The chief goblin settlement, Fngakngednedtoaneo, holds 120 souls amid temperate-rainforest.
-The chief hobgoblin settlement, Ngjeengjaenoagootoaneo, holds 120 souls amid temperate-rainforest.
-The chief kobold settlement, Xotroxoqrokrro, holds 128 souls amid temperate-rainforest.
+The land holds 71 settlement(s).
+The chief goblin settlement, Nokxngetbeetaonoaboo, holds 1 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Gkoavaefooboenoagoo, holds 13 souls amid alpine.
 
 ```text
                                                                         
-                       o                         o                      
-                          o o o       o     o o                         
                                                                         
-                                                                        
-                                                                        
-                                                   o                    
-                                                                        
+                              o o  o ooo                                
+                                           oo     o                     
+                              oo                 o  o                   
+                                                    o                   
+                                                    o                   
+                                                 oo                     
                                                  oo                     
                                                   o                     
-                                                   o                    
-                                                  o                     
-                                                   o@                   
                                                                         
-                   o                                                    
-                    o  o                       o                        
-                     o                           o                      
-                       o                      o   o                     
-                       o                         o  o                   
-                    oo                     o o    oo                    
-                    o                      o                            
-                      o                                                 
-                       o                                                
+                                                  o                     
+                                                                        
+                                                                        
+                                                                        
+                   o o oo o                                             
+                     oo                       o o                       
+                     oooo o o        o           o                      
+                   oo  o o                o @ oo ooo                    
+                            o o                                         
+                      o o o   o                                         
+                                                                        
+                                                  o                     
                                                                         
 ```
 

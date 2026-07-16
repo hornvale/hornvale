@@ -36,7 +36,14 @@ pub fn render_phonology() -> String {
          the third view, authored to clips by `hornvale voice`.\n\n"
     ));
 
+    // peopled-only: fauna carry no `PeopledTraits`/articulation vector and
+    // never speak (Task 4 widened `registry()` to include biosphere-only
+    // kinds); `sample_names_for` below reaches `peopled(def)`, so this
+    // filter must run before it.
     for (species, def) in hornvale_species::registry() {
+        if def.peopled.is_none() {
+            continue;
+        }
         let phonology = world_builder::language_of(&world, species);
 
         doc.push_str(&format!("## {}\n\n", capitalize(species)));
@@ -96,7 +103,7 @@ pub(crate) fn sample_names_for(
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(&def.psych);
+    let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -202,7 +209,11 @@ mod tests {
     #[test]
     fn renders_every_species_with_an_ipa_column_and_sample_names() {
         let doc = render_phonology();
-        for species in hornvale_species::registry().keys() {
+        // peopled-only: the page never renders a fauna heading.
+        for (species, def) in hornvale_species::registry() {
+            if def.peopled.is_none() {
+                continue;
+            }
             assert!(
                 doc.contains(&capitalize(species)),
                 "missing species heading for {species}"
@@ -227,10 +238,17 @@ mod tests {
     fn a_sample_name_carries_both_romanization_and_ipa() {
         let world = World::new(Seed(REFERENCE_SEED));
         let registry = hornvale_species::registry();
-        let (species, def) = registry.iter().next().expect("at least one species");
+        // A peopled species: fauna carry no `PeopledTraits` and `peopled()`
+        // panics on them, so `.next()` alone (grabbing the alphabetically
+        // first registry entry) is no longer safe now that fauna sort ahead
+        // of every people (Task 4).
+        let (species, def) = registry
+            .iter()
+            .find(|(_, def)| def.peopled.is_some())
+            .expect("at least one peopled species");
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&def.psych);
+        let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");
@@ -250,7 +268,14 @@ mod tests {
         assert!(doc.contains("Espeak"), "missing the Espeak column");
         let world = World::new(Seed(REFERENCE_SEED));
         let registry = hornvale_species::registry();
-        let (species, def) = registry.iter().next().expect("at least one species");
+        // A peopled species: fauna carry no `PeopledTraits` and `peopled()`
+        // panics on them, so `.next()` alone (grabbing the alphabetically
+        // first registry entry) is no longer safe now that fauna sort ahead
+        // of every people (Task 4).
+        let (species, def) = registry
+            .iter()
+            .find(|(_, def)| def.peopled.is_some())
+            .expect("at least one peopled species");
         let samples = sample_names_for(&world, species, def);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {

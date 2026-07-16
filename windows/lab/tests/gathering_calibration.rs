@@ -194,24 +194,40 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// a lost-population regression, or the founder floor firing far more than
 /// intended).
 ///
-/// **Not a tight "≈" bound.** Recomputing Σ K directly (the same
-/// `carrying_inputs_of` / `species_carrying_input` / `carrying_capacity`
-/// formula the composition root feeds into demography, summed over every
-/// species and every cell) against seed 42's committed population shows the
-/// gap is dominated by `condense()`'s threshold *culling* mass outright, not
-/// by rounding or the founder floor: at `THRESHOLD = 10.0`, every attractor
-/// whose catchment accumulation falls below the threshold is dropped from
-/// the settlement list entirely — its mass is never reassigned to a
-/// neighbouring surviving attractor (see `condense.rs`'s module doc; only
-/// `threshold == 0.0` conserves exactly, per that module's own test). Measured
-/// once (2026-07-13): Σ K = 7187.7407, Σ committed pop = 3971 — a ratio of
-/// ≈0.552, i.e. the threshold discards roughly 45% of the field's mass as
-/// sub-threshold catchments, not "a few percent". The founder floor and
-/// `.round()` at the emit boundary are comparatively tiny (bounded by one
-/// person per settlement, ~182 here) and only ever push population UP past
-/// what its catchment alone would round to, never account for the bulk of
-/// the gap. The bounds below reflect that reality rather than assume a
-/// near-exact conservation the design does not provide at this threshold.
+/// **Re-based onto niche-K post-cutover.** Settlement genesis no longer
+/// packs against the flat, psychology-only `carrying_inputs_of` /
+/// `species_carrying_input` / `carrying_capacity` path this guard used to
+/// recompute — Task A15a cut genesis over onto the niche-differentiated K
+/// (`niche_per_species_k`, The Niche) the coexistence stack actually
+/// competes against (windows/worldgen `build_to`'s `climate+settlements`
+/// stage). Comparing committed population against the OLD flat Σ K would
+/// measure the invariant against a capacity the population was never
+/// realized from. Σ K is now recomputed via
+/// `hornvale_worldgen::demography_report` — the pure, deterministic
+/// accessor that mirrors genesis's own `niche_per_species_k` → `coexist::
+/// pack` → `stack_condense::condense_stack` pipeline byte-for-byte at the
+/// frozen `BETA`/`FLOOR` constants — summing `per_species_k` over every
+/// peopled species and every cell, exactly as the brief's re-basing
+/// instructs.
+///
+/// **Not a tight "≈" bound, and looser than before in a second way now.**
+/// Two effects widen the gap between Σ K and committed population: (1)
+/// `condense()`'s threshold still *culls* mass outright at `THRESHOLD =
+/// 10.0` rather than reassigning it (see `condense.rs`'s module doc;
+/// unchanged by this cutover); AND (2) the coexistence stack commits a
+/// `population` fact for only the DOMINANT species at each attractor —
+/// bugbear and kobold are present in every settlement's composition (see
+/// `bugbear_and_kobold_are_present_in_settlement_composition`,
+/// `cli/tests/branches_identity.rs`) and so contribute to Σ K, but their
+/// share of the local capacity is never committed as anyone's population.
+/// Measured (2026-07-16, seed 42): Σ K = 315.8861753551 (the niche K's
+/// saturating, per-species-bounded scale — not the old flat formula's
+/// larger absolute-headcount scale), Σ committed pop = 110, count = 66
+/// settlements — a ratio of ≈0.3482, comfortably inside the same
+/// structural bounds (population within the founder-floor/rounding
+/// allowance above Σ K; population at least a quarter of Σ K) the
+/// pre-cutover guard used, so those bounds are kept as-is rather than
+/// retuned.
 #[test]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
@@ -223,19 +239,21 @@ fn world_level_population_conserves_against_total_capacity() {
         &hornvale_worldgen::SettlementPins::default(),
     )
     .expect("seed-42 world must build");
-    let terrain = hornvale_worldgen::terrain_of(&world).expect("terrain");
-    let climate = hornvale_worldgen::climate_of(&world).expect("climate");
-    let geo = terrain.geosphere();
-    let base_inputs = hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate);
-    let roster = hornvale_worldgen::default_roster();
-    let mut total_k = 0.0_f64;
-    for def in &roster {
-        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
-            hornvale_worldgen::species_carrying_input(*base_inputs.get(c), &def.psych)
-        });
-        let k = hornvale_demography::carrying_capacity(geo, &inputs);
-        total_k += geo.cells().map(|c| *k.get(c)).sum::<f64>();
-    }
+    let roster: Vec<hornvale_species::SpeciesDef> = hornvale_worldgen::default_roster()
+        .into_iter()
+        .filter(|d| d.peopled.is_some())
+        .collect();
+    let report = hornvale_worldgen::demography_report(&world, &roster)
+        .expect("demography_report must recompute over an already-built world's committed facts");
+    // Sum the niche-differentiated K (the coexistence stack's actual
+    // packing capacity) over every peopled species and every cell —
+    // mirroring genesis's own unpinned `species_set` (all-peopled at seed
+    // 42, so no filtering difference from `roster` above).
+    let total_k: f64 = report
+        .per_species_k
+        .iter()
+        .map(|(_, k)| k.iter().map(|(_, v)| *v).sum::<f64>())
+        .sum();
     let settlements: Vec<_> = world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
@@ -265,10 +283,11 @@ fn world_level_population_conserves_against_total_capacity() {
         "committed population {total_pop} exceeded Σ K {total_k} by more than the \
          {count}-settlement founder-floor/rounding allowance"
     );
-    // Lower bound: a generous floor (well under the measured ~0.552 ratio)
+    // Lower bound: a generous floor (well under the measured ~0.3482 ratio)
     // that still catches a catastrophic conservation break — e.g. population
     // collapsing toward zero — while tolerating the threshold's expected,
-    // already-documented mass culling.
+    // already-documented mass culling AND the coexistence stack's
+    // dominant-only population commit (see this test's doc comment).
     assert!(
         total_pop >= total_k * 0.25,
         "committed population {total_pop} fell far below Σ K {total_k} \

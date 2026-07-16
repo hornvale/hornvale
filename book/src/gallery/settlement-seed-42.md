@@ -1,10 +1,8 @@
 # The Peoples of Seed 42
 
-The land holds 182 settlement(s).
-The chief bugbear settlement, Qvoashshngoashdoodoa, holds 64 souls amid temperate-forest.
-The chief goblin settlement, Ngebvngadxnotnoaboo, holds 67 souls amid temperate-forest.
-The chief hobgoblin settlement, Gbeoveenoenoanoagoo, holds 67 souls amid temperate-forest.
-The chief kobold settlement, Roqrraxaxoqrrak, holds 71 souls amid temperate-forest.
+The land holds 66 settlement(s).
+The chief goblin settlement, Nobzxekngatnoenoa, holds 2 souls amid temperate-forest.
+The chief hobgoblin settlement, Mjaamjaenoenoanoagoo, holds 17 souls amid temperate-forest.
 
 ```text
                                                                         
@@ -15,14 +13,14 @@ The chief kobold settlement, Roqrraxaxoqrrak, holds 71 souls amid temperate-fore
                                                                         
                                                                         
                                                                         
-     o            o                                                     
-      o                                o               o   oo    o o    
-              ooo                                @      o          o    
-        o      o                                ooooo  o                
-         oo   ooo                                   ooo                 
-           oooo                                                         
-                         oooo          o                                
-                o                                                       
+                 oo              o        o   o                       oo
+     oo oo                       ooo o o               o   o     o ooo  
+         o  o   o                                o     oo         o     
+         o   o@                                     oo o                
+         oooo    o                                                      
+                                                                        
+                   oo   ooo                                             
+                o  o o o o             o                                
                                                                         
                                                                         
                                                                         
