@@ -169,6 +169,40 @@ impl GeneratedClimate {
             day,
         )
     }
+    /// The seasonal period this climate's temperature swing is phased on,
+    /// in standard days (the orbital year; a default on constant-sun worlds).
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn year_length_std(&self) -> f64 {
+        self.year_length_std
+    }
+
+    /// The hemisphere-signed seasonal half-swing at a cell, °C: the
+    /// coefficient of the seasonal sinusoid, `amplitude × sign(latitude)`.
+    /// Positive north, negative south, exactly `0.0` when locked, when the
+    /// world has no year, or at zero obliquity — matching `temperature_at`,
+    /// which this factors: `temperature_at(cell, day) == mean + swing ·
+    /// sin(τ · frac(day / year_length_std))`.
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn seasonal_swing_at(&self, cell: CellId) -> f64 {
+        match self.regime {
+            RotationRegime::Locked => 0.0,
+            RotationRegime::Spinning { .. } => {
+                if self.year_length_std <= 0.0 || self.obliquity_deg == 0.0 {
+                    return 0.0;
+                }
+                let amp = crate::temperature::seasonal_amplitude(
+                    &self.geosphere,
+                    &self.elevation,
+                    self.sea_level,
+                    self.obliquity_deg,
+                    cell,
+                );
+                let hemi = self.geosphere.coord(cell).latitude.signum();
+                amp * hemi
+            }
+        }
+    }
+
     /// Moisture at a cell, `[0, 1]`.
     /// type-audit: bare-ok(ratio)
     pub fn moisture_at(&self, cell: CellId) -> f64 {
@@ -284,6 +318,47 @@ mod tests {
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let c = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, RotationRegime::Locked));
         assert_eq!(c.band_count(), None);
+    }
+
+    #[test]
+    fn documented_evaluator_restates_temperature_at_exactly() {
+        use hornvale_kernel::math;
+        let geo = Geosphere::new(4);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
+        let period = climate.year_length_std();
+        assert!(period > 0.0);
+        // The documented client evaluator, restated in Rust with the SAME libm sin
+        // and the SAME frac. Must equal temperature_at to the last bit.
+        for cell in geo.cells() {
+            let mean = climate.mean_temperature_at(cell).get();
+            let swing = climate.seasonal_swing_at(cell);
+            for &day in &[0.0_f64, 30.0, 91.3, 182.6, 300.0, 365.25, 800.0] {
+                let phase = (day / period).rem_euclid(1.0);
+                let documented = mean + swing * math::sin(std::f64::consts::TAU * phase);
+                let actual = climate.temperature_at(cell, day).get();
+                assert_eq!(
+                    documented.to_bits(),
+                    actual.to_bits(),
+                    "cell {} day {day}: documented {documented} != temperature_at {actual}",
+                    cell.0
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn seasonal_swing_is_zero_when_locked() {
+        let geo = Geosphere::new(3);
+        let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let climate =
+            GeneratedClimate::generate(&inputs(&geo, &elev, &sea, RotationRegime::Locked));
+        for cell in geo.cells() {
+            assert_eq!(climate.seasonal_swing_at(cell), 0.0);
+        }
     }
 
     #[test]
