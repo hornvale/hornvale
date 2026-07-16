@@ -1,0 +1,235 @@
+# The Reckoning — Design
+
+**Date:** 2026-07-16
+**Status:** Awaiting G3 review
+**Tickets:** none yet — this is campaign **A** of the arc split out of [hornvale#4](https://github.com/hornvale/hornvale/issues/4); campaign **B** is the parked `2026-07-16-the-moons-design.md` (moon surfaces), which is blocked on this.
+**Parent contracts:** `2026-07-14-the-long-count-design.md` (main-sequence brightening — this supplies the zero point it lacks), `2026-07-14-eclipse-seasons-design.md` (dates eclipses from moon inclination + node — **this campaign moves those**), decision 0009 (models author, dice roll), the Campaign 2 astronomy model card.
+**This is an epoch.** See §7.
+
+---
+
+## 1. Problem
+
+**The star has a clock with no zero point.** The Long Count shipped
+main-sequence brightening — `brightening_per_gyr(star) = 0.10 · M^2.5`,
+Sol-calibrated, scaled by the main-sequence lifetime `t_MS ∝ M^-2.5` — and
+`luminosity_at(star, t)` anchored so that `t = 0` is genesis. The model
+therefore knows how fast the star brightens and can integrate *forward*, but
+it has no idea how far along the star already is. It reasons about `t_MS`
+without ever placing the star on it.
+
+**The moons have no origin story.** Each moon draws a mass, a distance, an
+inclination (0–10°), and a node longitude, and those quantities float free of
+each other. Nothing says *where the body came from* — and in reality that one
+fact predicts almost all of them.
+
+The immediate consequence, which is what surfaced this: The Moons (campaign B)
+cannot honestly derive a moon's density, because the generator draws mass but
+never composition. It was going to assume lunar density for every body in
+every world. That assumption is a stand-in for a missing concept.
+
+## 2. Goal
+
+Draw the star's age. Derive the planet's. Draw each moon's **formation
+mechanism**, and let it drive that moon's age, density, mass, distance, and
+inclination — so those quantities stop floating free and start agreeing with
+one another. Update the astronomy model card. Re-pin the eclipse batteries.
+
+## 3. The containment rule (the most important decision in this spec)
+
+**Age must not retroactively change genesis luminosity.**
+
+`Star::luminosity` is derived `M^3.5` and `habitable_zone` derives from it;
+orbit admission derives from the zone; climate derives from insolation. If age
+were allowed to correct luminosity toward a proper ZAMS-plus-brightening
+value, **every world's habitable zone, orbit, and climate would move** — an
+epoch across the entire simulation, orders of magnitude beyond what this
+campaign is for.
+
+So: `luminosity` **remains the genesis-epoch value it already is**, and
+`M^3.5` remains the declared approximation it already is. Age describes
+**pre-genesis history only**: it says how long the star has been on the main
+sequence before day 0. Anyone wanting the ZAMS luminosity can recover it
+backward as `L / (1 + b·age)`; nothing in the sim consumes it today.
+
+**The epoch is confined to the moons.** That is a deliberate boundary, and
+this spec's §7 blast-radius analysis depends on it holding.
+
+## 4. Stellar age
+
+```
+t_MS(M)  = 10 Gyr · M^-2.5          (already implicit in brightening_per_gyr)
+age      = U(0.05, 0.95) · min(t_MS(M), T_MAX)
+```
+
+drawn from a new stream, `star-age`. The `0.05–0.95` guard rails keep the star
+off the pre-main-sequence and post-main-sequence edges, where none of the
+model's physics applies.
+
+`T_MAX` is the open question — see §9.1. Across the drawn star-mass span
+(0.6–1.4 M☉) the lifetimes are:
+
+```
+  0.6 Msun (K)  ->  t_MS = 35.9 Gyr    brightening  2.8 %/Gyr
+  1.0 Msun (G)  ->  t_MS = 10.0 Gyr    brightening 10.0 %/Gyr
+  1.4 Msun (F)  ->  t_MS =  4.3 Gyr    brightening 23.2 %/Gyr
+```
+
+A **cosmological cap has a real physical consequence**, which is an argument
+for it beyond tidiness: capped at 13.8 Gyr, a 0.6 M☉ K dwarf can only ever be
+~38% through its life, so it has necessarily brightened very little — which is
+true of real K dwarfs, and emerges rather than being asserted.
+
+**Planet age** is *derived*: `planet_age = max(0, star_age − 0.05 Gyr)`.
+Terrestrial planets finish accreting within ~30–100 Myr of their star, so the
+difference is under 1% and far below anything the sim observes. It is modelled
+only so the number exists and is honest about its own precision.
+
+## 5. Moon formation mechanism
+
+### 5.1 The mechanisms, and which ones a terrestrial world can have
+
+Three real mechanisms (fission — Darwin's proposal that Earth spun off the
+Moon — is discredited and is not modelled):
+
+| | **Giant impact** | **Co-accretion** | **Capture** |
+|---|---|---|---|
+| exemplar | Luna | Galilean moons, Titan | Triton |
+| age | coeval (−~50 Myr) | coeval | **decoupled** |
+| mass | **large** rel. to primary | moderate, often several | usually small |
+| density | **iron-poor ~3.3** | primary-like, graded | alien, often **icy ~1.5–2.0** |
+| orbit | prograde, low inclination | regular, equatorial, resonant | **irregular: high inclination, often retrograde, distant** |
+
+**Co-accretion is not modelled**, and the reason is physical rather than
+budgetary: it needs a massive circumplanetary disk, which is a **giant-planet**
+mechanism. Hornvale's anchor is a terrestrial world. Modelling it would be
+modelling something these worlds do not have.
+
+So v1 draws from `{GiantImpact, Capture}`.
+
+### 5.2 What mechanism drives
+
+This is the point of the campaign — these stop being independent draws:
+
+| Quantity | GiantImpact | Capture |
+|---|---|---|
+| `age` | `planet_age − U(0.03, 0.10) Gyr` — coeval | **independent**: `U(0.05, 0.95) · planet_age` — the body formed elsewhere |
+| `density` | 3.34 g cm⁻³ — **derived, not assumed**: re-accreted mantle debris, no iron core (this is exactly why Luna is 3.34 against Earth's 5.51) | drawn from `{rocky 3.0, icy 1.6}` — a different reservoir |
+| `mass` | the current wide draw, biased **large** | biased **small** |
+| `distance` | the current Roche–Hill draw | biased **outward** (irregular satellites are distant) |
+| `inclination` | `U(0, 10)°` — the current draw, i.e. regular | **`U(20, 160)°`** — irregular; **>90° is retrograde** |
+
+**Radius** then follows from mass *and real density* (`r = (3M/4πρ)^{1/3}`)
+rather than from mass and an assumption — which is the honesty upgrade
+campaign B was blocked on.
+
+### 5.3 The mechanism draw
+
+Drawn per moon from a new stream, `moon-formation`, **before** the
+mechanism-conditioned quantities, so the conditioning is causal rather than
+post-hoc. A world's *first* moon is weighted heavily toward `GiantImpact` (a
+terrestrial world's large moon is an impact product); subsequent moons weight
+toward `Capture`. This gives a multi-moon terrestrial world an actual story —
+one impact child and some captured strays — instead of an unexplained crowd.
+
+## 6. The model card delta
+
+**Derived (real formulas):** planet age; moon age for the coeval mechanism;
+radius from mass and density; the ZAMS-luminosity back-derivation (§3).
+
+**Drawn:** star age (guard-railed fraction of `t_MS`); formation mechanism per
+moon; capture-mechanism density class, age, mass, distance, inclination.
+
+**Approximated (declared):**
+- `t_MS = 10 Gyr · M^-2.5` is the existing Sol-calibrated scaling, not a
+  stellar-structure model.
+- `L = M^3.5` **stays the genesis-epoch approximation it already is** (§3).
+  Age does not correct it. This is a deliberate containment, and the spec says
+  so rather than pretending the mass–luminosity relation is age-aware.
+- The mechanism weighting (§5.3) is a plausibility rule, not a population
+  synthesis of satellite formation.
+- Densities are two representative classes (rocky/icy), not a composition
+  model.
+- **Capture is modelled as an outcome, not an event.** No encounter dynamics,
+  no binary-exchange capture, no post-capture orbital evolution — the sim
+  draws that the body *was* captured and gives it irregular-satellite
+  statistics. A real capture requires energy dissipation the model does not
+  simulate.
+
+## 7. The epoch, and its blast radius
+
+**This is an epoch.** `inclination_deg`'s distribution changes for any moon
+drawn as `Capture`, and mass/distance conditioning shifts even for
+`GiantImpact`. Every seeded world's moons change.
+
+Known blast radius:
+
+1. **Eclipses move.** Eclipse Seasons dates real eclipses from inclination +
+   node. A retrograde or 40°-inclination moon eclipses on a completely
+   different cadence — often *never*. The dated-eclipse batteries re-pin.
+2. **The census moves.** `windows/lab/src/metrics.rs` runs a 100-year
+   dated-eclipse scan (`scan_century`, `century_cadence`) for its cadence
+   metrics. Those rows change ⇒ **an AWS census regeneration is required**, and
+   that is an explicit-authorization carve-out (§9.3).
+3. **Climate does NOT move** — by the §3 containment rule. If it does, the
+   containment leaked and the campaign has become something else; that is a
+   stop-and-report condition, not a re-baseline.
+4. **The pantheon may move on mooned seeds.** Eclipse Seasons noted that
+   pantheons re-derive on mooned seeds. Anything keyed to eclipse phenomena is
+   downstream.
+
+**Epoch discipline** (CLAUDE.md): deliberate regeneration takes an epoch
+suffix, never a rename. The affected stream labels get `/v2` suffixes rather
+than new names, so an old save's derivation is still legible.
+
+## 8. Testing
+
+- **Stellar age**: within the guard rails; never exceeds `t_MS` (nor `T_MAX`);
+  a 0.6 M☉ star's brightening-since-ZAMS stays small (§4's emergent claim,
+  asserted).
+- **Containment (the spec's most important test):** for a battery of seeds,
+  `star.luminosity`, `habitable_zone`, and the anchor's admitted orbit are
+  **byte-identical to pre-campaign**. This is what proves the epoch stayed in
+  the moons. It should be written first and watched hardest.
+- **Mechanism conditioning**: giant-impact moons are prograde and low-
+  inclination; captured moons land in the irregular band and ~half are
+  retrograde; densities fall in their declared classes; radius matches
+  `(3M/4πρ)^{1/3}`.
+- **Coevality**: giant-impact moon age is within 100 Myr of planet age;
+  captured moon age is decoupled (a distribution test across seeds, not a
+  per-seed assertion).
+- **Pin isolation** (`domains/astronomy/tests/genesis_properties.rs`): a
+  `--moons` pinned world consumes the same draws as the unpinned path — the
+  existing battery, extended for the new streams.
+- **Determinism**: same seed ⇒ same mechanisms, ages, densities, byte-identical.
+- **Re-pins in the drifting commit**, never deferred to the close: the eclipse
+  goldens move in the commit that moves them.
+
+## 9. Flagged for G3
+
+1. **`T_MAX` asserts a cosmology, and I cannot pick it for you.** A 0.6 M☉ K
+   dwarf's `t_MS` is **35.9 Gyr** — longer than the universe has existed. Cap
+   at 13.8 Gyr and Hornvale has committed to Big Bang cosmology; leave it
+   uncapped and a star may be 30 Gyr old, committing to an old or eternal
+   universe. **There is no neutral choice** — the number exists either way, and
+   the metaphysics is UNI-2-gated. My recommendation is `T_MAX = 13.8 Gyr`:
+   the project already calibrates on real constants throughout (Sol's
+   brightening, Luna, Earth), and the cap buys the emergent K-dwarf result in
+   §4. But this is your call.
+2. **Epoch + save-format contract (leads by carve-out rule).** New streams:
+   `star-age`, `moon-formation`. Changed derivation for the existing per-moon
+   draws ⇒ epoch suffixes (`/v2`), not renames. Every seeded world's moons
+   change; every world's climate does not (§3).
+3. **AWS census regeneration required** — an explicit-authorization carve-out.
+   The eclipse-cadence metrics move. Note the coordination: **rift-and-fit is a
+   terrain epoch v4 already at G3 with its own census-sequencing flag.** Two
+   epochs, one census budget. You chose to run this one now and split The Moons
+   behind it; the regen sequencing against rift-and-fit is still open.
+4. **Modelling capture at all is the campaign's boldest claim.** It introduces
+   retrograde and high-inclination moons to worlds that have never had them,
+   which will visibly change skies and eclipse cadences that players/tests have
+   seen. It is also the thing that makes moons *make sense*. If you would rather
+   ship ages + giant-impact-only (no capture, inclination distribution
+   unchanged), **the epoch mostly evaporates** — inclination stops moving, the
+   eclipse batteries mostly hold, and the census may not need a regen at all.
+   That is a materially cheaper campaign and a legitimate stopping point.
