@@ -1,5 +1,11 @@
 # The Faces — Design
 
+> **Status: SHIPPED** (hornvale#4, 2026-07-16). Merged to main; `world-wasm-v4`
+> released; orrery consumer merged. See the
+> [chronicle](../../../book/src/chronicle/the-faces.md) and
+> [retrospective](../../retrospectives/the-faces.md). Plan:
+> [2026-07-16-the-faces](../plans/2026-07-16-the-faces.md).
+
 *Moons deserve faces* (hornvale#4). `scene/system/v1` gives each moon orbital
 elements only — `sidereal_days`, `distance_mm`, `size_rel`, `phase_offset` —
 and the orrery draws them as flat gray spheres. This campaign gives each moon a
