@@ -1614,7 +1614,7 @@
         "subject": 1,
         "predicate": "ocean-fraction",
         "object": {
-          "Number": 0.7300913
+          "Number": 0.72960305
         },
         "place": null,
         "day": 0.0,
@@ -22234,7 +22234,7 @@
         "subject": 1,
         "predicate": "max-ice-fraction",
         "object": {
-          "Number": 0.40443756
+          "Number": 0.40420332
         },
         "place": null,
         "day": 0.0,

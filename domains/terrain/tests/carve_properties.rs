@@ -504,17 +504,43 @@ fn trim_recaps_hold_after_the_final_solve() {
                 g.elevation.get(c).get()
             );
         }
+        // Barrier cells (tuning iteration 4, ledger #9): the sea-trim
+        // exempts them like delta lobes, so a barrier's elevation must
+        // still sit exactly at its construction target
+        // (`sea_pre + barrier_height_m`, unperturbed by the trim) AND
+        // strictly above the FINAL sea level — the guard this whole
+        // mechanism exists to satisfy (a barrier must stay land after the
+        // final re-solve, not just after the first one).
+        let barrier_target = rebuilt.sea_pre.get() + p.barrier_height_m;
+        for &c in &g.barrier_cells {
+            assert!(
+                (g.elevation.get(c).get() - barrier_target).abs() < 1e-6,
+                "seed {seed} L{level}: barrier cell {} at {} != construction target {barrier_target}",
+                c.0,
+                g.elevation.get(c).get()
+            );
+            assert!(
+                *g.elevation.get(c) >= sea_final,
+                "seed {seed} L{level}: barrier cell {} at {} sank below the final sea level {}",
+                c.0,
+                g.elevation.get(c).get(),
+                sea_final.get()
+            );
+        }
         // The wedge-cap bound, gated on the membership the wedge actually
         // deposited under: ocean by sea_pre with retained sediment. Atoll
         // cells are excluded from this WEDGE bound only because their own
-        // (tighter-freeboard) cap is asserted above; delta lobes are
-        // exempt by ruling.
+        // (tighter-freeboard) cap is asserted above; delta lobes and
+        // barrier cells (tuning iteration 4, ledger #9) are exempt by
+        // ruling — both are meant to stay subaerial past the final
+        // re-solve, governed by their own construction, not this bound.
         let wedge_cap = sea_final.get() - p.wedge_freeboard_m;
         for (c, sed) in g.sediment_thickness.iter() {
             if *sed > 0.0
                 && *rebuilt.elevation_pre.get(c) < rebuilt.sea_pre
                 && !g.delta_cells.contains(&c)
                 && !g.atoll_cells.contains(&c)
+                && !g.barrier_cells.contains(&c)
             {
                 assert!(
                     g.elevation.get(c).get() <= wedge_cap + tol,
@@ -571,6 +597,7 @@ fn generate_level_books_account_for_every_eroded_unit() {
             &d.sediment_thickness_m,
             &d.delta_cells,
             &d.atoll_cells,
+            &d.barrier_cells,
             rebuilt.sea_pre,
             rebuilt.sea_carved,
             &CarveParams::default(),

@@ -22,7 +22,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Tuning knobs for the carve (engine A). Global constants only —
 /// heterogeneity comes from fields (spec §5).
-/// type-audit: pending(wave-2: incision_k_m), bare-ok(ratio: area_exponent), bare-ok(ratio: slope_exponent), bare-ok(count: area_ref), pending(wave-2: slope_ref_m), pending(wave-2: max_incision_m), pending(wave-2: repose_drop_m), bare-ok(count: repose_sweeps), pending(wave-2: deposit_slope_m), bare-ok(ratio: deposit_fraction), pending(wave-2: wedge_freeboard_m), bare-ok(count: wedge_reach_passive), bare-ok(count: wedge_reach_active), bare-ok(count: delta_count), pending(wave-2: delta_height_m), pending(wave-2: atoll_freeboard_m), pending(wave-2: atoll_max_depth_m), pending(wave-2: atoll_max_abs_lat), pending(wave-2: wave_cut_m), pending(wave-2: wave_cut_floor_m)
+/// type-audit: pending(wave-2: incision_k_m), bare-ok(ratio: area_exponent), bare-ok(ratio: slope_exponent), bare-ok(count: area_ref), pending(wave-2: slope_ref_m), pending(wave-2: max_incision_m), pending(wave-2: repose_drop_m), bare-ok(count: repose_sweeps), pending(wave-2: deposit_slope_m), bare-ok(ratio: deposit_fraction), pending(wave-2: wedge_freeboard_m), bare-ok(count: wedge_reach_passive), bare-ok(count: wedge_reach_active), bare-ok(count: delta_count), pending(wave-2: delta_height_m), pending(wave-2: atoll_freeboard_m), pending(wave-2: atoll_max_depth_m), pending(wave-2: atoll_max_abs_lat), pending(wave-2: wave_cut_m), pending(wave-2: wave_cut_floor_m), bare-ok(count: barrier_supply_per_cell), pending(wave-2: barrier_height_m)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CarveParams {
     /// Peak incision scale, meters (the stream-power prefactor `k`).
@@ -87,6 +87,22 @@ pub struct CarveParams {
     /// Depth below sea level, meters, past which a wave cut never lowers
     /// a coast cell — the wave-cut platform floor.
     pub wave_cut_floor_m: f64,
+    /// Supply cost, in the shared mouth-volume proxy, of one barrier cell
+    /// (tuning iteration 4, ledger #9, spec §5's banked spit/barrier
+    /// extension): a budget on the COUNT of cells [`raise_barriers`] may
+    /// raise, read off the total exported volume of every PASSIVE-margin
+    /// mouth (river + wave) — "no supply, no barrier". A proxy, not a
+    /// second withdrawal against `deposit_wedge`'s already-closed books
+    /// (see that function's own doc).
+    pub barrier_supply_per_cell: f64,
+    /// Barrier-bar crest height above the sea level [`raise_barriers`] is
+    /// given, meters (tuning iteration 4): small — a bar sits just clear of
+    /// the waterline, not a coastal ridge. Chosen small enough that the
+    /// bounded solve→trim→solve sequence's typical (post-wedge) DOWNWARD
+    /// sea-level shift (ruling #5c, ledger #4) leaves every barrier cell
+    /// comfortably above the final `sea_level` once the sea-trim exempts
+    /// it (like a delta lobe).
+    pub barrier_height_m: f64,
 }
 
 impl Default for CarveParams {
@@ -112,6 +128,8 @@ impl Default for CarveParams {
             atoll_max_abs_lat: 0.6,
             wave_cut_m: 1000.0,
             wave_cut_floor_m: 30.0,
+            barrier_supply_per_cell: 400.0,
+            barrier_height_m: 3.0,
         }
     }
 }
@@ -158,6 +176,11 @@ pub struct CarveDelta {
     /// Cells an atoll rim capped (Task 9). Empty until [`carve`] runs; feeds
     /// lithology's carbonate override (Task 10).
     pub atoll_cells: Vec<CellId>,
+    /// Cells a barrier bar raised above sea level (tuning iteration 4,
+    /// ledger #9, spec §5's banked spit/barrier extension). Empty until
+    /// [`carve`] runs. Like `delta_cells`, exempt from the sea-trim
+    /// ([`trim_to_sea`]) — meant to stay subaerial past the final re-solve.
+    pub barrier_cells: Vec<CellId>,
     /// Waterfall (knickpoint) sites the carve found (spec §5): land cells
     /// where a high-drainage watercourse crosses a sharp induration step,
     /// evaluated on the PRE-carve surface — "where the carve worked
@@ -205,6 +228,7 @@ impl CarveDelta {
             ocean_loss_m3: 0.0,
             delta_cells: Vec::new(),
             atoll_cells: Vec::new(),
+            barrier_cells: Vec::new(),
             waterfall_sites: Vec::new(),
         }
     }
@@ -967,10 +991,160 @@ pub fn deposit_wedge(
     (marine_deposit, delta_cells, ocean_loss)
 }
 
+/// Barrier islands and lagoons (tuning iteration 4, ledger #9; spec §5's
+/// banked longshore-drift extension): the shoreline-development diagnostic
+/// (`.superpowers/sdd/shoreline-diagnostic.md`) found the estimator
+/// `D = L / (2 sqrt(pi A))` rewards single-hex land/ocean alternation —
+/// exactly the barrier/lagoon/mainland pattern — and is nowhere near
+/// saturated. Runs on the surface AFTER the wedge
+/// (`elevation_after_wedge`), BEFORE atolls (see [`carve`]'s composition).
+///
+/// **Candidate rule, chosen by the edge arithmetic**: raising an ocean
+/// cell to land flips every one of its edges in the perimeter sum — a
+/// land neighbor's edge is REMOVED (land/ocean becomes land/land) while an
+/// ocean neighbor's edge is ADDED (ocean/ocean becomes land/ocean) — so a
+/// cell with `L` land neighbors and `O` ocean neighbors changes the raw
+/// perimeter by `O - L`. An **attached** spit-end (`L == 1`) nets `O - 1`;
+/// a **detached** cell (`L == 0`, ocean on every side) nets the full `O`
+/// (a whole 5- or 6-edge ring) — strictly more. So the candidate pool is
+/// detached: ocean cells with ZERO land neighbors of their own, that touch
+/// at least one ORDINARY coastal-fringe ocean cell (one hop from land) —
+/// i.e. exactly two hops from the mainland, with that fringe cell
+/// surviving untouched as the lagoon between barrier and shore. The
+/// fringe cell's own land neighbor(s) gate margin polarity (`Passive`
+/// only — spec's "recognized longshore extension" is a passive-margin
+/// phenomenon on Earth too) and exclude the trench and any river-mouth
+/// delta lobe (never restyled as a barrier).
+///
+/// **Alternating selection**: eligible cells are walked in ascending
+/// `CellId` order (the coastal-walk convention every other carve stage
+/// uses) and every OTHER one is skipped. Raising every eligible cell in a
+/// row would weld a solid offshore wall whose interior land-land edges are
+/// wasted perimeter — exactly the ordinary-coastline problem this
+/// mechanism exists to avoid, and it would reduce `P` relative to a porous
+/// chain.
+///
+/// **Supply gate**: a budget in raised CELLS (not the raise volume
+/// itself) — `total_passive_supply / params.barrier_supply_per_cell`,
+/// floored — where `total_passive_supply` sums the exported volume of
+/// every PASSIVE-margin mouth in `mouths` (the same merged river+wave list
+/// [`deposit_wedge`] already fully spent into shelf fill or ocean loss).
+/// This is a budget PROXY read off that same supply signal, not a second
+/// withdrawal against `deposit_wedge`'s already-closed books — "no
+/// supply, no barrier" without re-plumbing that function's internal
+/// accounting. The barrier's own raised volume books as a PAIRED
+/// source+sink in [`carve`] (added to both `eroded_total_m3` and
+/// `deposited_total_m3`), mirroring the atoll convention (spec §5's
+/// tier-aware mass balance): real sediment (longshore drift is a genuine
+/// process), gated rather than metered exactly.
+///
+/// Each selected cell raises to `sea_level + params.barrier_height_m`
+/// (never down — every candidate starts below `sea_level` by
+/// construction, so the raise is always positive). Returns
+/// `(fill, barrier_cells, volume_used)`, `barrier_cells` sorted ascending
+/// `CellId`; the caller ([`carve`]) folds `fill` into
+/// `elevation_after_wedge` before atolls cap, and the sea-trim
+/// ([`trim_to_sea`]) must exempt `barrier_cells` like `delta_cells` — a
+/// barrier is meant to stay subaerial past the final re-solve.
+/// type-audit: bare-ok(index: plate_of), pending(wave-2: mouths), pending(wave-2: return)
+#[allow(clippy::too_many_arguments)]
+pub fn raise_barriers(
+    geo: &Geosphere,
+    elevation_after_wedge: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    margins: &CellMap<MarginPolarity>,
+    boundary: &CellMap<Option<CellBoundary>>,
+    plate_of: &CellMap<u32>,
+    delta_cells: &BTreeSet<CellId>,
+    mouths: &[(CellId, f64)],
+    params: &CarveParams,
+) -> (CellMap<f64>, Vec<CellId>, f64) {
+    let is_ocean = |c: CellId| *elevation_after_wedge.get(c) < sea_level;
+    // The trench is a wall to barrier building too — the same test
+    // `deposit_wedge` uses (a CoastalRange contact's whole oceanic side,
+    // or an IslandArc contact's subducting side only).
+    let is_trench = |c: CellId| match boundary.get(c) {
+        Some(b) => match b.kind {
+            BoundaryKind::CoastalRange => true,
+            BoundaryKind::IslandArc => *plate_of.get(c) <= b.other_plate,
+            _ => false,
+        },
+        None => false,
+    };
+
+    // Ordinary coastal fringe: ocean cells with >= 1 land neighbor. These
+    // stay ocean — the lagoon between the mainland and any barrier raised
+    // beyond them.
+    let fringe: BTreeSet<CellId> = geo
+        .cells()
+        .filter(|&c| is_ocean(c) && geo.neighbors(c).iter().any(|&nb| !is_ocean(nb)))
+        .collect();
+
+    // Detached candidates: ocean, zero land neighbors of their own, and
+    // adjacent to at least one fringe cell whose own land neighbor is on
+    // a Passive margin — a genuine two-hops-from-the-mainland barrier
+    // site, not an arbitrary open-ocean cell.
+    let mut candidates: Vec<CellId> = geo
+        .cells()
+        .filter(|&c| {
+            if !is_ocean(c) || is_trench(c) || delta_cells.contains(&c) {
+                return false;
+            }
+            if geo.neighbors(c).iter().any(|&nb| !is_ocean(nb)) {
+                return false; // has a land neighbor directly: not detached
+            }
+            geo.neighbors(c).iter().any(|&nb| {
+                fringe.contains(&nb)
+                    && !is_trench(nb)
+                    && !delta_cells.contains(&nb)
+                    && geo.neighbors(nb).iter().any(|&land| {
+                        !is_ocean(land) && *margins.get(land) == MarginPolarity::Passive
+                    })
+            })
+        })
+        .collect();
+    candidates.sort_by_key(|c| c.0);
+
+    // Alternating selection: every OTHER eligible cell, in the coastal
+    // walk's CellId order.
+    let spaced: Vec<CellId> = candidates.into_iter().step_by(2).collect();
+
+    // Supply gate: budget in cells, from PASSIVE-margin mouths only (the
+    // river+wave exports `deposit_wedge` already fully spent).
+    let total_passive_supply: f64 = mouths
+        .iter()
+        .filter(|(m, _)| *margins.get(*m) == MarginPolarity::Passive)
+        .map(|(_, v)| v)
+        .sum();
+    let budget = if params.barrier_supply_per_cell > 0.0 {
+        (total_passive_supply / params.barrier_supply_per_cell).floor() as usize
+    } else {
+        0
+    };
+
+    let barrier_cells: Vec<CellId> = spaced.into_iter().take(budget).collect();
+
+    let target = sea_level.get() + params.barrier_height_m;
+    let mut fill = vec![0.0_f64; geo.cell_count()];
+    let mut volume_used = 0.0_f64;
+    for &c in &barrier_cells {
+        let raise = (target - elevation_after_wedge.get(c).get()).max(0.0);
+        fill[c.0 as usize] = raise;
+        volume_used += raise;
+    }
+
+    let raised = CellMap::from_fn(geo, |c| fill[c.0 as usize]);
+    (raised, barrier_cells, volume_used)
+}
+
 /// Atoll caps (Task 9, spec §5): warm, shallow-submerged trail seamounts
 /// (Task 6) grow a carbonate rim to just under the surface — relative to
 /// the sea level this function is GIVEN; the wired pipeline (Task 10)
-/// passes the provisional pre-carve sea level. The gap that opened when
+/// passes the provisional pre-carve sea level. Since tuning iteration 4
+/// (ledger #9), `carve`'s composition folds [`raise_barriers`]'s fill in
+/// BEFORE this runs, so a seamount whose nearest cell a barrier already
+/// raised reads as already-at-or-above-cap and is skipped — no double
+/// counting, no separate exclusion needed here. The gap that opened when
 /// the post-carve re-solve landed lower (composed atoll cells reading as
 /// emergent) is now closed by the sea-trim ([`trim_to_sea`], ruling #5c):
 /// `globe::generate` re-caps every atoll cell to the re-solved
@@ -1050,7 +1224,10 @@ pub fn cap_atolls(
 /// - every atoll cell trims down to `sea_1 - atoll_freeboard_m` (its own,
 ///   shallower freeboard — a reef breaks closer to the surface than the
 ///   shelf does);
-/// - delta lobes are EXEMPT (subaerial by design);
+/// - delta lobes and barrier cells are EXEMPT (subaerial by design —
+///   tuning iteration 4, ledger #9, treats a barrier bar exactly like a
+///   delta lobe here: meant to stay above the final sea level, not
+///   re-capped toward it);
 /// - LAND sediment (floodplain/playa deposit — land by `sea_pre`) is not
 ///   marine and is never trimmed;
 /// - a natural shallow bank (no sediment) is untouched: only what the
@@ -1070,6 +1247,7 @@ pub fn trim_to_sea(
     sediment_thickness: &CellMap<f64>,
     delta_cells: &[CellId],
     atoll_cells: &[CellId],
+    barrier_cells: &[CellId],
     sea_pre: ReferenceElevation,
     sea_1: ReferenceElevation,
     params: &CarveParams,
@@ -1078,7 +1256,7 @@ pub fn trim_to_sea(
     let atoll_cap = sea_1.get() - params.atoll_freeboard_m;
     let mut trimmed_volume = 0.0_f64;
     let trim = CellMap::from_fn(geo, |c| {
-        if delta_cells.contains(&c) {
+        if delta_cells.contains(&c) || barrier_cells.contains(&c) {
             return 0.0;
         }
         let e = elevation.get(c).get();
@@ -1107,13 +1285,14 @@ pub fn trim_to_sea(
 /// elevation+incision) → routing → wave-cut (on elevation+incision+repose;
 /// ledgers #6+#7) → wedge (mouth list = river mouths + wave micro-mouths)
 /// → deltas (river mouths ONLY take the top-K lobes — wave cells are not
-/// deltas) → atolls (on elevation+wedge, so a reef caps the seabed the
-/// wedge already built — the composed atoll cell ends exactly at
-/// `sea_level - atoll_freeboard_m`, never above it), composed into one
-/// `CarveDelta`. Wired into `globe::generate` since Task 10, followed
-/// there by the sea-trim ([`trim_to_sea`], ruling #5c) — generate-level
-/// composition is carve + trim. Every input is a plain reference the
-/// caller already has, and this function adds no new draws.
+/// deltas) → barriers (on elevation+wedge; tuning iteration 4, ledger #9)
+/// → atolls (on elevation+wedge+barriers, so a reef caps the seabed the
+/// wedge and any barrier already built — the composed atoll cell ends
+/// exactly at `sea_level - atoll_freeboard_m`, never above it), composed
+/// into one `CarveDelta`. Wired into `globe::generate` since Task 10,
+/// followed there by the sea-trim ([`trim_to_sea`], ruling #5c) —
+/// generate-level composition is carve + trim. Every input is a plain
+/// reference the caller already has, and this function adds no new draws.
 ///
 /// Books: `eroded_total_m3` and the repose-only part of `deposited_total_m3`
 /// come from `CarveDelta::from_incision_and_repose`; this function adds
@@ -1124,12 +1303,16 @@ pub fn trim_to_sea(
 /// the wedge's own loss to `ocean_loss_m3`, and atoll volume to
 /// `eroded_total_m3` too (a paired biogenic source+sink: carbonate grown in
 /// place books on both sides of the ledger, spec §5's tier-aware mass
-/// balance — never free mass). Mouth exports (river or wave) are not a
-/// separate top-level bucket: `deposit_wedge` fully consumes each mouth's
-/// export into wedge/delta deposit or its own `ocean_loss`, so the
-/// two-term identity `eroded ≈ deposited + ocean_loss` holds end to end.
-/// `CarveDelta::mouths` retains the RIVER mouths only — wave micro-mouths
-/// are transient shelf supply, not river mouths.
+/// balance — never free mass). Barrier volume is a paired source+sink too
+/// (added to both `eroded_total_m3` and `deposited_total_m3`; see
+/// [`raise_barriers`]'s own doc for why: it is supply-GATED rather than a
+/// literal second withdrawal against the wedge's already-closed books).
+/// Mouth exports (river or wave) are not a separate top-level bucket:
+/// `deposit_wedge` fully consumes each mouth's export into wedge/delta
+/// deposit or its own `ocean_loss`, so the two-term identity
+/// `eroded ≈ deposited + ocean_loss` holds end to end. `CarveDelta::mouths`
+/// retains the RIVER mouths only — wave micro-mouths are transient shelf
+/// supply, not river mouths.
 /// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(ratio: induration), bare-ok(ratio: carbonate), bare-ok(index: plate_of)
 #[allow(clippy::too_many_arguments)]
 pub fn carve(
@@ -1205,20 +1388,40 @@ pub fn carve(
         &river_mouth_cells,
         params,
     );
-    // Atolls cap the seabed the wedge already built, not the raw pre-wedge
-    // floor — the same fold-forward the incision→repose seam uses above.
-    // Without it, wedge fill and atoll fill each capped against raw
-    // elevation independently and their SUM overtopped the atoll freeboard
-    // (review-measured on seed 42/L4: CellId(1965) composed to
-    // sea_level + 222.322 m from raw -2713.534 + wedge 227.322 + atoll
-    // 296.707).
+    // Barriers (tuning iteration 4, ledger #9), on the surface the wedge
+    // already built, before atolls (spec order; see this function's own
+    // doc). Delta lobes are passed through so a river-mouth lobe is never
+    // restyled as a barrier.
     let elevation_after_wedge = CellMap::from_fn(geo, |c| {
         ReferenceElevation::new(elevation.get(c).get() + *marine_deposit.get(c))
             .expect("elevation plus wedge fill is finite")
     });
-    let (atoll_fill, atoll_cells) = cap_atolls(
+    let delta_cell_set: BTreeSet<CellId> = delta_cells.iter().copied().collect();
+    let (barrier_fill, barrier_cells, barrier_volume) = raise_barriers(
         geo,
         &elevation_after_wedge,
+        sea_level,
+        margins,
+        boundary,
+        plate_of,
+        &delta_cell_set,
+        &all_mouths,
+        params,
+    );
+    // Atolls cap the seabed the wedge and any barrier already built, not
+    // the raw pre-wedge floor — the same fold-forward the incision→repose
+    // seam uses above. Without it, wedge fill and atoll fill each capped
+    // against raw elevation independently and their SUM overtopped the
+    // atoll freeboard (review-measured on seed 42/L4: CellId(1965)
+    // composed to sea_level + 222.322 m from raw -2713.534 + wedge
+    // 227.322 + atoll 296.707).
+    let elevation_after_barriers = CellMap::from_fn(geo, |c| {
+        ReferenceElevation::new(elevation_after_wedge.get(c).get() + *barrier_fill.get(c))
+            .expect("elevation plus barrier fill is finite")
+    });
+    let (atoll_fill, atoll_cells) = cap_atolls(
+        geo,
+        &elevation_after_barriers,
         sea_level,
         trail_seamounts,
         params,
@@ -1237,17 +1440,23 @@ pub fn carve(
             + *wave_cut.get(c)
             + *routing_deposit.get(c)
             + *marine_deposit.get(c)
+            + *barrier_fill.get(c)
             + *atoll_fill.get(c)
     });
     delta.sediment_thickness_m = CellMap::from_fn(geo, |c| {
-        *old_sediment.get(c) + *routing_deposit.get(c) + *marine_deposit.get(c) + *atoll_fill.get(c)
+        *old_sediment.get(c)
+            + *routing_deposit.get(c)
+            + *marine_deposit.get(c)
+            + *barrier_fill.get(c)
+            + *atoll_fill.get(c)
     });
     delta.mouths = mouths;
-    delta.deposited_total_m3 += routing_total + marine_total + atoll_total;
+    delta.deposited_total_m3 += routing_total + marine_total + barrier_volume + atoll_total;
     delta.ocean_loss_m3 += routing_ocean_loss + wedge_ocean_loss;
-    delta.eroded_total_m3 += wave_total + atoll_total;
+    delta.eroded_total_m3 += wave_total + barrier_volume + atoll_total;
     delta.delta_cells = delta_cells;
     delta.atoll_cells = atoll_cells;
+    delta.barrier_cells = barrier_cells;
     // delta.waterfall_sites was already set above, from the pre-carve fields.
 
     delta
@@ -1945,6 +2154,247 @@ mod tests {
         }
     }
 
+    /// Raw shoreline perimeter `L` (unnormalized by land area) exactly as
+    /// `shape::shoreline_development` computes it internally — a local,
+    /// self-contained copy so the barrier tests below can isolate the
+    /// perimeter term the diagnostic (`.superpowers/sdd/
+    /// shoreline-diagnostic.md`) actually measured, without coupling to
+    /// that function's `D = L / (2 sqrt(pi A))` normalization.
+    fn raw_perimeter(
+        geo: &Geosphere,
+        elevation: &CellMap<ReferenceElevation>,
+        sea: ReferenceElevation,
+    ) -> f64 {
+        let mut perimeter = 0.0_f64;
+        for cell in geo.cells() {
+            let land = *elevation.get(cell) >= sea;
+            for &neighbor in geo.neighbors(cell) {
+                if neighbor.0 <= cell.0 {
+                    continue;
+                }
+                let neighbor_land = *elevation.get(neighbor) >= sea;
+                if land != neighbor_land {
+                    let a = geo.position(cell);
+                    let b = geo.position(neighbor);
+                    let angle =
+                        math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0));
+                    perimeter += angle / 3f64.sqrt();
+                }
+            }
+        }
+        perimeter
+    }
+
+    /// Shared scaffold for the barrier tests below: a single land cell
+    /// (`CellId(0)`) on an otherwise all-ocean globe, plus a real,
+    /// mesh-derived detached candidate two hops out (the ledger #9
+    /// diagnostic's "isolated offshore cell" case) — asserted, not
+    /// assumed, so a mesh-generation change fails loudly here instead of
+    /// silently degrading the tests below.
+    struct BarrierScaffold {
+        geo: Geosphere,
+        sea: ReferenceElevation,
+        elevation: CellMap<ReferenceElevation>,
+        land: CellId,
+        /// A real detached candidate (zero land neighbors, two hops from
+        /// `land` via a fringe cell) that the candidate rule must accept
+        /// when the fringe's land neighbor is Passive.
+        detached_candidate: CellId,
+    }
+
+    fn barrier_scaffold() -> BarrierScaffold {
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let land = CellId(0);
+        let elevation = CellMap::from_fn(&geo, |c| {
+            if c == land {
+                ReferenceElevation::new(100.0).unwrap()
+            } else {
+                ReferenceElevation::new(-500.0).unwrap()
+            }
+        });
+        let land_neighbors: BTreeSet<CellId> = geo.neighbors(land).iter().copied().collect();
+        let mut detached_candidate = None;
+        'search: for &fringe in geo.neighbors(land) {
+            for &b in geo.neighbors(fringe) {
+                if b != land && !land_neighbors.contains(&b) {
+                    detached_candidate = Some(b);
+                    break 'search;
+                }
+            }
+        }
+        let detached_candidate =
+            detached_candidate.expect("the mesh must offer a detached candidate two hops out");
+        BarrierScaffold {
+            geo,
+            sea,
+            elevation,
+            land,
+            detached_candidate,
+        }
+    }
+
+    #[test]
+    fn barrier_candidate_gains_exactly_its_ring_of_new_perimeter_edges() {
+        // Candidate-rule edge arithmetic (ledger #9's diagnostic): raising
+        // a DETACHED ocean cell (zero land neighbors) to land removes no
+        // land/ocean edges (it had none) and adds one for every one of its
+        // own neighbors — a full ring, the maximal per-cell gain the
+        // diagnostic identified.
+        let s = barrier_scaffold();
+        let margins = CellMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
+        let boundary = CellMap::from_fn(&s.geo, |_| None);
+        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let no_deltas = BTreeSet::new();
+        // Ample supply: the barrier-selection/spacing mechanics are not
+        // under test here, only whether the specific mesh-derived detached
+        // candidate is ACCEPTED by the candidate rule.
+        let mouths = vec![(s.land, 1_000_000.0)];
+        let p = CarveParams::default();
+
+        let (fill, barrier_cells, volume) = raise_barriers(
+            &s.geo,
+            &s.elevation,
+            s.sea,
+            &margins,
+            &boundary,
+            &plate_of,
+            &no_deltas,
+            &mouths,
+            &p,
+        );
+        assert!(
+            barrier_cells.contains(&s.detached_candidate),
+            "the detached candidate {} must be an eligible barrier cell (candidates: {:?})",
+            s.detached_candidate.0,
+            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+        );
+        assert!(volume > 0.0);
+
+        // Isolate the edge arithmetic to this ONE cell: raise it alone
+        // (not the whole selected set, which may include others) and
+        // compare raw perimeter before/after.
+        let before = raw_perimeter(&s.geo, &s.elevation, s.sea);
+        let raised = ReferenceElevation::new(
+            s.elevation.get(s.detached_candidate).get() + *fill.get(s.detached_candidate),
+        )
+        .unwrap();
+        let after_elevation = CellMap::from_fn(&s.geo, |c| {
+            if c == s.detached_candidate {
+                raised
+            } else {
+                *s.elevation.get(c)
+            }
+        });
+        let after = raw_perimeter(&s.geo, &after_elevation, s.sea);
+
+        let expected_gain: f64 = s
+            .geo
+            .neighbors(s.detached_candidate)
+            .iter()
+            .map(|&nb| {
+                let a = s.geo.position(s.detached_candidate);
+                let b = s.geo.position(nb);
+                math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0)) / 3f64.sqrt()
+            })
+            .sum();
+        assert!(
+            (after - before - expected_gain).abs() < 1e-9,
+            "perimeter gain {} != expected full ring {}",
+            after - before,
+            expected_gain
+        );
+    }
+
+    #[test]
+    fn barrier_supply_gate_blocks_with_no_passive_mouth_volume() {
+        // Supply-gated (ledger #9): with zero exported volume from any
+        // PASSIVE-margin mouth, the budget is zero and no cell is raised,
+        // even though the geometry/margin candidate rule is otherwise
+        // satisfied identically to the test above.
+        let s = barrier_scaffold();
+        let margins = CellMap::from_fn(&s.geo, |_| MarginPolarity::Passive);
+        let boundary = CellMap::from_fn(&s.geo, |_| None);
+        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let no_deltas = BTreeSet::new();
+        let p = CarveParams::default();
+
+        let (fill, barrier_cells, volume) = raise_barriers(
+            &s.geo,
+            &s.elevation,
+            s.sea,
+            &margins,
+            &boundary,
+            &plate_of,
+            &no_deltas,
+            &[],
+            &p,
+        );
+        assert!(
+            barrier_cells.is_empty(),
+            "no supply must mean no barrier: {:?}",
+            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+        );
+        assert_eq!(volume, 0.0);
+        assert!(fill.iter().all(|(_, f)| *f == 0.0));
+    }
+
+    #[test]
+    fn barrier_candidates_require_a_passive_margin_coast() {
+        // Passive margins only (ledger #9; spec's "recognized longshore
+        // extension" is a passive-margin phenomenon): the same scaffold
+        // and ample supply as the acceptance test above, but the coast
+        // land cell sits on an ACTIVE margin — the detached candidate must
+        // now be rejected.
+        let s = barrier_scaffold();
+        let margins = CellMap::from_fn(&s.geo, |c| {
+            if c == s.land {
+                MarginPolarity::Active
+            } else {
+                MarginPolarity::Passive
+            }
+        });
+        let boundary = CellMap::from_fn(&s.geo, |_| None);
+        let plate_of = CellMap::from_fn(&s.geo, |_| 0u32);
+        let no_deltas = BTreeSet::new();
+        // Supply comes from a DIFFERENT, ordinary Passive-margin cell —
+        // ample budget exists, so a rejection here can only be the
+        // candidate rule's own margin check, not the supply gate (which
+        // the previous test already covers in isolation).
+        let supply_mouth = CellId(s.geo.cell_count() as u32 - 1);
+        assert_ne!(supply_mouth, s.land);
+        assert_ne!(supply_mouth, s.detached_candidate);
+        let mouths = vec![(supply_mouth, 1_000_000.0)];
+        let p = CarveParams::default();
+
+        let total_passive_supply: f64 = mouths
+            .iter()
+            .filter(|(m, _)| *margins.get(*m) == MarginPolarity::Passive)
+            .map(|(_, v)| v)
+            .sum();
+        assert!(
+            total_passive_supply > 0.0,
+            "the supply must be real so the supply gate is not the reason for rejection"
+        );
+
+        let (_, barrier_cells, _) = raise_barriers(
+            &s.geo,
+            &s.elevation,
+            s.sea,
+            &margins,
+            &boundary,
+            &plate_of,
+            &no_deltas,
+            &mouths,
+            &p,
+        );
+        assert!(
+            !barrier_cells.contains(&s.detached_candidate),
+            "an Active-margin coast must never grow a barrier: {:?}",
+            barrier_cells.iter().map(|c| c.0).collect::<Vec<_>>()
+        );
+    }
+
     #[test]
     fn find_waterfalls_flags_a_high_drainage_hard_over_soft_step() {
         // Synthetic knickpoint: source is land, high drainage, hard
@@ -2208,6 +2658,7 @@ mod tests {
             &sediment,
             &[delta_cell],
             &[atoll_cell],
+            &[],
             sea_pre,
             sea_1,
             &p,

@@ -104,6 +104,13 @@ pub struct TectonicGlobe {
     /// carbonate to a reef-building high value regardless of the ordinary
     /// shallow-shelf test. Recomputed at genesis, never serialized.
     pub atoll_cells: Vec<CellId>,
+    /// Cells a barrier bar raised above sea level (the carve, tuning
+    /// iteration 4, ledger #9; spec §5's banked spit/barrier extension).
+    /// Exempt from the sea-trim like `delta_cells`. No lithology override
+    /// yet (a barrier reads as the generic buffer this campaign — a
+    /// followup register item, unconsolidated-sand coupling deferred).
+    /// Recomputed at genesis, never serialized.
+    pub barrier_cells: Vec<CellId>,
     /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
     /// §5): land cells where a high-drainage watercourse crosses a sharp
     /// PRE-carve induration step. Sorted ascending `CellId`. Recomputed at
@@ -309,6 +316,7 @@ pub fn generate(
         &cd.sediment_thickness_m,
         &cd.delta_cells,
         &cd.atoll_cells,
+        &cd.barrier_cells,
         sea_pre,
         sea_1,
         &carve_params,
@@ -414,6 +422,7 @@ pub fn generate(
         carve_delta_m: CellMap::from_fn(geosphere, |c| *cd.delta_m.get(c) + *trim_delta.get(c)),
         delta_cells: cd.delta_cells,
         atoll_cells: cd.atoll_cells,
+        barrier_cells: cd.barrier_cells,
         waterfall_sites: cd.waterfall_sites,
         carve_reroute_fraction,
         trim_ocean_loss_m3,
