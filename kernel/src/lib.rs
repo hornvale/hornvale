@@ -31,7 +31,7 @@ pub use ecology::{
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
-pub use ledger::{EntityId, Fact, Ledger, LedgerError, Value};
+pub use ledger::{EntityId, Fact, KindId, Ledger, LedgerError, Value};
 pub use noise::{fbm_2d, value_noise_2d};
 pub use phenomena::{ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Venue, observe};
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};

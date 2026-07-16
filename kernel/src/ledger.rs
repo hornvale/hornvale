@@ -10,6 +10,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct EntityId(pub u64);
 
+/// The stable identity of a *kind* — the authored label a kind is known by
+/// ("red-dragon", "kobold"). A kind's identity is its label, never its
+/// position in any registry (decision 0015: a name is its own key). When a
+/// kind is referenced in the ledger it is referenced by this label (a
+/// `Value::Text`); a deliberate change to a kind's authored traits that must
+/// not alias the old kind takes an epoch suffix ("red-dragon/v2"), never a
+/// rename. Build-state: never serialized — the label enters the save as
+/// `Value::Text`, not as a `KindId`.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct KindId(pub &'static str);
+
 /// A fact's object. `Number` values are quantized to a platform-stable
 /// canonical form at commit (see the `quantize` module), so bitwise-exact
 /// f64 equality is meaningful across platforms — the ledger's serialized
@@ -486,5 +498,14 @@ mod tests {
                 &Value::Text("Bolnar".to_string())
             ]
         );
+    }
+
+    #[test]
+    fn kind_id_orders_by_label() {
+        use crate::KindId;
+        let mut ids = [KindId("kobold"), KindId("goblin"), KindId("bugbear")];
+        ids.sort();
+        assert_eq!(ids, [KindId("bugbear"), KindId("goblin"), KindId("kobold")]);
+        assert_eq!(ids[0].0, "bugbear");
     }
 }

@@ -12,7 +12,7 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, DETRITUS, EntityId, Fact,
+    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, DETRITUS, EntityId, Fact, KindId,
     LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
     World,
 };
@@ -782,7 +782,7 @@ pub struct SpeciesDef {
 /// key order). Kobold, hobgoblin, and bugbear values are derived from D&D
 /// 5E SRD lore — see the species chapter's model card for each derivation.
 /// type-audit: bare-ok(identifier-text)
-pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
+pub fn registry() -> BTreeMap<KindId, SpeciesDef> {
     let mut reg = BTreeMap::new();
     // Mass: D&D 5E average weights (2014 Volo's Guide / PHB tables), lb -> kg:
     //   kobold 30 lb = 13.6 kg, goblin 40 lb = 18.1 kg,
@@ -792,7 +792,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     //   omnivore-scavengers. All omnivores here (both axes > 0); the true
     //   scavenger/autotroph/apex arrive with the Stage-B menagerie.
     reg.insert(
-        "goblin",
+        KindId("goblin"),
         SpeciesDef {
             name: "goblin",
             family: "goblinoid",
@@ -836,7 +836,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "kobold",
+        KindId("kobold"),
         SpeciesDef {
             name: "kobold",
             family: "kobold",
@@ -880,7 +880,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "hobgoblin",
+        KindId("hobgoblin"),
         SpeciesDef {
             name: "hobgoblin",
             family: "goblinoid",
@@ -924,7 +924,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "bugbear",
+        KindId("bugbear"),
         SpeciesDef {
             name: "bugbear",
             family: "goblinoid",
@@ -978,7 +978,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
     // (dragons, treant, xorn); see each `*_condition_niche` helper above for
     // the climate-tile rationale.
     reg.insert(
-        "treant",
+        KindId("treant"),
         SpeciesDef {
             name: "treant",
             family: "plant",
@@ -993,7 +993,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "twig-blight",
+        KindId("twig-blight"),
         SpeciesDef {
             name: "twig-blight",
             family: "plant",
@@ -1008,7 +1008,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "giant-elk",
+        KindId("giant-elk"),
         SpeciesDef {
             name: "giant-elk",
             family: "giant-elk",
@@ -1023,7 +1023,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "woolly-mammoth",
+        KindId("woolly-mammoth"),
         SpeciesDef {
             name: "woolly-mammoth",
             family: "woolly-mammoth",
@@ -1038,7 +1038,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "giant-goat",
+        KindId("giant-goat"),
         SpeciesDef {
             name: "giant-goat",
             family: "giant-goat",
@@ -1053,7 +1053,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "otyugh",
+        KindId("otyugh"),
         SpeciesDef {
             name: "otyugh",
             family: "otyugh",
@@ -1068,7 +1068,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "xorn",
+        KindId("xorn"),
         SpeciesDef {
             name: "xorn",
             family: "xorn",
@@ -1083,7 +1083,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "rust-monster",
+        KindId("rust-monster"),
         SpeciesDef {
             name: "rust-monster",
             family: "rust-monster",
@@ -1098,7 +1098,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "white-dragon",
+        KindId("white-dragon"),
         SpeciesDef {
             name: "white-dragon",
             family: "draconic",
@@ -1113,7 +1113,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "red-dragon",
+        KindId("red-dragon"),
         SpeciesDef {
             name: "red-dragon",
             family: "draconic",
@@ -1128,7 +1128,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "black-dragon",
+        KindId("black-dragon"),
         SpeciesDef {
             name: "black-dragon",
             family: "draconic",
@@ -1143,7 +1143,7 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
         },
     );
     reg.insert(
-        "owlbear",
+        KindId("owlbear"),
         SpeciesDef {
             name: "owlbear",
             family: "owlbear",
@@ -1164,10 +1164,10 @@ pub fn registry() -> BTreeMap<&'static str, SpeciesDef> {
 /// more than one member (a singleton's proto is itself and is absent here).
 /// Each is a distinct point equal to no daughter's vector (spec §3).
 /// type-audit: bare-ok(identifier-text)
-pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
+pub fn family_registry() -> BTreeMap<KindId, ArticulationVector> {
     let mut m = BTreeMap::new();
     m.insert(
-        "goblinoid",
+        KindId("goblinoid"),
         ArticulationVector {
             labiality: 0.5,
             vowel_space: 0.5,
@@ -1185,7 +1185,7 @@ pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
     // (`every_multi_member_family_has_a_proto`), keeping a future language
     // extension to fauna a data change rather than a new invariant.
     m.insert(
-        "draconic",
+        KindId("draconic"),
         ArticulationVector {
             labiality: 0.3,
             vowel_space: 0.6,
@@ -1197,7 +1197,7 @@ pub fn family_registry() -> BTreeMap<&'static str, ArticulationVector> {
         },
     );
     m.insert(
-        "plant",
+        KindId("plant"),
         ArticulationVector {
             labiality: 0.5,
             vowel_space: 0.4,
@@ -1523,7 +1523,7 @@ mod tests {
     #[test]
     fn goblin_is_the_baseline_vector() {
         let reg = registry();
-        let g = &reg["goblin"].peopled.as_ref().unwrap().psych;
+        let g = &reg[&KindId("goblin")].peopled.as_ref().unwrap().psych;
         for v in [
             g.threat_response,
             g.deliberation_latency,
@@ -1539,7 +1539,7 @@ mod tests {
     #[test]
     fn registry_is_ordered_alphabetically_and_kobold_contrasts() {
         let reg = registry();
-        let names: Vec<&str> = reg.keys().copied().collect();
+        let names: Vec<&str> = reg.keys().map(|k| k.0).collect();
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples); BTreeMap key order is lexicographic.
         assert_eq!(
@@ -1563,12 +1563,18 @@ mod tests {
                 "xorn",
             ]
         );
-        let k = &reg["kobold"].peopled.as_ref().unwrap().psych;
+        let k = &reg[&KindId("kobold")].peopled.as_ref().unwrap().psych;
         assert_eq!(k.sociality, Sociality::Communal);
         assert_eq!(k.status_basis, StatusBasis::Knowledge);
         assert!(k.in_group_radius < 0.5 && k.time_horizon > 0.5 && k.threat_response > 0.5);
-        assert_eq!(reg["kobold"].peopled.as_ref().unwrap().noun, "warren");
-        assert_eq!(reg["kobold"].peopled.as_ref().unwrap().top, "elders");
+        assert_eq!(
+            reg[&KindId("kobold")].peopled.as_ref().unwrap().noun,
+            "warren"
+        );
+        assert_eq!(
+            reg[&KindId("kobold")].peopled.as_ref().unwrap().top,
+            "elders"
+        );
     }
 
     #[test]
@@ -1592,6 +1598,82 @@ mod tests {
     }
 
     #[test]
+    fn inserting_a_kind_does_not_change_other_kinds_serialized_labels() {
+        // A kind's committed identity is its label (`KindId` / `SpeciesDef.name`),
+        // never its position (decision 0015). This proves it two ways:
+        // (1) prepending a dummy kind that sorts alphabetically first shifts
+        //     every real kind's build-local dense index (the same `.enumerate()`
+        //     position the worldgen packer's `u32` tags come from) — so
+        //     position is demonstrably NOT identity — while
+        // (2) every real kind's serialized `SPECIES_NAME` fact, minted via
+        //     the real `genesis_in` path, is byte-identical whether or not
+        //     the dummy is present. This is the label-stability half of the
+        //     durable-label / ephemeral-index split `KindId` documents.
+        let real_roster: Vec<SpeciesDef> = registry().into_values().collect();
+
+        // A dummy kind whose label sorts alphabetically before every real
+        // kind ("aaa-test-kind" < "black-dragon", the roster's first label).
+        let mut dummy = real_roster
+            .iter()
+            .find(|d| d.name == "goblin")
+            .expect("goblin is in the roster")
+            .clone();
+        dummy.name = "aaa-test-kind";
+        dummy.family = "aaa-test-kind";
+        dummy.peopled = None;
+        assert!(
+            dummy.name < real_roster[0].name,
+            "the dummy must sort first for the index-shift assertion below to hold"
+        );
+
+        let mut augmented_roster = vec![dummy];
+        augmented_roster.extend(real_roster.iter().cloned());
+
+        // (1) The build-local dense index shifts: `kobold`'s `.enumerate()`
+        // position (what the worldgen packer would tag it with as `u32`)
+        // is not the same across the two rosters.
+        let index_of = |roster: &[SpeciesDef], name: &str| -> usize {
+            roster
+                .iter()
+                .position(|d| d.name == name)
+                .unwrap_or_else(|| panic!("{name} missing from roster"))
+        };
+        let kobold_index_before = index_of(&real_roster, "kobold");
+        let kobold_index_after = index_of(&augmented_roster, "kobold");
+        assert_eq!(
+            kobold_index_after,
+            kobold_index_before + 1,
+            "prepending a dummy kind must renumber the build-local u32 index \
+             of every kind after it — position is not identity"
+        );
+
+        // (2) The serialized label is unaffected: mint both rosters through
+        // the real genesis path and compare each real kind's committed
+        // SPECIES_NAME fact.
+        let mut w_base = World::new(Seed(42));
+        register_concepts(&mut w_base.registry).unwrap();
+        let ids_base = genesis_in(&mut w_base, &real_roster).unwrap();
+
+        let mut w_augmented = World::new(Seed(42));
+        register_concepts(&mut w_augmented.registry).unwrap();
+        let ids_augmented = genesis_in(&mut w_augmented, &augmented_roster).unwrap();
+
+        for def in &real_roster {
+            let id_base = ids_base[def.name];
+            let id_augmented = ids_augmented[def.name];
+            let label_base = w_base.ledger.text_of(id_base, SPECIES_NAME);
+            let label_augmented = w_augmented.ledger.text_of(id_augmented, SPECIES_NAME);
+            assert_eq!(label_base, Some(def.name));
+            assert_eq!(
+                label_base, label_augmented,
+                "kind {}'s serialized SPECIES_NAME label must not change when \
+                 an unrelated kind (\"aaa-test-kind\") is inserted ahead of it",
+                def.name
+            );
+        }
+    }
+
+    #[test]
     fn species_facts_touch_no_pre_existing_predicate() {
         let mut w = World::new(Seed(1));
         register_concepts(&mut w.registry).unwrap();
@@ -1610,11 +1692,11 @@ mod tests {
     #[test]
     fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
         let reg = registry();
-        let g = &reg["goblin"].peopled.as_ref().unwrap().perception;
+        let g = &reg[&KindId("goblin")].peopled.as_ref().unwrap().perception;
         assert_eq!(g.activity, ActivityCycle::Diurnal);
         assert_eq!(g.night_vision, 0.5);
         assert_eq!(g.sky_attention, 0.5);
-        let k = &reg["kobold"].peopled.as_ref().unwrap().perception;
+        let k = &reg[&KindId("kobold")].peopled.as_ref().unwrap().perception;
         assert_eq!(k.activity, ActivityCycle::Nocturnal);
         assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
     }
@@ -1639,11 +1721,19 @@ mod tests {
     #[test]
     fn goblin_articulation_is_baseline_kobold_hisses_and_is_quiet() {
         let reg = registry();
-        let g = &reg["goblin"].peopled.as_ref().unwrap().articulation;
+        let g = &reg[&KindId("goblin")]
+            .peopled
+            .as_ref()
+            .unwrap()
+            .articulation;
         assert_eq!(g.labiality, 0.5);
         assert_eq!(g.voice_loudness, 0.5);
         assert_eq!(g.exotic, ExoticManner::None);
-        let k = &reg["kobold"].peopled.as_ref().unwrap().articulation;
+        let k = &reg[&KindId("kobold")]
+            .peopled
+            .as_ref()
+            .unwrap()
+            .articulation;
         assert!(k.sibilance > 0.5 && k.labiality < 0.5 && k.voice_loudness < 0.5);
         assert_eq!(k.exotic, ExoticManner::Trill);
     }
@@ -1664,28 +1754,35 @@ mod tests {
     fn registry_has_the_goblinoid_triad_and_kobold() {
         let r = registry();
         for name in ["goblin", "hobgoblin", "bugbear", "kobold"] {
-            assert!(r.contains_key(name), "{name} missing");
+            assert!(r.contains_key(&KindId(name)), "{name} missing");
         }
-        assert_eq!(r["hobgoblin"].family, "goblinoid");
-        assert_eq!(r["bugbear"].family, "goblinoid");
-        assert_eq!(r["kobold"].family, "kobold");
+        assert_eq!(r[&KindId("hobgoblin")].family, "goblinoid");
+        assert_eq!(r[&KindId("bugbear")].family, "goblinoid");
+        assert_eq!(r[&KindId("kobold")].family, "kobold");
     }
 
     #[test]
     fn family_divides_along_voice_loudness() {
         let r = registry();
-        let l = |n: &str| r[n].peopled.as_ref().unwrap().articulation.voice_loudness;
+        let l = |n: &'static str| {
+            r[&KindId(n)]
+                .peopled
+                .as_ref()
+                .unwrap()
+                .articulation
+                .voice_loudness
+        };
         assert!(l("bugbear") < l("goblin") && l("goblin") < l("hobgoblin"));
     }
 
     #[test]
     fn proto_goblinoid_vector_equals_no_daughter() {
-        let proto = family_registry()["goblinoid"];
+        let proto = family_registry()[&KindId("goblinoid")];
         let r = registry();
         for d in ["goblin", "hobgoblin", "bugbear"] {
             assert_ne!(
                 proto,
-                r[d].peopled.as_ref().unwrap().articulation,
+                r[&KindId(d)].peopled.as_ref().unwrap().articulation,
                 "proto must differ from {d}"
             );
         }
@@ -1708,7 +1805,7 @@ mod tests {
         for (family, n) in counts {
             if n >= 2 {
                 assert!(
-                    fams.contains_key(family),
+                    fams.contains_key(&KindId(family)),
                     "family {family} has {n} members but no proto vector"
                 );
             }
@@ -1719,7 +1816,7 @@ mod tests {
     fn goblinoids_carry_mass_and_a_nonzero_omnivore_niche() {
         let r = registry();
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
-            let s = &r[name];
+            let s = &r[&KindId(name)];
             assert!(s.biosphere.mass.kilograms() > 0.0, "{name} has mass");
             assert!(!s.biosphere.niche.is_zero(), "{name} eats something");
             // omnivores: both plant-forage and animal-prey present
@@ -1727,16 +1824,24 @@ mod tests {
             assert!(s.biosphere.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
         }
         // strict, modest, monotone mass band: kobold < goblin < hobgoblin < bugbear
-        assert!(r["kobold"].biosphere.mass.kilograms() < r["goblin"].biosphere.mass.kilograms());
-        assert!(r["goblin"].biosphere.mass.kilograms() < r["hobgoblin"].biosphere.mass.kilograms());
         assert!(
-            r["hobgoblin"].biosphere.mass.kilograms() < r["bugbear"].biosphere.mass.kilograms()
+            r[&KindId("kobold")].biosphere.mass.kilograms()
+                < r[&KindId("goblin")].biosphere.mass.kilograms()
+        );
+        assert!(
+            r[&KindId("goblin")].biosphere.mass.kilograms()
+                < r[&KindId("hobgoblin")].biosphere.mass.kilograms()
+        );
+        assert!(
+            r[&KindId("hobgoblin")].biosphere.mass.kilograms()
+                < r[&KindId("bugbear")].biosphere.mass.kilograms()
         );
     }
 
     #[test]
     fn every_species_has_a_finite_condition_niche() {
         for (name, def) in registry() {
+            let name = name.0;
             for r in [
                 def.biosphere.condition_niche.temperature,
                 def.biosphere.condition_niche.moisture,
@@ -1762,7 +1867,13 @@ mod tests {
         let reg = registry();
         let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
             .iter()
-            .map(|n| reg[*n].biosphere.condition_niche.temperature.optimum)
+            .map(|n| {
+                reg[&KindId(n)]
+                    .biosphere
+                    .condition_niche
+                    .temperature
+                    .optimum
+            })
             .collect();
         // the anti-uniformity guard: all four temperature optima pairwise distinct
         for i in 0..opts.len() {
@@ -1779,23 +1890,23 @@ mod tests {
     fn every_species_has_a_metabolic_class() {
         use MetabolicClass::*;
         let r = registry();
-        assert_eq!(r["goblin"].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r["hobgoblin"].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r["bugbear"].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r["kobold"].biosphere.metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
+        assert_eq!(r[&KindId("goblin")].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r[&KindId("hobgoblin")].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r[&KindId("bugbear")].biosphere.metabolic_class, Endotherm);
+        assert_eq!(r[&KindId("kobold")].biosphere.metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
     }
 
     #[test]
     fn split_preserves_biosphere_and_peopled_presence() {
         let reg = registry();
-        let goblin = &reg["goblin"];
+        let goblin = &reg[&KindId("goblin")];
         // biosphere moved intact
         assert_eq!(goblin.biosphere.mass, Mass::new(18.1).unwrap());
         assert_eq!(goblin.biosphere.potency, 0.0);
         // the four peoples all speak/settle
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
             assert!(
-                reg[name].peopled.is_some(),
+                reg[&KindId(name)].peopled.is_some(),
                 "{name} must carry PeopledTraits"
             );
         }
@@ -1838,47 +1949,53 @@ mod tests {
             "black-dragon",
             "owlbear",
         ] {
-            let d = &reg[name];
+            let d = &reg[&KindId(name)];
             assert!(d.peopled.is_none(), "{name} is fauna: no PeopledTraits");
             // `Mass` has no PartialOrd, so read the raw kilograms rather
             // than comparing against `Mass::new(0.0)`.
             assert!(d.biosphere.mass.kilograms() > 0.0, "{name} has mass");
         }
         // mighty creatures carry potency
-        assert!(reg["red-dragon"].biosphere.potency > 0.0);
-        assert!(reg["treant"].biosphere.potency > 0.0);
-        assert!(reg["xorn"].biosphere.potency > 0.0);
+        assert!(reg[&KindId("red-dragon")].biosphere.potency > 0.0);
+        assert!(reg[&KindId("treant")].biosphere.potency > 0.0);
+        assert!(reg[&KindId("xorn")].biosphere.potency > 0.0);
         // the material, non-mighty fauna carry none
-        assert_eq!(reg["owlbear"].biosphere.potency, 0.0);
-        assert_eq!(reg["rust-monster"].biosphere.potency, 0.0);
+        assert_eq!(reg[&KindId("owlbear")].biosphere.potency, 0.0);
+        assert_eq!(reg[&KindId("rust-monster")].biosphere.potency, 0.0);
 
         // resource niches are partitioned, not four omnivores: the distinct
         // dominant axis differs across creatures. `ResourceVector::overlap`
         // is the packer's Pianka overlap; disjoint axes overlap 0.
-        let overlap = reg["treant"]
+        let overlap = reg[&KindId("treant")]
             .biosphere
             .niche
-            .overlap(&reg["white-dragon"].biosphere.niche);
+            .overlap(&reg[&KindId("white-dragon")].biosphere.niche);
         assert!(
             overlap < 0.5,
             "photosynthate vs apex niches must barely overlap"
         );
 
         // Directly assert the basis-constant partition the brief calls for.
-        assert_eq!(reg["treant"].biosphere.niche.weight(PHOTOSYNTHATE), 1.0);
         assert_eq!(
-            reg["twig-blight"].biosphere.niche.weight(PHOTOSYNTHATE),
+            reg[&KindId("treant")].biosphere.niche.weight(PHOTOSYNTHATE),
+            1.0
+        );
+        assert_eq!(
+            reg[&KindId("twig-blight")]
+                .biosphere
+                .niche
+                .weight(PHOTOSYNTHATE),
             1.0
         );
         for name in ["giant-elk", "woolly-mammoth", "giant-goat"] {
-            assert_eq!(reg[name].biosphere.niche.weight(PLANT_FORAGE), 1.0);
+            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(PLANT_FORAGE), 1.0);
         }
         for name in ["white-dragon", "red-dragon", "black-dragon", "owlbear"] {
-            assert_eq!(reg[name].biosphere.niche.weight(ANIMAL_PREY), 1.0);
+            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(ANIMAL_PREY), 1.0);
         }
-        assert_eq!(reg["otyugh"].biosphere.niche.weight(DETRITUS), 1.0);
+        assert_eq!(reg[&KindId("otyugh")].biosphere.niche.weight(DETRITUS), 1.0);
         for name in ["xorn", "rust-monster"] {
-            assert_eq!(reg[name].biosphere.niche.weight(MINERAL), 1.0);
+            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(MINERAL), 1.0);
         }
     }
 
@@ -1889,22 +2006,28 @@ mod tests {
         // this generically, but pin the two new families explicitly so a
         // future edit that deletes one fails loudly here too.
         let fams = family_registry();
-        assert!(fams.contains_key("draconic"));
-        assert!(fams.contains_key("plant"));
+        assert!(fams.contains_key(&KindId("draconic")));
+        assert!(fams.contains_key(&KindId("plant")));
 
         let reg = registry();
         for name in ["white-dragon", "red-dragon", "black-dragon"] {
-            assert_eq!(reg[name].family, "draconic");
+            assert_eq!(reg[&KindId(name)].family, "draconic");
         }
         for name in ["treant", "twig-blight"] {
-            assert_eq!(reg[name].family, "plant");
+            assert_eq!(reg[&KindId(name)].family, "plant");
         }
 
         // The three chromatics claim distinct climate tiles even though they
         // share the animal-prey axis: white owns the cold, and red/black —
         // both warm — separate on moisture (volcanic-arid vs. swamp-wet).
-        let temp = |n: &str| reg[n].biosphere.condition_niche.temperature.optimum;
-        let moisture = |n: &str| reg[n].biosphere.condition_niche.moisture.optimum;
+        let temp = |n: &'static str| {
+            reg[&KindId(n)]
+                .biosphere
+                .condition_niche
+                .temperature
+                .optimum
+        };
+        let moisture = |n: &'static str| reg[&KindId(n)].biosphere.condition_niche.moisture.optimum;
         assert!(temp("white-dragon") < temp("red-dragon"));
         assert!(temp("white-dragon") < temp("black-dragon"));
         assert!(

@@ -1226,8 +1226,10 @@ pub fn registry() -> Vec<Metric> {
         Metric {
             name: "capacity-by-abs-latitude",
             doc: "The carrying-capacity field's headline calibration (design spec §5): the \
-                   ratio of mean per-land-cell K (summed over the full species roster's \
-                   individual fields, each species' own psychology folded in) in the \
+                   ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' \
+                   individual fields, each species' own psychology folded in — fauna kinds \
+                   have no psychology and are excluded, preserving this metric's \
+                   pre-menagerie population) in the \
                    low-latitude band (|latitude| < 30) to the \
                    polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of \
                    the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP \
@@ -1244,7 +1246,12 @@ pub fn registry() -> Vec<Metric> {
                     hornvale_worldgen::carrying_inputs_of(geo, v.terrain(), v.climate());
                 let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) =
                     (0.0_f64, 0u32, 0.0_f64, 0u32);
-                for def in v.roster() {
+                // Peopled kinds only: `peopled()` panics on fauna (the
+                // pass-boundary contract, worldgen lib.rs), and this
+                // metric's population has always been the psych-bearing
+                // roster — fauna carrying capacity is the biosphere/niche
+                // path, not this field.
+                for def in v.roster().iter().filter(|d| d.peopled.is_some()) {
                     let psych = &hornvale_worldgen::peopled(def).psych;
                     let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
                         hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
@@ -4541,6 +4548,31 @@ mod tests {
     }
 
     #[test]
+    fn capacity_metric_skips_fauna_kinds_at_seed_42() {
+        // Regression (2026-07-16): the menagerie put fauna kinds (no
+        // `PeopledTraits`) into `default_roster()`, and this metric's
+        // roster loop called `peopled()` unguarded — panicking at census
+        // scale only, because its calibration battery is heavy-tier and
+        // the commit gate never evaluated the metric. This test keeps the
+        // evaluation in the commit gate.
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        assert!(
+            view.roster().iter().any(|d| d.peopled.is_none()),
+            "premise: the default roster carries at least one fauna kind"
+        );
+        let built = BuiltView::Full(view);
+        match extract_from(&built, "capacity-by-abs-latitude") {
+            MetricValue::Number(v) => {
+                assert!(
+                    v.is_finite() && v > 0.0,
+                    "capacity ratio finite and positive: {v}"
+                )
+            }
+            other => panic!("expected a Number, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn composition_varies_across_settlements_at_seed_42() {
         // The Niche's headline: refutes the task-C "oatmeal" (identical
         // composition in all 276 settlements). Composition now VARIES and
@@ -4875,7 +4907,7 @@ mod tests {
     #[test]
     fn build_with_roster_resolves_a_renamed_solo_species() {
         use hornvale_species::SpeciesDef;
-        let goblin = hornvale_species::registry()["goblin"].clone();
+        let goblin = hornvale_species::registry()[&hornvale_kernel::KindId("goblin")].clone();
         let twin = SpeciesDef {
             name: "goblin-twin",
             ..goblin

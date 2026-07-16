@@ -29,7 +29,7 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
         if def.peopled.is_none() {
             continue;
         }
-        for (_, name) in crate::phonology::sample_names_for(&world, species, &def) {
+        for (_, name) in crate::phonology::sample_names_for(&world, species.0, &def) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {
                 kept += 1;
@@ -37,8 +37,9 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
             }
             record(&name.espeak, &path)?;
             println!(
-                "wrote {}  ({species} {} {})",
+                "wrote {}  ({} {} {})",
                 path.display(),
+                species.0,
                 name.roman,
                 name.espeak
             );

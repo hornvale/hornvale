@@ -44,9 +44,9 @@ pub fn render_phonology() -> String {
         if def.peopled.is_none() {
             continue;
         }
-        let phonology = world_builder::language_of(&world, species);
+        let phonology = world_builder::language_of(&world, species.0);
 
-        doc.push_str(&format!("## {}\n\n", capitalize(species)));
+        doc.push_str(&format!("## {}\n\n", capitalize(species.0)));
 
         doc.push_str("### Inventory\n\n");
         doc.push_str("| Segment | Romanization | IPA | Features |\n|---|---|---|---|\n");
@@ -77,7 +77,7 @@ pub fn render_phonology() -> String {
 
         doc.push_str("### Sample names\n\n");
         doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
-        for (kind, name) in sample_names_for(&world, species, &def) {
+        for (kind, name) in sample_names_for(&world, species.0, &def) {
             doc.push_str(&format!(
                 "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
                 kind,
@@ -214,6 +214,7 @@ mod tests {
             if def.peopled.is_none() {
                 continue;
             }
+            let species = species.0;
             assert!(
                 doc.contains(&capitalize(species)),
                 "missing species heading for {species}"
@@ -246,6 +247,7 @@ mod tests {
             .iter()
             .find(|(_, def)| def.peopled.is_some())
             .expect("at least one peopled species");
+        let species = species.0;
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
         let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
@@ -276,7 +278,7 @@ mod tests {
             .iter()
             .find(|(_, def)| def.peopled.is_some())
             .expect("at least one peopled species");
-        let samples = sample_names_for(&world, species, def);
+        let samples = sample_names_for(&world, species.0, def);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {
             assert!(
