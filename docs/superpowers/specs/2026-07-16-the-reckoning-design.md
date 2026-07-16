@@ -1,7 +1,7 @@
 # The Reckoning — Design
 
 **Date:** 2026-07-16
-**Status:** Awaiting G3 review
+**Status:** G3 RATIFIED 2026-07-16 (T_MAX = 15 Gyr; full epoch incl. Capture). Planning next. The AWS census regen remains an open carve-out — see §9.4.
 **Tickets:** none yet — this is campaign **A** of the arc split out of [hornvale#4](https://github.com/hornvale/hornvale/issues/4); campaign **B** is the parked `2026-07-16-the-moons-design.md` (moon surfaces), which is blocked on this.
 **Parent contracts:** `2026-07-14-the-long-count-design.md` (main-sequence brightening — this supplies the zero point it lacks), `2026-07-14-eclipse-seasons-design.md` (dates eclipses from moon inclination + node — **this campaign moves those**), decision 0009 (models author, dice roll), the Campaign 2 astronomy model card.
 **This is an epoch.** See §7.
@@ -59,6 +59,7 @@ this spec's §7 blast-radius analysis depends on it holding.
 
 ```
 t_MS(M)  = 10 Gyr · M^-2.5          (already implicit in brightening_per_gyr)
+T_MAX    = 15 Gyr                   (ratified — see below; NOT 13.8)
 age      = U(0.05, 0.95) · min(t_MS(M), T_MAX)
 ```
 
@@ -66,19 +67,27 @@ drawn from a new stream, `star-age`. The `0.05–0.95` guard rails keep the star
 off the pre-main-sequence and post-main-sequence edges, where none of the
 model's physics applies.
 
-`T_MAX` is the open question — see §9.1. Across the drawn star-mass span
-(0.6–1.4 M☉) the lifetimes are:
+Across the drawn star-mass span (0.6–1.4 M☉) the lifetimes are:
 
 ```
-  0.6 Msun (K)  ->  t_MS = 35.9 Gyr    brightening  2.8 %/Gyr
-  1.0 Msun (G)  ->  t_MS = 10.0 Gyr    brightening 10.0 %/Gyr
-  1.4 Msun (F)  ->  t_MS =  4.3 Gyr    brightening 23.2 %/Gyr
+  0.6 Msun (K)  ->  t_MS = 35.9 Gyr    brightening  2.8 %/Gyr   (T_MAX binds)
+  1.0 Msun (G)  ->  t_MS = 10.0 Gyr    brightening 10.0 %/Gyr   (t_MS binds)
+  1.4 Msun (F)  ->  t_MS =  4.3 Gyr    brightening 23.2 %/Gyr   (t_MS binds)
 ```
 
-A **cosmological cap has a real physical consequence**, which is an argument
-for it beyond tidiness: capped at 13.8 Gyr, a 0.6 M☉ K dwarf can only ever be
-~38% through its life, so it has necessarily brightened very little — which is
-true of real K dwarfs, and emerges rather than being asserted.
+**`T_MAX = 15 Gyr` (Nathan, ratified at G3). Note what 15 is not: it is not
+13.8.** A 13.8 Gyr cap would have imported *our* cosmology wholesale — every
+Hornvale world would then sit in a universe with our Big Bang. 15 Gyr is a
+**bound without a cosmology**: it says no star here is older than 15 Gyr while
+declining to say when the universe began. That keeps UNI-2 (metaphysics)
+genuinely open, rather than settling it as a side effect of a stellar-age
+formula. A generator constant should not quietly answer a metaphysical
+question the project has deliberately left open.
+
+The cap still buys its physics. A 0.6 M☉ K dwarf (t_MS 35.9 Gyr) is bounded at
+~42% of its main-sequence life, so it has **necessarily brightened little** —
+which is true of real K dwarfs, and *emerges* from the bound rather than being
+asserted anywhere.
 
 **Planet age** is *derived*: `planet_age = max(0, star_age − 0.05 Gyr)`.
 Terrestrial planets finish accreting within ~30–100 Myr of their star, so the
@@ -205,31 +214,41 @@ than new names, so an old save's derivation is still legible.
 - **Re-pins in the drifting commit**, never deferred to the close: the eclipse
   goldens move in the commit that moves them.
 
-## 9. Flagged for G3
+## 9. G3 outcome (ratified 2026-07-16)
 
-1. **`T_MAX` asserts a cosmology, and I cannot pick it for you.** A 0.6 M☉ K
-   dwarf's `t_MS` is **35.9 Gyr** — longer than the universe has existed. Cap
-   at 13.8 Gyr and Hornvale has committed to Big Bang cosmology; leave it
-   uncapped and a star may be 30 Gyr old, committing to an old or eternal
-   universe. **There is no neutral choice** — the number exists either way, and
-   the metaphysics is UNI-2-gated. My recommendation is `T_MAX = 13.8 Gyr`:
-   the project already calibrates on real constants throughout (Sol's
-   brightening, Luna, Earth), and the cap buys the emergent K-dwarf result in
-   §4. But this is your call.
-2. **Epoch + save-format contract (leads by carve-out rule).** New streams:
+1. **`T_MAX` = 15 Gyr — RATIFIED.** The question was never stellar physics: a
+   0.6 M☉ K dwarf's `t_MS` is 35.9 Gyr, longer than our universe has existed,
+   so *any* answer commits the project to a cosmology. 15 Gyr bounds without
+   committing (§4). UNI-2 stays open.
+2. **Full epoch, including `Capture` — RATIFIED.** The cheap variant (ages +
+   giant-impact only, in which the epoch mostly evaporates — inclination stops
+   moving, the eclipse batteries mostly hold, likely no regen) was offered and
+   **declined**, with the cost understood. Nathan's rationale, which belongs in
+   the record because it is the campaign's actual purpose: *"part of the point
+   here is 'to explore strange new worlds'… this can contribute to making
+   worlds that are more expressive and more interesting."* The thing that makes
+   this expensive — capture, and the irregular, retrograde, high-inclination
+   moons it admits — **is the deliverable**. Uniformity was never the goal.
+3. **Epoch + save-format contract (stands, by carve-out rule).** New streams:
    `star-age`, `moon-formation`. Changed derivation for the existing per-moon
    draws ⇒ epoch suffixes (`/v2`), not renames. Every seeded world's moons
    change; every world's climate does not (§3).
-3. **AWS census regeneration required** — an explicit-authorization carve-out.
-   The eclipse-cadence metrics move. Note the coordination: **rift-and-fit is a
-   terrain epoch v4 already at G3 with its own census-sequencing flag.** Two
-   epochs, one census budget. You chose to run this one now and split The Moons
-   behind it; the regen sequencing against rift-and-fit is still open.
-4. **Modelling capture at all is the campaign's boldest claim.** It introduces
-   retrograde and high-inclination moons to worlds that have never had them,
-   which will visibly change skies and eclipse cadences that players/tests have
-   seen. It is also the thing that makes moons *make sense*. If you would rather
-   ship ages + giant-impact-only (no capture, inclination distribution
-   unchanged), **the epoch mostly evaporates** — inclination stops moving, the
-   eclipse batteries mostly hold, and the census may not need a regen at all.
-   That is a materially cheaper campaign and a legitimate stopping point.
+4. **AWS census regeneration — STILL AN OPEN CARVE-OUT.** Authorising the epoch
+   is not authorising the spend. The eclipse-cadence metrics move, so a regen
+   is required *at merge*, and it needs explicit authorization at the point of
+   running it. **rift-and-fit is a terrain epoch v4 already at G3 with its own
+   census-sequencing flag** — two epochs, one census budget, and the sequencing
+   between them is unresolved. This is the one thing that can still block the
+   close.
+
+### 9.1 Registry context (scanned 2026-07-16)
+
+The frontier registry already banks much of this neighbourhood, and the spec
+should cross-link rather than restate: `SKY-22` **retrograde rotation is
+already shipped** (`Rotation::Spinning` carries a `retrograde: bool`) — moon
+retrogradation here is the *satellite* case, not the anchor's. `SKY-rings`
+banks ring systems *and* their Roche-limit origin, which is where a
+disintegrating moon would land — adjacent to this campaign's Roche/Hill
+bounds, deliberately out of scope. This campaign's own products are the newly
+filed `SKY-minimoon` (temporary capture — the honest sibling of §5's permanent
+capture) and `SKY-quasi-satellite`.
