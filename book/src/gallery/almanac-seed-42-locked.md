@@ -49,78 +49,78 @@ Eclipses of the first moon repeat every 1070 days (64 months); a family of them 
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 5534 m above the sea.
+The highest land stands 5605 m above the sea.
 Notable: the Great Delta, salt flats.
 
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
 Some 10% of the surface is habitable — land with water and a tolerable season.
 
-- **Veamjeattaonoagoo** — temperate-forest
 - **Njeomjeoxaanoagoo** — alpine
 - **Xoomjoeboe** — alpine
+- **Xeagqaenoagoo** — temperate-forest
 - **Voaveaboe** — alpine
+- **Xaaveongjoenoagoo** — temperate-forest
+- **Feengjoanjoeboenoagoo** — alpine
 - **Kbaefoegqoenoagooboe** — alpine
-- **Mjoeqteobtaeboenoagoo** — alpine
-- **Njootgoenoagoo** — alpine
-- **Vaonjoonoagooboe** — alpine
-- **Ktoakgeaxeaboe** — alpine
-- **Voangjaenoagooboe** — alpine
-- **Veevoaqqaaboenoagoo** — alpine
+- **Njaengjeaboe** — alpine
+- **Kkaonjaenoagoo** — alpine
+- **Njoexeeboenoagoo** — alpine
 - **Njoevoenoagoo** — alpine
-- **Bqeangjeenjooboenoagoo** — alpine
-- **Faafeofaonoagoo** — alpine
-- **Mjoomjoaktoenoagoo** — alpine
 - **Njeaveebqaeboenoagoo** — alpine
-- **Tbaekteeboenoagoo** — alpine
-- **Xaexeekbeoboe** — alpine
+- **Mjoomjoaktoenoagoo** — alpine
+- **Veevoaqqaaboenoagoo** — alpine
+- **Njeogqoanoagooboe** — alpine
+- **Qbeegboonoagoo** — alpine
+- **Njeetbaonoagoo** — alpine
 - **Ngjoemjeemjeenoagoo** — alpine
-- **Njaongjeenoagooboe** — alpine
-- **Njeokqoomjoeboenoagoo** — alpine
-- **Gtoekkoangjaenoagoo** — temperate-forest
-- **Foaqbeangjoanoagoo** — alpine
-- **Tteofaangjeanoagoo** — savanna
-- **Veofeabgaanoenoa** — temperate-forest
-- **Njeamjookgaanoagooboe** — alpine
+- **Tqaekqaoxoenoenoanoagoo** — temperate-forest
+- **Feanjeaboe** — alpine
 - **Fooveanoagooboe** — alpine
-- **Xoenjoanoagooboe** — alpine
+- **Tteofaangjeanoagoo** — savanna
+- **Gtoekkoangjaenoagoo** — temperate-forest
+- **Kqoongjoavoanoagooboe** — alpine
+- **Foaqbeangjoanoagoo** — alpine
+- **Njeamjookgaanoagooboe** — alpine
 - **Ngjaoxooxooboe** — alpine
+- **Njeokqoomjoeboenoagoo** — alpine
+- **Voanjaaboe** — alpine
+- **Veomjaeboenoagoo** — alpine
 - **Bqaobkoanoagooboe** — alpine
 - **Faangjeemjoaboenoagoo** — alpine
-- **Veetgeovaeboe** — alpine
 - **Veofeenoagoonaabae** — savanna
-- **Njaaxoafoenoagooboe** — alpine
-- **Kkaovoenoagoo** — alpine
-- **Tteongjeongjoaboe** — alpine
+- **Bbaonjooboe** — alpine
+- **Mjaonjaexaeboe** — alpine
+- **Ggaexoegtaaboe** — alpine
+- **Veexaoxoanoagooboe** — alpine
 - **Ngjaogboobqoanoagooboe** — alpine
 - **Xeekbaekqoenaabaenoagoo** — savanna
-- **Njeogqoanoagooboe** — alpine
-- **Feengjeoboe** — alpine
 - **Xaavaeboe** — alpine
-- **Njeakkoenoagoo** — alpine
-- **Gkoevoenoenoa** — temperate-forest
+- **Ktoakgeaxeaboe** — alpine
+- **Mjaaxeaxaanoagoo** — alpine
 - **Njeexaanoagoo** — savanna
-- **Xaobgaoxoenoagoo** — alpine
 - **Ngjaonjeanoagoo** — alpine
-- **Xaengjeetgaaboe** — alpine
-- **Mjaonjaexaeboe** — alpine
-- **Vnokngokvnotbeetaonoaboo** — tropical-seasonal-forest
-- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
+- **Gkoevoenoenoa** — temperate-forest
+- **Xaobgaoxoenoagoo** — alpine
+- **Nadngotvnekbeetao** — tropical-seasonal-forest
+- **Feengjeoboe** — alpine
 - **Tboavaanoagoonaabae** — savanna
 - **Voenjaaboenoagoo** — alpine
-- **Xaemjeenoagooboe** — alpine
 - **Feekkaamjoenaabae** — savanna
-- **Tgeenjaofeonoagooboe** — alpine
-- **Voavoatteanoagoonaabae** — savanna
-- **Fnetsvakfngodbeetao** — tropical-seasonal-forest
+- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
+- **Xaemjeenoagooboe** — alpine
+- **Faeveanoagoo** — alpine
 - **Fnaksvotnoaboo** — temperate-forest
-- **Btoangjeotkaenoagoo** — tropical-seasonal-forest
-- **Nokxnekxngabnoaboo** — temperate-forest
-- **Tkeaqqoomjeonoagooboe** — alpine
+- **Tgeenjaofeonoagooboe** — alpine
+- **Fnetsvakfngodnoenoa** — temperate-forest
+- **Voavoatteanoagoonaabae** — savanna
+- **Kkaabqeanoagoo** — alpine
 - **Mjoangjoekkoaboe** — alpine
-- **Svadvngatnoenoanoaboo** — temperate-forest
 - **Qboavaanoagooboe** — alpine
+- **Nokxnekxngabnoaboo** — temperate-forest
 - **Sfekzhfobzhxetnoaboonoenoa** — temperate-forest
 - **Ngjaotkeenoagoonaabae** — savanna
+- **Svadvngatnoenoanoaboo** — temperate-forest
+- **Mjoavooxaageetaonoagoo** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -137,19 +137,19 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 ## The People
 
 The land holds 66 settlement(s).
-The chief goblin settlement, Vnokngokvnotbeetaonoaboo, holds 1 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Veamjeattaonoagoo, holds 16 souls amid temperate-forest.
+The chief goblin settlement, Nadngotvnekbeetao, holds 1 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Njeomjeoxaanoagoo, holds 13 souls amid alpine.
 
-The goblin village of **Vnokngokvnotbeetaonoaboo**, population 1.
+The goblin village of **Nadngotvnekbeetao**, population 1.
 
-Vnokngokvnotbeetaonoaboo lives by farming.
+Nadngotvnekbeetao lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Veamjeattaonoagoo**, population 16.
+The hobgoblin legion of **Njeomjeoxaanoagoo**, population 13.
 
-Veamjeattaonoagoo lives by farming.
-Its roles, lowest to highest: laborer, augur, warlord.
+Njeomjeoxaanoagoo lives by foraging.
+Its roles, lowest to highest: laborer, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 ## The Gods
@@ -176,7 +176,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Veamjeattaonoagoo**, an organized priesthood tends its own pantheon:
+The legion of **Njeomjeoxaanoagoo** keeps its own folk pantheon:
 
 > Toeqea the Ngjeanoagoo is ever: Toeqea the Ngjeanoagoo watches unceasing. So it was, so it is.
 >

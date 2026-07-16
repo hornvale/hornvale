@@ -133,7 +133,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
 | `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → no change → Beonae |
 | `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → no change → Neebeo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
@@ -149,7 +149,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
-| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |

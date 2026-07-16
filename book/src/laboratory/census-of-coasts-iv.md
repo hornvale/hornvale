@@ -214,6 +214,48 @@ floor.
 |---|---|---:|---:|---:|---|---|---|
 | 0 (baseline) | v4 fit core, untuned (no crenulation) | 6.8647 | 0.0794 | 0.0840 | all inside (3.17 / 8 / 0.278 / 0.706) | battery green | shoreline open below floor; **shelf regressed out of band** (v3 closed 0.0916 → 0.0794) |
 | 1 (shipped) | cell-scale fracture crenulation activated: `CRENULATION_AMP` = 0.175 (`FRACTURE_AMP` × 0.5, first probe), `CRENULATION_FREQ` = 48.0, 1 octave, distinct hash-derived seed | **7.2334** (+0.369) | 0.0799 (+0.0004, flat) | 0.0806 | all inside (3.16 / 8 / 0.277 / 0.706) | battery green | guards held; shoreline moved toward floor; **crenulation does not recover shelf-fraction** |
+| 2a (probe only, NOT shipped) | `CRENULATION_AMP` bumped 0.175 → 0.30 (taper unchanged), to bank shoreline headroom | 7.6403 (+0.407) | 0.0803 | 0.0824 | all inside (3.14 / 8 / 0.274 / 0.706) | battery green | shoreline headroom banked; **fails the conjugate-fit battery** (see below) → not shipped |
+| 2 (shipped) | `CLIP_TAPER` widened 0.08 → 0.16 (Lever A, root-cause shelf recovery); crenulation held at its fit ceiling 0.175 | 6.8686 | **0.0841** (inside) | 0.0796 | all inside (3.06 / 8 / 0.281 / 0.706) | battery green | **shelf-fraction recovered into band**; conjugate-fit battery green; wider taper smooths coast, so shoreline returns to ~baseline |
+
+Iteration-2 reading. **Shelf-fraction is recovered into `[0.08, 0.22]`** — the
+v4 fit clip regressed it by cutting margins too steeply, and widening the
+clip's near-sea taper (`CLIP_TAPER` 0.08 → 0.16) restores the shallow band at
+its root: less continental crust removed at the coast, so crust tapers through
+sea level over a wider swath. Median shelf-fraction 0.0794 → **0.0841**
+(43/100 seeds below 0.08, down from 52; distribution mean 0.0916, back to the
+v3 figure). The conjugate fit is untouched: the clip reads exactly 0.5 at the
+seam curve for *any* taper (`smoothstep(0.5) == 0.5`), so
+`conjugate_margins_fit_by_construction` stays green — shelf was recovered
+without trading the fit, the season's signature. Every stayer held (bimodality
+softened 3.16 → 3.06 as the wider shelf taper predicts, still far inside its
+2–8 band), and reroute held at 0.0796.
+
+Two mechanism findings fell out of iteration 2.
+
+*Crenulation has a fit-battery ceiling at ~0.175.* Bumping `CRENULATION_AMP`
+to 0.30 (row 2a) does bank more shoreline (7.2334 → 7.6403), but crenulation
+is high-frequency (`CRENULATION_FREQ` = 48), so past ~0.175 the seam curve
+oscillates across the conjugate-fit battery's cross-arc strongly enough that
+its single-root bisection can no longer sample ≥ 30 shared-curve points
+(`conjugate_margins_fit_by_construction` finds 28 points at 0.20, 22 at 0.25,
+19 at 0.30 — below the battery's 30-point floor). The fit *holds* wherever a
+zero is found (0.5 for any noise); the curve is simply too crenulated to
+sample. So 0.30 is a measurement, not a shippable amplitude — crenulation
+ships at 0.175, its fit ceiling.
+
+*Shelf-recovery and shoreline-roughening are antagonistic through the coast.*
+The wider taper that recovers shelf also *smooths* the coastline (a gentler
+near-sea gradient is a less crenulated one), which returns shoreline-
+development to ~baseline (6.8686, from iteration 1's 7.2334). The two open
+bands are not independent: the very lever that closes shelf partly undoes
+crenulation's shoreline gain. This is acceptable under the operating frame —
+6.8686 sits comfortably inside the Earth-anchor band **[5.13, 13.14]**
+(`D_earth` = 8.21), and shoreline's contested 9.51 legacy floor is a
+band-supersession question reserved to Nathan at close (§7 / Task 11 G6), not
+an amplitude chase (which, given the fit ceiling and the high-frequency-texture
+anti-pattern, crenulation cannot win anyway). Shelf is the band this season
+must *close*, and it is closed; shoreline is a band to *hand over*, and it
+already passes the Earth-anchored replacement.
 
 Iteration-1 reading. Crenulation is a real shoreline-development mover: at the
 first-probe amplitude it closes roughly **14%** of the 6.8647 → 9.51 gap in one

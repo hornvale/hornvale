@@ -15,7 +15,6 @@ Salient phenomena, most attention-demanding first:
 - [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
 - [0.65] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
 - [0.64] *celestial-body* — a vast moon
-- [0.60] *heliacal-setting* — The smoldering red star takes its leave into the sunset.
 - [0.50] *tide* — the tide, rising and falling under the vast moon
 - [0.47] *celestial-body* — a small, distant moon
 - [0.29] *tide* — the tide, rising and falling under the small, distant moon
@@ -30,9 +29,9 @@ Salient phenomena, most attention-demanding first:
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
-The smoldering red star returns before dawn at year-phase 0.25, after 14 days of absence.
+The smoldering red star returns before dawn at year-phase 0.26, after 19 days of absence.
 
-The warm yellow star returns before dawn at year-phase 0.12, after 18 days of absence.
+The warm yellow star returns before dawn at year-phase 0.12, after 17 days of absence.
 
 The deep orange star returns before dawn at year-phase 0.96, after 18 days of absence.
 
@@ -70,66 +69,72 @@ From the first settlement, the midsummer sun rises at azimuth 89.0°; the sightl
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 5534 m above the sea.
+The highest land stands 5605 m above the sea.
 Notable: the Great Delta, salt flats.
 
-The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
+The air organizes into 3 circulation band(s) per hemisphere; 12 land biomes and 8 marine biomes cover the globe.
 Some 10% of the surface is habitable — land with water and a tolerable season.
 
+- **Feefaenoagoo** — temperate-forest
 - **Qgeonjeeqbeonoagoo** — temperate-forest
-- **Njaetboaqgeanoagoonoenoa** — temperate-forest
-- **Gqaonjeonoagoo** — temperate-forest
-- **Ngjeefeongjeenoenoanoagoo** — temperate-forest
+- **Foemjeexaanoagoo** — temperate-forest
+- **Xeexoenoenoa** — temperate-forest
+- **Ggaexoengjeanoagoo** — temperate-forest
+- **Njaafeavoanoagoonoenoa** — temperate-forest
 - **Njeoxaeveanoagoo** — temperate-forest
-- **Qtoagqeonoenoanoagoo** — temperate-forest
+- **Njootkaenoenoa** — temperate-forest
 - **Xaemjaotgaonoenoa** — temperate-forest
-- **Bkaovoenjaonoagoo** — temperate-forest
 - **Xoemjaanoenoanoagoo** — temperate-forest
 - **Njeoqbeanoenoa** — temperate-forest
-- **Faevoafaanoenoa** — temperate-forest
+- **Ngjaanjaekkaonoenoanoagoo** — temperate-forest
+- **Xaatbeonaagoa** — shrubland
+- **Ngjeefeongjeenoenoanoagoo** — temperate-forest
 - **Ngekzhfetnoaboo** — temperate-forest
-- **Xaefeanoagoonoenoa** — temperate-forest
-- **Xnekvngokneknoenoanoaboo** — temperate-forest
-- **Nedngednoaboo** — temperate-forest
-- **Xaomjoongjeenoenoa** — temperate-forest
-- **Qkaoqboobgeonoagoo** — temperate-forest
-- **Mjeofaovaenoenoa** — temperate-forest
-- **Njaonjoomjeanoagoonoenoa** — temperate-forest
-- **Faanjoengjoonoagoonoenoa** — temperate-forest
-- **Foanjaanjoanaagoa** — shrubland
-- **Vaaxeaqgoonoagoo** — temperate-forest
-- **Kkoeggeomjaanoagoo** — temperate-forest
-- **Tteatqeangjoenaagoa** — shrubland
+- **Xoanjaanoagoonoenoa** — temperate-forest
+- **Mjoangjaonoenoa** — temperate-forest
 - **Bkeexeoxaanoagoonoenoa** — temperate-forest
+- **Kkeafeexeenoenoa** — temperate-forest
+- **Mjeofaovaenoenoa** — temperate-forest
+- **Qkaoqboobgeonoagoo** — temperate-forest
+- **Njaonjoomjeanoagoonoenoa** — temperate-forest
+- **Njoomjaaxaonoagoo** — temperate-forest
+- **Ggeenjaonoagoo** — temperate-forest
+- **Foettaanoenoanoagoo** — temperate-forest
+- **Zvokfnednoenoanoaboo** — temperate-forest
+- **Netneknoaboo** — temperate-forest
+- **Vnokxngeknoaboonoenoa** — temperate-forest
+- **Xaemjaeqbaanoenoa** — temperate-forest
 - **Tqoamjeonoagoonoenoa** — temperate-forest
 - **Xnobngatnoaboo** — temperate-forest
-- **Tkoexeonoenoanoagoo** — temperate-forest
-- **Veongjeanoagoo** — temperate-forest
-- **Vaogkoangjeanoagoo** — temperate-forest
-- **Zhvabvnetsfebnoenoanoaboo** — temperate-forest
-- **Ngjeogtaanoagoonaagoa** — shrubland
+- **Vaaxeaqgoonoagoo** — temperate-forest
+- **Fngabvnadngodnoenoa** — temperate-forest
+- **Qkaomjaefaanoagoonoenoa** — temperate-forest
 - **Njeetgoanoagoo** — temperate-forest
 - **Sfadsvobsxadnoaboonoenoa** — temperate-forest
-- **Fngebsfetnoaboonoenoa** — temperate-forest
+- **Veogbaonoagoo** — temperate-forest
+- **Ngjeogtaanoagoonaagoa** — shrubland
+- **Zhvabvnetsfebnoenoanoaboo** — temperate-forest
 - **Bgaofaonoenoa** — temperate-forest
-- **Tkoekkoonoagoo** — taiga
-- **Njaoveenjeanoagoonoenoa** — temperate-forest
-- **Vaoxaanoagoo** — temperate-forest
+- **Ktoaxaanjeanoenoa** — temperate-forest
 - **Ngodvnoksxabnoaboonoenoa** — temperate-forest
 - **Ktoenjeanoenoanoagoo** — temperate-forest
-- **Ktoaxaanjeanoenoa** — temperate-forest
-- **Nebxngetfnadnoaboonoenoa** — temperate-forest
-- **Kkaakgeekteanoenoa** — temperate-forest
-- **Ttaeqboanoenoa** — temperate-forest
-- **Fngodxnetnoabookaa** — taiga
-- **Xaafaenoagoo** — temperate-forest
-- **Ngabngeknoenoanoaboo** — temperate-forest
+- **Vaoxaanoagoo** — temperate-forest
+- **Xeofaanoenoanoagoo** — temperate-forest
+- **Tkoekkoonoagoo** — taiga
+- **Xngebnebnoenoanoaboo** — temperate-forest
 - **Zhfetzhxabnoaboo** — temperate-forest
-- **Foettaanoenoanoagoo** — temperate-forest
-- **Nekxngodnednoaboo** — temperate-forest
-- **Ngetzxodnoenoa** — temperate-forest
+- **Xnodnebngebnoenoanoaboo** — temperate-forest
+- **Zhxabzfaknoenoanoaboo** — temperate-forest
+- **Ngodxnebnoaboo** — temperate-forest
+- **Feebkaonoenoa** — temperate-forest
+- **Vaogkoangjeanoagoo** — temperate-forest
+- **Xaafaenoagoo** — temperate-forest
 - **Fngatfngotsvotnoenoa** — temperate-forest
-- **Kkaongjoattoonoagoo** — temperate-forest
+- **Nekxngodnednoaboo** — temperate-forest
+- **Naksxetnoabookaa** — taiga
+- **Ktoeqbaonoenoanoagoo** — temperate-forest
+- **Nadsxabzxotnoaboonoenoa** — temperate-forest
+- **Fnetzhvaknoenoa** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -140,14 +145,14 @@ Notable: karst country, salt flats.
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 41% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 40% of the land.
 The sun brightens by 8 parts in a hundred over a gigayear — the slow fire under every deeper clock.
 
 ## The People
 
-The land holds 54 settlement(s).
+The land holds 60 settlement(s).
 The chief goblin settlement, Ngekzhfetnoaboo, holds 1 souls amid temperate-forest.
-The chief hobgoblin settlement, Qgeonjeeqbeonoagoo, holds 14 souls amid temperate-forest.
+The chief hobgoblin settlement, Feefaenoagoo, holds 8 souls amid temperate-forest.
 
 The goblin village of **Ngekzhfetnoaboo**, population 1.
 
@@ -155,9 +160,9 @@ Ngekzhfetnoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Qgeonjeeqbeonoagoo**, population 14.
+The hobgoblin legion of **Feefaenoagoo**, population 8.
 
-Qgeonjeeqbeonoagoo lives by farming.
+Feefaenoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
@@ -193,23 +198,19 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Ngakvngeb the Fnodsfekngek returns every 368.05 days. So it was, so it is.
->
-> — derived from the phenomenon *heliacal-setting*
-
-> Noa the Vngebnoa is felt, not counted. So it was, so it is.
+> Noa the Zxadnoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Teabae the Zvobteabae returns every 32.55 days. So it was, so it is.
+> Teabae the Nobteabae returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Noa the Ngobnoa is felt, not counted. So it was, so it is.
+> Noa the Nabnoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Qgeonjeeqbeonoagoo**, an organized priesthood tends its own pantheon:
+In the legion of **Feefaenoagoo**, an organized priesthood tends its own pantheon:
 
 > Noagoo the Xoonoagoo returns every 0.88 days. So it was, so it is.
 >
@@ -239,19 +240,15 @@ In the legion of **Qgeonjeeqbeonoagoo**, an organized priesthood tends its own p
 >
 > — derived from the phenomenon *celestial-body*
 
-> Bbaexaa the Ngjeakqea returns every 368.05 days. So it was, so it is.
->
-> — derived from the phenomenon *heliacal-setting*
-
-> Teabae the Ngjoeteabae returns every 32.55 days. So it was, so it is.
+> Teabae the Njooteabae returns every 32.55 days. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-> Noa the Xoanoa is felt, not counted. So it was, so it is.
+> Noa the Foanoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 
-> Noa the Njaenoa is felt, not counted. So it was, so it is.
+> Noa the Xoanoa is felt, not counted. So it was, so it is.
 >
 > — derived from the phenomenon *tide*
 

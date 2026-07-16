@@ -50,11 +50,24 @@ const FRACTURE_OCTAVES: u32 = 4;
 /// Stage-0 probe's co-top shoreline-development lever, Census of Coasts IV).
 /// A finer, higher-frequency band that alternates land/ocean at roughly
 /// cell scale along every rifted margin — the texture the
-/// shoreline-development estimator rewards. First-probe value
-/// `FRACTURE_AMP * 0.5`: the Stage-0 readout ranks crenulation's leverage by
-/// injected coastal-cell fraction, not by a seam-space amplitude, so no
-/// direct mapping exists; this is the iteration-1 starting amplitude, tuned
-/// by the probe.
+/// shoreline-development estimator rewards. Value `FRACTURE_AMP * 0.5` =
+/// 0.175: the Stage-0 readout ranks crenulation's leverage by injected
+/// coastal-cell fraction, not by a seam-space amplitude, so no direct mapping
+/// exists; iteration 1 started here (shoreline 6.8647 → 7.2334).
+///
+/// **This is the fit-battery ceiling and stays here.** Iteration 2 probed a
+/// bump to 0.30 (shoreline 7.6403) to bank the honest shoreline headroom, but
+/// crenulation is high-frequency (`CRENULATION_FREQ` = 48), so past ~0.175 the
+/// seam curve oscillates across the conjugate-fit battery's cross-arc strongly
+/// enough that its single-root bisection can no longer sample ≥30 shared-curve
+/// points (`conjugate_margins_fit_by_construction` fails at 0.20 with 28 pts,
+/// 0.25 → 22, 0.30 → 19). The fit itself holds wherever a zero is found (0.5 at
+/// the seam curve for any noise), but the campaign's signature battery caps the
+/// shippable amplitude here. That is fine: even the unshippable 0.30 reaches
+/// only 7.64, far below the contested 9.51 legacy floor yet already inside the
+/// Earth-anchor band [5.13, 13.14] (D_earth = 8.21). Shoreline resolution is
+/// therefore the §7 band-supersession conversation at close, not an amplitude
+/// chase (which the high-frequency-texture anti-pattern would be anyway).
 /// type-audit: bare-ok(ratio)
 pub const CRENULATION_AMP: f64 = FRACTURE_AMP * 0.5;
 
@@ -280,8 +293,20 @@ pub fn rotate(pole: [f64; 3], angle: f64, p: [f64; 3]) -> [f64; 3] {
 /// == CLIP_TAPER` the clip is 1, at `-CLIP_TAPER` it is 0, and at exactly 0
 /// (the shared seam curve, `seam_side`'s zero set) it is 0.5 — the
 /// conjugate margin's own crossing point, by construction (spec §8).
+///
+/// Widening the taper widens the near-sea band over which crust tapers
+/// through sea level — i.e. it is the shelf lever. The v4 fit at the initial
+/// 0.08 half-width cut margins steeply enough to regress shelf-fraction back
+/// out of `[0.08, 0.22]` (Census of Coasts IV iteration 0). Iteration 2
+/// raised it to 0.16 to recover the shelf band at its root (less crust
+/// removed at the coast) rather than depositing shelf synthetically. The
+/// conjugate fit is untouched by this: the clip reads exactly 0.5 at the
+/// seam curve for ANY taper (`smoothstep(0.5) == 0.5`), so
+/// `conjugate_margins_fit_by_construction` holds independent of this value —
+/// the taper sets only how fast the clip leaves 0.5, never where it sits on
+/// the shared curve.
 /// type-audit: bare-ok(ratio)
-pub const CLIP_TAPER: f64 = 0.08;
+pub const CLIP_TAPER: f64 = 0.16;
 
 /// Smoothstep on `x` clamped to `[0, 1]`: `3x² - 2x³`. A plain cubic
 /// ease, not centered — callers center it (`clip_with_rotation` centers on
