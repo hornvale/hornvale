@@ -330,6 +330,41 @@ pub fn region_json(scene: &RegionScene) -> String {
     serde_json::to_string(scene).expect("a RegionScene always serializes")
 }
 
+/// Per-node actual temperature at `day`, °C, on the same node grid as
+/// [`tiles_region_scene`] — the barycentric interpolation of `temperature_at`.
+/// This equals `t_mean_c[i] + t_swing_c[i]·sin(τ·frac(day/period))` because the
+/// seasonal period is global, so interpolation commutes with the evaluator
+/// (The Region §3.4). Full precision (not quantized); the cross-repo contract
+/// test pins the client's reconstruction against these values.
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+pub fn temperature_grid_region(
+    world: &World,
+    face: u32,
+    level: u32,
+    ix: u32,
+    iy: u32,
+    samples: u32,
+    day: f64,
+) -> Result<Vec<f64>, SceneError> {
+    let addr = RegionAddr {
+        face,
+        level,
+        ix,
+        iy,
+        samples,
+    };
+    addr.validate()?;
+    let climate =
+        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let c_index = NearestCellIndex::new(climate.geosphere());
+    let cg = climate.geosphere();
+    Ok(addr
+        .node_units()
+        .iter()
+        .map(|s| interp(cg, &c_index, *s, |c| climate.temperature_at(c, day).get()))
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,7 +490,7 @@ mod tests {
     }
 
     use hornvale_kernel::Seed;
-    use hornvale_worldgen::{SkyChoice, build_world};
+    use hornvale_worldgen::{SkyChoice, build_world, climate_of};
 
     fn gen42() -> hornvale_kernel::World {
         build_world(
@@ -559,5 +594,62 @@ mod tests {
             any_differs,
             "no node's elevation differs from nearest-cell — interpolation is not happening"
         );
+    }
+
+    #[test]
+    fn temperature_grid_region_commutes_with_the_evaluator() {
+        let w = gen42();
+        let (face, level, ix, iy, samples) = (0u32, 3u32, 4u32, 4u32, 16u32);
+        // The provider values, at full precision (pre-quantization), from an
+        // independent rebuild of the layers.
+        let climate = climate_of(&w).unwrap();
+        let c_index = NearestCellIndex::new(climate.geosphere());
+        let addr = RegionAddr {
+            face,
+            level,
+            ix,
+            iy,
+            samples,
+        };
+        let period = climate.year_length_std();
+        let tau = std::f64::consts::TAU;
+        for day in [0.0_f64, 91.3, 200.0, 366.5] {
+            let grid = temperature_grid_region(&w, face, level, ix, iy, samples, day).unwrap();
+            let theta = hornvale_kernel::math::sin(tau * (day / period).fract());
+            for (i, s) in addr.node_units().iter().enumerate() {
+                // `grid[i]` is interp(temperature_at) (form A); `rhs` is
+                // interp(mean) + interp(swing)·θ (form B). Commutation is exact
+                // in real arithmetic but only to float rounding here (weighted
+                // sums reduce in a different order), so assert tight-approximate
+                // — NOT assert_eq!.
+                let mean = interp(climate.geosphere(), &c_index, *s, |c| {
+                    climate.mean_temperature_at(c).get()
+                });
+                let swing = interp(climate.geosphere(), &c_index, *s, |c| {
+                    climate.seasonal_swing_at(c)
+                });
+                let rhs = mean + swing * theta;
+                assert!(
+                    (grid[i] - rhs).abs() <= 1e-9 * grid[i].abs().max(1.0),
+                    "commutation node {i} day {day}: {} vs {}",
+                    grid[i],
+                    rhs
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn temperature_grid_region_at_day_zero_equals_t_mean() {
+        let w = gen42();
+        let grid = temperature_grid_region(&w, 0, 3, 4, 4, 16, 0.0).unwrap();
+        let scene = tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap();
+        for (g, m) in grid.iter().zip(scene.t_mean_c.iter()) {
+            // grid is full precision; t_mean_c is quantized — agree to ~8 sig digits.
+            assert!(
+                (g - m).abs() <= 1e-6 * g.abs().max(1.0),
+                "day-0 grid vs t_mean: {g} vs {m}"
+            );
+        }
     }
 }
