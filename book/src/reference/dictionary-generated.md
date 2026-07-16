@@ -39,7 +39,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `home` | one's dwelling | Doo | /doo/ | Nee | Nee → no change → Doo |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | Doa | /doa/ | Dea | Dea → no change → Doa |
 | `light` | the color term for white/light hues | Tooqoa | /tooqoa/ | Toeqea | Toeqea → no change → Tooqoa |
 | `many` | an indefinitely large count | Doodoa | /doodoa/ | Neodoa | Neodoa → no change → Doodoa |
@@ -191,7 +191,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | Bea | /bea/ | Dea | Dea → no change → Bea |
 | `light` | the color term for white/light hues | Toeqea | /toeqea/ | Toeqea | Toeqea → no change → Toeqea |
 | `many` | an indefinitely large count | Neoboa | /neoboa/ | Neodoa | Neodoa → no change → Neoboa |
@@ -267,7 +267,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `home` | one's dwelling | Ragxo | /ragxo/ | Ragxog | Ragxog → finalloss → Ragxo |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | Roro | /roro/ | Rorot | Rorot → finalloss → Roro |
 | `light` | the color term for white/light hues | Xaxo | /xaxo/ | Xaxo | Xaxo → no change → Xaxo |
 | `many` | an indefinitely large count | Rogrra | /rogrra/ | Rogrra | Rogrra → no change → Rogrra |

@@ -1550,12 +1550,17 @@ mod tests {
         // wedge export, so fewer cells reach the trim cap to be tied —
         // seed 42's tied block fell to 15 cells (post-change survey over
         // seeds [42, 1, 7, 99, 2, 3, 5, 11]: at-top 15/1/32/34/1/56/20/12).
-        // Seed 3 (56 tied cells) keeps the wide-tied-block signature
-        // asserted on a world where the trim demonstrably bites; the
-        // signature is now seed-dependent, not universal.
+        // Seed 3 (56 tied cells) kept the wide-tied-block signature through
+        // iteration 2. Re-pinned 3 → 42 for tuning iteration 3
+        // (RELIEF_FREQUENCY 48→8): the coarser, resolved relief octave
+        // reshuffles which cells hit the exact trim cap; seed 3 fell to 2
+        // tied cells (post-change survey over [42, 1, 7, 99, 2, 3, 5, 11, 4,
+        // 6, 8, 9, 10, 12, 13, 20, 25]: at-top 57/4/115/98/3/2/67/63/113/65/
+        // 84/2/79/148/100/1/1). Seed 42 (57 tied cells) is back in front —
+        // the signature stays seed-dependent, not universal.
         let geo = Geosphere::new(4);
         let outcome =
-            crate::globe::generate(Seed(3), &geo, &crate::pins::TerrainPins::default()).unwrap();
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
         let g = &outcome.globe;
         let p = CarveParams::default();
         // Shelf mode, post-trim: every non-delta, non-atoll marine

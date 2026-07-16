@@ -33,204 +33,195 @@ The sky holds 2 figures; 1 stands on the sun's road.
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 5295 m above the sea.
+The highest land stands 5183 m above the sea.
 Notable: the Great Delta, salt flats.
 
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
 Some 11% of the surface is habitable — land with water and a tolerable season.
 
-- **Xatxoxogrrot** — temperate-forest
-- **Tqaatkoa** — temperate-forest
-- **Vngadnabnak** — temperate-forest
+- **Rogxaxakrratro** — temperate-forest
+- **Fnekvnakfngad** — tropical-seasonal-forest
+- **Njaafeavoa** — temperate-forest
+- **Fnobngadzhfak** — temperate-forest
+- **Kvaavngaa** — temperate-forest
+- **Roxaxaqrra** — tropical-seasonal-forest
+- **Njaamjea** — temperate-forest
+- **Zhxetned** — temperate-forest
+- **Xotrorroxarrag** — temperate-rainforest
+- **Qbaottao** — tropical-seasonal-forest
+- **Shngaobvaosh** — tropical-seasonal-forest
+- **Voafee** — temperate-rainforest
+- **Qgaemjoaqtoe** — tropical-rainforest
+- **Nebnok** — temperate-rainforest
+- **Ngakzfodsvek** — tropical-rainforest
+- **Bvaashdvoavngoo** — temperate-rainforest
+- **Shngoovngooshngoa** — tropical-rainforest
 - **Rorroxagra** — tropical-rainforest
-- **Shngootvaakvoosh** — temperate-forest
-- **Vnebvngot** — tropical-rainforest
-- **Tqeenjoexoe** — tropical-rainforest
-- **Gvaoqvoa** — tropical-rainforest
-- **Rogxarrakroxag** — tropical-rainforest
-- **Rogxaxatxorroqraq** — temperate-forest
-- **Xoonjeevee** — tropical-rainforest
-- **Xotroxorrarra** — temperate-rainforest
-- **Njoefoeqtea** — temperate-forest
-- **Nekngok** — temperate-forest
-- **Vngaoshshngoosh** — tropical-rainforest
-- **Vngodngak** — tropical-rainforest
 - **Rogxarorroxoxaq** — tropical-rainforest
+- **Tqeenjoexoe** — tropical-rainforest
+- **Vnebvngot** — tropical-rainforest
+- **Rorogxarotrrara** — tropical-seasonal-forest
+- **Rogxaxatxorroqraq** — temperate-forest
+- **Xoonjeo** — tropical-rainforest
+- **Zhxetzvob** — tropical-rainforest
+- **Gvaoqvoa** — tropical-rainforest
+- **Faevaengjao** — tropical-seasonal-forest
+- **Bvooshngaashbvaosh** — tropical-rainforest
+- **Njoefoeqtea** — temperate-forest
+- **Vngaotvoash** — tropical-seasonal-forest
+- **Nekngok** — temperate-forest
+- **Xatxorogxarrogxa** — temperate-forest
 - **Tvaaqvoosh** — temperate-forest
-- **Gqeongjaekkoe** — temperate-forest
-- **Zhxotngokzhxek** — temperate-forest
+- **Rogxaxoxagxak** — alpine
+- **Rorogxaroxaq** — tropical-seasonal-forest
+- **Njoanjoa** — temperate-forest
+- **Sxotvngednob** — temperate-forest
+- **Rogxaxokrra** — alpine
+- **Rogxaxatxorraro** — temperate-forest
+- **Mjaangjaangjee** — alpine
+- **Xotroxorrarra** — temperate-rainforest
+- **Vngooshbvaoshngoosh** — temperate-forest
+- **Shngaoshgvoash** — alpine
+- **Bteaqtaavae** — alpine
+- **Svedsvab** — alpine
+- **Xngebsvob** — alpine
+- **Shngooshngaoqvaosh** — alpine
 - **Ngjeanjoo** — temperate-rainforest
 - **Zhxotfngok** — temperate-rainforest
 - **Kvooshngaoshbvoo** — temperate-rainforest
-- **Xoonjeo** — tropical-rainforest
-- **Ngatzxeksvok** — temperate-forest
-- **Zhxetzvob** — tropical-rainforest
-- **Feotbea** — temperate-forest
-- **Bvooshngaashbvaosh** — tropical-rainforest
-- **Shngaashvngaoshngoo** — temperate-forest
-- **Rorogxaxakraxot** — tropical-seasonal-forest
-- **Rogxaxatxorrarokrag** — temperate-forest
-- **Gkeanjeengjaa** — tropical-seasonal-forest
-- **Nokngotfngeb** — tropical-seasonal-forest
-- **Vngaoshgvaashkvaa** — tropical-seasonal-forest
-- **Roxaxaqrra** — tropical-seasonal-forest
-- **Xngebsvob** — alpine
-- **Fnekvnakfngad** — tropical-seasonal-forest
-- **Tvoashdvoosh** — temperate-forest
-- **Xatxorogxarrogxa** — temperate-forest
-- **Qbaottao** — tropical-seasonal-forest
-- **Shngaobvaosh** — tropical-seasonal-forest
-- **Njoanjoa** — temperate-forest
-- **Sxotvngednob** — temperate-forest
 - **Xatxorroqrrorog** — temperate-forest
-- **Vngooshbvaoshngoosh** — temperate-forest
-- **Rogxaroqxo** — alpine
 - **Btoatbaobtaa** — temperate-forest
 - **Zhfebvngat** — temperate-forest
-- **Tbaofoa** — alpine
+- **Rogxaroqxo** — alpine
 - **Shngooshshngaagvao** — temperate-forest
+- **Tbaofoa** — alpine
 - **Shngoashbvaosh** — alpine
-- **Rorogxaxotrratrro** — tropical-seasonal-forest
-- **Rorogxarakxa** — tropical-seasonal-forest
-- **Feaqqoa** — tropical-seasonal-forest
-- **Sfakzvakfnot** — tropical-seasonal-forest
+- **Fngeksfod** — alpine
 - **Rogxaxotro** — alpine
-- **Gqeabqaobqee** — tropical-seasonal-forest
-- **Nebxngeb** — tropical-seasonal-forest
-- **Shngoobvaashngoa** — tropical-seasonal-forest
-- **Rogxaxatxoraro** — temperate-forest
-- **Vngoatvoo** — tropical-seasonal-forest
-- **Rogxaxorrorro** — tropical-seasonal-forest
+- **Xatxorogxaxakxatxog** — temperate-forest
+- **Rogxaraxo** — temperate-forest
 - **Xarorogxaxotxakxat** — savanna
 - **Shngaoshngaa** — alpine
 - **Xatxorakxograq** — temperate-forest
-- **Feoqgaengjaa** — tropical-seasonal-forest
-- **Fnodngoknab** — tropical-seasonal-forest
-- **Rogxarrorrorat** — temperate-forest
-- **Ngjaatbaefae** — savanna
-- **Tvaoshvngoatvoosh** — temperate-forest
-- **Vngotnobnged** — savanna
-- **Dvaovngaaqvoash** — tropical-seasonal-forest
-- **Dvoavngooshshngaash** — savanna
-- **Rogxaroratroxog** — tropical-seasonal-forest
-- **Mjoebkaa** — alpine
-- **Xatxorogxaxakxatxog** — temperate-forest
-- **Gqeemjeamjoa** — tropical-seasonal-forest
-- **Svatxneknab** — tropical-seasonal-forest
-- **Rogxaroroqxo** — tropical-seasonal-forest
-- **Vngaoshdvoo** — tropical-seasonal-forest
-- **Rogxaraxo** — temperate-forest
-- **Vngaashngoa** — temperate-forest
-- **Gqoogqae** — tropical-seasonal-forest
-- **Netngok** — tropical-seasonal-forest
+- **Shngaoshvngoa** — temperate-forest
 - **Tkooqkoegqee** — temperate-forest
 - **Vngoknebngod** — temperate-forest
-- **Vngaoshdvoakvaash** — tropical-seasonal-forest
-- **Rogxaxoqxoqxo** — tropical-seasonal-forest
+- **Ngjaatbaefae** — savanna
+- **Vngotnobnged** — savanna
+- **Dvoavngooshshngaash** — savanna
+- **Feotbea** — temperate-forest
+- **Ngatzxeksvok** — temperate-forest
 - **Shngaavngoashvngoosh** — temperate-forest
-- **Nadfnobsved** — tropical-rainforest
-- **Rogxarorrorroxag** — tropical-rainforest
-- **Rogxaxoxa** — temperate-forest
-- **Foengjao** — tropical-rainforest
 - **Rogxarorraxa** — tropical-seasonal-forest
-- **Xnekvngakned** — alpine
+- **Shngaashvngaoshngoo** — temperate-forest
+- **Rogxaxoqxoqxo** — tropical-seasonal-forest
+- **Gkaavoo** — temperate-forest
+- **Zvokngab** — temperate-forest
+- **Tgaongjaa** — tropical-seasonal-forest
+- **Dvoovngoashvngoa** — tropical-seasonal-forest
+- **Ngodsxabnek** — tropical-seasonal-forest
+- **Shngoadvoovngao** — temperate-forest
+- **Rogxarrorrorat** — temperate-forest
+- **Vngaashngoa** — temperate-forest
+- **Rogxaxoqxokrra** — savanna
+- **Tboamjeemjee** — temperate-forest
+- **Nadnoknek** — savanna
+- **Xarorogxarrorraq** — savanna
+- **Ngoknatfngot** — temperate-forest
+- **Foagkaemjee** — savanna
+- **Qvaoshngoabvoash** — savanna
+- **Ktoogboa** — savanna
+- **Ngaknod** — savanna
+- **Rorrorogxaxaxorak** — tropical-rainforest
 - **Rogxaratrraroraq** — alpine
-- **Vngoavngaashkvoa** — tropical-rainforest
-- **Ttaotbeogboe** — temperate-forest
-- **Kboafoabqoo** — tropical-rainforest
-- **Xngadngab** — tropical-rainforest
-- **Rogxarorrogroxa** — tropical-seasonal-forest
+- **Qkoaqgao** — tropical-seasonal-forest
+- **Vngaoshshngoashvngoo** — savanna
 - **Btaatqeoxao** — alpine
 - **Vnobzxatfngod** — alpine
+- **Shngoashngaash** — tropical-seasonal-forest
+- **Xnekvngakned** — alpine
 - **Rogxaratrrarroqrrak** — alpine
+- **Rogxaxotrrot** — temperate-rainforest
+- **Fngadfnetsxad** — tropical-seasonal-forest
+- **Dvooshngoobvoa** — alpine
+- **Gqeabqaobqee** — tropical-seasonal-forest
+- **Nebxngeb** — tropical-seasonal-forest
+- **Zvabfnebnok** — tropical-seasonal-forest
+- **Ngjoangjoekbeo** — alpine
+- **Rogxarorrogroxa** — tropical-seasonal-forest
+- **Vnadvned** — alpine
+- **Rogxaxoxa** — temperate-forest
+- **Dvoashtvaoshngao** — alpine
+- **Vngoatvoo** — tropical-seasonal-forest
+- **Rogxarraxakxo** — tropical-seasonal-forest
+- **Gbaefoofae** — temperate-rainforest
+- **Ngotzvod** — temperate-rainforest
+- **Rorogxarora** — tropical-seasonal-forest
+- **Njaettoengjao** — tropical-seasonal-forest
+- **Rorogxaratrokxa** — tropical-seasonal-forest
+- **Rogxararrogxo** — alpine
 - **Voanjeangjaa** — temperate-forest
-- **Tgaongjaa** — tropical-seasonal-forest
-- **Dvoashshngaoshshngaosh** — tropical-rainforest
-- **Tboamjeemjee** — temperate-forest
+- **Vaaggoavaa** — tropical-seasonal-forest
+- **Bvoashvngaashbvoash** — temperate-rainforest
 - **Xngekvngebsvot** — temperate-forest
-- **Dvoovngoashvngoa** — tropical-seasonal-forest
-- **Rogxaxoqxokrra** — savanna
-- **Nadnoknek** — savanna
+- **Vngoashqvaoshngoo** — tropical-seasonal-forest
 - **Xaokqaengjaa** — tropical-seasonal-forest
 - **Zhxekzhfot** — tropical-seasonal-forest
-- **Fngatnabxngak** — alpine
-- **Rogxarorroxarroxaq** — tropical-rainforest
+- **Foobtoa** — tropical-seasonal-forest
+- **Xngebzvedsxob** — tropical-seasonal-forest
 - **Vngaashvngoa** — tropical-seasonal-forest
-- **Ngodsxabnek** — tropical-seasonal-forest
-- **Rogxaxatxorraro** — temperate-forest
-- **Ngoknatfngot** — temperate-forest
-- **Vnadvned** — alpine
-- **Shngaoshgvoa** — temperate-forest
-- **Ngjoangjoekbeo** — alpine
-- **Dvooshngoobvoa** — alpine
-- **Foagkaemjee** — savanna
-- **Qkoaqgao** — tropical-seasonal-forest
-- **Dvoashtvaoshngao** — alpine
-- **Qvaoshngoabvoash** — savanna
-- **Rogxararrogxo** — alpine
-- **Njaamjea** — temperate-forest
-- **Mjeoveo** — tropical-rainforest
-- **Zxetngetned** — tropical-rainforest
-- **Rogxaxotrrot** — temperate-rainforest
-- **Shngoashngaash** — tropical-seasonal-forest
-- **Rorogxaratrokxa** — tropical-seasonal-forest
-- **Rogxarorrogrro** — tropical-seasonal-forest
-- **Vngoavngoosh** — temperate-forest
-- **Rogxaratrraroxo** — alpine
-- **Xoaggea** — alpine
-- **Dvooshvngoavngao** — tropical-rainforest
-- **Fngadfnetsxad** — tropical-seasonal-forest
+- **Rogxarorroxarroxaq** — tropical-rainforest
 - **Bteexeotboa** — tropical-seasonal-forest
 - **Ngednged** — tropical-seasonal-forest
-- **Gbaefoofae** — temperate-rainforest
-- **Tvaoshshngaashngaa** — alpine
-- **Ngotzvod** — temperate-rainforest
-- **Xeanjee** — tropical-seasonal-forest
-- **Zhfotngeb** — tropical-seasonal-forest
+- **Rogxaratrrarratxaxak** — alpine
+- **Shngaoshgvoa** — temperate-forest
+- **Xoaggea** — alpine
+- **Rogxaratrraroxo** — alpine
+- **Vngoashbvoa** — tropical-seasonal-forest
 - **Shngaashtvoash** — tropical-seasonal-forest
+- **Vngaashvngoosh** — tropical-seasonal-forest
+- **Tvaoshshngaashngaa** — alpine
+- **Xarorotxara** — savanna
+- **Mjeoveo** — tropical-rainforest
+- **Zxetngetned** — tropical-rainforest
 - **Tgoonjeo** — alpine
-- **Veobkooxeo** — tropical-seasonal-forest
+- **Feongjeanjoo** — alpine
 - **Fngednobzfeb** — alpine
-- **Zhxetned** — temperate-forest
-- **Vngaashngaobvoo** — tropical-seasonal-forest
-- **Rorroraxa** — tropical-rainforest
 - **Xarorogxarratrrorok** — savanna
-- **Bvoashvngaashbvoash** — temperate-rainforest
+- **Zhxakngab** — alpine
+- **Vngoavngoosh** — temperate-forest
+- **Mjeoggoofoo** — savanna
+- **Xngetfngab** — savanna
+- **Rogxaroroqxo** — tropical-seasonal-forest
+- **Vngaoshngaavngoo** — alpine
 - **Shngaashvngoo** — alpine
 - **Rorrorroqrarog** — tropical-rainforest
-- **Ngjaafoovaa** — savanna
-- **Ngabsvedngot** — savanna
-- **Rogxaxoqxa** — tropical-seasonal-forest
-- **Shngaoqvoashvngaosh** — savanna
-- **Qtaanjaonjaa** — tropical-rainforest
-- **Xnaknak** — tropical-rainforest
-- **Fngaksxobngad** — alpine
-- **Sfodngodngat** — tropical-seasonal-forest
-- **Vngaashshngoavngoa** — tropical-rainforest
+- **Dvooshvngoavngao** — tropical-rainforest
 - **Rorrokrorra** — tropical-seasonal-forest
-- **Shngooshvngaa** — tropical-seasonal-forest
-- **Rogxaxatxorroxaqxo** — temperate-forest
-- **Xotrorroxok** — temperate-rainforest
-- **Rogxaroroxoxak** — tropical-seasonal-forest
+- **Vnotxnged** — tropical-seasonal-forest
+- **Ngjaafoovaa** — savanna
+- **Bvoashgvaashngaosh** — savanna
+- **Ngabsvedngot** — savanna
+- **Shngaoqvoashvngaosh** — savanna
+- **Gqoogqae** — tropical-seasonal-forest
+- **Netngok** — tropical-seasonal-forest
 - **Gbeafaabkoo** — tropical-seasonal-forest
 - **Nebnadfneb** — tropical-seasonal-forest
-- **Bkaagtaengjao** — temperate-forest
-- **Xngebnadnak** — temperate-forest
+- **Qtaanjaonjaa** — tropical-rainforest
+- **Xnaknak** — tropical-rainforest
+- **Rorogxarraxa** — tropical-seasonal-forest
+- **Rogxaroroxoxak** — tropical-seasonal-forest
+- **Vngaoshdvoakvaash** — tropical-seasonal-forest
 - **Shngaashvngoash** — tropical-seasonal-forest
-- **Ngjeaxaa** — temperate-rainforest
-- **Svodfngod** — temperate-rainforest
-- **Vngoashngaovngoash** — temperate-forest
-- **Xarorogxarakrokxak** — savanna
+- **Vngaashshngoavngoa** — tropical-rainforest
+- **Rogxaxatxorroxaqxo** — temperate-forest
 - **Ngjaanjae** — tropical-seasonal-forest
 - **Zhvodngat** — tropical-seasonal-forest
-- **Vngaashqvaovngoash** — temperate-rainforest
-- **Rorogxarotrrara** — tropical-seasonal-forest
 - **Dvooshtvao** — tropical-seasonal-forest
-- **Rogxaroxagxaxoq** — tropical-seasonal-forest
-- **Shngoashkvoashvngaosh** — savanna
-- **Njaavoemjeo** — tropical-seasonal-forest
-- **Xnetvngadzfak** — tropical-seasonal-forest
-- **Faevaengjao** — tropical-seasonal-forest
+- **Bkaagtaengjao** — temperate-forest
+- **Xngebnadnak** — temperate-forest
+- **Vngoashngaovngoash** — temperate-forest
+- **Rorogxarrorotrra** — tropical-seasonal-forest
 - **Rogxarorrorrotxaq** — tropical-rainforest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
@@ -242,34 +233,34 @@ Notable: karst country, salt flats.
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 17% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 16% of the land.
 
 ## The People
 
-The land holds 193 settlement(s).
-The chief bugbear settlement, Shngootvaakvoosh, holds 111 souls amid temperate-forest.
-The chief goblin settlement, Vngadnabnak, holds 116 souls amid temperate-forest.
-The chief hobgoblin settlement, Tqaatkoa, holds 116 souls amid temperate-forest.
-The chief kobold settlement, Xatxoxogrrot, holds 123 souls amid temperate-forest.
+The land holds 184 settlement(s).
+The chief bugbear settlement, Kvaavngaa, holds 103 souls amid temperate-forest.
+The chief goblin settlement, Fnekvnakfngad, holds 113 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Njaafeavoa, holds 107 souls amid temperate-forest.
+The chief kobold settlement, Rogxaxakrratro, holds 114 souls amid temperate-forest.
 
-The bugbear lair of **Shngootvaakvoosh**, population 111.
+The bugbear lair of **Kvaavngaa**, population 103.
 
-Shngootvaakvoosh lives by farming.
+Kvaavngaa lives by farming.
 Its roles, lowest to highest: forager, omen-reader, headman.
 
-The goblin village of **Vngadnabnak**, population 116.
+The goblin village of **Fnekvnakfngad**, population 113.
 
-Vngadnabnak lives by farming.
+Fnekvnakfngad lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 
-The hobgoblin legion of **Tqaatkoa**, population 116.
+The hobgoblin legion of **Njaafeavoa**, population 107.
 
-Tqaatkoa lives by farming.
+Njaafeavoa lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 
-The kobold warren of **Xatxoxogrrot**, population 123.
+The kobold warren of **Rogxaxakrratro**, population 114.
 
-Xatxoxogrrot lives by farming.
+Rogxaxakrratro lives by farming.
 Its roles, lowest to highest: digger, keeper, elders.
 
 ## The Gods
@@ -292,7 +283,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-In the village of **Vngadnabnak**, an organized priesthood tends its own pantheon:
+In the village of **Fnekvnakfngad**, an organized priesthood tends its own pantheon:
 
 > Neb the Vnodneb is ever: Neb the Vnodneb watches unceasing. So it was, so it is.
 >
@@ -314,7 +305,7 @@ In the village of **Vngadnabnak**, an organized priesthood tends its own pantheo
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Tqaatkoa**, an organized priesthood tends its own pantheon:
+In the legion of **Njaafeavoa**, an organized priesthood tends its own pantheon:
 
 > Fee the Ngjeafee is ever: Fee the Ngjeafee watches unceasing. So it was, so it is.
 >
@@ -336,7 +327,7 @@ In the legion of **Tqaatkoa**, an organized priesthood tends its own pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the warren of **Xatxoxogrrot**, an organized priesthood tends its own pantheon:
+In the warren of **Rogxaxakrratro**, an organized priesthood tends its own pantheon:
 
 > Rogxaxaxo Xaxo is: Rogxaxaxo Xaxo is always watching. That's how it's always been. That's how it's always been. Rogxaxaxo is a great one among the gods.
 >

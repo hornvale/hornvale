@@ -137,12 +137,14 @@ const ARC_GATE_OCTAVES: u32 = 4;
 /// type-audit: pending(wave-2)
 pub const RELIEF_AMPLITUDE_M: f64 = 240.0;
 /// Relief noise base spatial frequency, cycles per radian: features
-/// ~1/48 rad, close to the canonical level-6 grid's mean cell spacing
-/// (~0.017 rad) — visible cell-to-cell craggy texture rather than a
-/// broad undulation, following the same informal "features ~1/frequency
-/// rad" sizing `LOBE_FREQ`/`ARC_SPACING` use. A decorative texture knob;
-/// may be retuned in the tuning season (Task 14).
-const RELIEF_FREQUENCY: f64 = 48.0;
+/// ~1/8 rad, spanning ~7 cells at the canonical level-6 grid's mean cell
+/// spacing (~0.017 rad). Retuned in the Task 14 tuning season (iteration
+/// 3): at the prior 48.0 the dominant octave was sub-Nyquist at L6
+/// (~1.2 samples/cycle — per-cell jitter the sea-level percentile
+/// averages away, contributing nothing to coastline shape). At 8.0 the
+/// octave is resolved (like `LOBE_FREQ` = 4 / `ARC_SPACING` = 9), giving
+/// coherent capes and bays where relief crosses sea level.
+const RELIEF_FREQUENCY: f64 = 8.0;
 /// Octaves for the fBm relief noise.
 const RELIEF_OCTAVES: u32 = 4;
 

@@ -4000,18 +4000,21 @@ mod tests {
         // farming, a 3-caste structure (farmer, shaman, chief). Sculpting
         // Task 3 (belt anatomy, discrete arcs, the trench) had redrawn the
         // flagship coastal and tropical-rainforest; Task 5 (induration-
-        // scaled fBm relief) redraws every world's elevation again and
-        // reverts the flagship to non-coastal, temperate-forest (see
-        // `almanac`'s seed-42 output and `cli/tests/branches_identity.rs`).
+        // scaled fBm relief) redrew every world's elevation again and
+        // reverted the flagship to non-coastal, temperate-forest. Tuning
+        // iteration 3 (Task 14, RELIEF_FREQUENCY 48→8: the sub-Nyquist fix)
+        // redraws elevation once more and moves the flagship BACK to
+        // coastal, tropical-rainforest (see `almanac`'s seed-42 output and
+        // `cli/tests/branches_identity.rs`).
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
+            MetricValue::Text("tropical-rainforest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
