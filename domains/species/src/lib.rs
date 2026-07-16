@@ -12,9 +12,9 @@
 use std::collections::BTreeMap;
 
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, DETRITUS, EntityId, Fact, KindId,
-    LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    World,
+    ANIMAL_PREY, Component, ComponentStore, ConceptKind, ConceptRegistry, ConditionResponse,
+    DETRITUS, EntityId, Fact, KindId, LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE,
+    RegistryError, ResourceVector, Value, World,
 };
 
 mod allometry;
@@ -1160,6 +1160,47 @@ pub fn registry() -> BTreeMap<KindId, SpeciesDef> {
     reg
 }
 
+impl Component for BiosphereTraits {}
+impl Component for PsychVector {}
+impl Component for PerceptionVector {}
+
+/// The universal biosphere component, one per kind — the canonical entity set
+/// (every kind that competes for space has a biosphere row). Derived from the
+/// authored `registry()` during the campaign-3 migration; becomes the direct
+/// authoring home when the god-struct is deleted (final task).
+/// type-audit: bare-ok(identifier-text)
+pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
+    registry()
+        .into_iter()
+        .map(|(k, d)| (k, d.biosphere))
+        .collect()
+}
+
+/// The peopled psychology component — present only for settling, speaking kinds.
+/// type-audit: bare-ok(identifier-text)
+pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
+    registry()
+        .into_iter()
+        .filter_map(|(k, d)| d.peopled.map(|p| (k, p.psych)))
+        .collect()
+}
+
+/// The peopled perception component — present only for peoples.
+/// type-audit: bare-ok(identifier-text)
+pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
+    registry()
+        .into_iter()
+        .filter_map(|(k, d)| d.peopled.map(|p| (k, p.perception)))
+        .collect()
+}
+
+/// The universal taxonomy lookup: a kind's family label, one per kind. Read by
+/// worldgen to resolve a kind's proto vector against language's family_proto.
+/// type-audit: bare-ok(identifier-text)
+pub fn family_of() -> ComponentStore<KindId, &'static str> {
+    registry().into_iter().map(|(k, d)| (k, d.family)).collect()
+}
+
 /// Proto ancestral articulation vectors, keyed by family, for families with
 /// more than one member (a singleton's proto is itself and is absent here).
 /// Each is a distinct point equal to no daughter's vector (spec §3).
@@ -1500,6 +1541,40 @@ mod tests {
                 || k.contains("metabolic")),
             "BIO-2 must not register a stream: {labels:?}"
         );
+    }
+
+    #[test]
+    fn component_registries_equal_the_god_struct_fields() {
+        let god = registry();
+        let bio = biosphere_registry();
+        let psy = psyche_registry();
+        let per = perception_registry();
+        let fam = family_of();
+        // biosphere + family: present for ALL kinds, field-equal.
+        assert_eq!(bio.len(), god.len());
+        assert_eq!(fam.len(), god.len());
+        for (kind, def) in god.iter() {
+            assert_eq!(bio.get(kind), Some(&def.biosphere), "biosphere {kind:?}");
+            assert_eq!(fam.get(kind), Some(&def.family), "family {kind:?}");
+            match &def.peopled {
+                Some(p) => {
+                    assert_eq!(psy.get(kind), Some(&p.psych), "psych {kind:?}");
+                    assert_eq!(per.get(kind), Some(&p.perception), "perception {kind:?}");
+                }
+                None => {
+                    assert!(!psy.contains(kind), "fauna {kind:?} must have no psyche");
+                    assert!(
+                        !per.contains(kind),
+                        "fauna {kind:?} must have no perception"
+                    );
+                }
+            }
+        }
+        // the peopled cluster: psyche and perception share one key-set (the 4 peoples).
+        let psy_ids: Vec<_> = psy.ids().collect();
+        let per_ids: Vec<_> = per.ids().collect();
+        assert_eq!(psy_ids, per_ids);
+        assert_eq!(psy.len(), 4);
     }
 
     #[test]
