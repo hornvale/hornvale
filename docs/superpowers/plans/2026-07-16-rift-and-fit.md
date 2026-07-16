@@ -1,5 +1,7 @@
 # Rift-and-Fit (Terrain Epoch v4) Implementation Plan
 
+**SHIPPED (terrain epoch v4, 2026-07-16).**
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Terrain epoch v4 — every world's continents become displaced fragments of an assembled supercontinent whose conjugate coastlines fit, with a probe-first evidence program (synthetic-D probe, Earth-mask anchor) governing which cell-scale rift textures are built for the inherited open shoreline-development band.

@@ -84,8 +84,9 @@ producer-sourced contract test on both sides of the boundary
 static quantities but for the small closed-form functions of them, which is
 the more demanding form of the same bet.
 
-**Terrain shape has Earth-anchored, self-checking acceptance bands, and five
-of six are now closed.** The Measured Coast preregistered six Earth-anchored
+**Terrain shape has Earth-anchored, self-checking acceptance bands, and the
+one that stayed open resolved by superseding its own instrument rather than
+closing under it.** The Measured Coast preregistered six Earth-anchored
 shape metrics (shoreline development, hypsometric bimodality, shelf
 fraction, continent count, largest-continent share, plate-size Gini) before
 any generator change, exactly the kind of bet this chapter cares about: the
@@ -98,17 +99,39 @@ repulsion hypothesis) before a read-only probe found the actual cause
 shelf-fraction, via a wave-cut coastal-erosion mechanism the tuning season
 built only once measurement showed the band demanded it — and left the
 sixth, shoreline-development, on an honest open verdict: every mechanism the
-spec banked for it is now built, the metric moved a real +8% under measurement,
-and it still sits below its floor. Rather than force a number, a dedicated
-diagnostic instrument established *why* the floor is hard to reach (the
-estimator is not saturated, but the floor's own anchor was partly built on
-coastline noise Crust later removed as fragmentation) and the open band was
-handed forward, with its evidence, to a named future campaign (the
-rift-and-fit fake-history coda) —
-the chapter's discipline working exactly as intended: a bet stays open for a
-structural reason, not because nobody looked. See [Crust](./chronicle/crust.md),
-[Sculpting](./chronicle/sculpting.md), and [The Census of Coasts
-III](./laboratory/census-of-coasts-iii.md).
+spec banked for it is now built, the metric moved a real +8% under
+measurement, and it still sat below its floor. A dedicated diagnostic
+instrument established *why* the floor was hard to reach — the estimator is
+not saturated, but the floor's own anchor was partly built on coastline
+noise a since-removed generator had produced — and handed the open band
+forward, with its evidence, to a named future campaign.
+
+That campaign, rift-and-fit, resolved the question, but not by closing the
+band. Its own fitted, continental-scale rift moved the metric the wrong way
+(lower than Sculpting's, not higher), which turned out to confirm the
+diagnostic rather than refute it: the estimator rewards single-hex-scale
+coastline texture almost exclusively, so a large-scale geometric fit was
+never going to move it much, and the one lever that does move it (cell-scale
+texture) hits a hard fit-verification ceiling before it can close the gap.
+The campaign then measured the real planet through the exact same,
+unchanged estimator for the first time — and Earth's own coastline scored
+*below* the floor every generated world had been held to. A floor no real
+planet clears is not a floor; it is the contaminated anchor the diagnostic
+had already flagged, now proven. The band was superseded, not closed: an
+Earth-anchored range now serves as a sanity floor rather than an acceptance
+gate, and single-scale coastline complexity stepped down from this
+project's headline shape criterion to a tripwire against degenerate output.
+The more interesting bet this surfaced is banked, not built — a coastline
+score is the wrong shape for a pass/fail band in the first place, because a
+coast is a variable meant to *vary and drive something else* (habitat edge,
+harbor geometry, a maritime-versus-continental cultural split) rather than
+sit at a constant the Laboratory checks once and forgets. This is the
+chapter's discipline working exactly as intended, one step further out: a
+bet stays open for a structural reason, and when it resolves, it can resolve
+by convicting the instrument instead of the world. See
+[Crust](./chronicle/crust.md), [Sculpting](./chronicle/sculpting.md),
+[Rift-and-Fit](./chronicle/rift-and-fit.md), and [The Census of Coasts
+IV](./laboratory/census-of-coasts-iv.md).
 
 ## Precedented but nontrivial (moderate confidence)
 

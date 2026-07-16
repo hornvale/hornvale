@@ -1,5 +1,7 @@
 # Rift-and-Fit — terrain epoch v4 (MAP-21)
 
+**SHIPPED (terrain epoch v4, 2026-07-16).**
+
 **Status:** Approved at G3 (Nathan, 2026-07-16) — epoch v4 and the
 `--supercontinent` supersession assented; the Earth-anchor procedure of §7
 approved as preregistered; sliver strings approved for the §6 probe-first
