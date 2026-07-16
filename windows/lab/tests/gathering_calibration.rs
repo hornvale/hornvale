@@ -102,9 +102,13 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // the-gathering's field condensation + the night-sky campaign's
     // phenomena): re-measured; the preregistered floor of 3 still clears
     // decisively.
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured (26.2645 -> 26.6509); the
+    // preregistered floor of 3 still clears decisively.
     assert!(
-        (mean - 26.2645).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~26.2645)"
+        (mean - 26.6509).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~26.6509)"
     );
 }
 
@@ -144,9 +148,13 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // the-gathering's field condensation + the night-sky campaign's
     // phenomena): re-measured; still comfortably below the uniform-sphere
     // baseline.
+    //
+    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
+    // regen, commit 1c954d0): re-measured (10.7459 -> 12.5595); still
+    // comfortably below the uniform-sphere baseline of 32.7.
     assert!(
-        (mean - 10.7459).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~10.7459)"
+        (mean - 12.5595).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~12.5595)"
     );
 }
 

@@ -82,7 +82,18 @@ the seasonal evaluator documented normatively in one place and pinned by a
 producer-sourced contract test on both sides of the boundary
 ([The Isotherm](./chronicle/the-isotherm.md)). The seam holds not just for
 static quantities but for the small closed-form functions of them, which is
-the more demanding form of the same bet.
+the more demanding form of the same bet. A refinement arrived from the
+consumer's side, and it sharpens what the bet does *not* buy: **the seam
+holding is not the same as the data being drawn.** A rendering debt had
+accumulated silently across three producer campaigns — four layers shipped
+and parsed and, in the sharpest case, fully evaluated, with
+`circulation_bands` feeding a tested, normatively specified wind evaluator
+that rendered no pixels at all. The seam was working perfectly while a
+quarter of what crossed it went unseen. That the sim emits a quantity a
+client faithfully receives says nothing about whether anyone ever looks at
+it, and the discipline this bet still lacks is the check — at a producer
+campaign's close, not a campaign later — that some consumer draws what was
+just shipped ([The Lens](./chronicle/the-lens.md)).
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and five
 of six are now closed.** The Measured Coast preregistered six Earth-anchored
@@ -142,6 +153,17 @@ III](./laboratory/census-of-coasts-iii.md).
   store, and the spike-validated adaptive-depth walk that lifts the uniform-depth
   restriction — all deferred, all resting now on a substrate that exists. The bet
   has moved from *no mechanism* to *mechanism shipped, composition pending*.
+  [The Region](./chronicle/the-region.md) shipped the first cross-repo
+  realization of the pointwise half — a regional tile query
+  (`scene/tiles-region/v1`) that samples and barycentrically interpolates the
+  continuous fields at arbitrary on-tile density, fed to a client that builds a
+  registered globe patch from a tile's address. In doing so it drew the honest
+  line the phrase *resolution-free* had blurred: the fields are free to *sample
+  and smooth* below cell scale, but carry no sub-cell *information* — the
+  ~110 km canonical cell is the physics floor, and interpolation beneath it is
+  cosmetic, not fidelity. The active-region swap the bet still awaits inherits
+  that boundary: it can refine geometry indefinitely, but never invent physics
+  the cells do not hold.
 
 ## Genuinely open — split by whether the world can grade itself
 
