@@ -85,6 +85,7 @@
 - [Goldengrove](./chronicle/goldengrove.md)
 - [The Helm](./chronicle/the-helm.md)
 - [The Menagerie](./chronicle/the-menagerie.md)
+- [The True Name](./chronicle/the-true-name.md)
 
 # The Gallery
 
