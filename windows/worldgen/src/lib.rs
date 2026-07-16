@@ -486,6 +486,20 @@ pub fn species_carrying_input(
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_set` index order tags the fields.
 ///
+/// **The returned `u32` is a build-local dense index, not identity.** It is
+/// `species_set`'s 0-based position for this one call, derived by
+/// enumerating a `KindId`-ordered roster/registry slice; it is valid only
+/// within this build and is **never serialized**. A kind's durable,
+/// serialized identity is its [`KindId`](hornvale_kernel::KindId) label
+/// (committed as the `SPECIES_NAME` `Value::Text` fact), never this index —
+/// decision 0015: a name is its own key. Inserting or removing a kind
+/// upstream can renumber every downstream `u32`, but never changes any
+/// other kind's label. Callers that pair this index with other per-call
+/// tuples (`species` below, `mass_map`, `.composition` tags) must rebuild
+/// all of them together from the same `species_set` ordering; none of it
+/// survives a save/load boundary. The other `.enumerate()` sites in this
+/// file that mint a `(tag as u32, ..)` pair share this exact contract.
+///
 /// For each species and cell: `saturate(base_carrying(cell) *
 /// total_uptake_s)` (the resource-supply term — the shared, psychology-free
 /// NPP proxy scaled by the species' summed niche weight over
@@ -577,6 +591,8 @@ pub fn demography_report_with_beta(
         insolation_scalar,
         &species_set,
     );
+    // `tag as u32` here is the same build-local dense index documented on
+    // `niche_per_species_k` — never serialized, never identity.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
         .iter()
         .enumerate()
@@ -2388,6 +2404,8 @@ fn build_to(
         insolation_scalar,
         &species_set,
     );
+    // `tag as u32` here is the same build-local dense index documented on
+    // `niche_per_species_k` — never serialized, never identity.
     let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
         .iter()
         .enumerate()

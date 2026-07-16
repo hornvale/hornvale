@@ -1598,6 +1598,82 @@ mod tests {
     }
 
     #[test]
+    fn inserting_a_kind_does_not_change_other_kinds_serialized_labels() {
+        // A kind's committed identity is its label (`KindId` / `SpeciesDef.name`),
+        // never its position (decision 0015). This proves it two ways:
+        // (1) prepending a dummy kind that sorts alphabetically first shifts
+        //     every real kind's build-local dense index (the same `.enumerate()`
+        //     position the worldgen packer's `u32` tags come from) — so
+        //     position is demonstrably NOT identity — while
+        // (2) every real kind's serialized `SPECIES_NAME` fact, minted via
+        //     the real `genesis_in` path, is byte-identical whether or not
+        //     the dummy is present. This is the label-stability half of the
+        //     durable-label / ephemeral-index split `KindId` documents.
+        let real_roster: Vec<SpeciesDef> = registry().into_values().collect();
+
+        // A dummy kind whose label sorts alphabetically before every real
+        // kind ("aaa-test-kind" < "black-dragon", the roster's first label).
+        let mut dummy = real_roster
+            .iter()
+            .find(|d| d.name == "goblin")
+            .expect("goblin is in the roster")
+            .clone();
+        dummy.name = "aaa-test-kind";
+        dummy.family = "aaa-test-kind";
+        dummy.peopled = None;
+        assert!(
+            dummy.name < real_roster[0].name,
+            "the dummy must sort first for the index-shift assertion below to hold"
+        );
+
+        let mut augmented_roster = vec![dummy];
+        augmented_roster.extend(real_roster.iter().cloned());
+
+        // (1) The build-local dense index shifts: `kobold`'s `.enumerate()`
+        // position (what the worldgen packer would tag it with as `u32`)
+        // is not the same across the two rosters.
+        let index_of = |roster: &[SpeciesDef], name: &str| -> usize {
+            roster
+                .iter()
+                .position(|d| d.name == name)
+                .unwrap_or_else(|| panic!("{name} missing from roster"))
+        };
+        let kobold_index_before = index_of(&real_roster, "kobold");
+        let kobold_index_after = index_of(&augmented_roster, "kobold");
+        assert_eq!(
+            kobold_index_after,
+            kobold_index_before + 1,
+            "prepending a dummy kind must renumber the build-local u32 index \
+             of every kind after it — position is not identity"
+        );
+
+        // (2) The serialized label is unaffected: mint both rosters through
+        // the real genesis path and compare each real kind's committed
+        // SPECIES_NAME fact.
+        let mut w_base = World::new(Seed(42));
+        register_concepts(&mut w_base.registry).unwrap();
+        let ids_base = genesis_in(&mut w_base, &real_roster).unwrap();
+
+        let mut w_augmented = World::new(Seed(42));
+        register_concepts(&mut w_augmented.registry).unwrap();
+        let ids_augmented = genesis_in(&mut w_augmented, &augmented_roster).unwrap();
+
+        for def in &real_roster {
+            let id_base = ids_base[def.name];
+            let id_augmented = ids_augmented[def.name];
+            let label_base = w_base.ledger.text_of(id_base, SPECIES_NAME);
+            let label_augmented = w_augmented.ledger.text_of(id_augmented, SPECIES_NAME);
+            assert_eq!(label_base, Some(def.name));
+            assert_eq!(
+                label_base, label_augmented,
+                "kind {}'s serialized SPECIES_NAME label must not change when \
+                 an unrelated kind (\"aaa-test-kind\") is inserted ahead of it",
+                def.name
+            );
+        }
+    }
+
+    #[test]
     fn species_facts_touch_no_pre_existing_predicate() {
         let mut w = World::new(Seed(1));
         register_concepts(&mut w.registry).unwrap();
