@@ -2887,7 +2887,7 @@ fn build_to(
         // world must mint the exact same ids for pre-C1 entities as pre-species
         // main, so the new, Y2-1-only entities are appended last rather than
         // interleaved. Then the peopled-by link for every settlement.
-        hornvale_species::genesis_in(&mut world, roster)?;
+        species_genesis(&mut world, &wc)?;
         for (id, s) in ids.iter().zip(placements.iter()) {
             hornvale_species::people(&mut world, *id, species_set[s.dominant as usize].name)?;
         }
@@ -2903,6 +2903,174 @@ fn build_to(
     })?;
 
     Ok(world)
+}
+
+/// Mint one species entity per kind in `wc` and commit its authored vector as
+/// facts, reading the composed [`WorldComponents`] rather than a `&SpeciesDef`
+/// roster (the composition-root relocation of `species::genesis_in`, ECS c3).
+///
+/// **Mint order is byte-identity-critical:** entities are minted in ascending
+/// `KindId` (`wc.biosphere.ids()`), which equals the default roster's slice
+/// order (`registry().into_values()` is `KindId`-ascending) and is single-
+/// element for Lab's synthetic rosters — so it reproduces `genesis_in`'s mint
+/// sequence in every real case. Every fact (predicate, value, order,
+/// `provenance="species"`, `day=Some(0.0)`) mirrors `genesis_in` exactly.
+/// type-audit: bare-ok(identifier-text)
+fn species_genesis(
+    world: &mut World,
+    wc: &WorldComponents,
+) -> Result<std::collections::BTreeMap<String, EntityId>, LedgerError> {
+    // Local mirror of species' `fact` helper: every species-genesis fact is
+    // day 0, provenance "species", placeless.
+    fn sfact(subject: EntityId, predicate: &str, object: Value) -> Fact {
+        Fact {
+            subject,
+            predicate: predicate.to_string(),
+            object,
+            place: None,
+            day: Some(0.0),
+            provenance: "species".to_string(),
+        }
+    }
+
+    use hornvale_species::{
+        ActivityCycle, DELIBERATION_LATENCY, IN_GROUP_RADIUS, SOCIALITY_MODE,
+        SPECIES_ACTIVITY_CYCLE, SPECIES_EXOTIC_MANNER, SPECIES_LABIALITY, SPECIES_NAME,
+        SPECIES_NIGHT_VISION, SPECIES_SIBILANCE, SPECIES_SKY_ATTENTION, SPECIES_TONALITY,
+        SPECIES_VOICE_LOUDNESS, SPECIES_VOICING, SPECIES_VOWEL_SPACE, STATUS_BASIS, Sociality,
+        StatusBasis, THREAT_RESPONSE, TIME_HORIZON,
+    };
+
+    let mut ids = std::collections::BTreeMap::new();
+    // Ascending KindId — the biosphere store is the canonical entity set.
+    for kind in wc.biosphere.ids() {
+        let name = kind.0;
+        let id = world.ledger.mint_entity();
+        world.ledger.commit(
+            sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
+            &world.registry,
+        )?;
+        if let Some(p) = wc.psyche.get(kind) {
+            let perception = wc
+                .perception
+                .get(kind)
+                .expect("peopled cluster shares one key-set (integrity-checked)");
+            let articulation = wc
+                .articulation
+                .get(kind)
+                .expect("peopled cluster shares one key-set (integrity-checked)");
+            let sociality = match p.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match p.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
+            world.ledger.commit(
+                sfact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    DELIBERATION_LATENCY,
+                    Value::Number(p.deliberation_latency),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, STATUS_BASIS, Value::Text(status.to_string())),
+                &world.registry,
+            )?;
+            let activity = match perception.activity {
+                ActivityCycle::Diurnal => "diurnal",
+                ActivityCycle::Nocturnal => "nocturnal",
+                ActivityCycle::Crepuscular => "crepuscular",
+            };
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_ACTIVITY_CYCLE,
+                    Value::Text(activity.to_string()),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_NIGHT_VISION,
+                    Value::Number(perception.night_vision),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_SKY_ATTENTION,
+                    Value::Number(perception.sky_attention),
+                ),
+                &world.registry,
+            )?;
+            let exotic = match articulation.exotic {
+                hornvale_language::ExoticManner::None => "none",
+                hornvale_language::ExoticManner::Trill => "trill",
+                hornvale_language::ExoticManner::Click => "click",
+                hornvale_language::ExoticManner::Ejective => "ejective",
+            };
+            world.ledger.commit(
+                sfact(id, SPECIES_LABIALITY, Value::Number(articulation.labiality)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_VOWEL_SPACE,
+                    Value::Number(articulation.vowel_space),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_VOICING, Value::Number(articulation.voicing)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_SIBILANCE, Value::Number(articulation.sibilance)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_VOICE_LOUDNESS,
+                    Value::Number(articulation.voice_loudness),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_TONALITY, Value::Number(articulation.tonality)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
+                &world.registry,
+            )?;
+        }
+        ids.insert(name.to_string(), id);
+    }
+    Ok(ids)
 }
 
 /// Build a complete world with the shipped species roster.
