@@ -12,6 +12,9 @@
 use hornvale_kernel::{NearestCellIndex, World};
 use serde::Serialize;
 
+mod region;
+pub use region::*;
+
 /// The schema identifier this crate emits.
 /// type-audit: bare-ok(identifier-text)
 pub const TILES_SCHEMA: &str = "scene/tiles/v1";
@@ -23,7 +26,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -32,6 +35,21 @@ pub enum SceneError {
     WidthOutOfRange(u32),
     /// The world could not be rebuilt from its ledger.
     Build(String),
+    /// Regional query: `face` must be 0..=5.
+    RegionFaceOutOfRange(u32),
+    /// Regional query: `level` must be 0..=MAX_REGION_LEVEL.
+    RegionLevelOutOfRange(u32),
+    /// Regional query: `ix`/`iy` must be < 2^level.
+    RegionTileOutOfRange {
+        /// The offending column.
+        ix: u32,
+        /// The offending row.
+        iy: u32,
+        /// The level whose 2^level bound they violated.
+        level: u32,
+    },
+    /// Regional query: `samples` must be 1..=MAX_REGION_SAMPLES.
+    RegionSamplesOutOfRange(u32),
 }
 
 impl std::fmt::Display for SceneError {
@@ -45,6 +63,20 @@ impl std::fmt::Display for SceneError {
                 write!(f, "--width {w} is outside {MIN_WIDTH}..={MAX_WIDTH}")
             }
             SceneError::Build(e) => write!(f, "building the world: {e}"),
+            SceneError::RegionFaceOutOfRange(f_) => {
+                write!(f, "--face {f_} is outside 0..=5 (six cube faces)")
+            }
+            SceneError::RegionLevelOutOfRange(l) => {
+                write!(f, "--level {l} is outside 0..={MAX_REGION_LEVEL}")
+            }
+            SceneError::RegionTileOutOfRange { ix, iy, level } => write!(
+                f,
+                "--ix {ix}/--iy {iy} out of range for level {level} (must be < {})",
+                1u64 << level
+            ),
+            SceneError::RegionSamplesOutOfRange(s) => {
+                write!(f, "--samples {s} is outside 1..={MAX_REGION_SAMPLES}")
+            }
         }
     }
 }
