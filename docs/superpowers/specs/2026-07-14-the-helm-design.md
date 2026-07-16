@@ -1,8 +1,13 @@
 # The Helm — Design
 
 **Date:** 2026-07-14
-**Status:** Approved at G3 (2026-07-14). Nathan's ruling: rename the
-client **Orrery** (`hornvale/orrery`); everything else as specified.
+**Status:** Executed and merged (2026-07-15); client live at
+hornvale.github.io/orrery. G3 ruling: rename the client **Orrery**
+(`hornvale/orrery`) — executed at Task 1. One implementation deviation,
+ledgered: §6's "body radii drop to true scale" became stated reference
+radii (Earth/Sol/Luna) — the scene documents carry no absolute radii.
+Chronicle: `book/src/chronicle/the-helm.md`; retro:
+`docs/retrospectives/the-helm.md`.
 **Kind:** Campaign spec.
 **Parent spec:** `2026-07-14-goldengrove-design.md` (the catalog/planetarium
 seam; decisions 0022, 0023, 0055 govern). This campaign is Goldengrove's
