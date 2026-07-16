@@ -82,7 +82,18 @@ the seasonal evaluator documented normatively in one place and pinned by a
 producer-sourced contract test on both sides of the boundary
 ([The Isotherm](./chronicle/the-isotherm.md)). The seam holds not just for
 static quantities but for the small closed-form functions of them, which is
-the more demanding form of the same bet.
+the more demanding form of the same bet. A refinement arrived from the
+consumer's side, and it sharpens what the bet does *not* buy: **the seam
+holding is not the same as the data being drawn.** A rendering debt had
+accumulated silently across three producer campaigns — four layers shipped
+and parsed and, in the sharpest case, fully evaluated, with
+`circulation_bands` feeding a tested, normatively specified wind evaluator
+that rendered no pixels at all. The seam was working perfectly while a
+quarter of what crossed it went unseen. That the sim emits a quantity a
+client faithfully receives says nothing about whether anyone ever looks at
+it, and the discipline this bet still lacks is the check — at a producer
+campaign's close, not a campaign later — that some consumer draws what was
+just shipped ([The Lens](./chronicle/the-lens.md)).
 
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and five
 of six are now closed.** The Measured Coast preregistered six Earth-anchored
