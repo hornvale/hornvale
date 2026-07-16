@@ -217,6 +217,33 @@ pub extern "C" fn hw_scene_tiles(width: u32) -> i32 {
     }
 }
 
+/// Emit the current world's `scene/tiles-region/v1` JSON for one tile address.
+/// 0 ok; 2 scene error (bad address; envelope set); -3 when no world is live.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_tiles_region(
+    face: u32,
+    level: u32,
+    ix: u32,
+    iy: u32,
+    samples: u32,
+) -> i32 {
+    let world_ptr = &raw const WORLD;
+    let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
+        set_error("no world; call hw_new first");
+        return -3;
+    };
+    match hornvale_scene::tiles_region_scene(world, face, level, ix, iy, samples) {
+        Ok(s) => {
+            set_out(hornvale_scene::region_json(&s));
+            0
+        }
+        Err(e) => {
+            set_error(&format!("{e}"));
+            2
+        }
+    }
+}
+
 /// Pointer to the 4096-byte input buffer JS writes pins JSON into.
 #[unsafe(no_mangle)]
 pub extern "C" fn hw_in_ptr() -> *mut u8 {

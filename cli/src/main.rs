@@ -45,6 +45,8 @@ usage:
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
+  hornvale scene tiles-region --world W --face F --level L --ix X --iy Y --samples N
+                          emit scene/tiles-region/v1 JSON to stdout
   hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
@@ -744,9 +746,11 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 }
 
 /// Emit a scene description as JSON on stdout: `scene tiles` renders the
-/// cartographic tile lattice (scene/tiles/v1), and `scene system` renders the
-/// system's orbital elements for the orrery (scene/system/v1). Deterministic;
-/// CI drift-checks the committed example scene.
+/// cartographic tile lattice (scene/tiles/v1), `scene tiles-region` renders one
+/// cube-sphere quadtree tile's footprint at higher on-tile density
+/// (scene/tiles-region/v1), and `scene system` renders the system's orbital
+/// elements for the orrery (scene/system/v1). Deterministic; CI drift-checks
+/// the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -767,10 +771,28 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::system_json(&scene));
             Ok(())
         }
+        Some("tiles-region") => {
+            let world = load_world(args)?;
+            let parse_u32 = |flag: &str| -> Result<u32, String> {
+                flag_value(args, flag)
+                    .ok_or_else(|| format!("scene tiles-region requires {flag}"))?
+                    .parse::<u32>()
+                    .map_err(|e| format!("{flag} must be a u32: {e}"))
+            };
+            let face = parse_u32("--face")?;
+            let level = parse_u32("--level")?;
+            let ix = parse_u32("--ix")?;
+            let iy = parse_u32("--iy")?;
+            let samples = parse_u32("--samples")?;
+            let scene = hornvale_scene::tiles_region_scene(&world, face, level, ix, iy, samples)
+                .map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::region_json(&scene));
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, system"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system"
         )),
-        None => Err("scene needs a kind; known kinds: tiles, system".to_string()),
+        None => Err("scene needs a kind; known kinds: tiles, tiles-region, system".to_string()),
     }
 }
 
@@ -1252,6 +1274,26 @@ mod tests {
         assert!(
             err.contains("system"),
             "known kinds must include system: {err}"
+        );
+    }
+
+    #[test]
+    fn scene_tiles_region_emits_the_schema() {
+        // Library-level content check (the CLI arm is a thin wrapper; content
+        // is exercised here to avoid stdout capture).
+        let json = hornvale_scene::region_json(
+            &hornvale_scene::tiles_region_scene(&test_generated_world(), 0, 3, 4, 4, 16).unwrap(),
+        );
+        assert!(json.contains("\"scene/tiles-region/v1\""));
+        assert!(json.contains("\"samples\":16"));
+    }
+
+    #[test]
+    fn scene_unknown_kind_names_tiles_region() {
+        let err = cmd_scene(&args(&["scene", "dioramas"])).unwrap_err();
+        assert!(
+            err.contains("tiles-region"),
+            "known kinds must include tiles-region: {err}"
         );
     }
 }

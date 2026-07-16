@@ -57,6 +57,7 @@ jobs:
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
+            ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
             ':(exclude)book/src/reference/locale-seed-42.json'
 
   atlas:

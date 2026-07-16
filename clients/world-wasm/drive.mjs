@@ -1,12 +1,14 @@
 // The catalog's golden smoke: wasm scene JSON must be byte-identical to
 // the native CLI's (the two-language golden contract at the wasm seam).
 // Usage: node drive.mjs <wasm> <native-system.json> <native-tiles.json> \
-//                       <tiles-width> <native-pinned-tiles.json>
+//                       <tiles-width> <native-pinned-tiles.json> <native-region.json>
 import { readFileSync } from "node:fs";
 
-const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath] = process.argv.slice(2);
-if (!pinnedTilesPath) {
-  console.error("usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json>");
+const [wasmPath, sysPath, tilesPath, widthStr, pinnedTilesPath, regionPath] = process.argv.slice(2);
+if (!pinnedTilesPath || !regionPath) {
+  console.error(
+    "usage: node drive.mjs <wasm> <sys.json> <tiles.json> <width> <pinned-tiles.json> <region.json>",
+  );
   process.exit(2);
 }
 const width = Number(widthStr);
@@ -32,6 +34,8 @@ expect(e.hw_scene_system(), 0, "hw_scene_system");
 golden(out(), sysPath, "scene/system/v1 (seed 42)");
 expect(e.hw_scene_tiles(width), 0, "hw_scene_tiles");
 golden(out(), tilesPath, "scene/tiles/v1 (seed 42)");
+expect(e.hw_scene_tiles_region(0, 3, 4, 4, 16), 0, "hw_scene_tiles_region");
+golden(out(), regionPath, "scene/tiles-region/v1 (seed 42, face 0 L3 4,4 s16)");
 
 // Pinned genesis (terrain pin: deterministic force, satisfiable on any seed).
 const pins = new TextEncoder().encode(JSON.stringify({ plates: "12" }));
@@ -48,4 +52,4 @@ if (!JSON.parse(out()).error) fail("unknown pin", "no error envelope");
 // A refused/errored pinned call cleared the world: scenes must refuse too.
 if (e.hw_scene_system() !== -3) fail("scene after cleared world", "expected -3");
 
-console.log("world-wasm smoke OK (system + tiles + pinned byte-identical; error envelopes sound)");
+console.log("world-wasm smoke OK (system + tiles + tiles-region + pinned byte-identical; error envelopes sound)");

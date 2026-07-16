@@ -245,11 +245,11 @@ No new fact infrastructure, no narration verb (window work, out of scope).
 - **No plate simulation over time** — ratified; the history is drawn.
 - **Plates untouched** (ledger #9): the known incoherence between rifted
   (passive-reading) margins and independently-drawn plate motion is
-  accepted and recorded; unification is registry row MAP-48.
+  accepted and recorded; unification is registry row MAP-50.
 - **No estimator change**; the companion metric is appended, not
   substituted.
 - **No staggered multi-generation breakup** (nested fracture hierarchies —
-  Pangea inside Gondwana): registry row MAP-49.
+  Pangea inside Gondwana): registry row MAP-51.
 - **No local census regeneration**, ever (0046).
 
 ## 11. Staging sketch (for the plan)
@@ -263,8 +263,8 @@ No new fact infrastructure, no narration verb (window work, out of scope).
 - **Stage 3:** tuning season — banked mechanisms activated per Stage-0
   demand, swept constants, iteration table in Census of Coasts IV.
 - **Close:** epoch re-pins, AWS census regen (Nathan-authorized), chronicle,
-  retro, registry flips (MAP-21; new rows MAP-48 plate/fracture unification,
-  MAP-49 staggered breakup, MAP-50 multi-scale roughness as a future banded
+  retro, registry flips (MAP-21; new rows MAP-50 plate/fracture unification,
+  MAP-51 staggered breakup, MAP-52 multi-scale roughness as a future banded
   metric), Confidence Gradient re-score if the coast bet moves.
 
 ## 12. Decisions promoted from the brainstorm ledger
