@@ -6,7 +6,8 @@
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
 use crate::SceneError;
-use hornvale_kernel::{CellId, Geosphere, NearestCellIndex};
+use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, World};
+use serde::Serialize;
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
 /// bound is a generous superset). Beyond the cell floor a tile is honest but
@@ -172,10 +173,6 @@ fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [
 }
 
 /// Barycentrically interpolate a per-cell scalar at `s`.
-// Unused outside tests until a later Region task wires continuous-layer
-// sampling through it; the allow keeps `triangle_weights`/`barycentric`
-// (which it calls) live for clippy too.
-#[allow(dead_code)]
 fn interp(
     geo: &Geosphere,
     index: &NearestCellIndex,
@@ -186,6 +183,151 @@ fn interp(
         .iter()
         .map(|(c, w)| w * value(*c))
         .sum()
+}
+
+/// One `scene/tiles-region/v1` document (The Region §3.3). Field order is the
+/// JSON key order and is contract. Per-node layers are `(samples+1)²`,
+/// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
+/// discrete layers (`ocean`, `biome`, `plate`) are nearest-cell.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture)
+#[derive(Debug, Serialize)]
+pub struct RegionScene {
+    /// Always `scene/tiles-region/v1`.
+    pub schema: String,
+    /// The world's seed.
+    pub seed: u64,
+    /// Cube face (0..=5).
+    pub face: u32,
+    /// Quadtree level.
+    pub level: u32,
+    /// Tile column.
+    pub ix: u32,
+    /// Tile row.
+    pub iy: u32,
+    /// Quads per edge; the node grid is `(samples+1)²`.
+    pub samples: u32,
+    /// Sea level, meters (document-level).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub sea_level_m: f64,
+    /// Seasonal sinusoid period, standard days (document-level; self-contained).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub season_period_days: f64,
+    /// Circulation bands per hemisphere; omitted when tidally locked.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub circulation_bands: Option<u32>,
+    /// The biome catalog, v1's stable append-only order.
+    pub biome_legend: Vec<String>,
+    /// Elevation per node, meters (barycentric).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub elevation_m: Vec<f64>,
+    /// Ocean flag per node (nearest-cell; the categorical coastline truth).
+    pub ocean: Vec<bool>,
+    /// Biome index per node (nearest-cell).
+    pub biome: Vec<u16>,
+    /// Plate id per node (nearest-cell).
+    pub plate: Vec<u32>,
+    /// Unrest per node, [0,1] (barycentric).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub unrest: Vec<f64>,
+    /// Annual-mean temperature per node, °C (barycentric).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_mean_c: Vec<f64>,
+    /// Hemisphere-signed seasonal half-swing per node, °C (barycentric; 0 when locked).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_swing_c: Vec<f64>,
+    /// Moisture index per node, [0,1] (barycentric).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub moisture: Vec<f64>,
+}
+
+/// Build the `scene/tiles-region/v1` scene for one tile address. Deterministic:
+/// same world + same address → byte-identical once serialized.
+/// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples)
+pub fn tiles_region_scene(
+    world: &World,
+    face: u32,
+    level: u32,
+    ix: u32,
+    iy: u32,
+    samples: u32,
+) -> Result<RegionScene, SceneError> {
+    let addr = RegionAddr {
+        face,
+        level,
+        ix,
+        iy,
+        samples,
+    };
+    addr.validate()?;
+    let terrain =
+        hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let climate =
+        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let t_index = NearestCellIndex::new(terrain.geosphere());
+    let c_index = NearestCellIndex::new(climate.geosphere());
+    let biomes = climate.biome_map();
+    let catalog = hornvale_climate::Biome::catalog();
+    let units = addr.node_units();
+
+    let mut elevation_m = Vec::with_capacity(units.len());
+    let mut ocean = Vec::with_capacity(units.len());
+    let mut biome = Vec::with_capacity(units.len());
+    let mut plate = Vec::with_capacity(units.len());
+    let mut unrest = Vec::with_capacity(units.len());
+    let mut t_mean_c = Vec::with_capacity(units.len());
+    let mut t_swing_c = Vec::with_capacity(units.len());
+    let mut moisture = Vec::with_capacity(units.len());
+    for s in &units {
+        let tg = terrain.geosphere();
+        let cg = climate.geosphere();
+        // Discrete: nearest-cell.
+        let t_cell = t_index.nearest_to_position(tg, *s);
+        let c_cell = c_index.nearest_to_position(cg, *s);
+        ocean.push(terrain.is_ocean(t_cell));
+        let b = *biomes.get(c_cell);
+        biome.push(
+            catalog
+                .iter()
+                .position(|e| *e == b)
+                .expect("biome in catalog") as u16,
+        );
+        plate.push(terrain.plate_of(t_cell));
+        // Continuous: barycentric.
+        elevation_m.push(interp(tg, &t_index, *s, |c| terrain.elevation_at(c).get()));
+        unrest.push(interp(tg, &t_index, *s, |c| terrain.unrest_at(c)));
+        t_mean_c.push(interp(cg, &c_index, *s, |c| {
+            climate.mean_temperature_at(c).get()
+        }));
+        t_swing_c.push(interp(cg, &c_index, *s, |c| climate.seasonal_swing_at(c)));
+        moisture.push(interp(cg, &c_index, *s, |c| climate.moisture_at(c)));
+    }
+    Ok(RegionScene {
+        schema: "scene/tiles-region/v1".to_string(),
+        seed: world.seed.0,
+        face,
+        level,
+        ix,
+        iy,
+        samples,
+        sea_level_m: terrain.sea_level().get(),
+        season_period_days: climate.year_length_std(),
+        circulation_bands: climate.band_count(),
+        biome_legend: catalog.iter().map(|b| b.name().to_string()).collect(),
+        elevation_m,
+        ocean,
+        biome,
+        plate,
+        unrest,
+        t_mean_c,
+        t_swing_c,
+        moisture,
+    })
+}
+
+/// Serialize a `RegionScene` as compact JSON (mirrors `scene_json`).
+/// type-audit: bare-ok(artifact: return)
+pub fn region_json(scene: &RegionScene) -> String {
+    serde_json::to_string(scene).expect("a RegionScene always serializes")
 }
 
 #[cfg(test)]
@@ -310,5 +452,112 @@ mod tests {
             let got = interp(&geo, &index, geo.position(cell), value);
             assert!((got - cell.0 as f64).abs() < 1e-6, "cell {cell:?}: {got}");
         }
+    }
+
+    use hornvale_kernel::Seed;
+    use hornvale_worldgen::{SkyChoice, build_world};
+
+    fn gen42() -> hornvale_kernel::World {
+        build_world(
+            Seed(42),
+            &Default::default(),
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    #[test]
+    fn region_scene_is_sized_and_byte_deterministic() {
+        let w = gen42();
+        let a = region_json(&tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap());
+        let b = region_json(&tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap());
+        assert_eq!(a, b);
+        let scene = tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap();
+        let nodes = 17 * 17;
+        for len in [
+            scene.elevation_m.len(),
+            scene.ocean.len(),
+            scene.biome.len(),
+            scene.plate.len(),
+            scene.unrest.len(),
+            scene.t_mean_c.len(),
+            scene.t_swing_c.len(),
+            scene.moisture.len(),
+        ] {
+            assert_eq!(len, nodes);
+        }
+        assert_eq!(scene.schema, "scene/tiles-region/v1");
+        assert_eq!(scene.biome_legend.len(), 22);
+        assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
+    }
+
+    #[test]
+    fn discrete_layers_match_nearest_cell() {
+        let w = gen42();
+        let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+        let index = NearestCellIndex::new(terrain.geosphere());
+        let a = RegionAddr {
+            face: 2,
+            level: 2,
+            ix: 1,
+            iy: 1,
+            samples: 8,
+        };
+        let scene = tiles_region_scene(&w, a.face, a.level, a.ix, a.iy, a.samples).unwrap();
+        for (i, s) in a.node_units().iter().enumerate() {
+            let cell = index.nearest_to_position(terrain.geosphere(), *s);
+            assert_eq!(scene.ocean[i], terrain.is_ocean(cell), "ocean node {i}");
+            assert_eq!(scene.plate[i], terrain.plate_of(cell), "plate node {i}");
+        }
+    }
+
+    #[test]
+    fn locked_world_zeroes_swing_and_omits_bands() {
+        use hornvale_astronomy::{RotationPin, SkyPins};
+        let sky = SkyPins {
+            rotation: Some(RotationPin::Locked),
+            ..Default::default()
+        };
+        let w = build_world(
+            Seed(42),
+            &sky,
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .unwrap();
+        let scene = tiles_region_scene(&w, 0, 2, 1, 1, 8).unwrap();
+        assert!(scene.t_swing_c.iter().all(|&s| s == 0.0));
+        assert_eq!(scene.circulation_bands, None);
+        assert!(!region_json(&scene).contains("circulation_bands"));
+    }
+
+    #[test]
+    fn continuous_layers_are_interpolated_not_nearest_cell() {
+        // At a fine enough tile, some node's interpolated elevation must differ
+        // from the raw nearest-cell elevation — proving barycentric blending is
+        // actually happening (guards against a silent fallback to nearest-cell).
+        let w = gen42();
+        let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+        let index = NearestCellIndex::new(terrain.geosphere());
+        let addr = RegionAddr {
+            face: 0,
+            level: 4,
+            ix: 8,
+            iy: 8,
+            samples: 16,
+        };
+        let scene =
+            tiles_region_scene(&w, addr.face, addr.level, addr.ix, addr.iy, addr.samples).unwrap();
+        let any_differs = addr.node_units().iter().enumerate().any(|(i, s)| {
+            let cell = index.nearest_to_position(terrain.geosphere(), *s);
+            (scene.elevation_m[i] - terrain.elevation_at(cell).get()).abs() > 1e-6
+        });
+        assert!(
+            any_differs,
+            "no node's elevation differs from nearest-cell — interpolation is not happening"
+        );
     }
 }
