@@ -152,6 +152,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         false,
         "a note recorded during tectonic genesis",
     )?;
+    registry.register_predicate(
+        facts::RIFTED_FROM,
+        false,
+        "a rifted conjugate pair of cratons whose conjugate margins fit up to subsequent erosion",
+    )?;
+    registry.register_predicate(
+        facts::BREAKUP_AGE,
+        false,
+        "a rifted seam's derived breakup age",
+    )?;
+    registry.register_predicate(
+        facts::SPREADING_RATE,
+        true,
+        "the globe's one drawn global spreading rate",
+    )?;
 
     registry.register_concept("stone", "terrain", ConceptKind::Substance, "rock")?;
     registry.register_concept("mountain", "terrain", ConceptKind::Terrain, "high ground")?;
