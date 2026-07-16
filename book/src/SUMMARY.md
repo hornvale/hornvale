@@ -77,6 +77,7 @@
 - [Lab Performance](./chronicle/lab-performance.md)
 - [Single-Craton Hypsometry](./chronicle/single-craton-hypsometry.md)
 - [The Ground](./chronicle/the-ground.md)
+- [Sculpting](./chronicle/sculpting.md)
 
 # The Gallery
 
@@ -112,6 +113,7 @@
 - [Study 010: The Census of Coasts](./laboratory/study-010.md)
 - [Study 011: The Census of Words](./laboratory/study-011.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
+- [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
 
 # Reference
 
