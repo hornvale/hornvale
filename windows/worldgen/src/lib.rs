@@ -543,17 +543,17 @@ pub fn niche_per_species_k(
 /// EXPLICITLY supplied `beta`/`floor` rather than the frozen
 /// [`hornvale_demography::BETA`]/[`hornvale_demography::FLOOR`] constants.
 /// Reconstructs terrain and climate, then assembles the report from
-/// [`niche_per_species_k`] (The Niche's differentiated K — the *shadow*
-/// path this accessor observes; settlement genesis still ships flat K
-/// unchanged) using demography's pub building blocks, mirroring
-/// [`hornvale_demography::report`]'s body. Pure and seed-free beyond the
-/// world's already-committed facts: two calls with the same `(world,
-/// roster, beta, floor)` produce byte-identical reports, so a β-sweep
-/// calibration harness (task A16b) can vary `beta` across many calls
-/// without rebuilding the world or drawing new seed state.
-/// [`demography_report`] is this function pinned to the frozen constants —
-/// the Lab accessor worldgen ships (settlement genesis is unaffected: it
-/// still calls [`hornvale_demography::report`] directly with flat K).
+/// [`niche_per_species_k`] (The Niche's differentiated K) using demography's
+/// pub building blocks, mirroring [`hornvale_demography::report`]'s body.
+/// Since The Seam's cutover, settlement genesis packs the same niche-K stack
+/// (peopled species only), so this accessor and genesis share one pipeline
+/// shape; this variant just exposes it over the full roster with a tunable
+/// `beta`. Pure and seed-free beyond the world's already-committed facts:
+/// two calls with the same `(world, roster, beta, floor)` produce
+/// byte-identical reports, so a β-sweep calibration harness (task A16b) can
+/// vary `beta` across many calls without rebuilding the world or drawing new
+/// seed state. [`demography_report`] is this function pinned to the frozen
+/// constants — the Lab accessor worldgen ships.
 ///
 /// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn demography_report_with_beta(
