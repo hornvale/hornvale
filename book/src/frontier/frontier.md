@@ -32,6 +32,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The governing principle: ambition is bounded by verification surface](#the-governing-principle-ambition-is-bounded-by-verification-surface)
   - [The frontier map](#the-frontier-map)
   - [The unification thesis](#the-unification-thesis)
+  - [Magic as a graph grammar — the debt economy](#magic-as-a-graph-grammar--the-debt-economy)
   - [The expressive-culture cluster](#the-expressive-culture-cluster)
   - [The channel-capacity frontier — enriching a constrained phonology](#the-channel-capacity-frontier--enriching-a-constrained-phonology)
   - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
@@ -367,6 +368,287 @@ UNI-2's controlled science in its most literal form — dial one on and measure
 the downstream reorganization of contact (MAP-9), carrying capacity (MAP-7),
 and the reach of authority (SOC-1) with no confounds: a Lab apparatus (MAP-1,
 TOOL-4) for counterfactual social history.
+
+---
+
+## Magic as a graph grammar — the debt economy
+
+*(Medium confidence on the structure, which is largely re-instantiation of
+machinery already shipped or already sequenced; the authored catalog's
+contents are taste-gated, and the whole cluster sits behind the UNI-2
+metaphysics gate. The claim this section exists to make is that the grammar
+framing raises the verification surface enough to move magic off the
+taste-checked floor.)*
+
+UNI-2 says magic is a second physics, drawn per seed. It does not say what a
+rule *is*. Name the rule a **graph-grammar production** and a surprising
+amount of the design stops being invented and starts being read off machinery
+that already exists.
+
+**The ledger is already the graph.** A `Fact` is subject/predicate/object — an
+edge-labelled directed graph, append-only, never forgetting. So a production is
+a **triple-pattern match** (its preconditions) plus an **append** (its
+effects), and the matcher is not a new component: it is the query engine
+UNI-22's metaplan already approved as SPO/PSO/OSP triple-store indexes. Magic
+asks for no new storage and no new addressing. It asks for a rule table.
+
+**A spell is a derivation, not a production.** This is the distinction the
+design turns on. If productions are the authored primitives, a spell is a
+*derivation over them* — a path, a proof — which buys an unbounded spell space
+from a finite drawn table. Research becomes proof search; a grimoire is a cache
+of lemmas; and **a spell's level is its derivation depth**, a formal quantity
+nobody has to author or balance. The corollary is that per-world difference
+need not be large to matter: a small delta in primitives is a combinatorial
+delta in what is *reachable*.
+
+**The catalog is authored; the world draws a subset.** A freely-drawn grammar
+generates noise — most random derivations are semantically empty, and a magic
+system built that way would buy combinatorial size at the cost of meaning.
+Decision 0009 forecloses the alternative and supplies the remedy in its own
+words: models author "grammars, motif libraries, lexicons, expert-system rule
+bases," frozen into the repo; the dice choose. Magic is that constraint's
+canonical case, not a strain on it.
+
+**Correspondence addresses; violation acts.** A production must say what it
+reaches and what it does, and these come from different places. The reaching is
+**sympathetic**: similarity (like produces like) and contagion (things once in
+contact continue to act on each other) are graph operations in the original
+rather than by analogy — similarity is proximity in trait vectors the sim
+already carries, and contagion is *reachability through the ledger's past*,
+free precisely because the ledger is append-only. The doing is **a licensed
+violation** of a law the sim actually enforces.
+
+That second half is load-bearing, because it means **the violation catalog is
+not authored from imagination — it is read off the property batteries.** Mass
+balance (the carve) negates to ex-nihilo landforms; locality to action at a
+distance; the ledger's causal order to prophecy; a-thing-is-one-kind to
+transmutation; thermodynamics to the everburning flame; animacy-is-terminal to
+raising (UNI-4). Ideonomic negation applied to the physics itself. Every
+invariant the sim enforces is a candidate magic, which makes the catalog
+*meaningful by construction* (it violates something that holds) and *checkable
+by construction* (the battery exists) — and makes it **grow with the
+simulation's fidelity**, automatically. Magic stops being a content problem and
+becomes the sim reflecting on itself, the shape UNI-21 already describes.
+
+**On sourcing: the laws, not the ladder.** Frazer's two laws are a good grammar
+and a bad theory. *The Golden Bough*'s evolutionist magic → religion → science
+progression is discredited, and citing it as theory would make the
+literature-checked tier a mirage. The laws survive re-grounded as *cognitive*
+primitives — Rozin and Nemeroff find sympathetic magical thinking alive in
+modern subjects who believe none of it — which lands them on the shelf MEM-3
+already cites (Sperber's cultural attraction, Boyer's minimal
+counterintuitiveness). Take the laws; drop the ladder. Evans-Pritchard marks
+the honest limit: Azande witchcraft answers *why me, why now* — misfortune's
+particularity — not how the world works. The grammar models
+magic-as-technology and would miss most of what magic historically *does*;
+magic-as-explanation is UNI-1's inference carrying its error term, and both
+must exist.
+
+**Correspondence is universal; whether the world honours it is drawn.** Because
+the two laws are facts about minds rather than about worlds, every world's
+peoples reason by them — so **superstition is the universal, and magic is the
+special case where superstition happens to be right**. This is what makes the
+cluster worth its cost even at zero fidelity: a world with an *empty* violation
+catalog still derives correspondence-thinking, false causes, relic-veneration,
+rival schools, and lost arts. The magic system is the culture-and-knowledge
+engine; magic is one setting of it. Earth is a member of the same family rather
+than its absence — a specific draw in which similarity is honoured in heredity
+("like begets like" is the law of similarity, and it is *correct*) and denied
+in effigies, while contagion is honoured in pathogens and denied in essence.
+That the intuitions are right often enough to be worth having is why they
+persist, and it puts the mundane tier within reach of real data.
+
+A third addressing mode is needed and is not Frazer's: **presence** — reach
+what you are directly aware of, gated by EXP-3's sensorium. Psionics uses it,
+which is why psionics *feels* categorically different without being a different
+physics.
+
+### Conservation, and the scar
+
+**The debt is not the environmental cost.** Conservation says a production
+takes from somewhere; **incidence** says who bears it, and the land is one
+option among five (self, the land, others, the future, the dead). A world whose
+debt falls on the caster has no defiling at all — mages burn out and die young,
+the debt just as real and just as legible, but the scar on a body rather than a
+landscape. **The scar is universal; where it lands is drawn**, and one
+parameter emits five recognisable worlds.
+
+Conservation also forces **source = incidence** — you cannot take from one
+place and charge another — with one exception, and it is the interesting one: a
+**flux network** displaces the debt spatially. MAP-40 banked ley-lines as a
+thaumic re-instantiation of the carve, noting engine A's seam is written
+potential-agnostically *on purpose*. Conservative magic supplies the one thing
+that row needs and lacks: something that flows. Then a caster is a **sink**, the
+land drains toward the working, and repeated use *incises a channel* — **a
+ley-line is an erosion feature, the accumulated scar of magical history,
+computed by shipped code and authored by nobody.** It is also infrastructure:
+the network carries the debt from hinterland to throne, so the capital is lush
+and the periphery ash, and core-periphery extraction becomes a **centrality
+claim about the flux graph** — the invariant class UNI-5's stones already lean
+on.
+
+This reconciles two banked rows that quietly contradict each other. MAP-40
+needs a conserved flux; MAP-42 is explicitly *ex nihilo*. Both are `raw`, so
+nobody has had to notice. Tiering makes both coherent: **the conservative rung
+has a flux and therefore has ley-lines; the ex-nihilo rung sits above it and
+does not carve.** Coarse constrains fine, applied to metaphysics.
+
+**The debt is the diagnostic phenomenon**, and this is the section's best
+result. Ex-nihilo magic leaves no residue and is therefore *undiscoverable*;
+conservative magic leaves a scar, and the scar is the evidence a culture infers
+over. The property that makes magic **checkable for us** is the same property
+that makes it **discoverable for them** — verification surface and in-world
+epistemology are one axis, and the governing principle stops being methodology
+and becomes a fact about the fiction. The dial therefore selects not magic's
+flavour but *what kind of civilisation can know things*: conservative worlds
+yield residue, inference, mages, schools; ex-nihilo worlds yield nothing to
+reason from, and magic can only be **received**. Turn conservation off and the
+same engine stops producing scholars and starts producing revelation — UNI-1's
+science/magic/theology trio as one scalar.
+
+### Stock, flow, and posture
+
+Every incidence offers two things to take, and the choice is the entire moral
+structure of a magic system asked five times: **the interest, or the
+principal?**
+
+| Incidence | The flow (sustainable) | The stock (extractive) |
+|---|---|---|
+| self | metabolic recovery — the disciplined psion | body integrity — burnout |
+| the land | NPP, what regrows — the **druid** | biomass and soil — the **defiler** |
+| others | labour freely given — the tithe | lives — sacrifice |
+| the future | growth — stewardship | an era's capital — borrowed time |
+| a god | worship income — devotion | the god's own potency — deicide |
+
+Druid and defiler run the *same* production against the *same* land; the only
+difference is **rate**, measurable against the NPP field that already ships. A
+druid's cap is the regeneration rate; a defiler eats the principal. That
+derives the trope rather than authoring it — sustainable yield is slow,
+liquidation fast — and it explains where the necromantic line has always been
+drawn: animating a corpse uses a renewable byproduct; devouring a soul destroys
+capital that does not regrow.
+
+**Two reversibilities, and the tragic one is not the grammar's.** Whether
+productions invert governs whether a *spell* can be undone (dispel). Whether
+the *world* can be restored is a property of rates, not rules: accumulation is
+bounded by regeneration and liquidation is not, so **a defiled world does not
+recover even if every production in its grammar inverts**. The asymmetry is
+thermodynamic. The dispel works; the desert stays.
+
+Lifted, the traditions are not classes but **postures toward a balance sheet** —
+savings (the cultivator building capital in the body over decades), income (the
+druid), liquidation (the defiler), self-employment (the psion paying per cast
+from his own labour), credit (the cleric repaying in worship on a schedule),
+credit-with-a-balloon (the warlock: power now, one payment later, counterparty
+the patron), theft (blood magic), salvage (the necromancer), and the
+distributed small accounts of the animist. The empty cells predict rather than
+accommodate: **mutualisation** is the coven — pooling *variance*, not mean,
+which is why ritual wants a circle, why the circle needs oaths (a free-rider
+problem), and why its size is bounded by `in_group_radius`; **taxation** is the
+templar, and the Sorcerer-King is therefore not a tyrant with spells but an
+*issuer*, aggregating capacity from a population and lending it to
+functionaries — with a failure mode nobody writes: if he has issued more than
+he holds, the system runs on confidence, and a test of his true capacity fails
+every templar at once. **Default** is corruption — the lich, the slow
+transformation — a margin call in which the collateral was you.
+
+**The epistemic dial is downstream of incidence, not free.** A tradition that
+externalises its costs is driven underground; one that pays its own way gets a
+school. Athas teaching psionics openly and hunting defilers is *one* decision,
+not two — and a world can run both settings at once, which is the tension that
+makes a setting.
+
+### The caster, from parameters that already exist
+
+Magic asks for no new per-species parameters. `PsychVector` already ships the
+discount rates incidence needs: `in_group_radius` *is* the social discount
+(insular → externalise onto outsiders), `time_horizon` *is* the temporal one
+(immediate → borrow against a later era). `deliberation_latency` governs how
+deep a derivation search a people will run — answering a question the
+ideonomic-cognition section already preregistered ("does a
+high-deliberation-latency species innovate slower but retain better?").
+`status_basis` decides which posture confers standing, and therefore whether a
+civilisation grows monasteries, an Athas, or a theocracy. Druid and defiler are
+opposite corners of the same two dimensions.
+
+Potency is likewise already in the kernel, and reading `sovereignty_floor`'s
+budget `e = a·ln(mass_kg) + b·potency` for casting says something precise: mass
+and potency are **additive into one buffering capacity**, so they substitute —
+and **potency is the capacity to absorb your own debt**. The coefficients carry
+the bargain: mass is logarithmic and *trainable*, potency linear, roughly
+sevenfold more efficient per unit, and *drawn at birth*. So a psion's
+discipline is real and rate-limited — strength buys the stock (how much you
+absorb at once), endurance the flow (how fast you refill) — and asceticism is
+**budget reallocation**: every drive left unsatisfied frees capacity, which is
+why austerity is universally associated with mystical power, and why in a
+self-incidence world that association is simply correct accounting.
+
+Crossing potency against repertoire produces the defiler as an *emergent
+quadrant* rather than a choice: high potency and low repertoire is the dragon,
+which does not defile because it need not; low potency and high repertoire is
+**the scholar whose knowledge outruns the body that must fund it**, and the
+debt goes outward. The frail scholar burns the world; the dragon simply is. It
+also places the menagerie's mighty roster (`potency > 0`) as natural casters
+rather than researchers.
+
+### Where it lives, and why that keeps being the answer
+
+**Magic is not a domain.** The domain map's own test — *"can be added without
+editing any sibling"* — fails immediately: terrain needs a magic-aware carve,
+and domain→domain dependency is constitutionally forbidden, so a `metaphysics`
+crate could never inform the thing it most needs to inform. Nor is it a
+*feature*, which lives inside one domain; magic lives inside six. The map's
+sort is binary — feature or crate — and magic is the third thing, for which
+this document's own prophecy section already coined the word: a **mode**.
+DOM-17's instinct ("one crate rather than a sprawl") diagnoses correctly and
+prescribes wrongly. Magic *must* sprawl, and the constitution already licenses
+a disciplined sprawl: **provider tiers coexist; worlds choose.** So the shape is
+a kernel-level rule base and dial, consumed as magic-aware provider tiers across
+many domains — and `potency` living in `kernel/src/ecology.rs` rather than in
+any domain is the shipped precedent that this is already how it goes. The same
+verdict falls on DOM-19; see DOM-20.
+
+That keeps happening, and it is the section's quiet finding: every time one
+goes looking for where magic should live, the answer is a seam already cut for
+another reason. `windows/historiography` is the sharpest case — *"domain-agnostic;
+it interprets no domain-specific predicate, so a new domain's facts are
+recounted the day they are committed"* — a window written for domains that do
+not exist yet, which would recount a spell's provenance the day metaphysics
+commits its first fact. Nobody has to teach it what magic is. **A scar is
+residue, so researching magic *is* doing history**: the mage inferring what was
+cast in a blighted land and the historian inferring what happened in a ruin run
+the same operation. UNI-1's list does not gain historiography as a fifth
+member — historiography *is* the mechanic, and science, magic, theology, and
+identification are it pointed at different residues.
+
+**The verification story**, tier by tier. *Formula-checked*: grammar properties
+(confluence, invertibility, monotonicity, termination) are the formal substrate
+MAP-45's dial has been missing, each a claim a test catches; the flux graph's
+centrality; conservation asserted globally on the conservative rung, so the
+mass-balance battery never weakens. *Calibration-checked*: the mundane draw
+against real ethnographic and psychological data, since Earth is a member of
+the family. *Literature-checked*: the two laws as cognitive primitives.
+*Taste-checked, honestly*: the catalog's contents, and whether proof search
+over authored primitives reads as magic rather than as programming. The mystery
+must come from hiddenness and noisy inference — which the constitutional
+guarantee that phenomena never reveal their producing system supplies for free.
+A god-carved gorge lands indistinguishably beside an eroded one, so discovery
+is hard *by construction* and superstition inevitable rather than simulated.
+
+**Sequencing.** Strictly downstream of the UNI-2/DOM-17 gate and of UNI-22's
+query engine (the matcher). The cheap tier is the one to build first and costs
+almost nothing: tier 0 runs *no* derivation search at all — a culture's lemma
+set is drawn, weighted by its perception vector against available
+correspondence edges, times surplus, times era — the same trade the
+ideonomic-cognition section already accepted in identical words ("tier 0 is
+cultures drifting with no individual ideation at all"). Real search belongs at
+play scale. The two clocks resolve by altitude rather than by mechanism:
+genesis magic is a **field** (civilisational drawdown reshaping the map over
+eras, on the era loop `paleoclimate` already runs), play magic is a **fact** (a
+working in a room), and coarse constrains fine. One guard-rail: an era loop in
+which magic forces climate is a chaotic forward integrator, so it must
+re-derive from the seed at full precision and can never be checkpointed from a
+save's quantized floats.
 
 ---
 
