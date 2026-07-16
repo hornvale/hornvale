@@ -88,6 +88,7 @@
 - [The Isotherm](./chronicle/the-isotherm.md)
 - [Sculpting](./chronicle/sculpting.md)
 - [The True Name](./chronicle/the-true-name.md)
+- [The Region](./chronicle/the-region.md)
 
 # The Gallery
 

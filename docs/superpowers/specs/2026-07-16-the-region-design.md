@@ -1,5 +1,13 @@
 # The Region — Design
 
+> **Status: SHIPPED** (2026-07-16). `scene/tiles-region/v1` producer, CLI,
+> `world-wasm-v3` export, reference page + golden, and the orrery consumer
+> (parser, extended evaluator, single-patch registration/seam proof) all
+> merged. Chronicle: [`the-region`](../../../book/src/chronicle/the-region.md);
+> retrospective: [`the-region`](../../retrospectives/the-region.md). The full
+> CDLOD renderer (orrery#2 proper) is a deferred follow-on. Census/calibration
+> regen deferred by Nathan at close.
+
 The map learned to answer *when* (The Isotherm). Now it must answer *closer*.
 
 `scene/tiles/v1` resamples a whole world onto one global equirectangular

@@ -142,6 +142,17 @@ III](./laboratory/census-of-coasts-iii.md).
   store, and the spike-validated adaptive-depth walk that lifts the uniform-depth
   restriction — all deferred, all resting now on a substrate that exists. The bet
   has moved from *no mechanism* to *mechanism shipped, composition pending*.
+  [The Region](./chronicle/the-region.md) shipped the first cross-repo
+  realization of the pointwise half — a regional tile query
+  (`scene/tiles-region/v1`) that samples and barycentrically interpolates the
+  continuous fields at arbitrary on-tile density, fed to a client that builds a
+  registered globe patch from a tile's address. In doing so it drew the honest
+  line the phrase *resolution-free* had blurred: the fields are free to *sample
+  and smooth* below cell scale, but carry no sub-cell *information* — the
+  ~110 km canonical cell is the physics floor, and interpolation beneath it is
+  cosmetic, not fidelity. The active-region swap the bet still awaits inherits
+  that boundary: it can refine geometry indefinitely, but never invent physics
+  the cells do not hold.
 
 ## Genuinely open — split by whether the world can grade itself
 

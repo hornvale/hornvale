@@ -1,5 +1,11 @@
 # The Region Implementation Plan
 
+> **Status: COMPLETE** (2026-07-16). All tasks executed subagent-driven and
+> reviewed clean; the orrery half consolidated Tasks 8–10 into two dispatches
+> (parser+evaluator; re-pin+patch proof). See the spec's status note and the
+> retrospective.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship `scene/tiles-region/v1` — a producer query returning the same per-tile layers for one cube-sphere quadtree tile's footprint at higher on-tile sample density, as a versioned cross-repo contract, with a `world-wasm-v3` export and producer-sourced contract tests, plus a minimal orrery consumer proving the data path.
