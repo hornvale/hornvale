@@ -1,12 +1,66 @@
 # The Moons — Design
 
 **Date:** 2026-07-16
-**Status:** Awaiting G3 review
+**Status:** **PARKED — split, and blocked on The Reckoning.** This spec was written before the campaign was decomposed. It is campaign **B** of two; do not execute it until **The Reckoning** (campaign A — stellar/planetary age + moon formation mechanism) has merged. See §0.
 **Tickets:** [hornvale#4](https://github.com/hornvale/hornvale/issues/4) (moon surface data); consumer proof in hornvale/orrery; unblocks orrery#4 (stand on the world *and its moons*).
 **Parent contracts:** `2026-07-16-the-isotherm-design.md` (the parameterized-quantity + normative-evaluator pattern this extends from time into space), `2026-07-16-the-region-design.md` (cross-repo contract discipline, producer-sourced goldens), decision 0022 (the sim emits data, clients render), decision 0033 (quantization at the emit boundary), decision 0055 (the wasm catalog boundary).
 **Roadmap:** The Isotherm §2 item 3. The Region shipped; this is next.
 
 ---
+
+## 0. Why this spec is parked, and what changes when it wakes
+
+Nathan's ruling at G3 (2026-07-16): **draw ages, and draw formation mechanism
+too.** That reaches much further than moon faces. A moon's formation mechanism
+predicts its **inclination** — and inclination is already drawn (0–10°, i.e.
+every moon in Hornvale today is implicitly *regular*), and Eclipse Seasons
+dates real eclipses off inclination and node. Constraining inclination from
+mechanism therefore moves every seeded world's eclipses: an **epoch**. Worse,
+`windows/lab/src/metrics.rs` runs a 100-year dated-eclipse scan for its cadence
+metrics, so the epoch moves **census rows** and needs an AWS census
+regeneration — an explicit-authorization carve-out.
+
+So the arc split (Nathan's call):
+
+- **Campaign A — The Reckoning** (the epoch, astronomy only): draw the star's
+  age bounded by the main-sequence lifetime; derive the planet's age; draw each
+  moon's **formation mechanism** and let it drive age, density, mass, and
+  inclination. Re-pins the eclipse batteries; needs the census regen.
+- **Campaign B — The Moons** (this spec, additive, no epoch): the
+  `scene/moon/v1` contract, the crater/mare population, the evaluator, and the
+  orrery consumer proof.
+
+**What The Reckoning retires from this spec when B wakes** — revise §§4–5 then,
+not now:
+
+1. **§5's assumed lunar bulk density dies.** Density becomes a *derivation* from
+   formation mechanism: a giant-impact moon is iron-poor (~3.3 g cm⁻³ — it is
+   re-accreted mantle debris with no core, which is exactly why Luna is 3.34
+   against Earth's 5.51); a captured body may be icy (~1.5–2.0). `radius_km`
+   then follows from real density rather than an assumption. This is the single
+   biggest honesty upgrade available to B.
+2. **§5's "crater density is drawn because there is no age" admission narrows —
+   but does not vanish**, and the reason is physically interesting.
+   **Crater density saturates**: impact flux collapsed after the first ~700 Myr,
+   and the lunar highlands are *saturated* — so heavily cratered that new
+   impacts destroy old ones and the count stops rising. Past ~1 Gyr, body age
+   barely changes a face. What actually varies is **surface age**, and *maria
+   reset the clock* (lunar maria flooded 3.1–3.9 Gyr ago, erasing everything
+   beneath — which is precisely why they are smooth and dark against the
+   battered bright highlands). So B's model becomes: **highlands saturate**
+   (fixed density, age-independent); **maria carry density ∝ (age − flood
+   time)**. That contrast *is* the Moon's face, and it arrives for real reasons.
+3. **§5's `maria_fraction` invented constant weakens**: flood timing and extent
+   both follow from how long the body stayed hot, which follows from mass — so
+   the rule gains a physical spine instead of a calibration to Luna.
+4. **Captured moons become possible for the first time**, which B's §4 must
+   handle: an irregular body is small, high-inclination, possibly retrograde,
+   and compositionally alien. An icy moon has no maria at all.
+
+Everything below this section predates the split and is preserved as written.
+Read §§3–4 (the contract shape and the derive-vs-generate rule) as still
+binding — those were ratified and are what B is. Read §5's model card as
+**superseded in the ways listed above**.
 
 ## 1. Problem
 
