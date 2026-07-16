@@ -139,3 +139,54 @@ closing this specific band. The final activation call, and the constants
 each mechanism ships with, are Stage 3's — chosen by sweep against the
 worst seeds, per spec §5, once the fit core (Stage 1) is in place to carry
 them.
+
+## The Earth anchor
+
+Shoreline-development is the one band Sculpting's tuning season inherited
+without an Earth anchor (spec §7): its governing floor was 1.3×–3.0× a
+*dead generator's own interim median* (7.315, v1@L6), and the supersession
+note flags that anchor as partly fragment-swarm noise. §7 re-derives it
+the way the other five bands were derived: rasterize Earth's real
+coastline onto the canonical L6 mesh and run the **same, unchanged**
+estimator over it.
+
+**Instrument:** `tools/earth-mask` (outside the workspace, mirroring
+`tools/type-audit`) reads Natural Earth's 110m land polygons (public
+domain; source and checksum recorded in the tool's doc comment) and, for
+every L6 cell center, runs an even-odd ray cast in longitude/latitude
+degrees against every ring (outer boundaries and holes) of every feature.
+The output — `book/src/laboratory/generated/earth-mask-l6/rows.csv`, a
+committed `cell,land` fixture, one row per L6 cell, ascending — carries a
+land fraction of **29.10%** (11,919 of 40,962 cells), matching Earth's
+real land fraction (~29.2%) closely enough to serve as a sanity check on
+the rasterization itself.
+
+`domains/terrain/src/shape.rs`'s `shoreline_development` was factored into
+a mask-based core, `shoreline_development_of_mask`, with the elevation
+version now deriving a mask and delegating — same iteration order, same
+float accumulation order, proved byte-identical by
+`mask_estimator_matches_elevation_estimator`. `windows/lab/tests/earth_anchor.rs`
+loads the fixture, builds the L6 `Geosphere`, and runs that same core over
+Earth's own mask.
+
+**Measured: `D_earth@L6` = 8.2106747** (quantized to 8 significant
+digits, `hornvale_kernel::quantize`'s convention), comfortably clearing
+the pre-registered sanity floor of `d > 1.5` (Earth is not a circle).
+
+**Preregistered proposed band** (spec §7's multiplier, `[D_earth/1.6, 1.6
+× D_earth]`, committed before the mask existed):
+
+- lower bound: 8.2106747 / 1.6 = **5.1316717**
+- upper bound: 8.2106747 × 1.6 = **13.1370795**
+
+so the candidate replacement band is **[5.1316717, 13.1370795]** — versus
+the contested current floor of 9.51 (itself only a lower bound, no stated
+upper bound) and the v3 tuning-probe's measured baseline median of
+7.3202–7.4332 (Census III / this probe's own 20-seed readout, above).
+Notably, the v3 baseline already sits *inside* this candidate band, while
+it sits below the current 9.51 floor — the two anchors disagree about
+whether v3 already passes.
+
+Per spec §7 and ledger #11: **the multipliers were committed in the spec
+before the mask existed; adoption of this band is Nathan's ruling, reserved
+to the season close.**

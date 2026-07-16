@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["kernel", "domains/*", "windows/*", "cli"]
-exclude = ["tools/type-audit", "clients/vessel/wasm", "clients/world-wasm"]
+exclude = ["tools/type-audit", "tools/earth-mask", "clients/vessel/wasm", "clients/world-wasm"]
 
 [workspace.package]
 edition = "2024"
