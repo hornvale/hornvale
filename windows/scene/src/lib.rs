@@ -456,6 +456,7 @@ pub fn system_json(scene: &SystemScene) -> String {
 }
 
 /// The `scene/moons/v1` schema tag.
+/// type-audit: bare-ok(identifier-text)
 pub const MOONS_SCHEMA: &str = "scene/moons/v1";
 
 /// Luna's reference radius, km (the constant-density anchor).
@@ -520,6 +521,7 @@ struct Descriptors {
 /// (most specific first): a bright icy face; else maria-rich; else heavily
 /// cratered; else a cratered highland. Thresholds are the reference page's
 /// normative table.
+/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
 pub fn moon_surface_class(albedo: f64, cratering: f64, maria_fraction: f64) -> &'static str {
     if albedo > 0.4 {
         "bright-icy"
@@ -534,7 +536,7 @@ pub fn moon_surface_class(albedo: f64, cratering: f64, maria_fraction: f64) -> &
 
 /// One moon's surface document entry. Field order is fixed; every f64
 /// quantizes at emit (decision 0033).
-/// type-audit: bare-ok(count: index), bare-ok(ratio: mass_rel), bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: surface_class)
+/// type-audit: bare-ok(count: index), bare-ok(ratio: mass_rel), bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: surface_class), pending(wave-3: radius_km), pending(wave-3: surface_gravity_ms2), bare-ok(ratio: tint)
 #[derive(Debug, Serialize)]
 pub struct MoonSurface {
     /// The moon's generation index (matches `scene/system/v1`).
@@ -934,37 +936,36 @@ mod tests {
 
     #[test]
     fn mass_bias_actually_bites_across_seeds() {
-        // Over many seeds, small moons read higher cratering and large moons
-        // higher maria than chance — the mass bias, not a single-seed fluke.
+        // The bias is a pure function of (seed, index, mass) — exercise it
+        // directly over synthetic masses spanning the drawn range [0.05, 2.5]
+        // (real moon mass is 0.05 + u·2.45), no world-building. Small moons
+        // must read higher cratering and large moons higher maria in aggregate
+        // (the bias, not a single-seed fluke).
+        let small_masses = [0.05, 0.2, 0.4, 0.6];
+        let large_masses = [1.6, 1.9, 2.2, 2.5];
         let mut small_cratering = 0.0;
         let mut large_cratering = 0.0;
         let mut small_maria = 0.0;
         let mut large_maria = 0.0;
-        let mut n = 0u32;
         for seed in 1..200u64 {
-            let Ok(scene) = moons_scene(&gen_world_for(seed)) else {
-                continue;
-            };
-            for m in &scene.moons {
-                if m.mass_rel < 0.8 {
-                    small_cratering += m.cratering;
-                    small_maria += m.maria_fraction;
-                } else {
-                    large_cratering += m.cratering;
-                    large_maria += m.maria_fraction;
-                }
+            let s = hornvale_kernel::Seed(seed);
+            for (i, &m) in small_masses.iter().enumerate() {
+                let d = super::seeded_descriptors(s, i, m);
+                small_cratering += d.cratering;
+                small_maria += d.maria_fraction;
             }
-            n += 1;
+            for (i, &m) in large_masses.iter().enumerate() {
+                let d = super::seeded_descriptors(s, i, m);
+                large_cratering += d.cratering;
+                large_maria += d.maria_fraction;
+            }
         }
-        assert!(n > 20, "enough mooned worlds sampled");
-        // Normalize is unnecessary for the direction test; means suffice because
-        // the bias term dominates the hash term.
         assert!(
-            small_cratering / large_cratering.max(1e-9) > 1.0,
+            small_cratering > large_cratering,
             "small moons more cratered in aggregate"
         );
         assert!(
-            large_maria / small_maria.max(1e-9) > 1.0,
+            large_maria > small_maria,
             "large moons more maria in aggregate"
         );
     }
