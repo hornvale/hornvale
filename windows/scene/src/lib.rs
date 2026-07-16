@@ -202,6 +202,38 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     })
 }
 
+/// Per-tile actual temperature at `day`, °C, on the same lattice as
+/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate cell.
+/// This is the sim's ground truth that a client reconstructs from the
+/// `t_mean_c`/`t_swing_c` layers; the cross-repo contract test compares the
+/// client's reconstruction against these values. Full precision (not
+/// quantized) — callers that need portable bytes quantize at their own
+/// boundary.
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>, SceneError> {
+    if !(MIN_WIDTH..=MAX_WIDTH).contains(&width) {
+        return Err(SceneError::WidthOutOfRange(width));
+    }
+    if !width.is_multiple_of(2) {
+        return Err(SceneError::WidthOdd(width));
+    }
+    let height = width / 2;
+    let climate =
+        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let climate_index = NearestCellIndex::new(climate.geosphere());
+    let tiles = (width * height) as usize;
+    let mut temperature = Vec::with_capacity(tiles);
+    for py in 0..height {
+        let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+        for px in 0..width {
+            let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            temperature.push(climate.temperature_at(c_cell, day).get());
+        }
+    }
+    Ok(temperature)
+}
+
 /// Settlement point features: every place holding both coordinate facts,
 /// in `places` order, with the flagship excluded there and appended last
 /// under its own kind (spec §2: the flagship appears exactly once).
@@ -575,6 +607,50 @@ mod tests {
             system_json(&scene),
             system_json(&system_scene(&gen_world()).unwrap())
         );
+    }
+
+    #[test]
+    fn temperature_grid_matches_direct_sampling_and_zero_phase_mean() {
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+        let world = build_world(
+            Seed(42),
+            &Default::default(),
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("seed 42 builds");
+        let width = 32;
+        let height = width / 2;
+        let climate = climate_of(&world).expect("climate builds");
+        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let day = 91.3;
+        let grid = temperature_grid(&world, width, day).expect("grid builds");
+        assert_eq!(grid.len(), (width * height) as usize);
+
+        // Independently reconstruct the same lattice sampling in the test
+        // (not by calling into tiles_scene's loop) and compare tile-by-tile
+        // against the direct `temperature_at` reading.
+        let mut i = 0;
+        for py in 0..height {
+            let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+            for px in 0..width {
+                let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let expected = climate.temperature_at(c_cell, day).get();
+                assert_eq!(grid[i], expected, "tile {i} mismatch at day {day}");
+                i += 1;
+            }
+        }
+
+        // At day 0 the seasonal sine term is exactly zero, so temperature_grid
+        // must agree with tiles_scene's t_mean_c (mean at zero phase).
+        let zero_grid = temperature_grid(&world, width, 0.0).expect("grid builds");
+        let scene = tiles_scene(&world, width).expect("scene builds");
+        for (g, m) in zero_grid.iter().zip(scene.t_mean_c.iter()) {
+            assert_eq!(*g, *m, "day-0 temperature_grid must equal t_mean_c");
+        }
     }
 
     #[test]
