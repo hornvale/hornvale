@@ -54,7 +54,7 @@
 //! brief's fallback clause, not silently substituted.
 
 use hornvale_astronomy::{Rotation, SkyPins};
-use hornvale_climate::substellar_cosine;
+use hornvale_climate::{RotationRegime, substellar_cosine};
 use hornvale_kernel::{CellMap, Geosphere, Seed};
 use hornvale_species::SpeciesDef;
 use hornvale_terrain::TerrainPins;
@@ -142,7 +142,19 @@ fn substrate_with_corrected_insolation(
     obliquity_deg: f64,
     insolation_scalar: f64,
 ) -> CellMap<Substrate> {
-    let shipped = substrate_field(geo, terrain, climate, obliquity_deg, insolation_scalar);
+    // This probe only ever runs on seeds `measure_seed` has already asserted
+    // are `Rotation::Locked` (see its `assert!` above the call site below);
+    // `shipped`'s insolation term is discarded and replaced wholesale by
+    // `corrected_insolation`, so the regime passed here only needs to be
+    // valid for the other three (already regime-aware) axes.
+    let shipped = substrate_field(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        &RotationRegime::Locked,
+    );
     let corrected_insolation = corrected_locked_insolation(geo, insolation_scalar);
     CellMap::from_fn(geo, |cell| {
         let s = *shipped.get(cell);

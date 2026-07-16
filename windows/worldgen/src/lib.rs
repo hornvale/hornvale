@@ -518,11 +518,19 @@ pub fn niche_per_species_k(
     climate: &GeneratedClimate,
     obliquity_deg: f64,
     insolation_scalar: f64,
+    regime: &RotationRegime,
     species_set: &[&hornvale_species::SpeciesDef],
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
     let base_inputs = carrying_inputs_of(geo, terrain, climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
-    let substrate = substrate_field(geo, terrain, climate, obliquity_deg, insolation_scalar);
+    let substrate = substrate_field(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        regime,
+    );
 
     species_set
         .iter()
@@ -580,7 +588,7 @@ pub fn demography_report_with_beta(
     let climate = climate_of(world)?;
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
-    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
     let species_set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
 
     let per_species_k = niche_per_species_k(
@@ -589,6 +597,7 @@ pub fn demography_report_with_beta(
         &climate,
         obliquity_deg,
         insolation_scalar,
+        &regime,
         &species_set,
     );
     // `tag as u32` here is the same build-local dense index documented on
@@ -746,6 +755,13 @@ pub fn annual_mean_insolation(
 /// four environmental readings The Niche's habitat model scores each
 /// species' condition niche against. Pure: draws nothing from the seed, only
 /// the world's already-committed terrain/climate/sky.
+///
+/// Insolation is rotation-regime-aware (SKY-24): a `Spinning` world keeps
+/// the latitude-only annual mean (byte-identical to the pre-fix path); a
+/// `Locked` world instead rewards the substellar geometry — a Lambert
+/// cosine off the substellar point, floored at `0.0` on the night side —
+/// so the terminator ring, not the fixed noon point, reads as the
+/// temperate band.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
 pub fn substrate_field(
     geo: &Geosphere,
@@ -753,15 +769,19 @@ pub fn substrate_field(
     climate: &GeneratedClimate,
     obliquity_deg: f64,
     insolation_scalar: f64,
+    regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
         temperature_c: climate.mean_temperature_at(cell).get(),
         moisture: climate.moisture_at(cell),
-        insolation: annual_mean_insolation(
-            geo.coord(cell).latitude,
-            obliquity_deg,
-            insolation_scalar,
-        ),
+        insolation: match regime {
+            RotationRegime::Spinning { .. } => {
+                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
+            }
+            RotationRegime::Locked => {
+                insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
+            }
+        },
         elevation: terrain.elevation_at(cell).get(),
     })
 }
@@ -2414,13 +2434,14 @@ fn build_to(
     // readable off `.composition` — replacing the interim `condense_tagged`
     // path (task A14: one settlement PER SPECIES, tag-per-settlement).
     let sky = sky_of(&world)?;
-    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
     let per_species_k = niche_per_species_k(
         geo,
         &terrain,
         &climate,
         obliquity_deg,
         insolation_scalar,
+        &regime,
         &species_set,
     );
     // `tag as u32` here is the same build-local dense index documented on
@@ -5057,8 +5078,15 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
-        let field = substrate_field(geo, &terrain, &climate, obliquity_deg, insolation_scalar);
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
         for cell in geo.cells() {
             let s = field.get(cell);
             assert!(s.temperature_c.is_finite());
@@ -5072,6 +5100,123 @@ mod tests {
         assert!(eq > pole, "equator {eq} > pole {pole}");
     }
 
+    /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
+    /// rewards the substellar geometry — peaking at the substellar cell,
+    /// zero at the antistellar cell (`cos_theta < 0`, floored), and
+    /// strictly between the two at a terminator-ring cell.
+    #[test]
+    fn locked_insolation_peaks_at_substellar_and_zeroes_on_night_side() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(hornvale_astronomy::RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        assert!(
+            matches!(regime, RotationRegime::Locked),
+            "the Locked rotation pin must yield RotationRegime::Locked"
+        );
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+
+        // Locate the substellar cell (max substellar_cosine), the
+        // antistellar cell (min), and the cell nearest the terminator
+        // (cosine closest to zero) by scanning the geosphere.
+        let mut substellar = None;
+        let mut antistellar = None;
+        let mut terminator = None;
+        for cell in geo.cells() {
+            let cos = hornvale_climate::substellar_cosine(geo.position(cell));
+            if substellar.map(|(_, best)| cos > best).unwrap_or(true) {
+                substellar = Some((cell, cos));
+            }
+            if antistellar.map(|(_, best)| cos < best).unwrap_or(true) {
+                antistellar = Some((cell, cos));
+            }
+            if terminator
+                .map(|(_, best): (_, f64)| cos.abs() < best.abs())
+                .unwrap_or(true)
+            {
+                terminator = Some((cell, cos));
+            }
+        }
+        let (substellar_cell, _) = substellar.unwrap();
+        let (antistellar_cell, antistellar_cos) = antistellar.unwrap();
+        let (terminator_cell, _) = terminator.unwrap();
+        assert!(
+            antistellar_cos < 0.0,
+            "the antistellar cell must sit on the night side"
+        );
+
+        let ins = |c| field.get(c).insolation;
+        assert!(
+            ins(substellar_cell) > ins(terminator_cell),
+            "substellar {} must exceed terminator {}",
+            ins(substellar_cell),
+            ins(terminator_cell)
+        );
+        assert!(
+            ins(terminator_cell) >= 0.0,
+            "terminator insolation must not be negative"
+        );
+        assert_eq!(
+            ins(antistellar_cell),
+            0.0,
+            "the antistellar cell reads zero insolation (Lambert floor)"
+        );
+    }
+
+    /// SKY-24 hard guard: on a `Spinning` world, `substrate_field`'s
+    /// insolation is EXACTLY `annual_mean_insolation` per cell — the
+    /// Spinning arm is the unmodified pre-fix computation, so no spinning
+    /// world's save bytes may move.
+    #[test]
+    fn spinning_worlds_are_byte_identical_across_the_fix() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        assert!(
+            matches!(regime, RotationRegime::Spinning { .. }),
+            "seed 42's default generated sky must be Spinning"
+        );
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+        for cell in geo.cells() {
+            let expected =
+                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar);
+            assert_eq!(
+                field.get(cell).insolation,
+                expected,
+                "cell {cell:?}: spinning insolation must equal the unchanged latitude-only formula exactly"
+            );
+        }
+    }
+
     #[test]
     fn niche_k_differentiates_species_with_different_temperature_optima() {
         let world = generated(42);
@@ -5079,7 +5224,7 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
 
         let roster = default_roster();
         let set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
@@ -5089,6 +5234,7 @@ mod tests {
             &climate,
             obliquity_deg,
             insolation_scalar,
+            &regime,
             &set,
         );
 

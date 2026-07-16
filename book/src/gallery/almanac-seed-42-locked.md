@@ -55,83 +55,78 @@ Notable: the Great Delta, salt flats.
 The air organizes into a single day–night overturning (tidally locked); 9 land biomes and 7 marine biomes cover the globe.
 Some 11% of the surface is habitable — land with water and a tolerable season.
 
-- **Gkaavoonoagoo** — temperate-forest
-- **Ngjeeqqaaqkoaboe** — alpine
-- **Xoomjoeboe** — alpine
-- **Njookboanoagoo** — alpine
-- **Foabtaoboenoagoo** — alpine
-- **Kbaefoegqoenoagooboe** — alpine
-- **Xeangjeoxoaboenoagoo** — alpine
-- **Voevaamjoeboenoagoo** — alpine
-- **Xeenjoofeeboe** — alpine
-- **Njaamjeanoagoonoenoa** — temperate-forest
-- **Njoexoanoagoo** — temperate-forest
-- **Kkeaxooboe** — alpine
-- **Foavaaboe** — alpine
-- **Ngjaetkaanjoenoagooboe** — alpine
-- **Qtaetqaoggaaboenoagoo** — alpine
-- **Feaqbaenoenoa** — temperate-forest
-- **Xoevoavoonoagooboe** — alpine
-- **Foongjoeboe** — alpine
-- **Ngjoemjeemjeenoagoo** — alpine
-- **Bgeoqqeoboenoagoo** — alpine
-- **Veenjeanoagooboe** — alpine
-- **Vootteanoagooboe** — alpine
-- **Qtookboenjaanoagoonoenoa** — temperate-forest
-- **Mjaofeavoanoagoo** — alpine
+- **Xoamjoenoenoanoagoo** — temperate-forest
+- **Njaofeoxooboe** — alpine
 - **Xeongjaaveoboenoagoo** — alpine
-- **Mjaevoanoagoo** — alpine
-- **Voangjaenoagooboe** — alpine
+- **Faoxaaxeaboenoagoo** — alpine
+- **Foabtaoboenoagoo** — alpine
+- **Feongjeanjooboe** — alpine
+- **Feotbeanoagoo** — temperate-forest
+- **Vootteanoagooboe** — alpine
+- **Njoeggaoktoenoagoo** — alpine
+- **Voekkaagkeenoagoo** — alpine
+- **Gkaavoonoagoo** — temperate-forest
+- **Ngjaonjaengjeonoagooboe** — alpine
+- **Njoexoanoagoo** — temperate-forest
+- **Ngjookqeanoagoonoenoa** — temperate-forest
+- **Gqeongjaekkoeboe** — alpine
+- **Qtaetqaoggaaboenoagoo** — alpine
+- **Veoxeanjoenoagoonoenoa** — temperate-forest
+- **Feaqbaenoenoa** — temperate-forest
+- **Ngjoemjeemjeenoagoo** — alpine
+- **Foongjoeboe** — alpine
+- **Veenjeanoagooboe** — alpine
+- **Mjaofeavoanoagoo** — alpine
+- **Voamjeexeonoagoo** — alpine
+- **Vaakkaegqeaboenoagoo** — alpine
 - **Voagtaenjaoboenoagoo** — alpine
+- **Bqeexaanjeoboenoagoo** — alpine
+- **Voevaamjoeboenoagoo** — alpine
 - **Qqeongjeanjaanoagoo** — alpine
+- **Tgoonjeoboe** — alpine
 - **Tteofaangjeanoagoo** — savanna
-- **Kgoaxaefeanoagoo** — alpine
-- **Veetgeovaenaabae** — savanna
-- **Voenjaaboenoagoo** — alpine
+- **Ktaengjoomjaoboenoagoo** — alpine
+- **Bbaonjoonaabae** — savanna
+- **Voebtaonoagooboe** — alpine
 - **Ngjeomjaenjoonoagoo** — alpine
 - **Ggaexoegtaaboe** — alpine
-- **Njaongjeenoagooboe** — alpine
-- **Ktaengjoomjaoboenoagoo** — alpine
+- **Ngjoekboenoagoo** — temperate-forest
+- **Mjeongjaenoagoo** — alpine
 - **Mjoengjoenoagoo** — alpine
-- **Voebtaonoagooboe** — alpine
-- **Veofeenoagoonaabae** — savanna
-- **Ngjaonjeanoagoo** — alpine
 - **Foagqeotkoenoenoa** — temperate-forest
 - **Veakkoanoagoo** — temperate-forest
 - **Mjoevaavoonoagoonoenoa** — temperate-forest
-- **Veoxeanjoenoagoonoenoa** — temperate-forest
-- **Xeekbaekqoenaabaenoagoo** — savanna
+- **Ngjaonjeanoagoo** — alpine
+- **Gtoofoanoagoonaabae** — savanna
+- **Gbaavoenoagooboe** — alpine
 - **Qteonjoegteenoagooboe** — alpine
-- **Faoxaaxeaboenoagoo** — alpine
-- **Kkaovoenoagoo** — alpine
+- **Xeekbaekqoenaabaenoagoo** — savanna
+- **Kgoaxaefeanoagoo** — alpine
 - **Xaavaenaabae** — savanna
-- **Njeakkoenoagoo** — alpine
 - **Qbeobgoenoagoo** — temperate-forest
-- **Njeexaanoagoo** — savanna
-- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
+- **Kkaovoenoagoo** — alpine
 - **Btoangjeotkaenoagoo** — tropical-seasonal-forest
 - **Njeexaeboenoagoo** — alpine
-- **Fnebvnobzxadnoaboo** — temperate-forest
+- **Gkoaqgeobtaegeetao** — tropical-seasonal-forest
 - **Zhfobzxetvngakbeetao** — tropical-seasonal-forest
-- **Tboavaanoagoonaabae** — savanna
+- **Fnebvnobzxadnoaboo** — temperate-forest
+- **Njeexaanoagoo** — savanna
 - **Fnaksvotnoaboo** — temperate-forest
 - **Sxekngobngebnoaboo** — tropical-seasonal-forest
-- **Ngedsxodnoaboo** — temperate-forest
+- **Kkaomjaogeetaonoagoo** — tropical-seasonal-forest
+- **Tboavaanoagoonaabae** — savanna
 - **Nokxnekxngabnoaboo** — temperate-forest
-- **Voavoatteanoagoonaabae** — savanna
-- **Feekkaamjoenaabae** — savanna
 - **Fnetsvakfngodbeetao** — tropical-seasonal-forest
 - **Xnetzhfobxnatbeetao** — tropical-seasonal-forest
-- **Bboangjoefeanoagoonaabae** — savanna
-- **Faavaonoagoonoenoa** — temperate-forest
-- **Nekvnobnednoaboobeetao** — tropical-seasonal-forest
+- **Voavoatteanoagoonaabae** — savanna
+- **Vngekngedbeetao** — tropical-seasonal-forest
+- **Xngedngeknoaboo** — savanna
+- **Feekkaamjoenaabae** — savanna
+- **Ngakngotnoaboonoenoa** — temperate-forest
 - **Zfokvngodzfadbeetaonoaboo** — tropical-seasonal-forest
-- **Kkaomjaogeetaonoagoo** — tropical-seasonal-forest
-- **Tkeaqqoomjeonoagooboe** — alpine
-- **Mjoangjoekkoaboe** — alpine
+- **Ngedsxodnoaboo** — temperate-forest
 - **Fngoknabnoknaadaenoaboo** — savanna
 - **Nadngotvnekbeetao** — tropical-seasonal-forest
-- **Qboavaanoagooboe** — alpine
 - **Svadvngatbeetaonoaboo** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
@@ -148,19 +143,19 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 78 settlement(s).
-The chief goblin settlement, Fnebvnobzxadnoaboo, holds 1 souls amid temperate-forest.
-The chief hobgoblin settlement, Gkaavoonoagoo, holds 20 souls amid temperate-forest.
+The land holds 73 settlement(s).
+The chief goblin settlement, Zhfobzxetvngakbeetao, holds 1 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Xoamjoenoenoanoagoo, holds 11 souls amid temperate-forest.
 
-The goblin village of **Fnebvnobzxadnoaboo**, population 1.
+The goblin village of **Zhfobzxetvngakbeetao**, population 1.
 
-Fnebvnobzxadnoaboo lives by farming.
+Zhfobzxetvngakbeetao lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Gkaavoonoagoo**, population 20.
+The hobgoblin legion of **Xoamjoenoenoanoagoo**, population 11.
 
-Gkaavoonoagoo lives by farming.
+Xoamjoenoenoanoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
@@ -188,7 +183,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Gkaavoonoagoo**, an organized priesthood tends its own pantheon:
+In the legion of **Xoamjoenoenoanoagoo**, an organized priesthood tends its own pantheon:
 
 > Toeqea the Ngjeanoagoo is ever: Toeqea the Ngjeanoagoo watches unceasing. So it was, so it is.
 >
