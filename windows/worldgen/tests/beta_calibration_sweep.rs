@@ -52,8 +52,8 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{CellMap, Mass, ResourceVector, Seed};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to, carrying_inputs_of, climate_of,
-    default_roster, peopled, species_carrying_input, terrain_of,
+    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, carrying_inputs_of,
+    climate_of, species_carrying_input, terrain_of,
 };
 use std::collections::BTreeMap;
 
@@ -105,14 +105,14 @@ struct SeedFixture {
 /// `species_carrying_input` are its public building blocks, reused here
 /// verbatim so this fixture is byte-for-byte what the shipped path feeds the
 /// packer).
-fn build_fixture(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> SeedFixture {
+fn build_fixture(seed: u64, wc: &WorldComponents) -> SeedFixture {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        roster,
+        wc,
         BuildDepth::Terrain,
     )
     .expect("seed builds at BuildDepth::Terrain");
@@ -122,20 +122,31 @@ fn build_fixture(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> SeedFixt
     let base_inputs = carrying_inputs_of(&geo, &terrain, &climate);
     let habitable = climate.habitability().clone();
 
-    let per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)> = roster
+    // The peopled kinds (the psyche key-set); fauna carry no psyche row. Tags
+    // are the shared build-local dense index — both `per_species_inputs` and
+    // `species` enumerate the SAME `wc.psyche` order.
+    let per_species_inputs: Vec<(u32, CellMap<hornvale_demography::CarryingInput>)> = wc
+        .psyche
         .iter()
         .enumerate()
-        .map(|(tag, def)| {
+        .map(|(tag, (_kind, psych))| {
             let inputs = CellMap::from_fn(&geo, |cell| {
-                species_carrying_input(*base_inputs.get(cell), &peopled(def).psych)
+                species_carrying_input(*base_inputs.get(cell), psych)
             });
             (tag as u32, inputs)
         })
         .collect();
-    let species: Vec<(u32, Mass, ResourceVector)> = roster
-        .iter()
+    let species: Vec<(u32, Mass, ResourceVector)> = wc
+        .psyche
+        .ids()
         .enumerate()
-        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
+        .map(|(tag, kind)| {
+            let bio = wc
+                .biosphere
+                .get(kind)
+                .expect("every peopled kind has a biosphere row");
+            (tag as u32, bio.mass, bio.niche.clone())
+        })
         .collect();
 
     let per_species_k: Vec<(u32, CellMap<f64>)> = per_species_inputs
@@ -389,12 +400,12 @@ fn run_table(
             not part of the commit gate or make gate-full's heavy tier — a one-shot \
             calibration read for task A16b's controller, not a fast-gate battery"]
 fn beta_calibration_sweep() {
-    let roster = default_roster();
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
     // Build every seed's β-independent fixture ONCE, up front.
     let fixtures: Vec<(u64, SeedFixture)> = SEEDS
         .iter()
-        .map(|&seed| (seed, build_fixture(seed, &roster)))
+        .map(|&seed| (seed, build_fixture(seed, &wc)))
         .collect();
 
     let post_trophic = run_table(

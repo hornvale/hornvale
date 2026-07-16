@@ -87,8 +87,8 @@ pub fn render_proto() -> Result<String, String> {
     // The merger-aware assignment (epoch root/v3): the same daughters the
     // composition root feeds `build_lexicon`, so this page's proto-roots are
     // exactly the ones the dictionary's modern forms descend from.
-    let daughters =
-        world_builder::family_daughters(&world, &world_builder::default_roster(), FAMILY);
+    let wc = world_builder::WorldComponents::assemble().expect("canonical registries");
+    let daughters = world_builder::family_daughters(&world, &wc, FAMILY);
     let assignment = assign_proto_roots(&world.seed, FAMILY, &phonology, &universe, &daughters);
     for concept in world.registry.concepts() {
         let proto = &assignment[&concept.name];

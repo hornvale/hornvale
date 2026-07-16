@@ -3,29 +3,34 @@
 use crate::{BuiltView, Metric, MetricValue, Study, StudyError, SummaryKind};
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
-use hornvale_species::SpeciesDef;
-use hornvale_worldgen::{BuildDepth, BuildError};
+use hornvale_worldgen::{BuildDepth, BuildError, WorldComponents};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Resolve a pin set's roster name to a concrete species roster. The closed
-/// set the Lab knows (spec §5): `None`/`"default"` = shipped; the two solo
-/// null-control rosters otherwise. Unknown ⇒ loud `StudyError`.
+/// Resolve a pin set's roster name to a concrete component set (ECS c3). The
+/// closed set the Lab knows (spec §5): `None`/`"default"` = the shipped
+/// canonical set; the two solo null-control kinds otherwise. Unknown ⇒ loud
+/// `StudyError`.
 ///
 /// `pub(crate)` (not private) so [`crate::blackbox::record_failure`] can
 /// resolve a pin set's roster exactly as the runner does, instead of
 /// duplicating this match.
-pub(crate) fn resolve_roster(name: Option<&str>) -> Result<Vec<SpeciesDef>, StudyError> {
-    match name {
-        None | Some("default") => Ok(hornvale_worldgen::default_roster()),
-        Some("goblin-solo") => Ok(crate::goblin_solo_roster()),
-        Some("goblin-twin-solo") => Ok(crate::goblin_twin_solo_roster()),
-        Some(other) => Err(StudyError {
-            message: format!(
-                "unknown roster '{other}'; known: default, goblin-solo, goblin-twin-solo"
-            ),
-        }),
-    }
+pub(crate) fn resolve_roster(name: Option<&str>) -> Result<WorldComponents, StudyError> {
+    let wc = match name {
+        None | Some("default") => WorldComponents::assemble(),
+        Some("goblin-solo") => Ok(crate::goblin_solo_components()),
+        Some("goblin-twin-solo") => Ok(crate::goblin_twin_solo_components()),
+        Some(other) => {
+            return Err(StudyError {
+                message: format!(
+                    "unknown roster '{other}'; known: default, goblin-solo, goblin-twin-solo"
+                ),
+            });
+        }
+    };
+    wc.map_err(|e| StudyError {
+        message: format!("failed to assemble the component set: {e:?}"),
+    })
 }
 
 /// One world's measurements (or its refusal).

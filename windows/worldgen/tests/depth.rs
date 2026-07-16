@@ -8,18 +8,19 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world, build_world_to, build_world_with_roster,
-    default_roster,
+    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world,
+    build_world_from_components, build_world_to,
 };
 
 fn shallow(depth: BuildDepth) -> hornvale_kernel::World {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
         Seed(42),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        &default_roster(),
+        &wc,
         depth,
     )
     .expect("seed 42 builds")
@@ -93,18 +94,19 @@ fn full_depth_is_byte_identical_to_the_ordinary_full_build() {
     // `build_world_to(.., Full)` must be the ordinary build, byte for byte —
     // the Full path adds no early return, only delegates.
     let via_depth = shallow(BuildDepth::Full);
-    let via_roster = build_world_with_roster(
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let via_components = build_world_from_components(
         Seed(42),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        &default_roster(),
+        &wc,
     )
     .expect("seed 42 builds");
     assert_eq!(
         serde_json::to_string(&via_depth).unwrap(),
-        serde_json::to_string(&via_roster).unwrap(),
-        "Full depth diverged from build_world_with_roster"
+        serde_json::to_string(&via_components).unwrap(),
+        "Full depth diverged from build_world_from_components"
     );
 }
