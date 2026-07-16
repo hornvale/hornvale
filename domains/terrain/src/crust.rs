@@ -649,6 +649,223 @@ fn repel_cratons(cratons: &mut [Craton]) {
     }
 }
 
+/// Fraction of `r_i + r_j` at which two cratons read as sutured (spec
+/// §3.1): less than 1 so lobed rim overlap still merges before craton
+/// *centers* reach exact tangency. Tuned only if the Task-6 pinned-world
+/// suture test demands it.
+/// type-audit: bare-ok(ratio)
+pub const CONTACT_FACTOR: f64 = 0.85;
+
+/// Sweep cap for `assemble_cratons`'s outward-push branch (a craton that
+/// starts already overlapping an earlier one): mirrors `repel_cratons`'s
+/// `REPEL_SWEEPS` exactly — clearing the worst-violating earlier craton
+/// can re-violate a different one, so the push repeats until clear or
+/// this cap is spent. The guarantee at the cap is *reduction*, not
+/// *attainment* — the same honesty `repel_cratons` documents.
+const ASSEMBLY_PUSH_SWEEPS: u32 = 16;
+
+/// Doubling-search cap for the outward push's extrapolation factor: the
+/// factor doubles from 2 until the push clears every placed craton, or
+/// this many doublings are spent, whichever comes first.
+const ASSEMBLY_PUSH_DOUBLINGS: u32 = 32;
+
+/// Bisection iteration count shared by the inward pull and the outward
+/// push: 64 fixed iterations rather than a tolerance, so the settled
+/// position is deterministic bit-for-bit (no platform-dependent
+/// early-exit).
+const ASSEMBLY_BISECTION_ITERS: u32 = 64;
+
+/// Angular separation between two unit-sphere points, radians.
+fn angular_separation(a: [f64; 3], b: [f64; 3]) -> f64 {
+    math::acos(dot(a, b).clamp(-1.0, 1.0))
+}
+
+/// The contact-separation target between two cratons: `CONTACT_FACTOR`
+/// times their combined nominal radii.
+fn contact_separation(a: &Craton, b: &Craton) -> f64 {
+    CONTACT_FACTOR * (a.radius_rad + b.radius_rad)
+}
+
+/// The assembly objective for craton `craton_i` at a candidate position
+/// `pos`: the smallest slack `sep(pos, assembly[j]) - contact(i, j)`
+/// over every already-placed craton `j`. Positive means clear of every
+/// placed craton; zero or negative means touching or overlapping the
+/// tightest one. A plain fold (not a sort) — `placed`/`assembly` stay
+/// index-aligned and small (craton counts are single digits to low
+/// teens), so this is cheap to re-evaluate at every bisection step.
+fn assembly_slack(
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> f64 {
+    (0..placed.len())
+        .map(|j| angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]))
+        .fold(f64::INFINITY, f64::min)
+}
+
+/// Index into `placed`/`assembly` of the worst-violated (most negative
+/// slack) placed craton against `pos`, with that slack value.
+fn worst_violation(
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> (usize, f64) {
+    (0..placed.len())
+        .map(|j| {
+            let slack =
+                angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]);
+            (j, slack)
+        })
+        .fold(
+            (0, f64::INFINITY),
+            |acc, cur| if cur.1 < acc.1 { cur } else { acc },
+        )
+}
+
+/// Bisect the inward pull arc `slerp(start, anchor, t)`, `t` in
+/// `[0, 1]`, for the exact `t` at which `assembly_slack` first reaches
+/// zero. The caller has already checked slack is positive at `t = 0`
+/// (the craton starts clear); slack at `t = 1` is always negative
+/// because the arc lands exactly on the anchor — craton 0's already-
+/// placed center — giving a zero separation against a strictly positive
+/// contact target, so a sign change always exists. Bisection maintains
+/// the invariant `slack(lo) > 0`, `slack(hi) <= 0` at every step
+/// regardless of whether the objective is monotonic between them, so by
+/// continuity the final `hi` converges to a point where some placed
+/// craton is touched (not deeply overlapped) to within float precision.
+fn pull_to_contact(
+    start: [f64; 3],
+    anchor: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let (mut lo, mut hi) = (0.0_f64, 1.0_f64);
+    for _ in 0..ASSEMBLY_BISECTION_ITERS {
+        let mid = 0.5 * (lo + hi);
+        let slack = assembly_slack(slerp(start, anchor, mid), craton_i, placed, assembly);
+        if slack > 0.0 {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    slerp(start, anchor, hi)
+}
+
+/// Bisect the outward extrapolation `slerp(anchor, pos, t)`, `t > 1`
+/// (the same extrapolation shape `repel_cratons` uses), for the
+/// smallest `t` at which `craton_i` is clear of every placed craton —
+/// not just `anchor`. Doubles a trial factor from 2 until clear (capped
+/// at `ASSEMBLY_PUSH_DOUBLINGS` doublings), then bisects `[1, t_hi]` for
+/// the exact crossing with the same fixed-iteration shape as
+/// `pull_to_contact`. If the doubling search never clears (pathological
+/// geometry), the bisection still runs and returns its best crossing —
+/// honesty about reduction, not attainment, mirrors `repel_cratons`.
+fn push_to_clear(
+    anchor: [f64; 3],
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let mut hi = 2.0_f64;
+    for _ in 0..ASSEMBLY_PUSH_DOUBLINGS {
+        let clear = assembly_slack(slerp(anchor, pos, hi), craton_i, placed, assembly) >= 0.0;
+        if clear {
+            break;
+        }
+        hi *= 2.0;
+    }
+    let (mut lo, mut hi_bound) = (1.0_f64, hi);
+    for _ in 0..ASSEMBLY_BISECTION_ITERS {
+        let mid = 0.5 * (lo + hi_bound);
+        let slack = assembly_slack(slerp(anchor, pos, mid), craton_i, placed, assembly);
+        if slack < 0.0 {
+            lo = mid;
+        } else {
+            hi_bound = mid;
+        }
+    }
+    slerp(anchor, pos, hi_bound)
+}
+
+/// Push craton `i` away from whichever placed craton it violates most,
+/// repeating against the next worst violator until clear or
+/// `ASSEMBLY_PUSH_SWEEPS` is spent. Coincident (or antipodal) centers —
+/// where `slerp`'s own guards make the push direction undefined — are
+/// left in place for that pairing step, exactly as `repel_cratons`
+/// documents for omega ~ 0: no push direction is privileged there, so
+/// the sweep stops rather than chase an arbitrary one.
+fn push_clear_of_overlap(
+    start: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let mut pos = start;
+    for _sweep in 0..ASSEMBLY_PUSH_SWEEPS {
+        let (worst_j, slack) = worst_violation(pos, craton_i, placed, assembly);
+        if slack >= 0.0 {
+            break;
+        }
+        let violator = assembly[worst_j];
+        let omega = angular_separation(violator, pos);
+        if !(1e-9..=std::f64::consts::PI - 1e-9).contains(&omega) {
+            break;
+        }
+        pos = push_to_clear(violator, pos, craton_i, placed, assembly);
+    }
+    pos
+}
+
+/// Derive the contact-configuration assembly frame: where each craton's
+/// center sits once cratons `1..` are pulled toward craton 0 (the
+/// anchor) and settled at first contact along the way — repulsion
+/// (`repel_cratons`) run in reverse (spec §3.1). Draw-free and
+/// deterministic: a pure function of the drawn craton set, consuming no
+/// `Seed`/`Stream`, never itself serialized (the assembly is derived on
+/// demand, not saved world state).
+///
+/// For craton `i` in id order `1..`, the pull arc is
+/// `slerp(cratons[i].center, anchor, t)`, `t` in `[0, 1]`. If the craton
+/// starts clear of every already-placed craton, it slides inward and
+/// settles the instant it first touches one (`pull_to_contact`,
+/// bisected exactly, not by tolerance). If it starts already
+/// overlapping one or more placed cratons, it is pushed directly away
+/// from the worst-violating one instead (`push_clear_of_overlap`), the
+/// same extrapolation `repel_cratons` uses, repeated against whichever
+/// craton is worst-violating next. If it starts exactly at zero slack,
+/// it is placed as-is. Craton 0 is the anchor and is never moved, so a
+/// single-craton input is the identity map.
+/// type-audit: bare-ok(ratio: return)
+pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
+    if cratons.is_empty() {
+        return Vec::new();
+    }
+    let anchor = cratons[0].center;
+    let mut assembly: Vec<[f64; 3]> = Vec::with_capacity(cratons.len());
+    assembly.push(anchor);
+    for i in 1..cratons.len() {
+        let placed = &cratons[..i];
+        let start = cratons[i].center;
+        let f0 = assembly_slack(start, &cratons[i], placed, &assembly);
+        let settled = match f0.partial_cmp(&0.0) {
+            Some(std::cmp::Ordering::Greater) => {
+                pull_to_contact(start, anchor, &cratons[i], placed, &assembly)
+            }
+            Some(std::cmp::Ordering::Less) => {
+                push_clear_of_overlap(start, &cratons[i], placed, &assembly)
+            }
+            _ => start,
+        };
+        assembly.push(settled);
+    }
+    assembly
+}
+
 /// The crust fields: stateless functions of position over the drawn
 /// craton set (Crust spec §2). Pure — the `Field` contract.
 pub struct CrustField {
@@ -962,6 +1179,59 @@ mod tests {
                 unrepelled, public,
                 "seed {seed}: repulsion ran despite --supercontinent"
             );
+        }
+    }
+
+    #[test]
+    fn assembly_is_identity_for_single_craton_and_sutures_multis() {
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let mut notes = Vec::new();
+        let pins = TerrainPins::default();
+        let ocean_target = default_ocean_target(seed);
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut notes);
+        let assembly = assemble_cratons(&cratons);
+        assert_eq!(assembly.len(), cratons.len());
+        // Every craton i > 0 touches at least one earlier craton at the
+        // contact separation (within 1e-9 rad) and none sits closer than
+        // contact to ANY earlier craton (no deep overlap).
+        for i in 1..cratons.len() {
+            let mut touched = false;
+            for j in 0..i {
+                let sep = math::acos(dot(assembly[i], assembly[j]).clamp(-1.0, 1.0));
+                let contact = CONTACT_FACTOR * (cratons[i].radius_rad + cratons[j].radius_rad);
+                assert!(sep >= contact - 1e-9, "craton {i} overlaps {j}");
+                if sep <= contact + 1e-9 {
+                    touched = true;
+                }
+            }
+            assert!(touched, "craton {i} floats free of the assembly");
+        }
+        // Single craton: identity.
+        let one = vec![cratons[0].clone()];
+        assert_eq!(assemble_cratons(&one), vec![cratons[0].center]);
+        // Determinism.
+        assert_eq!(assembly, assemble_cratons(&cratons));
+    }
+
+    #[test]
+    fn assembly_is_draw_free() {
+        // `assemble_cratons` takes no `Seed`/`Stream` — its signature is
+        // its own proof, but this documents the consequence: repeated
+        // calls on independent clones of the same craton set must be
+        // byte-identical, since there is nothing left to draw from.
+        // Swept across seeds so the assertion isn't riding on one draw.
+        for seed_val in [1u64, 7, 42] {
+            let terrain_seed = Seed(seed_val).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let cratons = draw_cratons(
+                terrain_seed,
+                &TerrainPins::default(),
+                ocean_target,
+                &mut Vec::new(),
+            );
+            let a = assemble_cratons(&cratons.clone());
+            let b = assemble_cratons(&cratons.clone());
+            assert_eq!(a, b, "seed {seed_val}: assembly is not draw-free");
         }
     }
 
