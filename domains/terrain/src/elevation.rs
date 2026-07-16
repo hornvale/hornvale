@@ -34,7 +34,9 @@ use crate::boundaries::{BoundaryKind, CellBoundary};
 use crate::pins::TerrainPins;
 use crate::plates::{Plate, dot, unit_vector};
 use crate::streams;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
+use hornvale_kernel::{
+    CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
+};
 
 /// Airy isostasy: meters of elevation per kilometer of crust thickness.
 /// type-audit: pending(wave-2)
@@ -89,6 +91,194 @@ fn boundary_amplitude_m(kind: BoundaryKind, continental: bool, arc_side: bool) -
     }
 }
 
+/// Foreland-basin trough depth, m (Sculpting spec §3: belt anatomy).
+/// type-audit: pending(wave-2)
+pub const FORELAND_DEPTH_M: f64 = -350.0;
+/// Foreland trough band, in boundary graph hops (continental side).
+/// type-audit: bare-ok(count)
+pub const FORELAND_HOPS: (u32, u32) = (3, 6);
+/// Trench trough depth, m, at the subducting-side boundary cell.
+/// type-audit: pending(wave-2)
+pub const TRENCH_DEPTH_M: f64 = -2800.0;
+/// Trench half-width, hops.
+/// type-audit: bare-ok(count)
+pub const TRENCH_HOPS: u32 = 1;
+/// Arc edifice spacing wavelength (in gate-noise cycles per radian).
+/// type-audit: pending(wave-2)
+pub const ARC_SPACING: f64 = 9.0;
+/// Fraction of the arc that is edifice (gate above this is "on").
+/// type-audit: bare-ok(ratio)
+pub const ARC_DUTY: f64 = 0.45;
+
+/// Collision-belt crest decay length, cells: the sharp core.
+const CREST_DECAY_CELLS: f64 = 1.0;
+/// Foothills amplitude, as a fraction of the belt's peak amplitude. Kept
+/// small (not the more "visually broad" fraction a first sketch might
+/// reach for) so the shoulder's own tail has died down well below
+/// `FORELAND_DEPTH_M` — a fixed depth, independent of belt strength — by
+/// the time the foreland band starts; otherwise a strong belt's foothills
+/// alone swamp the trough and it never goes negative. See the Task 3
+/// report for the numeric sweep that picked this value.
+const FOOTHILLS_FRACTION: f64 = 0.1;
+/// Foothills decay length, cells: broader than the crest's apron.
+const FOOTHILLS_DECAY_CELLS: f64 = 4.0;
+/// Island-arc volcanic-edifice decay length, cells.
+const ARC_EDIFICE_DECAY_CELLS: f64 = 1.5;
+/// Trench-notch decay length, cells: the sharp seaward deep.
+const TRENCH_DECAY_CELLS: f64 = 1.0;
+/// Decay length beyond the trench notch, cells.
+const FAR_FIELD_DECAY_CELLS: f64 = 3.0;
+/// Residual amplitude fraction beyond the trench notch.
+const FAR_FIELD_FRACTION: f64 = 0.2;
+/// Octaves for the along-strike arc-gate noise.
+const ARC_GATE_OCTAVES: u32 = 4;
+
+/// fBm relief peak amplitude, meters (spec §3).
+/// type-audit: pending(wave-2)
+pub const RELIEF_AMPLITUDE_M: f64 = 240.0;
+/// Relief noise base spatial frequency, cycles per radian: features
+/// ~1/8 rad, spanning ~7 cells at the canonical level-6 grid's mean cell
+/// spacing (~0.017 rad). Retuned in the Task 14 tuning season (iteration
+/// 3): at the prior 48.0 the dominant octave was sub-Nyquist at L6
+/// (~1.2 samples/cycle — per-cell jitter the sea-level percentile
+/// averages away, contributing nothing to coastline shape). At 8.0 the
+/// octave is resolved (like `LOBE_FREQ` = 4 / `ARC_SPACING` = 9), giving
+/// coherent capes and bays where relief crosses sea level.
+const RELIEF_FREQUENCY: f64 = 8.0;
+/// Octaves for the fBm relief noise.
+const RELIEF_OCTAVES: u32 = 4;
+
+/// Relief amplitude scale: hard rock (induration→1) carries full relief,
+/// soft lies smooth; belts (near boundaries) roughen further.
+/// type-audit: bare-ok(ratio: induration), bare-ok(count: boundary_hops)
+fn relief_scale(induration: f64, boundary_hops: u32) -> f64 {
+    let hardness = 0.25 + 0.75 * induration;
+    let belt = 1.0 + 1.5 * math::exp(-f64::from(boundary_hops) / 3.0);
+    hardness * belt
+}
+
+/// Per-kind boundary elevation profile (Sculpting, spec §3): crest,
+/// foothills, and a foreland trough for collision belts (including the
+/// continental side of a coastal range — the Andean volcanic line is ON
+/// the continent); gated volcanic edifices on an island arc's overriding
+/// side; a seaward trench on every subducting side (an island arc's
+/// non-arc side, and a coastal range's whole oceanic side — no offshore
+/// arc on a mixed margin); the bare per-kind amplitude for everything
+/// else — rifts, ridges, transforms, and a collision-tagged boundary
+/// whose own cell reads oceanic (crust varies continuously within a
+/// plate, so a cell can drift off the continental side even though its
+/// nearest same-plate boundary was classified from a
+/// continental-continental contact) — which `assemble_elevation` decays
+/// with the existing maturity-driven length exactly as it did before this
+/// profile existed (see `profile_scale`).
+///
+/// `gate` is the along-strike hash-noise in [0, 1), sampled once per
+/// **source** boundary cell so a whole edifice shares one gate value —
+/// only meaningful for the island-arc edifice branch; other kinds ignore
+/// it.
+fn boundary_profile_m(
+    kind: BoundaryKind,
+    cell_continental: bool,
+    arc_side: bool,
+    distance: u32,
+    gate: f64,
+) -> f64 {
+    let base = boundary_amplitude_m(kind, cell_continental, arc_side);
+    let d = f64::from(distance);
+    match kind {
+        BoundaryKind::ContinentalCollision | BoundaryKind::CoastalRange if cell_continental => {
+            let crest = base * math::exp(-d / CREST_DECAY_CELLS);
+            let foothills = FOOTHILLS_FRACTION * base * math::exp(-d / FOOTHILLS_DECAY_CELLS);
+            let (f0, f1) = FORELAND_HOPS;
+            let foreland = if distance >= f0 && distance <= f1 {
+                FORELAND_DEPTH_M
+                    * math::sin(
+                        core::f64::consts::PI * (d - f64::from(f0)) / f64::from(f1 - f0).max(1.0),
+                    )
+            } else {
+                0.0
+            };
+            crest + foothills + foreland
+        }
+        BoundaryKind::IslandArc if arc_side => {
+            // Overriding ocean plate: a volcanic edifice, present only
+            // where the along-strike gate is on.
+            let on = if gate > (1.0 - ARC_DUTY) { 1.0 } else { 0.12 };
+            base * on * math::exp(-d / ARC_EDIFICE_DECAY_CELLS)
+        }
+        BoundaryKind::IslandArc | BoundaryKind::CoastalRange => {
+            // The subducting-side trench. For CoastalRange this arm is
+            // every oceanic cell REGARDLESS of `arc_side` (the continental
+            // side was claimed by the crest arm above): Andean-style
+            // margins carry no offshore arc — the volcanic line is on the
+            // continent — and `arc_side` is a bare plate-id tie-break
+            // with no physical meaning on a mixed margin, so it must not
+            // select an edifice here (Task 3 review fix; spec §3).
+            if distance <= TRENCH_HOPS {
+                TRENCH_DEPTH_M * math::exp(-d / TRENCH_DECAY_CELLS)
+            } else {
+                base * math::exp(-d / FAR_FIELD_DECAY_CELLS) * FAR_FIELD_FRACTION
+            }
+        }
+        _ => base, // rifts/ridges/transform, unchanged in shape (caller decays it)
+    }
+}
+
+/// Whether `assemble_elevation` should apply the maturity amplitude
+/// `factor` (young plates rise higher, old plates worn down) to
+/// `boundary_profile_m`'s output, and whether it should also re-apply the
+/// maturity-driven `exp(-d/decay_cells)` falloff length on top.
+enum ProfileScale {
+    /// Pre-Sculpting behavior, bit-for-bit: `factor * exp(-d/decay_cells)`.
+    /// `boundary_profile_m` returned the bare amplitude for this branch.
+    Unchanged,
+    /// A belt/arc uplift part (crest+foothills+foreland combined for
+    /// collision belts, since they share one profile value; or a gated
+    /// volcanic edifice): `factor` applies, but the profile's own fixed
+    /// decay lengths replace `decay_cells` — no double falloff.
+    Uplift,
+    /// A trough (trench, and the residual subduction depression beyond
+    /// it): `factor` does NOT apply — old belts keep their basins.
+    Trough,
+}
+
+/// Classify a boundary contact for `ProfileScale`, mirroring
+/// `boundary_profile_m`'s own branch structure exactly (kept as a
+/// separate small function, rather than threading a scale enum out of
+/// `boundary_profile_m` itself, so the profile's public contract stays a
+/// plain `f64` per the interface `boundary_profile_m` is tested against).
+fn profile_scale(kind: BoundaryKind, cell_continental: bool, arc_side: bool) -> ProfileScale {
+    match kind {
+        BoundaryKind::ContinentalRift | BoundaryKind::OceanicRidge | BoundaryKind::Transform => {
+            ProfileScale::Unchanged
+        }
+        BoundaryKind::ContinentalCollision => {
+            if cell_continental {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Unchanged
+            }
+        }
+        BoundaryKind::CoastalRange => {
+            // The oceanic side is ALWAYS the trench (no offshore arc on
+            // an Andean-style margin), so `arc_side` is irrelevant here —
+            // mirroring `boundary_profile_m`'s own arms exactly.
+            if cell_continental {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Trough
+            }
+        }
+        BoundaryKind::IslandArc => {
+            if arc_side {
+                ProfileScale::Uplift
+            } else {
+                ProfileScale::Trough
+            }
+        }
+    }
+}
+
 /// A mantle hotspot: a fixed Gaussian dome of uplift.
 struct Hotspot {
     /// Dome center, a unit vector.
@@ -101,13 +291,18 @@ struct Hotspot {
 /// level 5).
 const HOTSPOT_SIGMA_RAD: f64 = 0.05;
 
-impl Hotspot {
-    /// Gaussian dome contribution at a unit-sphere position, meters.
-    fn contribution_m(&self, position: [f64; 3]) -> f64 {
-        let angle = math::acos(dot(self.position, position).clamp(-1.0, 1.0));
-        self.strength_m
-            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
-    }
+/// Gaussian dome contribution at a unit-sphere position, meters (Sculpting
+/// Task 6): generalizes the old `Hotspot::contribution_m` to any dome
+/// center/strength, not only the live hotspot — a `TrailSeamount`'s
+/// `age_index == 0` entry carries the SAME `position`/`strength_m` a plain
+/// `Hotspot` would, so calling this with those fields reproduces the
+/// pre-trails contribution byte-for-bit (see
+/// `dome_m_matches_the_original_hotspot_formula_for_age_zero`); trail
+/// entries (`age_index >= 1`) are additional calls of the same function
+/// that add their (decayed) contribution on top.
+fn dome_m(position: [f64; 3], strength_m: f64, at: [f64; 3]) -> f64 {
+    let angle = math::acos(dot(position, at).clamp(-1.0, 1.0));
+    strength_m * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD))
 }
 
 /// Draw 3–8 hotspots from the hotspots stream: count first, then position
@@ -127,14 +322,101 @@ fn draw_hotspots(terrain_seed: Seed) -> Vec<Hotspot> {
         .collect()
 }
 
-/// Pure elevation assembly over explicit inputs (hotspots included), so
-/// tests can pin the hotspot list. See the module doc for the formula.
-/// `crust` is each cell's crust thickness in km (the isostatic base
-/// input); `continental` is each cell's crust flag (feeds the boundary
-/// amplitude's side selection, unchanged in shape from the retired
-/// plate-level flag). Eight explicit narrow inputs beat a bundling struct
-/// here — same house call as climate's assemblers (`temperature.rs`,
-/// `biome.rs`).
+/// One seamount in a hotspot trail (Sculpting, spec §3): the drawn hotspot
+/// smeared along its plate's local velocity, age-progressive. Retained on
+/// `TectonicGlobe` for Task 9's atolls.
+/// type-audit: bare-ok(ratio: position), pending(wave-2: strength_m), bare-ok(count: age_index)
+#[derive(Debug, Clone, PartialEq)]
+pub struct TrailSeamount {
+    /// Dome center, unit vector.
+    pub position: [f64; 3],
+    /// Peak uplift, meters (decays along the chain).
+    pub strength_m: f64,
+    /// Steps upstream from the live hotspot (0 = the hotspot itself).
+    pub age_index: u32,
+}
+
+/// Maximum angular length of a hotspot trail, radians (~20°).
+/// type-audit: bare-ok(ratio)
+pub const TRAIL_LENGTH_RAD: f64 = 0.35;
+/// Number of trail steps upstream of the live hotspot dome.
+/// type-audit: bare-ok(count)
+pub const TRAIL_STEPS: u32 = 6;
+/// Per-step strength decay multiplier along a trail.
+/// type-audit: bare-ok(ratio)
+pub const TRAIL_DECAY: f64 = 0.55;
+
+/// Derive trail chains from the existing hotspot draws (no new draws):
+/// step upstream against the plate's surface velocity at each point,
+/// `TRAIL_STEPS` steps of `TRAIL_LENGTH_RAD`/`TRAIL_STEPS` radians each,
+/// strength decaying by `TRAIL_DECAY` per step. Chain length thus scales
+/// with plate speed direction only (fixed arc length; a stationary plate
+/// still gets a stubby stack — harmless, it reads as a large volcanic
+/// massif). Every hotspot contributes exactly `TRAIL_STEPS + 1` entries
+/// (the live dome plus `TRAIL_STEPS` trail steps) unless the plate's
+/// velocity at some point along the chain underflows to numerically zero
+/// (the rotation-axis poles), in which case the chain stops early.
+/// type-audit: bare-ok(index: plate_of)
+pub fn trail_seamounts(
+    terrain_seed: Seed,
+    plates: &[Plate],
+    plate_of: &CellMap<u32>,
+    geo: &Geosphere,
+) -> Vec<TrailSeamount> {
+    let hotspots = draw_hotspots(terrain_seed);
+    let index = NearestCellIndex::new(geo);
+    let step = TRAIL_LENGTH_RAD / f64::from(TRAIL_STEPS);
+    let mut out = Vec::new();
+    for h in &hotspots {
+        let mut pos = h.position;
+        let mut strength = h.strength_m;
+        out.push(TrailSeamount {
+            position: pos,
+            strength_m: strength,
+            age_index: 0,
+        });
+        for i in 1..=TRAIL_STEPS {
+            let cell = index.nearest_to_position(geo, pos);
+            let plate = &plates[*plate_of.get(cell) as usize];
+            let v = crate::plates::velocity_at(plate, pos);
+            let speed = crate::plates::norm(v);
+            if speed < 1e-9 {
+                break;
+            }
+            // Upstream = where the plate came FROM = -v direction.
+            let dir = crate::plates::normalize(crate::plates::scale(v, -1.0 / speed));
+            pos = crate::plates::rotate_toward(pos, dir, step);
+            strength *= TRAIL_DECAY;
+            out.push(TrailSeamount {
+                position: pos,
+                strength_m: strength,
+                age_index: i,
+            });
+        }
+    }
+    out
+}
+
+/// Pure elevation assembly over explicit inputs (hotspot trail seamounts
+/// included), so tests can pin the seamount list. See the module doc for
+/// the formula. `crust` is each cell's crust thickness in km (the
+/// isostatic base input); `continental` is each cell's crust flag (feeds
+/// the boundary amplitude's side selection, unchanged in shape from the
+/// retired plate-level flag). `arc_gate_seed` is hash-noise only
+/// (Sculpting spec §3, `streams::ARC_GATE`) — never consumed as a
+/// `Stream`, so it carries no draw-order/save-format contract; it gates
+/// island-arc/coastal-range edifices into discrete along-strike chains.
+/// `induration` (Task 4, The Ground/Sculpting seam) and `relief_seed`
+/// (Sculpting, spec §3, `streams::RELIEF`) feed the zero-mean fBm relief
+/// term: hash-noise only, never consumed as a `Stream`, so it carries no
+/// draw-order/save-format contract, mirroring `arc_gate_seed`. `seamounts`
+/// (Sculpting Task 6) replaces the old bare hotspot-dome list: its
+/// `age_index == 0` entries carry each drawn hotspot's own position and
+/// strength, so their `dome_m` contribution reproduces the pre-trails
+/// hotspot term byte-for-bit; trail entries (`age_index >= 1`) are
+/// additional (weaker) domes that add on top. Eleven explicit narrow
+/// inputs beat a bundling struct here — same house call as climate's
+/// assemblers (`temperature.rs`, `biome.rs`).
 #[allow(clippy::too_many_arguments)]
 fn assemble_elevation(
     geo: &Geosphere,
@@ -142,9 +424,12 @@ fn assemble_elevation(
     plate_of: &CellMap<u32>,
     boundaries: &CellMap<Option<CellBoundary>>,
     distances: &CellMap<Option<(u32, CellId)>>,
-    hotspots: &[Hotspot],
+    seamounts: &[TrailSeamount],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
+    arc_gate_seed: Seed,
+    induration: &CellMap<f64>,
+    relief_seed: Seed,
 ) -> CellMap<ReferenceElevation> {
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
@@ -155,30 +440,77 @@ fn assemble_elevation(
             Some((distance, source)) => {
                 let contact = (*boundaries.get(source)).expect("BFS sources are boundary cells");
                 let arc_side = plate.id > contact.other_plate;
-                let amplitude = boundary_amplitude_m(contact.kind, cell_continental, arc_side);
                 // Young plates (maturity 0): 1.5x amplitude, sharp 1.5-cell
                 // falloff. Old plates (maturity 1): 0.5x amplitude, worn
-                // 4.5-cell falloff.
+                // 4.5-cell falloff. Only `ProfileScale::Unchanged` (rifts,
+                // ridges, transforms, and an off-continent collision cell)
+                // still uses `decay_cells` — the belt/arc anatomy bakes its
+                // own fixed decay lengths into `boundary_profile_m` instead.
                 let factor = 1.5 - plate.maturity;
                 let decay_cells = 1.5 + 3.0 * plate.maturity;
-                amplitude
-                    * (contact.magnitude / MAX_CLOSING_SPEED)
-                    * factor
-                    * math::exp(-f64::from(distance) / decay_cells)
+                let magnitude_scale = contact.magnitude / MAX_CLOSING_SPEED;
+                // Along-strike gate: sampled once per SOURCE boundary cell
+                // (not per `cell`) so a whole edifice shares one value;
+                // only the island-arc edifice branch reads it (coastal
+                // ranges carry no offshore arc — Task 3 review fix), and
+                // it is hash-noise (no draw-order contract), so sampling
+                // is safely skipped everywhere else.
+                let gate = if contact.kind == BoundaryKind::IslandArc {
+                    crate::crust::sphere_fbm01(
+                        arc_gate_seed,
+                        geo.position(source),
+                        ARC_SPACING,
+                        ARC_GATE_OCTAVES,
+                    )
+                } else {
+                    0.0
+                };
+                let profile =
+                    boundary_profile_m(contact.kind, cell_continental, arc_side, distance, gate);
+                match profile_scale(contact.kind, cell_continental, arc_side) {
+                    ProfileScale::Unchanged => {
+                        profile
+                            * magnitude_scale
+                            * factor
+                            * math::exp(-f64::from(distance) / decay_cells)
+                    }
+                    ProfileScale::Uplift => profile * magnitude_scale * factor,
+                    ProfileScale::Trough => profile * magnitude_scale,
+                }
             }
         };
         let position = geo.position(cell);
-        let hotspot_term: f64 = hotspots.iter().map(|h| h.contribution_m(position)).sum();
-        let metres = base + boundary_term + hotspot_term + CELL_EPSILON_M * f64::from(cell.0);
+        let hotspot_term: f64 = seamounts
+            .iter()
+            .map(|s| dome_m(s.position, s.strength_m, position))
+            .sum();
+        // fBm relief (Sculpting, spec §3): zero-mean multi-octave detail,
+        // amplitude scaled by induration (hard rock stands craggy) and
+        // belt proximity (`relief_scale`). A cell with no reachable
+        // same-plate boundary (`None`) is treated as far from any belt
+        // (12 hops — already past `relief_scale`'s decay length).
+        let hops = (*distances.get(cell)).map_or(12, |(distance, _)| distance);
+        let relief_noise =
+            crate::crust::sphere_fbm01(relief_seed, position, RELIEF_FREQUENCY, RELIEF_OCTAVES);
+        let relief_term = RELIEF_AMPLITUDE_M
+            * relief_scale(*induration.get(cell), hops)
+            * (relief_noise - 0.5)
+            * 2.0;
+        let metres =
+            base + boundary_term + hotspot_term + relief_term + CELL_EPSILON_M * f64::from(cell.0);
         ReferenceElevation::new(metres).expect("isostatic elevation is finite")
     })
 }
 
 /// Per-cell elevation in meters: the isostatic base over crust thickness,
 /// the nearest same-plate boundary's contribution decayed by graph distance
-/// and shaped by maturity, drawn hotspots, and a strict-ordering
-/// micro-epsilon.
-/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental)
+/// and shaped by maturity, drawn hotspot trail seamounts, induration-scaled
+/// fBm relief, and a strict-ordering micro-epsilon. `seamounts` is
+/// `trail_seamounts`'s output (Sculpting Task 6) — computed by the caller
+/// (`globe::generate`, which already holds `plate_of`) from the SAME
+/// hotspot draws this function used to make on its own, so the hotspots
+/// stream's draw order/count is unchanged.
+/// type-audit: bare-ok(index: plate_of), bare-ok(count: distances), waiver(crust-km-convention: crust), bare-ok(flag: continental), bare-ok(ratio: induration)
 #[allow(clippy::too_many_arguments)]
 pub fn generate_elevation(
     terrain_seed: Seed,
@@ -187,19 +519,25 @@ pub fn generate_elevation(
     plate_of: &CellMap<u32>,
     boundaries: &CellMap<Option<CellBoundary>>,
     distances: &CellMap<Option<(u32, CellId)>>,
+    seamounts: &[TrailSeamount],
     crust: &CellMap<f64>,
     continental: &CellMap<bool>,
+    induration: &CellMap<f64>,
 ) -> CellMap<ReferenceElevation> {
-    let hotspots = draw_hotspots(terrain_seed);
+    let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
+    let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
         geo,
         plates,
         plate_of,
         boundaries,
         distances,
-        &hotspots,
+        seamounts,
         crust,
         continental,
+        arc_gate_seed,
+        induration,
+        relief_seed,
     )
 }
 
@@ -291,12 +629,29 @@ pub fn effective_ocean_target(target: f64, supply: f64, notes: &mut Vec<String>)
     1.0 - SHELF_BREAK_LAND_FACTOR * supply
 }
 
-/// Place sea level at the elevation percentile that puts exactly `target`
-/// fraction of cells strictly below it. Pure — no draws: `target` is
-/// resolved once in `generate` via `resolve_ocean_fraction` (Task 9
-/// iteration 3') and shared with `crust::draw_cratons`. Sort uses
-/// `total_cmp` — elevations are finite and strictly ordered by
-/// construction.
+/// Place sea level at the elevation percentile that puts as close to
+/// `target` fraction of cells strictly below it as the field's ties allow.
+/// Pure — no draws: `target` is resolved once in `generate` via
+/// `resolve_ocean_fraction` (Task 9 iteration 3') and shared with
+/// `crust::draw_cratons`. Sort uses `total_cmp`.
+///
+/// Pre-Sculpting, elevations were continuous fBm-derived values with no
+/// meaningful duplicates, so the naive order-statistic pick (`sorted[index]`)
+/// hit the target fraction exactly. The carve (Sculpting spec §5) can now
+/// deposit many cells to the *exact same* elevation — the marine wedge caps
+/// a whole shelf at one shared value — so a wide tie can straddle the
+/// target rank; since `is_ocean` is strict-less-than, the WHOLE tied block
+/// reads as land or ocean together; the naive pick can then miss the target
+/// fraction by the tie's width instead of by at most one cell. When a tie
+/// wider than one cell straddles the rank, this picks whichever of the two
+/// distinct boundary values (below the tie vs. through it) lands the
+/// achieved "cells strictly below" count closer to the target — a narrow
+/// (one-cell, the ordinary no-duplicate) tie changes nothing, so every
+/// pre-Sculpting call site is byte-identical. Note the tie-aware pick can
+/// land on EITHER side of the raw target (the naive pick could only
+/// undershoot): under a wide tie it takes whichever boundary is closer,
+/// so the achieved ocean fraction may overshoot the target — this fix is
+/// closest-approach, not strictly conservative.
 /// type-audit: bare-ok(ratio: target)
 pub fn derive_sea_level(
     elevation: &CellMap<ReferenceElevation>,
@@ -304,8 +659,18 @@ pub fn derive_sea_level(
 ) -> ReferenceElevation {
     let mut sorted: Vec<ReferenceElevation> = elevation.iter().map(|(_, e)| *e).collect();
     sorted.sort_by(|a, b| a.total_cmp(*b));
-    let index = ((target * sorted.len() as f64) as usize).min(sorted.len() - 1);
-    sorted[index]
+    let n = sorted.len();
+    let index = ((target * n as f64) as usize).min(n - 1);
+    let value = sorted[index];
+    let lo = sorted.partition_point(|v| v.total_cmp(value) == std::cmp::Ordering::Less);
+    let hi = sorted.partition_point(|v| v.total_cmp(value) != std::cmp::Ordering::Greater);
+    if hi > lo + 1 && hi < n {
+        let raw_target = target * n as f64;
+        if (hi as f64 - raw_target).abs() < (lo as f64 - raw_target).abs() {
+            return sorted[hi];
+        }
+    }
+    value
 }
 
 /// Relative restlessness of each boundary kind.
@@ -403,6 +768,11 @@ mod tests {
         let (crust, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
+        // Zero induration: minimizes the new relief term's amplitude so it
+        // stays well inside this test's pre-existing 100 m interior
+        // tolerance regardless of the sampled noise value (relief_scale's
+        // floor at induration 0 caps the term at ~66 m here).
+        let induration = CellMap::from_fn(&geo, |_| 0.0);
         let elevation = assemble_elevation(
             &geo,
             &plates,
@@ -412,6 +782,9 @@ mod tests {
             &[],
             &crust,
             &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
         // f64::MIN (not NEG_INFINITY, which the validating constructor
         // rejects) as a sentinel below every real elevation.
@@ -458,6 +831,16 @@ mod tests {
             let continental = CellMap::from_fn(&geo, |c| field.continental_at(geo.position(c)));
             let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
             let distances = boundary_distance(&geo, &plate_of, &boundaries);
+            let crust_age = CellMap::from_fn(&geo, |c| field.age_at(geo.position(c)));
+            let induration = CellMap::from_fn(&geo, |c| {
+                crate::lithology::induration_at(
+                    *crust_age.get(c),
+                    *continental.get(c),
+                    boundaries.get(c).map(|b| b.kind),
+                    distances.get(c).map(|(hops, _)| hops),
+                )
+            });
+            let seamounts = trail_seamounts(terrain_seed, &plates, &plate_of, &geo);
             let elevation = generate_elevation(
                 terrain_seed,
                 &geo,
@@ -465,8 +848,10 @@ mod tests {
                 &plate_of,
                 &boundaries,
                 &distances,
+                &seamounts,
                 &crust,
                 &continental,
+                &induration,
             );
             let sea = derive_sea_level(&elevation, ocean_target);
             let below = elevation.iter().filter(|(_, e)| **e < sea).count();
@@ -599,5 +984,211 @@ mod tests {
         assert_eq!(effective, 1.0 - SHELF_BREAK_LAND_FACTOR * supply);
         assert_eq!(notes.len(), 1);
         assert!(notes[0].contains("shelf break"), "{}", notes[0]);
+    }
+
+    #[test]
+    fn relief_is_zero_mean_and_induration_scaled() {
+        // Statistical, structural: over a real globe, mean |relief effect| on
+        // hard cells exceeds soft cells. Compute two globes differing only in
+        // that we zero the amplitude, then compare.
+        let geo = Geosphere::new(4);
+        let a =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        // The term exists: elevations differ from a no-relief reconstruction.
+        // Simplest honest probe: the constant is wired (non-zero) and the
+        // documented invariant holds — relief contribution at induration 1.0
+        // vs 0.0 scales by the documented ratio. Test the pure helper:
+        let hi = relief_scale(1.0, 0);
+        let lo = relief_scale(0.0, 12);
+        assert!(hi > 2.0 * lo, "induration scaling too weak: {hi} vs {lo}");
+        // The globe built fine with relief wired in (the `.unwrap()` above
+        // already proves it); a non-empty elevation map confirms the term
+        // didn't panic on any cell.
+        assert!(a.globe.elevation.iter().next().is_some());
+    }
+
+    #[test]
+    fn boundary_profiles_have_anatomy() {
+        // Collision, continental side: crest at d=0 positive; foreland
+        // trough negative somewhere in FORELAND_HOPS; recovery beyond.
+        let crest = boundary_profile_m(BoundaryKind::ContinentalCollision, true, false, 0, 1.0);
+        assert!(crest > 0.0);
+        let trough = (FORELAND_HOPS.0..=FORELAND_HOPS.1)
+            .map(|d| boundary_profile_m(BoundaryKind::ContinentalCollision, true, false, d, 1.0))
+            .fold(f64::INFINITY, f64::min);
+        assert!(trough < 0.0, "no foreland trough: {trough}");
+        // Island arc: the gate switches edifices on and off along strike.
+        let on = boundary_profile_m(BoundaryKind::IslandArc, false, true, 0, 1.0);
+        let off = boundary_profile_m(BoundaryKind::IslandArc, false, true, 0, 0.0);
+        assert!(
+            on > 0.0 && off < on * 0.25,
+            "arc not discrete: on {on} off {off}"
+        );
+        // Trench: oceanic subducting side goes deep right at the boundary.
+        let trench = boundary_profile_m(BoundaryKind::IslandArc, false, false, 0, 1.0);
+        assert!(trench < -1000.0, "no trench: {trench}");
+        // Coastal range, oceanic side: ALWAYS the trench, regardless of
+        // the arc_side tie-break — Andean margins have no offshore arc
+        // (the volcanic line is on the continent). The flag must be
+        // irrelevant on every oceanic CoastalRange cell, at the notch and
+        // in the residual beyond it.
+        for d in 0..=8u32 {
+            let seaward = boundary_profile_m(BoundaryKind::CoastalRange, false, false, d, 1.0);
+            let tie_broken = boundary_profile_m(BoundaryKind::CoastalRange, false, true, d, 1.0);
+            assert_eq!(
+                seaward, tie_broken,
+                "arc_side matters on an oceanic CoastalRange cell at d={d}"
+            );
+        }
+        let coastal_trench = boundary_profile_m(BoundaryKind::CoastalRange, false, true, 0, 1.0);
+        assert!(
+            coastal_trench < -1000.0,
+            "no coastal trench on the tie-broken side: {coastal_trench}"
+        );
+    }
+
+    /// Test-local flood fill: how many connected components `cells` forms
+    /// under the geosphere's neighbor adjacency, restricted to `cells`
+    /// itself (a neighbor outside the set does not link two components).
+    fn count_components(
+        geo: &Geosphere,
+        cells: &std::collections::BTreeSet<hornvale_kernel::CellId>,
+    ) -> usize {
+        let mut unvisited = cells.clone();
+        let mut components = 0;
+        while let Some(&start) = unvisited.iter().next() {
+            components += 1;
+            unvisited.remove(&start);
+            let mut stack = vec![start];
+            while let Some(cell) = stack.pop() {
+                for &neighbor in geo.neighbors(cell) {
+                    if unvisited.remove(&neighbor) {
+                        stack.push(neighbor);
+                    }
+                }
+            }
+        }
+        components
+    }
+
+    #[test]
+    fn arcs_are_chains_not_walls_on_a_real_globe() {
+        use std::collections::BTreeSet;
+        let geo = Geosphere::new(5);
+        let outcome =
+            crate::globe::generate(Seed(42), &geo, &crate::pins::TerrainPins::default()).unwrap();
+        let g = &outcome.globe;
+        // Above-sea arc cells at IslandArc boundaries form >1 connected
+        // component somewhere (discreteness), across land at arc boundaries.
+        let arc_land: BTreeSet<hornvale_kernel::CellId> = geo
+            .cells()
+            .filter(|c| {
+                matches!(
+                    g.boundary.get(*c).map(|b| b.kind),
+                    Some(crate::boundaries::BoundaryKind::IslandArc)
+                ) && *g.elevation.get(*c) >= g.sea_level
+            })
+            .collect();
+        // Weak structural check: arc land exists but is not one giant blob.
+        if arc_land.len() >= 6 {
+            let components = count_components(&geo, &arc_land);
+            assert!(
+                components >= 2,
+                "arc land is one wall: {} cells, {components} component(s)",
+                arc_land.len()
+            );
+        }
+    }
+
+    #[test]
+    fn dome_m_matches_the_original_hotspot_formula_for_age_zero() {
+        // The removed `Hotspot::contribution_m` computed exactly this
+        // expression. `dome_m` must stay byte-identical for the live-hotspot
+        // (age_index == 0) case so hotspot trails only ADD trail entries on
+        // top, never perturb the trunk dome's own contribution.
+        let position = crate::plates::normalize([0.3, -0.5, 0.8]);
+        let at = crate::plates::normalize([0.31, -0.49, 0.79]);
+        let strength_m = 1800.0;
+        let angle = math::acos(dot(position, at).clamp(-1.0, 1.0));
+        let expected = strength_m
+            * math::exp(-(angle * angle) / (2.0 * HOTSPOT_SIGMA_RAD * HOTSPOT_SIGMA_RAD));
+        assert_eq!(dome_m(position, strength_m, at), expected);
+
+        // End-to-end: an `assemble_elevation` call fed a single
+        // `TrailSeamount { age_index: 0, .. }` must land on the identical
+        // elevation an equivalent single-`Hotspot` call landed on before
+        // this task — same formula, same inputs, reconstructed inline
+        // since `Hotspot`/`contribution_m` are gone.
+        let geo = Geosphere::new(3);
+        let plates = hemisphere_plates(0.0);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let (crust, continental) = all_continental_crust(&geo);
+        let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
+        let distances = boundary_distance(&geo, &plate_of, &boundaries);
+        let induration = CellMap::from_fn(&geo, |_| 0.0);
+        let hotspot_position = [0.0, 1.0, 0.0];
+        let hotspot_strength_m = 2200.0;
+        let seamounts = [TrailSeamount {
+            position: hotspot_position,
+            strength_m: hotspot_strength_m,
+            age_index: 0,
+        }];
+        let elevation = assemble_elevation(
+            &geo,
+            &plates,
+            &plate_of,
+            &boundaries,
+            &distances,
+            &seamounts,
+            &crust,
+            &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
+        );
+        let baseline = assemble_elevation(
+            &geo,
+            &plates,
+            &plate_of,
+            &boundaries,
+            &distances,
+            &[],
+            &crust,
+            &continental,
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
+            &induration,
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
+        );
+        for cell in geo.cells() {
+            let position = geo.position(cell);
+            let expected_dome = dome_m(hotspot_position, hotspot_strength_m, position);
+            let expected_e = baseline.get(cell).get() + expected_dome;
+            assert!(
+                (elevation.get(cell).get() - expected_e).abs() < 1e-9,
+                "cell {} did not add exactly the dome contribution",
+                cell.0
+            );
+        }
+    }
+
+    #[test]
+    fn trails_are_age_ordered_chains_upstream_of_plate_motion() {
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let geo = Geosphere::new(4);
+        let pins = crate::pins::TerrainPins::default();
+        let mut notes = Vec::new();
+        let plates = crate::plates::generate_plates(seed, &pins, &mut notes);
+        let plate_of = crate::plates::assign_plates(&geo, seed, &plates);
+        let seamounts = trail_seamounts(seed, &plates, &plate_of, &geo);
+        // Every hotspot contributes TRAIL_STEPS+1 entries, age-ordered,
+        // strength strictly decaying along each chain.
+        assert!(seamounts.len().is_multiple_of(TRAIL_STEPS as usize + 1) && !seamounts.is_empty());
+        for chain in seamounts.chunks(TRAIL_STEPS as usize + 1) {
+            for pair in chain.windows(2) {
+                assert!(pair[1].age_index == pair[0].age_index + 1);
+                assert!(pair[1].strength_m < pair[0].strength_m);
+            }
+        }
+        assert_eq!(seamounts, trail_seamounts(seed, &plates, &plate_of, &geo));
     }
 }

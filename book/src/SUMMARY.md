@@ -85,6 +85,8 @@
 - [Goldengrove](./chronicle/goldengrove.md)
 - [The Helm](./chronicle/the-helm.md)
 - [The Menagerie](./chronicle/the-menagerie.md)
+- [The Isotherm](./chronicle/the-isotherm.md)
+- [Sculpting](./chronicle/sculpting.md)
 - [The True Name](./chronicle/the-true-name.md)
 
 # The Gallery
@@ -120,6 +122,7 @@
 - [Study 010: The Census of Coasts](./laboratory/study-010.md)
 - [Study 011: The Census of Words](./laboratory/study-011.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
+- [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
 
 # Reference
 
@@ -127,6 +130,7 @@
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
+- [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)

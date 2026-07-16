@@ -1,6 +1,7 @@
 //! The tier-1 terrain provider: a queryable generated tectonic globe.
 
 use crate::boundaries::CellBoundary;
+use crate::carve::Provenance;
 use crate::globe::{GenesisOutcome, TectonicGlobe};
 use crate::plates::dot;
 use hornvale_kernel::{CellId, Geosphere, ReferenceElevation, math};
@@ -142,6 +143,14 @@ impl GeneratedTerrain {
         self.globe.boundary_distance.get(id).map(|(hops, _)| hops)
     }
 
+    /// Induration/hardness at a cell, `[0,1]` (the Sculpting/Ground seam,
+    /// spec §4). Computed before elevation; agrees with `material_at`'s
+    /// `induration` axis everywhere.
+    /// type-audit: bare-ok(ratio)
+    pub fn induration_at(&self, id: CellId) -> f64 {
+        *self.globe.induration.get(id)
+    }
+
     /// The material buffer at a cell (The Ground, spec §2).
     pub fn material_at(&self, id: CellId) -> crate::lithology::MaterialBuffer {
         *self.globe.lithology.get(id)
@@ -154,7 +163,26 @@ impl GeneratedTerrain {
             self.drainage_at(id),
             self.is_endorheic(id),
             self.is_ocean(id),
+            self.sediment_thickness_at(id),
         )
+    }
+
+    /// The carve's deposited sediment thickness at a cell, metres (≥ 0;
+    /// Sculpting Task 10). Retained on the globe post-carve: repose's
+    /// receiver-side gains, routing's floodplain/playa deposit, the marine
+    /// wedge/delta fill, and atoll cap material, all summed.
+    /// type-audit: bare-ok(ratio)
+    pub fn sediment_thickness_at(&self, id: CellId) -> f64 {
+        *self.globe.sediment_thickness.get(id)
+    }
+
+    /// The carve's net elevation delta at a cell, metres (± — Sculpting
+    /// Task 10): incision subtracts, repose/deposition/wedge/delta/atoll
+    /// all add. Already folded into `elevation_at`; retained separately so
+    /// consumers can see how much of a cell's relief the carve moved.
+    /// type-audit: bare-ok(ratio)
+    pub fn carve_delta_at(&self, id: CellId) -> f64 {
+        *self.globe.carve_delta_m.get(id)
     }
 
     /// The hydrogeologic class at a cell (The Ground, spec §3).
@@ -186,6 +214,53 @@ impl GeneratedTerrain {
             self.boundary_at(id).map(|b| b.kind),
             self.unrest_at(id),
         )
+    }
+
+    /// Waterfall (knickpoint) sites the carve found (Sculpting Task 11, spec
+    /// §5): land cells where a high-drainage watercourse crosses a sharp
+    /// PRE-carve induration step. Sorted ascending `CellId`.
+    pub fn waterfalls(&self) -> &[CellId] {
+        &self.globe.waterfall_sites
+    }
+
+    /// Cells a river-mouth delta lobe raised above sea level (Sculpting Task
+    /// 9/11, spec §5). Not independently sorted here beyond
+    /// `deposit_wedge`'s own ascending-`CellId` dedup.
+    pub fn deltas(&self) -> &[CellId] {
+        &self.globe.delta_cells
+    }
+
+    /// Playas: endorheic interior sinks carrying real sediment fill
+    /// (Sculpting Task 11, spec §5) — the salt-flat floors the carve's
+    /// routing filled toward flat. Computed live rather than stored, since
+    /// it is a plain filter over two fields the globe already retains;
+    /// ascending `CellId` (cell iteration order).
+    pub fn playas(&self) -> Vec<CellId> {
+        self.geosphere
+            .cells()
+            .filter(|&c| self.is_endorheic(c) && self.sediment_thickness_at(c) > 0.0)
+            .collect()
+    }
+
+    /// Provenance of every waterfall this provider exposes (spec §5): this
+    /// campaign only builds the ordinary geologic process. A future gated
+    /// mythic overlay would land an alternate per-class accessor rather
+    /// than widen this one — phenomena never reveal their producing
+    /// system, so every waterfall reads uniformly today.
+    pub fn waterfall_provenance(&self) -> Provenance {
+        Provenance::Process
+    }
+
+    /// Provenance of every delta this provider exposes (spec §5); see
+    /// [`Self::waterfall_provenance`].
+    pub fn delta_provenance(&self) -> Provenance {
+        Provenance::Process
+    }
+
+    /// Provenance of every playa this provider exposes (spec §5); see
+    /// [`Self::waterfall_provenance`].
+    pub fn playa_provenance(&self) -> Provenance {
+        Provenance::Process
     }
 }
 
@@ -292,5 +367,31 @@ mod tests {
             geo.cells()
                 .any(|c| terrain.boundary_distance_at(c).is_some())
         );
+    }
+
+    #[test]
+    fn provider_exposes_point_observations_and_their_provenance() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome.clone());
+
+        assert_eq!(
+            terrain.waterfalls(),
+            outcome.globe.waterfall_sites.as_slice()
+        );
+        assert_eq!(terrain.deltas(), outcome.globe.delta_cells.as_slice());
+
+        // playas() is a live filter, not a stored field: check it against
+        // the same filter applied directly.
+        let expected_playas: Vec<CellId> = geo
+            .cells()
+            .filter(|&c| terrain.is_endorheic(c) && terrain.sediment_thickness_at(c) > 0.0)
+            .collect();
+        assert_eq!(terrain.playas(), expected_playas);
+
+        // This campaign only ever draws the ordinary geologic process.
+        assert_eq!(terrain.waterfall_provenance(), Provenance::Process);
+        assert_eq!(terrain.delta_provenance(), Provenance::Process);
+        assert_eq!(terrain.playa_provenance(), Provenance::Process);
     }
 }

@@ -157,6 +157,70 @@ their own section, and the census counts karst, aquifers, and fertile land
 the same way it counts everything else; see
 [The Ground](../chronicle/the-ground.md).
 
+**Sculpting — the terrain epoch (v3).** Crust answered *where* continents
+are; The Ground answered *what they're made of*; Sculpting answers *how they
+wear down*. It is the full mandate Crust's census handed forward in one
+epoch: two new drawn sets — **terranes** (exotic crustal slivers welded
+along active margins, `terrain/terranes`) and **microcontinents** (tiny
+cratons seeded in ocean basins, below continent-count's size floor by
+design, `terrain/microcontinents`) — join cratons at the crust stage, and a
+run of derived tectonic decorations (hotspot trails aging into chains along
+plate motion, atoll rings capping the trails' drowned seamounts in warm
+water, discrete rather than continuous island arcs, belt anatomy with a real
+foreland basin, a trench on the subducting side) roughen the surface the
+carve then works on. All of it is upstream of, and drawn or derived exactly
+as before — no epoch-breaking change to how a continent gets its shape.
+
+The carve itself is a **one-shot erosion/deposition correction field**
+(engine A): stream-power incision along the provisional drainage tree,
+angle-of-repose hillslope relaxation, routing with floodplain deposition,
+differential wave-cut coastal erosion, a margin-aware sediment wedge that
+builds the true shelf, top-K river-mouth deltas, endorheic playas, and — the
+tuning season's last addition — supply-gated barrier islands and lagoons.
+Every term is a pure function of fields that already exist (drainage,
+induration, carbonate, margin polarity); none of it time-steps or iterates
+to convergence. The carve sits behind a deliberately **potential-agnostic**
+function seam — `carve(elevation, drainage, induration_field, params) ->
+CarveDelta` reads as "a potential, a flow network derived from it, a
+resistivity field," water-over-elevation being only this campaign's
+instantiation — so a later thaumic re-instantiation (ley-lines as flux over
+a different potential) reuses the same machinery unchanged. Two heavier
+engines (B, an implicit steady-state solver; C, fixed-N geomorphic
+iteration) were designed for but never built: a preregistered
+rerouted-flow-fraction diagnostic closed the season self-consistent
+(median 0.0834, never above the 0.30 rejection line), so engine A ships
+alone.
+
+This is the epoch's one true structural change: **sea level and drainage
+now solve twice.** A provisional pass feeds the carve; the carve's output
+plus a bounded sea-trim (provisional final sea level, wedge/atoll tops
+trimmed to their freeboard below it, then the true final solve) produces the
+surface every later stage reads. The Ground's lithology buffer assembles
+over this final, carved surface rather than a pre-carve slope proxy —
+`soil_depth` and the alluvium classification consume the carve's
+`sediment_thickness` field directly, one coordinated formula change inside
+the same epoch. New point observations (waterfalls at induration
+knickpoints, deltas, playas) carry an open provenance tag (`Process` this
+campaign, `Mythic` banked) and surface as almanac notables, the walk-scale
+landmarks the anti-repetition mandate asks for.
+
+**No new pins.** All five terrain pins (`--plates`, `--ocean-fraction`,
+`--supercontinent`, `--continents`, `--globe-level`) keep exactly their
+Crust-era semantics; the two new drawn streams append strictly after every
+existing draw, so pinned and unpinned paths still consume identical draws
+and every prior save-format contract holds untouched. Judged against Census
+II's baseline, four of Crust's six bands stayed inside across the tuning
+season (hypsometric-bimodality, continent-count, largest-continent-share,
+plate-size-gini never wavered), and shelf-fraction came inside for the
+first time (0.048 → ~0.09, wave-cut erosion's doing) — five of six inside
+at close.
+Shoreline-development moved a real +8% and still sits below its floor — an
+open verdict, handed to the banked **rift-and-fit coda** alongside
+a diagnostic finding that the floor's own anchor was partly built on
+coastline noise Crust had deliberately removed. See
+[Sculpting](../chronicle/sculpting.md) and [The Census of Coasts
+III](../laboratory/census-of-coasts-iii.md).
+
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a
 habitable cell a walk-around interior. The anti-repetition mandate from the

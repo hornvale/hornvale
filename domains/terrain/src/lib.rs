@@ -4,6 +4,7 @@
 #![warn(missing_docs)]
 
 pub mod boundaries;
+pub mod carve;
 pub mod crust;
 pub mod drainage;
 pub mod elevation;
@@ -18,6 +19,10 @@ pub mod shape;
 pub mod streams;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
+pub use carve::{
+    CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
+    erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
+};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,

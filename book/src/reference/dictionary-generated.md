@@ -86,14 +86,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
 | `blue` | the color term for blue | Taotao | /taotao/ | Taoqao | Taoqao → no change → Taotao |
 | `bone` | the rigid frame of a body | Kae | /kae/ | Kae | Kae → no change → Kae |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): goblin has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Daekoa | /daekoa/ | Daekoa | Daekoa → no change → Daekoa |
-| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
+| `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Taanoo | /taanoo/ | Taanoo | Taanoo → no change → Taanoo |
 | `day` | the light half of the day-night cycle | Boanae | /boanae/ | Goanae | Goanae → no change → Boanae |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
@@ -113,13 +113,13 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → no change → Noobee |
 | `hobgoblin-kind` | a hobgoblin | Taaboe | /taaboe/ | Qaagoe | Qaagoe → no change → Taaboe |
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
-| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no compound recipe for 'hydrothermal-vent' |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): goblin has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Toetea | /toetea/ | Toeqea | Toeqea → no change → Toetea |
 | `many` | an indefinitely large count | Neodoa | /neodoa/ | Neodoa | Neodoa → no change → Neodoa |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
 | `moon` | a moon | Teabae | /teabae/ | Teapae | Teapae → no change → Teabae |
 | `mountain` | high ground | — | — | — | gap (experiential): goblin has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Doenoe | /doenoe/ | Doenoe | Doenoe → no change → Doenoe |
@@ -133,7 +133,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → no change → Beonae |
 | `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → no change → Neebeo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
@@ -142,12 +142,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
 | `stone` | rock | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
 | `sun` | the sun | Noaboo | /noaboo/ | Noagoo | Noagoo → no change → Noaboo |
-| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
+| `taiga` | a biome class | Kaa | /kaa/ | Kaa | Kaa → no change → Kaa |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
+| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
-| `tropical-rainforest` | a biome class | Toa | /toa/ | Qoa | Qoa → no change → Toa |
+| `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
@@ -205,7 +205,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Goatee | /goatee/ | Goatee | Goatee → no change → Goatee |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
-| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
 | `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
@@ -220,12 +220,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun` | the sun | Noagoo | /noagoo/ | Noagoo | Noagoo → no change → Noagoo |
 | `taiga` | a biome class | Gaa | /gaa/ | Kaa | Kaa → lenition → Gaa |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
 | `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
-| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
-| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Baogaa | /baogaa/ | Daokaa | Daokaa → lenition → Baogaa |

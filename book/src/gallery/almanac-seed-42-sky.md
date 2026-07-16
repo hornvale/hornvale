@@ -69,77 +69,74 @@ From the first settlement, the midsummer sun rises at azimuth 89.0°; the sightl
 ## The Land
 
 The globe breaks into 16 plates; the sea claims 73% of its surface.
-The highest land stands 6093 m above the sea.
+The highest land stands 5183 m above the sea.
+Notable: the Great Delta, salt flats.
 
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
 Some 11% of the surface is habitable — land with water and a tolerable season.
 
-- **Mjaamjaenoenoanoagoo** — temperate-forest
-- **Njooqgoamjeonoenoa** — temperate-forest
-- **Mjaonjoanoenoa** — temperate-forest
+- **Veenjeoxaanoenoanoagoo** — temperate-forest
+- **Mjaoqkaoxeenoenoa** — temperate-forest
 - **Njaonjoonjeenoagoonoenoa** — temperate-forest
-- **Qbeaveonoagoo** — temperate-forest
+- **Mjaonjoanoenoa** — temperate-forest
 - **Voafeengjaenoenoa** — temperate-forest
-- **Feagkoenoagoo** — temperate-forest
-- **Feongjoonoagoonoenoa** — temperate-forest
+- **Gqeanjeenoagoo** — temperate-forest
+- **Gkeevaenoagoo** — temperate-forest
 - **Xaevaonoenoa** — temperate-forest
-- **Bkaovoenjaonoagoo** — temperate-forest
-- **Nobzxekngatnoenoa** — temperate-forest
-- **Mjaengjootbeenoagoonoenoa** — temperate-forest
-- **Xaomjoongjeenoenoa** — temperate-forest
-- **Vooqqoenjaenoagoo** — temperate-forest
-- **Vnabnobnoaboo** — temperate-forest
-- **Mjooveekqeenoenoa** — temperate-forest
-- **Nedngednoaboo** — temperate-forest
-- **Bbeavoaqgeenoenoa** — temperate-forest
-- **Tqoamjeonoagoonoenoa** — temperate-forest
-- **Qkaoqboobgeonoagoo** — temperate-forest
-- **Qtoonjaenoagoonoenoa** — temperate-forest
-- **Xnekvngokneknoenoanoaboo** — temperate-forest
-- **Ngjaonjaofaanoagoonoenoa** — temperate-forest
-- **Foanjaanjoanoenoa** — temperate-forest
-- **Vngakvnokngetnoenoa** — temperate-forest
-- **Tkoekkoonoagoo** — temperate-forest
-- **Xoexaenoagoonoenoa** — temperate-forest
+- **Njeebkoamjoanoenoa** — temperate-forest
+- **Xoamjoonoenoa** — temperate-forest
+- **Kteeveanoenoa** — temperate-forest
+- **Vaoqgoanoenoanoagoo** — temperate-forest
+- **Xoemjaanoenoanoagoo** — temperate-forest
+- **Qbeaveonoagoo** — temperate-forest
 - **Vnetvngekzhxeknoaboonoenoa** — temperate-forest
-- **Xngebnebnoenoanoaboo** — temperate-forest
-- **Mjoengjaonoenoa** — temperate-forest
+- **Vooqqoenjaenoagoo** — temperate-forest
+- **Gteokkeexoanoenoa** — temperate-forest
 - **Njeegkeanoenoa** — temperate-forest
-- **Nekngetnoaboo** — temperate-forest
-- **Sfadsvobsxadnoaboonoenoa** — temperate-forest
-- **Ttoemjooqqoenoagoo** — taiga
+- **Xoetkaotqaanoagoonoenoa** — temperate-forest
+- **Xeevoomjaonoenoanoagoo** — temperate-forest
+- **Njoomjaaxaonoagoo** — temperate-forest
+- **Tgeenjoanoenoa** — temperate-forest
+- **Njeebgaonoagoo** — temperate-forest
+- **Foettaanoenoanoagoo** — temperate-forest
+- **Njaoxoaqteonoagoonoenoa** — temperate-forest
+- **Tqaatgoeqqeanaagoa** — shrubland
+- **Bbaaqteomjeenoenoanoagoo** — temperate-forest
+- **Mjeeqgoefaanoenoa** — temperate-forest
 - **Vaoxaanoagoo** — temperate-forest
-- **Xngadzfatnoenoanoaboo** — temperate-forest
-- **Kkaongjoattoonoagoo** — temperate-forest
-- **Tgoabtaotkeonoenoa** — temperate-forest
-- **Ngjeogtaanoagoonoenoa** — temperate-forest
-- **Zhfotsvadnoaboonoenoa** — temperate-forest
-- **Zhxabzfaknoenoanoaboo** — temperate-forest
-- **Fngatfngotsvotnoenoa** — temperate-forest
-- **Xeanjoanaagoanoagoo** — shrubland
-- **Fngakzhxebnoaboonoenoa** — temperate-forest
-- **Njeetgoanoagoo** — temperate-forest
-- **Ngakxnaknadnoaboonoenoa** — temperate-forest
-- **Nekvngabzhxatnoenoa** — temperate-forest
+- **Ktaavaogaanoagoo** — taiga
+- **Kboekteongjaenoagoo** — temperate-forest
+- **Mjaabgoongjeagaa** — taiga
+- **Nekngetnoaboo** — temperate-forest
+- **Njaonjoomjeanoagoonoenoa** — temperate-forest
+- **Sfabxnoknoenoanoaboo** — temperate-forest
+- **Bgaofaonoenoa** — temperate-forest
 - **Ktoenjeanoenoanoagoo** — temperate-forest
-- **Vnotzhfokzxotnoaboo** — temperate-forest
-- **Ngetzxodnoenoa** — temperate-forest
-- **Xoaxaonoenoanoagoo** — temperate-forest
-- **Ngobzhfodfnodnoenoanoaboo** — temperate-forest
-- **Xnodnebngebnoenoanoaboo** — temperate-forest
-- **Zvakzhxobnoenoanoaboo** — temperate-forest
-- **Ngatsfabnoaboo** — temperate-rainforest
-- **Zhvekngadtoanoaboo** — tropical-rainforest
-- **Mjoettoakbaenoagoonoenoa** — temperate-forest
-- **Nekxngodnednoaboo** — temperate-forest
-- **Voetgeenoagoonoenoa** — temperate-forest
+- **Xeenjeavoenoenoa** — temperate-forest
+- **Mjoobteekqoanaagoa** — shrubland
 - **Ngatsxeknoaboo** — temperate-forest
-- **Zhxabngednoenoanoaboo** — temperate-forest
-- **Vnobngobvnodnoaboo** — temperate-rainforest
-- **Vnedfnektoanoaboo** — tropical-rainforest
-- **Ngjaaqbeoxaenoagoonoenoa** — temperate-forest
-- **Bbaamjoafeonoagoonoenoa** — temperate-forest
-- **Nadsxabzxotnoaboonoenoa** — temperate-forest
+- **Mjeangjaavaonoagoonoenoa** — temperate-forest
+- **Njeetgoanoagoo** — temperate-forest
+- **Sfadsvobsxadnoaboonoenoa** — temperate-forest
+- **Vnabnobnoaboo** — temperate-forest
+- **Zhfadnabxneknoenoa** — temperate-forest
+- **Sxotvngednoaboonoenoa** — temperate-forest
+- **Nakzvaknoenoanoaboo** — temperate-forest
+- **Feonjaenoagoonoenoa** — temperate-forest
+- **Qgeeveoxeonoagoo** — temperate-forest
+- **Zhxokzhfeknoenoa** — temperate-forest
+- **Faanjoengjoonoagoonoenoa** — temperate-forest
+- **Xeakgaamjoenoagoonoenoa** — temperate-forest
+- **Ngetzxodnoenoa** — temperate-forest
+- **Sfakfngetvngatnoenoa** — temperate-forest
+- **Gqaabbaanoagoonoenoa** — temperate-forest
+- **Mjoexoetkaanoagoonoenoa** — temperate-forest
+- **Xoafaengjoenoagoonoenoa** — temperate-forest
+- **Vnodnebxngetnoaboo** — temperate-forest
+- **Ktooxaanaagoanoagoo** — shrubland
+- **Nakzhxotnoenoa** — temperate-forest
+- **Kteemjeogaanoagoo** — taiga
+- **Ngobfnedfnabnoaboo** — taiga
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -150,24 +147,24 @@ Notable: karst country, salt flats.
 
 ## Deep Time
 
-The frost retreated: at the glacial maximum (day -243500000), ice advanced over 39% of the land.
+The frost retreated: at the glacial maximum (day -243500000), ice advanced over 40% of the land.
 The sun brightens by 8 parts in a hundred over a gigayear — the slow fire under every deeper clock.
 
 ## The People
 
-The land holds 66 settlement(s).
-The chief goblin settlement, Nobzxekngatnoenoa, holds 2 souls amid temperate-forest.
-The chief hobgoblin settlement, Mjaamjaenoenoanoagoo, holds 17 souls amid temperate-forest.
+The land holds 62 settlement(s).
+The chief goblin settlement, Vnetvngekzhxeknoaboonoenoa, holds 1 souls amid temperate-forest.
+The chief hobgoblin settlement, Veenjeoxaanoenoanoagoo, holds 17 souls amid temperate-forest.
 
-The goblin village of **Nobzxekngatnoenoa**, population 2.
+The goblin village of **Vnetvngekzhxeknoaboonoenoa**, population 1.
 
-Nobzxekngatnoenoa lives by farming.
+Vnetvngekzhxeknoaboonoenoa lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Mjaamjaenoenoanoagoo**, population 17.
+The hobgoblin legion of **Veenjeoxaanoenoanoagoo**, population 17.
 
-Mjaamjaenoenoanoagoo lives by farming.
+Veenjeoxaanoenoanoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
@@ -215,7 +212,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *tide*
 
-In the legion of **Mjaamjaenoenoanoagoo**, an organized priesthood tends its own pantheon:
+In the legion of **Veenjeoxaanoenoanoagoo**, an organized priesthood tends its own pantheon:
 
 > Noagoo the Xoonoagoo returns every 0.88 days. So it was, so it is.
 >

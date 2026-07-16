@@ -75,7 +75,40 @@ than feared; it is also not the only interface, and that turned out to be the
 right shape. The scene seam has since crossed a repository boundary: an
 external client now consumes the same documents through a versioned wasm
 catalog, byte-identical across platforms
-([Goldengrove](./chronicle/goldengrove.md), decision 0055).
+([Goldengrove](./chronicle/goldengrove.md), decision 0055). It has also
+started carrying *parameterized* quantities the client evaluates over time —
+per-tile temperature elements a viewer reconstructs across the year, with
+the seasonal evaluator documented normatively in one place and pinned by a
+producer-sourced contract test on both sides of the boundary
+([The Isotherm](./chronicle/the-isotherm.md)). The seam holds not just for
+static quantities but for the small closed-form functions of them, which is
+the more demanding form of the same bet.
+
+**Terrain shape has Earth-anchored, self-checking acceptance bands, and five
+of six are now closed.** The Measured Coast preregistered six Earth-anchored
+shape metrics (shoreline development, hypsometric bimodality, shelf
+fraction, continent count, largest-continent share, plate-size Gini) before
+any generator change, exactly the kind of bet this chapter cares about: the
+Laboratory generates the evidence, measures it, and drift-checks the number,
+with no human judgment call about whether a continent "looks right." Crust's
+epoch closed four of six by direct measurement, refuting two of its own
+predictions along the way (the tanh-lobing pinch-off hypothesis, the craton-
+repulsion hypothesis) before a read-only probe found the actual cause
+(sea level sitting in the abyssal plain). Sculpting's epoch closed a fifth —
+shelf-fraction, via a wave-cut coastal-erosion mechanism the tuning season
+built only once measurement showed the band demanded it — and left the
+sixth, shoreline-development, on an honest open verdict: every mechanism the
+spec banked for it is now built, the metric moved a real +8% under measurement,
+and it still sits below its floor. Rather than force a number, a dedicated
+diagnostic instrument established *why* the floor is hard to reach (the
+estimator is not saturated, but the floor's own anchor was partly built on
+coastline noise Crust later removed as fragmentation) and the open band was
+handed forward, with its evidence, to a named future campaign (the
+rift-and-fit fake-history coda) —
+the chapter's discipline working exactly as intended: a bet stays open for a
+structural reason, not because nobody looked. See [Crust](./chronicle/crust.md),
+[Sculpting](./chronicle/sculpting.md), and [The Census of Coasts
+III](./laboratory/census-of-coasts-iii.md).
 
 ## Precedented but nontrivial (moderate confidence)
 

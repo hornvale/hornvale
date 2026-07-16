@@ -48,3 +48,31 @@ pub const PLATE_EDGE: &str = "plate-edge";
 /// only — never consumed as a `Stream`; no draw-order/save-format contract.
 /// type-audit: bare-ok(identifier-text)
 pub const LITHOLOGY: &str = "lithology";
+/// Terrane draws (Sculpting, spec §3): count, then per terrane a host
+/// craton index, rim bearing, size, age. A NEW label — existing stream
+/// consumption order is untouched (epoch v3 save-format contract).
+/// type-audit: bare-ok(identifier-text)
+pub const TERRANES: &str = "terranes";
+/// Microcontinent draws (Sculpting, spec §3): a NEW label — a fixed
+/// candidate count (`crust::MICRO_COUNT_MAX`), then per candidate a
+/// position (two draws via `unit_vector`), a radius, and an age,
+/// sequential. Every candidate is drawn in full regardless of whether it
+/// survives the away-from-majors filter (no rejection loop, no
+/// draw-count variance — pin-isolation discipline, mirroring
+/// `TERRANES`'s own no-rejection framing for its bearing draws). Existing
+/// stream consumption order is untouched (epoch v3 save-format contract).
+/// type-audit: bare-ok(identifier-text)
+pub const MICROCONTINENTS: &str = "microcontinents";
+/// Along-strike arc gating noise (Sculpting, spec §3): gates island-arc
+/// and coastal-range edifices into discrete chains instead of continuous
+/// walls. Hash-noise only — never consumed as a `Stream`, so it carries
+/// no draw-order/save-format contract (see `elevation::boundary_profile_m`).
+/// type-audit: bare-ok(identifier-text)
+pub const ARC_GATE: &str = "arc-gate";
+/// fBm relief noise (Sculpting, spec §3): zero-mean multi-octave detail
+/// added in `assemble_elevation`, amplitude scaled by induration and belt
+/// proximity (see `elevation::relief_scale`). Hash-noise only — never
+/// consumed as a `Stream`, so it carries no draw-order/save-format
+/// contract, mirroring `ARC_GATE`.
+/// type-audit: bare-ok(identifier-text)
+pub const RELIEF: &str = "relief";

@@ -45,11 +45,18 @@ fn go_moves_and_back_retraces() {
         Turn::Out(t) => t,
         _ => panic!("look must not release"),
     };
+    // Exact, word-boundary token match against the "Ways on: NE, NW, S."
+    // line — a substring check (e.g. `ways.contains("N")`) would false-
+    // positive "n" against "NE"/"NW" whenever neither bare "N" nor "S" is
+    // actually offered.
+    let tokens: Vec<String> = ways
+        .split([' ', ',', '.'])
+        .filter(|t| !t.is_empty())
+        .map(str::to_lowercase)
+        .collect();
     let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
         .iter()
-        .find(|d| {
-            ways.to_lowercase().contains(&format!(" {}", d)) || ways.contains(&d.to_uppercase())
-        })
+        .find(|d| tokens.iter().any(|t| t == *d))
         .copied()
         .expect("some way on");
     match s.handle(&format!("go {dir}")) {
@@ -135,9 +142,16 @@ fn knows_grows_as_you_walk() {
         Turn::Out(t) => t,
         _ => panic!(),
     };
+    // Exact, word-boundary token match — see `go_moves_and_back_retraces`'s
+    // comment: a substring check false-positives "n" against "NE"/"NW".
+    let tokens: Vec<String> = ways
+        .split([' ', ',', '.'])
+        .filter(|t| !t.is_empty())
+        .map(str::to_lowercase)
+        .collect();
     let dir = ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
         .iter()
-        .find(|d| ways.contains(&d.to_uppercase()))
+        .find(|d| tokens.iter().any(|t| t == *d))
         .copied()
         .expect("some way on");
     s.handle(&format!("go {dir}"));
