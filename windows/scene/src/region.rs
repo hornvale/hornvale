@@ -6,6 +6,7 @@
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
 use crate::SceneError;
+use hornvale_kernel::{CellId, Geosphere, NearestCellIndex};
 
 /// Deepest addressable quadtree level (the client clamps its own to ~18; this
 /// bound is a generous superset). Beyond the cell floor a tile is honest but
@@ -100,6 +101,93 @@ impl RegionAddr {
     }
 }
 
+/// Planar barycentric of `p` in triangle `(a, b, c)` (Ericson, *Real-Time
+/// Collision Detection*). Returns `(u, v, w)` with `u + v + w = 1`; `u` is the
+/// weight of `a`. Exact `(1, 0, 0)` when `p == a`.
+fn barycentric(p: [f64; 3], a: [f64; 3], b: [f64; 3], c: [f64; 3]) -> (f64, f64, f64) {
+    let sub = |x: [f64; 3], y: [f64; 3]| [x[0] - y[0], x[1] - y[1], x[2] - y[2]];
+    let dot = |x: [f64; 3], y: [f64; 3]| x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+    let (v0, v1, v2) = (sub(b, a), sub(c, a), sub(p, a));
+    let d00 = dot(v0, v0);
+    let d01 = dot(v0, v1);
+    let d11 = dot(v1, v1);
+    let d20 = dot(v2, v0);
+    let d21 = dot(v2, v1);
+    let denom = d00 * d11 - d01 * d01;
+    if denom == 0.0 {
+        return (1.0, 0.0, 0.0); // degenerate triangle: fall back to `a`
+    }
+    let v = (d11 * d20 - d01 * d21) / denom;
+    let w = (d00 * d21 - d01 * d20) / denom;
+    (1.0 - v - w, v, w)
+}
+
+/// The three geosphere cells whose triangle contains `s`, with barycentric
+/// weights in [0,1] summing to 1. The triangle is the nearest cell `c` plus a
+/// pair of its neighbours that are themselves adjacent (a fan triangle around
+/// `c`); the one containing `s` wins. Transcendental-free (dot products only),
+/// so cross-platform byte-identical. Exact at a cell centre. Degrades to
+/// nearest-cell `(c, 1.0)` if no fan triangle contains `s` (a measure-zero
+/// safety net, not a normal path).
+fn triangle_weights(geo: &Geosphere, index: &NearestCellIndex, s: [f64; 3]) -> [(CellId, f64); 3] {
+    let c = index.nearest_to_position(geo, s);
+    let pc = geo.position(c);
+    let neigh = geo.neighbors(c);
+    let mut best: Option<([(CellId, f64); 3], f64)> = None;
+    for (i, &a) in neigh.iter().enumerate() {
+        for &b in &neigh[i + 1..] {
+            // Only adjacent neighbour pairs form a real fan triangle.
+            if !geo.neighbors(a).contains(&b) {
+                continue;
+            }
+            let (wc, wa, wb) = barycentric(s, pc, geo.position(a), geo.position(b));
+            let min = wc.min(wa).min(wb);
+            // Pick the triangle whose most-negative weight is closest to zero;
+            // a containing triangle has all weights >= 0.
+            if best.as_ref().map(|(_, m)| min > *m).unwrap_or(true) {
+                best = Some(([(c, wc), (a, wa), (b, wb)], min));
+            }
+        }
+    }
+    match best {
+        Some((mut w, min)) if min >= -1e-9 => {
+            // Clamp tiny negatives and renormalise so weights are a clean
+            // partition of unity.
+            let mut sum = 0.0;
+            for (_, x) in w.iter_mut() {
+                if *x < 0.0 {
+                    *x = 0.0;
+                }
+                sum += *x;
+            }
+            if sum > 0.0 {
+                for (_, x) in w.iter_mut() {
+                    *x /= sum;
+                }
+            }
+            w
+        }
+        _ => [(c, 1.0), (c, 0.0), (c, 0.0)],
+    }
+}
+
+/// Barycentrically interpolate a per-cell scalar at `s`.
+// Unused outside tests until a later Region task wires continuous-layer
+// sampling through it; the allow keeps `triangle_weights`/`barycentric`
+// (which it calls) live for clippy too.
+#[allow(dead_code)]
+fn interp(
+    geo: &Geosphere,
+    index: &NearestCellIndex,
+    s: [f64; 3],
+    value: impl Fn(CellId) -> f64,
+) -> f64 {
+    triangle_weights(geo, index, s)
+        .iter()
+        .map(|(c, w)| w * value(*c))
+        .sum()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -166,5 +254,61 @@ mod tests {
             Err(SceneError::RegionSamplesOutOfRange(300))
         ));
         assert!(addr(0, 0, 0, 0, 1).validate().is_ok());
+    }
+
+    use hornvale_kernel::Geosphere;
+
+    #[test]
+    fn weights_are_exact_at_a_cell_center() {
+        let geo = Geosphere::new(4);
+        let index = NearestCellIndex::new(&geo);
+        for cell in geo.cells().take(50) {
+            let s = geo.position(cell);
+            let w = triangle_weights(&geo, &index, s);
+            // The cell carries essentially all the weight; the sum is 1.
+            let total: f64 = w.iter().map(|(_, x)| x).sum();
+            assert!((total - 1.0).abs() < 1e-9, "weights sum to 1: {total}");
+            let on_cell: f64 = w.iter().filter(|(c, _)| *c == cell).map(|(_, x)| x).sum();
+            assert!(
+                on_cell > 1.0 - 1e-9,
+                "cell {cell:?} weight {on_cell} not ~1"
+            );
+        }
+    }
+
+    #[test]
+    fn weights_are_a_partition_of_unity_off_center() {
+        let geo = Geosphere::new(4);
+        let index = NearestCellIndex::new(&geo);
+        // A point between two cell centers.
+        let a = geo.position(CellId(20));
+        let b = geo.position(geo.neighbors(CellId(20))[0]);
+        let mid = {
+            let m = [
+                (a[0] + b[0]) / 2.0,
+                (a[1] + b[1]) / 2.0,
+                (a[2] + b[2]) / 2.0,
+            ];
+            let len = (m[0] * m[0] + m[1] * m[1] + m[2] * m[2]).sqrt();
+            [m[0] / len, m[1] / len, m[2] / len]
+        };
+        let w = triangle_weights(&geo, &index, mid);
+        let total: f64 = w.iter().map(|(_, x)| x).sum();
+        assert!((total - 1.0).abs() < 1e-9);
+        assert!(
+            w.iter().all(|(_, x)| *x >= -1e-9 && *x <= 1.0 + 1e-9),
+            "weights in [0,1]: {w:?}"
+        );
+    }
+
+    #[test]
+    fn interp_at_a_cell_center_returns_that_cells_value() {
+        let geo = Geosphere::new(4);
+        let index = NearestCellIndex::new(&geo);
+        let value = |c: CellId| c.0 as f64; // an arbitrary per-cell scalar
+        for cell in geo.cells().take(50) {
+            let got = interp(&geo, &index, geo.position(cell), value);
+            assert!((got - cell.0 as f64).abs() < 1e-6, "cell {cell:?}: {got}");
+        }
     }
 }
