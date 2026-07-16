@@ -69,7 +69,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -99,6 +99,21 @@ pub struct TilesScene {
     pub unrest: Vec<f64>,
     /// Named points: settlements, the flagship last.
     pub features: Vec<Feature>,
+    /// Annual-mean temperature per tile, °C.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_mean_c: Vec<f64>,
+    /// Hemisphere-signed seasonal half-swing per tile, °C (0 when locked/zero-obliquity).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_swing_c: Vec<f64>,
+    /// The seasonal sinusoid's period, standard days (the world's year).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub season_period_days: f64,
+    /// Circulation bands per hemisphere; omitted entirely on tidally locked worlds.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub circulation_bands: Option<u32>,
+    /// Moisture index per tile, dimensionless [0, 1].
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub moisture: Vec<f64>,
 }
 
 /// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
@@ -132,6 +147,9 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut biome = Vec::with_capacity(tiles);
     let mut plate = Vec::with_capacity(tiles);
     let mut unrest = Vec::with_capacity(tiles);
+    let mut t_mean_c = Vec::with_capacity(tiles);
+    let mut t_swing_c = Vec::with_capacity(tiles);
+    let mut moisture = Vec::with_capacity(tiles);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
@@ -148,12 +166,18 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             biome.push(index);
             plate.push(terrain.plate_of(t_cell));
             unrest.push(terrain.unrest_at(t_cell));
+            t_mean_c.push(climate.mean_temperature_at(c_cell).get());
+            t_swing_c.push(climate.seasonal_swing_at(c_cell));
+            moisture.push(climate.moisture_at(c_cell));
         }
     }
     debug_assert!(
         elevation_m
             .iter()
             .chain(unrest.iter())
+            .chain(t_mean_c.iter())
+            .chain(t_swing_c.iter())
+            .chain(moisture.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
     );
@@ -170,7 +194,44 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         plate,
         unrest,
         features: features_of(world),
+        t_mean_c,
+        t_swing_c,
+        season_period_days: climate.year_length_std(),
+        circulation_bands: climate.band_count(),
+        moisture,
     })
+}
+
+/// Per-tile actual temperature at `day`, °C, on the same lattice as
+/// [`tiles_scene`] — `temperature_at` sampled at each tile's climate cell.
+/// This is the sim's ground truth that a client reconstructs from the
+/// `t_mean_c`/`t_swing_c` layers; the cross-repo contract test compares the
+/// client's reconstruction against these values. Full precision (not
+/// quantized) — callers that need portable bytes quantize at their own
+/// boundary.
+/// type-audit: bare-ok(count: width), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
+pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>, SceneError> {
+    if !(MIN_WIDTH..=MAX_WIDTH).contains(&width) {
+        return Err(SceneError::WidthOutOfRange(width));
+    }
+    if !width.is_multiple_of(2) {
+        return Err(SceneError::WidthOdd(width));
+    }
+    let height = width / 2;
+    let climate =
+        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let climate_index = NearestCellIndex::new(climate.geosphere());
+    let tiles = (width * height) as usize;
+    let mut temperature = Vec::with_capacity(tiles);
+    for py in 0..height {
+        let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+        for px in 0..width {
+            let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+            let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+            temperature.push(climate.temperature_at(c_cell, day).get());
+        }
+    }
+    Ok(temperature)
 }
 
 /// Settlement point features: every place holding both coordinate facts,
@@ -432,6 +493,55 @@ mod tests {
     }
 
     #[test]
+    fn climate_layers_are_sized_and_present() {
+        let scene = tiles_scene(&world(), 32).unwrap(); // seed-1 constant sky: spins, obliquity 23.5
+        let tiles = (scene.width * scene.height) as usize;
+        assert_eq!(scene.t_mean_c.len(), tiles);
+        assert_eq!(scene.t_swing_c.len(), tiles);
+        assert_eq!(scene.moisture.len(), tiles);
+        assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
+        assert_eq!(scene.season_period_days, 365.25); // constant-sun default year
+        assert_eq!(scene.circulation_bands, Some(3)); // Earth-like day → 3 bands
+        // A spinning, obliquity-23.5 world has a nonzero swing somewhere.
+        assert!(scene.t_swing_c.iter().any(|&s| s != 0.0));
+        // Signed: some tile north-positive, some south-negative.
+        assert!(scene.t_swing_c.iter().any(|&s| s > 0.0));
+        assert!(scene.t_swing_c.iter().any(|&s| s < 0.0));
+    }
+
+    #[test]
+    fn locked_world_omits_circulation_bands_and_zeroes_swing() {
+        use hornvale_astronomy::{RotationPin, SkyPins};
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world};
+        let sky = SkyPins {
+            rotation: Some(RotationPin::Locked),
+            ..Default::default()
+        };
+        let world = build_world(
+            Seed(42),
+            &sky,
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("seed 42 builds locked");
+        let scene = tiles_scene(&world, 32).unwrap();
+        assert_eq!(scene.circulation_bands, None, "locked world has no bands");
+        assert!(
+            scene.t_swing_c.iter().all(|&s| s == 0.0),
+            "locked world has no seasonal swing"
+        );
+        // The omitted field must not appear in the JSON.
+        let json = scene_json(&scene);
+        assert!(
+            !json.contains("circulation_bands"),
+            "absent field must not serialize"
+        );
+        assert!(json.contains("season_period_days"));
+    }
+
+    #[test]
     fn width_violations_are_loud() {
         // TilesScene has no PartialEq, so assert on the error side only.
         let w = world();
@@ -497,6 +607,50 @@ mod tests {
             system_json(&scene),
             system_json(&system_scene(&gen_world()).unwrap())
         );
+    }
+
+    #[test]
+    fn temperature_grid_matches_direct_sampling_and_zero_phase_mean() {
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world, climate_of};
+        let world = build_world(
+            Seed(42),
+            &Default::default(),
+            SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("seed 42 builds");
+        let width = 32;
+        let height = width / 2;
+        let climate = climate_of(&world).expect("climate builds");
+        let climate_index = NearestCellIndex::new(climate.geosphere());
+        let day = 91.3;
+        let grid = temperature_grid(&world, width, day).expect("grid builds");
+        assert_eq!(grid.len(), (width * height) as usize);
+
+        // Independently reconstruct the same lattice sampling in the test
+        // (not by calling into tiles_scene's loop) and compare tile-by-tile
+        // against the direct `temperature_at` reading.
+        let mut i = 0;
+        for py in 0..height {
+            let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+            for px in 0..width {
+                let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let expected = climate.temperature_at(c_cell, day).get();
+                assert_eq!(grid[i], expected, "tile {i} mismatch at day {day}");
+                i += 1;
+            }
+        }
+
+        // At day 0 the seasonal sine term is exactly zero, so temperature_grid
+        // must agree with tiles_scene's t_mean_c (mean at zero phase).
+        let zero_grid = temperature_grid(&world, width, 0.0).expect("grid builds");
+        let scene = tiles_scene(&world, width).expect("scene builds");
+        for (g, m) in zero_grid.iter().zip(scene.t_mean_c.iter()) {
+            assert_eq!(*g, *m, "day-0 temperature_grid must equal t_mean_c");
+        }
     }
 
     #[test]

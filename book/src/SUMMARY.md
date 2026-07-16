@@ -85,6 +85,7 @@
 - [Goldengrove](./chronicle/goldengrove.md)
 - [The Helm](./chronicle/the-helm.md)
 - [The Menagerie](./chronicle/the-menagerie.md)
+- [The Isotherm](./chronicle/the-isotherm.md)
 - [Sculpting](./chronicle/sculpting.md)
 
 # The Gallery
@@ -128,6 +129,7 @@
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
+- [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)
