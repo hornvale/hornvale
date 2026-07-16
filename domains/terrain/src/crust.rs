@@ -5,6 +5,7 @@
 
 use crate::pins::TerrainPins;
 use crate::plates::dot;
+use crate::rift::RiftHistory;
 use crate::streams;
 use hornvale_kernel::{Seed, math, noise};
 
@@ -879,6 +880,21 @@ pub struct CrustField {
     lobing_seeds: Vec<Seed>,
     /// The drawn terrane set (empty when built via `new`).
     terranes: Vec<Terrane>,
+    /// The drawn rift history (rift-and-fit, spec §3.3), or `None` for the
+    /// v3 field shape (`new`/`new_with_terranes`) — the clip in `strongest`
+    /// is gated behind this `Option` entirely, so the `None` path runs the
+    /// exact v3 arithmetic, instruction for instruction.
+    rift: Option<RiftHistory>,
+    /// Per-major-craton assembly-to-final rotation, index-aligned with
+    /// `cratons[0..major_count]` (the major/microcontinent id-position
+    /// invariant `draw_microcontinents` documents). Precomputed once here
+    /// — mirrors `lobing_seeds` — so `strongest` never re-derives a
+    /// rotation per sample; empty when `rift` is `None`.
+    craton_rotations: Vec<([f64; 3], f64)>,
+    /// Cratons with `id < major_count` are clip-eligible; microcontinents
+    /// (appended after the majors) and terranes ride unclipped. Ignored
+    /// entirely when `rift` is `None`.
+    major_count: usize,
 }
 
 impl CrustField {
@@ -893,27 +909,78 @@ impl CrustField {
         cratons: Vec<Craton>,
         terranes: Vec<Terrane>,
     ) -> CrustField {
+        CrustField::new_with_rift(terrain_seed, cratons, terranes, None, 0)
+    }
+
+    /// Assemble the field over a drawn craton set, terrane set, and
+    /// (optionally) a rift history that clips each major craton's cap
+    /// along its assembly-frame seam curves (rift-and-fit, spec §3.3).
+    /// `major_count` bounds clip application to majors (`id < major_count`)
+    /// — microcontinents and terranes are never clipped; its value is
+    /// ignored entirely when `rift` is `None`.
+    /// type-audit: bare-ok(count: major_count)
+    pub fn new_with_rift(
+        terrain_seed: Seed,
+        cratons: Vec<Craton>,
+        terranes: Vec<Terrane>,
+        rift: Option<RiftHistory>,
+        major_count: usize,
+    ) -> CrustField {
         let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
         let lobing_seeds = cratons
             .iter()
             .map(|c| lobing_root.derive(&format!("craton-{}", c.id)))
             .collect();
+        let craton_rotations = match &rift {
+            Some(r) => (0..major_count.min(cratons.len()))
+                .map(|i| crate::rift::rotation_for(r.assembly[i], cratons[i].center))
+                .collect(),
+            None => Vec::new(),
+        };
         CrustField {
             cratons,
             lobing_seeds,
             terranes,
+            rift,
+            craton_rotations,
+            major_count,
         }
     }
 
-    /// Envelope and winning craton at a position.
+    /// Envelope and winning craton at a position. Two branches, not one
+    /// with a no-op multiply: the `None` branch is byte-identical to v3's
+    /// `strongest` (untouched instruction-for-instruction), since even a
+    /// multiply-by-`1.0` clip factor is not guaranteed to be a float no-op
+    /// in every case — the empty-rift byte-identity contract needs the old
+    /// code path literally unperturbed, not merely numerically close.
     fn strongest(&self, p: [f64; 3]) -> Option<(f64, &Craton)> {
-        self.cratons
-            .iter()
-            .map(|c| {
-                let seed = self.lobing_seeds[c.id as usize];
-                (lobed_envelope(seed, c.center, p, c.radius_rad), c)
-            })
-            .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id)))
+        match &self.rift {
+            None => self
+                .cratons
+                .iter()
+                .map(|c| {
+                    let seed = self.lobing_seeds[c.id as usize];
+                    (lobed_envelope(seed, c.center, p, c.radius_rad), c)
+                })
+                .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
+            Some(rift) => self
+                .cratons
+                .iter()
+                .map(|c| {
+                    let seed = self.lobing_seeds[c.id as usize];
+                    let envelope = lobed_envelope(seed, c.center, p, c.radius_rad);
+                    let envelope = if (c.id as usize) < self.major_count {
+                        let rotation = self.craton_rotations[c.id as usize];
+                        let clip =
+                            crate::rift::clip_with_rotation(rift, &self.cratons, c.id, rotation, p);
+                        envelope * clip
+                    } else {
+                        envelope
+                    };
+                    (envelope, c)
+                })
+                .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
+        }
     }
 
     /// Crust thickness at a unit-sphere position, km: the winning
@@ -1001,6 +1068,22 @@ mod tests {
             &TerrainPins::default(),
             &mut Vec::new(),
         )
+    }
+
+    /// `n` roughly-evenly-spaced points on the unit sphere (the standard
+    /// golden-angle fibonacci-sphere construction), for byte-identity and
+    /// other whole-field sweeps that want broad coverage without a full
+    /// `Geosphere` grid.
+    fn fibonacci_sphere_points(n: usize) -> Vec<[f64; 3]> {
+        let golden_angle = core::f64::consts::PI * (3.0 - 5.0_f64.sqrt());
+        (0..n)
+            .map(|i| {
+                let y = 1.0 - 2.0 * (i as f64) / ((n - 1) as f64);
+                let radius = (1.0 - y * y).max(0.0).sqrt();
+                let theta = golden_angle * (i as f64);
+                [math::cos(theta) * radius, y, math::sin(theta) * radius]
+            })
+            .collect()
     }
 
     #[test]
@@ -1547,5 +1630,87 @@ mod tests {
                 "seed {seed}: supply {supply}"
             );
         }
+    }
+
+    #[test]
+    fn empty_rift_is_byte_identical_to_v3_field() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let pins = TerrainPins::default();
+        let ocean_target = default_ocean_target(seed);
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut Vec::new());
+        let plates = crate::plates::generate_plates(seed, &pins, &mut Vec::new());
+        let terranes = draw_terranes(seed, &cratons, &plates);
+        let major_count = cratons.len();
+        let v3 = CrustField::new_with_terranes(seed, cratons.clone(), terranes.clone());
+        let with_none = CrustField::new_with_rift(seed, cratons, terranes, None, major_count);
+        for p in fibonacci_sphere_points(200) {
+            assert_eq!(
+                v3.thickness_at(p),
+                with_none.thickness_at(p),
+                "empty-rift field diverged from v3 at {p:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn clip_flips_continental_at_across_a_synthetic_seam() {
+        // Two hand-placed cratons, contacting at assembly, no displacement
+        // (final centers == assembly centers) — the clip alone determines
+        // whether a point near the shared boundary reads continental.
+        let a = Craton {
+            id: 0,
+            center: [1.0, 0.0, 0.0],
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let b_center = crate::plates::normalize([math::cos(0.5), math::sin(0.5), 0.0]);
+        let b = Craton {
+            id: 1,
+            center: b_center,
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let cratons = vec![a.clone(), b.clone()];
+        let terrain_seed = Seed(1).derive(streams::ROOT);
+        let rift = crate::rift::draw_rift(terrain_seed, &cratons);
+        assert!(
+            !rift.seams.is_empty(),
+            "hand-placed cratons must contact and seam"
+        );
+        let field =
+            CrustField::new_with_rift(terrain_seed, cratons.clone(), Vec::new(), Some(rift), 2);
+        let plain = CrustField::new(terrain_seed, cratons);
+        // Deep in craton a's interior: continental in both fields, clip near 1.
+        assert!(field.continental_at(a.center));
+        assert!(plain.continental_at(a.center));
+        // Deep in craton b's interior, on its far side away from a (well
+        // past the seam on b's own side): also continental in both — the
+        // clip only cuts a craton's OWN side away from a seam it loses,
+        // never the side it wins.
+        let deep_in_b = crate::plates::normalize([math::cos(0.65), math::sin(0.65), 0.0]);
+        assert!(field.continental_at(deep_in_b));
+        assert!(plain.continental_at(deep_in_b));
+        // Between the two centers, near the seam but still on what was
+        // craton a's unclipped footprint: the plain (v3) field still
+        // reads continental there (a's envelope alone clears the
+        // threshold), but the clipped field does not — a's cap has been
+        // cut back to the seam, so nothing continental remains at that
+        // point once b's (near-zero, un-clipped-for-b) envelope also
+        // fails to clear it. This is the field-level clip consequence
+        // Task 6's wiring relies on.
+        let mut flipped = false;
+        for i in 0..200 {
+            let t = (i as f64) / 199.0;
+            let angle = 0.05 + 0.45 * t; // sweep between the two centers
+            let p = crate::plates::normalize([math::cos(angle), math::sin(angle), 0.0]);
+            if plain.continental_at(p) && !field.continental_at(p) {
+                flipped = true;
+                break;
+            }
+        }
+        assert!(
+            flipped,
+            "clip never flipped continental_at from true (v3) to false (clipped) along the seam sweep"
+        );
     }
 }

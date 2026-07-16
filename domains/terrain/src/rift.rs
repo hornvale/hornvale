@@ -130,6 +130,12 @@ pub fn draw_rift(terrain_seed: Seed, cratons: &[Craton]) -> RiftHistory {
             seams.push(Seam { a, b, noise_seed });
         }
     }
+    // Canonicalize enumeration order: the nested loop above already visits
+    // pairs in ascending `(i, j)` craton-slice order, which coincides with
+    // ascending `(a, b)` only when the input slice itself is id-ascending.
+    // Sort explicitly so `seams` is ascending `(a, b)` regardless of what
+    // order the caller's craton slice is in (Task 4 review carry-over).
+    seams.sort_by_key(|s| (s.a, s.b));
     let mut stream = rift_root.stream();
     let spreading_rate = SPREAD_MIN + (SPREAD_MAX - SPREAD_MIN) * stream.next_f64();
     RiftHistory {
@@ -221,6 +227,72 @@ pub fn rotate(pole: [f64; 3], angle: f64, p: [f64; 3]) -> [f64; 3] {
     ]
 }
 
+/// Half-width, in `seam_side` units (envelope-difference), over which the
+/// clip falls from 1 (fully present) to 0 (fully cut): at `side_toward_self
+/// == CLIP_TAPER` the clip is 1, at `-CLIP_TAPER` it is 0, and at exactly 0
+/// (the shared seam curve, `seam_side`'s zero set) it is 0.5 — the
+/// conjugate margin's own crossing point, by construction (spec §8).
+/// type-audit: bare-ok(ratio)
+pub const CLIP_TAPER: f64 = 0.08;
+
+/// Smoothstep on `x` clamped to `[0, 1]`: `3x² - 2x³`. A plain cubic
+/// ease, not centered — callers center it (`clip_with_rotation` centers on
+/// `side_toward_self == 0`).
+fn smoothstep(x: f64) -> f64 {
+    let x = x.clamp(0.0, 1.0);
+    3.0 * x * x - 2.0 * x * x * x
+}
+
+/// The assembly-frame clip evaluation shared by `clip_at` (which derives
+/// `rotation` fresh from `rift`/`cratons`) and `CrustField` (which
+/// precomputes and stores one rotation per major craton at construction —
+/// mirroring how `lobing_seeds` precomputes per-craton hash seeds rather
+/// than re-deriving them on every sample — and calls this directly to
+/// avoid repeating `rotation_for`'s work on every one of the millions of
+/// samples a rendered field takes). `p_final` is inverse-rotated into the
+/// assembly frame by `rotation`, then every seam touching `craton_id` is
+/// evaluated there: `clip = min` over those seams of the smoothstep,
+/// centered so the shared seam curve (`seam_side == 0`) reads exactly 0.5.
+/// A craton with no seams returns 1.0 (nothing cuts it).
+pub(crate) fn clip_with_rotation(
+    rift: &RiftHistory,
+    cratons: &[Craton],
+    craton_id: u32,
+    rotation: ([f64; 3], f64),
+    p_final: [f64; 3],
+) -> f64 {
+    let (pole, angle) = rotation;
+    let p_assembly = rotate(pole, -angle, p_final);
+    let mut clip = 1.0_f64;
+    let mut touched = false;
+    for seam in rift
+        .seams
+        .iter()
+        .filter(|s| s.a == craton_id || s.b == craton_id)
+    {
+        touched = true;
+        let raw = seam_side(seam, cratons, &rift.assembly, p_assembly);
+        let side_toward_self = if seam.a == craton_id { raw } else { -raw };
+        clip = clip.min(smoothstep(0.5 + side_toward_self / (2.0 * CLIP_TAPER)));
+    }
+    if touched { clip } else { 1.0 }
+}
+
+/// The clip factor for craton `craton_id` at a FINAL-frame point
+/// `p_final`: inverse-rotate by `craton_id`'s own assembly-to-final
+/// rotation (`rotation_for(rift.assembly[idx], cratons[idx].center)`,
+/// `idx` being `craton_id`'s position in `cratons`) and evaluate every
+/// seam touching it (`clip_with_rotation`). Standalone entry point for
+/// tests and any caller without a precomputed rotation cache; `CrustField`
+/// itself calls `clip_with_rotation` directly with a rotation it
+/// precomputed once at construction (see that function's doc).
+/// type-audit: bare-ok(index: craton_id), bare-ok(ratio: p_final), bare-ok(ratio: return)
+pub fn clip_at(rift: &RiftHistory, cratons: &[Craton], craton_id: u32, p_final: [f64; 3]) -> f64 {
+    let idx = craton_index(craton_id, cratons);
+    let rotation = rotation_for(rift.assembly[idx], cratons[idx].center);
+    clip_with_rotation(rift, cratons, craton_id, rotation, p_final)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,6 +320,175 @@ mod tests {
             ocean_target,
             &mut Vec::new(),
         )
+    }
+
+    #[test]
+    fn clip_is_one_far_from_seams_and_single_craton_is_uncut() {
+        // A single craton has nothing to seam against — `draw_rift`
+        // produces zero seams for it, so `clip_at` is 1.0 everywhere,
+        // interior or not.
+        let craton = Craton {
+            id: 0,
+            center: [0.0, 0.0, 1.0],
+            radius_rad: 0.4,
+            age: 0.5,
+        };
+        let cratons = vec![craton.clone()];
+        let terrain_seed = Seed(5).derive(streams::ROOT);
+        let rift = draw_rift(terrain_seed, &cratons);
+        assert!(rift.seams.is_empty(), "a lone craton must not seam");
+        for p in [
+            craton.center,
+            normalize([1.0, 0.0, 0.0]),
+            normalize([0.3, 0.4, 0.8]),
+        ] {
+            assert_eq!(clip_at(&rift, &cratons, 0, p), 1.0);
+        }
+
+        // A real multi-craton assembly: deep at a seaming craton's own
+        // assembly center, `side_toward_self` is strongly positive (its
+        // own envelope near 1, the neighbor's near 0) — comfortably past
+        // `CLIP_TAPER`'s taper band, so the clip saturates to 1.0.
+        let cratons = draw_test_cratons(42);
+        let terrain_seed = Seed(42).derive(streams::ROOT);
+        let rift = draw_rift(terrain_seed, &cratons);
+        let seam = rift
+            .seams
+            .first()
+            .expect("seed 42's assembly must produce at least one seam");
+        let ia = craton_index(seam.a, &cratons);
+        assert_eq!(
+            clip_at(&rift, &cratons, seam.a, cratons[ia].center),
+            1.0,
+            "clip did not saturate deep in the winning craton's own interior"
+        );
+    }
+
+    /// Bisect `seam_side` to zero along the cross-arc through `base`
+    /// (perpendicular to the a-b great-circle direction at `base`,
+    /// `perp`), within `[-search_range, search_range]` radians. `None`
+    /// when the two endpoints don't bracket a root (no sign change) — the
+    /// caller (the conjugate-fit battery) treats that step as unusable
+    /// rather than asserting on a spurious point.
+    fn bisect_seam_zero(
+        seam: &Seam,
+        cratons: &[Craton],
+        assembly: &[[f64; 3]],
+        base: [f64; 3],
+        perp: [f64; 3],
+        search_range: f64,
+    ) -> Option<[f64; 3]> {
+        let f = |angle: f64| {
+            let p = crate::plates::rotate_toward(base, perp, angle);
+            seam_side(seam, cratons, assembly, p)
+        };
+        let (mut lo, mut hi) = (-search_range, search_range);
+        let (mut f_lo, f_hi) = (f(lo), f(hi));
+        if f_lo == 0.0 {
+            return Some(crate::plates::rotate_toward(base, perp, lo));
+        }
+        if f_hi == 0.0 {
+            return Some(crate::plates::rotate_toward(base, perp, hi));
+        }
+        if f_lo.signum() == f_hi.signum() {
+            return None;
+        }
+        for _ in 0..64 {
+            let mid = 0.5 * (lo + hi);
+            let f_mid = f(mid);
+            if f_mid.signum() == f_lo.signum() {
+                lo = mid;
+                f_lo = f_mid;
+            } else {
+                hi = mid;
+            }
+        }
+        Some(crate::plates::rotate_toward(base, perp, 0.5 * (lo + hi)))
+    }
+
+    #[test]
+    fn conjugate_margins_fit_by_construction() {
+        // A hand-placed, isolated two-craton pair rather than a drawn
+        // multi-craton assembly (`draw_test_cratons`): seed 42's assembly
+        // has cratons of degree > 1 (e.g. craton 0 seams 1, 2, AND 3), so
+        // `clip_at`'s min-over-seams would fold in a SECOND seam's
+        // (unrelated) zero set along the walk below and the 0.5 read
+        // would not isolate this seam's own fit. Two cratons in contact
+        // guarantees exactly one seam, so every curve point found is
+        // governed by that seam alone on both sides.
+        let a = Craton {
+            id: 0,
+            center: [1.0, 0.0, 0.0],
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let b_center = normalize([math::cos(0.5), math::sin(0.5), 0.0]);
+        let b = Craton {
+            id: 1,
+            center: b_center,
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let cratons = vec![a, b];
+        let terrain_seed = Seed(1).derive(streams::ROOT);
+        let rift = draw_rift(terrain_seed, &cratons);
+        assert_eq!(rift.seams.len(), 1, "the pair must seam exactly once");
+        let seam = &rift.seams[0];
+        let ia = craton_index(seam.a, &cratons);
+        let ib = craton_index(seam.b, &cratons);
+        let center_a = rift.assembly[ia];
+        let center_b = rift.assembly[ib];
+        let axis = normalize(cross(center_a, center_b));
+        let total_angle = math::acos(dot(center_a, center_b).clamp(-1.0, 1.0));
+        // Wide enough to bracket the fracture-noise-wobbled zero set
+        // (`FRACTURE_AMP` can shift it well off the plain-envelope
+        // midpoint) without straying past either craton's own center.
+        let search_range = 0.9 * (cratons[ia].radius_rad + cratons[ib].radius_rad);
+
+        // Each craton's own assembly -> final rotation (Task 5 mapping:
+        // `rotation_for(assembly[idx], cratons[idx].center)`).
+        let (pole_a, angle_a) = rotation_for(center_a, cratons[ia].center);
+        let (pole_b, angle_b) = rotation_for(center_b, cratons[ib].center);
+
+        // Walk the great circle between the two assembly centers; at each
+        // step, bisect perpendicular to it for the seam's zero crossing.
+        // The set of found `q`s is ONE shared assembly-frame curve — both
+        // `seam_side(seam, ..., q) == 0`, by construction of the bisection
+        // — which is exactly the point of the battery: two cratons, two
+        // separate forward rotations, but the SAME curve underneath both
+        // margins.
+        let mut curve_points = Vec::new();
+        for i in 0..50 {
+            let t = (i as f64 + 1.0) / 51.0; // stay off the exact centers
+            let base = rotate(axis, t * total_angle, center_a);
+            let direction = normalize(cross(axis, base));
+            let perp = normalize(cross(base, direction));
+            if let Some(q) =
+                bisect_seam_zero(seam, &cratons, &rift.assembly, base, perp, search_range)
+            {
+                curve_points.push(q);
+            }
+        }
+        assert!(
+            curve_points.len() >= 30,
+            "too few usable curve points ({}) — battery cannot judge the fit off this few",
+            curve_points.len()
+        );
+
+        for q in curve_points {
+            let p_a = rotate(pole_a, angle_a, q);
+            let clip_a = clip_at(&rift, &cratons, seam.a, p_a);
+            assert!(
+                (clip_a - 0.5).abs() < 1e-6,
+                "craton a's clip at its own forward-rotated margin curve is {clip_a}, not 0.5"
+            );
+            let p_b = rotate(pole_b, angle_b, q);
+            let clip_b = clip_at(&rift, &cratons, seam.b, p_b);
+            assert!(
+                (clip_b - 0.5).abs() < 1e-6,
+                "craton b's clip at its own forward-rotated margin curve is {clip_b}, not 0.5"
+            );
+        }
     }
 
     #[test]
