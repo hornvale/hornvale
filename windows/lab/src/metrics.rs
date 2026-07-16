@@ -4632,22 +4632,25 @@ mod tests {
         // reverted the flagship to non-coastal, temperate-forest. Tuning
         // iteration 3 (Task 14, RELIEF_FREQUENCY 48→8: the sub-Nyquist fix)
         // redraws elevation once more and moves the flagship BACK to
-        // coastal, tropical-rainforest (see `almanac`'s seed-42 output and
-        // `cli/tests/branches_identity.rs`). The niche-differentiated-K
-        // coexistence-stack cutover (The Niche, merged here at Sculpting's
-        // close) repacked settlement genesis onto a competitive per-species
-        // K, relocating which cell goblin's flagship wins world-wide; the
-        // values below are re-derived on the merged tree (both campaigns'
-        // world-byte changes composed), not carried from either parent.
+        // coastal, tropical-rainforest — but that was Sculpting-alone. The
+        // niche-differentiated-K coexistence-stack cutover (The Niche,
+        // merged here at Sculpting's close) repacked settlement genesis
+        // onto a competitive per-species K, relocating which cell goblin's
+        // flagship wins world-wide on the composed tree: re-derived
+        // empirically post-merge (not carried from either parent), the
+        // flagship lands back on non-coastal, temperate-forest — matching
+        // neither parent's solo-tree finding on its own, since both
+        // campaigns' world-byte changes compose (see `almanac`'s seed-42
+        // output and `cli/tests/branches_identity.rs`).
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("tropical-rainforest".to_string())
+            MetricValue::Text("temperate-forest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
