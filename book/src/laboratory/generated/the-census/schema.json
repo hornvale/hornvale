@@ -472,7 +472,7 @@
         40.0,
         60.0
       ],
-      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the full species roster's individual fields, each species' own psychology folded in) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
+      "doc": "The carrying-capacity field's headline calibration (design spec §5): the ratio of mean per-land-cell K (summed over the roster's PEOPLED kinds' individual fields, each species' own psychology folded in — fauna kinds have no psychology and are excluded, preserving this metric's pre-menagerie population) in the low-latitude band (|latitude| < 30) to the polar band (|latitude| > 60), the polar mean floored at POLE_FLOOR (1% of the K formula's baseline unit) so an exactly-zero polar band — the Miami NPP proxy's honest reading of hard cold, not a bug — reports a large-but-bounded ratio rather than a division blowup. A field grounded in the real biomass gradient reads well above 1 here; Absent if either band has no land cells (a wholly ocean or wholly polar world)",
       "kind": "numeric",
       "name": "capacity-by-abs-latitude",
       "rung": "settlements"
@@ -1089,6 +1089,95 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Median shelf width over PASSIVE-margin coast land cells (Passive/Interior/Oceanic, mirroring the carve's own wedge-reach margin split): hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (passive median should exceed active); Absent if the world has no passive-margin coast",
+      "kind": "numeric",
+      "name": "shelf-width-passive-median",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        8.0
+      ],
+      "doc": "Median shelf width over ACTIVE-margin coast land cells: hops seaward from the coast cell, each hop to the deepest ocean neighbor, until depth first exceeds twice the sediment wedge's freeboard cap or 8 hops are spent — spec §8's passive/active shelf asymmetry battery (active median should be narrower than passive); Absent if the world has no active-margin coast",
+      "kind": "numeric",
+      "name": "shelf-width-active-median",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        100000.0,
+        200000.0,
+        400000.0,
+        800000.0,
+        1600000.0,
+        3200000.0
+      ],
+      "doc": "Total deposited sediment volume proxy: Σ sediment thickness (meters) over every cell, one cell-area unit per cell — the carve's own volume-proxy convention (spec §5): repose's receiver-side gains, routing's floodplain/ playa deposit, the marine wedge/delta fill, and atoll cap material, all summed",
+      "kind": "numeric",
+      "name": "sediment-volume",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of waterfall (knickpoint) sites the carve found: land cells where a high-drainage watercourse crosses a sharp PRE-carve induration step (spec §5's derived point observations)",
+      "kind": "numeric",
+      "name": "waterfall-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        1.0,
+        2.0,
+        4.0,
+        8.0,
+        16.0
+      ],
+      "doc": "Count of cells a river-mouth delta lobe raised above sea level (spec §5's top-K discrete deltas) — a cell count, not a mouth count: each of the top-K mouths can raise the mouth cell itself plus up to two adjacent hop-1 ocean cells",
+      "kind": "numeric",
+      "name": "delta-count",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.05,
+        0.1,
+        0.2,
+        0.3,
+        0.5
+      ],
+      "doc": "The A→B→C escalation diagnostic (spec §8, preregistered, a permanent census column): the flux-weighted fraction of the world's 20 largest pre-carve rivers' mainstem cells whose downhill target changed across the carve. Thresholds: < 0.10 engine A self-consistent; 0.10-0.30 flag, Nathan decides; > 0.30 A rejected as sole engine, engine B enters evaluation",
+      "kind": "numeric",
+      "name": "rerouted-flow-fraction",
+      "rung": "terrain"
+    },
+    {
       "doc": "Whether every daughter's lexicon (goblin, hobgoblin, bugbear, kobold) is Neogrammarian-regular: every Root's recorded derivation replays byte-identically through evolve, checked for EVERY daughter in this world's roster (spec §9.1, generalized family-wide); Absent if no daughter minted a Root",
       "kind": "flag",
       "name": "lexicon-regular-family",
@@ -1650,7 +1739,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xcc577c221169dcf6"
+    "fnv1a64": "0x929c43a10c088176"
   },
   "schema_version": 1,
   "study": {
