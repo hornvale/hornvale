@@ -53,6 +53,8 @@ Each entry in `moons` is:
 | `phase_offset` | number | The moon's synodic-phase offset at day 0, in turns ([0, 1)) — where in its light cycle the moon starts, analogous to `year_phase_offset` but for the moon's phase rather than the world's orbital position. |
 | `distance_mm` | number | Orbital distance from the world, megameters. |
 | `size_rel` | number | Angular-diameter ratio — the moon's apparent size relative to the reference the size-word vocabulary is built from. |
+| `inclination_deg` | number | Orbital inclination to the anchor's orbital plane, in degrees. Above 90° the moon orbits **retrograde** (The Reckoning's captured moons). Appended after `size_rel` per the schema's stability contract. |
+| `node_longitude_deg` | number | Ecliptic longitude of the ascending node at genesis, in degrees ([0, 360)). Appended after `inclination_deg` per the stability contract. |
 
 Each moon's surface (radius, gravity, and seeded descriptors) is its own
 document: [`scene/moons/v1`](scene-moons-v1.md).
@@ -77,8 +79,8 @@ An excerpt of a `scene/system/v1` document (seed 42; two moons):
     "year_phase_offset": 0.20941868
   },
   "moons": [
-    { "sidereal_days": 15.993805, "phase_offset": 0.85759808, "distance_mm": 307.74439, "size_rel": 1.6350803 },
-    { "sidereal_days": 32.555, "phase_offset": 0.25842259, "distance_mm": 494.27358, "size_rel": 0.69049995 }
+    { "sidereal_days": 15.993805, "phase_offset": 0.85759808, "distance_mm": 307.74439, "size_rel": 1.6350803, "inclination_deg": 4.6667409, "node_longitude_deg": 1.5976041 },
+    { "sidereal_days": 32.555, "phase_offset": 0.25842259, "distance_mm": 494.27358, "size_rel": 0.69049995, "inclination_deg": 117.27724, "node_longitude_deg": 193.38776 }
   ]
 }
 ```
