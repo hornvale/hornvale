@@ -459,26 +459,58 @@ pub fn system_json(scene: &SystemScene) -> String {
 /// type-audit: bare-ok(identifier-text)
 pub const MOONS_SCHEMA: &str = "scene/moons/v1";
 
-/// Luna's reference radius, km (the constant-density anchor).
-const LUNA_RADIUS_KM: f64 = 1737.4;
-/// Luna's reference surface gravity, m/s².
-const LUNA_GRAVITY_MS2: f64 = 1.62;
+/// Newtonian gravitational constant, N·m²/kg² (CODATA recommended value).
+const G_SI: f64 = 6.6743e-11;
 
-/// Physical radius (km) and surface gravity (m/s²) derived from a moon's
-/// mass in lunar masses, at an assumed constant density equal to Luna's:
-/// volume ∝ mass ⇒ radius ∝ mass^(1/3), and g = GM/r² reduces to
-/// g ∝ mass^(1/3). Uses the kernel's libm-routed `powf` for cross-platform
-/// byte-identity (decision 0041).
-pub(crate) fn derived_from_mass(mass_rel: f64) -> (f64, f64) {
-    let f = hornvale_kernel::math::powf(mass_rel, 1.0 / 3.0);
-    (LUNA_RADIUS_KM * f, LUNA_GRAVITY_MS2 * f)
+/// Bulk density below which a moon's composition reads as icy rather than
+/// rocky (The Reckoning). Chosen to sit cleanly between the domain's three
+/// density constants — icy captures draw 1.6 g/cm³, rocky captures 3.0,
+/// giant-impact moons 3.34 — so 2.0 separates the icy branch from both
+/// rocky branches with a wide margin (0.4 below, 1.0+ above) on either
+/// side; a drawn value can never land near this line.
+const ICY_DENSITY_THRESHOLD_G_CM3: f64 = 2.0;
+
+/// Surface gravity (m/s²) of a uniform sphere from its radius (km) and bulk
+/// density (g/cm³). `g = GM/r²` and, for a uniform sphere, `M = (4/3)πρr³`,
+/// so substituting gives `g = (4/3)πGρr` — no mass-in-kg term needed, which
+/// lets this compose directly with [`hornvale_astronomy::radius_km`] (The
+/// Reckoning's real-density radius) without re-deriving mass or duplicating
+/// that crate's radius formula. Anchors to the same figure the old
+/// constant-density formula encoded: a 1.0-lunar-mass `GiantImpact` moon
+/// (density 3.34 g/cm³, radius ≈1737.77 km) comes out to ≈1.6226 m/s²,
+/// matching Luna's real 1.62.
+fn surface_gravity_ms2(radius_km: f64, density_g_cm3: f64) -> f64 {
+    let r_m = radius_km * 1000.0;
+    let rho_kg_per_m3 = density_g_cm3 * 1000.0;
+    (4.0 / 3.0) * std::f64::consts::PI * G_SI * rho_kg_per_m3 * r_m
+}
+
+/// The baseline albedo band, before maria darkening, for a bulk density: an
+/// icy composition reads bright (0.5–0.7, real ice), a rocky/impact
+/// composition reads dark (0.1–0.2, real regolith) — supplying the visual
+/// referent `bright-icy` lacked before density was real (The Reckoning).
+fn albedo_band(density_g_cm3: f64) -> (f64, f64) {
+    if density_g_cm3 < ICY_DENSITY_THRESHOLD_G_CM3 {
+        (0.5, 0.7)
+    } else {
+        (0.1, 0.2)
+    }
 }
 
 /// A subtle near-gray tint, and the four seeded surface descriptors, as a
 /// pure hash of the world seed and the moon index — no `Stream` draw. Mass
-/// biases each so a face reads plausibly: small moons cratered highlands,
-/// large moons resurfaced maria plains ("models author, dice roll", 0009).
-fn seeded_descriptors(seed: hornvale_kernel::Seed, index: usize, mass_rel: f64) -> Descriptors {
+/// biases cratering/maria so a face reads plausibly: small moons cratered
+/// highlands, large moons resurfaced maria plains ("models author, dice
+/// roll", 0009). Albedo is biased by the moon's real bulk density (The
+/// Reckoning) rather than mass, so an icy moon actually reads brighter than
+/// a rocky one — the hash channel still perturbs within the composition's
+/// band so two moons of a world differ.
+fn seeded_descriptors(
+    seed: hornvale_kernel::Seed,
+    index: usize,
+    mass_rel: f64,
+    density_g_cm3: f64,
+) -> Descriptors {
     // value_noise_2d returns [0,1); integer coords sample the raw lattice
     // hash, one distinct channel per (index, channel) pair.
     let h = |channel: u32| hornvale_kernel::value_noise_2d(seed, index as f64, f64::from(channel));
@@ -491,9 +523,12 @@ fn seeded_descriptors(seed: hornvale_kernel::Seed, index: usize, mass_rel: f64) 
     // Maria: hash pulled up with mass, then damped by cratering so a face is
     // not simultaneously all-craters and all-maria.
     let maria_fraction = ((0.35 * h(1) + 0.65 * large) * (1.0 - 0.5 * cratering)).clamp(0.0, 1.0);
-    // Albedo in [0.04,0.5], darkened where maria (dark plains) is high.
-    let albedo = (0.04 + 0.46 * h(2)) * (1.0 - 0.6 * maria_fraction);
-    let albedo = albedo.clamp(0.04, 0.5);
+    // Albedo: a composition-baseline band (bright ice, dark rock), a hash
+    // channel perturbing within it, then darkened where maria (dark plains)
+    // is high.
+    let (albedo_lo, albedo_hi) = albedo_band(density_g_cm3);
+    let albedo = (albedo_lo + (albedo_hi - albedo_lo) * h(2)) * (1.0 - 0.6 * maria_fraction);
+    let albedo = albedo.clamp(0.04, 0.7);
     // Tint: three near-gray channels, deliberately subtle (moons are gray),
     // enough to tell two moons of a world apart.
     let tint = [
@@ -509,6 +544,16 @@ fn seeded_descriptors(seed: hornvale_kernel::Seed, index: usize, mass_rel: f64) 
     }
 }
 
+/// Stable lowercase word for a moon's formation mechanism (The Reckoning) —
+/// serialized as text rather than the astronomy domain's enum discriminant,
+/// the same convention `surface_class` already follows.
+fn formation_word(formation: hornvale_astronomy::Formation) -> &'static str {
+    match formation {
+        hornvale_astronomy::Formation::GiantImpact => "giant-impact",
+        hornvale_astronomy::Formation::Capture => "capture",
+    }
+}
+
 struct Descriptors {
     albedo: f64,
     cratering: f64,
@@ -516,14 +561,17 @@ struct Descriptors {
     tint: [f64; 3],
 }
 
-/// The normative `surface_class` classifier over the descriptors: a stable,
-/// append-only word for clients that want a name, not a texture. Precedence
-/// (most specific first): a bright icy face; else maria-rich; else heavily
-/// cratered; else a cratered highland. Thresholds are the reference page's
-/// normative table.
-/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
-pub fn moon_surface_class(albedo: f64, cratering: f64, maria_fraction: f64) -> &'static str {
-    if albedo > 0.4 {
+/// The normative `surface_class` classifier: a stable, append-only word for
+/// clients that want a name, not a texture. Precedence (most specific
+/// first): a bright icy face; else maria-rich; else heavily cratered; else
+/// a cratered highland. Thresholds are the reference page's normative
+/// table. **Since The Reckoning, `bright-icy` keys off the moon's real bulk
+/// density, not the hash-noise `albedo`** — Nathan-ratified: The Faces
+/// shipped the word for an icy moon before the model had a concept of ice;
+/// this is the referent.
+/// type-audit: pending(wave-3: density_g_cm3), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
+pub fn moon_surface_class(density_g_cm3: f64, cratering: f64, maria_fraction: f64) -> &'static str {
+    if density_g_cm3 < ICY_DENSITY_THRESHOLD_G_CM3 {
         "bright-icy"
     } else if maria_fraction > 0.4 {
         "maria-rich"
@@ -536,7 +584,7 @@ pub fn moon_surface_class(albedo: f64, cratering: f64, maria_fraction: f64) -> &
 
 /// One moon's surface document entry. Field order is fixed; every f64
 /// quantizes at emit (decision 0033).
-/// type-audit: bare-ok(count: index), bare-ok(ratio: mass_rel), bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: surface_class), pending(wave-3: radius_km), pending(wave-3: surface_gravity_ms2), bare-ok(ratio: tint)
+/// type-audit: bare-ok(count: index), bare-ok(ratio: mass_rel), bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: surface_class), pending(wave-3: radius_km), pending(wave-3: surface_gravity_ms2), bare-ok(ratio: tint), pending(wave-3: density_g_cm3), bare-ok(identifier-text: formation)
 #[derive(Debug, Serialize)]
 pub struct MoonSurface {
     /// The moon's generation index (matches `scene/system/v1`).
@@ -564,6 +612,18 @@ pub struct MoonSurface {
     pub tint: [f64; 3],
     /// Derived descriptive class name (see `moon_surface_class`).
     pub surface_class: String,
+    /// Bulk density, g/cm³ (The Reckoning) — the moon's real drawn/derived
+    /// density (`hornvale_astronomy::Moon::density`), the physical basis
+    /// `radius_km`, `surface_gravity_ms2`, and `surface_class`'s `bright-icy`
+    /// branch all derive from. Additive field; appended after every
+    /// existing field per the schema's stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub density_g_cm3: f64,
+    /// How this moon formed (The Reckoning): `"giant-impact"` or
+    /// `"capture"` — see `hornvale_astronomy::Formation`. Additive field;
+    /// appended after every existing field per the schema's stability
+    /// contract.
+    pub formation: String,
 }
 
 /// One `scene/moons/v1` document: each moon's surface as derived physics
@@ -593,8 +653,13 @@ pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
         .enumerate()
         .map(|(index, m)| {
             let mass_rel = m.mass.get();
-            let (radius_km, surface_gravity_ms2) = derived_from_mass(mass_rel);
-            let d = seeded_descriptors(world.seed, index, mass_rel);
+            let density_g_cm3 = m.density.get();
+            // Real-density physics (The Reckoning): call the domain's own
+            // radius formula rather than re-deriving it, then compose
+            // gravity from that radius and the same real density.
+            let radius_km = hornvale_astronomy::radius_km(m);
+            let surface_gravity_ms2 = surface_gravity_ms2(radius_km, density_g_cm3);
+            let d = seeded_descriptors(world.seed, index, mass_rel, density_g_cm3);
             MoonSurface {
                 index,
                 mass_rel,
@@ -604,8 +669,10 @@ pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
                 cratering: d.cratering,
                 maria_fraction: d.maria_fraction,
                 tint: d.tint,
-                surface_class: moon_surface_class(d.albedo, d.cratering, d.maria_fraction)
+                surface_class: moon_surface_class(density_g_cm3, d.cratering, d.maria_fraction)
                     .to_string(),
+                density_g_cm3,
+                formation: formation_word(m.formation).to_string(),
             }
         })
         .collect();
@@ -898,40 +965,151 @@ mod tests {
     }
 
     #[test]
-    fn derived_params_follow_the_constant_density_physics() {
+    fn derived_params_follow_real_density_physics() {
+        // Independently recompute r = (3M/4piρ)^(1/3) and g = GM/r^2 from
+        // each moon's own surfaced mass_rel/density_g_cm3 fields — not by
+        // calling hornvale_astronomy::radius_km or super::surface_gravity_ms2
+        // again — so this catches a wiring bug (wrong mass/density passed
+        // through) as well as a physics regression.
+        const LUNAR_MASS_KG: f64 = 7.342e22;
         let scene = moons_scene(&mooned_world()).unwrap();
+        assert_eq!(scene.moons.len(), 2, "seed 42 has two moons");
         for m in &scene.moons {
-            let f = hornvale_kernel::math::powf(m.mass_rel, 1.0 / 3.0);
+            let mass_kg = m.mass_rel * LUNAR_MASS_KG;
+            let rho_kg_m3 = m.density_g_cm3 * 1000.0;
+            let v_m3 = 3.0 * mass_kg / (4.0 * std::f64::consts::PI * rho_kg_m3);
+            let expected_r_km = hornvale_kernel::math::powf(v_m3, 1.0 / 3.0) / 1000.0;
             assert!(
-                (m.radius_km - 1737.4 * f).abs() < 1e-6,
-                "radius = 1737.4·mass^(1/3)"
+                (m.radius_km - expected_r_km).abs() < 1e-6,
+                "radius must equal (3M/4piρ)^(1/3) at density {}: got {}, expected {}",
+                m.density_g_cm3,
+                m.radius_km,
+                expected_r_km
             );
+            const G_SI: f64 = 6.6743e-11;
+            let expected_g = G_SI * mass_kg / (expected_r_km * 1000.0 * expected_r_km * 1000.0);
             assert!(
-                (m.surface_gravity_ms2 - 1.62 * f).abs() < 1e-6,
-                "g = 1.62·mass^(1/3)"
+                (m.surface_gravity_ms2 - expected_g).abs() < 1e-9,
+                "gravity must equal GM/r^2: got {}, expected {}",
+                m.surface_gravity_ms2,
+                expected_g
             );
         }
     }
 
     #[test]
-    fn derived_params_equal_luna_at_one_lunar_mass() {
-        // A unit-mass moon reproduces Luna's reference radius and gravity.
-        let (r, g) = super::derived_from_mass(1.0);
-        assert!((r - 1737.4).abs() < 1e-9);
-        assert!((g - 1.62).abs() < 1e-9);
+    fn derived_params_equal_luna_at_one_lunar_mass_and_giant_impact_density() {
+        use hornvale_astronomy::{GramsPerCm3, LunarMasses};
+        // Base every non-overridden field on a real generated moon (never a
+        // from-scratch literal), then override mass/density to the Luna
+        // calibration point — same pattern the astronomy domain's own
+        // `radius_follows_from_mass_and_real_density_not_an_assumption` uses.
+        let w = mooned_world();
+        let sky = hornvale_worldgen::sky_of(&w).unwrap();
+        let base = sky.system().unwrap().moons[0].clone();
+        let luna = hornvale_astronomy::Moon {
+            mass: LunarMasses::new(1.0).unwrap(),
+            density: GramsPerCm3::new(3.34).unwrap(),
+            ..base
+        };
+        let r = hornvale_astronomy::radius_km(&luna);
+        // Real physics from the real lunar mass (7.342e22 kg) and density
+        // (3.34 g/cm3) gives ~1737.77 km — a hair above the old assumed-
+        // constant anchor of 1737.4 km (the two agree to 4 significant
+        // figures because the old anchor WAS Luna's real observed radius,
+        // and 1737.77 is what the same mass/density pair yields when run
+        // through r = (3M/4piρ)^(1/3) instead of being looked up).
+        assert!((r - 1737.77).abs() < 0.01, "radius came out {r} km");
+        let g = super::surface_gravity_ms2(r, 3.34);
+        assert!((g - 1.6226).abs() < 0.001, "gravity came out {g} m/s2");
+
+        // An icy body of the same mass is ~28% larger (task calibration:
+        // (3.34/1.6)^(1/3) - 1 ≈ 0.278).
+        let icy = hornvale_astronomy::Moon {
+            density: GramsPerCm3::new(1.6).unwrap(),
+            ..luna
+        };
+        let r_icy = hornvale_astronomy::radius_km(&icy);
+        let ratio = r_icy / r;
+        assert!(
+            (1.27..1.29).contains(&ratio),
+            "icy/impact radius ratio came out {ratio}"
+        );
+    }
+
+    #[test]
+    fn albedo_band_is_bright_for_icy_and_dark_for_rocky() {
+        assert_eq!(super::albedo_band(1.6), (0.5, 0.7), "icy capture density");
+        assert_eq!(
+            super::albedo_band(1.999),
+            (0.5, 0.7),
+            "just under the icy threshold"
+        );
+        assert_eq!(
+            super::albedo_band(2.0),
+            (0.1, 0.2),
+            "at the threshold reads rocky"
+        );
+        assert_eq!(super::albedo_band(3.0), (0.1, 0.2), "rocky capture density");
+        assert_eq!(super::albedo_band(3.34), (0.1, 0.2), "giant-impact density");
     }
 
     #[test]
     fn descriptors_are_in_range() {
         let scene = moons_scene(&mooned_world()).unwrap();
         for m in &scene.moons {
-            assert!((0.04..=0.5).contains(&m.albedo), "albedo in [0.04,0.5]");
+            assert!((0.04..=0.7).contains(&m.albedo), "albedo in [0.04,0.7]");
             assert!((0.0..=1.0).contains(&m.cratering));
             assert!((0.0..=1.0).contains(&m.maria_fraction));
             for c in m.tint {
                 assert!((0.0..=1.0).contains(&c));
             }
         }
+    }
+
+    #[test]
+    fn icy_albedo_can_exceed_the_old_zero_point_five_cap() {
+        // Seed 42's two real moons both land below 0.5 (neither is icy), so
+        // `descriptors_are_in_range` alone never exercises the widened cap.
+        // This directly proves an icy composition needs headroom above the
+        // old [0.04,0.5] range: at least one index/seed with density 1.6
+        // must land above 0.5, still within [0.04,0.7].
+        let found_above_half = (0u64..50).any(|seed| {
+            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, 1.6);
+            d.albedo > 0.5
+        });
+        assert!(
+            found_above_half,
+            "no icy-density draw exceeded the old 0.5 cap across 50 seeds"
+        );
+        // And the clamp still holds even at the icy band's own upper bound.
+        for seed in 0u64..50 {
+            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, 1.6);
+            assert!(
+                (0.04..=0.7).contains(&d.albedo),
+                "seed {seed}: {}",
+                d.albedo
+            );
+        }
+    }
+
+    #[test]
+    fn moons_scene_surfaces_density_and_formation() {
+        // Seed 42: moon 0 is GiantImpact (density 3.34), moon 1 is Capture
+        // (density either the rocky or icy reservoir).
+        let scene = moons_scene(&mooned_world()).unwrap();
+        assert_eq!(scene.moons[0].formation, "giant-impact");
+        assert!(
+            (scene.moons[0].density_g_cm3 - 3.34).abs() < 1e-9,
+            "giant-impact density must be the derived constant 3.34, got {}",
+            scene.moons[0].density_g_cm3
+        );
+        assert_eq!(scene.moons[1].formation, "capture");
+        assert!(
+            scene.moons[1].density_g_cm3 == 3.0 || scene.moons[1].density_g_cm3 == 1.6,
+            "capture density must be one of the two drawn reservoirs, got {}",
+            scene.moons[1].density_g_cm3
+        );
     }
 
     #[test]
@@ -947,15 +1125,18 @@ mod tests {
         let mut large_cratering = 0.0;
         let mut small_maria = 0.0;
         let mut large_maria = 0.0;
+        // Density held fixed (an arbitrary rocky value) across every call so
+        // only the mass bias under test varies.
+        const FIXED_DENSITY_G_CM3: f64 = 3.34;
         for seed in 1..200u64 {
             let s = hornvale_kernel::Seed(seed);
             for (i, &m) in small_masses.iter().enumerate() {
-                let d = super::seeded_descriptors(s, i, m);
+                let d = super::seeded_descriptors(s, i, m, FIXED_DENSITY_G_CM3);
                 small_cratering += d.cratering;
                 small_maria += d.maria_fraction;
             }
             for (i, &m) in large_masses.iter().enumerate() {
-                let d = super::seeded_descriptors(s, i, m);
+                let d = super::seeded_descriptors(s, i, m, FIXED_DENSITY_G_CM3);
                 large_cratering += d.cratering;
                 large_maria += d.maria_fraction;
             }
@@ -988,9 +1169,22 @@ mod tests {
 
     #[test]
     fn surface_class_table_is_normative() {
-        assert_eq!(moon_surface_class(0.45, 0.9, 0.1), "bright-icy");
-        assert_eq!(moon_surface_class(0.2, 0.1, 0.5), "maria-rich");
-        assert_eq!(moon_surface_class(0.2, 0.8, 0.1), "heavily-cratered");
-        assert_eq!(moon_surface_class(0.2, 0.3, 0.1), "cratered-highland");
+        // Density wins even under high cratering/maria — it is checked
+        // first (most specific), per the reference page's normative table.
+        assert_eq!(moon_surface_class(1.6, 0.9, 0.9), "bright-icy");
+        assert_eq!(moon_surface_class(3.0, 0.1, 0.5), "maria-rich");
+        assert_eq!(moon_surface_class(3.0, 0.8, 0.1), "heavily-cratered");
+        assert_eq!(moon_surface_class(3.0, 0.3, 0.1), "cratered-highland");
+    }
+
+    #[test]
+    fn icy_composition_classifies_bright_icy_and_rock_does_not() {
+        // The requirement this campaign exists to satisfy: an icy captured
+        // moon reliably classifies bright-icy, a rocky/impact moon does not
+        // — independent of the hash-noise descriptors.
+        assert_eq!(moon_surface_class(1.6, 0.0, 0.0), "bright-icy");
+        assert_eq!(moon_surface_class(1.9, 0.0, 0.0), "bright-icy");
+        assert_ne!(moon_surface_class(3.0, 0.0, 0.0), "bright-icy");
+        assert_ne!(moon_surface_class(3.34, 0.0, 0.0), "bright-icy");
     }
 }
