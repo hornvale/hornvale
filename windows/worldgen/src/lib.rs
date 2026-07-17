@@ -3200,6 +3200,7 @@ pub fn dominant_people_in(world: &World, wc: &WorldComponents) -> Option<KindId>
 /// inhabits — capitalized per the lexicon's surface-view convention.
 /// `None` if the world has no dominant race, or if that race's lexicon has
 /// no entry for the concept (a coverage gap, never a silent fallback).
+/// type-audit: bare-ok(identifier-text)
 pub fn world_name(world: &World) -> Option<String> {
     let kind = dominant_people(world)?;
     let lex = lexicon_of(world, kind.0).ok()?;

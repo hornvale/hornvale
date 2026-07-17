@@ -27,6 +27,7 @@ pub enum Definiteness {
 
 /// A language-neutral clause: predicate-argument structure plus features.
 /// The per-language realizer decides how (and whether) each feature surfaces.
+/// type-audit: bare-ok(identifier-text: subject), bare-ok(identifier-text: complement)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClauseSpec {
     /// The construction.
@@ -49,6 +50,7 @@ fn indefinite_article(word: &str) -> &'static str {
 }
 
 /// Realize a ClauseSpec as a Common (≈ limited English) sentence.
+/// type-audit: bare-ok(prose)
 pub fn realize_common(spec: &ClauseSpec) -> String {
     match spec.frame {
         Frame::Classify => {
