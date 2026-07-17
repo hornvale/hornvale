@@ -3123,8 +3123,13 @@ pub fn dominant_people_in(world: &World, wc: &WorldComponents) -> Option<KindId>
             // Biosphere-only (a dragon/fungus) — not a naming candidate.
             continue;
         }
-        let population = flagship_of(world, kind.0).map_or(0, |v| v.population);
-        let weight = population as f64 * bio.mass.kilograms();
+        // Candidacy requires actual placement (registry-first-is-not-
+        // placed-first): a registered-but-unplaced kind must never compete
+        // at weight 0.0 against a placed kind — it isn't a candidate at all.
+        let Some(flagship) = flagship_of(world, kind.0) else {
+            continue;
+        };
+        let weight = flagship.population as f64 * bio.mass.kilograms();
         let better = match best {
             None => true,
             Some((best_weight, best_kind)) => {
@@ -3940,6 +3945,71 @@ mod tests {
             new_winner, winner,
             "crushing the winner's mass must change who wins — dominant_people is \
              mass-weighted, not headcount-only"
+        );
+    }
+
+    /// Correctness guard (registry-first-is-not-placed-first, the class
+    /// behind hornvale#1): the chosen dominant race must always be a race
+    /// actually PLACED on this world, never a registered-but-unplaced kind
+    /// that merely tied at weight zero.
+    #[test]
+    fn dominant_people_is_always_a_placed_race() {
+        let world = constant(1);
+        let kind = dominant_people(&world).expect("a peopled world has a dominant race");
+        assert!(
+            flagship_of(&world, kind.0).is_some(),
+            "dominant_people must never name a species that holds no flagship settlement"
+        );
+    }
+
+    /// C1 T2 review regression: `dominant_people_in`'s candidacy loop must
+    /// treat "registered but unplaced" differently from "placed with zero
+    /// population" — both weighed 0.0 before the fix, so an unplaced species
+    /// could win by alphabetical tie-break instead of the doc-promised
+    /// `None`. Built with a fauna-only component set at `build_world_to`
+    /// (mirrors `fauna_are_skipped_by_settlement_genesis`) so the world
+    /// itself places no settlements at all, then queried against the
+    /// CANONICAL component set (real lexicon entries for goblin, hobgoblin,
+    /// …) so every candidate passes the "is a naming candidate" filter and
+    /// none is placed — the exact shape of the bug.
+    #[test]
+    fn dominant_people_returns_none_when_no_peopled_race_is_placed() {
+        use hornvale_kernel::ComponentStore;
+        let goblin_bio = hornvale_species::biosphere_registry()
+            .get(&KindId("goblin"))
+            .expect("the shipped goblin has a biosphere row")
+            .clone();
+        let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+            [(KindId("test-beast"), goblin_bio)].into_iter().collect();
+        let family_of: ComponentStore<KindId, &'static str> =
+            [(KindId("test-beast"), "test-beast")].into_iter().collect();
+        let fauna_only_wc = WorldComponents::from_stores(
+            biosphere,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            hornvale_language::family_proto(),
+            family_of,
+        )
+        .expect("a fauna-only component set is well-formed (no peopled rows)");
+
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &fauna_only_wc,
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+
+        let canonical_wc = WorldComponents::assemble().unwrap();
+        assert_eq!(
+            dominant_people_in(&world, &canonical_wc),
+            None,
+            "a world with no placed peopled race must have no dominant race"
         );
     }
 
