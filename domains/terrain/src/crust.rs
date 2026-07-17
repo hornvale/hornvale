@@ -5,6 +5,7 @@
 
 use crate::pins::TerrainPins;
 use crate::plates::dot;
+use crate::rift::RiftHistory;
 use crate::streams;
 use hornvale_kernel::{Seed, math, noise};
 
@@ -388,11 +389,6 @@ fn terrane_envelope(t: &Terrane, p: [f64; 3]) -> f64 {
     terrane_contribution_km(t, p) / t.thickness_km
 }
 
-/// How far each non-anchor craton slides toward craton 0 when
-/// `--supercontinent` clusters them: 0 leaves it in place, 1 collapses it
-/// onto the anchor exactly.
-const CLUSTER_PULL: f64 = 0.75;
-
 /// Spherical interpolation from `a` toward `b` by `t` in [0, 1]: the
 /// great-circle analogue of a linear blend, so a slid center stays on the
 /// unit sphere exactly rather than needing a post-hoc renormalize-to-taste.
@@ -476,15 +472,21 @@ fn slerp(a: [f64; 3], b: [f64; 3], t: f64) -> [f64; 3] {
 /// 0.415\] — radii grow roughly 1.6x versus the plain-area match, since
 /// only a fraction of each nominal cap is actually continental.
 ///
-/// `--supercontinent` is applied after every position is drawn and every
-/// radius rescaled: it clusters cratons 1.. toward craton 0 by `slerp`,
-/// so the pin perturbs positions but never the draw sequence or the area
-/// normalization (pin isolation again).
+/// `--supercontinent` no longer transforms craton centers here (epoch v4,
+/// rift-and-fit spec §4): it holds the world at its pre-breakup ASSEMBLY
+/// frame, applied in `globe::generate` after the rift is drawn (each
+/// major's center becomes `rift.assembly[i]`). The draw stage leaves the
+/// pinned set exactly as the unpinned path draws it, so the pin still
+/// perturbs no draw and no area normalization (pin isolation).
 ///
 /// Repulsion (Task 9 iteration 2, retargeted in iteration 3') is applied
-/// last, and only when the world is *not* pinned `--supercontinent` (that
-/// pin wants clustering — repelling what it just pulled together would
-/// fight it): one deterministic pass, in id order, zero stream draws,
+/// last, and only when the world is *not* pinned `--supercontinent`: under
+/// that pin the drawn set feeds `assemble_cratons` at genesis, which pulls
+/// every craton back to first contact regardless of how the raw draw
+/// scattered them, so a repulsion pass first would only respread an input
+/// the assembly immediately collapses — skipping it keeps the pinned draw
+/// equal to its own unrepelled path. One deterministic pass, in id order,
+/// zero stream draws,
 /// separating overlap-merged craton centers so distinct cratons read as
 /// distinct landmasses (see `repel_cratons`). Like the radius rescale,
 /// this makes the final *center* of cratons 1.. a downstream arithmetic
@@ -584,12 +586,13 @@ fn draw_cratons_unrepelled(
             c.radius_rad = (c.radius_rad * scale).min(0.6);
         }
     }
-    if pins.supercontinent == Some(true) && cratons.len() > 1 {
-        let anchor = cratons[0].center;
-        for craton in cratons.iter_mut().skip(1) {
-            craton.center = slerp(craton.center, anchor, CLUSTER_PULL);
-        }
-    }
+    // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
+    // transforms craton centers at the draw stage. The pin now holds the
+    // world at its pre-breakup ASSEMBLY frame, applied in `globe::generate`
+    // after the rift is drawn (each major's center is replaced by
+    // `rift.assembly[i]`), so the drawn set here is left exactly as the
+    // unpinned path draws it — the suture is a genesis-stage consequence of
+    // `crust::assemble_cratons`, not a raw-draw transform.
     cratons
 }
 
@@ -649,6 +652,223 @@ fn repel_cratons(cratons: &mut [Craton]) {
     }
 }
 
+/// Fraction of `r_i + r_j` at which two cratons read as sutured (spec
+/// §3.1): less than 1 so lobed rim overlap still merges before craton
+/// *centers* reach exact tangency. Tuned only if the Task-6 pinned-world
+/// suture test demands it.
+/// type-audit: bare-ok(ratio)
+pub const CONTACT_FACTOR: f64 = 0.85;
+
+/// Sweep cap for `assemble_cratons`'s outward-push branch (a craton that
+/// starts already overlapping an earlier one): mirrors `repel_cratons`'s
+/// `REPEL_SWEEPS` exactly — clearing the worst-violating earlier craton
+/// can re-violate a different one, so the push repeats until clear or
+/// this cap is spent. The guarantee at the cap is *reduction*, not
+/// *attainment* — the same honesty `repel_cratons` documents.
+const ASSEMBLY_PUSH_SWEEPS: u32 = 16;
+
+/// Doubling-search cap for the outward push's extrapolation factor: the
+/// factor doubles from 2 until the push clears every placed craton, or
+/// this many doublings are spent, whichever comes first.
+const ASSEMBLY_PUSH_DOUBLINGS: u32 = 32;
+
+/// Bisection iteration count shared by the inward pull and the outward
+/// push: 64 fixed iterations rather than a tolerance, so the settled
+/// position is deterministic bit-for-bit (no platform-dependent
+/// early-exit).
+const ASSEMBLY_BISECTION_ITERS: u32 = 64;
+
+/// Angular separation between two unit-sphere points, radians.
+fn angular_separation(a: [f64; 3], b: [f64; 3]) -> f64 {
+    math::acos(dot(a, b).clamp(-1.0, 1.0))
+}
+
+/// The contact-separation target between two cratons: `CONTACT_FACTOR`
+/// times their combined nominal radii.
+fn contact_separation(a: &Craton, b: &Craton) -> f64 {
+    CONTACT_FACTOR * (a.radius_rad + b.radius_rad)
+}
+
+/// The assembly objective for craton `craton_i` at a candidate position
+/// `pos`: the smallest slack `sep(pos, assembly[j]) - contact(i, j)`
+/// over every already-placed craton `j`. Positive means clear of every
+/// placed craton; zero or negative means touching or overlapping the
+/// tightest one. A plain fold (not a sort) — `placed`/`assembly` stay
+/// index-aligned and small (craton counts are single digits to low
+/// teens), so this is cheap to re-evaluate at every bisection step.
+fn assembly_slack(
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> f64 {
+    (0..placed.len())
+        .map(|j| angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]))
+        .fold(f64::INFINITY, f64::min)
+}
+
+/// Index into `placed`/`assembly` of the worst-violated (most negative
+/// slack) placed craton against `pos`, with that slack value.
+fn worst_violation(
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> (usize, f64) {
+    (0..placed.len())
+        .map(|j| {
+            let slack =
+                angular_separation(pos, assembly[j]) - contact_separation(craton_i, &placed[j]);
+            (j, slack)
+        })
+        .fold(
+            (0, f64::INFINITY),
+            |acc, cur| if cur.1 < acc.1 { cur } else { acc },
+        )
+}
+
+/// Bisect the inward pull arc `slerp(start, anchor, t)`, `t` in
+/// `[0, 1]`, for the exact `t` at which `assembly_slack` first reaches
+/// zero. The caller has already checked slack is positive at `t = 0`
+/// (the craton starts clear); slack at `t = 1` is always negative
+/// because the arc lands exactly on the anchor — craton 0's already-
+/// placed center — giving a zero separation against a strictly positive
+/// contact target, so a sign change always exists. Bisection maintains
+/// the invariant `slack(lo) > 0`, `slack(hi) <= 0` at every step
+/// regardless of whether the objective is monotonic between them, so by
+/// continuity the final `hi` converges to a point where some placed
+/// craton is touched (not deeply overlapped) to within float precision.
+fn pull_to_contact(
+    start: [f64; 3],
+    anchor: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let (mut lo, mut hi) = (0.0_f64, 1.0_f64);
+    for _ in 0..ASSEMBLY_BISECTION_ITERS {
+        let mid = 0.5 * (lo + hi);
+        let slack = assembly_slack(slerp(start, anchor, mid), craton_i, placed, assembly);
+        if slack > 0.0 {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    slerp(start, anchor, hi)
+}
+
+/// Bisect the outward extrapolation `slerp(anchor, pos, t)`, `t > 1`
+/// (the same extrapolation shape `repel_cratons` uses), for the
+/// smallest `t` at which `craton_i` is clear of every placed craton —
+/// not just `anchor`. Doubles a trial factor from 2 until clear (capped
+/// at `ASSEMBLY_PUSH_DOUBLINGS` doublings), then bisects `[1, t_hi]` for
+/// the exact crossing with the same fixed-iteration shape as
+/// `pull_to_contact`. If the doubling search never clears (pathological
+/// geometry), the bisection still runs and returns its best crossing —
+/// honesty about reduction, not attainment, mirrors `repel_cratons`.
+fn push_to_clear(
+    anchor: [f64; 3],
+    pos: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let mut hi = 2.0_f64;
+    for _ in 0..ASSEMBLY_PUSH_DOUBLINGS {
+        let clear = assembly_slack(slerp(anchor, pos, hi), craton_i, placed, assembly) >= 0.0;
+        if clear {
+            break;
+        }
+        hi *= 2.0;
+    }
+    let (mut lo, mut hi_bound) = (1.0_f64, hi);
+    for _ in 0..ASSEMBLY_BISECTION_ITERS {
+        let mid = 0.5 * (lo + hi_bound);
+        let slack = assembly_slack(slerp(anchor, pos, mid), craton_i, placed, assembly);
+        if slack < 0.0 {
+            lo = mid;
+        } else {
+            hi_bound = mid;
+        }
+    }
+    slerp(anchor, pos, hi_bound)
+}
+
+/// Push craton `i` away from whichever placed craton it violates most,
+/// repeating against the next worst violator until clear or
+/// `ASSEMBLY_PUSH_SWEEPS` is spent. Coincident (or antipodal) centers —
+/// where `slerp`'s own guards make the push direction undefined — are
+/// left in place for that pairing step, exactly as `repel_cratons`
+/// documents for omega ~ 0: no push direction is privileged there, so
+/// the sweep stops rather than chase an arbitrary one.
+fn push_clear_of_overlap(
+    start: [f64; 3],
+    craton_i: &Craton,
+    placed: &[Craton],
+    assembly: &[[f64; 3]],
+) -> [f64; 3] {
+    let mut pos = start;
+    for _sweep in 0..ASSEMBLY_PUSH_SWEEPS {
+        let (worst_j, slack) = worst_violation(pos, craton_i, placed, assembly);
+        if slack >= 0.0 {
+            break;
+        }
+        let violator = assembly[worst_j];
+        let omega = angular_separation(violator, pos);
+        if !(1e-9..=std::f64::consts::PI - 1e-9).contains(&omega) {
+            break;
+        }
+        pos = push_to_clear(violator, pos, craton_i, placed, assembly);
+    }
+    pos
+}
+
+/// Derive the contact-configuration assembly frame: where each craton's
+/// center sits once cratons `1..` are pulled toward craton 0 (the
+/// anchor) and settled at first contact along the way — repulsion
+/// (`repel_cratons`) run in reverse (spec §3.1). Draw-free and
+/// deterministic: a pure function of the drawn craton set, consuming no
+/// `Seed`/`Stream`, never itself serialized (the assembly is derived on
+/// demand, not saved world state).
+///
+/// For craton `i` in id order `1..`, the pull arc is
+/// `slerp(cratons[i].center, anchor, t)`, `t` in `[0, 1]`. If the craton
+/// starts clear of every already-placed craton, it slides inward and
+/// settles the instant it first touches one (`pull_to_contact`,
+/// bisected exactly, not by tolerance). If it starts already
+/// overlapping one or more placed cratons, it is pushed directly away
+/// from the worst-violating one instead (`push_clear_of_overlap`), the
+/// same extrapolation `repel_cratons` uses, repeated against whichever
+/// craton is worst-violating next. If it starts exactly at zero slack,
+/// it is placed as-is. Craton 0 is the anchor and is never moved, so a
+/// single-craton input is the identity map.
+/// type-audit: bare-ok(ratio: return)
+pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
+    if cratons.is_empty() {
+        return Vec::new();
+    }
+    let anchor = cratons[0].center;
+    let mut assembly: Vec<[f64; 3]> = Vec::with_capacity(cratons.len());
+    assembly.push(anchor);
+    for i in 1..cratons.len() {
+        let placed = &cratons[..i];
+        let start = cratons[i].center;
+        let f0 = assembly_slack(start, &cratons[i], placed, &assembly);
+        let settled = match f0.partial_cmp(&0.0) {
+            Some(std::cmp::Ordering::Greater) => {
+                pull_to_contact(start, anchor, &cratons[i], placed, &assembly)
+            }
+            Some(std::cmp::Ordering::Less) => {
+                push_clear_of_overlap(start, &cratons[i], placed, &assembly)
+            }
+            _ => start,
+        };
+        assembly.push(settled);
+    }
+    assembly
+}
+
 /// The crust fields: stateless functions of position over the drawn
 /// craton set (Crust spec §2). Pure — the `Field` contract.
 pub struct CrustField {
@@ -662,6 +882,27 @@ pub struct CrustField {
     lobing_seeds: Vec<Seed>,
     /// The drawn terrane set (empty when built via `new`).
     terranes: Vec<Terrane>,
+    /// The drawn rift history (rift-and-fit, spec §3.3), or `None` for the
+    /// v3 field shape (`new`/`new_with_terranes`) — the clip in `strongest`
+    /// is gated behind this `Option` entirely, so the `None` path runs the
+    /// exact v3 arithmetic, instruction for instruction.
+    rift: Option<RiftHistory>,
+    /// Per-major-craton assembly-to-final rotation, index-aligned with
+    /// `cratons[0..major_count]` (the major/microcontinent id-position
+    /// invariant `draw_microcontinents` documents). Precomputed once here
+    /// — mirrors `lobing_seeds` — so `strongest` never re-derives a
+    /// rotation per sample; empty when `rift` is `None`.
+    craton_rotations: Vec<([f64; 3], f64)>,
+    /// Per-major-craton indices into `rift.seams` of the seams touching
+    /// that craton (`rift::seam_indices_for`), index-aligned with
+    /// `craton_rotations`. Precomputed once — the same caching shape as
+    /// `lobing_seeds` — so per-sample clipping scans only the craton's own
+    /// seams; empty when `rift` is `None`.
+    craton_seams: Vec<Vec<usize>>,
+    /// Cratons with `id < major_count` are clip-eligible; microcontinents
+    /// (appended after the majors) and terranes ride unclipped. Ignored
+    /// entirely when `rift` is `None`.
+    major_count: usize,
 }
 
 impl CrustField {
@@ -676,27 +917,113 @@ impl CrustField {
         cratons: Vec<Craton>,
         terranes: Vec<Terrane>,
     ) -> CrustField {
+        CrustField::new_with_rift(terrain_seed, cratons, terranes, None, 0)
+    }
+
+    /// Assemble the field over a drawn craton set, terrane set, and
+    /// (optionally) a rift history that clips each major craton's cap
+    /// along its assembly-frame seam curves (rift-and-fit, spec §3.3).
+    /// `major_count` bounds clip application to majors (`id < major_count`)
+    /// — microcontinents and terranes are never clipped; its value is
+    /// ignored entirely when `rift` is `None`.
+    /// type-audit: bare-ok(count: major_count)
+    pub fn new_with_rift(
+        terrain_seed: Seed,
+        cratons: Vec<Craton>,
+        terranes: Vec<Terrane>,
+        rift: Option<RiftHistory>,
+        major_count: usize,
+    ) -> CrustField {
         let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
         let lobing_seeds = cratons
             .iter()
             .map(|c| lobing_root.derive(&format!("craton-{}", c.id)))
             .collect();
+        let craton_rotations = match &rift {
+            Some(r) => (0..major_count.min(cratons.len()))
+                .map(|i| crate::rift::rotation_for(r.assembly[i], cratons[i].center))
+                .collect(),
+            None => Vec::new(),
+        };
+        let craton_seams = match &rift {
+            Some(r) => (0..major_count.min(cratons.len()))
+                .map(|i| crate::rift::seam_indices_for(r, cratons[i].id))
+                .collect(),
+            None => Vec::new(),
+        };
         CrustField {
             cratons,
             lobing_seeds,
             terranes,
+            rift,
+            craton_rotations,
+            craton_seams,
+            major_count,
         }
     }
 
-    /// Envelope and winning craton at a position.
+    /// Envelope and winning craton at a position. Two branches, not one
+    /// with a no-op multiply: the `None` branch is byte-identical to v3's
+    /// `strongest` (untouched instruction-for-instruction), since even a
+    /// multiply-by-`1.0` clip factor is not guaranteed to be a float no-op
+    /// in every case — the empty-rift byte-identity contract needs the old
+    /// code path literally unperturbed, not merely numerically close.
     fn strongest(&self, p: [f64; 3]) -> Option<(f64, &Craton)> {
-        self.cratons
-            .iter()
-            .map(|c| {
-                let seed = self.lobing_seeds[c.id as usize];
-                (lobed_envelope(seed, c.center, p, c.radius_rad), c)
-            })
-            .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id)))
+        match &self.rift {
+            None => self
+                .cratons
+                .iter()
+                .map(|c| {
+                    let seed = self.lobing_seeds[c.id as usize];
+                    (lobed_envelope(seed, c.center, p, c.radius_rad), c)
+                })
+                .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
+            Some(rift) => self
+                .cratons
+                .iter()
+                .map(|c| {
+                    let seed = self.lobing_seeds[c.id as usize];
+                    let envelope = lobed_envelope(seed, c.center, p, c.radius_rad);
+                    // Two byte-identity-preserving skips, not fidelity calls
+                    // (the Task 6 perf budget's recovery — ~2.7x over ->
+                    // within budget — with zero output bytes moved):
+                    // (1) `envelope != 0.0`: the clip is a finite value in
+                    //     [0, 1] and `0.0 * clip == 0.0` exactly, so gating
+                    //     it behind a nonzero envelope is bit-equal
+                    //     everywhere. `lobed_envelope` returns a hard 0.0
+                    //     outside 1.5x radius, and at any sample only a
+                    //     craton or two is nonzero, so the (seam-noise-
+                    //     heavy) clip is paid per OVERLAPPING craton, not
+                    //     per craton.
+                    // (2) empty seam list: `clip_over_seams` returns exactly
+                    //     1.0 for a seamless craton, and `envelope * 1.0`
+                    //     is bit-equal to `envelope` (IEEE 754 multiply by
+                    //     1.0 is exact), so the call is skipped outright.
+                    // The seam subset itself is precomputed per major at
+                    // construction (`craton_seams`) — same seams, same
+                    // order, same min-fold as the full-scan filter.
+                    let idx = c.id as usize;
+                    let envelope = if envelope != 0.0
+                        && idx < self.major_count
+                        && !self.craton_seams[idx].is_empty()
+                    {
+                        let rotation = self.craton_rotations[idx];
+                        let clip = crate::rift::clip_over_seams(
+                            rift,
+                            &self.cratons,
+                            c.id,
+                            rotation,
+                            p,
+                            &self.craton_seams[idx],
+                        );
+                        envelope * clip
+                    } else {
+                        envelope
+                    };
+                    (envelope, c)
+                })
+                .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
+        }
     }
 
     /// Crust thickness at a unit-sphere position, km: the winning
@@ -784,6 +1111,22 @@ mod tests {
             &TerrainPins::default(),
             &mut Vec::new(),
         )
+    }
+
+    /// `n` roughly-evenly-spaced points on the unit sphere (the standard
+    /// golden-angle fibonacci-sphere construction), for byte-identity and
+    /// other whole-field sweeps that want broad coverage without a full
+    /// `Geosphere` grid.
+    fn fibonacci_sphere_points(n: usize) -> Vec<[f64; 3]> {
+        let golden_angle = core::f64::consts::PI * (3.0 - 5.0_f64.sqrt());
+        (0..n)
+            .map(|i| {
+                let y = 1.0 - 2.0 * (i as f64) / ((n - 1) as f64);
+                let radius = (1.0 - y * y).max(0.0).sqrt();
+                let theta = golden_angle * (i as f64);
+                [math::cos(theta) * radius, y, math::sin(theta) * radius]
+            })
+            .collect()
     }
 
     #[test]
@@ -966,6 +1309,59 @@ mod tests {
     }
 
     #[test]
+    fn assembly_is_identity_for_single_craton_and_sutures_multis() {
+        let seed = Seed(42).derive(crate::streams::ROOT);
+        let mut notes = Vec::new();
+        let pins = TerrainPins::default();
+        let ocean_target = default_ocean_target(seed);
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut notes);
+        let assembly = assemble_cratons(&cratons);
+        assert_eq!(assembly.len(), cratons.len());
+        // Every craton i > 0 touches at least one earlier craton at the
+        // contact separation (within 1e-9 rad) and none sits closer than
+        // contact to ANY earlier craton (no deep overlap).
+        for i in 1..cratons.len() {
+            let mut touched = false;
+            for j in 0..i {
+                let sep = math::acos(dot(assembly[i], assembly[j]).clamp(-1.0, 1.0));
+                let contact = CONTACT_FACTOR * (cratons[i].radius_rad + cratons[j].radius_rad);
+                assert!(sep >= contact - 1e-9, "craton {i} overlaps {j}");
+                if sep <= contact + 1e-9 {
+                    touched = true;
+                }
+            }
+            assert!(touched, "craton {i} floats free of the assembly");
+        }
+        // Single craton: identity.
+        let one = vec![cratons[0].clone()];
+        assert_eq!(assemble_cratons(&one), vec![cratons[0].center]);
+        // Determinism.
+        assert_eq!(assembly, assemble_cratons(&cratons));
+    }
+
+    #[test]
+    fn assembly_is_draw_free() {
+        // `assemble_cratons` takes no `Seed`/`Stream` — its signature is
+        // its own proof, but this documents the consequence: repeated
+        // calls on independent clones of the same craton set must be
+        // byte-identical, since there is nothing left to draw from.
+        // Swept across seeds so the assertion isn't riding on one draw.
+        for seed_val in [1u64, 7, 42] {
+            let terrain_seed = Seed(seed_val).derive(streams::ROOT);
+            let ocean_target = default_ocean_target(terrain_seed);
+            let cratons = draw_cratons(
+                terrain_seed,
+                &TerrainPins::default(),
+                ocean_target,
+                &mut Vec::new(),
+            );
+            let a = assemble_cratons(&cratons.clone());
+            let b = assemble_cratons(&cratons.clone());
+            assert_eq!(a, b, "seed {seed_val}: assembly is not draw-free");
+        }
+    }
+
+    #[test]
     fn continents_pin_overrides_without_perturbing_shared_cratons() {
         let seed = Seed(42).derive(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
@@ -1023,11 +1419,16 @@ mod tests {
     }
 
     #[test]
-    fn supercontinent_clusters_cratons_without_new_draws() {
+    fn supercontinent_no_longer_transforms_the_drawn_craton_set() {
+        // Epoch v4 (rift-and-fit, spec §4): `--supercontinent` no longer
+        // clusters cratons at the draw stage. Its only draw-stage effect is
+        // the (pre-existing) repulsion skip; the suture is now a
+        // genesis-stage consequence of `assemble_cratons` (see
+        // `pinned_supercontinent_is_sutured` in tests/tectonic_properties.rs).
         let seed = Seed(42).derive(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let scattered = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
-        let clustered = draw_cratons(
+        let pinned = draw_cratons(
             seed,
             &TerrainPins {
                 supercontinent: Some(true),
@@ -1036,22 +1437,30 @@ mod tests {
             ocean_target,
             &mut Vec::new(),
         );
-        assert_eq!(scattered.len(), clustered.len());
-        let center = scattered[0].center;
-        for (s, c) in scattered.iter().zip(&clustered) {
-            assert_eq!(s.radius_rad, c.radius_rad);
-            assert_eq!(s.age, c.age);
-            if s.id == 0 {
-                assert_eq!(s.center, c.center);
-            } else {
-                // Every clustered center is strictly closer to craton 0.
-                assert!(
-                    crate::plates::dot(c.center, center)
-                        > crate::plates::dot(s.center, center) - 1e-12
-                );
-            }
+        assert_eq!(scattered.len(), pinned.len());
+        // Position-independent draws (radius, age) are byte-identical: the
+        // pin perturbs no draw, and no longer moves any center toward
+        // craton 0.
+        for (s, p) in scattered.iter().zip(&pinned) {
+            assert_eq!(s.id, p.id);
+            assert_eq!(s.radius_rad, p.radius_rad);
+            assert_eq!(s.age, p.age);
         }
-        // Some(false) re-affirms scattered byte-identically.
+        // The pinned path equals its own unrepelled draw exactly — the only
+        // draw-stage difference from the scattered path is the repulsion
+        // skip (repulsion would respread an input the genesis assembly
+        // immediately collapses).
+        let pinned_unrepelled = draw_cratons_unrepelled(
+            seed,
+            &TerrainPins {
+                supercontinent: Some(true),
+                ..TerrainPins::default()
+            },
+            ocean_target,
+            &mut Vec::new(),
+        );
+        assert_eq!(pinned, pinned_unrepelled);
+        // Some(false) re-affirms the scattered (repelled) layout byte-identically.
         let reaffirmed = draw_cratons(
             seed,
             &TerrainPins {
@@ -1277,5 +1686,102 @@ mod tests {
                 "seed {seed}: supply {supply}"
             );
         }
+    }
+
+    #[test]
+    fn empty_rift_is_byte_identical_to_v3_field() {
+        let seed = Seed(42).derive(streams::ROOT);
+        let pins = TerrainPins::default();
+        let ocean_target = default_ocean_target(seed);
+        let cratons = draw_cratons(seed, &pins, ocean_target, &mut Vec::new());
+        let plates = crate::plates::generate_plates(seed, &pins, &mut Vec::new());
+        let terranes = draw_terranes(seed, &cratons, &plates);
+        let major_count = cratons.len();
+        let v3 = CrustField::new_with_terranes(seed, cratons.clone(), terranes.clone());
+        let with_none = CrustField::new_with_rift(seed, cratons, terranes, None, major_count);
+        for p in fibonacci_sphere_points(200) {
+            assert_eq!(
+                v3.thickness_at(p),
+                with_none.thickness_at(p),
+                "empty-rift field diverged from v3 at {p:?}"
+            );
+            // `age_at` shares the same `strongest` winner comparison as
+            // `thickness_at`, so the `None` rift path must leave it
+            // byte-identical too (Task 5 review carry-over): a clip that
+            // silently perturbed the winning craton would move ages even
+            // where it left thicknesses alone.
+            assert_eq!(
+                v3.age_at(p),
+                with_none.age_at(p),
+                "empty-rift age_at diverged from v3 at {p:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn clip_flips_continental_at_across_a_synthetic_seam() {
+        // Two hand-placed cratons ~0.5 rad apart, radii 0.3 — closer than
+        // their contact separation (`CONTACT_FACTOR * 0.6 = 0.51 rad`), so
+        // `assemble_cratons` nudges craton 1 OUTWARD by ~0.01 rad
+        // (`push_clear_of_overlap`) to first contact: the final centers are
+        // NOT the assembly centers, they differ by that small push, and
+        // craton 1's clip therefore rides a real (if tiny) assembly->final
+        // rotation rather than the identity. The clip still determines
+        // whether a point near the shared boundary reads continental.
+        let a = Craton {
+            id: 0,
+            center: [1.0, 0.0, 0.0],
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let b_center = crate::plates::normalize([math::cos(0.5), math::sin(0.5), 0.0]);
+        let b = Craton {
+            id: 1,
+            center: b_center,
+            radius_rad: 0.3,
+            age: 0.0,
+        };
+        let cratons = vec![a.clone(), b.clone()];
+        let terrain_seed = Seed(1).derive(streams::ROOT);
+        let rift = crate::rift::draw_rift(terrain_seed, &cratons);
+        assert!(
+            !rift.seams.is_empty(),
+            "hand-placed cratons must contact and seam"
+        );
+        let field =
+            CrustField::new_with_rift(terrain_seed, cratons.clone(), Vec::new(), Some(rift), 2);
+        let plain = CrustField::new(terrain_seed, cratons);
+        // Deep in craton a's interior: continental in both fields, clip near 1.
+        assert!(field.continental_at(a.center));
+        assert!(plain.continental_at(a.center));
+        // Deep in craton b's interior, on its far side away from a (well
+        // past the seam on b's own side): also continental in both — the
+        // clip only cuts a craton's OWN side away from a seam it loses,
+        // never the side it wins.
+        let deep_in_b = crate::plates::normalize([math::cos(0.65), math::sin(0.65), 0.0]);
+        assert!(field.continental_at(deep_in_b));
+        assert!(plain.continental_at(deep_in_b));
+        // Between the two centers, near the seam but still on what was
+        // craton a's unclipped footprint: the plain (v3) field still
+        // reads continental there (a's envelope alone clears the
+        // threshold), but the clipped field does not — a's cap has been
+        // cut back to the seam, so nothing continental remains at that
+        // point once b's (near-zero, un-clipped-for-b) envelope also
+        // fails to clear it. This is the field-level clip consequence
+        // Task 6's wiring relies on.
+        let mut flipped = false;
+        for i in 0..200 {
+            let t = (i as f64) / 199.0;
+            let angle = 0.05 + 0.45 * t; // sweep between the two centers
+            let p = crate::plates::normalize([math::cos(angle), math::sin(angle), 0.0]);
+            if plain.continental_at(p) && !field.continental_at(p) {
+                flipped = true;
+                break;
+            }
+        }
+        assert!(
+            flipped,
+            "clip never flipped continental_at from true (v3) to false (clipped) along the seam sweep"
+        );
     }
 }

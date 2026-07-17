@@ -90,6 +90,8 @@
 - [The True Name](./chronicle/the-true-name.md)
 - [The Region](./chronicle/the-region.md)
 - [The Lens](./chronicle/the-lens.md)
+- [The Faces](./chronicle/the-faces.md)
+- [Rift-and-Fit](./chronicle/rift-and-fit.md)
 - [The Dissolution](./chronicle/the-dissolution.md)
 
 # The Gallery
@@ -126,6 +128,7 @@
 - [Study 011: The Census of Words](./laboratory/study-011.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
 - [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
+- [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
 
 # Reference
 
@@ -135,6 +138,7 @@
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
+- [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)

@@ -3842,13 +3842,19 @@ mod tests {
         // now the DOMINANT species' own rendered headcount (biomass share
         // divided by its own body mass), not the old flat-K catchment's
         // conserved population unit -- a much smaller, physically grounded
-        // number. At seed 42 the world's largest coexistence attractor
-        // (`village_info`'s first, highest-`mass_total` settlement) is a
-        // hobgoblin flagship of 17; the old `>= 40` threshold measured the
-        // pre-cutover scale and no longer applies.
+        // number; the old `>= 40` threshold measured the pre-cutover scale
+        // and no longer applies. Terrain epoch v4 (rift-and-fit) then moved
+        // the seed-42 coastline, so the settlement layout re-derived and
+        // the largest coexistence attractor (`village_info`'s first,
+        // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
+        // season moved it again within the epoch: iteration 2's clip-taper
+        // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
+        // here (with review) whenever a deliberate terrain change moves world
+        // identity.
         assert_eq!(
-            village.population, 17,
-            "the world's largest attractor is a hobgoblin flagship of 17 at this seed"
+            village.population, 8,
+            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
