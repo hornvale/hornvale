@@ -8,25 +8,25 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">375</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">500</text>
-<rect x="62.1" y="202.8" width="69.0" height="33.2" fill="#5b8dd9" rx="2" />
-<text x="96.6" y="198.8" font-size="11" fill="currentColor" text-anchor="middle">83</text>
+<rect x="62.1" y="204.0" width="69.0" height="32.0" fill="#5b8dd9" rx="2" />
+<text x="96.6" y="200.0" font-size="11" fill="currentColor" text-anchor="middle">80</text>
 <text x="96.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 96.6 252.0)">andesite</text>
-<rect x="143.2" y="234.4" width="69.0" height="1.6" fill="#5b8dd9" rx="2" />
-<text x="177.7" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">4</text>
+<rect x="143.2" y="234.0" width="69.0" height="2.0" fill="#5b8dd9" rx="2" />
+<text x="177.7" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">5</text>
 <text x="177.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 177.7 252.0)">conglomerate</text>
-<rect x="224.4" y="110.8" width="69.0" height="125.2" fill="#5b8dd9" rx="2" />
-<text x="258.9" y="106.8" font-size="11" fill="currentColor" text-anchor="middle">313</text>
+<rect x="224.4" y="90.8" width="69.0" height="145.2" fill="#5b8dd9" rx="2" />
+<text x="258.9" y="86.8" font-size="11" fill="currentColor" text-anchor="middle">363</text>
 <text x="258.9" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 258.9 252.0)">evaporite</text>
-<rect x="305.5" y="168.4" width="69.0" height="67.6" fill="#5b8dd9" rx="2" />
-<text x="340.0" y="164.4" font-size="11" fill="currentColor" text-anchor="middle">169</text>
+<rect x="305.5" y="181.6" width="69.0" height="54.4" fill="#5b8dd9" rx="2" />
+<text x="340.0" y="177.6" font-size="11" fill="currentColor" text-anchor="middle">136</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">gneiss</text>
-<rect x="386.7" y="234.0" width="69.0" height="2.0" fill="#5b8dd9" rx="2" />
-<text x="421.1" y="230.0" font-size="11" fill="currentColor" text-anchor="middle">5</text>
+<rect x="386.7" y="234.4" width="69.0" height="1.6" fill="#5b8dd9" rx="2" />
+<text x="421.1" y="230.4" font-size="11" fill="currentColor" text-anchor="middle">4</text>
 <text x="421.1" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 421.1 252.0)">granite</text>
-<rect x="467.8" y="220.0" width="69.0" height="16.0" fill="#5b8dd9" rx="2" />
-<text x="502.3" y="216.0" font-size="11" fill="currentColor" text-anchor="middle">40</text>
+<rect x="467.8" y="223.2" width="69.0" height="12.8" fill="#5b8dd9" rx="2" />
+<text x="502.3" y="219.2" font-size="11" fill="currentColor" text-anchor="middle">32</text>
 <text x="502.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 502.3 252.0)">sandstone</text>
-<rect x="548.9" y="81.6" width="69.0" height="154.4" fill="#5b8dd9" rx="2" />
-<text x="583.4" y="77.6" font-size="11" fill="currentColor" text-anchor="middle">386</text>
+<rect x="548.9" y="84.0" width="69.0" height="152.0" fill="#5b8dd9" rx="2" />
+<text x="583.4" y="80.0" font-size="11" fill="currentColor" text-anchor="middle">380</text>
 <text x="583.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 583.4 252.0)">shale</text>
 </svg>

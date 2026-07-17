@@ -374,8 +374,13 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // coastline geometry, shifting which sites condense a goblin flagship;
     // re-measured (493 -> 353 coastal, 507 -> 643 inland; the remaining 4
     // seeds report neither flag).
-    assert_eq!(coastal, 353, "coastal flagship count drifted");
-    assert_eq!(inland, 643, "inland flagship count drifted");
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the conjugate-fit epoch
+    // reshapes coastlines again; re-measured (353 -> 316 coastal,
+    // 643 -> 683 inland; 1 seed reports neither flag).
+    assert_eq!(coastal, 316, "coastal flagship count drifted");
+    assert_eq!(inland, 683, "inland flagship count drifted");
 }
 
 #[test]
@@ -538,12 +543,17 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // regen, commit 1c954d0): re-measured; the sun/night-star brightness
     // split among moonless spinning worlds shifts again (56 -> 13 solar,
     // 94 -> 19 lunar).
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the epoch shifts which seeds
+    // field a kobold settlement at all (see the name-length re-pin below);
+    // re-measured (13 -> 12 solar, 19 -> 14 lunar).
     assert_eq!(
-        moonless_solar, 13,
+        moonless_solar, 12,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 19,
+        moonless_lunar, 14,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -624,8 +634,13 @@ fn blind_attribution_beats_chance_decisively() {
     // pool collapse is under a named investigation (rift-and-fit campaign
     // ledger #14/#19); this pin records the measured canonical value, not a
     // verdict that the movement is correct.
-    assert_eq!(correct, 188, "blind-attribution count drifted");
-    assert_eq!(total, 224, "attributable-pair count drifted");
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the pool shrinks further with
+    // kobold presence (224 -> 163 pairs; 188 -> 135 correct, accuracy
+    // 0.828, still above the 0.8 floor). Same named investigation as above.
+    assert_eq!(correct, 135, "blind-attribution count drifted");
+    assert_eq!(total, 163, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -919,8 +934,13 @@ fn name_collision_rate_is_measured_and_pinned() {
     // regen, commit 1c954d0): the true-name/KindId work changes how
     // settlement names draw from each culture's lexicon, sharply reducing
     // reuse (62 -> 272 zero-collision worlds).
-    assert_eq!(zero, 272, "zero-collision world count drifted");
-    assert_eq!(nonzero, 728, "nonzero-collision world count drifted");
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the epoch reshuffles every
+    // settlement roster (fewer settlements per world on average), further
+    // reducing per-culture lexicon reuse (272 -> 309 zero-collision worlds).
+    assert_eq!(zero, 309, "zero-collision world count drifted");
+    assert_eq!(nonzero, 691, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -931,7 +951,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // Census regen (2026-07-14 #2): -> 0.155_266_538_742.
         // Census regen (2026-07-16, post-sculpting/isotherm/true-name):
         // -> 0.066_086_440_963_100.
-        (mean - 0.066_086_440_963_100).abs() < 1e-6,
+        // Census regen (2026-07-16 #2, rift-and-fit epoch v4 + SKY-24,
+        // commit 945f62b): -> 0.075_993_125_372_100.
+        (mean - 0.075_993_125_372_100).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -998,9 +1020,17 @@ fn name_length_distributions_are_measured_and_pinned() {
     // and kobold drops sharply (1000 -> 225 present, mean 14.42 -> 9.72) —
     // the sculpting v3 terrain epoch's coastline/hypsometry changes shift
     // which seeds field a kobold settlement at all. Re-measured below.
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the conjugate-fit epoch moves
+    // kobold presence again (225 -> 163 present, mean 9.72 -> 9.86); goblin
+    // recovers 3 present rows (996 -> 999, mean 14.02 -> 13.52). The kobold
+    // presence collapse is part of the same movement under the rift-and-fit
+    // ledger #14/#19 investigation named in
+    // `blind_attribution_beats_chance_decisively`.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 996u32, 14.017_905_514_759_04),
-        ("kobold", 225u32, 9.719_762_956_444_445),
+        ("goblin", 999u32, 13.517_655_343_343_346),
+        ("kobold", 163u32, 9.857_451_023_312_882),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1217,7 +1247,9 @@ fn null_control_name_length_smd_is_pinned() {
         // Census regen (2026-07-14 #2): -0.071_825_669_752_140_97 -> below.
         // Census regen (2026-07-16, post-sculpting/isotherm/true-name
         // 1000-seed regen, commit 1c954d0): -> -0.062_795_250_861_151_92.
-        (namelen - -0.062_795_250_861_151_92).abs() < 1e-9,
+        // Census regen (2026-07-16 #2, rift-and-fit epoch v4 + SKY-24,
+        // commit 945f62b): -> -0.057_246_623_530_308_95.
+        (namelen - -0.057_246_623_530_308_95).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

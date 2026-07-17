@@ -13,9 +13,6 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomal
 
 /// Dry-adiabatic-ish lapse rate: °C lost per meter of elevation above sea level.
 const LAPSE_C_PER_M: f64 = 6.5 / 1000.0;
-/// The substellar point of a locked world (spec convention: latitude 0,
-/// longitude 0 → the +x axis).
-const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Continentality: `1.0` fully inland, dropping toward `0.2` as a cell gains
 /// ocean neighbors. Damps the seasonal swing (the sea is a thermal buffer).
@@ -65,7 +62,7 @@ pub fn mean_temperature(
             }
             RotationRegime::Locked => {
                 let p = geo.position(cell);
-                let cos_theta = p[0] * SUBSTELLAR[0] + p[1] * SUBSTELLAR[1] + p[2] * SUBSTELLAR[2];
+                let cos_theta = crate::substellar_cosine(p);
                 if cos_theta > 0.0 {
                     // Day side: hot at substellar, ~0 °C toward the terminator.
                     (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
