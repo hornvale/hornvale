@@ -67,3 +67,61 @@ fn awakening_is_a_fact_and_the_large_owlbear_stays_large() {
     // …and the instance override survives the transition (spec §4.3).
     assert_eq!(eff.mass.kilograms(), 900.0);
 }
+
+#[test]
+fn mighty_things_in_the_cold_north() {
+    // Drill 4, the program keystone: filter instances by their KIND's
+    // authored components (potency, via the registry) crossed with their
+    // OWN ledger facts (location), answered by the c4 query engine (OSP) —
+    // the kind ⋈ instance join this campaign exists to land.
+    let wc = awakened_owlbear_components();
+    let mut w = world();
+    // Register a location predicate for the demonstration (non-functional).
+    w.registry
+        .register_predicate("located-in", false, "spatial containment")
+        .unwrap();
+    let north = w.ledger.mint_entity();
+    let south = w.ledger.mint_entity();
+    let place = |w: &mut World, e, region| {
+        w.ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject: e,
+                    predicate: "located-in".to_string(),
+                    object: Value::Entity(region),
+                    place: None,
+                    day: Some(0.0),
+                    provenance: "lab".to_string(),
+                },
+                &w.registry,
+            )
+            .unwrap();
+    };
+    // Three instances: a mighty northerner, a mundane northerner, a mighty southerner.
+    let mighty_north =
+        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "awakened-owlbear", None, "lab")
+            .unwrap();
+    let mundane_north =
+        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "owlbear", None, "lab").unwrap();
+    let mighty_south =
+        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "awakened-owlbear", None, "lab")
+            .unwrap();
+    place(&mut w, mighty_north, north);
+    place(&mut w, mundane_north, north);
+    place(&mut w, mighty_south, south);
+
+    // The join: things in the north (OSP object query) whose current kind's
+    // effective potency > 0 (instance_of -> registry via the lens).
+    let answer: Vec<_> = w
+        .ledger
+        .query_by_object(&Value::Entity(north))
+        .filter(|f| f.predicate == "located-in")
+        .map(|f| f.subject)
+        .filter(|&e| {
+            instance_biosphere(&w.ledger, e, &wc.biosphere)
+                .map(|t| t.potency > 0.0)
+                .unwrap_or(false)
+        })
+        .collect();
+    assert_eq!(answer, vec![mighty_north], "exactly the mighty northerner");
+}
