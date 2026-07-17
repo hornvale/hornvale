@@ -54,6 +54,35 @@ exactly this: *"No pinned seed exercises this path, so it shipped
 undetected — recorded here as a spec note for whichever campaign next
 touches the Gods renderer."* This is that campaign.
 
+### Correction (added post-implementation; the design below is unaffected)
+
+The whole-branch review refuted the causal story told above, and the git log
+confirms it. Recorded here rather than edited away, because the spec was
+approved as written and because the error is instructive:
+
+- **The bug did not wait for a third species.** `i == 0` landed 2026-07-08
+  (5589df2, *"one Gods section, two pantheons — first block byte-stable"*),
+  when the roster was already goblin + kobold. Bugbear landed 2026-07-10 —
+  *after*. The condition was wrong the day it was written; it needed only a
+  **second pantheon**, which is what that same commit shipped.
+- **Bugbear is not what fires.** On seed 2 — the evidence table above —
+  bugbear does not place, block 0 *is* goblin's, and it renders stripped
+  anyway. Were alphabetical order the cause, the unattributed pantheon
+  would be bugbear's.
+- **The blast radius was understated ~5×.** "Roughly one seed in six"
+  measured three-pantheon worlds. The bug fires on any world with ≥2
+  pantheons: 27 of 30 seeds in 1–30, i.e. ~90%, including seed 42 — which
+  is why all three of its committed almanacs moved.
+
+What the roster's growth did change is the reach of a second, rarer mode
+(an alphabetically-first species that is not goblin); that mode may never
+have fired, since bugbear seldom places.
+
+**None of this changes the design.** The fix — attribution as a property,
+cardinality shared with the People section — is orthogonal to why the old
+condition broke, and repairs both modes. It does change the process lesson;
+see `docs/retrospectives/the-named.md`.
+
 ## 2. The design
 
 **Governing sentence: attribution is a property a pantheon has, never a

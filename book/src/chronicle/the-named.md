@@ -26,21 +26,24 @@ attribution, but the condition it selects on is about iteration. That gap
 is invisible while a single fact holds it closed — that block zero is
 always goblin's.
 
-## How the fact expired
+## The bug was never waiting for anything
 
-The species registry is a `BTreeMap`, so its key order is alphabetical, and
-the builder pushes one block per species in exactly that order. When the
-roster was goblin and kobold, alphabetical order put goblin first and the
-coincidence held. The roster is now four peopled species — bugbear, goblin,
-hobgoblin, kobold — and **bugbear sorts ahead of goblin**. Block zero
-stopped meaning "goblin" and started meaning "whichever species is
-alphabetically first among those that happen to hold beliefs."
+The tempting story — the one this campaign told itself for most of its
+length — is that the roster grew and broke it. The registry is a
+`BTreeMap`, its key order is alphabetical, and **bugbear sorts ahead of
+goblin**, so block zero stopped meaning "goblin". It is a clean story and
+the record refutes it.
 
-Nothing announced this. Bugbear rarely places, so block zero usually still
-landed on goblin, and the sentence still read plausibly. What changed is
-that goblin's pantheon was now the *only* one in a multi-people world
-rendered without its village and its name, sitting directly above
-neighbours that had both. On seed 2:
+`i == 0` landed on 2026-07-08, in a commit titled *one Gods section, two
+pantheons — first block byte-stable*. The roster was already goblin and
+kobold; two pantheons already existed. Bugbear did not arrive until
+2026-07-10, two days later. The condition was wrong the day it was written,
+and what it needed to fire was never a third species — only a **second
+pantheon**, which is precisely the feature that same commit shipped.
+
+Seed 2 disproves the bugbear story on its own. Bugbear does not place
+there. Block zero *is* goblin's, exactly as the original design assumed —
+and it rendered stripped anyway:
 
 ```
 An organized priesthood tends a pantheon:                              <- goblin
@@ -48,12 +51,45 @@ In the legion of **Woogwaoweobwoaljeovzeof**, ...                      <- hobgob
 In the warren of **Qshashngdashksashngkoshqsho**, ...                  <- kobold
 ```
 
-Roughly one seed in six placed three peoples and printed this. The
-Campaign Y2-2 retrospective had predicted the mechanism exactly — *"No
-pinned seed exercises this path, so it shipped undetected"* — and filed it
-as a debt for whichever campaign next touched the renderer. The debt was
-not called in by a failing test. It was called in by someone asking whether
-the ticket was still worth keeping.
+Had alphabetical order been the cause, the unattributed pantheon would be
+bugbear's. It is goblin's. The defect was never that block zero held the
+*wrong* species. It was that *being first* had been made to mean *needing
+no name* — and from the moment a second pantheon existed to be named beside
+it, that silence became a claim about goblin that nobody had authored.
+
+What the roster's growth actually changed was the reach of a second, rarer
+mode: one where the alphabetically-first species is not goblin. That mode
+may never have fired at all, since bugbear seldom places. The mode that did
+fire needed nothing to land, and it was not rare. Across seeds 1–30,
+twenty-seven place two or more peoples and printed an unattributed block
+zero — ninety percent. Seed 42, the project's flagship fixture, is one of
+them; that is why all three of its committed almanacs moved when the rule
+was fixed.
+
+## The drift check held it in place
+
+Both the ticket and the Campaign Y2-2 retrospective described this as a
+future, conditional failure: *"a world where goblin places no pantheon"*,
+*"No pinned seed exercises this path, so it shipped undetected."* Both were
+wrong in the same direction, and the conditional framing is exactly what
+stopped anyone from checking. A pinned seed did exercise the path. Seed
+42's committed almanac had been printing
+
+```
+An organized priesthood tends a pantheon:
+...
+The legion of **Foanjaovaaboenoagoo** keeps its own folk pantheon:
+```
+
+for eight days — in a file that CI regenerates and byte-compares on every
+run. The drift check was green the whole time, and green was correct: the
+bytes it produced matched the bytes on disk. A drift check pins output
+against change; it has no opinion about whether the output was ever right.
+It did not miss the bug. It froze it.
+
+The debt was not called in by a test, or by the check that reads this file
+every run. It was called in by someone asking whether the ticket was still
+worth keeping.
 
 ## What replaced it
 

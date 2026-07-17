@@ -107,14 +107,19 @@ drift apart. The identity contract is still cashed at the page a reader
 actually sees: a legacy save carrying no `peopled-by` facts, and a
 single-people world, each reproduce the pre-Eyes page byte-for-byte.
 
-An earlier rule gave the anonymous lead to whichever block came first. It
-assumed the registry-first species held that block's beliefs, and that the
-registry-first species was goblin — an assumption that expired quietly when
-the roster reached four peopled species, because the registry is ordered
-alphabetically and bugbear sorts ahead of goblin. Block zero was never a
-fact about the world, only about iteration order, and goblin's pantheon had
-been rendering stripped of its attribution beside named neighbours on
-roughly one seed in six by the time The Named repaired it.
+An earlier rule gave the anonymous lead to whichever block came first,
+conserving the pre-species page by pinning it to index zero. The condition
+was wrong from the day it was written: it made *being first* mean *needing
+no name*, so the moment a second pantheon existed to be named beside it —
+the same release that introduced multiple pantheons — the first block's
+silence became an unauthored claim about the people who held it. Block zero
+is not a fact about the world, only about iteration order. Ninety percent of
+seeds place two or more peoples, so ninety percent printed it, including
+seed 42, until The Named repaired it. (The registry's alphabetical order and
+bugbear's place at the head of it are a real hazard for a second, rarer
+mode — a first block that is not goblin's — but they are not what fired: on
+seed 2 bugbear never places, block zero is goblin's, and it rendered
+stripped regardless.)
 
 **Meaning committed, voice rendered (Campaign Y2-3, The Tongues).**
 Religion's own tenet fact — an English sentence, assembled once and frozen

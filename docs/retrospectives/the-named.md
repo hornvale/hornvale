@@ -6,37 +6,82 @@ One page, process only. Product is in the chronicle
 
 ## Headline lesson
 
-**A deferred ticket whose trigger is "when X lands" needs a test that fails
-when X lands — not a prose note asking a future campaign to remember.**
+**A drift check pins output against change. It has no opinion about whether
+the output was ever right — so it can hold a bug in place indefinitely, and
+report green while it does.**
 
-hornvale#1 did everything right on paper. It analysed the bug correctly,
-identified the exact precondition (a third species), prescribed a fix
-direction, named the code sites, and closed with an explicit instruction:
-*"Link this from the third-species campaign spec so it can't be
-forgotten."* The Campaign Y2-2 retrospective independently recorded the
-same debt and named its mechanism: *"No pinned seed exercises this path, so
-it shipped undetected."*
+The defect was visible, in plain English, in
+`book/src/gallery/almanac-seed-42.md` — a committed artifact that CI
+regenerates and byte-compares on every run:
 
-Then four peopled species landed. No link was made. The bug went live on
-roughly one seed in six and stayed live, through several campaigns that
-touched adjacent code, until someone asked in passing whether the ticket
-was still valid.
+```
+An organized priesthood tends a pantheon:
+...
+The legion of **Foanjaovaaboenoagoo** keeps its own folk pantheon:
+```
 
-Two prose warnings, in two separate documents, both accurate, both
-predicting the exact failure — and neither fired, because prose does not
-fire. The only artifact that would have fired is a test asserting that
-every pantheon in a multi-people world carries attribution. That test costs
-about ten lines. It did not exist because the condition to make it fail did
-not exist *yet*, and "write the test that will fail later" is not a habit
-the process currently has.
+One pantheon named, one not, in the project's flagship fixture, for eight
+days. The drift check was green throughout, and green was *correct*: the
+bytes it regenerated matched the bytes on disk. It did not miss the bug. It
+froze it — and every campaign that regenerated artifacts re-ratified the
+wrong output as the baseline.
 
-**Concrete change to try:** when a campaign defers a bug behind a
-precondition, land a test that encodes the precondition and passes
-vacuously today — `if roster.len() >= 3 { assert!(...) }`, or an
-`#[ignore]`d test whose ignore-reason names the trigger. The roster growing
-then turns the note into a failure. If that is impractical, the deferral
-should be recorded as an idea-registry row with the trigger as its own
-scannable field, not as prose in a retro nobody greps.
+This is a structural blind spot, not an oversight. Byte-identity is
+constitutional here and the drift check is how it is enforced, so the
+machinery is doing its job. But it means committed artifacts get exactly one
+substantive reading — the moment a human looks at the rendered page — and
+after that they are only ever compared to themselves. **Anything wrong at
+the moment of first commit is invisible forever after.**
+
+**Concrete change to try:** when a campaign rebaselines an artifact, the
+review should include reading the changed region as prose and asking whether
+it is *right*, not only whether it changed as predicted. This campaign did
+do that — every rebaselined lead line was checked against the People
+section's goblin flagship — and it is worth making explicit rather than
+leaving to conscientiousness.
+
+## The lesson this retro originally recorded, and why it was wrong
+
+The first draft of this page led with: *"a deferred ticket whose trigger is
+'when X lands' needs a test that fails when X lands, not a prose note asking
+a future campaign to remember."* It was built on a misdiagnosis that
+survived the spec, the plan, the implementation, and both task reviews, and
+was caught only by the whole-branch review.
+
+The campaign believed the bug was dormant until a third species landed, then
+fired when the roster reached four (bugbear sorting ahead of goblin in the
+alphabetical registry). The record refutes this:
+
+- `i == 0` landed **2026-07-08** (5589df2, *"one Gods section, two
+  pantheons — first block byte-stable"*), when the roster was already
+  goblin + kobold. Bugbear landed **2026-07-10**, two days *later*.
+- The bug needed only a **second pantheon** — the very feature that commit
+  shipped. It was live from that day, on ~90% of seeds (27 of 30 in 1–30),
+  including seed 42.
+- Seed 2, the campaign's own headline example, disproves the story: bugbear
+  does not place there, block zero *is* goblin's, and it rendered stripped
+  regardless. Had alphabetical order been the cause, the unattributed
+  pantheon would have been bugbear's.
+
+There was no trigger, so there was nothing for a trigger-test to wait for.
+The ticket and the Y2-2 retro didn't fail because "prose does not fire" —
+they failed because both described the wrong failure mode (*"a world where
+goblin places no pantheon"*, a mode that likely never fired at all), and the
+conditional framing is exactly what persuaded everyone it hadn't happened
+yet. Including this campaign, which inherited the ticket's framing wholesale
+and spent its entire analysis confirming a story the git log contradicts.
+
+**The real lesson about deferral:** a ticket that says "benign, do not fix
+yet" is an *assertion about the present*, and it decays. This one was wrong
+when filed. Re-deriving the claim from the current code cost one afternoon;
+trusting it cost eight days of shipped-wrong output. When a deferred ticket
+is picked up, the first move is to verify its premise, not its fix
+direction — and the campaign should measure the blast radius itself rather
+than adopting the ticket's estimate. "Roughly one seed in six" persisted into
+the spec and the plan because it was measured against the wrong population
+(three-pantheon worlds) — the actual figure is ninety percent, and the tell
+was sitting in plain sight the whole time: *all three* seed-42 galleries
+changed.
 
 ## What the process caught, and what it didn't
 
@@ -126,7 +171,11 @@ Carried from `.superpowers/sdd/followups.md`:
    registry-first species (goblin)". The registry is alphabetical
    (`domains/species/src/lib.rs:783`) and bugbear now sorts first. Correct
    this when closing the ticket.
-4. **The deferral mechanism itself** — the headline lesson above.
+4. **Verify a deferred ticket's premise before its fix direction** — see
+   "The lesson this retro originally recorded" above. hornvale#1's stale
+   "registry-first species (goblin)" text is followup 3; its *"benign (do
+   not fix yet)"* status assertion was wrong when filed, which is the more
+   expensive error.
 5. **Fold type-audit into `make gate`** (or at minimum `make gate-full`) —
    the gate gap above.
 6. **Minor, deferred deliberately:**
@@ -139,9 +188,20 @@ Carried from `.superpowers/sdd/followups.md`:
 
 ## What went right, briefly
 
-The campaign found the bug live before writing a line of code (sampling
-seeds, not reasoning), verified the two carve-out-adjacent claims — no
-epoch, no census regen — rather than assuming them, and shipped a
-three-line artifact diff whose every changed line was checked against the
-People section it had to agree with. The gate stayed green throughout and
-the AWS carve-out was never invoked.
+The campaign confirmed the bug was live by generating worlds rather than by
+reasoning, verified the two carve-out-adjacent claims — no epoch, no census
+regen — instead of assuming them, and checked every rebaselined lead line
+against the People section it had to agree with. The gate stayed green
+throughout and the AWS carve-out was never invoked.
+
+The reviews are what saved this campaign, and specifically the reviewers who
+**ran things instead of reading them**. Task 1's reviewer executed the
+type-audit binary and found a malformed tag. Task 2's reviewer reproduced a
+clippy failure by temporarily reverting an expression, and read CI's actual
+regen step to prove the plan's commands wrong. The whole-branch reviewer
+mutation-tested the new tests — finding that one of them was vacuous and
+that the campaign's headline rule had no builder-level coverage at all — and
+then checked the git log, which is what overturned the root-cause narrative
+three documents had already repeated. Every one of those findings was
+against text I had written and was confident in. None would have surfaced
+from a reviewer who read the diff and agreed with it.
