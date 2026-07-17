@@ -265,13 +265,13 @@ checks AS (
          CAST(collision_absent AS DOUBLE), 0.0, collision_absent = 0 FROM agg
   UNION ALL
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.075_993_125_372_100, abs(collision_mean - 0.075_993_125_372_100) < 1e-6 FROM agg
+         collision_mean, 0.075_980_437_211_100, abs(collision_mean - 0.075_980_437_211_100) < 1e-6 FROM agg
   UNION ALL
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
          CAST(goblin_len_present AS DOUBLE), 999.0, goblin_len_present = 999 FROM agg
   UNION ALL
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.517_655_343_343_346, abs(goblin_len_mean - 13.517_655_343_343_346) < 1e-6 FROM agg
+         goblin_len_mean, 13.519_483_012_612_616, abs(goblin_len_mean - 13.519_483_012_612_616) < 1e-6 FROM agg
   UNION ALL
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
          CAST(kobold_len_present AS DOUBLE), 163.0, kobold_len_present = 163 FROM agg
@@ -304,8 +304,8 @@ checks AS (
          mean_a - mean_b, 0.0, abs(mean_a - mean_b) < 1e-6 FROM pantheon_size_stats
   UNION ALL
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.057_246_623_530_308_95,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.057_246_623_530_308_95) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.056_923_687_297_304_355,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.056_923_687_297_304_355) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

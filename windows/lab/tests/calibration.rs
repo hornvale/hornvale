@@ -925,7 +925,11 @@ fn name_collision_rate_is_measured_and_pinned() {
         // -> 0.066_086_440_963_100.
         // Census regen (2026-07-16 #2, rift-and-fit epoch v4 + SKY-24,
         // commit 945f62b): -> 0.075_993_125_372_100.
-        (mean - 0.075_993_125_372_100).abs() < 1e-6,
+        // Census regen (2026-07-17, The Presiding on the merged Reckoning
+        // epoch): the ages/origins facts perturb the deity-name draws that
+        // feed each culture's lexicon; the zero/nonzero split is unmoved
+        // (309/691), only the mean shifts -> 0.075_980_437_211_100.
+        (mean - 0.075_980_437_211_100).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1001,7 +1005,10 @@ fn name_length_distributions_are_measured_and_pinned() {
     // ledger #14/#19 investigation named in
     // `blind_attribution_beats_chance_decisively`.
     for (species, expected_present, expected_mean) in [
-        ("goblin", 999u32, 13.517_655_343_343_346),
+        // goblin mean re-pinned on the 2026-07-17 Reckoning-epoch regen
+        // (The Presiding): ages/origins facts perturb the deity-name draws;
+        // kobold's mean is unmoved.
+        ("goblin", 999u32, 13.519_483_012_612_616),
         ("kobold", 163u32, 9.857_451_023_312_882),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
@@ -1221,7 +1228,9 @@ fn null_control_name_length_smd_is_pinned() {
         // 1000-seed regen, commit 1c954d0): -> -0.062_795_250_861_151_92.
         // Census regen (2026-07-16 #2, rift-and-fit epoch v4 + SKY-24,
         // commit 945f62b): -> -0.057_246_623_530_308_95.
-        (namelen - -0.057_246_623_530_308_95).abs() < 1e-9,
+        // Census regen (2026-07-17, The Presiding on the merged Reckoning
+        // epoch): -> -0.056_923_687_297_304_355.
+        (namelen - -0.056_923_687_297_304_355).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
