@@ -96,16 +96,25 @@ the same globe, without religion importing perception any more than it
 ever imported astronomy. The priesthood check moved from a literal
 `"shaman"` string match to each species' own shaman-rung word — a kobold
 `"keeper"` presides over an organized cult exactly as a goblin `"shaman"`
-does. The almanac's "The Gods" section now holds one block per pantheon
-that formed; the first block still reproduces the pre-Eyes, single-pantheon
-page byte-for-byte, the identity contract cashed at the page a reader
-actually sees — a spec-level corner case worth naming here: that
-byte-stability rule assumes the registry-first species (goblin) is the one
-holding the first block's beliefs, and a world where goblin places no
-pantheon of its own would render the surviving pantheon with that same
-anonymous, unnamed lead, silently losing its species attribution. No
-census seed exercises this path; it is recorded as a debt for whichever
-campaign next touches the renderer.
+does. The almanac's "The Gods" section holds one block per pantheon that
+formed, and which block carries a species-qualified lead is decided by the
+pantheon itself, never by its position in the list: a block names the people
+who hold it whenever the world has two or more peoples to tell apart, and
+falls back to the anonymous, pre-Eyes lead when it has none. That is the
+same name-only-when-there-is-ambiguity convention the People section
+follows, and both sections read it off one shared predicate so they cannot
+drift apart. The identity contract is still cashed at the page a reader
+actually sees: a legacy save carrying no `peopled-by` facts, and a
+single-people world, each reproduce the pre-Eyes page byte-for-byte.
+
+An earlier rule gave the anonymous lead to whichever block came first. It
+assumed the registry-first species held that block's beliefs, and that the
+registry-first species was goblin — an assumption that expired quietly when
+the roster reached four peopled species, because the registry is ordered
+alphabetically and bugbear sorts ahead of goblin. Block zero was never a
+fact about the world, only about iteration order, and goblin's pantheon had
+been rendering stripped of its attribution beside named neighbours on
+roughly one seed in six by the time The Named repaired it.
 
 **Meaning committed, voice rendered (Campaign Y2-3, The Tongues).**
 Religion's own tenet fact — an English sentence, assembled once and frozen
