@@ -3844,19 +3844,63 @@ mod tests {
     }
 
     /// A one-people builder-level fixture: the shipped goblin, placed alone.
-    /// Built from a single-species roster (not a seed search) so the fixture
-    /// never depends on which seeds happen to place exactly one people —
-    /// mirrors `fauna_are_skipped_by_settlement_genesis`'s
-    /// `hornvale_species::registry()[&KindId("goblin")].clone()` idiom.
+    /// Built from a single-kind component set (not a seed search) so the
+    /// fixture never depends on which seeds happen to place exactly one
+    /// people — the ECS-c3 analogue of the old single-species roster, keyed
+    /// by `KindId("goblin")` and composed from the domain registries.
     fn goblin_solo(seed: u64) -> World {
-        let goblin = hornvale_species::registry()[&KindId("goblin")].clone();
-        build_world_with_roster(
+        use hornvale_kernel::ComponentStore;
+        let g = KindId("goblin");
+        let biosphere: ComponentStore<KindId, _> = [(
+            g,
+            hornvale_species::biosphere_registry()
+                .get(&g)
+                .unwrap()
+                .clone(),
+        )]
+        .into_iter()
+        .collect();
+        let psyche: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::psyche_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
+        let perception: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::perception_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
+        let articulation: ComponentStore<KindId, _> = [(
+            g,
+            *hornvale_language::articulation_registry().get(&g).unwrap(),
+        )]
+        .into_iter()
+        .collect();
+        let lexicon: ComponentStore<KindId, _> = [(
+            g,
+            hornvale_language::lexicon_registry()
+                .get(&g)
+                .unwrap()
+                .clone(),
+        )]
+        .into_iter()
+        .collect();
+        let family_of: ComponentStore<KindId, _> = [(g, "goblinoid")].into_iter().collect();
+        let wc = crate::components::WorldComponents::from_stores(
+            biosphere,
+            psyche,
+            perception,
+            articulation,
+            lexicon,
+            hornvale_language::family_proto(),
+            family_of,
+        )
+        .unwrap();
+        build_world_from_components(
             Seed(seed),
             &SkyPins::default(),
             SkyChoice::Constant,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
-            &[goblin],
+            &wc,
         )
         .unwrap()
     }

@@ -66,7 +66,7 @@ use hornvale_kernel::Seed;
 use hornvale_religion::{Sentiment, beliefs_of};
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world, build_world_to, sky_of,
+    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world, build_world_to, sky_of,
 };
 
 /// Ascending-seed scan ceiling — mirrors the Task-2 probe's first window
@@ -83,14 +83,14 @@ const MIN_LOCKED: usize = 8;
 /// to `BuildDepth::Astronomy` — the cheapest depth that exposes the sky —
 /// mirroring `insolation_probe.rs::is_locked` exactly, so this battery's
 /// seed set can never silently diverge from the Stage-0 probe's.
-fn is_locked(seed: u64) -> bool {
+fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(world) = build_world_to(
         Seed(seed),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        &[],
+        wc,
         BuildDepth::Astronomy,
     ) else {
         return false;
@@ -125,7 +125,8 @@ fn is_locked(seed: u64) -> bool {
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
-    let locked: Vec<u64> = (1..=SCAN_MAX).filter(|&s| is_locked(s)).collect();
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let locked: Vec<u64> = (1..=SCAN_MAX).filter(|&s| is_locked(s, &wc)).collect();
     assert!(
         locked.len() >= MIN_LOCKED,
         "locked-seed scan under-yielded ({} found in 1..={SCAN_MAX}, want >= {MIN_LOCKED}); \

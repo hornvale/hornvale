@@ -32,10 +32,10 @@
 //! 3. Run the SAME per-species suitability product `niche_per_species_k`
 //!    computes (replicated here as `niche_k_over`, since that function
 //!    builds its own internal `Substrate` and cannot take an injected one)
-//!    over the corrected substrate, for the roster's PEOPLED species only
-//!    (the four settling goblinoids — settlement genesis itself filters to
-//!    `peopled.is_some()`, since only settling species found cultures and
-//!    thus presiding religions; fauna in the wider menagerie never do).
+//!    over the corrected substrate, for the PEOPLED kinds only (the four
+//!    settling goblinoids — the kinds carrying a psyche component in
+//!    `WorldComponents`, since only settling species found cultures and thus
+//!    presiding religions; fauna in the wider menagerie never do).
 //! 4. Find the world-dominant peopled species (highest total K over
 //!    habitable cells) and the cell where ITS K is maximal; classify that
 //!    cell by `substellar_cosine`.
@@ -56,11 +56,11 @@
 use hornvale_astronomy::{Rotation, SkyPins};
 use hornvale_climate::{RotationRegime, substellar_cosine};
 use hornvale_kernel::{CellMap, Geosphere, Seed};
-use hornvale_species::SpeciesDef;
+use hornvale_species::BiosphereTraits;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, Substrate, build_world_to, carrying_inputs_of,
-    climate_of, default_roster, sky_of, substrate_field, terrain_of,
+    BuildDepth, SettlementPins, SkyChoice, Substrate, WorldComponents, build_world_to,
+    carrying_inputs_of, climate_of, sky_of, substrate_field, terrain_of,
 };
 
 /// First scan window: seeds `1..=200` (brief step 1). Widened by
@@ -84,14 +84,14 @@ const TERMINATOR_HEADLINE_HALF_WIDTH: f64 = 0.3;
 /// settlements). Returns `false` for any seed whose generated-sky genesis
 /// is refused (never happens for the unpinned default pins in practice,
 /// but a refusal is not "locked" either way).
-fn is_locked(seed: u64) -> bool {
+fn is_locked(seed: u64, wc: &WorldComponents) -> bool {
     let Ok(world) = build_world_to(
         Seed(seed),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        &[],
+        wc,
         BuildDepth::Astronomy,
     ) else {
         return false;
@@ -108,11 +108,11 @@ fn is_locked(seed: u64) -> bool {
 /// Scan ascending seeds for the `Locked` regime, widening the window once
 /// if the first pass under-yields (brief step 1). Returns seeds in
 /// ascending order.
-fn locked_seeds() -> Vec<u64> {
-    let mut found: Vec<u64> = (1..=FIRST_SCAN_MAX).filter(|&s| is_locked(s)).collect();
+fn locked_seeds(wc: &WorldComponents) -> Vec<u64> {
+    let mut found: Vec<u64> = (1..=FIRST_SCAN_MAX).filter(|&s| is_locked(s, wc)).collect();
     if found.len() < MIN_LOCKED {
         let mut wider: Vec<u64> = (FIRST_SCAN_MAX + 1..=WIDE_SCAN_MAX)
-            .filter(|&s| is_locked(s))
+            .filter(|&s| is_locked(s, wc))
             .collect();
         found.append(&mut wider);
     }
@@ -174,7 +174,7 @@ fn niche_k_over(
     geo: &Geosphere,
     base_carrying: &CellMap<f64>,
     substrate: &CellMap<Substrate>,
-    species_set: &[&SpeciesDef],
+    species_set: &[&BiosphereTraits],
 ) -> Vec<(u32, CellMap<f64>)> {
     species_set
         .iter()
@@ -182,11 +182,10 @@ fn niche_k_over(
         .map(|(tag, def)| {
             let total_uptake: f64 = hornvale_kernel::v1_basis()
                 .iter()
-                .map(|axis| def.biosphere.niche.weight(*axis))
+                .map(|axis| def.niche.weight(*axis))
                 .sum();
-            let floor_buf =
-                hornvale_kernel::sovereignty_floor(def.biosphere.mass, def.biosphere.potency);
-            let cn = &def.biosphere.condition_niche;
+            let floor_buf = hornvale_kernel::sovereignty_floor(def.mass, def.potency);
+            let cn = &def.condition_niche;
             let k = CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
                 let supply = base_carrying.get(cell) * total_uptake;
@@ -256,19 +255,19 @@ struct SeedRow {
 }
 
 /// Measure one locked seed: build to `BuildDepth::Terrain`, assemble the
-/// corrected substrate, run the peopled roster's K, and reduce to a
+/// corrected substrate, run the peopled kinds' K, and reduce to a
 /// [`SeedRow`]. Panics loudly (via `expect`) on any reconstruction failure
 /// — a locked seed identified by [`is_locked`] must build cleanly at the
 /// deeper rung too, since terrain genesis reads no sky-regime-specific
 /// pin.
-fn measure_seed(seed: u64, roster: &[SpeciesDef]) -> SeedRow {
+fn measure_seed(seed: u64, wc: &WorldComponents) -> SeedRow {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        roster,
+        wc,
         BuildDepth::Terrain,
     )
     .expect("a locked seed identified at Astronomy depth builds at Terrain depth too");
@@ -296,16 +295,28 @@ fn measure_seed(seed: u64, roster: &[SpeciesDef]) -> SeedRow {
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
 
-    let peopled: Vec<&SpeciesDef> = roster.iter().filter(|d| d.peopled.is_some()).collect();
+    // The peopled biosphere set, in ascending `KindId` (registry/alphabetical)
+    // order: the kinds carrying a psyche component — settling peoples found
+    // cultures and thus presiding religions; fauna in the wider menagerie
+    // never do. `peopled_kinds` keeps the `(KindId, BiosphereTraits)` pairing
+    // so the dominant `tag` can recover its kind name; `peopled` is the
+    // biosphere-only view `niche_k_over` reads (tag order shared, since both
+    // derive from the same filtered `wc.biosphere.iter()`).
+    let peopled_kinds: Vec<(&hornvale_kernel::KindId, &BiosphereTraits)> = wc
+        .biosphere
+        .iter()
+        .filter(|(k, _)| wc.psyche.contains(k))
+        .collect();
+    let peopled: Vec<&BiosphereTraits> = peopled_kinds.iter().map(|(_, bio)| *bio).collect();
     let per_species_k = niche_k_over(geo, &base_carrying, &substrate, &peopled);
     let habitable = climate.habitability();
 
     // The world-dominant species: highest total K summed over habitable
-    // cells. Ties broken by species-name order (ascending `tag` index
-    // matches `peopled`'s — itself `roster`'s, itself the registry's
-    // alphabetical — order, so a tie is already deterministic without an
-    // explicit tiebreak; the `max_by` below keeps the FIRST maximum, i.e.
-    // the alphabetically-earliest species on an exact tie).
+    // cells. Ties broken by kind-name order (ascending `tag` index matches
+    // `peopled`'s — itself the peopled biosphere set in ascending `KindId`,
+    // i.e. registry/alphabetical, order, so a tie is already deterministic
+    // without an explicit tiebreak; the `max_by` below keeps the FIRST
+    // maximum, i.e. the alphabetically-earliest kind on an exact tie).
     let (dominant_tag, dominant_total_k) = per_species_k
         .iter()
         .map(|(tag, k)| {
@@ -324,7 +335,7 @@ fn measure_seed(seed: u64, roster: &[SpeciesDef]) -> SeedRow {
         .find(|(tag, _)| *tag == dominant_tag)
         .map(|(_, k)| k)
         .expect("dominant_tag came from per_species_k itself");
-    let dominant_species = peopled[dominant_tag as usize].name;
+    let dominant_species = peopled_kinds[dominant_tag as usize].0.0;
 
     let peak_cell = geo
         .cells()
@@ -357,8 +368,8 @@ fn measure_seed(seed: u64, roster: &[SpeciesDef]) -> SeedRow {
             for the Locked rotation regime and rebuilds terrain/climate per locked seed; \
             a one-shot preregistered readout, not a fast-gate battery"]
 fn dominant_k_peak_under_corrected_locked_insolation() {
-    let roster = default_roster();
-    let locked = locked_seeds();
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let locked = locked_seeds(&wc);
     assert!(
         !locked.is_empty(),
         "expected at least one locked seed in 1..={WIDE_SCAN_MAX}"
@@ -378,10 +389,7 @@ fn dominant_k_peak_under_corrected_locked_insolation() {
     );
     println!("{}", "-".repeat(100));
 
-    let rows: Vec<SeedRow> = locked
-        .iter()
-        .map(|&seed| measure_seed(seed, &roster))
-        .collect();
+    let rows: Vec<SeedRow> = locked.iter().map(|&seed| measure_seed(seed, &wc)).collect();
     for row in &rows {
         println!(
             "{:>6} | {:>10.4} | {:>9.2} | {:>16} | {:>14.4} | {:>10.4} | {:>20}",
