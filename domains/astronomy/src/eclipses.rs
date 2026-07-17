@@ -538,6 +538,8 @@ pub(crate) fn luna_sol() -> (crate::system::StarSystem, Calendar) {
         inclination_deg: 5.14,
         node_longitude_deg: 0.0,
         formation: crate::moons::Formation::GiantImpact,
+        density: crate::units::GramsPerCm3(3.34),
+        age: crate::units::Gyr(4.51),
     };
     let calendar = calendar_of(&system);
     (system, calendar)
@@ -757,7 +759,7 @@ mod tests {
     }
 
     fn test_moon(inclination_deg: f64, node_longitude_deg: f64) -> Moon {
-        use crate::units::{LunarMasses, Megameters};
+        use crate::units::{GramsPerCm3, Gyr, LunarMasses, Megameters};
         Moon {
             mass: LunarMasses(1.0),
             distance: Megameters(384.4),
@@ -767,6 +769,8 @@ mod tests {
             inclination_deg,
             node_longitude_deg,
             formation: crate::moons::Formation::GiantImpact,
+            density: GramsPerCm3(3.34),
+            age: Gyr(4.51),
         }
     }
 

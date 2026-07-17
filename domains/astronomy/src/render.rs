@@ -378,6 +378,8 @@ mod tests {
                 inclination_deg: 5.14,
                 node_longitude_deg: 0.0,
                 formation: crate::moons::Formation::GiantImpact,
+                density: crate::units::GramsPerCm3::new(3.34).unwrap(),
+                age: crate::units::Gyr::new(4.51).unwrap(),
             }],
             neighbors: vec![],
             forcing: crate::forcing::OrbitalForcing {

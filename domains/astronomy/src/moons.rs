@@ -3,9 +3,9 @@
 
 use crate::anchor::Anchor;
 use crate::pins::{GenesisError, SkyPins};
-use crate::star::Star;
+use crate::star::{Star, planet_age};
 use crate::streams;
-use crate::units::{LunarMasses, Megameters, StdDays};
+use crate::units::{GramsPerCm3, Gyr, LunarMasses, Megameters, StdDays};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
@@ -55,6 +55,22 @@ pub struct Moon {
     /// How this moon formed (The Reckoning): drawn after admission and the
     /// distance sort, weighted by distance, from its own stream.
     pub formation: Formation,
+    /// Bulk density in g/cm3 (The Reckoning). Mechanism-dependent: a
+    /// `GiantImpact` moon's density is the **derived** constant 3.34
+    /// (re-accreted mantle debris, no iron core — exactly why Luna is 3.34
+    /// against Earth's 5.51); a `Capture` moon's density is **drawn** from
+    /// a different reservoir entirely ({rocky 3.0, icy 1.6}). Every moon
+    /// still consumes one draw from `MOON_DENSITY` regardless of branch —
+    /// see `generate_moons`.
+    pub density: GramsPerCm3,
+    /// Age in Gyr, pre-genesis (The Reckoning). Mechanism-dependent: a
+    /// `GiantImpact` moon is coeval with its planet (`planet_age` minus a
+    /// small **drawn** jitter — Luna is 4.51 against Earth's 4.54); a
+    /// `Capture` moon's age is **drawn** independently of the planet's,
+    /// decoupled, because the body formed elsewhere. Every moon still
+    /// consumes one draw from `MOON_AGE` regardless of branch — see
+    /// `generate_moons`.
+    pub age: Gyr,
 }
 
 /// The anchor's Hill radius in Mm (model card formula).
@@ -100,6 +116,12 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
         // Drawn after admission from its own stream (The Reckoning), like
         // the inclination and node above it.
         formation: Formation::GiantImpact,
+        // Placeholder; overwritten after formation is known (The
+        // Reckoning), like formation/inclination/node above it.
+        density: GramsPerCm3(3.34),
+        // Placeholder; overwritten after formation is known (The
+        // Reckoning), like formation/inclination/node above it.
+        age: Gyr(0.0),
     }
 }
 
@@ -235,7 +257,70 @@ pub fn generate_moons(
     for moon in &mut moons {
         moon.node_longitude_deg = nodes.next_f64() * 360.0;
     }
+
+    // The Reckoning (Task 5): density draws from its own stream, after
+    // formation is known, so nothing above this line moves. Every moon
+    // consumes EXACTLY ONE `next_f64()` here in BOTH branches, even
+    // `GiantImpact`, whose density is a derived constant and needs no
+    // draw at all — draw and discard it anyway. If `GiantImpact` skipped
+    // the draw, moon i's density would depend on how many *earlier* moons
+    // happened to draw `Capture`, so flipping moon 0's formation would
+    // silently shift every later moon's density. Same index-stability
+    // discipline as SKY-6 and this campaign's own inclination epoch.
+    let mut densities = astronomy_seed.derive(streams::MOON_DENSITY).stream();
+    for moon in &mut moons {
+        let roll = densities.next_f64();
+        moon.density = match moon.formation {
+            // Derived, not drawn: re-accreted mantle debris with no iron
+            // core. This is exactly why Luna is 3.34 against Earth's
+            // 5.51. The roll above is discarded.
+            Formation::GiantImpact => GramsPerCm3(3.34),
+            // Drawn from a different reservoir entirely: a captured body
+            // may be rocky or icy, unrelated to the anchor's composition.
+            Formation::Capture => {
+                if roll < 0.5 {
+                    GramsPerCm3(3.0)
+                } else {
+                    GramsPerCm3(1.6)
+                }
+            }
+        };
+    }
+
+    // The Reckoning (Task 5): age draws from its own stream, after
+    // formation is known, for the same index-stability reason as density
+    // above — one draw per moon in both branches.
+    let planet_age_gyr = planet_age(star).0;
+    let mut ages = astronomy_seed.derive(streams::MOON_AGE).stream();
+    for moon in &mut moons {
+        let roll = ages.next_f64();
+        moon.age = match moon.formation {
+            // Coeval with the planet: the impact happened during
+            // accretion, so the moon's age trails the planet's by only a
+            // small jitter. Luna is 4.51 against Earth's 4.54.
+            Formation::GiantImpact => {
+                let jitter = 0.03 + roll * (0.10 - 0.03);
+                Gyr((planet_age_gyr - jitter).max(0.0))
+            }
+            // Decoupled: the body formed elsewhere, at some earlier point
+            // in the planet's history, and was captured later.
+            Formation::Capture => Gyr((0.05 + roll * (0.95 - 0.05)) * planet_age_gyr),
+        };
+    }
+
     Ok((moons, notes))
+}
+
+/// Bulk radius in km from mass and density: r = (3M / 4piρ)^(1/3).
+/// Derived — and derived from a REAL density, not an assumed one, which is
+/// the whole point of knowing the formation mechanism (The Reckoning).
+/// type-audit: pending(wave-1)
+pub fn radius_km(moon: &Moon) -> f64 {
+    const LUNAR_MASS_KG: f64 = 7.342e22;
+    let m_kg = moon.mass.0 * LUNAR_MASS_KG;
+    let rho_kg_m3 = moon.density.0 * 1000.0;
+    let v = 3.0 * m_kg / (4.0 * std::f64::consts::PI * rho_kg_m3);
+    math::powf(v, 1.0 / 3.0) / 1000.0
 }
 
 #[cfg(test)]
@@ -486,6 +571,46 @@ mod tests {
         }
     }
 
+    /// The Reckoning, Task 5: proves the "discard the roll, don't skip the
+    /// draw" rule actually holds, which no range/membership assertion above
+    /// can — a bug that skips `MOON_DENSITY`'s/`MOON_AGE`'s draw on the
+    /// `GiantImpact` branch would shift a *later* `Capture` moon's density
+    /// (still lands in {3.0, 1.6}) and age (still lands in `[0, planet_age]`)
+    /// to a DIFFERENT value in that same set/range — invisible to a
+    /// membership check, visible only to an exact pin. Seed 373 admits three
+    /// moons under this file's `system()` helper with formation
+    /// GiantImpact/Capture/GiantImpact — a mix in both directions (impact
+    /// before capture and capture before impact) — so a stream-position
+    /// bug in either branch's draw shows up here. These values are the
+    /// production output of THIS commit's `generate_moons`, captured by
+    /// running the code once and pasting its result (unlike the pre-epoch
+    /// byte-identity tests above, there is no "before" value to independently
+    /// recover: this property did not exist before this task).
+    #[test]
+    fn density_and_age_draws_are_index_stable_across_mixed_formation() {
+        let (star, anchor) = system(373);
+        let (moons, _) = generate_moons(Seed(373), &star, &anchor, &SkyPins::default()).unwrap();
+        let formations: Vec<Formation> = moons.iter().map(|m| m.formation).collect();
+        assert_eq!(
+            formations,
+            vec![
+                Formation::GiantImpact,
+                Formation::Capture,
+                Formation::GiantImpact
+            ],
+            "seed 373 must mix formations in both directions for this property to test anything"
+        );
+        let expected: &[(f64, f64)] = &[
+            (3.34, 0.6316516151065772),
+            (1.6, 0.5941737938444442),
+            (3.34, 0.6758533809396974),
+        ];
+        for (m, (density, age)) in moons.iter().zip(expected) {
+            assert_eq!(m.density.0, *density, "seed 373 density drifted");
+            assert_eq!(m.age.0, *age, "seed 373 age drifted");
+        }
+    }
+
     #[test]
     fn moons_are_deterministic() {
         let (star, anchor) = system(9);
@@ -521,6 +646,93 @@ mod tests {
             assert_eq!(m.mass.0, *mass);
             assert_eq!(m.distance.0, *dist);
         }
+    }
+
+    /// The Reckoning, Task 5, spec §5.2: a `GiantImpact` moon's density is
+    /// the derived constant 3.34 (mantle debris, no iron core) and its age
+    /// trails the planet's by only the drawn jitter — always coeval, never
+    /// decoupled. A distribution claim over seeds, calling production
+    /// `generate_moons` and `planet_age` rather than recomputing either.
+    #[test]
+    fn impact_moons_are_iron_poor_and_coeval() {
+        let mut checked = 0u32;
+        for seed in 0..300u64 {
+            let (star, anchor) = system(seed);
+            let p_age = planet_age(&star);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            for m in moons
+                .iter()
+                .filter(|m| m.formation == Formation::GiantImpact)
+            {
+                checked += 1;
+                assert_eq!(m.density.0, 3.34, "seed {seed}");
+                let gap = p_age.0 - m.age.0;
+                assert!((0.03..=0.10).contains(&gap), "seed {seed}: gap {gap} Gyr");
+            }
+        }
+        assert!(checked > 20, "too few impact moons to judge ({checked})");
+    }
+
+    /// The Reckoning, Task 5, spec §5.2: a `Capture` moon's density is drawn
+    /// from a different reservoir entirely ({rocky 3.0, icy 1.6}) and its
+    /// age is decoupled from the planet's (drawn independently, always
+    /// within `[0, planet_age]` since the body cannot postdate its own
+    /// capture-by-a-planet-that-already-exists).
+    #[test]
+    fn captured_moons_have_alien_density_and_decoupled_age() {
+        let mut icy = 0u32;
+        let mut captured = 0u32;
+        for seed in 0..300u64 {
+            let (star, anchor) = system(seed);
+            let p_age = planet_age(&star);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            for m in moons.iter().filter(|m| m.formation == Formation::Capture) {
+                captured += 1;
+                assert!(
+                    m.density.0 == 3.0 || m.density.0 == 1.6,
+                    "seed {seed}: {}",
+                    m.density.0
+                );
+                if m.density.0 == 1.6 {
+                    icy += 1;
+                }
+                assert!(
+                    m.age.0 <= p_age.0,
+                    "seed {seed}: captured moon older than its planet"
+                );
+                assert!(m.age.0 >= 0.0);
+            }
+        }
+        assert!(captured > 20, "too few captured moons ({captured})");
+        assert!(icy > 0, "no icy captured body in 300 seeds");
+    }
+
+    /// The Reckoning, Task 5: the campaign's payload — radius follows from
+    /// mass and a REAL density, not an assumption. Builds the base moon from
+    /// a real `generate_moons` output (never a from-scratch literal) so the
+    /// non-density/mass fields are production values, then overrides mass
+    /// and density to the Luna calibration point from the brief.
+    #[test]
+    fn radius_follows_from_mass_and_real_density_not_an_assumption() {
+        let (star, anchor) = system(9);
+        let (moons, _) = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
+        let base = moons.into_iter().next().expect("seed 9 has moons");
+        // Luna: 1.0 lunar mass at 3.34 g/cm3 -> ~1737 km.
+        let luna = Moon {
+            mass: LunarMasses(1.0),
+            density: GramsPerCm3(3.34),
+            ..base
+        };
+        let r = radius_km(&luna);
+        assert!((r - 1737.0).abs() < 30.0, "Luna radius came out {r} km");
+        // An icy body of the same mass is larger.
+        let icy = Moon {
+            density: GramsPerCm3(1.6),
+            ..luna
+        };
+        assert!(radius_km(&icy) > r * 1.2);
     }
 
     /// The Reckoning, Nathan-ratified recalibration: at Luna's real distance

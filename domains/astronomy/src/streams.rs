@@ -62,6 +62,18 @@ pub const STAR_AGE: &str = "star-age";
 /// and the distance sort, so count/mass/distance stay byte-identical.
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_FORMATION: &str = "moon-formation";
+/// Per-moon density draw (The Reckoning). Drawn after formation, one draw
+/// per moon in every branch — a `GiantImpact` moon's density is a derived
+/// constant, not a drawn one, but it still consumes a draw so that moon
+/// *i*'s density stream position never depends on how many earlier moons
+/// drew `Capture`.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_DENSITY: &str = "moon-density";
+/// Per-moon age draw (The Reckoning). Drawn after formation, one draw per
+/// moon in every branch, for the same index-stability reason as
+/// [`MOON_DENSITY`].
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_AGE: &str = "moon-age";
 
 #[cfg(test)]
 mod tests {
@@ -96,6 +108,8 @@ mod tests {
         MOON_NODES,
         STAR_AGE,
         MOON_FORMATION,
+        MOON_DENSITY,
+        MOON_AGE,
     ];
 
     /// Every label constant in this file must appear (root-qualified, since

@@ -37,7 +37,7 @@ pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
-pub use moons::{Formation, Moon, generate_moons, hill_radius_mm};
+pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, radius_km};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
@@ -118,6 +118,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/moon-formation",
             "per-moon formation-mechanism draw (giant impact vs. capture)",
+        ),
+        (
+            "astronomy/moon-density",
+            "per-moon density draw (drawn only for captured moons; impact moons still consume it)",
+        ),
+        (
+            "astronomy/moon-age",
+            "per-moon age draw (jitter around the planet's age either way)",
         ),
     ]
 }
