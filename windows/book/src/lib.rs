@@ -42,9 +42,57 @@ pub fn render_volume(world: &World) -> BookVolume {
     }
 }
 
+/// Predicates present in the ledger that C1's grammar cannot yet render:
+/// registered predicates with at least one committed fact, excluding those
+/// the grammar already covers (`is-a`), sorted and deduped.
+/// type-audit: bare-ok(identifier-text)
+pub fn uncovered_predicates(world: &World) -> Vec<String> {
+    use std::collections::BTreeSet;
+    const COVERED: &[&str] = &["is-a"];
+    let mut gaps: BTreeSet<String> = BTreeSet::new();
+    for predicate in world.registry.predicates() {
+        let name = predicate.name.as_str();
+        if !COVERED.contains(&name) && world.ledger.find(name).next().is_some() {
+            gaps.insert(name.to_string());
+        }
+    }
+    gaps.into_iter().collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn constant(seed: u64) -> World {
+        use hornvale_astronomy::SkyPins;
+        use hornvale_terrain::TerrainPins;
+        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+        build_world(
+            hornvale_kernel::Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("constant world builds")
+    }
+
+    #[test]
+    fn coverage_flags_name_as_uncovered() {
+        let world = constant(1);
+        let gaps = uncovered_predicates(&world);
+        assert!(
+            gaps.contains(&"name".to_string()),
+            "name has no construction yet: {:?}",
+            gaps
+        );
+        assert!(
+            !gaps.contains(&"is-a".to_string()),
+            "is-a is covered: {:?}",
+            gaps
+        );
+    }
 
     #[test]
     fn volume_states_the_planet_is_a_planet() {
