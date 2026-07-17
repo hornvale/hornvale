@@ -76,3 +76,9 @@ pub const ARC_GATE: &str = "arc-gate";
 /// contract, mirroring `ARC_GATE`.
 /// type-audit: bare-ok(identifier-text)
 pub const RELIEF: &str = "relief";
+/// Rift draws (rift-and-fit, spec §3): ONE global spreading-rate draw.
+/// Per-seam geometry uses hash sub-derivations (`seam-{a}-{b}`) — no
+/// sequential draws, no draw-count variance. A NEW label — epoch v4
+/// save-format contract.
+/// type-audit: bare-ok(identifier-text)
+pub const RIFT: &str = "rift";

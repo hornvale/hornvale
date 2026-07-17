@@ -124,7 +124,9 @@ no draw); and the "no isostasy" line no longer holds. Two pins join the three
 above — `--continents N` (craton count) and `--globe-level 4–7` (the canonical
 grid, default 6, part of world identity per the decision
 0038) — and `--supercontinent` now
-clusters cratons rather than plates. The crust fields implement the kernel
+holds the world at its pre-breakup assembly (a sutured supercontinent whose
+rift seams are drawn but never opened; terrain epoch v4), superseding the
+earlier craton-clustering transform. The crust fields implement the kernel
 `Field` trait, so any grid samples the same underlying world: the
 coarse-constrains-fine boundary is drawn exactly at the graph-versus-field
 line (mesh-bound sea level, drainage, and placement compute once on the
@@ -214,12 +216,55 @@ season (hypsometric-bimodality, continent-count, largest-continent-share,
 plate-size-gini never wavered), and shelf-fraction came inside for the
 first time (0.048 → ~0.09, wave-cut erosion's doing) — five of six inside
 at close.
-Shoreline-development moved a real +8% and still sits below its floor — an
-open verdict, handed to the banked **rift-and-fit coda** alongside
-a diagnostic finding that the floor's own anchor was partly built on
-coastline noise Crust had deliberately removed. See
+Shoreline-development moved a real +8% and still sat below its floor — an
+open verdict at Sculpting's close, handed to the banked **rift-and-fit
+coda** alongside a diagnostic finding that the floor's own anchor was
+partly built on coastline noise Crust had deliberately removed. See
 [Sculpting](../chronicle/sculpting.md) and [The Census of Coasts
 III](../laboratory/census-of-coasts-iii.md).
+
+**Rift-and-fit — the terrain epoch (v4).** Sculpting's own bands were five
+of six inside; the sixth was handed forward with evidence, not a fifth
+tuning knob. Rift-and-fit gives every world a fake rifting history: the same
+drawn craton set as before is pulled backward along great circles — a
+draw-free *assembly frame* — until every rim abuts its neighbor, exactly
+reversing the repulsion pass that spread them apart. A fracture network is
+drawn once over the assembled union's contact seams, both margins on either
+side of a seam inherit the identical shared curve, and displacement is the
+rotation from the assembly frame back to each craton's ordinary, unchanged
+final position, narrated through one new drawn spreading rate
+(`terrain/rift`). Conjugate coastlines fit **by construction** — a battery
+rotates one margin's curve back by its stored rotation and asserts curve
+identity exactly — and the carve still runs downstream unchanged; a
+companion probe measures how much of that exact fit the carve's own
+wave-cut and wedge texture blurs afterward (a small, expected, honestly
+recorded ~2% of coastal cells). `--supercontinent` now holds the world at
+this pre-breakup assembly frame, seams drawn but never opened, superseding
+the earlier craton-clustering transform. Cell-scale fracture crenulation —
+the one banked texture measurement showed had real leverage — activates on
+top of the fit; rift-shoulder sliver strings and failed rift arms stay
+banked, unbuilt, for a future campaign to activate on measured demand.
+
+Rift-and-fit's own headline finding is that its signature machinery barely
+moved the metric it targeted, and that this is a confirmation rather than a
+failure: shipped shoreline-development (6.87) sits *below* Sculpting's 7.32,
+because a fitted, continental-scale rift is large-scale geometry and the
+estimator is nearly blind to large-scale geometry by design, and because the
+lever that recovers a shelf-fraction regression the fit's own tight seam-clip
+introduced (a wider near-sea taper) smooths away the one texture lever
+(crenulation) that does move the number. The campaign's real contribution to
+the open shoreline question was an **Earth-mask anchor**: Earth's own
+coastline, run through the exact same unchanged estimator at the canonical
+mesh, scores 8.21 — *below* the inherited 9.51 floor. Nathan's ruling
+adopted a new Earth-anchored band, `[5.13, 13.14]`, bracketing that score by
+the same multiplier the project's other coastline-adjacent bands use — not
+as a replacement acceptance gate, but as a **sanity floor**, demoting
+single-scale shoreline-development from the campaign's headline pass/fail
+criterion to a tripwire. Shipped v4 passes it (6.87), and shelf-fraction —
+regressed by the fit clip and recovered by the same taper widening that cost
+shoreline its crenulation gain — closed back inside its band (0.0841). See
+[Rift-and-Fit](../chronicle/rift-and-fit.md) and [The Census of Coasts
+IV](../laboratory/census-of-coasts-iv.md).
 
 **The tier ladder ahead:** place names that feel authored rather than
 generated, and eventually the region-graph refinement that gives a

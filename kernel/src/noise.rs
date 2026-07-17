@@ -35,6 +35,35 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
     top + (bot - top) * ty
 }
 
+/// Static per-octave derivation labels for `fbm_2d`'s common octave
+/// range, indexed by octave number (index 0 is a placeholder — octave 0
+/// uses the seed directly and never derives). Byte-for-byte the labels
+/// `format!("octave-{n}")` produces, so the derived seeds — and every
+/// noise value — are bit-identical; the table only removes the per-call
+/// `format!` (a heap-allocated `String` per octave per sample), which a
+/// Task 6 profiling pass measured at ~52% of whole-world generation time
+/// (fbm is called per octave per slice per field sample). Octave counts
+/// beyond the table fall back to `format!` with the same label scheme,
+/// preserving exact semantics for any count.
+const OCTAVE_LABELS: [&str; 16] = [
+    "octave-0",
+    "octave-1",
+    "octave-2",
+    "octave-3",
+    "octave-4",
+    "octave-5",
+    "octave-6",
+    "octave-7",
+    "octave-8",
+    "octave-9",
+    "octave-10",
+    "octave-11",
+    "octave-12",
+    "octave-13",
+    "octave-14",
+    "octave-15",
+];
+
 /// Fractal Brownian motion over `value_noise_2d`, normalized to [0, 1).
 /// Gain 0.5, lacunarity 2.0. Octave 0 uses the seed directly so that
 /// one-octave fbm equals plain value noise. Panics if octaves == 0.
@@ -49,6 +78,8 @@ pub fn fbm_2d(seed: Seed, x: f64, y: f64, octaves: u32) -> f64 {
     for octave in 0..octaves {
         let s = if octave == 0 {
             seed
+        } else if (octave as usize) < OCTAVE_LABELS.len() {
+            seed.derive(OCTAVE_LABELS[octave as usize])
         } else {
             seed.derive(&format!("octave-{octave}"))
         };

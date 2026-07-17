@@ -54,6 +54,9 @@ Each entry in `moons` is:
 | `distance_mm` | number | Orbital distance from the world, megameters. |
 | `size_rel` | number | Angular-diameter ratio — the moon's apparent size relative to the reference the size-word vocabulary is built from. |
 
+Each moon's surface (radius, gravity, and seeded descriptors) is its own
+document: [`scene/moons/v1`](scene-moons-v1.md).
+
 An excerpt of a `scene/system/v1` document (seed 42; two moons):
 
 ```json

@@ -14,8 +14,6 @@ use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 const RAIN_SHADOW_STEPS: usize = 6;
 /// Barrier height (m, above the leeward cell) that fully dries it.
 const RAIN_SHADOW_SCALE_M: f64 = 3000.0;
-/// The substellar point (spec convention).
-const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 
 /// Ocean-proximity bonus: `+0.3` if the cell itself is ocean-adjacent (or is
 /// ocean), tapering to `0.0` fully inland.
@@ -93,7 +91,7 @@ pub fn moisture_field(
             // of the day/night axis.
             CellMap::from_fn(geo, |cell| {
                 let p = geo.position(cell);
-                let cos_theta = p[0] * SUBSTELLAR[0] + p[1] * SUBSTELLAR[1] + p[2] * SUBSTELLAR[2];
+                let cos_theta = crate::substellar_cosine(p);
                 let base = 0.7 * (1.0 - cos_theta.abs());
                 (base + ocean_bonus(geo, elevation, sea_level, cell)).clamp(0.0, 1.0)
             })
