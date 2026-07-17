@@ -75,13 +75,31 @@ pub fn node_crossing_chance(threshold_deg: f64, inclination_deg: f64) -> f64 {
 /// reject it): `StdDays` elsewhere means an absolute or non-negative
 /// duration, but here the sign is load-bearing. Numerically safe in
 /// every reachable case — `|P_node| = (4/3)·Y²/(P_sid·|cos i|)` is
-/// minimized at |cos i| = 1, giving `|P_node| ≥ (4/3)·Y²/P_sid`, which
-/// for any world where the year exceeds the moon's sidereal period (the
-/// only physically generated case) exceeds both Y and P_sid by roughly
-/// an order of magnitude — so `draconic_month` and `eclipse_year`, which
-/// divide by it, never see the near-cancellation that would blow the
-/// result up toward infinity, let alone produce NaN. Confirmed by
-/// `node_regression_period_matches_the_180_minus_i_magnitude` below.
+/// **minimized** at |cos i| = 1 (i.e. near i = 0°/180°; i = 90° is the
+/// *safest* case — a polar orbit has no secular nodal precession at
+/// all), giving `|P_node| ≥ (4/3)·Y²/P_sid`. `draconic_month` and
+/// `eclipse_year` divide by `P_node`, so the danger case is
+/// near-cancellation against Y or P_sid; that would need
+/// |cos i| = (4/3)·(Y/P_sid) (to cancel against Y) or
+/// |cos i| = (4/3)·(Y/P_sid)² (to cancel against P_sid) — both exceed
+/// 4/3 > 1 whenever P_sid < Y, so both are **structurally unreachable**
+/// (not merely improbable), since |cos i| ≤ 1 always. `P_sid < Y` isn't
+/// assumed, it's *enforced*: `generate_moons` in `moons.rs` admits a
+/// moon only within `0.4 · hill_radius_mm(..)` of its anchor, and that
+/// Hill-sphere cap keeps every admitted moon's orbit — and hence its
+/// sidereal period via Kepler's third law — far inside the anchor's own
+/// orbit around the star, so `P_sid` never approaches `Y`. Confirmed
+/// numerically by `node_regression_period_matches_the_180_minus_i_magnitude`
+/// below (which pins the algebra at Luna's fixed Y/P_sid, not the
+/// population's margin — the smallest measured margin across a live
+/// world sample is 9.19× (`|P_node|/Y` at i≈0.97°), still far from 1).
+///
+/// The remaining fragility: `Formation::Capture` (The Reckoning) models
+/// distant *irregular* satellites — precisely the population that sits
+/// closest to the Hill-radius admission cap, i.e. closest to the margin
+/// this safety argument depends on. A future campaign that widens how
+/// far captured moons are allowed to orbit is what would erode this
+/// margin, not a change to this module.
 /// type-audit: pending(wave-1: inclination_deg)
 pub fn node_regression_period(year: StdDays, sidereal: StdDays, inclination_deg: f64) -> StdDays {
     StdDays((4.0 / 3.0) * year.0 * year.0 / (sidereal.0 * math::cos(inclination_deg.to_radians())))
@@ -431,12 +449,22 @@ pub fn best_cycle(synodic: StdDays, draconic: StdDays) -> Option<EclipseCycle> {
 }
 
 /// How many returns a series survives: the ecliptic-latitude walk per
-/// return is i·sin(slip); a series is born grazing one edge of the ±θ
-/// window and dies at the other, so it lives ≈ 2θ / Δβ returns. Slipless
-/// cycles saturate at 10,000.
+/// return is the exact spherical form Δβ = asin(sin i · sin slip)
+/// (bounded by ±min(i, 180−i), same construction as
+/// `moon_ecliptic_latitude_deg`); a series is born grazing one edge of the
+/// ±θ window and dies at the other, so it lives ≈ 2θ / Δβ returns.
+/// Slipless (or, at retrograde inclinations, edge-saturated) cycles
+/// saturate at 10,000. Symmetric under i ↔ 180−i (sin i = sin(180−i)), as
+/// physics requires — the small-angle form `i·sin(slip)` this replaces
+/// was not, and overshot past 90° the same way the two functions fixed in
+/// 8711a5a did.
 /// type-audit: pending(wave-1: threshold_deg), pending(wave-1: inclination_deg), bare-ok(index: return)
 pub fn series_returns(cycle: &EclipseCycle, threshold_deg: f64, inclination_deg: f64) -> u32 {
-    let d_beta = inclination_deg * math::sin(cycle.node_slip_deg.to_radians()).abs();
+    let sin_i = math::sin(inclination_deg.to_radians());
+    let slip = cycle.node_slip_deg.to_radians();
+    let d_beta = math::asin((sin_i * math::sin(slip)).clamp(-1.0, 1.0))
+        .to_degrees()
+        .abs();
     if d_beta <= 0.0 {
         return 10_000;
     }
@@ -532,9 +560,13 @@ mod tests {
     /// prograde mirror (180−i) share the same |P_node| — the physical
     /// torque magnitude only depends on |cos i| — but flip sign, since a
     /// retrograde orbit's nodes precess the opposite way. Neither is
-    /// NaN/infinite, and |P_node| stays far above both Y and P_sid, so
-    /// `draconic_month`/`eclipse_year` (which divide by it) never see a
-    /// near-cancellation.
+    /// NaN/infinite, and at Luna's fixed Y/P_sid, |P_node| stays far
+    /// above both. This pins the *formula's algebra*, not the
+    /// population's margin — the structural argument for why
+    /// `draconic_month`/`eclipse_year` never see a near-cancellation for
+    /// *any* admitted moon (regardless of Y/P_sid) lives in
+    /// `node_regression_period`'s own doc comment, tied to the Hill-radius
+    /// admission cut in `moons.rs`.
     #[test]
     fn node_regression_period_matches_the_180_minus_i_magnitude() {
         let year = StdDays(365.25);
@@ -652,6 +684,39 @@ mod tests {
         let chance = node_crossing_chance(10.0, 0.0);
         assert!(chance.is_finite());
         assert!((chance - 1.0).abs() < 1e-6, "flat-orbit chance {chance}");
+    }
+
+    /// The-reckoning regression: a third site with the same linear-in-i
+    /// defect `node_crossing_chance` and `moon_ecliptic_latitude_deg` had
+    /// (8711a5a fixed those two; this one was missed). `series_returns`
+    /// must agree for an orbit at i and its retrograde mirror at 180−i —
+    /// the old form `i·sin(slip)` gave an 8.75x difference between i=20°
+    /// and i=160° at Luna's threshold with a representative node slip
+    /// (35 vs 4 returns); the exact spherical form is identical by
+    /// construction (sin i = sin(180−i)).
+    #[test]
+    fn series_returns_is_symmetric_under_i_and_180_minus_i() {
+        let cycle = EclipseCycle {
+            synodic_count: 1,
+            draconic_count: 1,
+            period: StdDays(29.53),
+            node_slip_deg: 1.72,
+        };
+        let threshold = 10.66; // Luna–Sol solar threshold, ANGULAR_UNIT_DEG-scaled.
+        for i in [5.0, 20.0, 45.0, 60.0, 89.0] {
+            let prograde = series_returns(&cycle, threshold, i);
+            let retrograde = series_returns(&cycle, threshold, 180.0 - i);
+            assert_eq!(
+                prograde, retrograde,
+                "i={i}: returns {prograde} vs retrograde {retrograde}"
+            );
+        }
+        let at_20 = series_returns(&cycle, threshold, 20.0);
+        let at_160 = series_returns(&cycle, threshold, 160.0);
+        assert_eq!(
+            at_20, at_160,
+            "the review's headline case: returns(20°)={at_20} vs returns(160°)={at_160}"
+        );
     }
 
     /// With zero eccentricity the event-time sun is the mean sun exactly.
