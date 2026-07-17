@@ -1,7 +1,8 @@
 # Dissolve `SpeciesDef` — ECS Program, Campaign 3: Components by Domain — Design
 
-**Status:** Draft for G3 review (2026-07-16) · **Author:** Claude (campaign-
-autopilot) · **Decider:** Nathan · **Program:**
+**Status:** SHIPPED 2026-07-16 (merged to local main; chronicle *The
+Dissolution*) · **Author:** Claude (campaign-autopilot) · **Decider:** Nathan ·
+**Program:**
 [ECS metaplan](2026-07-14-ecs-program-metaplan-design.md) §4.2, §4.3, §5 (c3), §7
 
 > Campaign 3 of the entity-component program, and the one the first two were

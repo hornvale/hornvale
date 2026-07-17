@@ -90,6 +90,7 @@
 - [The True Name](./chronicle/the-true-name.md)
 - [The Region](./chronicle/the-region.md)
 - [The Lens](./chronicle/the-lens.md)
+- [The Dissolution](./chronicle/the-dissolution.md)
 
 # The Gallery
 

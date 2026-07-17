@@ -119,8 +119,8 @@ more literally: an activity-cycle dimension had no seat in this closed
 vector, so nocturnality lived only as authored prose with nowhere to run.
 Campaign 15 (The Eyes) spent it: `domains/species` now also holds a closed
 three-dimension **perception vector** — activity cycle, night vision, sky
-attention — sitting alongside this six-dimension psychology vector on the
-same `SpeciesDef`, and kobold's authored nocturnality finally reaches a
+attention — a second component keyed to the same kind alongside this
+six-dimension psychology vector, and kobold's authored nocturnality finally reaches a
 formula, a species-specific characteristic hour and salience lens that
 crowns the moons and the night sky over the sun. See
 [Perception](./perception.md) for the vector, the lens derivation, and what
@@ -128,8 +128,10 @@ it let religion do with two peoples instead of one. Campaign Y2-3 (The
 Tongues) added a third: a closed six-dimension **articulation vector** —
 labiality, vowel-space breadth, voicing contrast, sibilance, voice
 loudness, and an exotic manner a species' anatomy affords — again authored
-at the goblin baseline and read from the same D&D 5E corpus for kobold, and
-again sitting alongside the other two on the same `SpeciesDef`. See
+at the goblin baseline and read from the same D&D 5E corpus for kobold. Since
+*The Dissolution* the articulation vector is owned by `domains/language`
+itself — its true home, the domain that reads it to build every name — rather
+than by `domains/species`, keyed to the same kind. See
 [Language](./language.md) for the vector itself and what it let every name
 in the world become.
 
@@ -155,15 +157,22 @@ varies goblin-to-goblin rather than only goblin-to-kobold, is real work with
 its own design principles; it does not arrive as a quiet addition to a
 struct that happened to have room.
 
-**The full species model card.** Since *The Menagerie* (the entity-component
-program's first campaign), `SpeciesDef` is split: a universal `BiosphereTraits`
-(mass, metabolic class, resource niche, condition niche, potency — the
-component every kind carries and the packer and habitat model read) and an
-`Option<PeopledTraits>` present only for a people that settles and speaks. The
-three closed vectors below — psychology (6), perception (3), articulation (6),
-fifteen dimensions — now live in `PeopledTraits`; the biosphere-only fauna of
-the menagerie (dragons, treant, xorn, …) carry `peopled: None` and none of
-this table. Every dimension here is still **authored**. Nothing in this table is
+**The full species model card.** Since *The Dissolution* (the entity-component
+program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
+**set of components**, each keyed by the kind's stable `KindId` label, each
+authored and owned by the one domain that presents it, composed only at
+worldgen. `domains/species` authors the universal **biosphere** component
+(`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
+potency — the row every kind carries and the packer and habitat model read) and,
+for a people that settles and speaks, the **psychology** (6) and **perception**
+(3) components; `domains/language` authors the **articulation** (6) and the
+social **lexicon** — the speech a kind that speaks carries. The biosphere-only
+fauna of the menagerie (dragons, treant, xorn, …) simply have no rows in the
+peopled registries, and none of this table; their dragon-ness is that absence,
+expressed rather than declared. What the old `Option<PeopledTraits>` once
+guaranteed by the shape of a type — all the peopled traits together or none —
+worldgen now enforces as a load-time referential-integrity check across the
+registries. Every dimension here is still **authored**. Nothing in this table is
 drawn, fit, or measured; species is data written once by a person reading a
 corpus, the same posture each of the three sub-vector chapters keeps on its
 own. The "consumer" column names the actual formula that reads each

@@ -1,5 +1,10 @@
 # Dissolve SpeciesDef (ECS Campaign 3) Implementation Plan
 
+> **COMPLETE — SHIPPED 2026-07-16** (merged to local main; chronicle *The
+> Dissolution*). Executed in 10 byte-identical commits + a final-review fix.
+> The revised endgame (Tasks 5–10) followed ledger #60/#61: the roster is a
+> component-set, and `SpeciesDef` was deleted this campaign (not phased).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Dissolve the `SpeciesDef` god-struct into per-concern component registries keyed by `KindId`, each owned by a domain (body+mind → `species`, speech → `language`), composed only at `worldgen` — byte-identical.
