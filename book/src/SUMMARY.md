@@ -90,6 +90,7 @@
 - [The True Name](./chronicle/the-true-name.md)
 - [The Region](./chronicle/the-region.md)
 - [The Lens](./chronicle/the-lens.md)
+- [The Faces](./chronicle/the-faces.md)
 
 # The Gallery
 
@@ -134,6 +135,7 @@
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
+- [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)
