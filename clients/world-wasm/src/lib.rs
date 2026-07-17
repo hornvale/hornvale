@@ -216,6 +216,27 @@ pub extern "C" fn hw_scene_moons() -> i32 {
     }
 }
 
+/// Emit the current world's `scene/neighbors/v1` JSON (night-sky catalog).
+/// 0 ok; 2 scene error (envelope set); -3 when no world is live.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_neighbors() -> i32 {
+    let world_ptr = &raw const WORLD;
+    let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
+        set_error("no world; call hw_new first");
+        return -3;
+    };
+    match hornvale_scene::neighbors_scene(world) {
+        Ok(s) => {
+            set_out(hornvale_scene::neighbors_json(&s));
+            0
+        }
+        Err(e) => {
+            set_error(&format!("{e}"));
+            2
+        }
+    }
+}
+
 /// Emit the current world's `scene/tiles/v1` JSON at `width` tiles across.
 /// 0 ok; 2 scene error (width odd / out of range; envelope set); -3 when
 /// no world is live.
