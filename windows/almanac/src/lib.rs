@@ -40,17 +40,31 @@ pub struct BeliefLine {
     pub tenet: String,
 }
 
-/// One community's pantheon, ready to render: the species and settlement
-/// it belongs to, its cult form, and its beliefs in salience order.
-/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: noun), bare-ok(identifier-text: settlement), bare-ok(identifier-text: cult_form)
-pub struct PantheonBlock {
-    /// The species name ("goblin", "kobold"); empty for legacy saves that
-    /// predate species facts.
+/// The people a pantheon belongs to: their species, their settlement noun,
+/// and the settlement itself.
+///
+/// Absent when the almanac has no one to distinguish this pantheon from — a
+/// legacy save predating species facts, or a world with fewer than two
+/// peoples. This is the same name-only-when-ambiguous convention the People
+/// section follows; `windows/worldgen`'s `placed_peoples` is the shared
+/// predicate behind both.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: noun), bare-ok(identifier-text: settlement)
+pub struct PantheonAttribution {
+    /// The species name ("goblin", "kobold").
     pub species: String,
     /// The settlement noun ("village", "warren").
     pub noun: String,
     /// The holding settlement's name.
     pub settlement: String,
+}
+
+/// One community's pantheon, ready to render: who holds it (when the
+/// almanac names them), its cult form, and its beliefs in salience order.
+/// type-audit: bare-ok(identifier-text: cult_form)
+pub struct PantheonBlock {
+    /// The people holding this pantheon, when the almanac names them.
+    /// `None` renders the anonymous lead — see [`PantheonAttribution`].
+    pub attribution: Option<PantheonAttribution>,
     /// The pantheon's cult form (`"organized"` or `"folk"`), if recorded.
     pub cult_form: Option<String>,
     /// The pantheon's beliefs, head first, each paired with its rendered
@@ -300,32 +314,36 @@ pub fn render(ctx: &AlmanacContext) -> String {
     if ctx.pantheons.iter().all(|p| p.beliefs.is_empty()) {
         doc.push_str("No beliefs are recorded.\n\n");
     } else {
-        for (i, pantheon) in ctx.pantheons.iter().enumerate() {
+        for pantheon in &ctx.pantheons {
             if pantheon.beliefs.is_empty() {
                 continue;
             }
-            // The first block reproduces the legacy section byte-for-byte
-            // (the identity contract); later blocks name their people.
-            if i == 0 {
-                if let Some(form) = &pantheon.cult_form {
-                    let lead = match form.as_str() {
-                        "organized" => "An organized priesthood tends a pantheon:",
-                        _ => "The people keep a folk pantheon:",
+            match &pantheon.attribution {
+                // No people to name: the legacy section, byte-for-byte. The
+                // lead is emitted only when a cult form was recorded — that
+                // silence is the pre-species contract, not an oversight.
+                None => {
+                    if let Some(form) = &pantheon.cult_form {
+                        let lead = match form.as_str() {
+                            "organized" => "An organized priesthood tends a pantheon:",
+                            _ => "The people keep a folk pantheon:",
+                        };
+                        doc.push_str(&format!("{lead}\n\n"));
+                    }
+                }
+                Some(who) => {
+                    let lead = match pantheon.cult_form.as_deref() {
+                        Some("organized") => format!(
+                            "In the {} of **{}**, an organized priesthood tends its own pantheon:",
+                            who.noun, who.settlement
+                        ),
+                        _ => format!(
+                            "The {} of **{}** keeps its own folk pantheon:",
+                            who.noun, who.settlement
+                        ),
                     };
                     doc.push_str(&format!("{lead}\n\n"));
                 }
-            } else {
-                let lead = match pantheon.cult_form.as_deref() {
-                    Some("organized") => format!(
-                        "In the {} of **{}**, an organized priesthood tends its own pantheon:",
-                        pantheon.noun, pantheon.settlement
-                    ),
-                    _ => format!(
-                        "The {} of **{}** keeps its own folk pantheon:",
-                        pantheon.noun, pantheon.settlement
-                    ),
-                };
-                doc.push_str(&format!("{lead}\n\n"));
             }
             for line in &pantheon.beliefs {
                 let mark = if line.belief.high_god {
@@ -396,9 +414,7 @@ mod tests {
                 culture_lines: vec![],
             }],
             pantheons: vec![PantheonBlock {
-                species: "goblin".to_string(),
-                noun: "village".to_string(),
-                settlement: "Bolnar".to_string(),
+                attribution: None,
                 cult_form: Some("organized".to_string()),
                 beliefs: vec![BeliefLine {
                     belief: Belief {
@@ -620,9 +636,7 @@ mod tests {
     fn the_gods_section_renders_a_structured_pantheon() {
         let ctx = AlmanacContext {
             pantheons: vec![PantheonBlock {
-                species: "goblin".to_string(),
-                noun: "village".to_string(),
-                settlement: "Bolnar".to_string(),
+                attribution: None,
                 cult_form: Some("organized".to_string()),
                 beliefs: vec![
                     BeliefLine {
@@ -665,24 +679,34 @@ mod tests {
     }
 
     #[test]
-    fn a_single_pantheon_renders_exactly_as_before() {
-        // Byte-identity: the first block must reproduce the legacy section.
-        let ctx = sample_context(); // one goblin pantheon, organized, one high god
+    fn an_unattributed_pantheon_renders_the_anonymous_lead() {
+        // Byte-identity: a legacy save (no peopled-by facts) and a one-people
+        // world both reach render with no attribution, and both reproduce the
+        // pre-species section exactly.
+        let ctx = sample_context(); // one people => the builder withholds attribution
         let doc = render(&ctx);
         assert!(doc.contains("## The Gods\n\nAn organized priesthood tends a pantheon:\n\n"));
         assert!(
             !doc.contains("its own"),
-            "single-pantheon worlds name no species"
+            "with no one to distinguish it from, a pantheon names no species"
         );
     }
 
     #[test]
-    fn a_second_pantheon_gets_a_species_lead() {
+    fn every_pantheon_is_named_when_two_peoples_hold_them() {
+        // hornvale#1: no block is anonymous by position. Both are named.
         let mut ctx = sample_context();
+        ctx.pantheons[0].attribution = Some(PantheonAttribution {
+            species: "goblin".to_string(),
+            noun: "village".to_string(),
+            settlement: "Bolnar".to_string(),
+        });
         ctx.pantheons.push(PantheonBlock {
-            species: "kobold".to_string(),
-            noun: "warren".to_string(),
-            settlement: "Zikthur".to_string(),
+            attribution: Some(PantheonAttribution {
+                species: "kobold".to_string(),
+                noun: "warren".to_string(),
+                settlement: "Zikthur".to_string(),
+            }),
             cult_form: Some("folk".to_string()),
             beliefs: vec![BeliefLine {
                 belief: Belief {
@@ -697,13 +721,55 @@ mod tests {
             }],
         });
         let doc = render(&ctx);
-        assert!(doc.contains("The warren of **Zikthur** keeps its own folk pantheon:"));
         let gods = doc.split("## The Gods").nth(1).unwrap();
         assert!(
-            gods.find("priesthood tends a pantheon").unwrap()
-                < gods.find("its own folk pantheon").unwrap(),
-            "goblin block renders first, exactly as before"
+            gods.contains(
+                "In the village of **Bolnar**, an organized priesthood tends its own pantheon:"
+            ),
+            "the first block names its people rather than going anonymous"
         );
+        assert!(gods.contains("The warren of **Zikthur** keeps its own folk pantheon:"));
+        assert!(
+            !gods.contains("An organized priesthood tends a pantheon:"),
+            "no pantheon is anonymous once there are peoples to distinguish"
+        );
+        assert!(
+            gods.find("Bolnar").unwrap() < gods.find("Zikthur").unwrap(),
+            "registry order still governs block order"
+        );
+    }
+
+    #[test]
+    fn a_lone_pantheon_is_named_when_another_people_placed() {
+        // The divergence case: two peoples placed, only one holds beliefs. A
+        // naive "anonymous iff exactly one pantheon" rule would render this
+        // unnamed beneath a People section listing two peoples — the very
+        // ambiguity this campaign removes.
+        let mut ctx = sample_context();
+        ctx.pantheons[0].attribution = Some(PantheonAttribution {
+            species: "goblin".to_string(),
+            noun: "village".to_string(),
+            settlement: "Bolnar".to_string(),
+        });
+        let doc = render(&ctx);
+        assert!(doc.contains(
+            "In the village of **Bolnar**, an organized priesthood tends its own pantheon:"
+        ));
+    }
+
+    #[test]
+    fn an_unattributed_pantheon_with_no_cult_form_keeps_its_silent_lead() {
+        // Preserved deliberately (spec §7, followup 1): the legacy contract
+        // emits no lead at all when no cult form is recorded.
+        let mut ctx = sample_context();
+        ctx.pantheons[0].cult_form = None;
+        let doc = render(&ctx);
+        assert!(
+            doc.contains("## The Gods\n\n>"),
+            "beliefs render under no lead"
+        );
+        assert!(!doc.contains("priesthood"));
+        assert!(!doc.contains("folk pantheon"));
     }
 
     #[test]

@@ -3368,12 +3368,12 @@ fn legacy_rendered_beliefs(
 }
 
 /// Every belief in the world, each paired with its rendered tenet — grouped
-/// by species-flagship pantheon in registry order (goblin first), each
-/// pantheon's beliefs head first (matching `beliefs_of`/`beliefs_held_by`'s
-/// own ordering). The seam-wiring site the REPL's `beliefs` command renders
-/// through (spec §6, Task 11); the almanac renders the same seam via
-/// [`almanac_context`]'s `PantheonBlock`s. Legacy fallback: see
-/// [`legacy_rendered_beliefs`].
+/// by species-flagship pantheon in registry order — alphabetical; bugbear
+/// sorts first — each pantheon's beliefs head first (matching
+/// `beliefs_of`/`beliefs_held_by`'s own ordering). The seam-wiring site the
+/// REPL's `beliefs` command renders through (spec §6, Task 11); the almanac
+/// renders the same seam via [`almanac_context`]'s `PantheonBlock`s. Legacy
+/// fallback: see [`legacy_rendered_beliefs`].
 /// type-audit: bare-ok(prose: return)
 pub fn rendered_beliefs(
     world: &World,
@@ -3433,12 +3433,18 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
+            // The almanac names a people only when there is another to
+            // distinguish them from — the same rule, and the same
+            // predicate, the People section uses (`settlement_lines`).
+            let named = placed_peoples(world).len() > 1;
             for (name, def) in hornvale_species::registry() {
                 if let Some((v, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
-                        species: name.0.to_string(),
-                        noun: peopled(&def).noun.to_string(),
-                        settlement: v.name.clone(),
+                        attribution: named.then(|| hornvale_almanac::PantheonAttribution {
+                            species: name.0.to_string(),
+                            noun: peopled(&def).noun.to_string(),
+                            settlement: v.name.clone(),
+                        }),
                         cult_form: hornvale_religion::cult_form_held_by(world, v.id),
                         beliefs: rendered
                             .into_iter()
@@ -3448,15 +3454,14 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
                 }
             }
             // Legacy fallback: pre-species saves have beliefs but no
-            // peopled-by facts — render them as the single anonymous
-            // pantheon they always were (see `legacy_rendered_beliefs`).
+            // peopled-by facts — no species is attributable, so these
+            // render as the single anonymous pantheon they always were
+            // (see `legacy_rendered_beliefs`).
             if blocks.is_empty() {
                 let rendered = legacy_rendered_beliefs(world)?;
                 if !rendered.is_empty() {
                     blocks.push(hornvale_almanac::PantheonBlock {
-                        species: String::new(),
-                        noun: String::new(),
-                        settlement: String::new(),
+                        attribution: None,
                         cult_form: hornvale_religion::cult_form_of(world),
                         beliefs: rendered
                             .into_iter()
@@ -3520,6 +3525,39 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap()
+    }
+
+    /// hornvale#1 regression: seed 42 places two peoples, so every pantheon
+    /// names the people who hold it — none is anonymous by position. This is
+    /// the test the ticket never had; it fails on the pre-campaign renderer.
+    #[test]
+    fn seed_42_names_both_its_peoples_pantheons() {
+        let world = constant(42);
+        assert!(
+            placed_peoples(&world).len() > 1,
+            "seed 42 places two peoples"
+        );
+        let ctx = almanac_context(&world).unwrap();
+        assert!(!ctx.pantheons.is_empty());
+        assert!(
+            ctx.pantheons.iter().all(|b| b.attribution.is_some()),
+            "with two peoples, every pantheon names its own"
+        );
+    }
+
+    /// The builder withholds attribution exactly when the People section
+    /// withholds its species prefix — one predicate, one voice.
+    #[test]
+    fn attribution_tracks_the_people_sections_predicate() {
+        let world = constant(42);
+        let multi = placed_peoples(&world).len() > 1;
+        let ctx = almanac_context(&world).unwrap();
+        for block in &ctx.pantheons {
+            assert!(
+                block.attribution.is_none() || multi,
+                "a one-people world never names a pantheon's species"
+            );
+        }
     }
 
     #[test]

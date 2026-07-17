@@ -170,7 +170,7 @@ The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, m
 
 ## The Gods
 
-An organized priesthood tends a pantheon:
+In the village of **Vnetvngekzhxeknoaboonoenoa**, an organized priesthood tends its own pantheon:
 
 > Noaboo the Xngoknoaboo returns every 0.88 days. So it was, so it is.
 >
