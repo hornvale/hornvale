@@ -49,6 +49,37 @@ impl hornvale_kernel::Domain for Culture {
     }
 }
 
+/// How a culture kind transmits itself between generations.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Transmission {
+    /// Spoken/performed transmission (the pre-writing default).
+    Oral,
+    /// Written transmission.
+    Written,
+}
+
+/// Authored kind-level traits of culture kinds — the culture-owned
+/// component (an aggregate kind: no body, no psyche). Deliberately thin
+/// (spec §4.4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CultureTraits {
+    /// The kind's transmission mode.
+    pub transmission: Transmission,
+}
+
+/// The canonical culture-kind registry. One kind today: `culture`, oral.
+pub fn culture_registry() -> hornvale_kernel::ComponentStore<hornvale_kernel::KindId, CultureTraits>
+{
+    [(
+        hornvale_kernel::KindId("culture"),
+        CultureTraits {
+            transmission: Transmission::Oral,
+        },
+    )]
+    .into_iter()
+    .collect()
+}
+
 /// Tier-1 genesis: commit the settlement's subsistence mode and its emergent
 /// caste/role structure (from `structure`). Replaces the tier-0 fixed ladder.
 pub fn genesis(

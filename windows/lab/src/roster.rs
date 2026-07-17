@@ -74,6 +74,9 @@ fn goblin_derived(
         lexicon,
         hornvale_language::family_proto(),
         family_of,
+        ComponentStore::new(),
+        ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("a goblin-derived single-kind component set is well-formed")
 }

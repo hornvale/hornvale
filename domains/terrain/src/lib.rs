@@ -231,6 +231,43 @@ pub fn places(world: &World) -> Vec<PlaceInfo> {
         .collect()
 }
 
+/// Authored traits of a material kind — body-stuff without agency, the
+/// terrain-owned component. Fields are real, coarse physical scales
+/// (spec §4.4: thin and honest).
+/// type-audit: bare-ok(ratio: hardness_mohs), bare-ok(flag: sedimentary)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct MaterialTraits {
+    /// Scratch hardness on the Mohs scale (1–10).
+    pub hardness_mohs: f64,
+    /// Whether the material is sedimentary in origin.
+    pub sedimentary: bool,
+}
+
+/// The canonical material-kind registry, mirroring the lithology classes
+/// worlds already carry: granite (igneous, ~6.5 Mohs) and limestone
+/// (sedimentary, ~3 Mohs).
+pub fn material_registry()
+-> hornvale_kernel::ComponentStore<hornvale_kernel::KindId, MaterialTraits> {
+    [
+        (
+            hornvale_kernel::KindId("granite"),
+            MaterialTraits {
+                hardness_mohs: 6.5,
+                sedimentary: false,
+            },
+        ),
+        (
+            hornvale_kernel::KindId("limestone"),
+            MaterialTraits {
+                hardness_mohs: 3.0,
+                sedimentary: true,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

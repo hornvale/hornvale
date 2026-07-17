@@ -3079,6 +3079,28 @@ pub fn build_world(
     build_world_from_components(seed, pins, sky, terrain_pins, settlement_pins, &wc)
 }
 
+/// Mint an instance of a known kind: the composition root's validated entry
+/// to `Ledger::mint_instance` (the kernel is roster-blind; spec §4.2). Fails
+/// loudly when the label is not in the union kind roster.
+/// type-audit: bare-ok(identifier-text: kind), waiver(decision-0014: day), bare-ok(prose: provenance)
+pub fn mint_instance_of_kind(
+    world: &mut World,
+    wc: &WorldComponents,
+    kind: &str,
+    day: Option<f64>,
+    provenance: &str,
+) -> Result<EntityId, BuildError> {
+    if !wc.kinds().iter().any(|k| k.0 == kind) {
+        return Err(BuildError::MalformedKind(format!(
+            "cannot mint an instance of unknown kind {kind:?} (not in the union roster)"
+        )));
+    }
+    world
+        .ledger
+        .mint_instance(kind, day, provenance, &world.registry)
+        .map_err(BuildError::Ledger)
+}
+
 /// The first-placed settlement of `species` (its flagship), if any.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::VillageInfo> {
@@ -3896,6 +3918,9 @@ mod tests {
             lexicon,
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
         )
         .unwrap();
         build_world_from_components(
@@ -5067,6 +5092,9 @@ mod tests {
             ComponentStore::new(),
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 

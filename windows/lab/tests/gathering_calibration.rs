@@ -280,6 +280,9 @@ fn world_level_population_conserves_against_total_capacity() {
         hornvale_language::lexicon_registry(),
         hornvale_language::family_proto(),
         family_of,
+        ComponentStore::new(),
+        ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("the peopled-only component set is well-formed");
     let report = hornvale_worldgen::demography_report(&world, &wc)
