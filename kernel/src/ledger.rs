@@ -111,6 +111,10 @@ impl std::error::Error for LedgerError {}
 pub struct Ledger {
     facts: Vec<Fact>,
     next_entity: u64,
+    /// Derived permutation indexes — never serialized; rebuilt on first use
+    /// after load, maintained incrementally on commit. Absent-or-complete.
+    #[serde(skip)]
+    index: Option<crate::fact_index::FactIndex>,
 }
 
 impl Ledger {
@@ -118,6 +122,31 @@ impl Ledger {
     pub fn mint_entity(&mut self) -> EntityId {
         self.next_entity += 1;
         EntityId(self.next_entity)
+    }
+
+    /// Ensure the derived index exists and is current (rebuild-if-absent).
+    fn ensure_index(&mut self) {
+        if self.index.is_none() {
+            let mut idx = crate::fact_index::FactIndex::default();
+            idx.rebuild(&self.facts);
+            self.index = Some(idx);
+        }
+    }
+
+    // --- naive reference impls: the O(n) truth the index refines. Kept for the
+    // INDEX≡SCAN property test and the heavy-tier before/after micro-bench.
+    pub(crate) fn naive_has_conflict(&self, fact: &Fact) -> bool {
+        self.facts.iter().any(|f| {
+            f.subject == fact.subject && f.predicate == fact.predicate && f.object != fact.object
+        })
+    }
+    pub(crate) fn naive_contains(&self, fact: &Fact) -> bool {
+        self.facts.contains(fact)
+    }
+    pub(crate) fn naive_facts_about(&self, subject: EntityId) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| self.facts[p].subject == subject)
+            .collect()
     }
 
     /// Would this fact be accepted? Used by the refinement engine to test
@@ -138,11 +167,10 @@ impl Ledger {
             });
         }
         if def.functional {
-            let clash = self.facts.iter().any(|f| {
-                f.subject == fact.subject
-                    && f.predicate == fact.predicate
-                    && f.object != fact.object
-            });
+            let clash = match &self.index {
+                Some(idx) => idx.has_conflicting_object(fact, &self.facts),
+                None => self.naive_has_conflict(fact),
+            };
             if clash {
                 return Err(LedgerError::Contradiction {
                     subject: fact.subject,
@@ -171,9 +199,18 @@ impl Ledger {
             fact.object = Value::Number(crate::quantize::quantize(n));
         }
         fact.day = fact.day.map(crate::quantize::quantize);
+        self.ensure_index(); // fast contradiction/dedup for the rest of this build
         self.check(&fact, registry)?;
-        if self.facts.contains(&fact) {
+        let dup = match &self.index {
+            Some(idx) => idx.contains_full(&fact, &self.facts),
+            None => self.naive_contains(&fact),
+        };
+        if dup {
             return Ok(false);
+        }
+        let pos = self.facts.len();
+        if let Some(idx) = self.index.as_mut() {
+            idx.insert(pos, &fact);
         }
         self.facts.push(fact);
         Ok(true)
@@ -181,7 +218,11 @@ impl Ledger {
 
     /// All facts with this subject.
     pub fn facts_about(&self, subject: EntityId) -> impl Iterator<Item = &Fact> {
-        self.facts.iter().filter(move |f| f.subject == subject)
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_subject(subject),
+            None => self.naive_facts_about(subject),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// All facts with this predicate.
@@ -507,5 +548,61 @@ mod tests {
         ids.sort();
         assert_eq!(ids, [KindId("bugbear"), KindId("goblin"), KindId("kobold")]);
         assert_eq!(ids[0].0, "bugbear");
+    }
+
+    #[test]
+    fn index_backed_commit_matches_naive_semantics() {
+        // Idempotent recommit, functional contradiction, and non-functional
+        // multi-object all behave exactly as the pre-index ledger did.
+        let r = registry();
+        let mut l = Ledger::default();
+        let f = named(&mut l, "Zaggrak");
+        let s = f.subject;
+        assert!(l.commit(f.clone(), &r).unwrap()); // appended
+        assert!(!l.commit(f, &r).unwrap()); // idempotent no-op
+        assert_eq!(l.len(), 1);
+        let clash = Fact {
+            subject: s,
+            predicate: "name".into(),
+            object: Value::Text("Bolnar".into()),
+            place: None,
+            day: None,
+            provenance: "t".into(),
+        };
+        assert!(matches!(
+            l.commit(clash, &r),
+            Err(LedgerError::Contradiction { .. })
+        ));
+    }
+
+    #[test]
+    fn facts_about_yields_commit_order_after_index() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let village = l.mint_entity();
+        for c in ["located-in"].iter().cycle().take(3).zip(0..3) {
+            let target = l.mint_entity();
+            l.commit(
+                Fact {
+                    subject: village,
+                    predicate: c.0.to_string(),
+                    object: Value::Entity(target),
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            )
+            .unwrap();
+        }
+        let objs: Vec<&Value> = l.facts_about(village).map(|f| &f.object).collect();
+        // ascending commit order == ascending minted target ids (2,3,4)
+        assert_eq!(
+            objs,
+            l.facts_about(village)
+                .map(|f| &f.object)
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(l.facts_about(village).count(), 3);
     }
 }
