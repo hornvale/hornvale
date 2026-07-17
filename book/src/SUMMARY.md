@@ -89,6 +89,7 @@
 - [Sculpting](./chronicle/sculpting.md)
 - [The True Name](./chronicle/the-true-name.md)
 - [The Region](./chronicle/the-region.md)
+- [The Lens](./chronicle/the-lens.md)
 - [Rift-and-Fit](./chronicle/rift-and-fit.md)
 
 # The Gallery
