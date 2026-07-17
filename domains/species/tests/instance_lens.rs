@@ -165,7 +165,11 @@ fn join_equals_scan_over_random_ledgers() {
     // overrides before AND after changes, both zero spellings, dangling
     // labels, kindless entities.
     let reg = biosphere_registry();
-    let labels = ["owlbear", "woolly-mammoth", "giant-elk", "no-such-kind"];
+    // "treant" carries a non-zero authored potency (0.6); the other valid
+    // labels are all potency 0.0, so without it the property never exercises
+    // potency-default resolution after a kind change (the c4 signed-zero
+    // lesson: the generator's value-space must cover the field).
+    let labels = ["owlbear", "woolly-mammoth", "treant", "no-such-kind"];
     for seed in 0..64u64 {
         let mut w = world();
         let mut st = seed.wrapping_add(1);
