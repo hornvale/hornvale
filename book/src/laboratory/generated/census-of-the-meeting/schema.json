@@ -173,12 +173,6 @@
       "rung": "astronomy"
     },
     {
-      "doc": "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); Absent if no beliefs",
-      "kind": "categorical",
-      "name": "belief-kind",
-      "rung": "full"
-    },
-    {
       "doc": "Number of genesis notes recorded",
       "kind": "categorical",
       "name": "genesis-note-count",
@@ -774,6 +768,30 @@
       "doc": "Cult form of the kobold flagship's pantheon (organized/folk); Absent without one",
       "kind": "categorical",
       "name": "cult-form-kobold",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "kind": "categorical",
+      "name": "belief-kind-bugbear",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "kind": "categorical",
+      "name": "belief-kind-goblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the hobgoblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "kind": "categorical",
+      "name": "belief-kind-hobgoblin",
+      "rung": "full"
+    },
+    {
+      "doc": "Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+      "kind": "categorical",
+      "name": "belief-kind-kobold",
       "rung": "full"
     },
     {
@@ -1753,7 +1771,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xc02cb929ce91970d"
+    "fnv1a64": "0xbd9644e12958f6c7"
   },
   "schema_version": 1,
   "study": {

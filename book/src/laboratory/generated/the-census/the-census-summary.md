@@ -211,13 +211,6 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 | 6 | 11 | 1.1% |
 | 7 | 3 | 0.3% |
 
-### belief-kind — default
-
-| value | count | share |
-|---|---|---|
-| cyclic | 952 | 95.2% |
-| eternal | 48 | 4.8% |
-
 ### genesis-note-count — default
 
 | value | count | share |
@@ -847,6 +840,36 @@ Seeds 0..1000 × 1 pin set(s); 1000 rows; 0 refusals.
 |---|---|---|
 | folk | 156 | 15.6% |
 | organized | 7 | 0.7% |
+| absent | 837 | 83.7% |
+
+### belief-kind-bugbear — default
+
+| value | count | share |
+|---|---|---|
+| absent | 1000 | 100.0% |
+
+### belief-kind-goblin — default
+
+| value | count | share |
+|---|---|---|
+| cyclic | 951 | 95.1% |
+| eternal | 48 | 4.8% |
+| absent | 1 | 0.1% |
+
+### belief-kind-hobgoblin — default
+
+| value | count | share |
+|---|---|---|
+| cyclic | 712 | 71.2% |
+| eternal | 48 | 4.8% |
+| absent | 240 | 24.0% |
+
+### belief-kind-kobold — default
+
+| value | count | share |
+|---|---|---|
+| cyclic | 146 | 14.6% |
+| eternal | 17 | 1.7% |
 | absent | 837 | 83.7% |
 
 ### blind-attribution-correct — default

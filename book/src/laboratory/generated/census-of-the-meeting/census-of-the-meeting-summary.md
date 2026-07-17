@@ -209,13 +209,6 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | 6 | 4 | 0.8% |
 | 7 | 1 | 0.2% |
 
-### belief-kind — goblin-solo
-
-| value | count | share |
-|---|---|---|
-| cyclic | 477 | 95.4% |
-| eternal | 23 | 4.6% |
-
 ### genesis-note-count — goblin-solo
 
 | value | count | share |
@@ -816,6 +809,31 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | organized | 433 | 86.6% |
 
 ### cult-form-kobold — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-bugbear — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-goblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| cyclic | 477 | 95.4% |
+| eternal | 23 | 4.6% |
+
+### belief-kind-hobgoblin — goblin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-kobold — goblin-solo
 
 | value | count | share |
 |---|---|---|
@@ -1931,13 +1949,6 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | 6 | 4 | 0.8% |
 | 7 | 1 | 0.2% |
 
-### belief-kind — goblin-twin-solo
-
-| value | count | share |
-|---|---|---|
-| cyclic | 477 | 95.4% |
-| eternal | 23 | 4.6% |
-
 ### genesis-note-count — goblin-twin-solo
 
 | value | count | share |
@@ -2529,6 +2540,30 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | absent | 500 | 100.0% |
 
 ### cult-form-kobold — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-bugbear — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-goblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-hobgoblin — goblin-twin-solo
+
+| value | count | share |
+|---|---|---|
+| absent | 500 | 100.0% |
+
+### belief-kind-kobold — goblin-twin-solo
 
 | value | count | share |
 |---|---|---|
