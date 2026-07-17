@@ -49,6 +49,7 @@ usage:
                           emit scene/tiles-region/v1 JSON to stdout
   hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
+  hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
   hornvale locale --world W --sample N [--depth D]
@@ -750,9 +751,11 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// cartographic tile lattice (scene/tiles/v1), `scene tiles-region` renders one
 /// cube-sphere quadtree tile's footprint at higher on-tile density
 /// (scene/tiles-region/v1), `scene system` renders the system's orbital
-/// elements for the orrery (scene/system/v1), and `scene moons` renders each
-/// moon's per-surface descriptors (scene/moons/v1). Deterministic; CI
-/// drift-checks the committed example scene.
+/// elements for the orrery (scene/system/v1), `scene moons` renders each
+/// moon's per-surface descriptors (scene/moons/v1), and `scene neighbors`
+/// renders the night sky's two star populations, the notable neighbor
+/// stars and the background starfield (scene/neighbors/v1). Deterministic;
+/// CI drift-checks the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -779,6 +782,12 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::moons_json(&scene));
             Ok(())
         }
+        Some("neighbors") => {
+            let world = load_world(args)?;
+            let scene = hornvale_scene::neighbors_scene(&world).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::neighbors_json(&scene));
+            Ok(())
+        }
         Some("tiles-region") => {
             let world = load_world(args)?;
             let parse_u32 = |flag: &str| -> Result<u32, String> {
@@ -798,11 +807,12 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors"
         )),
-        None => {
-            Err("scene needs a kind; known kinds: tiles, tiles-region, system, moons".to_string())
-        }
+        None => Err(
+            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors"
+                .to_string(),
+        ),
     }
 }
 
