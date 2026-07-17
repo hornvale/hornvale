@@ -229,9 +229,11 @@ fn each_peoples_belief_kind_is_its_own_not_the_first_minted() {
 
 `FullView::build(Seed(42), &SkyPins::default()).unwrap()` is the module's existing idiom (see `metrics.rs:4278`); reuse it rather than inventing a helper.
 
-- [ ] **Step 8b: Repoint the third consumer**
+- [ ] **Step 8b: Repoint the four remaining consumers in `metrics.rs`**
 
-`windows/lab/src/metrics.rs:4277` `seed_42_belief_kind_is_text_and_not_absent` calls `extract_from(&built, "belief-kind")` and breaks on the delete. Repoint it:
+The exhaustive grep is `grep -rn '"belief-kind"' --include=*.rs .` — run it and confirm you have moved **every** hit before committing. Four live in `metrics.rs` itself. All four were always reading goblin's answer (goblin mints first on every seed), so repointing to `belief-kind-goblin` makes them *more* honest, not less.
+
+`:4277` — repoint:
 
 ```rust
     #[test]
@@ -244,6 +246,22 @@ fn each_peoples_belief_kind_is_its_own_not_the_first_minted() {
             _ => panic!("Expected Text, got {:?}", value),
         }
     }
+```
+
+`:4355` (`locked_world_belief_kind_is_eternal`) and `:4367` (`spinning_world_belief_kind_is_cyclic`) are **substantive physics invariants** — a locked world's solar head is aperiodic (eternal), a spinning world's is periodic (cyclic). Keep both; change only the metric name to `"belief-kind-goblin"` in each `extract_from` call, and rename the tests to `locked_world_goblin_belief_kind_is_eternal` / `spinning_world_goblin_belief_kind_is_cyclic` so the name states whose reading it is. Leave `:4349`'s `beliefs_of(view.world())` / `source_kind == "celestial-body"` assertion alone — it tests `beliefs_of`, which this campaign does not touch.
+
+`:4899` (the doc-table test) looks the metric up by name:
+
+```rust
+        let belief_kind = metrics
+            .iter()
+            .find(|m| m.name == "belief-kind-goblin")
+            .unwrap();
+        assert!(
+            table.contains(belief_kind.doc),
+            "Missing doc for belief-kind-goblin: {}",
+            belief_kind.doc
+        );
 ```
 
 - [ ] **Step 9: Run the gate**
