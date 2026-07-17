@@ -30,11 +30,11 @@ impl PartialOrd for ObjKey {
         Some(self.cmp(o))
     }
 }
-// NOTE: `Ord` uses total_cmp (so -0.0 < 0.0) while the derived `PartialEq`
-// delegates to Value's IEEE `==` (so -0.0 == 0.0). BTreeMap only ever calls
-// `Ord::cmp` for its structure, and non-finite objects are rejected at commit
-// (Ledger::check) before they reach the index, so the asymmetry is inert here.
-// It is intentional — do not "fix" the derive into IEEE ordering.
+// `Ord` orders finite non-zero numbers by total_cmp, but canonicalizes signed
+// zero (see `canon` below) so -0.0 and 0.0 share one index bucket — matching
+// the naive path's IEEE `==` and keeping INDEX == SCAN. The derived `PartialEq`
+// (IEEE, so -0.0 == 0.0) therefore agrees with `Ord` on zero. BTreeMap uses
+// only `Ord::cmp`; non-finite objects are rejected at commit before indexing.
 impl Ord for ObjKey {
     fn cmp(&self, other: &Self) -> Ordering {
         fn rank(v: &Value) -> u8 {
@@ -45,10 +45,19 @@ impl Ord for ObjKey {
                 Value::Flag(_) => 3,
             }
         }
+        // Canonicalize signed zero: the ledger's naive scan compares objects
+        // with IEEE equality (-0.0 == 0.0), so the index MUST bucket the two
+        // zero spellings together or the two paths diverge (INDEX != SCAN).
+        // total_cmp otherwise orders -0.0 < 0.0. All other finite values order
+        // by total_cmp; non-finite objects are rejected at commit and never
+        // reach the index.
+        fn canon(x: f64) -> f64 {
+            if x == 0.0 { 0.0 } else { x }
+        }
         match (&self.0, &other.0) {
             (Value::Entity(a), Value::Entity(b)) => a.cmp(b),
             (Value::Text(a), Value::Text(b)) => a.cmp(b),
-            (Value::Number(a), Value::Number(b)) => a.total_cmp(b),
+            (Value::Number(a), Value::Number(b)) => canon(*a).total_cmp(&canon(*b)),
             (Value::Flag(a), Value::Flag(b)) => a.cmp(b),
             (a, b) => rank(a).cmp(&rank(b)),
         }

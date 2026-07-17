@@ -678,12 +678,20 @@ mod tests {
             let s = subjects[(splitmix(&mut st) as usize) % subjects.len()];
             // only use the non-functional predicate for bulk facts, so random
             // objects never trip the functional-contradiction reject
-            let target = subjects[(splitmix(&mut st) as usize) % subjects.len()];
+            let obj = if splitmix(&mut st).is_multiple_of(4) {
+                match splitmix(&mut st) % 3 {
+                    0 => Value::Number(0.0),
+                    1 => Value::Number(-0.0),
+                    _ => Value::Number((splitmix(&mut st) % 100) as f64),
+                }
+            } else {
+                Value::Entity(subjects[(splitmix(&mut st) as usize) % subjects.len()])
+            };
             let _ = l.commit(
                 Fact {
                     subject: s,
                     predicate: "located-in".into(),
-                    object: Value::Entity(target),
+                    object: obj,
                     place: None,
                     day: None,
                     provenance: "t".into(),
@@ -739,6 +747,48 @@ mod tests {
                     .collect();
                 assert_eq!(idx, scan, "query_by_object seed {seed} obj {obj:?}");
             }
+        }
+    }
+
+    #[test]
+    fn index_equals_scan_handles_signed_zero_numbers() {
+        // Regression: quantize preserves -0.0 and total_cmp orders -0.0 < 0.0, but
+        // the naive path compares objects with IEEE == (-0.0 == 0.0). ObjKey
+        // canonicalizes signed zero so the index buckets them together, keeping
+        // INDEX == SCAN total over numeric objects.
+        let r = registry();
+        let mut l = Ledger::default();
+        let s = l.mint_entity();
+        for obj in [Value::Number(0.0), Value::Number(-0.0), Value::Number(1.5)] {
+            l.commit(
+                Fact {
+                    subject: s,
+                    predicate: "located-in".into(),
+                    object: obj,
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            )
+            .unwrap();
+        }
+        // -0.0 dedups against 0.0 (IEEE) exactly as the pre-index ledger did:
+        // 0.0 and 1.5 remain (2 facts), matching the naive scan.
+        assert_eq!(l.facts_about(s).count(), l.naive_facts_about(s).len());
+        assert_eq!(l.facts_about(s).count(), 2);
+        // query_by_object under either zero spelling returns the naive set.
+        for probe in [Value::Number(0.0), Value::Number(-0.0)] {
+            let idx: Vec<&Fact> = l.query_by_object(&probe).collect();
+            let scan: Vec<&Fact> = l
+                .naive_query_by_object(&probe)
+                .iter()
+                .map(|&p| l.fact_at(p))
+                .collect();
+            assert_eq!(
+                idx, scan,
+                "query_by_object({probe:?}) must equal the naive scan"
+            );
         }
     }
 
