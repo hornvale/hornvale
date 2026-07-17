@@ -178,7 +178,9 @@ census regeneration must cover.
 ## 6. The model card delta
 
 **Derived (real formulas):** planet age; moon age for the coeval mechanism;
-radius from mass and density; the ZAMS-luminosity back-derivation (§3).
+radius from mass and density; the ZAMS-luminosity back-derivation (§3) —
+recoverable by inverting `luminosity_at`, not a function the sim calls;
+nothing consumes it today.
 
 **Drawn:** star age (guard-railed fraction of `t_MS`); formation mechanism per
 moon; capture-mechanism density class, age, mass, distance, inclination.

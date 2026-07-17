@@ -284,13 +284,18 @@ pub fn generate_moons(
     // the distance sort, so every pre-eclipse draw (count, masses,
     // distances) is byte-identical and the draws are index-stable.
     //
-    // The Reckoning: this is the epoch, and it is a PARTIAL one. Both
-    // branches consume EXACTLY ONE draw from this same stream, whichever is
-    // taken, so index-stability holds regardless of which mechanism a moon
-    // drew — and the GiantImpact formula is byte-identical to the pre-epoch
-    // one, so an all-impact world's inclinations (and everything derived
-    // from them: nodes, eclipses) never move. Only worlds that actually
-    // receive a captured moon change.
+    // The Reckoning: both branches consume EXACTLY ONE draw from this same
+    // stream, whichever is taken, so index-stability holds regardless of
+    // which mechanism a moon drew, and masses, distances, and this
+    // inclination draw itself are byte-identical everywhere — an
+    // all-impact world's GiantImpact branch is the same formula over the
+    // same roll as the pre-epoch code. That is where the identity ends:
+    // eclipse dating downstream of this inclination now uses the exact
+    // spherical latitude form (not the old small-angle one), which the
+    // GiantImpact branch's own low-inclination band is not immune to, so an
+    // all-impact world's eclipses are NOT byte-identical even though its
+    // inclinations are. The epoch is total, not partial — see the astronomy
+    // model card's "The epoch, corrected" section.
     let mut inclinations = astronomy_seed.derive(streams::MOON_INCLINATIONS).stream();
     for moon in &mut moons {
         let roll = inclinations.next_f64();
@@ -575,13 +580,18 @@ mod tests {
         );
     }
 
-    /// The Reckoning, spec §7: the partial-epoch property. Seed 218 (under
-    /// this file's `system()` helper, a raw seed) admits 3 moons that all
-    /// draw `GiantImpact` — checked with a throwaway probe, not asserted
-    /// here. Because the `GiantImpact` branch's formula is byte-identical to
-    /// the pre-epoch code, and both branches consume exactly one draw from
-    /// the same `MOON_INCLINATIONS` stream, an all-impact world's
-    /// inclinations must be unchanged.
+    /// The Reckoning: the inclination *draw* stays byte-identical for an
+    /// all-impact world, even though the epoch this campaign opens is total
+    /// at the world level (eclipse dating downstream is not — see the
+    /// astronomy model card's "The epoch, corrected" section). Seed 218
+    /// (under this file's `system()` helper, a raw seed) admits 3 moons
+    /// that all draw `GiantImpact` — checked with a throwaway probe, not
+    /// asserted here. Because the `GiantImpact` branch's formula is
+    /// byte-identical to the pre-epoch code, and both branches consume
+    /// exactly one draw from the same `MOON_INCLINATIONS` stream, an
+    /// all-impact world's inclinations must be unchanged, which this test
+    /// pins — nothing here claims anything about eclipses or other
+    /// downstream quantities.
     ///
     /// These three values are the pre-campaign ones: recorded by checking
     /// out `d30bcfd` (the commit immediately before this task) into a
