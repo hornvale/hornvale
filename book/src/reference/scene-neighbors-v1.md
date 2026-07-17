@@ -91,14 +91,16 @@ The full document is committed at
 
 ## Derived vs drawn vs recomputed
 
-- **`neighbors` is drawn, ledger-backed physics.** `index`, `class_name`,
-  `color`, `distance_ly`, and the RA/dec pair are all the generator's own
-  drawn or derived values, surfaced unchanged — each also lives in the
-  ledger as `is-neighbor`, `neighbor-class`, `neighbor-color` (see
-  `facts.rs`), `neighbor-distance-ly`, `neighbor-ra-deg`, and
-  `neighbor-declination-deg` facts. `brightness_rel` is **derived**: L/d²
-  from the neighbor's drawn luminosity and drawn distance — not itself a
-  separate draw.
+- **`neighbors` is drawn, ledger-backed physics.** The class, distance, and
+  RA/dec pair are the generator's own drawn values, surfaced unchanged, and
+  each lives in the ledger (see `facts.rs`): `is-neighbor`,
+  `neighbor-class`, `neighbor-distance-ly`, `neighbor-ra-deg`, and
+  `neighbor-declination-deg`. `brightness_rel` is **derived** — L/d² from
+  the class's luminosity and the drawn distance, not a separate draw — but
+  it is still committed, as the `neighbor-brightness-rel` fact. `class_name`
+  and `color` are not themselves facts: both are pure presentational
+  functions of the drawn `class` (`class_name()` and `class_color()` in
+  `neighborhood.rs`), surfaced here so a consumer need not re-derive them.
 - **`stars` is derived texture, not a ledger product.** Every field star
   is recomputed on demand from one seeded stream
   (`world.seed.derive(ASTRONOMY_STREAM_ROOT).derive(streams::STARFIELD)`)
