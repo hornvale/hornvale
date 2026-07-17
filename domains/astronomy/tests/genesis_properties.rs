@@ -515,6 +515,34 @@ fn star_battery_mass_bounds_and_monotone_derivations() {
     }
 }
 
+/// The Reckoning's containment rule (spec §3): drawing an age must not move
+/// luminosity or the habitable zone. If this ever fails, the epoch has
+/// leaked out of the moons and into climate.
+#[test]
+fn stellar_age_does_not_touch_luminosity_or_the_habitable_zone() {
+    use hornvale_astronomy::generate_star;
+    for seed in 0..500u64 {
+        let star = generate_star(Seed(seed));
+        // Luminosity is M^3.5 and NOTHING else — recompute it independently.
+        let expected_l = hornvale_kernel::math::powf(star.mass.get(), 3.5);
+        assert!(
+            (star.luminosity.get() - expected_l).abs() < 1e-12,
+            "seed {seed}: luminosity {} != M^3.5 {}",
+            star.luminosity.get(),
+            expected_l
+        );
+        let sqrt_l = expected_l.sqrt();
+        assert!(
+            (star.habitable_zone.inner().get() - 0.95 * sqrt_l).abs() < 1e-12,
+            "seed {seed}"
+        );
+        assert!(
+            (star.habitable_zone.outer().get() - 1.37 * sqrt_l).abs() < 1e-12,
+            "seed {seed}"
+        );
+    }
+}
+
 /// SKY-23 close-out, anchor battery: over 256 seeds the orbit sits inside
 /// the habitable zone, the Kepler relation holds, and locked worlds never
 /// have a solar hour.

@@ -8,6 +8,7 @@
 pub mod component;
 pub mod domain;
 pub mod ecology;
+mod fact_index;
 pub mod field;
 pub mod geosphere;
 pub mod golden;

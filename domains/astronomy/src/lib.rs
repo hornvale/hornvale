@@ -37,7 +37,7 @@ pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
-pub use moons::{Moon, generate_moons, hill_radius_mm};
+pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
@@ -50,14 +50,14 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, Star, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
-    luminosity_at,
+    GYR_DAYS, Star, T_MAX, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
+    luminosity_at, main_sequence_lifetime, planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
-    SolarLuminosities, SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, LightYears, LocalDays, LunarMasses,
+    Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
@@ -113,6 +113,19 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "astronomy/moon-nodes",
             "per-moon ascending-node longitude draws",
+        ),
+        ("astronomy/star-age", "stellar age draw"),
+        (
+            "astronomy/moon-formation",
+            "per-moon formation-mechanism draw (giant impact vs. capture)",
+        ),
+        (
+            "astronomy/moon-density",
+            "per-moon density draw (drawn only for captured moons; impact moons still consume it)",
+        ),
+        (
+            "astronomy/moon-age",
+            "per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it)",
         ),
     ]
 }
@@ -194,7 +207,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::MOON_NODE_PERIOD_DAYS,
         false,
-        "nodal-regression period of a moon, in standard days",
+        "nodal-regression period of a moon, in standard days — signed: \
+         negative for a retrograde orbit, whose nodes precess prograde \
+         (eastward) rather than the usual westward regression",
     )?;
     registry.register_predicate(
         facts::MOON_MASS_LUNAR,
@@ -358,6 +373,23 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
         true,
         "solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north",
+    )?;
+    registry.register_predicate(
+        facts::STAR_AGE_GYR,
+        true,
+        "the host star's age in gigayears (drawn; does not feed luminosity \
+         or the habitable zone — a deliberate containment)",
+    )?;
+    registry.register_predicate(
+        facts::MOON_FORMATION,
+        false,
+        "how a moon formed: giant-impact or capture",
+    )?;
+    registry.register_predicate(facts::MOON_AGE_GYR, false, "a moon's age in gigayears")?;
+    registry.register_predicate(
+        facts::MOON_DENSITY,
+        false,
+        "a moon's bulk density in grams per cubic centimeter",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;

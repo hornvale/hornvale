@@ -1,5 +1,38 @@
 # The Gods of Seed 42
 
+> **This page's quoted almanacs are a historical snapshot, not current output
+> (noted 2026-07-17).** Every block below is labelled "quoted verbatim from the
+> committed almanac," and that claim has lapsed — in two different ways, worth
+> separating because only one of them is a number.
+>
+> **The world moved out from under the page.** It quotes 182 settlements under
+> the spinning sky and 172 under the locked one, drawn from four peoples with a
+> kobold flagship. Today's committed almanacs hold **60** and **65**, and seed
+> 42 grows only **two** peoples — goblin and hobgoblin. No kobold or bugbear
+> pantheon forms at this seed at all. So the page's central comparison, the
+> goblin/kobold pair it says its argument was built around, no longer has a
+> kobold half to compare. That is not a number to refresh; it is a premise to
+> re-found, and re-founding it is a deliberate act this page is owed rather
+> than a sweep's side effect.
+>
+> **The sky moved too, and that part is recent.** [The
+> Reckoning](../chronicle/the-reckoning.md) gave every moon a formation
+> mechanism, and seed 42 drew a **retrograde captured moon at 117°**. A
+> retrograde moon eclipses on a completely different cadence, so the
+> eclipse-derived gods below are quoting superseded periods: the god this page
+> renders at 423.36 days now returns every **3111.86**, and 269.79 is now
+> **1991.56**. The non-eclipse gods — the wanderer at 386.98, the daily
+> celestial body at 0.88 — are unmoved, which is precisely the campaign's
+> containment showing through: what astronomy touched moved, and what it did
+> not touch did not.
+>
+> The generated almanacs
+> ([spinning](./almanac-seed-42-sky.md), [locked](./almanac-seed-42-locked.md))
+> regenerate with every change and are always current; read them for the
+> world as it stands. This page is preserved as written until its comparison is
+> re-founded, because a partial refresh would restore the word "verbatim" to
+> text that had stopped being a quotation.
+
 This is the Year-1 exit demo (spec §15) — the single comparison the whole
 cascade was built to make legible. The version that closed Year 1 described
 the pair below as one settlement wearing two skies: the same flagship, the

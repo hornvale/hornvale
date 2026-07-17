@@ -2,7 +2,7 @@
 //! (model card: L = M^3.5; habitable zone 0.95√L–1.37√L AU).
 
 use crate::streams;
-use crate::units::{Au, HabitableZone, SolarLuminosities, SolarMasses};
+use crate::units::{Au, Gyr, HabitableZone, SolarLuminosities, SolarMasses};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
@@ -18,6 +18,45 @@ pub struct Star {
     pub class_name: String,
     /// Habitable-zone bounds in AU (derived: 0.95√L inner, 1.37√L outer).
     pub habitable_zone: HabitableZone,
+    /// Stellar age in Gyr (drawn, The Reckoning). Bounded by
+    /// [`main_sequence_lifetime`] and [`T_MAX`]. **Does not feed
+    /// `luminosity` or `habitable_zone`** (spec §3, the containment rule) —
+    /// those stay exactly `M^3.5`-derived so age can never move a world's
+    /// insolation, orbit admission, or climate.
+    pub age: Gyr,
+}
+
+/// The main-sequence bound on a drawn age. **Not 13.8 Gyr**: this is a bound,
+/// not a cosmology. Capping at the age of *our* universe would settle a
+/// metaphysical question (UNI-2) that the project deliberately leaves open, as
+/// a side effect of a generator constant. 15 Gyr bounds the draw without
+/// dating the universe.
+pub const T_MAX: Gyr = Gyr(15.0);
+
+/// t_MS = 10 Gyr · M^-2.5, on the raw mass value. The single definition both
+/// [`main_sequence_lifetime`] (needs a built `Star`) and `generate_star`
+/// (builds the `Star`, so has only the mass so far) call, so the formula
+/// exists exactly once.
+fn t_ms_of_mass(mass: f64) -> f64 {
+    10.0 * math::powf(mass, -2.5)
+}
+
+/// Main-sequence lifetime: t_MS = 10 Gyr · M^-2.5 (declared approximation —
+/// the Sol-calibrated scaling already implicit in `brightening_per_gyr`, made
+/// explicit; not a stellar-structure model).
+pub fn main_sequence_lifetime(star: &Star) -> Gyr {
+    Gyr(t_ms_of_mass(star.mass.0))
+}
+
+/// The planet's age: terrestrial accretion completes within ~30–100 Myr of the
+/// star, so the planet trails it by a token 0.05 Gyr. Derived, not drawn — the
+/// difference is under 1% and below anything the sim observes; it is modelled
+/// only so the number exists and is honest about its own precision.
+pub fn planet_age(star: &Star) -> Gyr {
+    // `.max(0.0)` is a defensive guard, not a live path: the age guard-rail
+    // floors `star.age` at `0.05 * min(t_MS(1.4), T_MAX)` ≈ 0.2156 Gyr, so
+    // `age - 0.05` cannot go negative for any star this crate generates.
+    Gyr((star.age.0 - 0.05).max(0.0))
 }
 
 /// Generate the star from the astronomy domain seed.
@@ -34,12 +73,16 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
         "yellow-white dwarf (F)"
     }
     .to_string();
+    let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
+    let age =
+        Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
     Star {
         mass,
         luminosity,
         class_name,
         habitable_zone: HabitableZone::new(Au(0.95 * sqrt_l), Au(1.37 * sqrt_l))
             .expect("0.95√L < 1.37√L for all L > 0"),
+        age,
     }
 }
 
@@ -127,6 +170,7 @@ mod tests {
             class_name: "yellow dwarf (G)".to_string(),
             habitable_zone: HabitableZone::new(Au::new(0.95).unwrap(), Au::new(1.37).unwrap())
                 .unwrap(),
+            age: Gyr::new(4.5).unwrap(),
         };
         assert!((sun_angular_diameter_rel(&sol, Au::new(1.0).unwrap()) - 1.0).abs() < 1e-12);
         // A heavier star seen from a wider orbit: θ = M^0.8 / a.
@@ -197,5 +241,95 @@ mod tests {
         assert!(
             insolation_rel_at(&star, &anchor, StdDays(GYR_DAYS)) > insolation_rel(&star, &anchor)
         );
+    }
+
+    #[test]
+    fn main_sequence_lifetime_scales_as_mass_to_the_minus_five_halves() {
+        let sol = generate_star(Seed(1));
+        let t_of = |m: f64| {
+            main_sequence_lifetime(&Star {
+                mass: SolarMasses(m),
+                ..sol.clone()
+            })
+            .0
+        };
+        // Sol-calibrated: 1.0 Msun -> 10 Gyr.
+        let t_sol = t_of(1.0);
+        assert!((t_sol - 10.0).abs() < 1e-9, "{}", t_sol);
+
+        // Pin the LAW, not just a couple of loose bounds: t(m1)/t(m2) must
+        // equal (m1/m2)^-2.5 exactly, for several mass pairs. A loose bound
+        // check (t(1.4) < 5.0 and t(0.6) > 30.0) cannot distinguish -2.5 from
+        // a drifted exponent — code review confirmed -2.8 and -3.0 both pass
+        // it — but neither survives this ratio.
+        for (m1, m2) in [(1.4, 1.0), (0.6, 1.0), (1.4, 0.6), (0.8, 1.2)] {
+            let ratio = t_of(m1) / t_of(m2);
+            let expected = math::powf(m1 / m2, -2.5);
+            assert!(
+                (ratio - expected).abs() < 1e-9,
+                "t({m1})/t({m2}) = {ratio}, expected (m1/m2)^-2.5 = {expected}"
+            );
+        }
+
+        // A heavier star burns out faster; a lighter one outlives the bound.
+        let heavy = t_of(1.4);
+        let light = t_of(0.6);
+        assert!(heavy < 5.0, "1.4 Msun t_MS = {heavy}");
+        assert!(light > 30.0, "0.6 Msun t_MS = {light}");
+    }
+
+    #[test]
+    fn age_stays_inside_the_guard_rails_and_the_bound() {
+        for seed in 0..200u64 {
+            let star = generate_star(Seed(seed));
+            let t_ms = main_sequence_lifetime(&star);
+            let ceiling = t_ms.0.min(T_MAX.0);
+            assert!(
+                star.age.0 >= 0.05 * ceiling,
+                "seed {seed}: age {} below rail",
+                star.age.0
+            );
+            assert!(
+                star.age.0 <= 0.95 * ceiling,
+                "seed {seed}: age {} above rail",
+                star.age.0
+            );
+            assert!(
+                star.age.0 <= T_MAX.0,
+                "seed {seed}: age {} exceeds T_MAX",
+                star.age.0
+            );
+        }
+    }
+
+    /// The emergent result the 15 Gyr bound buys (spec §4): a 0.6 Msun star's
+    /// t_MS is ~35.9 Gyr, so T_MAX caps it at ~42% of its life — it has
+    /// necessarily brightened little. This is true of real K dwarfs.
+    #[test]
+    fn a_k_dwarf_is_bounded_young_in_main_sequence_terms() {
+        let sol = generate_star(Seed(1));
+        let k = Star {
+            mass: SolarMasses(0.6),
+            ..sol
+        };
+        let t_ms = main_sequence_lifetime(&k);
+        let max_fraction = T_MAX.0 / t_ms.0;
+        assert!(
+            max_fraction < 0.45,
+            "K dwarf can reach {max_fraction} of its life"
+        );
+    }
+
+    #[test]
+    fn planet_age_trails_the_star_by_the_accretion_interval() {
+        let star = generate_star(Seed(42));
+        let p = planet_age(&star);
+        assert!((star.age.0 - p.0 - 0.05).abs() < 1e-9);
+        assert!(p.0 >= 0.0);
+    }
+
+    #[test]
+    fn age_is_deterministic() {
+        assert_eq!(generate_star(Seed(42)).age, generate_star(Seed(42)).age);
     }
 }

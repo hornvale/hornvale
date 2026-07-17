@@ -110,6 +110,42 @@ impl WorldComponents {
     }
 }
 
+/// A selector over the per-domain component registries, for reflection —
+/// "which kinds carry this component" (UNI-21's capability query; the GOAP
+/// available-action set).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ComponentTag {
+    /// Universal body component.
+    Biosphere,
+    /// Peopled psychology.
+    Psyche,
+    /// Peopled perception.
+    Perception,
+    /// Peopled phonology.
+    Articulation,
+    /// Peopled lexicon.
+    Lexicon,
+    /// Family proto vectors.
+    FamilyProto,
+    /// Taxonomy family label.
+    FamilyOf,
+}
+
+impl WorldComponents {
+    /// The kinds carrying a given component, in ascending `KindId` order.
+    pub fn kinds_with(&self, tag: ComponentTag) -> Vec<KindId> {
+        match tag {
+            ComponentTag::Biosphere => self.biosphere.ids().copied().collect(),
+            ComponentTag::Psyche => self.psyche.ids().copied().collect(),
+            ComponentTag::Perception => self.perception.ids().copied().collect(),
+            ComponentTag::Articulation => self.articulation.ids().copied().collect(),
+            ComponentTag::Lexicon => self.lexicon.ids().copied().collect(),
+            ComponentTag::FamilyProto => self.family_proto.ids().copied().collect(),
+            ComponentTag::FamilyOf => self.family_of.ids().copied().collect(),
+        }
+    }
+}
+
 /// Enforce peopled-cluster coherence: the four peopled stores (psyche,
 /// perception, articulation, lexicon) share one key-set — the peoples — and
 /// every peopled kind has a biosphere row and a family row. Also enforce
@@ -380,5 +416,21 @@ mod tests {
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn kinds_with_biosphere_is_the_full_roster_and_psyche_is_the_peopled_subset() {
+        let wc = WorldComponents::assemble().unwrap();
+        let bio = wc.kinds_with(ComponentTag::Biosphere);
+        let psy = wc.kinds_with(ComponentTag::Psyche);
+        assert!(!bio.is_empty());
+        // every peopled (psyche) kind has a biosphere row (referential integrity)
+        assert!(psy.iter().all(|k| bio.contains(k)));
+        // fauna (menagerie) exist in biosphere but not psyche => strict subset
+        assert!(psy.len() < bio.len());
+        // ascending KindId order (BTreeMap-backed store)
+        let mut sorted = bio.clone();
+        sorted.sort();
+        assert_eq!(bio, sorted);
     }
 }

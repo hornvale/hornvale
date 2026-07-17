@@ -143,6 +143,23 @@ quantity!(
     non_negative,
     "Time or duration in a world's own days."
 );
+quantity!(
+    Gyr,
+    "gigayears",
+    non_negative,
+    "Pre-genesis history in gigayears (10^9 years) — a star's or moon's age \
+     before the world's genesis moment. Unrelated to `WorldTime`, which \
+     counts standard days forward from genesis; a zero-age star is \
+     degenerate, not invalid."
+);
+quantity!(
+    GramsPerCm3,
+    "grams per cubic centimeter",
+    positive,
+    "Bulk density in g/cm3 (Luna = 3.34, Earth = 5.51). A massless body is \
+     not a body, so zero is rejected along with negative and non-finite \
+     values."
+);
 
 /// An angle in degrees, valid in [0, 360).
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
@@ -285,5 +302,26 @@ mod tests {
         // inner must strictly precede outer
         assert!(HabitableZone::new(Au::new(1.4).unwrap(), Au::new(0.9).unwrap()).is_err());
         assert!(HabitableZone::new(Au::new(1.0).unwrap(), Au::new(1.0).unwrap()).is_err());
+    }
+
+    #[test]
+    fn gyr_rejects_negative_and_nonfinite() {
+        assert!(Gyr::new(-1.0).is_err());
+        assert!(Gyr::new(f64::NAN).is_err());
+        assert!(Gyr::new(f64::INFINITY).is_err());
+        assert_eq!(Gyr::new(4.5).unwrap().get(), 4.5);
+        assert_eq!(
+            Gyr::new(0.0).unwrap().get(),
+            0.0,
+            "a zero-age star is degenerate, not invalid"
+        );
+    }
+
+    #[test]
+    fn density_rejects_nonpositive_and_nonfinite() {
+        assert!(GramsPerCm3::new(0.0).is_err());
+        assert!(GramsPerCm3::new(-3.0).is_err());
+        assert!(GramsPerCm3::new(f64::NAN).is_err());
+        assert_eq!(GramsPerCm3::new(3.34).unwrap().get(), 3.34);
     }
 }

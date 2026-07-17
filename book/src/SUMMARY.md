@@ -95,6 +95,8 @@
 - [The Terminator](./chronicle/the-terminator.md)
 - [The Named](./chronicle/the-named.md)
 - [The Dissolution](./chronicle/the-dissolution.md)
+- [The Reckoning](./chronicle/the-reckoning.md)
+- [The Concordance](./chronicle/the-concordance.md)
 
 # The Gallery
 
