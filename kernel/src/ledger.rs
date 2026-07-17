@@ -848,13 +848,13 @@ mod tests {
     // so it shares that string with the other heavy-tier deferrals: both are
     // deferred from the commit gate to `make gate-full` for the same reason
     // (too slow to run every commit).
-    #[test]
-    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     // Wall-clock time is banned everywhere the sim computes (decision 0001):
     // world time is `WorldTime`, never `Instant`. This test measures the
     // *build's* wall-clock cost of commits, off the sim compute path and
     // never serialized/gated — a justified, scoped exception.
+    #[test]
     #[allow(clippy::disallowed_types)]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
     fn bench_commit_scaling_before_vs_after_index() {
         use std::hint::black_box;
         use std::time::Instant;
