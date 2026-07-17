@@ -1000,6 +1000,20 @@
     },
     {
       "buckets": [
+        -0.5,
+        0.0,
+        0.25,
+        0.5,
+        1.0,
+        1.5
+      ],
+      "doc": "Multi-scale coastline-roughness slope, unbanded: the least-squares slope of ln(shoreline development) against mesh level, measured at L4/L5/L6 by projecting each level's cells onto the canonical L6 land/ocean truth (NearestCellIndex). A companion to shoreline-development, not a replacement — that estimator is unchanged. Positive means roughness concentrates at fine scales, which makes this slope immune to the single-hex land/ocean alternation exploit that inflates shoreline-development without changing the coast's coarse shape; Absent if any of the three levels has no shoreline",
+      "kind": "numeric",
+      "name": "coast-roughness-slope",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
         0.0,
         1.0,
         2.0,
@@ -1739,7 +1753,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x0e0748c036c58901"
+    "fnv1a64": "0xc02cb929ce91970d"
   },
   "schema_version": 1,
   "study": {
