@@ -4354,15 +4354,19 @@ mod tests {
             goblin.is_some() && hobgoblin.is_some(),
             "seed 42 places both peoples"
         );
-        // They may legitimately agree; what must NOT hold is that hobgoblin's
-        // reading is produced by ignoring the species argument.
-        assert_eq!(
-            species_head_sentiment(&v, "hobgoblin"),
-            hobgoblin,
-            "the reading is a pure function of the species asked for"
+        // The reading must depend on the species argument, not ignore it. A
+        // species-ignoring implementation (reading `beliefs_of().first()`)
+        // would return goblin's answer for every people, collapsing all four
+        // readings to one value. Assert the argument actually discriminates:
+        // goblin and bugbear must not read alike, because bugbear places no
+        // flagship on seed 42 and goblin does.
+        let bugbear = species_head_sentiment(&v, "bugbear");
+        assert_ne!(
+            goblin, bugbear,
+            "the reading discriminates on the species asked for, not the world's first belief"
         );
         assert!(
-            species_head_sentiment(&v, "bugbear").is_none(),
+            bugbear.is_none(),
             "bugbear places no flagship on seed 42 — Absent is the honest reading, \
              and it is exactly the fact SKY-25, the terminator battery, and the \
              frozen-sky calibration all got wrong"
