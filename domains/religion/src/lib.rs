@@ -267,7 +267,7 @@ pub fn genesis(
         let sentiment = Sentiment::of(p);
 
         let belief = world.ledger.mint_entity();
-        let salt = belief.0;
+        let salt = belief.get();
         let (deity_name, deity_ipa) = names.deity(salt);
         let (epithet, epithet_ipa) = names.epithet(salt, sentiment);
 

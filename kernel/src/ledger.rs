@@ -4,11 +4,34 @@
 
 use crate::registry::ConceptRegistry;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU64;
 
-/// Opaque entity handle. Minted by the ledger, never reused.
+/// Opaque entity handle. Minted by the ledger, never reused. `NonZeroU64`:
+/// 0 has always been reserved as "never valid", so the niche is free and
+/// `Option<EntityId>` is 8 bytes. Serializes as the bare number.
 /// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct EntityId(pub u64);
+pub struct EntityId(pub NonZeroU64);
+
+impl EntityId {
+    /// Construct from a raw id; `None` for the reserved 0.
+    /// type-audit: bare-ok(constructor-edge)
+    pub const fn new(raw: u64) -> Option<EntityId> {
+        match NonZeroU64::new(raw) {
+            Some(n) => Some(EntityId(n)),
+            None => None,
+        }
+    }
+    /// The raw id value.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub const fn get(self) -> u64 {
+        self.0.get()
+    }
+    /// Smallest valid id (1) — index range sentinel.
+    pub(crate) const MIN: EntityId = EntityId(NonZeroU64::MIN);
+    /// Largest valid id — index range sentinel.
+    pub(crate) const MAX: EntityId = EntityId(NonZeroU64::MAX);
+}
 
 /// The stable identity of a *kind* — the authored label a kind is known by
 /// ("red-dragon", "kobold"). A kind's identity is its label, never its
@@ -121,7 +144,9 @@ impl Ledger {
     /// Mint a fresh entity id. Ids start at 1; 0 is reserved as "never valid".
     pub fn mint_entity(&mut self) -> EntityId {
         self.next_entity += 1;
-        EntityId(self.next_entity)
+        EntityId(
+            NonZeroU64::new(self.next_entity).expect("next_entity starts at 0 and only increments"),
+        )
     }
 
     /// Ensure the derived index exists and is current (rebuild-if-absent).
@@ -312,10 +337,10 @@ impl Ledger {
             .iter()
             .flat_map(|f| {
                 let object_id = match f.object {
-                    Value::Entity(e) => Some(e.0),
+                    Value::Entity(e) => Some(e.get()),
                     _ => None,
                 };
-                [Some(f.subject.0), object_id, f.place.map(|p| p.0)]
+                [Some(f.subject.get()), object_id, f.place.map(|p| p.get())]
             })
             .flatten()
             .max()
@@ -364,6 +389,24 @@ mod tests {
     fn mint_entity_yields_distinct_ids() {
         let mut l = Ledger::default();
         assert_ne!(l.mint_entity(), l.mint_entity());
+    }
+
+    #[test]
+    fn option_entity_id_is_niche_packed() {
+        // The c4-deferred perf contract: the NonZeroU64 niche halves Option<EntityId>.
+        assert_eq!(std::mem::size_of::<Option<EntityId>>(), 8);
+    }
+
+    #[test]
+    fn entity_id_zero_is_unrepresentable() {
+        assert!(EntityId::new(0).is_none());
+        assert_eq!(EntityId::new(7).unwrap().get(), 7);
+        // A forged 0 in a save now fails loudly at deserialize.
+        assert!(serde_json::from_str::<EntityId>("0").is_err());
+        assert_eq!(
+            serde_json::from_str::<EntityId>("7").unwrap(),
+            EntityId::new(7).unwrap()
+        );
     }
 
     #[test]
@@ -550,7 +593,7 @@ mod tests {
         // Minting must resume without colliding with existing entities.
         let fresh = l2.mint_entity();
         assert!(l2.facts_about(fresh).count() == 0);
-        assert!(fresh.0 > 1);
+        assert!(fresh.get() > 1);
     }
 
     #[test]

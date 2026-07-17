@@ -394,7 +394,7 @@ mod tests {
                 venue: Venue::Ambient,
             }],
             places: vec![PlaceInfo {
-                id: EntityId(1),
+                id: EntityId::new(1).unwrap(),
                 name: "the Vale".to_string(),
                 biome: "temperate forest".to_string(),
             }],
@@ -421,7 +421,7 @@ mod tests {
                 cult_form: Some("organized".to_string()),
                 beliefs: vec![BeliefLine {
                     belief: Belief {
-                        id: EntityId(3),
+                        id: EntityId::new(3).unwrap(),
                         deity: "Ignathar".to_string(),
                         epithet: "the Ever-Flame".to_string(),
                         source_kind: "celestial-body".to_string(),
@@ -644,7 +644,7 @@ mod tests {
                 beliefs: vec![
                     BeliefLine {
                         belief: Belief {
-                            id: EntityId(3),
+                            id: EntityId::new(3).unwrap(),
                             deity: "Ignathar".to_string(),
                             epithet: "the Ever-Flame".to_string(),
                             source_kind: "celestial-body".to_string(),
@@ -656,7 +656,7 @@ mod tests {
                     },
                     BeliefLine {
                         belief: Belief {
-                            id: EntityId(4),
+                            id: EntityId::new(4).unwrap(),
                             deity: "Meraleth".to_string(),
                             epithet: "the Tidewalker".to_string(),
                             source_kind: "seasonal-cycle".to_string(),
@@ -713,7 +713,7 @@ mod tests {
             cult_form: Some("folk".to_string()),
             beliefs: vec![BeliefLine {
                 belief: Belief {
-                    id: EntityId(99),
+                    id: EntityId::new(99).unwrap(),
                     deity: "Meraleth".to_string(),
                     epithet: "the Tidewalker".to_string(),
                     source_kind: "celestial-body".to_string(),

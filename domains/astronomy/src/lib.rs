@@ -469,7 +469,7 @@ mod tests {
     use hornvale_kernel::EntityId;
 
     fn ctx(day: f64) -> ObserverContext {
-        ObserverContext::at(EntityId(1), WorldTime { day })
+        ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
     }
 
     #[test]

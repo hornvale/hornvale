@@ -12,7 +12,7 @@ use hornvale_astronomy::{
 use hornvale_kernel::{EntityId, ObserverContext, PhenomenaSource, Seed, Venue, WorldTime};
 
 fn ctx(day: f64) -> ObserverContext {
-    ObserverContext::at(EntityId(1), WorldTime { day })
+    ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
 }
 
 /// The pin sets that span the rotation regimes tier 0 must survive.

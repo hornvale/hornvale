@@ -2864,7 +2864,11 @@ fn build_to(
             hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
             for (salt, gloss) in &deity_namer.glosses {
                 world.ledger.commit(
-                    name_gloss_fact(hornvale_kernel::EntityId(*salt), gloss),
+                    name_gloss_fact(
+                        hornvale_kernel::EntityId::new(*salt)
+                            .expect("salt is a minted entity id's raw value, never 0"),
+                        gloss,
+                    ),
                     &world.registry,
                 )?;
             }

@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn recount_is_none_for_an_unknown_entity() {
         let w = world();
-        assert!(recount(&w, EntityId(999)).is_none());
+        assert!(recount(&w, EntityId::new(999).unwrap()).is_none());
     }
 
     #[test]
