@@ -576,17 +576,25 @@ mod tests {
     }
 
     #[test]
-    fn facts_about_yields_commit_order_after_index() {
+    fn facts_about_yields_commit_order_not_index_key_order() {
+        // Commit-order preservation is a determinism contract: facts_about must
+        // yield facts in ascending commit position, NOT in the (predicate, object)
+        // key order the SPO index iterates. Construct a case where the two differ:
+        // "located-in" interns first (symbol 0), "name" second (symbol 1); the two
+        // located-in objects are committed high-id-then-low-id. Index-key order is
+        // [C(low obj), A(high obj), B(name)]; commit order is [A, B, C]. This test
+        // fails if positions_for_subject's sort is dropped.
         let r = registry();
         let mut l = Ledger::default();
-        let village = l.mint_entity();
-        for c in ["located-in"].iter().cycle().take(3).zip(0..3) {
-            let target = l.mint_entity();
+        let s = l.mint_entity();
+        let low = l.mint_entity(); // id 2
+        let high = l.mint_entity(); // id 3, so ObjKey(Entity(low)) < ObjKey(Entity(high))
+        let commit = |l: &mut Ledger, pred: &str, obj: Value| {
             l.commit(
                 Fact {
-                    subject: village,
-                    predicate: c.0.to_string(),
-                    object: Value::Entity(target),
+                    subject: s,
+                    predicate: pred.to_string(),
+                    object: obj,
                     place: None,
                     day: None,
                     provenance: "t".into(),
@@ -594,15 +602,19 @@ mod tests {
                 &r,
             )
             .unwrap();
-        }
-        let objs: Vec<&Value> = l.facts_about(village).map(|f| &f.object).collect();
-        // ascending commit order == ascending minted target ids (2,3,4)
+        };
+        commit(&mut l, "located-in", Value::Entity(high)); // A, pos 0
+        commit(&mut l, "name", Value::Text("Zaggrak".into())); // B, pos 1 (name is functional, one value)
+        commit(&mut l, "located-in", Value::Entity(low)); // C, pos 2
+        let objs: Vec<&Value> = l.facts_about(s).map(|f| &f.object).collect();
         assert_eq!(
             objs,
-            l.facts_about(village)
-                .map(|f| &f.object)
-                .collect::<Vec<_>>()
+            vec![
+                &Value::Entity(high),
+                &Value::Text("Zaggrak".into()),
+                &Value::Entity(low),
+            ],
+            "facts_about must yield commit order [A, B, C], not index-key order [C, A, B]"
         );
-        assert_eq!(l.facts_about(village).count(), 3);
     }
 }

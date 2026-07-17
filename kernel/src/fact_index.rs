@@ -30,6 +30,11 @@ impl PartialOrd for ObjKey {
         Some(self.cmp(o))
     }
 }
+// NOTE: `Ord` uses total_cmp (so -0.0 < 0.0) while the derived `PartialEq`
+// delegates to Value's IEEE `==` (so -0.0 == 0.0). BTreeMap only ever calls
+// `Ord::cmp` for its structure, and non-finite objects are rejected at commit
+// (Ledger::check) before they reach the index, so the asymmetry is inert here.
+// It is intentional — do not "fix" the derive into IEEE ordering.
 impl Ord for ObjKey {
     fn cmp(&self, other: &Self) -> Ordering {
         fn rank(v: &Value) -> u8 {
