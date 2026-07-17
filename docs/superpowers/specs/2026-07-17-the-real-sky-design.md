@@ -36,18 +36,35 @@ quantized at emit, decision 0033).
 NeighborsScene {
   schema: "scene/neighbors/v1",
   seed: u64,
-  neighbors: [NeighborElem, …]   // generation order
+  neighbors: [NeighborElem, …],  // generation order (brightest first)
+  stars: [FieldStarElem, …]      // background starfield, derivation order
 }
 NeighborElem {
   index: usize,          // generation index (stable identity)
   class_name: String,    // prose spectral class (class_name(class))
-  color: String,         // the producer's color word (e.g. "amber")
+  color: String,         // the producer's color word (e.g. "smoldering red")
   distance_ly: f64,
   brightness_rel: f64,   // apparent brightness, L/d² relative units
   ra_deg: f64,           // right ascension, degrees [0, 360)
   dec_deg: f64,          // declination, degrees [-90, +90]
 }
+FieldStarElem {
+  ra_deg: f64,
+  dec_deg: f64,
+  magnitude_class: u8,   // 1 (brightest) ..= 5 (faintest)
+}
 ```
+
+**Two populations (post-G3 revision, ledger #11, leads the G6 digest):**
+the sim's night sky is not only the 2–5 notable neighbors — the domain
+also derives a 100–300-star background field
+(`hornvale_astronomy::starfield`, seeded from
+`world.seed.derive(ASTRONOMY_STREAM_ROOT)`, the exact population
+`figures()` clusters and the almanac's chart draws). A neighbors-only
+export would render an *emptier* sky than the sim owns; the document
+therefore carries both. Field stars are anonymous texture (position +
+magnitude class only, the domain's own framing); neighbors are the bright,
+colored, class-named objects.
 
 **Frame convention (normative, on the reference page):** RA/dec are the
 world's genesis-epoch equatorial coordinates — exactly the values of the
@@ -67,10 +84,13 @@ captured future direction, not a gap here). Identity for display is
 
 ## 3. Producer work (hornvale)
 
-- `windows/scene`: `NEIGHBORS_SCHEMA`, `NeighborElem`, `NeighborsScene`,
-  `neighbors_scene(world)` (pure read of `sky_of` → `system.neighbors`;
-  consumes no draws), `neighbors_json` — mirroring `moons_scene` exactly,
-  including the no-generated-sky error.
+- `windows/scene`: `NEIGHBORS_SCHEMA`, `NeighborElem`, `FieldStarElem`,
+  `NeighborsScene`, `neighbors_scene(world)` (pure reads: `sky_of` →
+  `system.neighbors`, plus `hornvale_astronomy::starfield(seed.derive(
+  ASTRONOMY_STREAM_ROOT))` for the background field — derived on demand
+  exactly as the almanac's figures path does; consumes no genesis draws),
+  `neighbors_json` — mirroring `moons_scene` exactly, including the
+  no-generated-sky error.
 - **`scene/system/v1` additive rider:** `MoonElem` appends
   `inclination_deg` and `node_longitude_deg` (both already on
   `hornvale_astronomy::Moon`; pure reads). Appended after every existing
@@ -99,14 +119,15 @@ captured future direction, not a gap here). Identity for display is
   mapping, length/range validation — house style), catalog
   `sceneNeighbors()`, wired through the wasm loader.
 - **Starfield**: replace `buildStarfield`'s random cloud with the real
-  neighbors on the backdrop shell — position via the pinned
-  equatorial→ecliptic transform, point size/opacity from
+  sky on the backdrop shell — both populations, positioned via the pinned
+  equatorial→ecliptic transform. Neighbors: bright points, intensity from
   log-scaled `brightness_rel` (the dynamic range spans decades; the
   mapping is presentation, unit-tested for monotonicity and clamping),
   color from a total map over the producer's color-word vocabulary
   (enumerated from `neighborhood.rs`; unknown word → neutral fallback +
-  test that the map covers the enumeration). The old cosmetic cloud is
-  deleted, not kept as a fallback.
+  test that the map covers the enumeration). Field stars: faint neutral
+  points graded by `magnitude_class` (1 brightest … 5 faintest). The old
+  cosmetic cloud is deleted, not kept as a fallback.
 - **Moon orbits**: `moonLocalPosition` tilts the orbit plane by
   `inclination_deg` about the node line (`node_longitude_deg`);
   inclination > 90° yields retrograde motion with no special casing.
