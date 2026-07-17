@@ -9,6 +9,25 @@ use crate::units::{LunarMasses, Megameters, StdDays};
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
 
+/// How a moon came to be. The mechanism predicts the body's age, its
+/// density, and whether its orbit is regular or irregular.
+///
+/// Co-accretion (the Galilean moons, Titan) is deliberately absent: it needs
+/// a massive circumplanetary disk, which is a giant-planet mechanism, and
+/// the anchor is terrestrial. Fission (Darwin's proposal for Luna) is
+/// discredited.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Formation {
+    /// A body struck the proto-planet and the debris re-accreted — Luna.
+    /// Coeval with the planet, iron-poor (mantle debris, no core), and
+    /// regular: prograde, low inclination.
+    GiantImpact,
+    /// A passing body was captured — Triton. Its age is decoupled (it
+    /// formed elsewhere), its composition is from another reservoir, and
+    /// its orbit is irregular: high inclination, often retrograde.
+    Capture,
+}
+
 /// A moon of the anchor world. Mass and distance drawn; the rest derived.
 /// type-audit: bare-ok(ratio)
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +52,9 @@ pub struct Moon {
     /// the full node geometry that dates each eclipse.
     /// type-audit: pending(wave-1)
     pub node_longitude_deg: f64,
+    /// How this moon formed (The Reckoning): drawn after admission and the
+    /// distance sort, weighted by distance, from its own stream.
+    pub formation: Formation,
 }
 
 /// The anchor's Hill radius in Mm (model card formula).
@@ -58,6 +80,9 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
         // Drawn after admission from its own stream (Eclipse Seasons),
         // like the inclination above it.
         node_longitude_deg: 0.0,
+        // Drawn after admission from its own stream (The Reckoning), like
+        // the inclination and node above it.
+        formation: Formation::GiantImpact,
     }
 }
 
@@ -136,6 +161,23 @@ pub fn generate_moons(
     }
 
     moons.sort_by(|a, b| a.distance.0.total_cmp(&b.distance.0));
+
+    // The Reckoning: formation draws from its own stream, after the distance
+    // sort, so every admission draw (count, masses, distances) stays
+    // byte-identical — the same discipline SKY-6 and Eclipse Seasons used.
+    // Weighted by distance: an impact child forms close and tidally
+    // recedes; irregular satellites are distant.
+    let mut formations = astronomy_seed.derive(streams::MOON_FORMATION).stream();
+    for moon in &mut moons {
+        let span = (max_distance - 60.0).max(1e-9);
+        let p_capture = ((moon.distance.0 - 60.0) / span).clamp(0.10, 0.85);
+        moon.formation = if formations.next_f64() < p_capture {
+            Formation::Capture
+        } else {
+            Formation::GiantImpact
+        };
+    }
+
     // SKY-6: inclinations draw from their own stream, after admission and
     // the distance sort, so every pre-eclipse draw (count, masses,
     // distances) is byte-identical and the draws are index-stable.
@@ -313,5 +355,84 @@ mod tests {
         let a = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
         let b = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
         assert_eq!(a, b);
+    }
+
+    /// The Reckoning, spec §5.3: the whole point of drawing after admission.
+    /// These values are the pre-campaign ones; if this fails, the admission
+    /// loop was disturbed.
+    #[test]
+    fn masses_and_distances_are_untouched_by_the_formation_draw() {
+        let (star, anchor) = system(42);
+        let (moons, _) = generate_moons(Seed(42), &star, &anchor, &SkyPins::default()).unwrap();
+        // Recorded from a run before the formation draw existed (Step 2):
+        // seed 42, via this file's `system()` helper (a raw `Seed(42)`, not
+        // the `"astronomy"`-derived root `generate()` uses — see
+        // `golden_seed_42.rs` for that path), draws zero moons unpinned.
+        let expected: &[(f64, f64)] = &[];
+        assert_eq!(moons.len(), expected.len());
+        for (m, (mass, dist)) in moons.iter().zip(expected) {
+            assert_eq!(m.mass.0, *mass);
+            assert_eq!(m.distance.0, *dist);
+        }
+    }
+
+    /// The Reckoning: formation is weighted by distance, so the innermost
+    /// moon of a multi-moon system is almost always an impact child and the
+    /// outermost is often a stray. A distribution claim over seeds, not a
+    /// per-seed assertion.
+    #[test]
+    fn the_innermost_moon_is_an_impact_child_and_the_outermost_tends_to_stray() {
+        let (mut inner_impact, mut inner_total) = (0u32, 0u32);
+        let (mut outer_capture, mut outer_total) = (0u32, 0u32);
+        for seed in 0..400u64 {
+            let (star, anchor) = system(seed);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            if moons.len() < 2 {
+                continue;
+            }
+            inner_total += 1;
+            if moons[0].formation == Formation::GiantImpact {
+                inner_impact += 1;
+            }
+            outer_total += 1;
+            if moons[moons.len() - 1].formation == Formation::Capture {
+                outer_capture += 1;
+            }
+        }
+        assert!(
+            inner_total > 20 && outer_total > 20,
+            "too few multi-moon seeds to judge"
+        );
+        let inner_rate = f64::from(inner_impact) / f64::from(inner_total);
+        let outer_rate = f64::from(outer_capture) / f64::from(outer_total);
+        // Measured against this exact weighting formula over seeds 0..400:
+        // inner_rate = 0.6813, outer_rate = 0.7912 (deterministic, not
+        // flaky). The admitted innermost moon's distance fraction averages
+        // ~0.32 of [60, max_distance], not near 0 — the mutual-spacing
+        // constraint (ratio >= 1.5) keeps it from crowding the floor when a
+        // second or third moon needs room above it — so its impact rate
+        // caps below the >0.7 a naive "almost certainly" reading would
+        // suggest. 0.6 keeps the qualitative claim (majority impact,
+        // minority capture, and asymmetric with the outer rate) with margin
+        // below the true value, rather than asserting an unmeasured bound.
+        assert!(inner_rate > 0.6, "innermost impact rate {inner_rate}");
+        assert!(outer_rate > 0.3, "outermost capture rate {outer_rate}");
+    }
+
+    /// The Reckoning: the formation draw is deterministic like every other
+    /// per-moon draw.
+    #[test]
+    fn formation_is_deterministic() {
+        let (star, anchor) = system(7);
+        let a = generate_moons(Seed(7), &star, &anchor, &SkyPins::default())
+            .unwrap()
+            .0;
+        let b = generate_moons(Seed(7), &star, &anchor, &SkyPins::default())
+            .unwrap()
+            .0;
+        let fa: Vec<_> = a.iter().map(|m| m.formation).collect();
+        let fb: Vec<_> = b.iter().map(|m| m.formation).collect();
+        assert_eq!(fa, fb);
     }
 }

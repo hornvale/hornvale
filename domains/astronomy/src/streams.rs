@@ -58,6 +58,10 @@ pub const MOON_NODES: &str = "moon-nodes";
 /// Stellar age draw (The Reckoning).
 /// type-audit: bare-ok(identifier-text)
 pub const STAR_AGE: &str = "star-age";
+/// Per-moon formation-mechanism draw (The Reckoning). Drawn after admission
+/// and the distance sort, so count/mass/distance stay byte-identical.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_FORMATION: &str = "moon-formation";
 
 #[cfg(test)]
 mod tests {
@@ -91,6 +95,7 @@ mod tests {
         STARFIELD,
         MOON_NODES,
         STAR_AGE,
+        MOON_FORMATION,
     ];
 
     /// Every label constant in this file must appear (root-qualified, since
