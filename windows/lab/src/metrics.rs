@@ -806,19 +806,6 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
-            name: "belief-kind",
-            doc: "The first belief's sentiment tag ('eternal', 'cyclic', or 'ambient'); \
-                   Absent if no beliefs",
-            summary: SummaryKind::Categorical,
-            extract: Extractor::Full(|v: &FullView| {
-                let beliefs = beliefs_of(v.world());
-                match beliefs.first() {
-                    Some(first) => MetricValue::Text(first.sentiment.as_str().to_string()),
-                    None => MetricValue::Absent,
-                }
-            }),
-        },
-        Metric {
             name: "genesis-note-count",
             doc: "Number of genesis notes recorded",
             summary: SummaryKind::Categorical,
@@ -1807,6 +1794,44 @@ pub fn registry() -> Vec<Metric> {
             summary: SummaryKind::Categorical,
             extract: Extractor::Full(|v: &FullView| match pantheon_sig(v, "kobold") {
                 Some(s) => MetricValue::Text(s.cult),
+                None => MetricValue::Absent,
+            }),
+        },
+        Metric {
+            name: "belief-kind-bugbear",
+            doc: "Sentiment of the bugbear flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "bugbear") {
+                Some(s) => MetricValue::Text(s),
+                None => MetricValue::Absent,
+            }),
+        },
+        Metric {
+            name: "belief-kind-goblin",
+            doc: "Sentiment of the goblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "goblin") {
+                Some(s) => MetricValue::Text(s),
+                None => MetricValue::Absent,
+            }),
+        },
+        Metric {
+            name: "belief-kind-hobgoblin",
+            doc: "Sentiment of the hobgoblin flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Full(
+                |v: &FullView| match species_head_sentiment(v, "hobgoblin") {
+                    Some(s) => MetricValue::Text(s),
+                    None => MetricValue::Absent,
+                },
+            ),
+        },
+        Metric {
+            name: "belief-kind-kobold",
+            doc: "Sentiment of the kobold flagship's pantheon head ('eternal', 'cyclic', or 'ambient'); Absent without one",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Full(|v: &FullView| match species_head_sentiment(v, "kobold") {
+                Some(s) => MetricValue::Text(s),
                 None => MetricValue::Absent,
             }),
         },
@@ -2923,6 +2948,18 @@ fn pantheon_sig(v: &FullView, species: &str) -> Option<PantheonSig> {
             .unwrap_or_else(|| "folk".to_string()),
         cyclic_share: cyclic as f64 / members.len().max(1) as f64,
     })
+}
+
+/// The sentiment of `species`' pantheon head — the deity that presides over
+/// THAT people, which is the only scale at which "presides" means anything.
+/// `None` when the people placed no flagship or holds no beliefs.
+///
+/// A people's beliefs mint salience-descending, so its first belief is its
+/// head; `beliefs_held_by` preserves that order.
+fn species_head_sentiment(v: &FullView, species: &str) -> Option<String> {
+    let flagship = flagship_of(v.world(), species)?;
+    let beliefs = hornvale_religion::beliefs_held_by(v.world(), flagship.id);
+    beliefs.first().map(|b| b.sentiment.as_str().to_string())
 }
 
 /// The fixed blind-attribution rule (spec §9.2, preregistered): given two
@@ -4274,14 +4311,62 @@ mod tests {
     }
 
     #[test]
-    fn seed_42_belief_kind_is_text_and_not_absent() {
+    fn seed_42_belief_kind_goblin_is_text_and_not_absent() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         let built = BuiltView::Full(view);
-        let value = extract_from(&built, "belief-kind");
+        let value = extract_from(&built, "belief-kind-goblin");
         match value {
             MetricValue::Text(_) => {}
             _ => panic!("Expected Text, got {:?}", value),
         }
+    }
+
+    /// The Presiding (SKY-25): a world has no religion, its peoples do. The
+    /// retired `belief-kind` read `beliefs_of(&world).first()` — whichever
+    /// people sorted first in the alphabetical component registry, which on
+    /// every measured seed is a single founder-floor goblin.
+    #[test]
+    fn belief_kind_is_per_species_and_the_world_belief_is_gone() {
+        let reg = registry();
+        assert!(
+            !reg.iter().any(|m| m.name == "belief-kind"),
+            "the world-level belief-kind is retired: a world has no presiding belief"
+        );
+        for species in ["bugbear", "goblin", "hobgoblin", "kobold"] {
+            let name = format!("belief-kind-{species}");
+            assert!(
+                reg.iter().any(|m| m.name == name),
+                "{name} is registered — every people gets its own reading"
+            );
+        }
+    }
+
+    /// Mutation guard: `belief-kind-<species>` must read THAT people's head, not
+    /// the world's first-minted belief. On every measured seed the first-minted
+    /// belief is goblin's (a single founder-floor soul), so a metric that read
+    /// `beliefs_of().first()` would give every species goblin's answer.
+    #[test]
+    fn each_peoples_belief_kind_is_its_own_not_the_first_minted() {
+        let v = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let goblin = species_head_sentiment(&v, "goblin");
+        let hobgoblin = species_head_sentiment(&v, "hobgoblin");
+        assert!(
+            goblin.is_some() && hobgoblin.is_some(),
+            "seed 42 places both peoples"
+        );
+        // They may legitimately agree; what must NOT hold is that hobgoblin's
+        // reading is produced by ignoring the species argument.
+        assert_eq!(
+            species_head_sentiment(&v, "hobgoblin"),
+            hobgoblin,
+            "the reading is a pure function of the species asked for"
+        );
+        assert!(
+            species_head_sentiment(&v, "bugbear").is_none(),
+            "bugbear places no flagship on seed 42 — Absent is the honest reading, \
+             and it is exactly the fact SKY-25, the terminator battery, and the \
+             frozen-sky calibration all got wrong"
+        );
     }
 
     #[test]
@@ -4321,7 +4406,7 @@ mod tests {
     }
 
     #[test]
-    fn locked_world_first_belief_is_the_eternal_celestial_body() {
+    fn locked_world_goblin_belief_kind_is_eternal() {
         // SEQ-1 realized by SKY-5: a locked world's sky is frozen, so a
         // low-sky-attention first observer's felt tide (Venue::Ambient)
         // out-ranks the motionless sun in ITS OWN pantheon — that
@@ -4352,19 +4437,19 @@ mod tests {
             .expect("locked world has beliefs");
         assert_eq!(first.source_kind, "celestial-body");
         let built = BuiltView::Full(view);
-        let value = extract_from(&built, "belief-kind");
+        let value = extract_from(&built, "belief-kind-goblin");
         assert_eq!(value, MetricValue::Text("eternal".to_string()));
     }
 
     #[test]
-    fn spinning_world_belief_kind_is_cyclic() {
+    fn spinning_world_goblin_belief_kind_is_cyclic() {
         let pins = SkyPins {
             rotation: Some(hornvale_astronomy::pins::RotationPin::PeriodHours(24.0)),
             ..SkyPins::default()
         };
         let view = FullView::build(Seed(42), &pins).unwrap();
         let built = BuiltView::Full(view);
-        let value = extract_from(&built, "belief-kind");
+        let value = extract_from(&built, "belief-kind-goblin");
         assert_eq!(value, MetricValue::Text("cyclic".to_string()));
     }
 
@@ -4421,8 +4506,10 @@ mod tests {
         // (Task 12: shelf-width-passive-median, shelf-width-active-median,
         // sediment-volume, waterfall-count, delta-count,
         // rerouted-flow-fraction), +1 for rift-and-fit (Task 9:
-        // coast-roughness-slope).
-        assert_eq!(registry().len(), 149);
+        // coast-roughness-slope), +3 for The Presiding (SKY-25: the
+        // world-level belief-kind is retired, replaced by
+        // belief-kind-{bugbear,goblin,hobgoblin,kobold} — net -1 +4).
+        assert_eq!(registry().len(), 152);
     }
 
     #[test]
@@ -4896,10 +4983,13 @@ mod tests {
             "Missing doc for moons-admitted: {}",
             moons_admitted.doc
         );
-        let belief_kind = metrics.iter().find(|m| m.name == "belief-kind").unwrap();
+        let belief_kind = metrics
+            .iter()
+            .find(|m| m.name == "belief-kind-goblin")
+            .unwrap();
         assert!(
             table.contains(belief_kind.doc),
-            "Missing doc for belief-kind: {}",
+            "Missing doc for belief-kind-goblin: {}",
             belief_kind.doc
         );
     }

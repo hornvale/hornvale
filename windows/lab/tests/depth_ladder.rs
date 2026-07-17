@@ -93,7 +93,7 @@ fn depth_scoped_metrics_match_full_build() {
 }
 
 /// The `"all"`-metric studies always require `Full` (the registry includes
-/// Full-rung metrics like `belief-kind`), so `run` and `run_forced_full`
+/// Full-rung metrics like `belief-kind-goblin`), so `run` and `run_forced_full`
 /// take the *identical* code path for them — there is no depth divergence
 /// to catch here, only a check that the always-Full path still dispatches
 /// correctly under the new `required`-depth machinery.
@@ -135,7 +135,7 @@ fn all_metric_studies_require_full_depth() {
 }
 
 /// The rung-map corrections that motivated this stage (commit history:
-/// "correct rung map — belief-kind is Full, hue-depth is Astronomy")
+/// "correct rung map — belief-kind-goblin is Full, hue-depth is Astronomy")
 /// checked directly against the registry, so a future edit that moves
 /// either metric's extractor to the wrong rung fails here immediately
 /// rather than only showing up as a missed speedup that was never measured.
@@ -144,12 +144,12 @@ fn belief_kind_and_hue_depth_have_the_expected_rung() {
     let reg = registry();
     let belief_kind = reg
         .iter()
-        .find(|m| m.name == "belief-kind")
-        .expect("belief-kind is registered");
+        .find(|m| m.name == "belief-kind-goblin")
+        .expect("belief-kind-goblin is registered");
     assert_eq!(
         belief_kind.rung(),
         BuildDepth::Full,
-        "belief-kind reads religion facts and must require a Full build"
+        "belief-kind-goblin reads religion facts and must require a Full build"
     );
 
     let hue_depth = reg

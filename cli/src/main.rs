@@ -1212,9 +1212,12 @@ mod tests {
     }
 
     #[test]
-    fn list_metrics_output_contains_belief_kind() {
+    fn list_metrics_output_contains_per_species_belief_kind() {
         let output = hornvale_lab::render_metric_list();
-        assert!(output.contains("belief-kind"));
+        // Per-species, not world-level: `contains("belief-kind")` would pass
+        // by substring even after the world metric was retired.
+        assert!(output.contains("belief-kind-goblin"));
+        assert!(output.contains("belief-kind-hobgoblin"));
     }
 
     #[test]
