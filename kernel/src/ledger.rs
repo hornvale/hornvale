@@ -111,6 +111,10 @@ impl std::error::Error for LedgerError {}
 pub struct Ledger {
     facts: Vec<Fact>,
     next_entity: u64,
+    /// Derived permutation indexes — never serialized; rebuilt on first use
+    /// after load, maintained incrementally on commit. Absent-or-complete.
+    #[serde(skip)]
+    index: Option<crate::fact_index::FactIndex>,
 }
 
 impl Ledger {
@@ -118,6 +122,52 @@ impl Ledger {
     pub fn mint_entity(&mut self) -> EntityId {
         self.next_entity += 1;
         EntityId(self.next_entity)
+    }
+
+    /// Ensure the derived index exists and is current (rebuild-if-absent).
+    fn ensure_index(&mut self) {
+        if self.index.is_none() {
+            let mut idx = crate::fact_index::FactIndex::default();
+            idx.rebuild(&self.facts);
+            self.index = Some(idx);
+        }
+    }
+
+    // --- naive reference impls: the O(n) truth the index refines. Kept for the
+    // INDEX≡SCAN property test and the heavy-tier before/after micro-bench.
+    pub(crate) fn naive_has_conflict(&self, fact: &Fact) -> bool {
+        self.facts.iter().any(|f| {
+            f.subject == fact.subject && f.predicate == fact.predicate && f.object != fact.object
+        })
+    }
+    pub(crate) fn naive_contains(&self, fact: &Fact) -> bool {
+        self.facts.contains(fact)
+    }
+    pub(crate) fn naive_facts_about(&self, subject: EntityId) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| self.facts[p].subject == subject)
+            .collect()
+    }
+    /// Position accessor for tests/benches (the naive refs return positions).
+    #[cfg(test)]
+    pub(crate) fn fact_at(&self, pos: usize) -> &Fact {
+        &self.facts[pos]
+    }
+    pub(crate) fn naive_find(&self, predicate: &str) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| self.facts[p].predicate == predicate)
+            .collect()
+    }
+    pub(crate) fn naive_value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
+        self.facts
+            .iter()
+            .find(|f| f.subject == subject && f.predicate == predicate)
+            .map(|f| &f.object)
+    }
+    pub(crate) fn naive_query_by_object(&self, object: &Value) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| &self.facts[p].object == object)
+            .collect()
     }
 
     /// Would this fact be accepted? Used by the refinement engine to test
@@ -138,11 +188,10 @@ impl Ledger {
             });
         }
         if def.functional {
-            let clash = self.facts.iter().any(|f| {
-                f.subject == fact.subject
-                    && f.predicate == fact.predicate
-                    && f.object != fact.object
-            });
+            let clash = match &self.index {
+                Some(idx) => idx.has_conflicting_object(fact, &self.facts),
+                None => self.naive_has_conflict(fact),
+            };
             if clash {
                 return Err(LedgerError::Contradiction {
                     subject: fact.subject,
@@ -171,9 +220,18 @@ impl Ledger {
             fact.object = Value::Number(crate::quantize::quantize(n));
         }
         fact.day = fact.day.map(crate::quantize::quantize);
+        self.ensure_index(); // fast contradiction/dedup for the rest of this build
         self.check(&fact, registry)?;
-        if self.facts.contains(&fact) {
+        let dup = match &self.index {
+            Some(idx) => idx.contains_full(&fact, &self.facts),
+            None => self.naive_contains(&fact),
+        };
+        if dup {
             return Ok(false);
+        }
+        let pos = self.facts.len();
+        if let Some(idx) = self.index.as_mut() {
+            idx.insert(pos, &fact);
         }
         self.facts.push(fact);
         Ok(true)
@@ -181,24 +239,48 @@ impl Ledger {
 
     /// All facts with this subject.
     pub fn facts_about(&self, subject: EntityId) -> impl Iterator<Item = &Fact> {
-        self.facts.iter().filter(move |f| f.subject == subject)
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_subject(subject),
+            None => self.naive_facts_about(subject),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// All facts with this predicate.
     /// type-audit: bare-ok(identifier-text)
     pub fn find(&self, predicate: &str) -> impl Iterator<Item = &Fact> {
-        let predicate = predicate.to_string();
-        self.facts.iter().filter(move |f| f.predicate == predicate)
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_predicate(predicate),
+            None => self.naive_find(predicate),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// First object for (subject, predicate). For functional predicates
     /// this is the unique value.
     /// type-audit: bare-ok(identifier-text)
     pub fn value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
-        self.facts
-            .iter()
-            .find(|f| f.subject == subject && f.predicate == predicate)
-            .map(|f| &f.object)
+        match &self.index {
+            Some(idx) => {
+                // first fact (commit order) for (subject, predicate)
+                let first = idx
+                    .positions_for_subject(subject)
+                    .into_iter()
+                    .find(|&p| self.facts[p].predicate == predicate);
+                first.map(|p| &self.facts[p].object)
+            }
+            None => self.naive_value_of(subject, predicate),
+        }
+    }
+
+    /// All facts whose object equals `object`, in commit order (the O-shape
+    /// query the flat ledger could not answer). O(log n + k) via the OSP index.
+    pub fn query_by_object(&self, object: &Value) -> impl Iterator<Item = &Fact> {
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_object(object),
+            None => self.naive_query_by_object(object),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// The text value of (subject, predicate), if present and textual.
@@ -507,5 +589,310 @@ mod tests {
         ids.sort();
         assert_eq!(ids, [KindId("bugbear"), KindId("goblin"), KindId("kobold")]);
         assert_eq!(ids[0].0, "bugbear");
+    }
+
+    #[test]
+    fn index_backed_commit_matches_naive_semantics() {
+        // Idempotent recommit, functional contradiction, and non-functional
+        // multi-object all behave exactly as the pre-index ledger did.
+        let r = registry();
+        let mut l = Ledger::default();
+        let f = named(&mut l, "Zaggrak");
+        let s = f.subject;
+        assert!(l.commit(f.clone(), &r).unwrap()); // appended
+        assert!(!l.commit(f, &r).unwrap()); // idempotent no-op
+        assert_eq!(l.len(), 1);
+        let clash = Fact {
+            subject: s,
+            predicate: "name".into(),
+            object: Value::Text("Bolnar".into()),
+            place: None,
+            day: None,
+            provenance: "t".into(),
+        };
+        assert!(matches!(
+            l.commit(clash, &r),
+            Err(LedgerError::Contradiction { .. })
+        ));
+    }
+
+    #[test]
+    fn facts_about_yields_commit_order_not_index_key_order() {
+        // Commit-order preservation is a determinism contract: facts_about must
+        // yield facts in ascending commit position, NOT in the (predicate, object)
+        // key order the SPO index iterates. Construct a case where the two differ:
+        // "located-in" interns first (symbol 0), "name" second (symbol 1); the two
+        // located-in objects are committed high-id-then-low-id. Index-key order is
+        // [C(low obj), A(high obj), B(name)]; commit order is [A, B, C]. This test
+        // fails if positions_for_subject's sort is dropped.
+        let r = registry();
+        let mut l = Ledger::default();
+        let s = l.mint_entity();
+        let low = l.mint_entity(); // id 2
+        let high = l.mint_entity(); // id 3, so ObjKey(Entity(low)) < ObjKey(Entity(high))
+        let commit = |l: &mut Ledger, pred: &str, obj: Value| {
+            l.commit(
+                Fact {
+                    subject: s,
+                    predicate: pred.to_string(),
+                    object: obj,
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            )
+            .unwrap();
+        };
+        commit(&mut l, "located-in", Value::Entity(high)); // A, pos 0
+        commit(&mut l, "name", Value::Text("Zaggrak".into())); // B, pos 1 (name is functional, one value)
+        commit(&mut l, "located-in", Value::Entity(low)); // C, pos 2
+        let objs: Vec<&Value> = l.facts_about(s).map(|f| &f.object).collect();
+        assert_eq!(
+            objs,
+            vec![
+                &Value::Entity(high),
+                &Value::Text("Zaggrak".into()),
+                &Value::Entity(low),
+            ],
+            "facts_about must yield commit order [A, B, C], not index-key order [C, A, B]"
+        );
+    }
+
+    // Tiny deterministic PRNG — no dep (splitmix64). Same "roll our own" style as
+    // the astronomy property batteries.
+    fn splitmix(state: &mut u64) -> u64 {
+        *state = state.wrapping_add(0x9E3779B97F4A7C15);
+        let mut z = *state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        z ^ (z >> 31)
+    }
+
+    fn random_ledger(seed: u64, n: usize) -> (Ledger, ConceptRegistry, Vec<EntityId>) {
+        let r = registry(); // predicates: "name" (functional), "located-in" (non-functional)
+        let mut l = Ledger::default();
+        let subjects: Vec<EntityId> = (0..8).map(|_| l.mint_entity()).collect();
+        let mut st = seed.wrapping_add(1);
+        for _ in 0..n {
+            let s = subjects[(splitmix(&mut st) as usize) % subjects.len()];
+            // only use the non-functional predicate for bulk facts, so random
+            // objects never trip the functional-contradiction reject
+            let obj = if splitmix(&mut st).is_multiple_of(4) {
+                match splitmix(&mut st) % 3 {
+                    0 => Value::Number(0.0),
+                    1 => Value::Number(-0.0),
+                    _ => Value::Number((splitmix(&mut st) % 100) as f64),
+                }
+            } else {
+                Value::Entity(subjects[(splitmix(&mut st) as usize) % subjects.len()])
+            };
+            let _ = l.commit(
+                Fact {
+                    subject: s,
+                    predicate: "located-in".into(),
+                    object: obj,
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            );
+        }
+        (l, r, subjects)
+    }
+
+    #[test]
+    fn index_equals_scan_subject_and_predicate() {
+        for seed in 0..64u64 {
+            let (l, _r, subjects) = random_ledger(seed, 200);
+            // S-shape: facts_about == naive scan (same facts, same commit order)
+            for &s in &subjects {
+                let idx: Vec<&Fact> = l.facts_about(s).collect();
+                let scan: Vec<&Fact> = l
+                    .naive_facts_about(s)
+                    .iter()
+                    .map(|&p| l.fact_at(p))
+                    .collect();
+                assert_eq!(idx, scan, "facts_about seed {seed} subj {s:?}");
+                // value_of == naive_value_of for the same subject/predicate
+                assert_eq!(
+                    l.value_of(s, "located-in"),
+                    l.naive_value_of(s, "located-in"),
+                    "value_of seed {seed} subj {s:?}"
+                );
+            }
+            // P-shape: find == naive scan
+            let idx: Vec<&Fact> = l.find("located-in").collect();
+            let scan: Vec<&Fact> = l
+                .naive_find("located-in")
+                .iter()
+                .map(|&p| l.fact_at(p))
+                .collect();
+            assert_eq!(idx, scan, "find seed {seed}");
+        }
+    }
+
+    #[test]
+    fn index_equals_scan_object() {
+        for seed in 0..64u64 {
+            let (l, _r, subjects) = random_ledger(seed, 200);
+            for &s in &subjects {
+                let obj = Value::Entity(s);
+                let idx: Vec<&Fact> = l.query_by_object(&obj).collect();
+                let scan: Vec<&Fact> = l
+                    .naive_query_by_object(&obj)
+                    .iter()
+                    .map(|&p| l.fact_at(p))
+                    .collect();
+                assert_eq!(idx, scan, "query_by_object seed {seed} obj {obj:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn index_equals_scan_handles_signed_zero_numbers() {
+        // Regression: quantize preserves -0.0 and total_cmp orders -0.0 < 0.0, but
+        // the naive path compares objects with IEEE == (-0.0 == 0.0). ObjKey
+        // canonicalizes signed zero so the index buckets them together, keeping
+        // INDEX == SCAN total over numeric objects.
+        let r = registry();
+        let mut l = Ledger::default();
+        let s = l.mint_entity();
+        for obj in [Value::Number(0.0), Value::Number(-0.0), Value::Number(1.5)] {
+            l.commit(
+                Fact {
+                    subject: s,
+                    predicate: "located-in".into(),
+                    object: obj,
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            )
+            .unwrap();
+        }
+        // -0.0 dedups against 0.0 (IEEE) exactly as the pre-index ledger did:
+        // 0.0 and 1.5 remain (2 facts), matching the naive scan.
+        assert_eq!(l.facts_about(s).count(), l.naive_facts_about(s).len());
+        assert_eq!(l.facts_about(s).count(), 2);
+        // query_by_object under either zero spelling returns the naive set.
+        for probe in [Value::Number(0.0), Value::Number(-0.0)] {
+            let idx: Vec<&Fact> = l.query_by_object(&probe).collect();
+            let scan: Vec<&Fact> = l
+                .naive_query_by_object(&probe)
+                .iter()
+                .map(|&p| l.fact_at(p))
+                .collect();
+            assert_eq!(
+                idx, scan,
+                "query_by_object({probe:?}) must equal the naive scan"
+            );
+        }
+    }
+
+    #[test]
+    fn query_by_object_finds_committed_facts() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let a = l.mint_entity();
+        let hub = l.mint_entity();
+        l.commit(
+            Fact {
+                subject: a,
+                predicate: "located-in".into(),
+                object: Value::Entity(hub),
+                place: None,
+                day: None,
+                provenance: "t".into(),
+            },
+            &r,
+        )
+        .unwrap();
+        let found: Vec<EntityId> = l
+            .query_by_object(&Value::Entity(hub))
+            .map(|f| f.subject)
+            .collect();
+        assert_eq!(found, vec![a]);
+    }
+
+    #[test]
+    fn symbol_is_four_bytes() {
+        // The interning space contract: a predicate key is a u32, not a String.
+        assert_eq!(std::mem::size_of::<crate::fact_index::Symbol>(), 4);
+    }
+
+    #[test]
+    fn index_is_absent_until_first_use_then_complete() {
+        // The lifecycle invariant: a freshly-deserialized ledger has no index;
+        // a query over it still returns the right answers (naive fallback), and a
+        // commit builds it. (Byte-identity of the serialized form is covered by
+        // ledger_serializes_roundtrip_including_minting_state.)
+        let r = registry();
+        let mut l = Ledger::default();
+        let f = named(&mut l, "Zaggrak");
+        let s = f.subject;
+        l.commit(f, &r).unwrap();
+        let json = serde_json::to_string(&l).unwrap();
+        let l2: Ledger = serde_json::from_str(&json).unwrap();
+        // index skipped on the wire => rebuilt-on-use; answers match
+        assert_eq!(l2.facts_about(s).count(), 1);
+        assert_eq!(l2.value_of(s, "name"), Some(&Value::Text("Zaggrak".into())));
+    }
+
+    // This is a wall-time micro-bench of `Ledger::commit`'s scaling, not a
+    // live-worldgen battery — but `cli/tests/heavy_tier.rs` requires every
+    // `#[ignore]` reason containing "heavy:" to be the one verbatim
+    // canonical string (checked by `heavy_tier_reason_strings_are_canonical`),
+    // so it shares that string with the other heavy-tier deferrals: both are
+    // deferred from the commit gate to `make gate-full` for the same reason
+    // (too slow to run every commit).
+    #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    // Wall-clock time is banned everywhere the sim computes (decision 0001):
+    // world time is `WorldTime`, never `Instant`. This test measures the
+    // *build's* wall-clock cost of commits, off the sim compute path and
+    // never serialized/gated — a justified, scoped exception.
+    #[allow(clippy::disallowed_types)]
+    fn bench_commit_scaling_before_vs_after_index() {
+        use std::hint::black_box;
+        use std::time::Instant;
+        let r = registry();
+        for n in [1_000usize, 5_000, 20_000] {
+            // AFTER: index-backed commit (each commit maintains the index).
+            let mut l = Ledger::default();
+            let subj = l.mint_entity();
+            let start = Instant::now();
+            for i in 0..n {
+                let target = l.mint_entity();
+                let _ = black_box(l.commit(
+                    Fact {
+                        subject: subj,
+                        predicate: "located-in".into(),
+                        object: Value::Entity(target),
+                        place: None,
+                        day: None,
+                        provenance: "b".into(),
+                    },
+                    &r,
+                ));
+                let _ = i;
+            }
+            let after = start.elapsed();
+            // BEFORE (reference): the naive O(n) contradiction+dedup scans over the
+            // same facts, showing the quadratic the index removes.
+            let facts: Vec<Fact> = l.iter().cloned().collect();
+            let scan_start = Instant::now();
+            let probe = Ledger::default();
+            for f in &facts {
+                let _ = black_box(probe.naive_has_conflict(f) || probe.naive_contains(f));
+                // (probe is not mutated; this measures the scan cost per fact)
+            }
+            let before = scan_start.elapsed();
+            eprintln!(
+                "n={n:>6}  after(indexed commit)={after:?}  before(naive scans/one pass)={before:?}"
+            );
+        }
     }
 }
