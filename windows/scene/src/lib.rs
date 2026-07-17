@@ -462,14 +462,6 @@ pub const MOONS_SCHEMA: &str = "scene/moons/v1";
 /// Newtonian gravitational constant, N·m²/kg² (CODATA recommended value).
 const G_SI: f64 = 6.6743e-11;
 
-/// Bulk density below which a moon's composition reads as icy rather than
-/// rocky (The Reckoning). Chosen to sit cleanly between the domain's three
-/// density constants — icy captures draw 1.6 g/cm³, rocky captures 3.0,
-/// giant-impact moons 3.34 — so 2.0 separates the icy branch from both
-/// rocky branches with a wide margin (0.4 below, 1.0+ above) on either
-/// side; a drawn value can never land near this line.
-const ICY_DENSITY_THRESHOLD_G_CM3: f64 = 2.0;
-
 /// Surface gravity (m/s²) of a uniform sphere from its radius (km) and bulk
 /// density (g/cm³). `g = GM/r²` and, for a uniform sphere, `M = (4/3)πρr³`,
 /// so substituting gives `g = (4/3)πGρr` — no mass-in-kg term needed, which
@@ -485,31 +477,46 @@ fn surface_gravity_ms2(radius_km: f64, density_g_cm3: f64) -> f64 {
     (4.0 / 3.0) * std::f64::consts::PI * G_SI * rho_kg_per_m3 * r_m
 }
 
-/// The baseline albedo band, before maria darkening, for a bulk density: an
-/// icy composition reads bright (0.5–0.7, real ice), a rocky/impact
-/// composition reads dark (0.1–0.2, real regolith) — supplying the visual
-/// referent `bright-icy` lacked before density was real (The Reckoning).
-fn albedo_band(density_g_cm3: f64) -> (f64, f64) {
-    if density_g_cm3 < ICY_DENSITY_THRESHOLD_G_CM3 {
-        (0.5, 0.7)
-    } else {
-        (0.1, 0.2)
-    }
+/// The baseline albedo band, before maria darkening, for a moon's
+/// composition: icy reads bright (0.5–0.7, real ice), rocky/impact reads
+/// dark (0.1–0.2, real regolith) — supplying the visual referent
+/// `bright-icy` lacked before density was real (The Reckoning). Takes the
+/// already-classified `is_icy` flag rather than a raw density: this crate
+/// holds no density threshold of its own (review follow-up to Task 5b) —
+/// `hornvale_astronomy::is_icy` is the single place that decides, so the
+/// only boundary-precision test for "how close can a density be to icy"
+/// lives in that domain crate, not duplicated here.
+fn albedo_band(is_icy: bool) -> (f64, f64) {
+    if is_icy { (0.5, 0.7) } else { (0.1, 0.2) }
 }
+
+/// The multiplier applied to `maria_fraction` for an icy composition
+/// (review follow-up to Task 5b): maria are flood basalts, which an ice
+/// body does not have, so a composition-blind `maria_fraction` could put
+/// basaltic plains on an ice ball. Damped, not zeroed — real icy bodies
+/// still carry resurfaced terrain (Europa's chaos terrain, Enceladus's
+/// tiger stripes), just not basaltic maria, so a reduced residual stays
+/// physically plausible. 0.3 was chosen judgmentally, not measured: it
+/// caps an icy moon's `maria_fraction` at roughly the bottom third of the
+/// hash-driven range rather than forcing it to read as pristine (a hard
+/// zero), while still making an icy moon visibly less maria-marked than a
+/// rocky one of the same mass in the vast majority of draws.
+const ICY_MARIA_DAMPING: f64 = 0.3;
 
 /// A subtle near-gray tint, and the four seeded surface descriptors, as a
 /// pure hash of the world seed and the moon index — no `Stream` draw. Mass
 /// biases cratering/maria so a face reads plausibly: small moons cratered
 /// highlands, large moons resurfaced maria plains ("models author, dice
-/// roll", 0009). Albedo is biased by the moon's real bulk density (The
-/// Reckoning) rather than mass, so an icy moon actually reads brighter than
-/// a rocky one — the hash channel still perturbs within the composition's
-/// band so two moons of a world differ.
+/// roll", 0009). `is_icy` (from `hornvale_astronomy::is_icy`, real bulk
+/// density) biases albedo's baseline band and damps `maria_fraction` (The
+/// Reckoning; damping is a review follow-up) — an icy moon reads brighter
+/// and less maria-marked than a rocky one of the same mass, while the hash
+/// channel still perturbs within each band so two moons of a world differ.
 fn seeded_descriptors(
     seed: hornvale_kernel::Seed,
     index: usize,
     mass_rel: f64,
-    density_g_cm3: f64,
+    is_icy: bool,
 ) -> Descriptors {
     // value_noise_2d returns [0,1); integer coords sample the raw lattice
     // hash, one distinct channel per (index, channel) pair.
@@ -521,12 +528,18 @@ fn seeded_descriptors(
     // Cratering: hash pulled toward 1 as mass falls.
     let cratering = (0.35 * h(0) + 0.65 * small).clamp(0.0, 1.0);
     // Maria: hash pulled up with mass, then damped by cratering so a face is
-    // not simultaneously all-craters and all-maria.
+    // not simultaneously all-craters and all-maria, then damped again for
+    // an icy composition (basaltic maria are a rocky-body feature).
     let maria_fraction = ((0.35 * h(1) + 0.65 * large) * (1.0 - 0.5 * cratering)).clamp(0.0, 1.0);
+    let maria_fraction = if is_icy {
+        maria_fraction * ICY_MARIA_DAMPING
+    } else {
+        maria_fraction
+    };
     // Albedo: a composition-baseline band (bright ice, dark rock), a hash
     // channel perturbing within it, then darkened where maria (dark plains)
     // is high.
-    let (albedo_lo, albedo_hi) = albedo_band(density_g_cm3);
+    let (albedo_lo, albedo_hi) = albedo_band(is_icy);
     let albedo = (albedo_lo + (albedo_hi - albedo_lo) * h(2)) * (1.0 - 0.6 * maria_fraction);
     let albedo = albedo.clamp(0.04, 0.7);
     // Tint: three near-gray channels, deliberately subtle (moons are gray),
@@ -568,10 +581,13 @@ struct Descriptors {
 /// table. **Since The Reckoning, `bright-icy` keys off the moon's real bulk
 /// density, not the hash-noise `albedo`** — Nathan-ratified: The Faces
 /// shipped the word for an icy moon before the model had a concept of ice;
-/// this is the referent.
-/// type-audit: pending(wave-3: density_g_cm3), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
-pub fn moon_surface_class(density_g_cm3: f64, cratering: f64, maria_fraction: f64) -> &'static str {
-    if density_g_cm3 < ICY_DENSITY_THRESHOLD_G_CM3 {
+/// this is the referent. Takes the already-classified `is_icy` flag
+/// (`hornvale_astronomy::is_icy`) rather than a raw density (review
+/// follow-up to Task 5b) — this crate holds no density threshold of its
+/// own; the domain decides composition, this classifier only presents it.
+/// type-audit: bare-ok(flag: is_icy), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
+pub fn moon_surface_class(is_icy: bool, cratering: f64, maria_fraction: f64) -> &'static str {
+    if is_icy {
         "bright-icy"
     } else if maria_fraction > 0.4 {
         "maria-rich"
@@ -592,19 +608,24 @@ pub struct MoonSurface {
     /// Mass in lunar masses (the generator's drawn value, surfaced).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub mass_rel: f64,
-    /// Physical radius, km — derived from mass at constant lunar density.
+    /// Physical radius, km — derived from mass and the moon's real bulk
+    /// density (`density_g_cm3`); see `hornvale_astronomy::radius_km`.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub radius_km: f64,
-    /// Surface gravity, m/s² — derived, `1.62 × mass^(1/3)`.
+    /// Surface gravity, m/s² — derived from `radius_km` and that same real
+    /// density: `g = (4/3)πGρr` (see `surface_gravity_ms2` in this crate).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub surface_gravity_ms2: f64,
-    /// Seeded reflectance in [0.04, 0.5]; darkened where maria is high.
+    /// Seeded reflectance in [0.04, 0.7]; composition-biased (bright for
+    /// icy, dark for rocky/impact) and darkened where maria is high.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub albedo: f64,
     /// Seeded cratering intensity in [0, 1]; biased high for small moons.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub cratering: f64,
-    /// Seeded smooth-maria fraction in [0, 1]; biased high for large moons.
+    /// Seeded smooth-maria fraction in [0, 1]; biased high for large moons,
+    /// damped for an icy composition (maria are basaltic plains, which an
+    /// ice body does not have).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub maria_fraction: f64,
     /// Seeded near-gray linear-RGB tint, each channel in [0, 1].
@@ -654,22 +675,25 @@ pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
         .map(|(index, m)| {
             let mass_rel = m.mass.get();
             let density_g_cm3 = m.density.get();
+            // Composition (review follow-up to Task 5b): the domain's own
+            // predicate, not a local copy of a density threshold.
+            let is_icy = hornvale_astronomy::is_icy(m);
             // Real-density physics (The Reckoning): call the domain's own
             // radius formula rather than re-deriving it, then compose
             // gravity from that radius and the same real density.
             let radius_km = hornvale_astronomy::radius_km(m);
-            let surface_gravity_ms2 = surface_gravity_ms2(radius_km, density_g_cm3);
-            let d = seeded_descriptors(world.seed, index, mass_rel, density_g_cm3);
+            let gravity_ms2 = surface_gravity_ms2(radius_km, density_g_cm3);
+            let d = seeded_descriptors(world.seed, index, mass_rel, is_icy);
             MoonSurface {
                 index,
                 mass_rel,
                 radius_km,
-                surface_gravity_ms2,
+                surface_gravity_ms2: gravity_ms2,
                 albedo: d.albedo,
                 cratering: d.cratering,
                 maria_fraction: d.maria_fraction,
                 tint: d.tint,
-                surface_class: moon_surface_class(density_g_cm3, d.cratering, d.maria_fraction)
+                surface_class: moon_surface_class(is_icy, d.cratering, d.maria_fraction)
                     .to_string(),
                 density_g_cm3,
                 formation: formation_word(m.formation).to_string(),
@@ -1039,19 +1063,13 @@ mod tests {
 
     #[test]
     fn albedo_band_is_bright_for_icy_and_dark_for_rocky() {
-        assert_eq!(super::albedo_band(1.6), (0.5, 0.7), "icy capture density");
-        assert_eq!(
-            super::albedo_band(1.999),
-            (0.5, 0.7),
-            "just under the icy threshold"
-        );
-        assert_eq!(
-            super::albedo_band(2.0),
-            (0.1, 0.2),
-            "at the threshold reads rocky"
-        );
-        assert_eq!(super::albedo_band(3.0), (0.1, 0.2), "rocky capture density");
-        assert_eq!(super::albedo_band(3.34), (0.1, 0.2), "giant-impact density");
+        // `albedo_band` takes the already-classified flag, not a raw
+        // density (review follow-up to Task 5b) — so this crate has only
+        // the two branches to check; the "how close can a density be to
+        // icy" boundary-precision question now belongs entirely to
+        // `hornvale_astronomy::is_icy`'s own test.
+        assert_eq!(super::albedo_band(true), (0.5, 0.7), "icy composition");
+        assert_eq!(super::albedo_band(false), (0.1, 0.2), "non-icy composition");
     }
 
     #[test]
@@ -1075,7 +1093,7 @@ mod tests {
         // old [0.04,0.5] range: at least one index/seed with density 1.6
         // must land above 0.5, still within [0.04,0.7].
         let found_above_half = (0u64..50).any(|seed| {
-            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, 1.6);
+            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, true);
             d.albedo > 0.5
         });
         assert!(
@@ -1084,13 +1102,49 @@ mod tests {
         );
         // And the clamp still holds even at the icy band's own upper bound.
         for seed in 0u64..50 {
-            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, 1.6);
+            let d = super::seeded_descriptors(hornvale_kernel::Seed(seed), 0, 1.0, true);
             assert!(
                 (0.04..=0.7).contains(&d.albedo),
                 "seed {seed}: {}",
                 d.albedo
             );
         }
+    }
+
+    #[test]
+    fn icy_composition_damps_maria_fraction_but_never_zeroes_it() {
+        // Review follow-up: composition-blind maria_fraction let an icy
+        // moon read as basaltic plains on an ice ball. Compare the SAME
+        // (seed, index, mass) pair under is_icy=false vs true so only the
+        // damping under test varies; every seed's icy value must be
+        // strictly smaller than its rocky counterpart whenever the rocky
+        // value is nonzero, and the damping ratio must match
+        // ICY_MARIA_DAMPING exactly (a smooth multiplicative damping, not
+        // a hard zero).
+        let mut compared_a_nonzero_case = false;
+        for seed in 0u64..50 {
+            let s = hornvale_kernel::Seed(seed);
+            let rocky = super::seeded_descriptors(s, 0, 1.0, false);
+            let icy = super::seeded_descriptors(s, 0, 1.0, true);
+            if rocky.maria_fraction > 0.0 {
+                compared_a_nonzero_case = true;
+                assert!(
+                    icy.maria_fraction < rocky.maria_fraction,
+                    "seed {seed}: icy maria_fraction {} must be damped below rocky {}",
+                    icy.maria_fraction,
+                    rocky.maria_fraction
+                );
+                assert!(
+                    (icy.maria_fraction - rocky.maria_fraction * super::ICY_MARIA_DAMPING).abs()
+                        < 1e-12,
+                    "seed {seed}: damping must be exactly the ICY_MARIA_DAMPING multiplier"
+                );
+            }
+        }
+        assert!(
+            compared_a_nonzero_case,
+            "no seed produced a nonzero rocky maria_fraction to damp against"
+        );
     }
 
     #[test]
@@ -1125,18 +1179,19 @@ mod tests {
         let mut large_cratering = 0.0;
         let mut small_maria = 0.0;
         let mut large_maria = 0.0;
-        // Density held fixed (an arbitrary rocky value) across every call so
-        // only the mass bias under test varies.
-        const FIXED_DENSITY_G_CM3: f64 = 3.34;
+        // Composition held fixed (non-icy, so the maria damping added by
+        // the icy-composition review follow-up never fires) across every
+        // call so only the mass bias under test varies.
+        const FIXED_IS_ICY: bool = false;
         for seed in 1..200u64 {
             let s = hornvale_kernel::Seed(seed);
             for (i, &m) in small_masses.iter().enumerate() {
-                let d = super::seeded_descriptors(s, i, m, FIXED_DENSITY_G_CM3);
+                let d = super::seeded_descriptors(s, i, m, FIXED_IS_ICY);
                 small_cratering += d.cratering;
                 small_maria += d.maria_fraction;
             }
             for (i, &m) in large_masses.iter().enumerate() {
-                let d = super::seeded_descriptors(s, i, m, FIXED_DENSITY_G_CM3);
+                let d = super::seeded_descriptors(s, i, m, FIXED_IS_ICY);
                 large_cratering += d.cratering;
                 large_maria += d.maria_fraction;
             }
@@ -1169,22 +1224,18 @@ mod tests {
 
     #[test]
     fn surface_class_table_is_normative() {
-        // Density wins even under high cratering/maria — it is checked
+        // is_icy wins even under high cratering/maria — it is checked
         // first (most specific), per the reference page's normative table.
-        assert_eq!(moon_surface_class(1.6, 0.9, 0.9), "bright-icy");
-        assert_eq!(moon_surface_class(3.0, 0.1, 0.5), "maria-rich");
-        assert_eq!(moon_surface_class(3.0, 0.8, 0.1), "heavily-cratered");
-        assert_eq!(moon_surface_class(3.0, 0.3, 0.1), "cratered-highland");
-    }
-
-    #[test]
-    fn icy_composition_classifies_bright_icy_and_rock_does_not() {
-        // The requirement this campaign exists to satisfy: an icy captured
-        // moon reliably classifies bright-icy, a rocky/impact moon does not
-        // — independent of the hash-noise descriptors.
-        assert_eq!(moon_surface_class(1.6, 0.0, 0.0), "bright-icy");
-        assert_eq!(moon_surface_class(1.9, 0.0, 0.0), "bright-icy");
-        assert_ne!(moon_surface_class(3.0, 0.0, 0.0), "bright-icy");
-        assert_ne!(moon_surface_class(3.34, 0.0, 0.0), "bright-icy");
+        // `moon_surface_class` takes the already-classified flag, not a
+        // raw density (review follow-up to Task 5b): the "which densities
+        // actually read icy" question — formerly this test's job via
+        // literal density values (1.6, 1.9, 3.0, 3.34) — now belongs
+        // entirely to `hornvale_astronomy::is_icy`'s own
+        // `is_icy_agrees_with_the_domains_own_density_reservoirs` test, so
+        // it is not duplicated here.
+        assert_eq!(moon_surface_class(true, 0.9, 0.9), "bright-icy");
+        assert_eq!(moon_surface_class(false, 0.1, 0.5), "maria-rich");
+        assert_eq!(moon_surface_class(false, 0.8, 0.1), "heavily-cratered");
+        assert_eq!(moon_surface_class(false, 0.3, 0.1), "cratered-highland");
     }
 }

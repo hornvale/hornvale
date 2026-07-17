@@ -97,6 +97,43 @@ const CAPTURE_ROCKY_DENSITY_G_CM3: f64 = 3.0;
 /// be markedly larger than an impact child of the same mass.
 const CAPTURE_ICY_DENSITY_G_CM3: f64 = 1.6;
 
+/// Bulk density, g/cm³, below which a moon's composition reads as icy
+/// rather than rocky — the single number `is_icy` (below) checks against.
+/// Chosen with wide margin from all three reservoirs above it: 0.4 g/cm³
+/// above the icy draw, 1.0 below the rocky draw, 1.34 below the impact
+/// constant. Lives here, beside the reservoirs it must stay clear of
+/// (rather than duplicated in a presentation layer), so a future
+/// refinement of `CAPTURE_ROCKY_DENSITY_G_CM3` toward real captured
+/// rubble-pile densities (Phobos 1.88, Deimos 1.47 g/cm³) is edited in the
+/// same file as this threshold, not three crates away from it.
+const ICY_DENSITY_THRESHOLD_G_CM3: f64 = 2.0;
+
+// Belt and braces on top of colocation: if a future edit to any reservoir
+// above ever pushes it past this threshold, that edit fails to *compile*
+// instead of silently reclassifying moons at runtime — the rot path a
+// review of The Reckoning's Task 5b flagged (a window-side copy of `2.0`
+// would have kept compiling right through such a crossing).
+const _: () = assert!(
+    ICY_DENSITY_THRESHOLD_G_CM3 > CAPTURE_ICY_DENSITY_G_CM3
+        && ICY_DENSITY_THRESHOLD_G_CM3 < CAPTURE_ROCKY_DENSITY_G_CM3
+        && ICY_DENSITY_THRESHOLD_G_CM3 < IMPACT_DENSITY_G_CM3,
+    "ICY_DENSITY_THRESHOLD_G_CM3 must stay strictly between the icy reservoir \
+     and both non-icy reservoirs, or is_icy silently misclassifies"
+);
+
+/// Whether a moon's bulk density reads as icy composition rather than
+/// rocky (review follow-up to The Reckoning's Task 5b). The domain owns
+/// composition, so this is the single predicate a presentation layer
+/// (`windows/scene`'s `bright-icy` class, its albedo banding) calls
+/// instead of keeping its own copy of `ICY_DENSITY_THRESHOLD_G_CM3`.
+/// `formation` alone cannot answer this question: a `Capture` moon draws
+/// rocky or icy composition 50/50 (see `generate_moons`'s density draw),
+/// so only density decides.
+/// type-audit: bare-ok(flag: return)
+pub fn is_icy(moon: &Moon) -> bool {
+    moon.density.0 < ICY_DENSITY_THRESHOLD_G_CM3
+}
+
 /// The probability that a moon admitted at `distance` Mm is a captured stray,
 /// given the system's admitted ceiling `max_distance` Mm. The single
 /// definition: `generate_moons` and the Luna calibration test both call this,
@@ -722,6 +759,50 @@ mod tests {
         }
         assert!(captured > 20, "too few captured moons ({captured})");
         assert!(icy > 0, "no icy captured body in 300 seeds");
+    }
+
+    /// Review follow-up to Task 5b: `is_icy` must agree with every density
+    /// this module actually produces — the icy capture reservoir reads
+    /// icy, the rocky capture and impact reservoirs do not — calling
+    /// production `is_icy` against real generated-moon bases (never a
+    /// from-scratch literal), the same pattern
+    /// `radius_follows_from_mass_and_real_density_not_an_assumption` uses.
+    #[test]
+    fn is_icy_agrees_with_the_domains_own_density_reservoirs() {
+        let (star, anchor) = system(9);
+        let (moons, _) = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
+        let base = moons.into_iter().next().expect("seed 9 has moons");
+        let icy = Moon {
+            density: GramsPerCm3(CAPTURE_ICY_DENSITY_G_CM3),
+            ..base.clone()
+        };
+        assert!(is_icy(&icy), "the icy capture reservoir must read icy");
+        let rocky = Moon {
+            density: GramsPerCm3(CAPTURE_ROCKY_DENSITY_G_CM3),
+            ..base.clone()
+        };
+        assert!(
+            !is_icy(&rocky),
+            "the rocky capture reservoir must not read icy"
+        );
+        let impact = Moon {
+            density: GramsPerCm3(IMPACT_DENSITY_G_CM3),
+            ..base.clone()
+        };
+        assert!(
+            !is_icy(&impact),
+            "the giant-impact reservoir must not read icy"
+        );
+        // The boundary itself: `<` is strict, so a moon exactly at the
+        // threshold reads non-icy.
+        let at_threshold = Moon {
+            density: GramsPerCm3(ICY_DENSITY_THRESHOLD_G_CM3),
+            ..base
+        };
+        assert!(
+            !is_icy(&at_threshold),
+            "the threshold itself must not read icy (< is strict)"
+        );
     }
 
     /// The Reckoning, Task 5: the campaign's payload — radius follows from

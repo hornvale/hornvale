@@ -50,7 +50,7 @@ Each entry in `moons` is:
 | `surface_gravity_ms2` | number | **Derived.** Surface gravity, m/s², from that radius and the same real density. See §3.2. |
 | `albedo` | number | **Seeded.** Reflectance in [0.04, 0.7]; composition-biased (bright for icy, dark for rocky), darkened where `maria_fraction` is high. See §3.3. |
 | `cratering` | number | **Seeded.** Cratering intensity in [0, 1]; biased high for small moons. See §3.3. |
-| `maria_fraction` | number | **Seeded.** Smooth resurfaced-plains fraction in [0, 1]; biased high for large moons. See §3.3. |
+| `maria_fraction` | number | **Seeded.** Smooth resurfaced-plains fraction in [0, 1]; biased high for large moons, composition-damped (not zeroed) for an icy moon — maria are basaltic, which an ice body does not have. See §3.3. |
 | `tint` | array of 3 numbers | **Seeded.** Near-gray linear-RGB tint, each channel in [0, 1] — deliberately subtle (moons are gray), enough to tell two moons of a world apart. See §3.3. |
 | `surface_class` | string | **Derived** from bulk density and the seeded descriptors above by the normative classifier in §3.4. |
 | `density_g_cm3` | number | **Derived boundary: drawn/derived, mechanism-dependent (The Reckoning).** Bulk density, g/cm³ — 3.34 for a `GiantImpact` moon (derived), one of {3.0 rocky, 1.6 icy} for a `Capture` moon (drawn). The physical basis for `radius_km`, `surface_gravity_ms2`, and `surface_class`'s `bright-icy` branch. See §3.2. |
@@ -114,31 +114,56 @@ was Luna's density regardless of formation.
 
 ## §3.3 Seeded surface descriptors: hash noise, not simulation
 
-`albedo`, `cratering`, `maria_fraction`, and `tint` are **authored
-procedural detail, not simulated surface science**. Each is a deterministic
-hash of the world's seed and the moon's index — the same value every time
-the document is regenerated for that world, but not derived from any
-physical process, and not backed by a `Stream` draw. Nothing about
-generating them consumes randomness from the world's draw sequence; two
-worlds could share every drawn quantity (mass, orbit) and still differ here
-only if their seeds differ, because the hash reads the seed directly.
+The four descriptors here are not authored the same way, and the
+difference matters for a consumer deciding how much to trust a value:
 
-The hash is biased by `mass_rel` (and, for `albedo`, also by real
-`density_g_cm3`) so a face reads plausibly, in the same spirit that a
-settlement's name reads plausibly without being a linguistic simulation
-("models author, dice roll" — decision 0009): small moons bias toward
-cratered highlands (`cratering` pulled up as mass falls); large moons bias
-toward resurfaced maria plains (`maria_fraction` pulled up as mass rises,
-then damped where `cratering` is already high, so a face is never
-simultaneously all-craters and all-maria); `albedo` starts from a
-composition baseline — bright (0.5–0.7) below the icy-density threshold
-(§3.4), dark (0.1–0.2) at or above it — with the hash perturbing within
-that band, then darkens further where `maria_fraction` is high, since maria
-are conventionally dark plains. **Since The Reckoning, the composition
-baseline is real** (it reads real `density_g_cm3`, not mass); the mass bias
-on `cratering`/`maria_fraction` and the hash perturbation within a band
-remain narrative plausibility, not measurement — nothing enforces that a
-massive moon in some other physical model would in fact be maria-rich.
+- `cratering`, `maria_fraction`, and `tint` are **authored procedural
+  detail, not simulated surface science**: each is a deterministic hash of
+  the world's seed and the moon's index — the same value every time the
+  document is regenerated for that world — biased by `mass_rel` so a face
+  reads plausibly, and backed by no `Stream` draw of its own.
+- `albedo` is **part real, part authored**: its *baseline band* — bright
+  ice (0.5–0.7) vs. dark rock (0.1–0.2) — is composition-derived, reading
+  the moon's real `density_g_cm3` via `hornvale_astronomy::is_icy`, which
+  is itself Stream-backed two steps upstream through `formation` (§3.2).
+  Only the *position within that band* is the seed/index hash, and the
+  maria-darkening multiplier applied on top is authored bias like the
+  other three, not measurement.
+- `density_g_cm3`, `radius_km`, `surface_gravity_ms2`, and `formation`
+  are real derived or drawn physics, start to finish — not authored at
+  all. See §3.2.
+
+Nothing in the hash channel consumes randomness from the world's own draw
+sequence — it reads `(seed, index)` directly, not a `Stream`. But two
+worlds sharing every drawn quantity — including `formation` and
+`density_g_cm3`, both of which **are** drawn or mechanism-derived (§3.2),
+contrary to what a skim of this page might otherwise suggest — still
+differ in `cratering`/`maria_fraction`/`tint` and in albedo's in-band
+position only if their seeds differ; they would differ in albedo's *band*
+only if `formation` or `density_g_cm3` differ.
+
+The hash is biased by `mass_rel` so a face reads plausibly, in the same
+spirit that a settlement's name reads plausibly without being a linguistic
+simulation ("models author, dice roll" — decision 0009): small moons bias
+toward cratered highlands (`cratering` pulled up as mass falls); large
+moons bias toward resurfaced maria plains (`maria_fraction` pulled up as
+mass rises, then damped where `cratering` is already high, so a face is
+never simultaneously all-craters and all-maria). For an icy moon,
+`maria_fraction` is damped a second time, by a fixed 0.3 multiplier
+(review follow-up to The Reckoning): maria are flood basalts, which an ice
+body does not have, so a composition-blind fraction let an icy moon read
+as basaltic plains on an ice ball. The damping is deliberately not a hard
+zero — real icy bodies do carry resurfaced terrain (Europa's chaos
+terrain, Enceladus's tiger stripes), just not basaltic maria — so a
+reduced residual stays reachable. `albedo` starts from its composition
+baseline (above), with the hash perturbing within that band, then darkens
+further where the (possibly icy-damped) `maria_fraction` is high, since
+maria are conventionally dark plains. The mass bias on
+`cratering`/`maria_fraction`, the icy damping factor, and the hash
+perturbation within a band all remain narrative plausibility, not
+measurement — nothing enforces that a massive moon in some other physical
+model would in fact be maria-rich, or that a real icy moon's resurfaced
+fraction would land at exactly this damped value.
 
 ## §3.4 `surface_class`: the normative classifier
 
@@ -164,11 +189,25 @@ land near the line. Density wins the precedence check even under high
 `cratering`/`maria_fraction` — an icy moon is `bright-icy` regardless of its
 other descriptors.
 
-The set of class names is append-only: a new class may join the table in
-the future, but an existing class's name and the condition that produces it
-never change — a client's `if surface_class == "maria-rich"` stays correct
-across regenerations. Adding a class also never re-meanings the fallback:
-`cratered-highland` stays the catch-all it is today.
+The set of class **names** is append-only: no class is ever removed or
+renamed — a client's `if surface_class == "maria-rich"` stays correct
+across regenerations, and a new class may join the table in the future
+without touching the rows above it. Adding a class also never re-meanings
+the fallback: `cratered-highland` stays the catch-all it is today.
+
+A class's **condition** is a narrower promise than its name. It holds
+across ordinary regenerations, with one disclosed exception to date:
+`bright-icy`'s condition was re-based, by The Reckoning, from `albedo >
+0.4` to `density_g_cm3 < 2.0`. That is not a routine tuning change — it is
+the one time this schema has given a class the physical referent it was
+missing at introduction. Before density was real, `albedo > 0.4` was
+hash noise standing in for a concept (ice) the model could not yet
+represent; the class name shipped ahead of anything that could back it.
+Once density existed, the condition moved onto it because the old
+condition was never actually answering the question `bright-icy` asked.
+Barring another campaign supplying a referent a class is missing in the
+same way, a condition does not move underneath a consumer once it has one
+— this is a disclosed, one-time exception, not an open door.
 
 ## Stability
 
@@ -180,9 +219,14 @@ discipline as `scene/system/v1` and `scene/tiles/v1`:
   unaffected.
 - Changing an existing field's meaning, order, or type never happens in
   place — that mints `scene/moons/v2` alongside `v1`.
-- The `surface_class` table (§3.4) is append-only in the same sense: new
-  rows may be added, but no existing row's condition or output name
-  changes underneath a consumer.
+- The `surface_class` table (§3.4) is append-only in the name sense: a
+  class is never removed or renamed. A class's condition is stable across
+  ordinary regenerations, with one disclosed exception to date —
+  `bright-icy`'s condition was re-based from `albedo > 0.4` to
+  `density_g_cm3 < 2.0` by The Reckoning, the one time this schema has
+  given a class the physical referent it was missing at introduction (see
+  §3.4). Absent that kind of referent-supplying campaign, no existing
+  row's condition or output name changes underneath a consumer.
 
 The committed example, `book/src/gallery/scene-moons-seed-42.json`, is
 generated by `hornvale scene moons --world <seed-42 generated-sky world>`

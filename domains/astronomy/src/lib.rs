@@ -37,7 +37,7 @@ pub use figures::{
     FIGURE_MAGNITUDE_FLOOR, FIGURE_MIN_MEMBERS, FIGURE_SEPARATION_DEG, Figure, describe, figures,
 };
 pub use heliacal::{HeliacalPair, arcus_visionis_deg, heliacal_events};
-pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, radius_km};
+pub use moons::{Formation, Moon, generate_moons, hill_radius_mm, is_icy, radius_km};
 pub use neighborhood::{Neighbor, class_luminosity, class_name, generate_neighbors};
 pub use night_sky::{Hemisphere, NightSky, POLE_STAR_MAX_SEPARATION_DEG, PoleStar, night_sky_at};
 pub use pins::{
