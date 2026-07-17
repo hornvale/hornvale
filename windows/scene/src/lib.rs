@@ -368,7 +368,7 @@ pub struct WorldElem {
 }
 
 /// One moon's orbital elements.
-/// type-audit: pending(wave-3: sidereal_days), pending(wave-3: distance_mm), bare-ok(ratio: phase_offset), bare-ok(ratio: size_rel)
+/// type-audit: pending(wave-3: sidereal_days), pending(wave-3: distance_mm), bare-ok(ratio: phase_offset), bare-ok(ratio: size_rel), pending(wave-1: inclination_deg), pending(wave-1: node_longitude_deg)
 #[derive(Debug, Serialize)]
 pub struct MoonElem {
     /// Sidereal orbital period, standard days.
@@ -383,6 +383,14 @@ pub struct MoonElem {
     /// Angular-diameter ratio (the size-word input).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub size_rel: f64,
+    /// Orbital inclination to the anchor's orbital plane, degrees; > 90 is
+    /// retrograde (The Reckoning). Appended per the stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub inclination_deg: f64,
+    /// Ecliptic longitude of the ascending node at genesis, degrees.
+    /// Appended per the stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub node_longitude_deg: f64,
 }
 
 /// One `scene/system/v1` document: the system's orbital geometry as elements.
@@ -427,6 +435,8 @@ pub fn system_scene(world: &World) -> Result<SystemScene, SceneError> {
                 .unwrap_or(0.0),
             distance_mm: m.distance.get(),
             size_rel: m.angular_diameter_rel,
+            inclination_deg: m.inclination_deg,
+            node_longitude_deg: m.node_longitude_deg,
         })
         .collect();
     Ok(SystemScene {
@@ -1010,6 +1020,14 @@ mod tests {
         assert!(scene.world.year_days > 0.0);
         assert!(scene.world.day_length_days.is_some(), "seed 42 spins");
         assert!(scene.star.hz_inner_au < scene.star.hz_outer_au);
+        for m in &scene.moons {
+            assert!((0.0..=180.0).contains(&m.inclination_deg));
+            assert!((0.0..360.0).contains(&m.node_longitude_deg));
+        }
+        assert!(
+            scene.moons.iter().any(|m| m.inclination_deg > 90.0),
+            "seed 42 has a retrograde captured moon (The Reckoning)"
+        );
         // Byte-identical when serialized: determinism.
         assert_eq!(
             system_json(&scene),
