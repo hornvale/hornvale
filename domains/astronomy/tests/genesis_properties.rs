@@ -516,8 +516,8 @@ fn star_battery_mass_bounds_and_monotone_derivations() {
 }
 
 /// The Reckoning's containment rule (spec §3): drawing an age must not move
-/// luminosity, the habitable zone, or the anchor's admitted orbit. If this
-/// ever fails, the epoch has leaked out of the moons and into climate.
+/// luminosity or the habitable zone. If this ever fails, the epoch has
+/// leaked out of the moons and into climate.
 #[test]
 fn stellar_age_does_not_touch_luminosity_or_the_habitable_zone() {
     use hornvale_astronomy::generate_star;

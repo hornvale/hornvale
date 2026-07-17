@@ -50,14 +50,14 @@ pub use provider::{
 };
 pub use sky_position::{EclipticCoord, EquatorialCoord, ecliptic_of, equatorial_at};
 pub use star::{
-    GYR_DAYS, Star, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
-    luminosity_at,
+    GYR_DAYS, Star, T_MAX, brightening_per_gyr, generate_star, insolation_rel, insolation_rel_at,
+    luminosity_at, main_sequence_lifetime, planet_age,
 };
 pub use starfield::{FieldStar, starfield};
 pub use system::{GenesisOutcome, StarSystem, generate};
 pub use units::{
-    Au, Degrees, EarthMasses, HabitableZone, LightYears, LocalDays, LunarMasses, Megameters,
-    SolarLuminosities, SolarMasses, StdDays, UnitError,
+    Au, Degrees, EarthMasses, GramsPerCm3, Gyr, HabitableZone, LightYears, LocalDays, LunarMasses,
+    Megameters, SolarLuminosities, SolarMasses, StdDays, UnitError,
 };
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
@@ -114,6 +114,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "astronomy/moon-nodes",
             "per-moon ascending-node longitude draws",
         ),
+        ("astronomy/star-age", "stellar age draw"),
     ]
 }
 

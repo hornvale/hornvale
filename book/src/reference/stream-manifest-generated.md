@@ -24,6 +24,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/wanderers` | per-wanderer parameter draws, sequential |
 | `astronomy/starfield` | background starfield: count + per-star position/brightness (derived on demand) |
 | `astronomy/moon-nodes` | per-moon ascending-node longitude draws |
+| `astronomy/star-age` | stellar age draw |
 
 ### hornvale-climate
 

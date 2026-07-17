@@ -31,14 +31,21 @@ pub struct Star {
 /// metaphysical question (UNI-2) that the project deliberately leaves open, as
 /// a side effect of a generator constant. 15 Gyr bounds the draw without
 /// dating the universe.
-/// type-audit: bare-ok(constant)
 pub const T_MAX: Gyr = Gyr(15.0);
+
+/// t_MS = 10 Gyr · M^-2.5, on the raw mass value. The single definition both
+/// [`main_sequence_lifetime`] (needs a built `Star`) and `generate_star`
+/// (builds the `Star`, so has only the mass so far) call, so the formula
+/// exists exactly once.
+fn t_ms_of_mass(mass: f64) -> f64 {
+    10.0 * math::powf(mass, -2.5)
+}
 
 /// Main-sequence lifetime: t_MS = 10 Gyr · M^-2.5 (declared approximation —
 /// the Sol-calibrated scaling already implicit in `brightening_per_gyr`, made
 /// explicit; not a stellar-structure model).
 pub fn main_sequence_lifetime(star: &Star) -> Gyr {
-    Gyr(10.0 * math::powf(star.mass.0, -2.5))
+    Gyr(t_ms_of_mass(star.mass.0))
 }
 
 /// The planet's age: terrestrial accretion completes within ~30–100 Myr of the
@@ -46,6 +53,9 @@ pub fn main_sequence_lifetime(star: &Star) -> Gyr {
 /// difference is under 1% and below anything the sim observes; it is modelled
 /// only so the number exists and is honest about its own precision.
 pub fn planet_age(star: &Star) -> Gyr {
+    // `.max(0.0)` is a defensive guard, not a live path: the age guard-rail
+    // floors `star.age` at `0.05 * min(t_MS(1.4), T_MAX)` ≈ 0.2156 Gyr, so
+    // `age - 0.05` cannot go negative for any star this crate generates.
     Gyr((star.age.0 - 0.05).max(0.0))
 }
 
@@ -63,7 +73,7 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
         "yellow-white dwarf (F)"
     }
     .to_string();
-    let ceiling = (10.0 * math::powf(mass.0, -2.5)).min(T_MAX.0);
+    let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
     let age =
         Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
     Star {
@@ -235,24 +245,37 @@ mod tests {
 
     #[test]
     fn main_sequence_lifetime_scales_as_mass_to_the_minus_five_halves() {
-        // Sol-calibrated: 1.0 Msun -> 10 Gyr.
         let sol = generate_star(Seed(1));
-        let t = main_sequence_lifetime(&Star {
-            mass: SolarMasses(1.0),
-            ..sol.clone()
-        });
-        assert!((t.0 - 10.0).abs() < 1e-9, "{}", t.0);
+        let t_of = |m: f64| {
+            main_sequence_lifetime(&Star {
+                mass: SolarMasses(m),
+                ..sol.clone()
+            })
+            .0
+        };
+        // Sol-calibrated: 1.0 Msun -> 10 Gyr.
+        let t_sol = t_of(1.0);
+        assert!((t_sol - 10.0).abs() < 1e-9, "{}", t_sol);
+
+        // Pin the LAW, not just a couple of loose bounds: t(m1)/t(m2) must
+        // equal (m1/m2)^-2.5 exactly, for several mass pairs. A loose bound
+        // check (t(1.4) < 5.0 and t(0.6) > 30.0) cannot distinguish -2.5 from
+        // a drifted exponent — code review confirmed -2.8 and -3.0 both pass
+        // it — but neither survives this ratio.
+        for (m1, m2) in [(1.4, 1.0), (0.6, 1.0), (1.4, 0.6), (0.8, 1.2)] {
+            let ratio = t_of(m1) / t_of(m2);
+            let expected = math::powf(m1 / m2, -2.5);
+            assert!(
+                (ratio - expected).abs() < 1e-9,
+                "t({m1})/t({m2}) = {ratio}, expected (m1/m2)^-2.5 = {expected}"
+            );
+        }
+
         // A heavier star burns out faster; a lighter one outlives the bound.
-        let heavy = main_sequence_lifetime(&Star {
-            mass: SolarMasses(1.4),
-            ..sol.clone()
-        });
-        let light = main_sequence_lifetime(&Star {
-            mass: SolarMasses(0.6),
-            ..sol
-        });
-        assert!(heavy.0 < 5.0, "1.4 Msun t_MS = {}", heavy.0);
-        assert!(light.0 > 30.0, "0.6 Msun t_MS = {}", light.0);
+        let heavy = t_of(1.4);
+        let light = t_of(0.6);
+        assert!(heavy < 5.0, "1.4 Msun t_MS = {heavy}");
+        assert!(light > 30.0, "0.6 Msun t_MS = {light}");
     }
 
     #[test]
