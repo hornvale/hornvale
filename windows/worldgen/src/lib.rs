@@ -2912,7 +2912,7 @@ fn build_to(
                 &world.registry,
             )
             .expect("is-a on a fresh entity cannot conflict");
-        if let Some(name) = world_name(&world) {
+        if let Some(name) = world_name_in(&world, wc) {
             world
                 .ledger
                 .commit(
@@ -3200,10 +3200,24 @@ pub fn dominant_people_in(world: &World, wc: &WorldComponents) -> Option<KindId>
 /// inhabits — capitalized per the lexicon's surface-view convention.
 /// `None` if the world has no dominant race, or if that race's lexicon has
 /// no entry for the concept (a coverage gap, never a silent fallback).
+///
+/// Assembles the canonical [`WorldComponents`] and delegates to
+/// [`world_name_in`]; callers that already hold a `wc` (e.g. the planet
+/// genesis stage) should call that directly instead of re-deriving.
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name(world: &World) -> Option<String> {
-    let kind = dominant_people(world)?;
-    let lex = lexicon_of(world, kind.0).ok()?;
+    let wc = WorldComponents::assemble().ok()?;
+    world_name_in(world, &wc)
+}
+
+/// [`world_name`] over an explicit component set — the testable core
+/// (mirrors `lexicon_of`/`lexicon_of_in` and `dominant_people`/
+/// `dominant_people_in`), so the planet genesis stage can use the SAME
+/// injected `wc` it already built rather than re-assembling components.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
+    let kind = dominant_people_in(world, wc)?;
+    let lex = lexicon_of_in(world, wc, kind.0).ok()?;
     match lex.entry("earth")? {
         hornvale_language::LexEntry::Root { views, .. }
         | hornvale_language::LexEntry::Compound { views, .. } => Some(views.roman.clone()),
@@ -3998,6 +4012,101 @@ mod tests {
             new_winner, winner,
             "crushing the winner's mass must change who wins — dominant_people is \
              mass-weighted, not headcount-only"
+        );
+    }
+
+    /// A minimal peopled world: one settlement per `(kind, population)`
+    /// pair, each `peopled-by` its kind, with NO other facts. Lets a test
+    /// hold every candidate's canonical (`wc`) mass fixed while choosing its
+    /// population freely — `constant(1)`'s real settlements already carry a
+    /// committed `population` fact, and that predicate is functional (a
+    /// second commit to the same subject would be rejected as a
+    /// contradiction), so population can only be varied on fresh entities.
+    fn synthetic_peopled_world(seed: Seed, placements: &[(KindId, u32)]) -> World {
+        let mut world = World::new(seed);
+        hornvale_settlement::register_concepts(&mut world.registry)
+            .expect("settlement concepts register on a fresh registry");
+        hornvale_species::register_concepts(&mut world.registry)
+            .expect("species concepts register on a fresh registry");
+        for (kind, population) in placements {
+            let id = world.ledger.mint_entity();
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_settlement::IS_SETTLEMENT.into(),
+                        object: Value::Flag(true),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic flagship".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("is-settlement on a fresh entity cannot conflict");
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_settlement::POPULATION.into(),
+                        object: Value::Number(f64::from(*population)),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic population".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("population on a fresh entity cannot conflict");
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_species::PEOPLED_BY.into(),
+                        object: Value::Text(kind.0.to_string()),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic peopled-by".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("peopled-by on a fresh entity cannot conflict");
+        }
+        world
+    }
+
+    /// Companion to `dominant_people_changes_when_the_winners_mass_is_crushed`:
+    /// that test crushes MASS and proves the result isn't headcount-only, but
+    /// a mass-only (population-blind) implementation — `weight = bio.mass`,
+    /// ignoring population entirely — would still pass it, because crushing
+    /// the winner's mass flips the mass-only ranking too. This test isolates
+    /// the OTHER factor: hold both candidates' masses at their canonical
+    /// (`wc`) values (mass ranking unchanged from `constant(1)`) and instead
+    /// invert POPULATION — give the real winner a population of 1 and the
+    /// real loser a landslide population. A mass-only mutant, which never
+    /// looks at population, would still declare the same winner (mass
+    /// ranking didn't move) and this assertion would fail; the real
+    /// `Σ(population × mass)` formula flips.
+    #[test]
+    fn dominant_people_changes_when_the_winners_population_is_crushed() {
+        let world = constant(1);
+        let wc = WorldComponents::assemble().unwrap();
+        let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
+        let loser = if winner == KindId("goblin") {
+            KindId("hobgoblin")
+        } else {
+            KindId("goblin")
+        };
+
+        let synth = synthetic_peopled_world(world.seed, &[(winner, 1), (loser, 100_000)]);
+        let new_winner =
+            dominant_people_in(&synth, &wc).expect("the synthetic world has two candidates");
+        assert_ne!(
+            new_winner, winner,
+            "crushing the winner's population (while holding both masses fixed at their \
+             canonical values) must change who wins — dominant_people is population-weighted, \
+             not mass-only"
         );
     }
 

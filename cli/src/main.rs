@@ -663,11 +663,15 @@ fn cmd_proto() -> Result<(), String> {
 
 /// Render The Book: three volumes, one per seed in `1, 2, 3`, built through
 /// the composition root with default pins and a generated sky (matching
-/// `cmd_new`'s builder call). Each volume's title is its world's endonym
-/// (`world_builder::world_name`), or `"Untitled"` for a world with no
-/// dominant peopled race to name it. Markdown to stdout; deterministic.
+/// `cmd_new`'s builder call). Each volume's title is the committed `name`
+/// fact on the world's planet entity (the dominant people's endonym, read
+/// back from the ledger rather than re-derived), or `"Untitled"` for a
+/// world with no dominant peopled race to name it. After the Book is
+/// printed to stdout, a PROC-15 coverage report (unrendered predicates per
+/// volume) is printed to stderr. Markdown to stdout; deterministic.
 fn cmd_book(_args: &[String]) -> Result<(), String> {
     let mut out = String::from("# The Book\n");
+    let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
         let world = world_builder::build_world(
             Seed(seed),
@@ -678,14 +682,26 @@ fn cmd_book(_args: &[String]) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
         let vol = hornvale_book::render_volume(&world);
-        let title = world_builder::world_name(&world).unwrap_or_else(|| "Untitled".to_string());
+        let title = world_builder::planet_entity(&world)
+            .and_then(|p| world.ledger.text_of(p, hornvale_kernel::NAME))
+            .map(str::to_string)
+            .unwrap_or_else(|| "Untitled".to_string());
         out.push_str(&format!("\n## Volume {seed}: {title}\n\n"));
         for line in vol.lines {
             out.push_str(&line);
             out.push('\n');
         }
+        coverage.push((seed, hornvale_book::uncovered_predicates(&world)));
     }
     print!("{out}");
+    for (seed, gaps) in &coverage {
+        let gaps = if gaps.is_empty() {
+            "none".to_string()
+        } else {
+            gaps.join(", ")
+        };
+        eprintln!("coverage — volume {seed}: unrendered predicates: {gaps}");
+    }
     Ok(())
 }
 
