@@ -12,6 +12,11 @@ use std::path::Path;
 /// type-audit: bare-ok(identifier-text)
 pub const NAME: &str = "name";
 
+/// The classification predicate: `(entity, is-a, <kind-label>)`. Functional —
+/// an entity has one class. Object is a `Value::Text` KindId label.
+/// type-audit: bare-ok(identifier-text)
+pub const IS_A: &str = "is-a";
+
 /// A world is a seed plus everything ever observed about it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
@@ -30,6 +35,9 @@ impl World {
         let mut registry = ConceptRegistry::default();
         registry
             .register_predicate(NAME, true, "canonical name of an entity")
+            .expect("core concept registration cannot conflict in an empty registry");
+        registry
+            .register_predicate(IS_A, true, "the class an entity belongs to")
             .expect("core concept registration cannot conflict in an empty registry");
         World {
             seed,
@@ -144,6 +152,19 @@ mod tests {
         );
         assert_ne!(json, corrupt, "test setup must actually corrupt the json");
         assert!(World::from_json(&corrupt).is_err());
+    }
+
+    #[test]
+    fn every_world_registers_is_a() {
+        let w = World::new(Seed(1));
+        assert!(
+            w.registry.predicate("is-a").is_some(),
+            "is-a must be registered"
+        );
+        assert!(
+            w.registry.predicate("is-a").unwrap().functional,
+            "is-a is functional"
+        );
     }
 
     #[test]
