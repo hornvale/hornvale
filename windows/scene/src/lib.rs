@@ -455,6 +455,173 @@ pub fn system_json(scene: &SystemScene) -> String {
     serde_json::to_string(scene).expect("a SystemScene always serializes")
 }
 
+/// The `scene/moons/v1` schema tag.
+/// type-audit: bare-ok(identifier-text)
+pub const MOONS_SCHEMA: &str = "scene/moons/v1";
+
+/// Luna's reference radius, km (the constant-density anchor).
+const LUNA_RADIUS_KM: f64 = 1737.4;
+/// Luna's reference surface gravity, m/s².
+const LUNA_GRAVITY_MS2: f64 = 1.62;
+
+/// Physical radius (km) and surface gravity (m/s²) derived from a moon's
+/// mass in lunar masses, at an assumed constant density equal to Luna's:
+/// volume ∝ mass ⇒ radius ∝ mass^(1/3), and g = GM/r² reduces to
+/// g ∝ mass^(1/3). Uses the kernel's libm-routed `powf` for cross-platform
+/// byte-identity (decision 0041).
+pub(crate) fn derived_from_mass(mass_rel: f64) -> (f64, f64) {
+    let f = hornvale_kernel::math::powf(mass_rel, 1.0 / 3.0);
+    (LUNA_RADIUS_KM * f, LUNA_GRAVITY_MS2 * f)
+}
+
+/// A subtle near-gray tint, and the four seeded surface descriptors, as a
+/// pure hash of the world seed and the moon index — no `Stream` draw. Mass
+/// biases each so a face reads plausibly: small moons cratered highlands,
+/// large moons resurfaced maria plains ("models author, dice roll", 0009).
+fn seeded_descriptors(seed: hornvale_kernel::Seed, index: usize, mass_rel: f64) -> Descriptors {
+    // value_noise_2d returns [0,1); integer coords sample the raw lattice
+    // hash, one distinct channel per (index, channel) pair.
+    let h = |channel: u32| hornvale_kernel::value_noise_2d(seed, index as f64, f64::from(channel));
+    // "Largeness" in [0,1] over the drawn mass range [0.05, 2.5].
+    let large = ((mass_rel - 0.05) / 2.45).clamp(0.0, 1.0);
+    let small = 1.0 - large;
+
+    // Cratering: hash pulled toward 1 as mass falls.
+    let cratering = (0.35 * h(0) + 0.65 * small).clamp(0.0, 1.0);
+    // Maria: hash pulled up with mass, then damped by cratering so a face is
+    // not simultaneously all-craters and all-maria.
+    let maria_fraction = ((0.35 * h(1) + 0.65 * large) * (1.0 - 0.5 * cratering)).clamp(0.0, 1.0);
+    // Albedo in [0.04,0.5], darkened where maria (dark plains) is high.
+    let albedo = (0.04 + 0.46 * h(2)) * (1.0 - 0.6 * maria_fraction);
+    let albedo = albedo.clamp(0.04, 0.5);
+    // Tint: three near-gray channels, deliberately subtle (moons are gray),
+    // enough to tell two moons of a world apart.
+    let tint = [
+        (0.70 + 0.15 * (h(3) - 0.5)).clamp(0.0, 1.0),
+        (0.70 + 0.15 * (h(4) - 0.5)).clamp(0.0, 1.0),
+        (0.70 + 0.15 * (h(5) - 0.5)).clamp(0.0, 1.0),
+    ];
+    Descriptors {
+        albedo,
+        cratering,
+        maria_fraction,
+        tint,
+    }
+}
+
+struct Descriptors {
+    albedo: f64,
+    cratering: f64,
+    maria_fraction: f64,
+    tint: [f64; 3],
+}
+
+/// The normative `surface_class` classifier over the descriptors: a stable,
+/// append-only word for clients that want a name, not a texture. Precedence
+/// (most specific first): a bright icy face; else maria-rich; else heavily
+/// cratered; else a cratered highland. Thresholds are the reference page's
+/// normative table.
+/// type-audit: bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: return)
+pub fn moon_surface_class(albedo: f64, cratering: f64, maria_fraction: f64) -> &'static str {
+    if albedo > 0.4 {
+        "bright-icy"
+    } else if maria_fraction > 0.4 {
+        "maria-rich"
+    } else if cratering > 0.6 {
+        "heavily-cratered"
+    } else {
+        "cratered-highland"
+    }
+}
+
+/// One moon's surface document entry. Field order is fixed; every f64
+/// quantizes at emit (decision 0033).
+/// type-audit: bare-ok(count: index), bare-ok(ratio: mass_rel), bare-ok(ratio: albedo), bare-ok(ratio: cratering), bare-ok(ratio: maria_fraction), bare-ok(identifier-text: surface_class), pending(wave-3: radius_km), pending(wave-3: surface_gravity_ms2), bare-ok(ratio: tint)
+#[derive(Debug, Serialize)]
+pub struct MoonSurface {
+    /// The moon's generation index (matches `scene/system/v1`).
+    pub index: usize,
+    /// Mass in lunar masses (the generator's drawn value, surfaced).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub mass_rel: f64,
+    /// Physical radius, km — derived from mass at constant lunar density.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub radius_km: f64,
+    /// Surface gravity, m/s² — derived, `1.62 × mass^(1/3)`.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub surface_gravity_ms2: f64,
+    /// Seeded reflectance in [0.04, 0.5]; darkened where maria is high.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub albedo: f64,
+    /// Seeded cratering intensity in [0, 1]; biased high for small moons.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub cratering: f64,
+    /// Seeded smooth-maria fraction in [0, 1]; biased high for large moons.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub maria_fraction: f64,
+    /// Seeded near-gray linear-RGB tint, each channel in [0, 1].
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub tint: [f64; 3],
+    /// Derived descriptive class name (see `moon_surface_class`).
+    pub surface_class: String,
+}
+
+/// One `scene/moons/v1` document: each moon's surface as derived physics
+/// plus seeded procedural descriptors.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed)
+#[derive(Debug, Serialize)]
+pub struct MoonsScene {
+    /// Always `scene/moons/v1`.
+    pub schema: String,
+    /// The world's seed.
+    pub seed: u64,
+    /// The moons, in generation order (matches `scene/system/v1`).
+    pub moons: Vec<MoonSurface>,
+}
+
+/// Build the `scene/moons/v1` scene for `world`. Errors when the world has
+/// no generated sky (the tier-0 constant sun has no moons) — mirrors
+/// [`system_scene`]. A pure read plus hash: consumes no `Stream` draws.
+pub fn moons_scene(world: &World) -> Result<MoonsScene, SceneError> {
+    let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let system = sky
+        .system()
+        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let moons = system
+        .moons
+        .iter()
+        .enumerate()
+        .map(|(index, m)| {
+            let mass_rel = m.mass.get();
+            let (radius_km, surface_gravity_ms2) = derived_from_mass(mass_rel);
+            let d = seeded_descriptors(world.seed, index, mass_rel);
+            MoonSurface {
+                index,
+                mass_rel,
+                radius_km,
+                surface_gravity_ms2,
+                albedo: d.albedo,
+                cratering: d.cratering,
+                maria_fraction: d.maria_fraction,
+                tint: d.tint,
+                surface_class: moon_surface_class(d.albedo, d.cratering, d.maria_fraction)
+                    .to_string(),
+            }
+        })
+        .collect();
+    Ok(MoonsScene {
+        schema: MOONS_SCHEMA.to_string(),
+        seed: world.seed.0,
+        moons,
+    })
+}
+
+/// Serialize a `MoonsScene` to compact JSON (mirrors [`system_json`]).
+/// type-audit: bare-ok(artifact: return)
+pub fn moons_json(scene: &MoonsScene) -> String {
+    serde_json::to_string(scene).expect("a MoonsScene always serializes")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -473,6 +640,21 @@ mod tests {
             &Default::default(),
         )
         .expect("seed 1 builds")
+    }
+
+    fn mooned_world() -> World {
+        gen_world_for(42)
+    }
+
+    fn gen_world_for(seed: u64) -> World {
+        hornvale_worldgen::build_world(
+            hornvale_kernel::Seed(seed),
+            &Default::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("seed builds a generated sky")
     }
 
     /// Significant digits in a JSON number token (sign, leading zeros, the
@@ -698,5 +880,117 @@ mod tests {
         )
         .unwrap();
         assert!(system_scene(&world).is_err(), "constant sun has no system");
+    }
+
+    #[test]
+    fn moons_scene_has_schema_indices_and_is_deterministic() {
+        let a = moons_scene(&mooned_world()).expect("generated world has moons");
+        assert_eq!(a.schema, "scene/moons/v1");
+        assert_eq!(a.seed, mooned_world().seed.0);
+        assert_eq!(a.moons.len(), 2, "seed 42 has two moons");
+        assert_eq!(a.moons[0].index, 0);
+        assert_eq!(a.moons[1].index, 1);
+        // Byte-identical on rebuild (determinism from the seed alone).
+        assert_eq!(
+            moons_json(&a),
+            moons_json(&moons_scene(&mooned_world()).unwrap())
+        );
+    }
+
+    #[test]
+    fn derived_params_follow_the_constant_density_physics() {
+        let scene = moons_scene(&mooned_world()).unwrap();
+        for m in &scene.moons {
+            let f = hornvale_kernel::math::powf(m.mass_rel, 1.0 / 3.0);
+            assert!(
+                (m.radius_km - 1737.4 * f).abs() < 1e-6,
+                "radius = 1737.4·mass^(1/3)"
+            );
+            assert!(
+                (m.surface_gravity_ms2 - 1.62 * f).abs() < 1e-6,
+                "g = 1.62·mass^(1/3)"
+            );
+        }
+    }
+
+    #[test]
+    fn derived_params_equal_luna_at_one_lunar_mass() {
+        // A unit-mass moon reproduces Luna's reference radius and gravity.
+        let (r, g) = super::derived_from_mass(1.0);
+        assert!((r - 1737.4).abs() < 1e-9);
+        assert!((g - 1.62).abs() < 1e-9);
+    }
+
+    #[test]
+    fn descriptors_are_in_range() {
+        let scene = moons_scene(&mooned_world()).unwrap();
+        for m in &scene.moons {
+            assert!((0.04..=0.5).contains(&m.albedo), "albedo in [0.04,0.5]");
+            assert!((0.0..=1.0).contains(&m.cratering));
+            assert!((0.0..=1.0).contains(&m.maria_fraction));
+            for c in m.tint {
+                assert!((0.0..=1.0).contains(&c));
+            }
+        }
+    }
+
+    #[test]
+    fn mass_bias_actually_bites_across_seeds() {
+        // The bias is a pure function of (seed, index, mass) — exercise it
+        // directly over synthetic masses spanning the drawn range [0.05, 2.5]
+        // (real moon mass is 0.05 + u·2.45), no world-building. Small moons
+        // must read higher cratering and large moons higher maria in aggregate
+        // (the bias, not a single-seed fluke).
+        let small_masses = [0.05, 0.2, 0.4, 0.6];
+        let large_masses = [1.6, 1.9, 2.2, 2.5];
+        let mut small_cratering = 0.0;
+        let mut large_cratering = 0.0;
+        let mut small_maria = 0.0;
+        let mut large_maria = 0.0;
+        for seed in 1..200u64 {
+            let s = hornvale_kernel::Seed(seed);
+            for (i, &m) in small_masses.iter().enumerate() {
+                let d = super::seeded_descriptors(s, i, m);
+                small_cratering += d.cratering;
+                small_maria += d.maria_fraction;
+            }
+            for (i, &m) in large_masses.iter().enumerate() {
+                let d = super::seeded_descriptors(s, i, m);
+                large_cratering += d.cratering;
+                large_maria += d.maria_fraction;
+            }
+        }
+        assert!(
+            small_cratering > large_cratering,
+            "small moons more cratered in aggregate"
+        );
+        assert!(
+            large_maria > small_maria,
+            "large moons more maria in aggregate"
+        );
+    }
+
+    #[test]
+    fn moons_scene_errors_on_a_constant_sun() {
+        assert!(moons_scene(&world()).is_err(), "constant sun has no moons");
+    }
+
+    #[test]
+    fn moons_scene_does_not_consume_draws_or_mutate_the_world() {
+        // The save-format guard: the document is a pure read + hash, so building
+        // it leaves the world byte-identical (no Stream draw, no mutation).
+        let w = mooned_world();
+        let before = serde_json::to_string(&w).unwrap();
+        let _ = moons_scene(&w).unwrap();
+        let after = serde_json::to_string(&w).unwrap();
+        assert_eq!(before, after, "moons_scene must not alter the world");
+    }
+
+    #[test]
+    fn surface_class_table_is_normative() {
+        assert_eq!(moon_surface_class(0.45, 0.9, 0.1), "bright-icy");
+        assert_eq!(moon_surface_class(0.2, 0.1, 0.5), "maria-rich");
+        assert_eq!(moon_surface_class(0.2, 0.8, 0.1), "heavily-cratered");
+        assert_eq!(moon_surface_class(0.2, 0.3, 0.1), "cratered-highland");
     }
 }
