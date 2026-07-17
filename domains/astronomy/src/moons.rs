@@ -66,6 +66,23 @@ pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
 const ATTEMPTS_PER_MOON: u32 = 128;
 const TIDE_CAP: f64 = 8.0;
 
+/// The probability that a moon admitted at `distance` Mm is a captured stray,
+/// given the system's admitted ceiling `max_distance` Mm. The single
+/// definition: `generate_moons` and the Luna calibration test both call this,
+/// so the test pins the production formula rather than a copy of it (an
+/// earlier version recomputed the arithmetic inline and therefore could not
+/// catch a regression in this function at all).
+///
+/// The distance proxy is physical: an impact child forms close and tidally
+/// recedes, while irregular satellites are distant. `frac` is cubed rather
+/// than used linearly — see `generate_moons`'s call site for the Luna
+/// calibration that forced it.
+fn capture_probability(distance: f64, max_distance: f64) -> f64 {
+    let span = (max_distance - 60.0).max(1e-9);
+    let frac = (distance - 60.0) / span;
+    (frac * frac * frac).clamp(0.02, 0.85)
+}
+
 fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
     Moon {
         mass: LunarMasses(mass),
@@ -181,9 +198,7 @@ pub fn generate_moons(
     // cubed value for a wide swath of close-in fracs.
     let mut formations = astronomy_seed.derive(streams::MOON_FORMATION).stream();
     for moon in &mut moons {
-        let span = (max_distance - 60.0).max(1e-9);
-        let frac = (moon.distance.0 - 60.0) / span;
-        let p_capture = (frac * frac * frac).clamp(0.02, 0.85);
+        let p_capture = capture_probability(moon.distance.0, max_distance);
         moon.formation = if formations.next_f64() < p_capture {
             Formation::Capture
         } else {
@@ -411,8 +426,11 @@ mod tests {
     /// and inner/outer rates below for the draw-level confirmation).
     #[test]
     fn luna_like_distance_reads_as_impact_child() {
-        let frac: f64 = 384.4 / (900.0 - 60.0);
-        let p_capture = (frac * frac * frac).clamp(0.02, 0.85);
+        // Calls the production `capture_probability` — NOT a copy of its
+        // arithmetic. An earlier version recomputed the formula inline, so
+        // reverting `generate_moons` to the linear map left this test
+        // passing: it pinned nothing.
+        let p_capture = capture_probability(384.4, 900.0);
         assert!(
             p_capture < 0.10,
             "Luna-like p_capture {p_capture} should be small — the whole point of cubing"
