@@ -124,22 +124,56 @@ This is the point of the campaign — these stop being independent draws:
 |---|---|---|
 | `age` | `planet_age − U(0.03, 0.10) Gyr` — coeval | **independent**: `U(0.05, 0.95) · planet_age` — the body formed elsewhere |
 | `density` | 3.34 g cm⁻³ — **derived, not assumed**: re-accreted mantle debris, no iron core (this is exactly why Luna is 3.34 against Earth's 5.51) | drawn from `{rocky 3.0, icy 1.6}` — a different reservoir |
-| `mass` | the current wide draw, biased **large** | biased **small** |
-| `distance` | the current Roche–Hill draw | biased **outward** (irregular satellites are distant) |
-| `inclination` | `U(0, 10)°` — the current draw, i.e. regular | **`U(20, 160)°`** — irregular; **>90° is retrograde** |
+| `inclination` | `U(0, 10)°` — **the current formula, unchanged** | **`U(20, 160)°`** — irregular; **>90° is retrograde** |
+| `mass`, `distance` | **not conditioned** — see §5.3 | **not conditioned** — see §5.3 |
 
 **Radius** then follows from mass *and real density* (`r = (3M/4πρ)^{1/3}`)
 rather than from mass and an assumption — which is the honesty upgrade
 campaign B was blocked on.
 
-### 5.3 The mechanism draw
+### 5.3 The mechanism draw — after admission, and why that is *more* honest
 
-Drawn per moon from a new stream, `moon-formation`, **before** the
-mechanism-conditioned quantities, so the conditioning is causal rather than
-post-hoc. A world's *first* moon is weighted heavily toward `GiantImpact` (a
-terrestrial world's large moon is an impact product); subsequent moons weight
-toward `Capture`. This gives a multi-moon terrestrial world an actual story —
-one impact child and some captured strays — instead of an unexplained crowd.
+**Amended at plan time (Nathan-ratified).** An earlier draft drew mechanism
+*before* mass and distance and let it bias both, on the theory that causal
+conditioning beats post-hoc conditioning. Reading `generate_moons` killed that
+on two counts.
+
+**The physics does not support conditioning mass.** The draft claimed captured
+moons are small. **Triton falsifies it** — it is the seventh-largest moon in
+the solar system and it is captured. Mass is not a capture signature.
+**Inclination is**: a high, often retrograde inclination is the *defining*
+signature of an irregular satellite. Conditioning mass would have asserted a
+correlation the solar system contradicts.
+
+**And the file already documents the right discipline.** `generate_moons`
+draws count, mass, and distance in the admission loop, sorts by distance, and
+*then* draws inclination and node, each from its own stream — with the reason
+in a comment: "so every pre-eclipse draw (count, masses, distances) is
+byte-identical and the draws are index-stable." SKY-6 and Eclipse Seasons both
+added per-moon quantities this way.
+
+So mechanism is drawn **per moon, after the distance sort, from its own new
+stream `moon-formation`**, and is **weighted by distance** — which is both
+physical (an impact child forms close and tidally recedes; irregular
+satellites are distant) and free, since distance is already in hand.
+
+The consequence is the campaign's best property:
+
+```
+  GiantImpact -> inclination = incl_stream.next_f64() * 10.0          <- IDENTICAL to today
+  Capture     -> inclination = 20.0 + incl_stream.next_f64() * 140.0  <- differs
+```
+
+Same stream, same **single** draw per moon, so index-stability holds exactly as
+SKY-6 established. Therefore:
+
+- **Masses and distances never move, in any world.**
+- **A world whose moons all draw `GiantImpact` is byte-identical to today** —
+  same moons, same inclinations, same nodes, same eclipses.
+- Only worlds that actually receive a captured moon change.
+
+This is a **partial epoch**, not a total one (§7), and it shrinks what the
+census regeneration must cover.
 
 ## 6. The model card delta
 
@@ -167,9 +201,21 @@ moon; capture-mechanism density class, age, mass, distance, inclination.
 
 ## 7. The epoch, and its blast radius
 
-**This is an epoch.** `inclination_deg`'s distribution changes for any moon
-drawn as `Capture`, and mass/distance conditioning shifts even for
-`GiantImpact`. Every seeded world's moons change.
+**This is a PARTIAL epoch** (narrowed by §5.3's amendment). `inclination_deg`
+changes **only** for a moon drawn as `Capture`. Masses and distances never
+move; a `GiantImpact` moon's inclination uses the identical formula off the
+identical stream draw. So:
+
+- A **moonless** world: byte-identical.
+- A world whose moons **all** draw `GiantImpact`: byte-identical.
+- A world with **any** captured moon: that moon's inclination moves, and its
+  eclipses with it.
+
+The blast radius is therefore *a fraction of seeds*, not all of them — which
+is what §5.3 bought. **The affected fraction is measurable before merge and
+must be measured** (Task 6): run the mechanism draw across the census seed set
+and report what share of worlds move. That number is the honest input to the
+regen conversation, and nobody has it yet.
 
 Known blast radius:
 
