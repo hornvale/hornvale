@@ -5,6 +5,10 @@
 //! composition root populates and never imports another domain.
 #![warn(missing_docs)]
 
+/// The clause layer: a language-neutral `ClauseSpec` and the Common
+/// realizer that turns it into a sentence. Generalizes the `render_line`
+/// seam from a bespoke tenet spec to any clause.
+pub mod clause;
 /// The etymology engine: proto-roots drawn from a phonology, and a drawn
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
@@ -31,6 +35,7 @@ pub mod phonology;
 /// seam.
 pub mod register;
 
+pub use clause::{ClauseSpec, Definiteness, Frame, Number, realize_common};
 pub use etymology::{
     AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
     draw_cascade, evolve, proto_root,
