@@ -32,8 +32,12 @@ a measure, silence where a component is absent. A dragon has a biosphere row and
 no mind row; that absence *is* its dragon-ness, expressed rather than declared.
 
 Two consequences fall out. There is no roster struct and no central list of
-kinds: the universal biosphere registry — the trunk every kind hangs from — *is*
-the set of entities, and "which kinds exist" is answered by iterating it. And the
+kinds: at this point in the program the universal biosphere registry — the
+trunk every kind hangs from — is still the whole of it, and "which kinds
+exist" is answered by iterating it alone. (Campaign 5, *The Individuation*,
+generalizes this once kinds without a body — deity, culture, raw material —
+enter the substrate: the canonical roster becomes the union of every
+component store's key-set, biosphere included but no longer exclusive.) And the
 old struct's `Option<PeopledTraits>`, which made "all the peopled traits or none"
 true by the shape of the type, becomes a **referential-integrity check** at the
 composition root: the peopled cluster must share one key-set, every peopled kind

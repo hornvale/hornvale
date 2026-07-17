@@ -1,5 +1,7 @@
 # The Individuation (ECS Campaign 5) Implementation Plan
 
+> **STATUS: SHIPPED** — *The Individuation*, all six tasks landed byte-identical; keystone kind ⋈ instance query green; full gate green. FF to main is Nathan's G6 call. See the chronicle `book/src/chronicle/the-individuation.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Land the instance half of the entity-component substrate: `NonZeroU64` `EntityId`s, canonical `instance-of` facts with a latest-wins `kind_of` read, the per-call `instance_biosphere` prototype-inheritance lens, the first four non-species kinds, and the keystone kind⋈instance query — with every shipped world's ledger byte-identical.

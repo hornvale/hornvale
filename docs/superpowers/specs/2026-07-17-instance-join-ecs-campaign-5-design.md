@@ -1,5 +1,7 @@
 # Instance ⋈ Ledger (ECS Campaign 5) — Design
 
+> **STATUS: SHIPPED** — *The Individuation*, all six tasks landed on `worktree-the-individuation` 2026-07-17 (byte-identical; shadow posture — zero genesis instances; full gate green). FF to main is Nathan's G6 call. Chronicle: `book/src/chronicle/the-individuation.md`.
+
 Program: **The Entity-Component Substrate** (metaplan
 `docs/superpowers/specs/2026-07-14-ecs-program-metaplan-design.md`, campaign 5;
 registry **UNI-22**). Base: main `@37ae360` (campaigns 1–4 shipped: The
