@@ -1,5 +1,17 @@
 # The Terminator (Regime-Aware Insolation, SKY-24) Implementation Plan
 
+> **Status: SHIPPED** (habitability fix; religion payoff banked as
+> follow-up, 2026-07-16). Tasks 1–3 and 5 executed as planned; Task 4
+> (roster re-tune) correctly SKIPPED per the Task-2 probe's verdict. The
+> acceptance battery (Task 5) measured the campaign's preregistered payoff
+> — locked-world Ambient-religion recovery — and it did NOT land (0/9,
+> unchanged from the pre-fix 0/48); the habitability half is verified
+> correct and complete. Nathan's ruling: ship as the habitability fidelity
+> fix it is, bank presiding-belief dominance-blindness as SKY-25. See the
+> spec's status note, the chronicle
+> (`book/src/chronicle/the-terminator.md`), and the retrospective
+> (`docs/retrospectives/the-terminator.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the habitability `insolation` field rotation-regime-aware so tidally-locked worlds reward the terminator (restoring tide-Ambient religion as emergent physics), via a shared `climate::substellar_cosine` helper and a Locked day/night insolation branch — leaving spinning worlds byte-identical.

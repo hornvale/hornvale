@@ -89,6 +89,7 @@
 - [Sculpting](./chronicle/sculpting.md)
 - [The True Name](./chronicle/the-true-name.md)
 - [The Region](./chronicle/the-region.md)
+- [The Terminator](./chronicle/the-terminator.md)
 
 # The Gallery
 

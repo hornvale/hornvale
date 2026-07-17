@@ -1,6 +1,19 @@
 # The Terminator — regime-aware insolation (SKY-24)
 
-**Status:** Draft — awaiting G3 (spec review before planning)
+> **Status: SHIPPED** (habitability fix; religion payoff banked as
+> follow-up, 2026-07-16). The shared `substellar_cosine` helper and the
+> `Locked` insolation branch merged as planned, spinning-world
+> byte-identity held, and no roster re-tune was needed (measured, not
+> guessed). The acceptance battery measured the campaign's own
+> preregistered payoff — §8's Ambient-recovery prediction — and it was
+> FALSIFIED: 0/9 locked worlds head Ambient post-fix, unchanged from the
+> pre-fix 0/48, because presiding-belief selection is gated by a second,
+> independent mechanism (species-registry order + the founder-floor
+> flagship guarantee) the insolation fix never touches. Nathan's ruling:
+> ship the correct habitability fix, bank the presiding-belief fix as
+> SKY-25. Chronicle: [`the-terminator`](../../../book/src/chronicle/the-terminator.md);
+> retrospective: [`the-terminator`](../../retrospectives/the-terminator.md).
+
 **Campaign:** the-terminator · **Registry:** SKY-24 · **Relates:** SKY-5, SEQ-1
 **Origin:** the ambient-extinction investigation during rift-and-fit
 (2026-07-16); reports in `.superpowers/sdd/`.
