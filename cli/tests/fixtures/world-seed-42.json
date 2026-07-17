@@ -1194,7 +1194,7 @@
         "subject": 1,
         "predicate": "moon-inclination-degrees",
         "object": {
-          "Number": 6.948374
+          "Number": 117.27724
         },
         "place": null,
         "day": 0.0,
@@ -1214,7 +1214,7 @@
         "subject": 1,
         "predicate": "moon-node-period-days",
         "object": {
-          "Number": 5589.1342
+          "Number": -12105.887
         },
         "place": null,
         "day": 0.0,

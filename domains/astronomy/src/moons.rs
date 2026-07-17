@@ -209,9 +209,23 @@ pub fn generate_moons(
     // SKY-6: inclinations draw from their own stream, after admission and
     // the distance sort, so every pre-eclipse draw (count, masses,
     // distances) is byte-identical and the draws are index-stable.
+    //
+    // The Reckoning: this is the epoch, and it is a PARTIAL one. Both
+    // branches consume EXACTLY ONE draw from this same stream, whichever is
+    // taken, so index-stability holds regardless of which mechanism a moon
+    // drew — and the GiantImpact formula is byte-identical to the pre-epoch
+    // one, so an all-impact world's inclinations (and everything derived
+    // from them: nodes, eclipses) never move. Only worlds that actually
+    // receive a captured moon change.
     let mut inclinations = astronomy_seed.derive(streams::MOON_INCLINATIONS).stream();
     for moon in &mut moons {
-        moon.inclination_deg = inclinations.next_f64() * 10.0;
+        let roll = inclinations.next_f64();
+        moon.inclination_deg = match moon.formation {
+            // Regular: prograde, low inclination. The pre-epoch formula.
+            Formation::GiantImpact => roll * 10.0,
+            // Irregular. Above 90° the orbit is retrograde — Triton's case.
+            Formation::Capture => 20.0 + roll * 140.0,
+        };
     }
 
     // Eclipse Seasons: node longitudes draw from their own stream, after
@@ -338,10 +352,12 @@ mod tests {
         }
     }
 
-    /// SKY-6: every admitted moon draws an inclination in [0, 10)°,
-    /// deterministically, from its own stream — the pre-eclipse draws
-    /// (count, masses, distances) are pinned unchanged by
-    /// `golden_seed_42.rs`.
+    /// The Reckoning: every admitted moon draws an inclination whose range is
+    /// conditioned on its `formation` — impact moons stay in the pre-epoch
+    /// [0, 10)° band, captured moons draw the wide irregular [20, 160] band
+    /// — deterministically, from the same single `MOON_INCLINATIONS` stream
+    /// draw either way (index-stability; the pre-inclination draws (count,
+    /// masses, distances) are pinned unchanged by `golden_seed_42.rs`).
     #[test]
     fn every_moon_draws_an_inclination_in_range() {
         for seed in 0..64 {
@@ -349,12 +365,105 @@ mod tests {
             let (moons, _) =
                 generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
             for moon in &moons {
-                assert!(
-                    (0.0..10.0).contains(&moon.inclination_deg),
-                    "seed {seed}: inclination {}",
-                    moon.inclination_deg
-                );
+                match moon.formation {
+                    Formation::GiantImpact => assert!(
+                        (0.0..10.0).contains(&moon.inclination_deg),
+                        "seed {seed}: impact moon inclination {}",
+                        moon.inclination_deg
+                    ),
+                    Formation::Capture => assert!(
+                        (20.0..=160.0).contains(&moon.inclination_deg),
+                        "seed {seed}: captured moon inclination {}",
+                        moon.inclination_deg
+                    ),
+                }
             }
+        }
+    }
+
+    /// The Reckoning: restates the range check as a distribution claim per
+    /// mechanism, over a wider seed sweep than `every_moon_draws_an_
+    /// inclination_in_range` — the brief's Step 1 test, asserting against
+    /// production `generate_moons` rather than pinning its own arithmetic.
+    #[test]
+    fn impact_moons_are_regular_and_captured_moons_are_irregular() {
+        for seed in 0..400u64 {
+            let (star, anchor) = system(seed);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            for m in &moons {
+                match m.formation {
+                    Formation::GiantImpact => assert!(
+                        (0.0..=10.0).contains(&m.inclination_deg),
+                        "seed {seed}: impact moon at {}°",
+                        m.inclination_deg
+                    ),
+                    Formation::Capture => assert!(
+                        (20.0..=160.0).contains(&m.inclination_deg),
+                        "seed {seed}: captured moon at {}°",
+                        m.inclination_deg
+                    ),
+                }
+            }
+        }
+    }
+
+    /// The Reckoning: the campaign's visible deliverable — worlds that could
+    /// never have a retrograde moon before now can. Above 90° is retrograde;
+    /// among captured moons the rate should land in a broad plausible band,
+    /// neither ~0 nor ~1.
+    #[test]
+    fn some_captured_moons_are_retrograde() {
+        let mut retrograde = 0u32;
+        let mut captured = 0u32;
+        for seed in 0..400u64 {
+            let (star, anchor) = system(seed);
+            let (moons, _) =
+                generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            for m in moons.iter().filter(|m| m.formation == Formation::Capture) {
+                captured += 1;
+                if m.inclination_deg > 90.0 {
+                    retrograde += 1;
+                }
+            }
+        }
+        assert!(
+            captured > 20,
+            "too few captured moons to judge ({captured})"
+        );
+        let rate = f64::from(retrograde) / f64::from(captured);
+        assert!(
+            (0.3..0.7).contains(&rate),
+            "retrograde rate {rate} among {captured} captured"
+        );
+    }
+
+    /// The Reckoning, spec §7: the partial-epoch property. Seed 218 (under
+    /// this file's `system()` helper, a raw seed) admits 3 moons that all
+    /// draw `GiantImpact` — checked with a throwaway probe, not asserted
+    /// here. Because the `GiantImpact` branch's formula is byte-identical to
+    /// the pre-epoch code, and both branches consume exactly one draw from
+    /// the same `MOON_INCLINATIONS` stream, an all-impact world's
+    /// inclinations must be unchanged.
+    ///
+    /// These three values are the pre-campaign ones: recorded by checking
+    /// out `d30bcfd` (the commit immediately before this task) into a
+    /// separate temporary worktree and printing `generate_moons(Seed(218),
+    /// ...)`'s inclinations there directly — not by running the post-change
+    /// code and pasting what it prints, which would pin whatever the code
+    /// does and prove nothing.
+    #[test]
+    fn an_all_impact_world_is_byte_identical_to_the_pre_campaign_draw() {
+        let (star, anchor) = system(218);
+        let (moons, _) = generate_moons(Seed(218), &star, &anchor, &SkyPins::default()).unwrap();
+        assert_eq!(moons.len(), 3);
+        assert!(
+            moons.iter().all(|m| m.formation == Formation::GiantImpact),
+            "seed 218 must be an all-impact world for this property to test anything"
+        );
+        let expected = [4.474260413733722, 2.778959967462058, 6.084528594520218];
+        for (m, want) in moons.iter().zip(expected) {
+            assert_eq!(m.inclination_deg, want, "seed 218 inclination drifted");
         }
     }
 

@@ -32,9 +32,9 @@ On day 103, the first moon devours the sun whole along latitude 11°.
 
 On day 111, the full first moon darkens to a bloodred coal.
 
-On day 116, the full second moon darkens to a bloodred coal.
-
 On day 119, the first moon devours the sun whole along latitude -62°.
+
+On day 270, the first moon devours the sun whole along latitude -59°.
 
 The eclipse seasons parade backward through the year at 12 days a year.
 
@@ -176,7 +176,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Zvakngek the Nodsfobsvad returns every 269.79 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 4586.51 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -198,7 +198,7 @@ In the legion of **Gkaavoonoagoo**, an organized priesthood tends its own panthe
 >
 > — derived from the phenomenon *eclipse*
 
-> Kqeotgaetgeo the Mjoeggoexeo returns every 269.79 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 4586.51 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 

@@ -49,9 +49,9 @@ On day 103, the first moon devours the sun whole along latitude 11°.
 
 On day 111, the full first moon darkens to a bloodred coal.
 
-On day 116, the full second moon darkens to a bloodred coal.
-
 On day 119, the first moon devours the sun whole along latitude -62°.
+
+On day 270, the first moon devours the sun whole along latitude -59°.
 
 The eclipse seasons parade backward through the year at 12 days a year.
 
@@ -180,7 +180,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Zvakngek the Nodsfobsvad returns every 423.36 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 7166.52 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -188,7 +188,7 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *eclipse*
 
-> Nobzhxok the Vnetzfobzfobzhxeb returns every 269.79 days. So it was, so it is.
+> Nobzhxok the Vnetzfobzfobzhxeb returns every 4586.51 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -222,7 +222,7 @@ In the legion of **Veenjeoxaanoenoanoagoo**, an organized priesthood tends its o
 >
 > — derived from the phenomenon *eclipse*
 
-> Kqeotgaetgeo the Mjoeggoexeo returns every 423.36 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 7166.52 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -230,7 +230,7 @@ In the legion of **Veenjeoxaanoenoanoagoo**, an organized priesthood tends its o
 >
 > — derived from the phenomenon *eclipse*
 
-> Voeveamjae the Vaabqaobqao returns every 269.79 days. So it was, so it is.
+> Voeveamjae the Vaabqaobqao returns every 4586.51 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
