@@ -303,12 +303,15 @@ In the warren of **Roqrraxaxoqrrak**, an organized priesthood tends its own pant
 The spinning sky is a busy one — the sun on its 0.88-day round, two moons,
 a wanderer that returns every 386.98 days, two kinds of eclipse, and the
 tides the moons raise — and every pantheon mythologizes the same inventory
-of phenomena, each in its own voice and its own order. The anonymous lead
-block, the identity contract's surviving trace of the pre-Eyes single-pantheon
-page, now belongs to **bugbear**, the species that sorts first in the
-registry, not to goblin; [Religion](../domains/religion.md) names that exact
-byte-stability assumption as a standing debt, and this is the case the debt
-described. Nothing broke — the attribution is simply silent.
+of phenomena, each in its own voice and its own order. Each pantheon block
+now names the people who hold it — The Named ended the anonymous lead that
+once fell on whichever pantheon rendered first, and The Presiding ended the
+matching fiction in the lab, where a metric called `belief-kind` reported one
+people's head deity as the whole world's religion. Both were the same error a
+layer apart: *first in a list* mistaken for *belonging to the world*. And
+both were told, for a while, that the first block belonged to **bugbear**,
+the species that sorts first in the registry — a species that, the
+thousand-seed census shows, places on no world at all.
 
 Read the goblin and kobold blocks against each other and the species axis
 appears cleanly. Both peoples see the identical sky, but they crown it

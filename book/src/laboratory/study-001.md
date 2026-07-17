@@ -22,13 +22,21 @@ At tier 0 a world's religion heeds only its single most salient sky: a
 tidally locked sun, fixed forever at one point in the heavens, yields a
 belief in an eternal and unmoving power; a rising-and-setting sun yields a
 cyclic one. This is not a hypothesis about the census — it is a fact about
-the code, true by construction. So the metrics `tidally-locked` and
-`belief-kind` must agree in every world, and if they ever disagreed the
+the code, true by construction. So a world's tidal locking and the sentiment
+of its peoples' head deities must agree, and if they ever disagreed the
 instrument would be lying.
 
 They agree. Of ten thousand worlds, **457 are tidally locked, and exactly
 457 hold an eternal faith** — not 456, not 458. The remaining 9,543 spin,
 and all 9,543 believe in a cyclic heaven.
+
+*(A note on how this is measured now: the census once carried a single
+per-world `belief-kind` column, the head deity of whichever people committed
+its pantheon first. The Presiding retired it — a world has no religion, its
+peoples do — for one reading per people. The invariant is unchanged and in
+fact stronger: it now holds for every people's head on every locked world,
+not one arbitrary people's. The frozen-sky calibration in
+`windows/lab/tests/calibration.rs` checks exactly that.)*
 
 <!-- `belief-kind` is a religion-domain metric, dropped from
 `census-of-skies` when it went sky-only (chore(lab): census-of-skies goes

@@ -97,6 +97,7 @@
 - [The Dissolution](./chronicle/the-dissolution.md)
 - [The Reckoning](./chronicle/the-reckoning.md)
 - [The Concordance](./chronicle/the-concordance.md)
+- [The Presiding](./chronicle/the-presiding.md)
 
 # The Gallery
 

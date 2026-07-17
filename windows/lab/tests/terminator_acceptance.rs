@@ -35,31 +35,37 @@
 //! directly (seed 8): the world DOES commit a tide-derived, Ambient belief
 //! (source_kind `"tide"`) — but only as its 4th belief. Its FIRST belief
 //! (source_kind `"celestial-body"`, Eternal) comes from whichever peopled
-//! species commits its pantheon first in ledger order. Per
-//! `a_frozen_sky_never_heads_a_cyclic_pantheon`'s own doc comment, that is
-//! now **bugbear**, unconditionally: `hornvale_species::registry()`'s
-//! `BTreeMap` iteration sorts "bugbear" alphabetically first among the
-//! Branches' four peoples, and the founder floor (MAP-22's allocation
-//! layer, `domains/demography/src/founder.rs`) guarantees bugbear a
-//! flagship settlement on every seed — so
-//! bugbear's pantheon is minted first on every locked world in this
-//! sample, regardless of which species the corrected insolation field
-//! makes numerically dominant. Bugbear's own head-deity selection picks
-//! whatever phenomenon is most salient to bugbear specifically, which this
-//! sample shows defaulting to a celestial body (Eternal), not the tide.
+//! species commits its pantheon first in ledger order.
+//!
+//! CORRECTION (The Presiding, SKY-25, 2026-07-17): this passage originally
+//! blamed **bugbear** — that `registry()`'s alphabetical `BTreeMap` order
+//! plus the founder floor make bugbear commit first on every seed. The
+//! 1000-seed census refutes it: `belief-kind-bugbear` is Absent on
+//! **1000/1000** seeds. Bugbear places NOWHERE. The first committer is
+//! **goblin** (present on 999/1000), and on every naturally-locked seed it
+//! is a single founder-floor soul of population 1, speaking for a world
+//! that holds up to 27 hobgoblins. Registry-first is not placed-first — the
+//! sort order is real, but the species it names never arrives. (The Named
+//! and The Terminator each made this same inference independently; check
+//! placement, not sort order.)
+//!
+//! What this battery MEASURED is correct and its pin stands: 0/9 locked
+//! worlds head Ambient. The deeper reason The Presiding found is that the
+//! swap the row implied would not help — **hobgoblin's own pantheon also
+//! heads Eternal on all 9**, so making presiding-belief selection
+//! dominance-aware moves the tide payoff 0/9 → 0/9. The real gate is the
+//! ambient-extinction movement (rift-and-fit ledger #14/#19), not who
+//! presides.
 //!
 //! **The fix repaired habitability (Task 2/3's measured, verified target)
 //! but the presiding-belief mechanism `beliefs_of(&world).first()` reads
 //! is decoupled from habitability dominance by an unrelated,
-//! already-shipped mechanism** (the Branches' alphabetical-commit-order +
-//! founder-floor coupling that `a_frozen_sky_never_heads_a_cyclic_
-//! pantheon` already documents as a "genuine behavioural finding, not a
-//! bug"). This battery pins the measured falsification exactly — per this
-//! codebase's convention for honest, unforced, unwidened calibration pins
-//! (ADR 0016) — rather than asserting a floor that isn't met. A future
-//! campaign that revisits presiding-belief selection (e.g. weighting by
-//! dominance rather than commit order) should update these pinned counts
-//! deliberately, not silently.
+//! already-shipped mechanism.** The Presiding retired the world-level
+//! `belief-kind` metric this battery's own docstring leaned on — a world
+//! has no religion, its peoples do — but this battery reads
+//! `beliefs_of(&world)` directly (not the metric), so it is unaffected.
+//! It pins the measured falsification exactly, per ADR 0016, rather than
+//! asserting a floor that isn't met.
 
 use hornvale_astronomy::{Rotation, SkyPins};
 use hornvale_kernel::Seed;
