@@ -49,6 +49,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-book"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+]
+
+[[package]]
 name = "hornvale-climate"
 version = "0.1.0"
 dependencies = [
