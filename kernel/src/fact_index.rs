@@ -170,7 +170,6 @@ impl FactIndex {
     }
 
     /// Ascending positions of all facts whose object equals `object`.
-    #[allow(dead_code)]
     pub(crate) fn positions_for_object(&self, object: &Value) -> Vec<usize> {
         let obj = ObjKey(object.clone());
         let mut v: Vec<usize> = self

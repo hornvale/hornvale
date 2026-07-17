@@ -164,6 +164,11 @@ impl Ledger {
             .find(|f| f.subject == subject && f.predicate == predicate)
             .map(|f| &f.object)
     }
+    pub(crate) fn naive_query_by_object(&self, object: &Value) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| &self.facts[p].object == object)
+            .collect()
+    }
 
     /// Would this fact be accepted? Used by the refinement engine to test
     /// candidates without committing.
@@ -266,6 +271,16 @@ impl Ledger {
             }
             None => self.naive_value_of(subject, predicate),
         }
+    }
+
+    /// All facts whose object equals `object`, in commit order (the O-shape
+    /// query the flat ledger could not answer). O(log n + k) via the OSP index.
+    pub fn query_by_object(&self, object: &Value) -> impl Iterator<Item = &Fact> {
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_object(object),
+            None => self.naive_query_by_object(object),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// The text value of (subject, predicate), if present and textual.
@@ -692,6 +707,12 @@ mod tests {
                     .map(|&p| l.fact_at(p))
                     .collect();
                 assert_eq!(idx, scan, "facts_about seed {seed} subj {s:?}");
+                // value_of == naive_value_of for the same subject/predicate
+                assert_eq!(
+                    l.value_of(s, "located-in"),
+                    l.naive_value_of(s, "located-in"),
+                    "value_of seed {seed} subj {s:?}"
+                );
             }
             // P-shape: find == naive scan
             let idx: Vec<&Fact> = l.find("located-in").collect();
@@ -702,5 +723,47 @@ mod tests {
                 .collect();
             assert_eq!(idx, scan, "find seed {seed}");
         }
+    }
+
+    #[test]
+    fn index_equals_scan_object() {
+        for seed in 0..64u64 {
+            let (l, _r, subjects) = random_ledger(seed, 200);
+            for &s in &subjects {
+                let obj = Value::Entity(s);
+                let idx: Vec<&Fact> = l.query_by_object(&obj).collect();
+                let scan: Vec<&Fact> = l
+                    .naive_query_by_object(&obj)
+                    .iter()
+                    .map(|&p| l.fact_at(p))
+                    .collect();
+                assert_eq!(idx, scan, "query_by_object seed {seed} obj {obj:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn query_by_object_finds_committed_facts() {
+        let r = registry();
+        let mut l = Ledger::default();
+        let a = l.mint_entity();
+        let hub = l.mint_entity();
+        l.commit(
+            Fact {
+                subject: a,
+                predicate: "located-in".into(),
+                object: Value::Entity(hub),
+                place: None,
+                day: None,
+                provenance: "t".into(),
+            },
+            &r,
+        )
+        .unwrap();
+        let found: Vec<EntityId> = l
+            .query_by_object(&Value::Entity(hub))
+            .map(|f| f.subject)
+            .collect();
+        assert_eq!(found, vec![a]);
     }
 }
