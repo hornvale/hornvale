@@ -70,7 +70,7 @@ sky flags (shared by new and scout):
 const TERRAIN_FLAGS: &str = "\
   [--plates N]                             pin the plate count (2-64)
   [--ocean-fraction F]                     pin the target ocean fraction (0.05-0.95)
-  [--supercontinent true|false]            cluster the cratons into one landmass
+  [--supercontinent true|false]            hold the world at its pre-breakup assembly (sutured supercontinent; rift seams visible)
   [--globe-level N]                        pin the canonical grid level (4-7; default 6)
   [--continents N]                         pin the craton count (1-16)
 ";

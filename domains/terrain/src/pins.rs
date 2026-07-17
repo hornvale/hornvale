@@ -11,10 +11,12 @@ pub struct TerrainPins {
     pub plates: Option<u32>,
     /// Target ocean fraction (legal 0.05–0.95); drawn 0.5–0.75 when `None`.
     pub ocean_fraction: Option<f64>,
-    /// `Some(true)` clusters the drawn cratons (see `continents`) toward
-    /// craton 0 into one landmass; `Some(false)` explicitly re-affirms the
-    /// drawn (scattered) layout. Structural — no drawn counterpart, so it
-    /// is never metered in genesis notes.
+    /// `Some(true)` holds the world at its pre-breakup assembly — a sutured
+    /// supercontinent whose rift seams are drawn but never opened (each
+    /// major craton's center is replaced by its `rift.assembly` position at
+    /// genesis, rift-and-fit spec §4); `Some(false)` re-affirms the drawn
+    /// (displaced) layout. Structural — no drawn counterpart, so it is never
+    /// metered in genesis notes.
     pub supercontinent: Option<bool>,
     /// Canonical geodesic grid level (legal 4–7); the crate default
     /// `GLOBE_LEVEL` when `None`. Part of world identity: the same seed at

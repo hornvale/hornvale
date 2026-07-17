@@ -49,11 +49,17 @@ assert.equal(hv_start(42n), 0, "seed-42 genesis succeeds");
 const genesisMs = performance.now() - t0;
 assert.equal(readOut(), golden, "wasm opening === native transcript opening");
 
-// 2. Walking works and returns different prose.
-assert.equal(send("go n"), 0);
-const north = readOut();
-assert.notEqual(north, golden, "moving changed the room");
-assert.match(north, /^\[room /, "room header present");
+// 2. Walking works and returns different prose. The direction comes from the
+// opening's own "Ways on:" line, not a hardcoded compass point — a worldgen
+// epoch may reshape the seed-42 opening room's exits, and this smoke asserts
+// "walking works", not any particular geography.
+const ways = golden.match(/^Ways on: (.+)\.$/m);
+assert.notEqual(ways, null, "opening lists its ways on");
+const dir = ways[1].split(", ")[0].toLowerCase();
+assert.equal(send(`go ${dir}`), 0);
+const stepped = readOut();
+assert.notEqual(stepped, golden, "moving changed the room");
+assert.match(stepped, /^\[room /, "room header present");
 
 // 3. Retrace.
 assert.equal(send("back"), 0);

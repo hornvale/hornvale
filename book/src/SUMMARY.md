@@ -91,6 +91,10 @@
 - [The Region](./chronicle/the-region.md)
 - [The Lens](./chronicle/the-lens.md)
 - [The Faces](./chronicle/the-faces.md)
+- [Rift-and-Fit](./chronicle/rift-and-fit.md)
+- [The Terminator](./chronicle/the-terminator.md)
+- [The Named](./chronicle/the-named.md)
+- [The Dissolution](./chronicle/the-dissolution.md)
 
 # The Gallery
 
@@ -126,6 +130,8 @@
 - [Study 011: The Census of Words](./laboratory/study-011.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
 - [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
+- [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
+- [The Terminator Probe](./laboratory/the-terminator-probe.md)
 
 # Reference
 

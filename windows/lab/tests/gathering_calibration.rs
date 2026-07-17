@@ -106,9 +106,13 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (26.2645 -> 26.6509); the
     // preregistered floor of 3 still clears decisively.
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): re-measured (26.6509 ->
+    // 24.2412); the preregistered floor of 3 still clears decisively.
     assert!(
-        (mean - 26.6509).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~26.6509)"
+        (mean - 24.2412).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~24.2412)"
     );
 }
 
@@ -152,9 +156,13 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (10.7459 -> 12.5595); still
     // comfortably below the uniform-sphere baseline of 32.7.
+    //
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): re-measured (12.5595 ->
+    // 11.5144); still comfortably below the uniform-sphere baseline of 32.7.
     assert!(
-        (mean - 12.5595).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~12.5595)"
+        (mean - 11.5144).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~11.5144)"
     );
 }
 
@@ -247,11 +255,34 @@ fn world_level_population_conserves_against_total_capacity() {
         &hornvale_worldgen::SettlementPins::default(),
     )
     .expect("seed-42 world must build");
-    let roster: Vec<hornvale_species::SpeciesDef> = hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
+    // The peopled-only component set (the psyche key-set; fauna are
+    // biosphere-only), byte-identical to the pre-ECS peopled roster this
+    // conservation guard has always measured.
+    use hornvale_kernel::{ComponentStore, KindId};
+    let psyche = hornvale_species::psyche_registry();
+    let peopled: std::collections::BTreeSet<KindId> = psyche.ids().copied().collect();
+    let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+        hornvale_species::biosphere_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
+    let family_of: ComponentStore<KindId, &'static str> = hornvale_species::family_of()
+        .iter()
+        .filter(|(k, _)| peopled.contains(k))
+        .map(|(k, v)| (*k, *v))
         .collect();
-    let report = hornvale_worldgen::demography_report(&world, &roster)
+    let wc = hornvale_worldgen::WorldComponents::from_stores(
+        biosphere,
+        psyche,
+        hornvale_species::perception_registry(),
+        hornvale_language::articulation_registry(),
+        hornvale_language::lexicon_registry(),
+        hornvale_language::family_proto(),
+        family_of,
+    )
+    .expect("the peopled-only component set is well-formed");
+    let report = hornvale_worldgen::demography_report(&world, &wc)
         .expect("demography_report must recompute over an already-built world's committed facts");
     // Sum the niche-differentiated K (the coexistence stack's actual
     // packing capacity) over every peopled species and every cell —

@@ -13,9 +13,9 @@ use hornvale_terrain::{
     CarveParams, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, Sky, SkyChoice, build_world_to, build_world_with_roster, climate_of,
-    flagship_of, language_of_in, observed_phenomena_as_in, rock_class_name, sky_of, soil_of,
-    soil_order_name, terrain_of,
+    BuildDepth, BuildError, Sky, SkyChoice, WorldComponents, build_world_from_components,
+    build_world_to, climate_of, flagship_of, language_of_in, observed_phenomena_as_in,
+    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -38,28 +38,28 @@ pub struct WorldView {
     /// The derived climate (biome + habitability).
     pub climate: GeneratedClimate,
     /// The species roster this view was built from (default = shipped).
-    pub roster: Vec<hornvale_species::SpeciesDef>,
+    pub components: WorldComponents,
 }
 
 impl WorldView {
     /// Build a world view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<WorldView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build a world view with an explicit species roster (spec §3).
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<WorldView, BuildError> {
-        let world = build_world_with_roster(
+        let world = build_world_from_components(
             seed,
             pins,
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
-            &roster,
+            &wc,
         )?;
         let sky = sky_of(&world)?;
         let Sky::Generated(sky) = sky else {
@@ -78,7 +78,7 @@ impl WorldView {
             globe,
             terrain,
             climate,
-            roster,
+            components: wc,
         })
     }
 }
@@ -108,22 +108,22 @@ pub struct AstronomyView {
     /// Genesis notes recorded during sky generation.
     pub notes: Vec<String>,
     /// The species roster this view was built from (default = shipped).
-    pub roster: Vec<hornvale_species::SpeciesDef>,
+    pub components: WorldComponents,
 }
 
 impl AstronomyView {
     /// Build an astronomy-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<AstronomyView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build an astronomy-rung view with an explicit species roster.
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<AstronomyView, BuildError> {
-        Self::build_to(seed, pins, roster, BuildDepth::Astronomy)
+        Self::build_to(seed, pins, wc, BuildDepth::Astronomy)
     }
 
     /// Build the world to `depth` and reconstruct the astronomy-rung fields.
@@ -132,7 +132,7 @@ impl AstronomyView {
     fn build_to(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<AstronomyView, BuildError> {
         let world = build_world_to(
@@ -141,7 +141,7 @@ impl AstronomyView {
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &hornvale_worldgen::SettlementPins::default(),
-            &roster,
+            &wc,
             depth,
         )?;
         let sky = sky_of(&world)?;
@@ -155,7 +155,7 @@ impl AstronomyView {
             calendar: sky.calendar().clone(),
             notes: sky.notes().to_vec(),
             world,
-            roster,
+            components: wc,
         })
     }
 }
@@ -173,16 +173,16 @@ pub struct TerrainView {
 impl TerrainView {
     /// Build a terrain-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<TerrainView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build a terrain-rung view with an explicit species roster.
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<TerrainView, BuildError> {
-        Self::build_to(seed, pins, roster, BuildDepth::Terrain)
+        Self::build_to(seed, pins, wc, BuildDepth::Terrain)
     }
 
     /// Build the world to `depth` and reconstruct the terrain-rung fields
@@ -190,10 +190,10 @@ impl TerrainView {
     fn build_to(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<TerrainView, BuildError> {
-        let astronomy = AstronomyView::build_to(seed, pins, roster, depth)?;
+        let astronomy = AstronomyView::build_to(seed, pins, wc, depth)?;
         let terrain = terrain_of(&astronomy.world)?;
         let globe = hornvale_terrain::summarize(terrain.globe());
         Ok(TerrainView {
@@ -224,16 +224,16 @@ pub struct ClimateView {
 impl ClimateView {
     /// Build a climate-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<ClimateView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build a climate-rung view with an explicit species roster.
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<ClimateView, BuildError> {
-        Self::build_to(seed, pins, roster, BuildDepth::Terrain)
+        Self::build_to(seed, pins, wc, BuildDepth::Terrain)
     }
 
     /// Build the world to `depth` and reconstruct the climate-rung fields
@@ -241,10 +241,10 @@ impl ClimateView {
     fn build_to(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<ClimateView, BuildError> {
-        let terrain = TerrainView::build_to(seed, pins, roster, depth)?;
+        let terrain = TerrainView::build_to(seed, pins, wc, depth)?;
         let climate = climate_of(&terrain.astronomy.world)?;
         Ok(ClimateView { terrain, climate })
     }
@@ -281,16 +281,16 @@ pub struct SettlementView {
 impl SettlementView {
     /// Build a settlement-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<SettlementView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build a settlement-rung view with an explicit species roster.
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<SettlementView, BuildError> {
-        let climate = ClimateView::build_to(seed, pins, roster, BuildDepth::Settlements)?;
+        let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Settlements)?;
         Ok(SettlementView { climate })
     }
 
@@ -316,8 +316,8 @@ impl SettlementView {
 
     /// The species roster this view was built from, reached through the
     /// climate/terrain/astronomy rungs this view extends.
-    pub fn roster(&self) -> &[hornvale_species::SpeciesDef] {
-        &self.climate.terrain.astronomy.roster
+    pub fn components(&self) -> &WorldComponents {
+        &self.climate.terrain.astronomy.components
     }
 }
 
@@ -347,16 +347,16 @@ pub struct FullView {
 impl FullView {
     /// Build a full-rung view with the shipped species roster.
     pub fn build(seed: Seed, pins: &SkyPins) -> Result<FullView, BuildError> {
-        Self::build_with_roster(seed, pins, hornvale_worldgen::default_roster())
+        Self::build_with_components(seed, pins, WorldComponents::assemble()?)
     }
 
     /// Build a full-rung view with an explicit species roster.
-    pub fn build_with_roster(
+    pub fn build_with_components(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
     ) -> Result<FullView, BuildError> {
-        let climate = ClimateView::build_to(seed, pins, roster, BuildDepth::Full)?;
+        let climate = ClimateView::build_to(seed, pins, wc, BuildDepth::Full)?;
         Ok(FullView {
             settlement: SettlementView { climate },
         })
@@ -371,8 +371,8 @@ impl FullView {
 
     /// The species roster this view was built from, reached through the
     /// settlement/climate/terrain/astronomy rungs this view extends.
-    pub fn roster(&self) -> &[hornvale_species::SpeciesDef] {
-        &self.settlement.climate.terrain.astronomy.roster
+    pub fn components(&self) -> &WorldComponents {
+        &self.settlement.climate.terrain.astronomy.components
     }
 
     /// The derived climate, reached through the settlement/climate rungs
@@ -478,21 +478,21 @@ impl BuiltView {
     pub fn build_to(
         seed: Seed,
         pins: &SkyPins,
-        roster: Vec<hornvale_species::SpeciesDef>,
+        wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<BuiltView, BuildError> {
         match depth {
-            BuildDepth::Astronomy => Ok(BuiltView::Astronomy(AstronomyView::build_with_roster(
-                seed, pins, roster,
-            )?)),
-            BuildDepth::Terrain => Ok(BuiltView::Terrain(TerrainView::build_with_roster(
-                seed, pins, roster,
+            BuildDepth::Astronomy => Ok(BuiltView::Astronomy(
+                AstronomyView::build_with_components(seed, pins, wc)?,
+            )),
+            BuildDepth::Terrain => Ok(BuiltView::Terrain(TerrainView::build_with_components(
+                seed, pins, wc,
             )?)),
             BuildDepth::Settlements => Ok(BuiltView::Settlement(
-                SettlementView::build_with_roster(seed, pins, roster)?,
+                SettlementView::build_with_components(seed, pins, wc)?,
             )),
-            BuildDepth::Full => Ok(BuiltView::Full(FullView::build_with_roster(
-                seed, pins, roster,
+            BuildDepth::Full => Ok(BuiltView::Full(FullView::build_with_components(
+                seed, pins, wc,
             )?)),
         }
     }
@@ -1251,8 +1251,7 @@ pub fn registry() -> Vec<Metric> {
                 // metric's population has always been the psych-bearing
                 // roster — fauna carrying capacity is the biosphere/niche
                 // path, not this field.
-                for def in v.roster().iter().filter(|d| d.peopled.is_some()) {
-                    let psych = &hornvale_worldgen::peopled(def).psych;
+                for (_kind, psych) in v.components().psyche.iter() {
                     let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
                         hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });
@@ -1302,7 +1301,8 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
-                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.roster()) else {
+                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.components())
+                else {
                     return MetricValue::Absent;
                 };
                 let geo = v.terrain().geosphere();
@@ -1336,7 +1336,8 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
-                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.roster()) else {
+                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.components())
+                else {
                     return MetricValue::Absent;
                 };
                 let settlements = &report.stack_settlements;
@@ -1345,7 +1346,7 @@ pub fn registry() -> Vec<Metric> {
                 }
                 let n = settlements.len() as f64;
                 let mut total_var = 0.0_f64;
-                for sid in 0..v.roster().len() as u32 {
+                for sid in 0..v.components().biosphere.len() as u32 {
                     // this species' fraction in each settlement (0.0 if absent from the mix)
                     let fracs = settlements.iter().map(|s| {
                         s.composition
@@ -2039,6 +2040,24 @@ pub fn registry() -> Vec<Metric> {
                     None => MetricValue::Absent,
                 }
             }),
+        },
+        Metric {
+            name: "coast-roughness-slope",
+            doc: "Multi-scale coastline-roughness slope, unbanded: the \
+                  least-squares slope of ln(shoreline development) against \
+                  mesh level, measured at L4/L5/L6 by projecting each \
+                  level's cells onto the canonical L6 land/ocean truth \
+                  (NearestCellIndex). A companion to shoreline-development, \
+                  not a replacement — that estimator is unchanged. Positive \
+                  means roughness concentrates at fine scales, which makes \
+                  this slope immune to the single-hex land/ocean \
+                  alternation exploit that inflates shoreline-development \
+                  without changing the coast's coarse shape; Absent if any \
+                  of the three levels has no shoreline",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.5, 0.0, 0.25, 0.5, 1.0, 1.5],
+            },
+            extract: Extractor::Terrain(coast_roughness_slope),
         },
         Metric {
             name: "hypsometric-bimodality",
@@ -2806,6 +2825,59 @@ fn shelf_width_median(v: &TerrainView, active_only: bool) -> MetricValue {
     }
 }
 
+/// Multi-scale coastline-roughness slope (rift-and-fit spec §7): a
+/// companion to `shoreline-development`, not a replacement — that estimator
+/// is unchanged. Builds the level 4/5/6 `Geosphere`s and, for each, derives
+/// a land mask by looking up each cell's NEAREST canonical L6 cell (by
+/// unit-sphere position, `NearestCellIndex::nearest_to_position` — the same
+/// projection the scene/region window uses to sample canonical truth from a
+/// coarser or finer mesh) and testing that L6 cell's elevation against the
+/// world's sea level; at k = 6 every cell is its own nearest, so the mapping
+/// is the identity. `D_k = shoreline_development_of_mask` at each level,
+/// then the function returns the least-squares slope of `ln D_k` regressed
+/// on `k` (three points, k = 4, 5, 6). A positive slope means roughness
+/// concentrates at fine scales; a single-hex land/ocean alternation (the
+/// exploit that inflates the plain `shoreline-development` index without
+/// changing the coast's coarse shape) reads as a steep positive slope here,
+/// since `D_4`/`D_5` stay modest while `D_6` spikes. `Absent` if any of the
+/// three levels has no shoreline (`shoreline_development_of_mask` returns
+/// `None` there).
+fn coast_roughness_slope(v: &TerrainView) -> MetricValue {
+    let l6_geo = v.terrain.geosphere();
+    let globe = v.terrain.globe();
+    let l6_index = hornvale_kernel::NearestCellIndex::new(l6_geo);
+    let mut ks: Vec<f64> = Vec::new();
+    let mut ys: Vec<f64> = Vec::new();
+    for k in [4u32, 5, 6] {
+        let geo_k = hornvale_kernel::Geosphere::new(k);
+        let land = hornvale_kernel::CellMap::from_fn(&geo_k, |cell| {
+            let pos = geo_k.position(cell);
+            let l6_cell = l6_index.nearest_to_position(l6_geo, pos);
+            *globe.elevation.get(l6_cell) >= globe.sea_level
+        });
+        match hornvale_terrain::shape::shoreline_development_of_mask(&geo_k, &land) {
+            Some(d) => {
+                ks.push(k as f64);
+                ys.push(hornvale_kernel::math::ln(d));
+            }
+            None => return MetricValue::Absent,
+        }
+    }
+    let n = ks.len() as f64;
+    let mean_k = ks.iter().sum::<f64>() / n;
+    let mean_y = ys.iter().sum::<f64>() / n;
+    let (mut num, mut den) = (0.0_f64, 0.0_f64);
+    for (k, y) in ks.iter().zip(ys.iter()) {
+        num += (k - mean_k) * (y - mean_y);
+        den += (k - mean_k) * (k - mean_k);
+    }
+    if den == 0.0 {
+        MetricValue::Absent
+    } else {
+        MetricValue::Number(num / den)
+    }
+}
+
 /// A flagship pantheon's structural signature — every lexical channel
 /// (names, epithets, tenets) deliberately absent (spec §9.2).
 struct PantheonSig {
@@ -2834,7 +2906,7 @@ fn pantheon_sig(v: &FullView, species: &str) -> Option<PantheonSig> {
     }
     // Pantheons derive from the same first-place, hemisphere-culled vantage
     // religion's genesis observes (SEQ-4/SEQ-5).
-    let seen = observed_phenomena_as_in(v.world(), v.roster(), species).ok()?;
+    let seen = observed_phenomena_as_in(v.world(), v.components(), species).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
         hornvale_kernel::Venue::DaySky => "solar",
@@ -2980,7 +3052,7 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
     if names.is_empty() {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     let attested = hornvale_worldgen::lexicon_of(v.world(), species)
         .map(|lex| attested_roman_forms(&lex))
         .unwrap_or_default();
@@ -3031,13 +3103,13 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     // Religion (and the deity glosses drawn inside it) observes from the
     // world's first place, hemisphere-culled (SEQ-4/SEQ-5) — re-derive from
     // exactly that vantage so the check tracks the pipeline's real sky.
-    let Ok(seen) = observed_phenomena_as_in(v.world(), v.roster(), species) else {
+    let Ok(seen) = observed_phenomena_as_in(v.world(), v.components(), species) else {
         return MetricValue::Absent;
     };
     let Ok(lexicon) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     let namer = Namer::new(&v.world().seed, species, &ph);
     let carries = |(i, b): (usize, &hornvale_religion::Belief)| {
         let Some(phenomenon) = seen.get(i) else {
@@ -3139,7 +3211,8 @@ fn settlement_site_concepts(v: &FullView, id: EntityId) -> Option<Vec<String>> {
         .to_string();
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
-        hornvale_worldgen::observed_phenomena_as_at(v.world(), v.roster(), &species, id).ok()?;
+        hornvale_worldgen::observed_phenomena_as_at(v.world(), v.components(), &species, id)
+            .ok()?;
     let mut concepts = vec![biome];
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
@@ -3201,10 +3274,10 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
 /// `cli/tests/branches_coverage.rs`'s `derivations_replay`. `Absent` if
 /// `species` is not in this world's roster or its lexicon minted no `Root`.
 fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
-    if !v.roster().iter().any(|d| d.name == species) {
+    if !v.components().biosphere.ids().any(|k| k.0 == species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
     let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
@@ -3243,8 +3316,13 @@ fn independently_steeped_concepts(
     v: &FullView,
     species: &str,
 ) -> Option<std::collections::BTreeSet<String>> {
-    let def = v.roster().iter().find(|d| d.name == species)?;
-    let depths = hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception);
+    let perception = v
+        .components()
+        .perception
+        .iter()
+        .find(|(k, _)| k.0 == species)
+        .map(|(_, p)| p)?;
+    let depths = hornvale_worldgen::pack_depths(perception);
     let mut steeped: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
     for entry in hornvale_language::universal_stratum() {
@@ -3351,10 +3429,10 @@ fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
 /// card), read straight from `pack_depths` over the roster's own
 /// perception vector. `Absent` if `species` is not in this world's roster.
 fn hue_depth(v: &AstronomyView, species: &str) -> MetricValue {
-    match v.roster.iter().find(|d| d.name == species) {
-        Some(def) => MetricValue::Number(f64::from(
-            hornvale_worldgen::pack_depths(&hornvale_worldgen::peopled(def).perception).hue,
-        )),
+    match v.components.perception.iter().find(|(k, _)| k.0 == species) {
+        Some((_, perception)) => {
+            MetricValue::Number(f64::from(hornvale_worldgen::pack_depths(perception).hue))
+        }
         None => MetricValue::Absent,
     }
 }
@@ -3380,7 +3458,7 @@ const ALL_DAUGHTERS: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
 /// kobold against the GLOBAL default roster even when they were never part
 /// of this particular world.
 fn in_roster(v: &FullView, species: &str) -> bool {
-    v.roster().iter().any(|d| d.name == species)
+    v.components().biosphere.ids().any(|k| k.0 == species)
 }
 
 /// Whether every daughter in [`ALL_DAUGHTERS`] is lexicon-regular
@@ -3436,7 +3514,7 @@ fn goblinoid_proto_assignment(v: &FullView) -> std::collections::BTreeMap<String
         .collect();
     // The merger-aware assignment (epoch root/v3) build_lexicon consumes, so
     // this reconstruction matches every daughter's recorded proto exactly.
-    let daughters = hornvale_worldgen::family_daughters(v.world(), v.roster(), "goblinoid");
+    let daughters = hornvale_worldgen::family_daughters(v.world(), v.components(), "goblinoid");
     hornvale_language::assign_proto_roots(
         &v.world().seed,
         "goblinoid",
@@ -3515,7 +3593,7 @@ fn inventory_closure(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
@@ -3556,7 +3634,7 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
         return MetricValue::Absent;
     };
@@ -3823,13 +3901,18 @@ fn confusable_homophony(v: &FullView, species: &str) -> MetricValue {
 }
 
 /// `species`' derived life-history profile (BIO-2 spec §5), read from the
-/// roster's own `SpeciesDef.mass`/`metabolic_class` — a pure `f(Mass,
+/// biosphere component's `mass`/`metabolic_class` — a pure `f(Mass,
 /// MetabolicClass)`, no draws. `None` if `species` is off-roster.
 fn species_life_history(v: &FullView, species: &str) -> Option<hornvale_species::LifeHistory> {
-    let def = v.roster().iter().find(|d| d.name == species)?;
+    let bio = v
+        .components()
+        .biosphere
+        .iter()
+        .find(|(k, _)| k.0 == species)
+        .map(|(_, b)| b)?;
     Some(hornvale_species::life_history(
-        def.biosphere.mass,
-        def.biosphere.metabolic_class,
+        bio.mass,
+        bio.metabolic_class,
     ))
 }
 
@@ -3899,7 +3982,7 @@ fn tone_count_metric(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     MetricValue::Number(hornvale_language::tone_inventory(&ph).len() as f64)
 }
 
@@ -3912,7 +3995,7 @@ fn distinguishable_capacity_metric(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let ph = language_of_in(v.world(), v.roster(), species);
+    let ph = language_of_in(v.world(), v.components(), species);
     MetricValue::Number(hornvale_language::distinguishable_capacity(&ph) as f64)
 }
 
@@ -4337,8 +4420,9 @@ mod tests {
         // +1 for The Niche (composition-variance), +6 for Sculpting
         // (Task 12: shelf-width-passive-median, shelf-width-active-median,
         // sediment-volume, waterfall-count, delta-count,
-        // rerouted-flow-fraction).
-        assert_eq!(registry().len(), 148);
+        // rerouted-flow-fraction), +1 for rift-and-fit (Task 9:
+        // coast-roughness-slope).
+        assert_eq!(registry().len(), 149);
     }
 
     #[test]
@@ -4448,7 +4532,7 @@ mod tests {
         // see `bugbear_and_kobold_are_present_in_settlement_composition` in
         // `cli/tests/branches_identity.rs`), so `religion::genesis` never
         // fires for kobold this seed: hobgoblin is Rank-status (per
-        // `hornvale_species::registry`) and still places, so it still
+        // `hornvale_species::psyche_registry`) and still places, so it still
         // commits honorific-bearing epithets — this metric is per-species
         // and does not depend on which OTHER Rank-status people (goblin)
         // also places. kobold is the roster's ONLY Knowledge-status
@@ -4519,7 +4603,7 @@ mod tests {
     #[test]
     fn per_cell_diversity_is_finite_and_bounded_by_species_count_at_seed_42() {
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        let n_species = view.roster().len() as f64;
+        let n_species = view.components().biosphere.len() as f64;
         let built = BuiltView::Full(view);
         let m = |name: &str| extract_from(&built, name);
         match m("per-cell-diversity") {
@@ -4549,15 +4633,18 @@ mod tests {
 
     #[test]
     fn capacity_metric_skips_fauna_kinds_at_seed_42() {
-        // Regression (2026-07-16): the menagerie put fauna kinds (no
-        // `PeopledTraits`) into `default_roster()`, and this metric's
-        // roster loop called `peopled()` unguarded — panicking at census
+        // Regression (2026-07-16): the menagerie put fauna kinds (no psyche
+        // component) into the roster, and this metric's roster loop assumed
+        // a peopled component unguarded — panicking at census
         // scale only, because its calibration battery is heavy-tier and
         // the commit gate never evaluated the metric. This test keeps the
         // evaluation in the commit gate.
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert!(
-            view.roster().iter().any(|d| d.peopled.is_none()),
+            view.components()
+                .biosphere
+                .ids()
+                .any(|k| !view.components().psyche.contains(k)),
             "premise: the default roster carries at least one fauna kind"
         );
         let built = BuiltView::Full(view);
@@ -4595,7 +4682,7 @@ mod tests {
         // non-flat. Build the seed-42 report directly for these structural
         // asserts (the built view above no longer exposes its fields).
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
-        let report = hornvale_worldgen::demography_report(view.world(), view.roster()).unwrap();
+        let report = hornvale_worldgen::demography_report(view.world(), view.components()).unwrap();
         let dominants: std::collections::BTreeSet<u32> = report
             .stack_settlements
             .iter()
@@ -4819,13 +4906,16 @@ mod tests {
 
     #[test]
     fn solo_goblin_and_twin_share_placement_and_head_domain_at_seed_42() {
-        let g =
-            FullView::build_with_roster(Seed(42), &SkyPins::default(), crate::goblin_solo_roster())
-                .unwrap();
-        let t = FullView::build_with_roster(
+        let g = FullView::build_with_components(
             Seed(42),
             &SkyPins::default(),
-            crate::goblin_twin_solo_roster(),
+            crate::goblin_solo_components(),
+        )
+        .unwrap();
+        let t = FullView::build_with_components(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_twin_solo_components(),
         )
         .unwrap();
         let gf = flagship_of(g.world(), "goblin").unwrap();
@@ -4872,6 +4962,7 @@ mod tests {
     fn shape_metrics_are_present_deterministic_and_sane() {
         let names = [
             "shoreline-development",
+            "coast-roughness-slope",
             "hypsometric-bimodality",
             "shelf-fraction",
             "continent-count",
@@ -4905,16 +4996,28 @@ mod tests {
     }
 
     #[test]
-    fn build_with_roster_resolves_a_renamed_solo_species() {
-        use hornvale_species::SpeciesDef;
-        let goblin = hornvale_species::registry()[&hornvale_kernel::KindId("goblin")].clone();
-        let twin = SpeciesDef {
-            name: "goblin-twin",
-            ..goblin
-        };
-        let view = WorldView::build_with_roster(Seed(42), &SkyPins::default(), vec![twin]).unwrap();
-        // The twin resolves through the view's roster (it is NOT in the global registry).
-        let ph = hornvale_worldgen::language_of_in(&view.world, &view.roster, "goblin-twin");
+    fn seed_42_coast_roughness_slope_is_finite() {
+        let view = TerrainView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Terrain(view);
+        let value = extract_from(&built, "coast-roughness-slope");
+        match value {
+            MetricValue::Number(x) => assert!(x.is_finite(), "slope not finite: {x}"),
+            other => panic!("expected a finite Number, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_with_components_resolves_a_renamed_solo_species() {
+        // The twin is a goblin clone re-keyed as `goblin-twin` (NOT in the
+        // global registry) — it resolves only through the view's own
+        // component set.
+        let view = WorldView::build_with_components(
+            Seed(42),
+            &SkyPins::default(),
+            crate::goblin_twin_solo_components(),
+        )
+        .unwrap();
+        let ph = hornvale_worldgen::language_of_in(&view.world, &view.components, "goblin-twin");
         assert!(!ph.inventory.is_empty(), "twin phonology must draw");
         // And it placed a flagship peopled by the twin's name.
         assert!(flagship_of(&view.world, "goblin-twin").is_some());
@@ -5064,10 +5167,10 @@ mod tests {
         // tone-capable species realizes >1 tone and its capacity meets the
         // floor via pitch, across seeds.
         for seed in [1u64, 7, 42] {
-            let v = FullView::build_with_roster(
+            let v = FullView::build_with_components(
                 Seed(seed),
                 &SkyPins::default(),
-                crate::serpent_tonal_solo_roster(),
+                crate::serpent_tonal_solo_components(),
             )
             .unwrap();
             let tones = match tone_count_metric(&v, "serpent") {

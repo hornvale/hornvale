@@ -110,6 +110,11 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
 | `terrain/lithology` | lithology sub-cell hash-noise (hash-noise only; no stream draws) |
+| `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
+| `terrain/terranes` | terrane count, then per terrane host-craton index/bearing/size/age |
+| `terrain/arc-gate` | along-strike island-arc gating noise (hash-noise only; no stream draws) |
+| `terrain/relief` | fBm relief-detail noise (hash-noise only; no stream draws) |
+| `terrain/rift` | ONE spreading-rate draw; per-seam geometry via hash sub-derivations (seam-{a}-{b}); no other sequential draws |
 
 ### hornvale-vessel
 

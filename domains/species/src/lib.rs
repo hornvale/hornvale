@@ -1,20 +1,19 @@
-//! Species, tier 1: authored species definitions — a closed six-dimension
-//! psychology vector, a closed three-dimension perception vector, a closed
-//! seven-dimension articulation vector, and vocabulary stopgaps. Species are
-//! data; the social grammar stays code (spec §2). Goblin is the baseline:
-//! scalars 0.5, default enum variants; every downstream modulation is the
-//! identity function at this vector. Placeholder name syllables (the
-//! pre-Tongues stopgap) are retired — names are generated from the
-//! articulation vector by `hornvale-language`, wired at the composition
-//! root (spec §7).
+//! Species, tier 1: the authored body/mind/taxonomy component registries —
+//! the universal biosphere component (mass, metabolic class, resource + climate
+//! niche, potency), a closed six-dimension psychology vector, a closed
+//! three-dimension perception vector, and each kind's family label. Kinds are
+//! keyed by `KindId`; each component authors its own rows directly (the former
+//! authored god-struct was dissolved in ECS c3). Species are data; the
+//! social grammar stays code (spec §2). Goblin is the baseline: scalars 0.5,
+//! default enum variants; every downstream modulation is the identity function
+//! at this vector. The peopled speech data (articulation vector, lexicon,
+//! family proto) is language-owned and lives in `hornvale-language`.
 #![warn(missing_docs)]
 
-use std::collections::BTreeMap;
-
 use hornvale_kernel::{
-    ANIMAL_PREY, ConceptKind, ConceptRegistry, ConditionResponse, DETRITUS, EntityId, Fact, KindId,
-    LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    World,
+    ANIMAL_PREY, Component, ComponentStore, ConceptKind, ConceptRegistry, ConditionResponse,
+    DETRITUS, EntityId, Fact, KindId, LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE,
+    RegistryError, ResourceVector, Value, World,
 };
 
 mod allometry;
@@ -110,19 +109,6 @@ pub enum ActivityCycle {
     Crepuscular,
 }
 
-/// An exotic manner of articulation found in a species' phonology.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExoticManner {
-    /// No exotic manner (the goblin baseline).
-    None,
-    /// Trill: rapid vibration of an articulator.
-    Trill,
-    /// Click: sharp ingressive oral sound.
-    Click,
-    /// Ejective: sharp egressive sound made with trapped air.
-    Ejective,
-}
-
 /// The closed six-dimension psychology vector (spec §3). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign.
@@ -155,34 +141,6 @@ pub struct PerceptionVector {
     pub night_vision: f64,
     /// Celestial vs. terrestrial attention: earthbound 0 ↔ sky-rapt 1.
     pub sky_attention: f64,
-}
-
-/// The closed seven-dimension articulation vector (spec §5, extended by the
-/// phonology epoch with `tonality`). Scalars are bare ratios in `[0, 1]` with
-/// 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the humanoid default);
-/// widening the vector requires its own campaign. Every dimension is
-/// authored — nothing drawn.
-/// type-audit: bare-ok(ratio)
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ArticulationVector {
-    /// Lip-rounding and jaw-closure degree: unrounded 0 ↔ rounded 1.
-    pub labiality: f64,
-    /// Vowel-space size: compressed 0 ↔ expanded 1.
-    pub vowel_space: f64,
-    /// Voicing emphasis: voiceless 0 ↔ voiced 1.
-    pub voicing: f64,
-    /// Sibilance emphasis: minimal 0 ↔ pronounced 1.
-    pub sibilance: f64,
-    /// Voice-loudness range: quiet 0 ↔ loud 1.
-    pub voice_loudness: f64,
-    /// Tonal propensity, authored from body plan: atonal 0 (humanoid default)
-    /// ↔ fully tonal 1. Maps to a tone-inventory size in `draw_phonology`
-    /// (1 = atonal Neutral-only, 2–3 tone-capable) and makes tonogenesis
-    /// effective. The shipped humanoids stay 0.0; the value earns its keep as
-    /// the bestiary grows (serpentine, avian).
-    pub tonality: f64,
-    /// Exotic manner of articulation.
-    pub exotic: ExoticManner,
 }
 
 /// A species' condition-tolerance profile: one response curve per v1
@@ -737,478 +695,314 @@ pub struct BiosphereTraits {
     pub potency: f64,
 }
 
-/// The peopled component: present only for settling, speaking peoples.
-/// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Debug, PartialEq)]
-pub struct PeopledTraits {
-    /// The settlement noun ("village", "warren").
-    pub noun: &'static str,
-    /// The psychology vector.
-    pub psych: PsychVector,
-    /// The perception vector.
-    pub perception: PerceptionVector,
-    /// The articulation vector.
-    pub articulation: ArticulationVector,
-    /// Worker-role override; `None` = the subsistence worker word.
-    pub worker_override: Option<&'static str>,
-    /// The warrior-rung word.
-    pub warrior: &'static str,
-    /// The artisan-rung word.
-    pub artisan: &'static str,
-    /// The shaman-rung word.
-    pub shaman: &'static str,
-    /// The top-rung word ("chief", "elders").
-    pub top: &'static str,
-}
+// The biosphere / psyche / perception / family authoring lives in the four
+// component registries below (`biosphere_registry` / `psyche_registry` /
+// `perception_registry` / `family_of`). The former authored god-struct and
+// its `registry()` are gone (ECS c3): kinds are keyed by `KindId`, and each
+// component authors its own rows directly. The peopled speech data
+// (articulation, lexicon, family proto) lives in `hornvale_language`.
 
-/// One authored species: vector, vocabulary stopgaps (deleted by The
-/// Tongues), and a placeholder syllable pool for names.
-/// type-audit: bare-ok(identifier-text)
-#[derive(Clone, Debug, PartialEq)]
-pub struct SpeciesDef {
-    /// The species name ("goblin", "kobold").
-    pub name: &'static str,
-    /// The family this species descends from ("goblinoid", "kobold"); a
-    /// singleton family's name equals its lone member's name. Looked up in
-    /// [`family_registry`] for the family's proto ancestral vector.
-    pub family: &'static str,
-    /// The universal biosphere component: every entity has one.
-    pub biosphere: BiosphereTraits,
-    /// The peopled component: present only for settling, speaking peoples.
-    pub peopled: Option<PeopledTraits>,
-}
+impl Component for BiosphereTraits {}
+impl Component for PsychVector {}
+impl Component for PerceptionVector {}
 
-/// The authored species registry, ordered alphabetically by name (`BTreeMap`
-/// key order). Kobold, hobgoblin, and bugbear values are derived from D&D
-/// 5E SRD lore — see the species chapter's model card for each derivation.
+/// The universal biosphere component, authored directly (one row per kind).
+/// Every kind that competes for space has a biosphere row; this is the
+/// canonical entity set. Mass is D&D 5E canon (kg); niche is a sparse
+/// utilization profile over the resource-axis basis; each kind's climate-tile
+/// rationale lives in its `*_condition_niche` helper above. Potency > 0 only
+/// for the mighty (dragons, treant, xorn); the four material peoples carry 0.
 /// type-audit: bare-ok(identifier-text)
-pub fn registry() -> BTreeMap<KindId, SpeciesDef> {
-    let mut reg = BTreeMap::new();
-    // Mass: D&D 5E average weights (2014 Volo's Guide / PHB tables), lb -> kg:
-    //   kobold 30 lb = 13.6 kg, goblin 40 lb = 18.1 kg,
-    //   hobgoblin 165 lb = 74.8 kg, bugbear 291 lb = 132.0 kg.
-    // Niche: 5E ecology — bugbear a carnivore (hunts, eats humanoids), hobgoblin
-    //   the most agricultural (cultivates + hunts), kobold/goblin opportunistic
-    //   omnivore-scavengers. All omnivores here (both axes > 0); the true
-    //   scavenger/autotroph/apex arrive with the Stage-B menagerie.
-    reg.insert(
-        KindId("goblin"),
-        SpeciesDef {
-            name: "goblin",
-            family: "goblinoid",
-            biosphere: BiosphereTraits {
+pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
+    [
+        (
+            KindId("goblin"),
+            BiosphereTraits {
                 mass: Mass::new(18.1).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
             },
-            peopled: Some(PeopledTraits {
-                noun: "village",
-                psych: PsychVector {
-                    threat_response: 0.5,
-                    deliberation_latency: 0.5,
-                    in_group_radius: 0.5,
-                    time_horizon: 0.5,
-                    sociality: Sociality::Hierarchic,
-                    status_basis: StatusBasis::Rank,
-                },
-                perception: PerceptionVector {
-                    activity: ActivityCycle::Diurnal,
-                    night_vision: 0.5,
-                    sky_attention: 0.5,
-                },
-                articulation: ArticulationVector {
-                    labiality: 0.5,
-                    vowel_space: 0.5,
-                    voicing: 0.5,
-                    sibilance: 0.5,
-                    voice_loudness: 0.5,
-                    tonality: 0.0,
-                    exotic: ExoticManner::None,
-                },
-                worker_override: None,
-                warrior: "warrior",
-                artisan: "artisan",
-                shaman: "shaman",
-                top: "chief",
-            }),
-        },
-    );
-    reg.insert(
-        KindId("kobold"),
-        SpeciesDef {
-            name: "kobold",
-            family: "kobold",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("kobold"),
+            BiosphereTraits {
                 mass: Mass::new(13.6).unwrap(),
                 metabolic_class: MetabolicClass::Ectotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
             },
-            peopled: Some(PeopledTraits {
-                noun: "warren",
-                psych: PsychVector {
-                    threat_response: 0.8,
-                    deliberation_latency: 0.7,
-                    in_group_radius: 0.2,
-                    time_horizon: 0.8,
-                    sociality: Sociality::Communal,
-                    status_basis: StatusBasis::Knowledge,
-                },
-                perception: PerceptionVector {
-                    activity: ActivityCycle::Nocturnal,
-                    night_vision: 0.9,
-                    sky_attention: 0.8,
-                },
-                articulation: ArticulationVector {
-                    labiality: 0.1,
-                    vowel_space: 0.3,
-                    voicing: 0.6,
-                    sibilance: 0.9,
-                    voice_loudness: 0.2,
-                    tonality: 0.0,
-                    exotic: ExoticManner::Trill,
-                },
-                worker_override: Some("digger"),
-                warrior: "warden",
-                artisan: "shaper",
-                shaman: "keeper",
-                top: "elders",
-            }),
-        },
-    );
-    reg.insert(
-        KindId("hobgoblin"),
-        SpeciesDef {
-            name: "hobgoblin",
-            family: "goblinoid",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("hobgoblin"),
+            BiosphereTraits {
                 mass: Mass::new(74.8).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
             },
-            peopled: Some(PeopledTraits {
-                noun: "legion",
-                psych: PsychVector {
-                    threat_response: 0.7,
-                    deliberation_latency: 0.6,
-                    in_group_radius: 0.3,
-                    time_horizon: 0.5,
-                    sociality: Sociality::Hierarchic,
-                    status_basis: StatusBasis::Rank,
-                },
-                perception: PerceptionVector {
-                    activity: ActivityCycle::Diurnal,
-                    night_vision: 0.6,
-                    sky_attention: 0.5,
-                },
-                articulation: ArticulationVector {
-                    labiality: 0.5,
-                    vowel_space: 0.5,
-                    voicing: 0.6,
-                    sibilance: 0.4,
-                    voice_loudness: 0.8,
-                    tonality: 0.0,
-                    exotic: ExoticManner::None,
-                },
-                worker_override: Some("laborer"),
-                warrior: "soldier",
-                artisan: "smith",
-                shaman: "augur",
-                top: "warlord",
-            }),
-        },
-    );
-    reg.insert(
-        KindId("bugbear"),
-        SpeciesDef {
-            name: "bugbear",
-            family: "goblinoid",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("bugbear"),
+            BiosphereTraits {
                 mass: Mass::new(132.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
             },
-            peopled: Some(PeopledTraits {
-                noun: "lair",
-                psych: PsychVector {
-                    threat_response: 0.8,
-                    deliberation_latency: 0.4,
-                    in_group_radius: 0.3,
-                    time_horizon: 0.3,
-                    sociality: Sociality::Communal,
-                    status_basis: StatusBasis::Rank,
-                },
-                perception: PerceptionVector {
-                    activity: ActivityCycle::Nocturnal,
-                    night_vision: 0.7,
-                    sky_attention: 0.3,
-                },
-                articulation: ArticulationVector {
-                    labiality: 0.5,
-                    vowel_space: 0.4,
-                    voicing: 0.7,
-                    sibilance: 0.2,
-                    voice_loudness: 0.3,
-                    tonality: 0.0,
-                    exotic: ExoticManner::None,
-                },
-                worker_override: Some("forager"),
-                warrior: "mauler",
-                artisan: "tanner",
-                shaman: "omen-reader",
-                top: "headman",
-            }),
-        },
-    );
-    // The menagerie (Task 4, decision-ledger #26): the first non-peopled
-    // (biosphere-only, `peopled: None`) kinds the world holds — fauna, not
-    // peoples. Mass is D&D 5E canon (kg), fixed by #26; niche is a single
-    // dominant resource axis per creature so the twelve genuinely PARTITION
-    // the resource-axis basis rather than reading as four more omnivores
-    // (photosynthate: treant/twig-blight; plant-forage: giant-elk/woolly-
-    // mammoth/giant-goat; animal-prey: the three dragons + owlbear; detritus:
-    // otyugh; mineral: xorn/rust-monster). Potency > 0 only for the mighty
-    // (dragons, treant, xorn); see each `*_condition_niche` helper above for
-    // the climate-tile rationale.
-    reg.insert(
-        KindId("treant"),
-        SpeciesDef {
-            name: "treant",
-            family: "plant",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("treant"),
+            BiosphereTraits {
                 mass: Mass::new(1800.0).unwrap(),
                 metabolic_class: MetabolicClass::Autotroph,
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: treant_condition_niche(),
                 potency: 0.6,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("twig-blight"),
-        SpeciesDef {
-            name: "twig-blight",
-            family: "plant",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("twig-blight"),
+            BiosphereTraits {
                 mass: Mass::new(5.0).unwrap(),
                 metabolic_class: MetabolicClass::Autotroph,
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("giant-elk"),
-        SpeciesDef {
-            name: "giant-elk",
-            family: "giant-elk",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("giant-elk"),
+            BiosphereTraits {
                 mass: Mass::new(450.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("woolly-mammoth"),
-        SpeciesDef {
-            name: "woolly-mammoth",
-            family: "woolly-mammoth",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("woolly-mammoth"),
+            BiosphereTraits {
                 mass: Mass::new(6000.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("giant-goat"),
-        SpeciesDef {
-            name: "giant-goat",
-            family: "giant-goat",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("giant-goat"),
+            BiosphereTraits {
                 mass: Mass::new(140.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("otyugh"),
-        SpeciesDef {
-            name: "otyugh",
-            family: "otyugh",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("otyugh"),
+            BiosphereTraits {
                 mass: Mass::new(260.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("xorn"),
-        SpeciesDef {
-            name: "xorn",
-            family: "xorn",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("xorn"),
+            BiosphereTraits {
                 mass: Mass::new(55.0).unwrap(),
                 metabolic_class: MetabolicClass::Ametabolic,
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
                 potency: 0.5,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("rust-monster"),
-        SpeciesDef {
-            name: "rust-monster",
-            family: "rust-monster",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("rust-monster"),
+            BiosphereTraits {
                 mass: Mass::new(90.0).unwrap(),
                 metabolic_class: MetabolicClass::Ectotherm,
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("white-dragon"),
-        SpeciesDef {
-            name: "white-dragon",
-            family: "draconic",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("white-dragon"),
+            BiosphereTraits {
                 mass: Mass::new(2200.0).unwrap(), // 5E adult white dragon
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(), // obligate apex
                 condition_niche: white_dragon_condition_niche(),
                 potency: 0.85, // mighty
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("red-dragon"),
-        SpeciesDef {
-            name: "red-dragon",
-            family: "draconic",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("red-dragon"),
+            BiosphereTraits {
                 mass: Mass::new(2700.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: red_dragon_condition_niche(),
                 potency: 0.95, // mightiest of the three chromatics
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("black-dragon"),
-        SpeciesDef {
-            name: "black-dragon",
-            family: "draconic",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("black-dragon"),
+            BiosphereTraits {
                 mass: Mass::new(2200.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: black_dragon_condition_niche(),
                 potency: 0.85,
             },
-            peopled: None,
-        },
-    );
-    reg.insert(
-        KindId("owlbear"),
-        SpeciesDef {
-            name: "owlbear",
-            family: "owlbear",
-            biosphere: BiosphereTraits {
+        ),
+        (
+            KindId("owlbear"),
+            BiosphereTraits {
                 mass: Mass::new(450.0).unwrap(),
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
             },
-            peopled: None,
-        },
-    );
-    reg
+        ),
+    ]
+    .into_iter()
+    .collect()
 }
 
-/// Proto ancestral articulation vectors, keyed by family, for families with
-/// more than one member (a singleton's proto is itself and is absent here).
-/// Each is a distinct point equal to no daughter's vector (spec §3).
+/// The peopled psychology component — authored directly, present only for the
+/// four settling, speaking peoples (goblin is the baseline: scalars 0.5,
+/// default enum variants).
 /// type-audit: bare-ok(identifier-text)
-pub fn family_registry() -> BTreeMap<KindId, ArticulationVector> {
-    let mut m = BTreeMap::new();
-    m.insert(
-        KindId("goblinoid"),
-        ArticulationVector {
-            labiality: 0.5,
-            vowel_space: 0.5,
-            voicing: 0.55,
-            sibilance: 0.45,
-            voice_loudness: 0.55,
-            tonality: 0.0,
-            exotic: ExoticManner::None,
-        },
-    );
-    // Fauna families (Task 4): the three chromatic dragons and the two plant
-    // kinds are `peopled: None` and never speak, so this proto vector is
-    // inert data today — it exists solely to satisfy the same-shaped
-    // consistency guard every multi-member family carries
-    // (`every_multi_member_family_has_a_proto`), keeping a future language
-    // extension to fauna a data change rather than a new invariant.
-    m.insert(
-        KindId("draconic"),
-        ArticulationVector {
-            labiality: 0.3,
-            vowel_space: 0.6,
-            voicing: 0.7,
-            sibilance: 0.6,
-            voice_loudness: 0.8,
-            tonality: 0.0,
-            exotic: ExoticManner::None,
-        },
-    );
-    m.insert(
-        KindId("plant"),
-        ArticulationVector {
-            labiality: 0.5,
-            vowel_space: 0.4,
-            voicing: 0.4,
-            sibilance: 0.3,
-            voice_loudness: 0.3,
-            tonality: 0.0,
-            exotic: ExoticManner::None,
-        },
-    );
-    m
+pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
+    [
+        (
+            KindId("goblin"),
+            PsychVector {
+                threat_response: 0.5,
+                deliberation_latency: 0.5,
+                in_group_radius: 0.5,
+                time_horizon: 0.5,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+        (
+            KindId("kobold"),
+            PsychVector {
+                threat_response: 0.8,
+                deliberation_latency: 0.7,
+                in_group_radius: 0.2,
+                time_horizon: 0.8,
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Knowledge,
+            },
+        ),
+        (
+            KindId("hobgoblin"),
+            PsychVector {
+                threat_response: 0.7,
+                deliberation_latency: 0.6,
+                in_group_radius: 0.3,
+                time_horizon: 0.5,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+        (
+            KindId("bugbear"),
+            PsychVector {
+                threat_response: 0.8,
+                deliberation_latency: 0.4,
+                in_group_radius: 0.3,
+                time_horizon: 0.3,
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// The peopled perception component — authored directly, present only for the
+/// four peoples (goblin is the baseline: diurnal, 0.5/0.5).
+/// type-audit: bare-ok(identifier-text)
+pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
+    [
+        (
+            KindId("goblin"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.5,
+                sky_attention: 0.5,
+            },
+        ),
+        (
+            KindId("kobold"),
+            PerceptionVector {
+                activity: ActivityCycle::Nocturnal,
+                night_vision: 0.9,
+                sky_attention: 0.8,
+            },
+        ),
+        (
+            KindId("hobgoblin"),
+            PerceptionVector {
+                activity: ActivityCycle::Diurnal,
+                night_vision: 0.6,
+                sky_attention: 0.5,
+            },
+        ),
+        (
+            KindId("bugbear"),
+            PerceptionVector {
+                activity: ActivityCycle::Nocturnal,
+                night_vision: 0.7,
+                sky_attention: 0.3,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// The universal taxonomy lookup: a kind's family label, authored directly
+/// (one row per kind). Read by worldgen to resolve a kind's proto vector
+/// against language's `family_proto`. A singleton family's name equals its
+/// lone member's name.
+/// type-audit: bare-ok(identifier-text)
+pub fn family_of() -> ComponentStore<KindId, &'static str> {
+    [
+        (KindId("goblin"), "goblinoid"),
+        (KindId("kobold"), "kobold"),
+        (KindId("hobgoblin"), "goblinoid"),
+        (KindId("bugbear"), "goblinoid"),
+        (KindId("treant"), "plant"),
+        (KindId("twig-blight"), "plant"),
+        (KindId("giant-elk"), "giant-elk"),
+        (KindId("woolly-mammoth"), "woolly-mammoth"),
+        (KindId("giant-goat"), "giant-goat"),
+        (KindId("otyugh"), "otyugh"),
+        (KindId("xorn"), "xorn"),
+        (KindId("rust-monster"), "rust-monster"),
+        (KindId("white-dragon"), "draconic"),
+        (KindId("red-dragon"), "draconic"),
+        (KindId("black-dragon"), "draconic"),
+        (KindId("owlbear"), "owlbear"),
+    ]
+    .into_iter()
+    .collect()
 }
 
 /// Every seed-derivation label this crate uses (none — species are authored).
@@ -1292,163 +1086,6 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     }
 }
 
-/// Mint one entity per species in `roster` (in slice order) and commit its
-/// authored vector as facts — the roster-scoped form of [`genesis`]. Species
-/// entities carry facts ONLY under this crate's predicates (the superset
-/// contract, spec §8, depends on it).
-/// type-audit: bare-ok(identifier-text)
-pub fn genesis_in(
-    world: &mut World,
-    roster: &[SpeciesDef],
-) -> Result<BTreeMap<String, EntityId>, LedgerError> {
-    let mut ids = BTreeMap::new();
-    for def in roster {
-        let name = def.name;
-        let id = world.ledger.mint_entity();
-        world.ledger.commit(
-            fact(id, SPECIES_NAME, Value::Text(name.to_string())),
-            &world.registry,
-        )?;
-        if let Some(peopled) = &def.peopled {
-            let p = peopled.psych;
-            let sociality = match p.sociality {
-                Sociality::Hierarchic => "hierarchic",
-                Sociality::Communal => "communal",
-            };
-            let status = match p.status_basis {
-                StatusBasis::Rank => "rank",
-                StatusBasis::Knowledge => "knowledge",
-                StatusBasis::Generosity => "generosity",
-            };
-            world.ledger.commit(
-                fact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    DELIBERATION_LATENCY,
-                    Value::Number(p.deliberation_latency),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(id, STATUS_BASIS, Value::Text(status.to_string())),
-                &world.registry,
-            )?;
-            let activity = match peopled.perception.activity {
-                ActivityCycle::Diurnal => "diurnal",
-                ActivityCycle::Nocturnal => "nocturnal",
-                ActivityCycle::Crepuscular => "crepuscular",
-            };
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_ACTIVITY_CYCLE,
-                    Value::Text(activity.to_string()),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_NIGHT_VISION,
-                    Value::Number(peopled.perception.night_vision),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_SKY_ATTENTION,
-                    Value::Number(peopled.perception.sky_attention),
-                ),
-                &world.registry,
-            )?;
-            let exotic = match peopled.articulation.exotic {
-                ExoticManner::None => "none",
-                ExoticManner::Trill => "trill",
-                ExoticManner::Click => "click",
-                ExoticManner::Ejective => "ejective",
-            };
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_LABIALITY,
-                    Value::Number(peopled.articulation.labiality),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_VOWEL_SPACE,
-                    Value::Number(peopled.articulation.vowel_space),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_VOICING,
-                    Value::Number(peopled.articulation.voicing),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_SIBILANCE,
-                    Value::Number(peopled.articulation.sibilance),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_VOICE_LOUDNESS,
-                    Value::Number(peopled.articulation.voice_loudness),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(
-                    id,
-                    SPECIES_TONALITY,
-                    Value::Number(peopled.articulation.tonality),
-                ),
-                &world.registry,
-            )?;
-            world.ledger.commit(
-                fact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
-                &world.registry,
-            )?;
-        }
-        ids.insert(name.to_string(), id);
-    }
-    Ok(ids)
-}
-
-/// Mint one entity per shipped species (registry order) and commit its
-/// authored vector as facts.
-/// type-audit: bare-ok(identifier-text)
-pub fn genesis(world: &mut World) -> Result<BTreeMap<String, EntityId>, LedgerError> {
-    let roster: Vec<SpeciesDef> = registry().into_values().collect();
-    genesis_in(world, &roster)
-}
-
 /// Commit the `peopled-by` fact linking a settlement to its species.
 /// type-audit: bare-ok(identifier-text)
 pub fn people(world: &mut World, settlement: EntityId, species: &str) -> Result<(), LedgerError> {
@@ -1481,7 +1118,7 @@ pub fn species_entity(world: &World, name: &str) -> Option<EntityId> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{Fact, Seed};
 
     #[test]
     fn bio2_adds_no_stream_label() {
@@ -1500,6 +1137,32 @@ mod tests {
                 || k.contains("metabolic")),
             "BIO-2 must not register a stream: {labels:?}"
         );
+    }
+
+    #[test]
+    fn component_registries_are_consistent() {
+        // With the god-struct gone, the four registries author independently.
+        // The cross-registry invariants the world relies on: biosphere and
+        // family cover the SAME full kind set, and psyche/perception share
+        // exactly one key-set — the four peoples — every one of which also
+        // carries a biosphere row.
+        let bio = biosphere_registry();
+        let fam = family_of();
+        let psy = psyche_registry();
+        let per = perception_registry();
+
+        assert_eq!(bio.len(), 16, "sixteen kinds compete for space");
+        let bio_ids: Vec<_> = bio.ids().collect();
+        let fam_ids: Vec<_> = fam.ids().collect();
+        assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
+
+        let psy_ids: Vec<_> = psy.ids().collect();
+        let per_ids: Vec<_> = per.ids().collect();
+        assert_eq!(psy_ids, per_ids, "psyche and perception share one key-set");
+        assert_eq!(psy.len(), 4, "the four peoples");
+        for kind in psy.ids() {
+            assert!(bio.contains(kind), "people {kind:?} has a biosphere row");
+        }
     }
 
     #[test]
@@ -1522,8 +1185,8 @@ mod tests {
 
     #[test]
     fn goblin_is_the_baseline_vector() {
-        let reg = registry();
-        let g = &reg[&KindId("goblin")].peopled.as_ref().unwrap().psych;
+        let psy = psyche_registry();
+        let g = psy.get(&KindId("goblin")).unwrap();
         for v in [
             g.threat_response,
             g.deliberation_latency,
@@ -1538,10 +1201,10 @@ mod tests {
 
     #[test]
     fn registry_is_ordered_alphabetically_and_kobold_contrasts() {
-        let reg = registry();
-        let names: Vec<&str> = reg.keys().map(|k| k.0).collect();
+        let bio = biosphere_registry();
+        let names: Vec<&str> = bio.ids().map(|k| k.0).collect();
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
-        // alongside the four peoples); BTreeMap key order is lexicographic.
+        // alongside the four peoples); ComponentStore key order is lexicographic.
         assert_eq!(
             names,
             vec![
@@ -1563,290 +1226,96 @@ mod tests {
                 "xorn",
             ]
         );
-        let k = &reg[&KindId("kobold")].peopled.as_ref().unwrap().psych;
+        let psy = psyche_registry();
+        let k = psy.get(&KindId("kobold")).unwrap();
         assert_eq!(k.sociality, Sociality::Communal);
         assert_eq!(k.status_basis, StatusBasis::Knowledge);
         assert!(k.in_group_radius < 0.5 && k.time_horizon > 0.5 && k.threat_response > 0.5);
-        assert_eq!(
-            reg[&KindId("kobold")].peopled.as_ref().unwrap().noun,
-            "warren"
-        );
-        assert_eq!(
-            reg[&KindId("kobold")].peopled.as_ref().unwrap().top,
-            "elders"
-        );
     }
 
     #[test]
-    fn genesis_commits_vector_facts_and_people_links_settlements() {
+    fn people_links_a_settlement_to_its_species() {
+        // The ledger helpers `people` / `species_of` / `species_entity` stay in
+        // species (they don't touch the deleted god-struct). Genesis moved to
+        // `worldgen::species_genesis`; its byte-identity is proven by the
+        // seed-42 world fixture and worldgen's own tests, so it is not re-tested
+        // here.
         let mut w = World::new(Seed(42));
         register_concepts(&mut w.registry).unwrap();
         let settlement = w.ledger.mint_entity();
-        let ids = genesis(&mut w).unwrap();
-        // 4 peoples + the Task 4 menagerie's 12 biosphere-only fauna: genesis
-        // mints an entity per species in the roster regardless of `peopled`.
-        assert_eq!(ids.len(), 16);
         people(&mut w, settlement, "kobold").unwrap();
         assert_eq!(species_of(&w, settlement).as_deref(), Some("kobold"));
-        // The species entity carries its vector under species predicates.
-        let kobold = ids["kobold"];
-        assert!(matches!(
-            w.ledger.value_of(kobold, THREAT_RESPONSE),
-            Some(Value::Number(n)) if *n > 0.5
-        ));
-        assert_eq!(w.ledger.text_of(kobold, SPECIES_NAME), Some("kobold"));
-    }
 
-    #[test]
-    fn inserting_a_kind_does_not_change_other_kinds_serialized_labels() {
-        // A kind's committed identity is its label (`KindId` / `SpeciesDef.name`),
-        // never its position (decision 0015). This proves it two ways:
-        // (1) prepending a dummy kind that sorts alphabetically first shifts
-        //     every real kind's build-local dense index (the same `.enumerate()`
-        //     position the worldgen packer's `u32` tags come from) — so
-        //     position is demonstrably NOT identity — while
-        // (2) every real kind's serialized `SPECIES_NAME` fact, minted via
-        //     the real `genesis_in` path, is byte-identical whether or not
-        //     the dummy is present. This is the label-stability half of the
-        //     durable-label / ephemeral-index split `KindId` documents.
-        let real_roster: Vec<SpeciesDef> = registry().into_values().collect();
-
-        // A dummy kind whose label sorts alphabetically before every real
-        // kind ("aaa-test-kind" < "black-dragon", the roster's first label).
-        let mut dummy = real_roster
-            .iter()
-            .find(|d| d.name == "goblin")
-            .expect("goblin is in the roster")
-            .clone();
-        dummy.name = "aaa-test-kind";
-        dummy.family = "aaa-test-kind";
-        dummy.peopled = None;
-        assert!(
-            dummy.name < real_roster[0].name,
-            "the dummy must sort first for the index-shift assertion below to hold"
-        );
-
-        let mut augmented_roster = vec![dummy];
-        augmented_roster.extend(real_roster.iter().cloned());
-
-        // (1) The build-local dense index shifts: `kobold`'s `.enumerate()`
-        // position (what the worldgen packer would tag it with as `u32`)
-        // is not the same across the two rosters.
-        let index_of = |roster: &[SpeciesDef], name: &str| -> usize {
-            roster
-                .iter()
-                .position(|d| d.name == name)
-                .unwrap_or_else(|| panic!("{name} missing from roster"))
-        };
-        let kobold_index_before = index_of(&real_roster, "kobold");
-        let kobold_index_after = index_of(&augmented_roster, "kobold");
-        assert_eq!(
-            kobold_index_after,
-            kobold_index_before + 1,
-            "prepending a dummy kind must renumber the build-local u32 index \
-             of every kind after it — position is not identity"
-        );
-
-        // (2) The serialized label is unaffected: mint both rosters through
-        // the real genesis path and compare each real kind's committed
-        // SPECIES_NAME fact.
-        let mut w_base = World::new(Seed(42));
-        register_concepts(&mut w_base.registry).unwrap();
-        let ids_base = genesis_in(&mut w_base, &real_roster).unwrap();
-
-        let mut w_augmented = World::new(Seed(42));
-        register_concepts(&mut w_augmented.registry).unwrap();
-        let ids_augmented = genesis_in(&mut w_augmented, &augmented_roster).unwrap();
-
-        for def in &real_roster {
-            let id_base = ids_base[def.name];
-            let id_augmented = ids_augmented[def.name];
-            let label_base = w_base.ledger.text_of(id_base, SPECIES_NAME);
-            let label_augmented = w_augmented.ledger.text_of(id_augmented, SPECIES_NAME);
-            assert_eq!(label_base, Some(def.name));
-            assert_eq!(
-                label_base, label_augmented,
-                "kind {}'s serialized SPECIES_NAME label must not change when \
-                 an unrelated kind (\"aaa-test-kind\") is inserted ahead of it",
-                def.name
-            );
-        }
-    }
-
-    #[test]
-    fn species_facts_touch_no_pre_existing_predicate() {
-        let mut w = World::new(Seed(1));
-        register_concepts(&mut w.registry).unwrap();
-        genesis(&mut w).unwrap();
-        // No species fact may land under the kernel NAME predicate (or any
-        // other pre-C1 predicate) — the superset contract depends on it.
-        for f in w.ledger.iter() {
-            assert!(
-                f.predicate.starts_with("species-") || f.predicate == PEOPLED_BY,
-                "unexpected predicate {}",
-                f.predicate
-            );
-        }
+        // `species_entity` resolves a committed SPECIES_NAME fact back to its
+        // entity (the fact worldgen's genesis commits at world build).
+        let kobold = w.ledger.mint_entity();
+        w.ledger
+            .commit(
+                Fact {
+                    subject: kobold,
+                    predicate: SPECIES_NAME.to_string(),
+                    object: Value::Text("kobold".to_string()),
+                    place: None,
+                    day: Some(0.0),
+                    provenance: "species".to_string(),
+                },
+                &w.registry,
+            )
+            .unwrap();
+        assert_eq!(species_entity(&w, "kobold"), Some(kobold));
     }
 
     #[test]
     fn goblin_perception_is_the_baseline_and_kobold_contrasts() {
-        let reg = registry();
-        let g = &reg[&KindId("goblin")].peopled.as_ref().unwrap().perception;
+        let per = perception_registry();
+        let g = per.get(&KindId("goblin")).unwrap();
         assert_eq!(g.activity, ActivityCycle::Diurnal);
         assert_eq!(g.night_vision, 0.5);
         assert_eq!(g.sky_attention, 0.5);
-        let k = &reg[&KindId("kobold")].peopled.as_ref().unwrap().perception;
+        let k = per.get(&KindId("kobold")).unwrap();
         assert_eq!(k.activity, ActivityCycle::Nocturnal);
         assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
     }
 
     #[test]
-    fn genesis_commits_perception_facts() {
-        let mut w = World::new(Seed(42));
-        register_concepts(&mut w.registry).unwrap();
-        let ids = genesis(&mut w).unwrap();
-        let kobold = ids["kobold"];
-        assert_eq!(
-            w.ledger.text_of(kobold, SPECIES_ACTIVITY_CYCLE),
-            Some("nocturnal")
-        );
-        assert!(matches!(
-            w.ledger.value_of(kobold, SPECIES_NIGHT_VISION),
-            Some(Value::Number(n)) if *n > 0.5
-        ));
-        assert_eq!(species_entity(&w, "kobold"), Some(kobold));
-    }
-
-    #[test]
-    fn goblin_articulation_is_baseline_kobold_hisses_and_is_quiet() {
-        let reg = registry();
-        let g = &reg[&KindId("goblin")]
-            .peopled
-            .as_ref()
-            .unwrap()
-            .articulation;
-        assert_eq!(g.labiality, 0.5);
-        assert_eq!(g.voice_loudness, 0.5);
-        assert_eq!(g.exotic, ExoticManner::None);
-        let k = &reg[&KindId("kobold")]
-            .peopled
-            .as_ref()
-            .unwrap()
-            .articulation;
-        assert!(k.sibilance > 0.5 && k.labiality < 0.5 && k.voice_loudness < 0.5);
-        assert_eq!(k.exotic, ExoticManner::Trill);
-    }
-
-    #[test]
-    fn genesis_commits_articulation_facts() {
-        let mut w = World::new(Seed(42));
-        register_concepts(&mut w.registry).unwrap();
-        let ids = genesis(&mut w).unwrap();
-        let k = ids["kobold"];
-        assert_eq!(w.ledger.text_of(k, SPECIES_EXOTIC_MANNER), Some("trill"));
-        assert!(
-            matches!(w.ledger.value_of(k, SPECIES_SIBILANCE), Some(Value::Number(n)) if *n > 0.5)
-        );
-    }
-
-    #[test]
     fn registry_has_the_goblinoid_triad_and_kobold() {
-        let r = registry();
+        let bio = biosphere_registry();
+        let fam = family_of();
         for name in ["goblin", "hobgoblin", "bugbear", "kobold"] {
-            assert!(r.contains_key(&KindId(name)), "{name} missing");
+            assert!(bio.contains(&KindId(name)), "{name} missing");
         }
-        assert_eq!(r[&KindId("hobgoblin")].family, "goblinoid");
-        assert_eq!(r[&KindId("bugbear")].family, "goblinoid");
-        assert_eq!(r[&KindId("kobold")].family, "kobold");
-    }
-
-    #[test]
-    fn family_divides_along_voice_loudness() {
-        let r = registry();
-        let l = |n: &'static str| {
-            r[&KindId(n)]
-                .peopled
-                .as_ref()
-                .unwrap()
-                .articulation
-                .voice_loudness
-        };
-        assert!(l("bugbear") < l("goblin") && l("goblin") < l("hobgoblin"));
-    }
-
-    #[test]
-    fn proto_goblinoid_vector_equals_no_daughter() {
-        let proto = family_registry()[&KindId("goblinoid")];
-        let r = registry();
-        for d in ["goblin", "hobgoblin", "bugbear"] {
-            assert_ne!(
-                proto,
-                r[&KindId(d)].peopled.as_ref().unwrap().articulation,
-                "proto must differ from {d}"
-            );
-        }
-    }
-
-    #[test]
-    fn every_multi_member_family_has_a_proto() {
-        // CONSISTENCY GUARD (matters as more families are added). A species'
-        // `family` field points into `family_registry` by name; a lookup MISS
-        // falls through to the singleton path, so a typo'd or forgotten family
-        // would silently demote a would-be family member to an isolated language
-        // with no cognates. Assert every family shared by ≥2 species has a proto
-        // entry — the miss can then never be silent.
-        let r = registry();
-        let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
-        for def in r.values() {
-            *counts.entry(def.family).or_default() += 1;
-        }
-        let fams = family_registry();
-        for (family, n) in counts {
-            if n >= 2 {
-                assert!(
-                    fams.contains_key(&KindId(family)),
-                    "family {family} has {n} members but no proto vector"
-                );
-            }
-        }
+        assert_eq!(fam.get(&KindId("hobgoblin")), Some(&"goblinoid"));
+        assert_eq!(fam.get(&KindId("bugbear")), Some(&"goblinoid"));
+        assert_eq!(fam.get(&KindId("kobold")), Some(&"kobold"));
     }
 
     #[test]
     fn goblinoids_carry_mass_and_a_nonzero_omnivore_niche() {
-        let r = registry();
+        let bio = biosphere_registry();
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
-            let s = &r[&KindId(name)];
-            assert!(s.biosphere.mass.kilograms() > 0.0, "{name} has mass");
-            assert!(!s.biosphere.niche.is_zero(), "{name} eats something");
+            let s = bio.get(&KindId(name)).unwrap();
+            assert!(s.mass.kilograms() > 0.0, "{name} has mass");
+            assert!(!s.niche.is_zero(), "{name} eats something");
             // omnivores: both plant-forage and animal-prey present
-            assert!(s.biosphere.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
-            assert!(s.biosphere.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
+            assert!(s.niche.weight(hornvale_kernel::PLANT_FORAGE) > 0.0);
+            assert!(s.niche.weight(hornvale_kernel::ANIMAL_PREY) > 0.0);
         }
         // strict, modest, monotone mass band: kobold < goblin < hobgoblin < bugbear
-        assert!(
-            r[&KindId("kobold")].biosphere.mass.kilograms()
-                < r[&KindId("goblin")].biosphere.mass.kilograms()
-        );
-        assert!(
-            r[&KindId("goblin")].biosphere.mass.kilograms()
-                < r[&KindId("hobgoblin")].biosphere.mass.kilograms()
-        );
-        assert!(
-            r[&KindId("hobgoblin")].biosphere.mass.kilograms()
-                < r[&KindId("bugbear")].biosphere.mass.kilograms()
-        );
+        let kg = |n: &'static str| bio.get(&KindId(n)).unwrap().mass.kilograms();
+        assert!(kg("kobold") < kg("goblin"));
+        assert!(kg("goblin") < kg("hobgoblin"));
+        assert!(kg("hobgoblin") < kg("bugbear"));
     }
 
     #[test]
     fn every_species_has_a_finite_condition_niche() {
-        for (name, def) in registry() {
-            let name = name.0;
+        for (kind, def) in biosphere_registry_pairs() {
+            let name = kind.0;
             for r in [
-                def.biosphere.condition_niche.temperature,
-                def.biosphere.condition_niche.moisture,
-                def.biosphere.condition_niche.insolation,
-                def.biosphere.condition_niche.elevation,
+                def.condition_niche.temperature,
+                def.condition_niche.moisture,
+                def.condition_niche.insolation,
+                def.condition_niche.elevation,
             ] {
                 assert!(r.optimum.is_finite(), "{name} optimum finite");
                 assert!(
@@ -1856,7 +1325,7 @@ mod tests {
                 assert!(r.devotion.is_finite(), "{name} devotion finite");
             }
             assert!(
-                def.biosphere.potency >= 0.0 && def.biosphere.potency.is_finite(),
+                def.potency >= 0.0 && def.potency.is_finite(),
                 "{name} potency >= 0"
             );
         }
@@ -1864,12 +1333,12 @@ mod tests {
 
     #[test]
     fn the_four_peoples_have_distinct_temperature_optima() {
-        let reg = registry();
+        let bio = biosphere_registry();
         let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
             .iter()
             .map(|n| {
-                reg[&KindId(n)]
-                    .biosphere
+                bio.get(&KindId(n))
+                    .unwrap()
                     .condition_niche
                     .temperature
                     .optimum
@@ -1889,52 +1358,33 @@ mod tests {
     #[test]
     fn every_species_has_a_metabolic_class() {
         use MetabolicClass::*;
-        let r = registry();
-        assert_eq!(r[&KindId("goblin")].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r[&KindId("hobgoblin")].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r[&KindId("bugbear")].biosphere.metabolic_class, Endotherm);
-        assert_eq!(r[&KindId("kobold")].biosphere.metabolic_class, Ectotherm); // reptilian/draconic SRD lineage
+        let bio = biosphere_registry();
+        let mc = |n: &'static str| bio.get(&KindId(n)).unwrap().metabolic_class;
+        assert_eq!(mc("goblin"), Endotherm);
+        assert_eq!(mc("hobgoblin"), Endotherm);
+        assert_eq!(mc("bugbear"), Endotherm);
+        assert_eq!(mc("kobold"), Ectotherm); // reptilian/draconic SRD lineage
     }
 
     #[test]
     fn split_preserves_biosphere_and_peopled_presence() {
-        let reg = registry();
-        let goblin = &reg[&KindId("goblin")];
-        // biosphere moved intact
-        assert_eq!(goblin.biosphere.mass, Mass::new(18.1).unwrap());
-        assert_eq!(goblin.biosphere.potency, 0.0);
-        // the four peoples all speak/settle
+        let bio = biosphere_registry();
+        let psy = psyche_registry();
+        // biosphere authored intact
+        let goblin = bio.get(&KindId("goblin")).unwrap();
+        assert_eq!(goblin.mass, Mass::new(18.1).unwrap());
+        assert_eq!(goblin.potency, 0.0);
+        // the four peoples all speak/settle (carry a psyche row)
         for name in ["goblin", "kobold", "hobgoblin", "bugbear"] {
-            assert!(
-                reg[&KindId(name)].peopled.is_some(),
-                "{name} must carry PeopledTraits"
-            );
+            assert!(psy.contains(&KindId(name)), "{name} must carry a psyche");
         }
     }
 
     #[test]
-    fn genesis_in_with_registry_slice_matches_genesis_exactly() {
-        let roster: Vec<SpeciesDef> = registry().into_values().collect();
-        let mut a = World::new(Seed(42));
-        register_concepts(&mut a.registry).unwrap();
-        let ids_a = genesis(&mut a).unwrap();
-
-        let mut b = World::new(Seed(42));
-        register_concepts(&mut b.registry).unwrap();
-        let ids_b = genesis_in(&mut b, &roster).unwrap();
-
-        assert_eq!(ids_a, ids_b, "same ids in same order");
-        let fa: Vec<_> = a.ledger.iter().collect();
-        let fb: Vec<_> = b.ledger.iter().collect();
-        assert_eq!(
-            fa, fb,
-            "genesis_in over the registry slice must be byte-identical to genesis"
-        );
-    }
-
-    #[test]
     fn menagerie_is_biosphere_only_and_spans_axes() {
-        let reg = registry();
+        let bio = biosphere_registry();
+        let psy = psyche_registry();
+        let per = perception_registry();
         for name in [
             "treant",
             "twig-blight",
@@ -1949,90 +1399,98 @@ mod tests {
             "black-dragon",
             "owlbear",
         ] {
-            let d = &reg[&KindId(name)];
-            assert!(d.peopled.is_none(), "{name} is fauna: no PeopledTraits");
+            let d = bio.get(&KindId(name)).unwrap();
+            assert!(!psy.contains(&KindId(name)), "{name} is fauna: no psyche");
+            assert!(
+                !per.contains(&KindId(name)),
+                "{name} is fauna: no perception"
+            );
             // `Mass` has no PartialOrd, so read the raw kilograms rather
             // than comparing against `Mass::new(0.0)`.
-            assert!(d.biosphere.mass.kilograms() > 0.0, "{name} has mass");
+            assert!(d.mass.kilograms() > 0.0, "{name} has mass");
         }
         // mighty creatures carry potency
-        assert!(reg[&KindId("red-dragon")].biosphere.potency > 0.0);
-        assert!(reg[&KindId("treant")].biosphere.potency > 0.0);
-        assert!(reg[&KindId("xorn")].biosphere.potency > 0.0);
+        assert!(bio.get(&KindId("red-dragon")).unwrap().potency > 0.0);
+        assert!(bio.get(&KindId("treant")).unwrap().potency > 0.0);
+        assert!(bio.get(&KindId("xorn")).unwrap().potency > 0.0);
         // the material, non-mighty fauna carry none
-        assert_eq!(reg[&KindId("owlbear")].biosphere.potency, 0.0);
-        assert_eq!(reg[&KindId("rust-monster")].biosphere.potency, 0.0);
+        assert_eq!(bio.get(&KindId("owlbear")).unwrap().potency, 0.0);
+        assert_eq!(bio.get(&KindId("rust-monster")).unwrap().potency, 0.0);
 
         // resource niches are partitioned, not four omnivores: the distinct
         // dominant axis differs across creatures. `ResourceVector::overlap`
         // is the packer's Pianka overlap; disjoint axes overlap 0.
-        let overlap = reg[&KindId("treant")]
-            .biosphere
+        let overlap = bio
+            .get(&KindId("treant"))
+            .unwrap()
             .niche
-            .overlap(&reg[&KindId("white-dragon")].biosphere.niche);
+            .overlap(&bio.get(&KindId("white-dragon")).unwrap().niche);
         assert!(
             overlap < 0.5,
             "photosynthate vs apex niches must barely overlap"
         );
 
         // Directly assert the basis-constant partition the brief calls for.
-        assert_eq!(
-            reg[&KindId("treant")].biosphere.niche.weight(PHOTOSYNTHATE),
-            1.0
-        );
-        assert_eq!(
-            reg[&KindId("twig-blight")]
-                .biosphere
-                .niche
-                .weight(PHOTOSYNTHATE),
-            1.0
-        );
+        let w = |n: &'static str, axis| bio.get(&KindId(n)).unwrap().niche.weight(axis);
+        assert_eq!(w("treant", PHOTOSYNTHATE), 1.0);
+        assert_eq!(w("twig-blight", PHOTOSYNTHATE), 1.0);
         for name in ["giant-elk", "woolly-mammoth", "giant-goat"] {
-            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(PLANT_FORAGE), 1.0);
+            assert_eq!(w(name, PLANT_FORAGE), 1.0);
         }
         for name in ["white-dragon", "red-dragon", "black-dragon", "owlbear"] {
-            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(ANIMAL_PREY), 1.0);
+            assert_eq!(w(name, ANIMAL_PREY), 1.0);
         }
-        assert_eq!(reg[&KindId("otyugh")].biosphere.niche.weight(DETRITUS), 1.0);
+        assert_eq!(w("otyugh", DETRITUS), 1.0);
         for name in ["xorn", "rust-monster"] {
-            assert_eq!(reg[&KindId(name)].biosphere.niche.weight(MINERAL), 1.0);
+            assert_eq!(w(name, MINERAL), 1.0);
         }
     }
 
     #[test]
-    fn menagerie_families_registered_and_climate_tiles_distinct() {
+    fn menagerie_families_and_climate_tiles_distinct() {
         // The three chromatics and the two plant kinds are multi-member
-        // families; `every_multi_member_family_has_a_proto` already guards
-        // this generically, but pin the two new families explicitly so a
-        // future edit that deletes one fails loudly here too.
-        let fams = family_registry();
-        assert!(fams.contains_key(&KindId("draconic")));
-        assert!(fams.contains_key(&KindId("plant")));
-
-        let reg = registry();
+        // families (their proto vectors live in `hornvale_language`, tested
+        // there); here we pin the family labels and the distinct climate tiles.
+        let fam = family_of();
         for name in ["white-dragon", "red-dragon", "black-dragon"] {
-            assert_eq!(reg[&KindId(name)].family, "draconic");
+            assert_eq!(fam.get(&KindId(name)), Some(&"draconic"));
         }
         for name in ["treant", "twig-blight"] {
-            assert_eq!(reg[&KindId(name)].family, "plant");
+            assert_eq!(fam.get(&KindId(name)), Some(&"plant"));
         }
 
         // The three chromatics claim distinct climate tiles even though they
         // share the animal-prey axis: white owns the cold, and red/black —
         // both warm — separate on moisture (volcanic-arid vs. swamp-wet).
+        let bio = biosphere_registry();
         let temp = |n: &'static str| {
-            reg[&KindId(n)]
-                .biosphere
+            bio.get(&KindId(n))
+                .unwrap()
                 .condition_niche
                 .temperature
                 .optimum
         };
-        let moisture = |n: &'static str| reg[&KindId(n)].biosphere.condition_niche.moisture.optimum;
+        let moisture = |n: &'static str| {
+            bio.get(&KindId(n))
+                .unwrap()
+                .condition_niche
+                .moisture
+                .optimum
+        };
         assert!(temp("white-dragon") < temp("red-dragon"));
         assert!(temp("white-dragon") < temp("black-dragon"));
         assert!(
             moisture("red-dragon") < moisture("black-dragon") - 0.3,
             "volcanic-arid red must sit well below swamp-wet black on moisture"
         );
+    }
+
+    // A test-only pairing of the biosphere store as (KindId, &BiosphereTraits)
+    // so the condition-niche sweep can name each kind in its assertions.
+    fn biosphere_registry_pairs() -> Vec<(KindId, BiosphereTraits)> {
+        let bio = biosphere_registry();
+        bio.ids()
+            .map(|k| (*k, bio.get(k).unwrap().clone()))
+            .collect()
     }
 }

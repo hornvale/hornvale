@@ -6,7 +6,7 @@ use crate::streams::VESSEL_AGENT;
 use hornvale_kernel::{RoomAddr, Value, World, math};
 use hornvale_locale::LocaleContext;
 use hornvale_settlement::{LATITUDE, LONGITUDE, VillageInfo, village_info};
-use hornvale_species::{PerceptionVector, registry, species_of};
+use hornvale_species::{PerceptionVector, perception_registry, species_of};
 
 /// A minted agent's id, drawn deterministically from the world seed.
 /// type-audit: bare-ok(index: 0)
@@ -44,13 +44,14 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     let species = species_of(world, village.id)
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
     // `species` is free text read from the ledger (a committed `Value::Text`),
-    // not a `KindId` — resolve it against the registry by its `name` label,
-    // failing loudly if unknown.
-    let species_def = registry()
-        .into_values()
-        .find(|d| d.name == species.as_str())
+    // not a `KindId` — resolve it against the perception component registry by
+    // its `KindId` label, failing loudly if unknown. Only peopled kinds carry a
+    // perception row, so an unknown or fauna label fails here.
+    let perception = *perception_registry()
+        .iter()
+        .find(|(k, _)| k.0 == species.as_str())
+        .map(|(_, p)| p)
         .ok_or_else(|| VesselError::NoSpecies(species.clone()))?;
-    let perception = hornvale_worldgen::peopled(&species_def).perception;
     let lat = number_fact(world, village.id, LATITUDE)?;
     let lon = number_fact(world, village.id, LONGITUDE)?;
     let (la, lo) = (lat.to_radians(), lon.to_radians());

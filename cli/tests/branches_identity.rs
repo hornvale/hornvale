@@ -137,8 +137,8 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
     let kph = hornvale_worldgen::language_of(&world, "kobold");
     let kex = hornvale_worldgen::exposure_of(&world, "kobold")
         .expect("exposure_of(kobold) must succeed for a placed species");
-    let kdaughters =
-        hornvale_worldgen::family_daughters(&world, &hornvale_worldgen::default_roster(), "kobold");
+    let wc = hornvale_worldgen::WorldComponents::assemble().expect("canonical registries");
+    let kdaughters = hornvale_worldgen::family_daughters(&world, &wc, "kobold");
     let direct = hornvale_language::build_lexicon(
         &world.seed,
         "kobold",
@@ -167,9 +167,14 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
 #[test]
 fn kobold_phonology_is_a_pure_function_of_seed_and_envelope() {
     let world = default_generated_seed_42();
-    let registry = hornvale_species::registry();
-    let kobold_articulation =
-        &hornvale_worldgen::peopled(&registry[&KindId("kobold")]).articulation;
+    // `envelope_of` now takes language's own articulation type (ECS c3); the
+    // kobold row of the canonical articulation registry is byte-identical to
+    // the god-struct's `peopled(kobold).articulation` (proved by
+    // `dissolve_equivalence`), so the drawn phonology is unchanged.
+    let articulation = hornvale_language::articulation_registry();
+    let kobold_articulation = articulation
+        .get(&KindId("kobold"))
+        .expect("kobold has an articulation row");
     let envelope = hornvale_worldgen::envelope_of(kobold_articulation);
     let direct = hornvale_language::draw_phonology(&world.seed, "kobold", &envelope);
     assert_eq!(
@@ -252,17 +257,40 @@ fn goblin_names_are_rebaselined_not_frozen() {
 #[test]
 fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let world = default_generated_seed_42();
-    let roster: Vec<hornvale_species::SpeciesDef> = hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
+    // The peopled-only component set (the psyche key-set; fauna are
+    // biosphere-only), matching genesis's unpinned peopled `species_set`.
+    use hornvale_kernel::{ComponentStore, KindId};
+    let psyche = hornvale_species::psyche_registry();
+    let peopled: std::collections::BTreeSet<KindId> = psyche.ids().copied().collect();
+    let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+        hornvale_species::biosphere_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
+    let family_of: ComponentStore<KindId, &'static str> = hornvale_species::family_of()
+        .iter()
+        .filter(|(k, _)| peopled.contains(k))
+        .map(|(k, v)| (*k, *v))
         .collect();
-    let report = hornvale_worldgen::demography_report(&world, &roster)
+    let names: Vec<&'static str> = biosphere.ids().map(|k| k.0).collect();
+    let wc = hornvale_worldgen::WorldComponents::from_stores(
+        biosphere,
+        psyche,
+        hornvale_species::perception_registry(),
+        hornvale_language::articulation_registry(),
+        hornvale_language::lexicon_registry(),
+        hornvale_language::family_proto(),
+        family_of,
+    )
+    .expect("the peopled-only component set is well-formed");
+    let report = hornvale_worldgen::demography_report(&world, &wc)
         .expect("demography_report must recompute over an already-built world's committed facts");
 
     let tag_of = |species: &str| -> u32 {
-        roster
+        names
             .iter()
-            .position(|d| d.name == species)
+            .position(|n| *n == species)
             .unwrap_or_else(|| panic!("{species} must be in the peopled roster")) as u32
     };
 

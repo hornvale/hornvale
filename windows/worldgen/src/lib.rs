@@ -74,11 +74,13 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
     out
 }
 
+pub mod components;
 pub mod settlement_pins;
+pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;
 
 /// Errors from building a world.
-/// type-audit: bare-ok(prose: Pins.0)
+/// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
 #[derive(Debug)]
 pub enum BuildError {
     /// A concept registration conflicted.
@@ -91,6 +93,9 @@ pub enum BuildError {
     Pins(String),
     /// Terrain genesis refused a pin.
     TerrainGenesis(hornvale_terrain::GenesisError),
+    /// A kind's component-set is malformed (referential-integrity failure at
+    /// assembly): e.g. a peopled kind missing a biosphere or a speech row.
+    MalformedKind(String),
 }
 
 impl std::fmt::Display for BuildError {
@@ -101,6 +106,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Genesis(e) => write!(f, "sky genesis: {e}"),
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
             BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
+            BuildError::MalformedKind(reason) => write!(f, "malformed kind: {reason}"),
         }
     }
 }
@@ -484,7 +490,7 @@ pub fn species_carrying_input(
 
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
-/// for the coexistence stack. `species_set` index order tags the fields.
+/// for the coexistence stack. `species_biosphere` index order tags the fields.
 ///
 /// **The returned `u32` is a build-local dense index, not identity.** It is
 /// `species_set`'s 0-based position for this one call, derived by
@@ -518,23 +524,30 @@ pub fn niche_per_species_k(
     climate: &GeneratedClimate,
     obliquity_deg: f64,
     insolation_scalar: f64,
-    species_set: &[&hornvale_species::SpeciesDef],
+    regime: &RotationRegime,
+    species_biosphere: &[&hornvale_species::BiosphereTraits],
 ) -> Vec<(u32, hornvale_kernel::CellMap<f64>)> {
     let base_inputs = carrying_inputs_of(geo, terrain, climate);
     let base_carrying = hornvale_demography::carrying_capacity(geo, &base_inputs);
-    let substrate = substrate_field(geo, terrain, climate, obliquity_deg, insolation_scalar);
+    let substrate = substrate_field(
+        geo,
+        terrain,
+        climate,
+        obliquity_deg,
+        insolation_scalar,
+        regime,
+    );
 
-    species_set
+    species_biosphere
         .iter()
         .enumerate()
-        .map(|(tag, def)| {
+        .map(|(tag, bio)| {
             let total_uptake: f64 = hornvale_kernel::v1_basis()
                 .iter()
-                .map(|axis| def.biosphere.niche.weight(*axis))
+                .map(|axis| bio.niche.weight(*axis))
                 .sum();
-            let floor_buf =
-                hornvale_kernel::sovereignty_floor(def.biosphere.mass, def.biosphere.potency);
-            let cn = &def.biosphere.condition_niche;
+            let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
+            let cn = &bio.condition_niche;
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
                 let supply = base_carrying.get(cell) * total_uptake;
@@ -572,7 +585,7 @@ pub fn niche_per_species_k(
 /// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
 pub fn demography_report_with_beta(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     beta: f64,
     floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
@@ -580,8 +593,14 @@ pub fn demography_report_with_beta(
     let climate = climate_of(world)?;
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
-    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
-    let species_set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
+    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    // Biosphere per kind, read from the world's component set (ECS c3) in
+    // ascending-`KindId` order — the build-local dense index the `tag`s below
+    // and `niche_per_species_k`'s returned `u32` share. This is the WHOLE
+    // component set (fauna included), matching the report's "whole roster"
+    // contract; the order equals the default roster's `registry()`-key order.
+    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> =
+        wc.biosphere.iter().map(|(_, bio)| bio).collect();
 
     let per_species_k = niche_per_species_k(
         geo,
@@ -589,15 +608,17 @@ pub fn demography_report_with_beta(
         &climate,
         obliquity_deg,
         insolation_scalar,
-        &species_set,
+        &regime,
+        &species_biosphere,
     );
     // `tag as u32` here is the same build-local dense index documented on
     // `niche_per_species_k` — never serialized, never identity.
-    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
-        .iter()
-        .enumerate()
-        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
-        .collect();
+    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> =
+        species_biosphere
+            .iter()
+            .enumerate()
+            .map(|(tag, bio)| (tag as u32, bio.mass, bio.niche.clone()))
+            .collect();
 
     let settlements =
         hornvale_demography::condense_tagged(&per_species_k, geo, CONDENSATION_THRESHOLD);
@@ -631,11 +652,11 @@ pub fn demography_report_with_beta(
 /// from the seed.
 pub fn demography_report(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     demography_report_with_beta(
         world,
-        roster,
+        wc,
         hornvale_demography::BETA,
         hornvale_demography::FLOOR,
     )
@@ -746,6 +767,13 @@ pub fn annual_mean_insolation(
 /// four environmental readings The Niche's habitat model scores each
 /// species' condition niche against. Pure: draws nothing from the seed, only
 /// the world's already-committed terrain/climate/sky.
+///
+/// Insolation is rotation-regime-aware (SKY-24): a `Spinning` world keeps
+/// the latitude-only annual mean (byte-identical to the pre-fix path); a
+/// `Locked` world instead rewards the substellar geometry — a Lambert
+/// cosine off the substellar point, floored at `0.0` on the night side —
+/// so the terminator ring, not the fixed noon point, reads as the
+/// temperate band.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
 pub fn substrate_field(
     geo: &Geosphere,
@@ -753,15 +781,19 @@ pub fn substrate_field(
     climate: &GeneratedClimate,
     obliquity_deg: f64,
     insolation_scalar: f64,
+    regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
         temperature_c: climate.mean_temperature_at(cell).get(),
         moisture: climate.moisture_at(cell),
-        insolation: annual_mean_insolation(
-            geo.coord(cell).latitude,
-            obliquity_deg,
-            insolation_scalar,
-        ),
+        insolation: match regime {
+            RotationRegime::Spinning { .. } => {
+                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar)
+            }
+            RotationRegime::Locked => {
+                insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
+            }
+        },
         elevation: terrain.elevation_at(cell).get(),
     })
 }
@@ -1415,52 +1447,36 @@ pub fn observation_time(
     Ok(0.0) // pathological all-daylight window: fall back deterministically
 }
 
-/// The shipped species roster — the whole authored registry, in key order.
-/// The default every shipped verb builds with (spec §3).
-pub fn default_roster() -> Vec<hornvale_species::SpeciesDef> {
-    hornvale_species::registry().into_values().collect()
+/// Resolve `species` to its canonical `'static` `KindId` label within `wc`,
+/// or fail loudly with the known kinds. A kind's identity is its `KindId`, not
+/// a god-struct — the composition root resolves names against the component
+/// set the world was built from.
+fn resolve_kind(wc: &WorldComponents, species: &str) -> Result<&'static str, BuildError> {
+    wc.biosphere
+        .ids()
+        .map(|k| k.0)
+        .find(|name| *name == species)
+        .ok_or_else(|| {
+            let known: Vec<&str> = wc.biosphere.ids().map(|k| k.0).collect();
+            BuildError::Pins(format!(
+                "unknown species '{species}'; roster: {}",
+                known.join(", ")
+            ))
+        })
 }
 
-/// Resolve `species` within `roster` or fail loudly.
-fn def_in<'a>(
-    roster: &'a [hornvale_species::SpeciesDef],
-    species: &str,
-) -> Result<&'a hornvale_species::SpeciesDef, BuildError> {
-    roster.iter().find(|d| d.name == species).ok_or_else(|| {
-        let known: Vec<&str> = roster.iter().map(|d| d.name).collect();
-        BuildError::Pins(format!(
-            "unknown species '{species}'; roster: {}",
-            known.join(", ")
-        ))
-    })
-}
-
-/// Borrow `def`'s peopled component, for passes gated to settling,
-/// speaking species (settlement genesis, phonology, perception, naming).
-/// Panics if called on a fauna kind (a `SpeciesDef` with no
-/// `PeopledTraits`) — every call site here is reached only after a
-/// `peopled.is_some()` filter at the pass boundary, so a panic means that
-/// invariant broke, not that fauna are a normal input. Public so the Lab
-/// and vessel windows (both compose worlds through this crate) share the
-/// same guard instead of re-deriving it.
-pub fn peopled(def: &hornvale_species::SpeciesDef) -> &hornvale_species::PeopledTraits {
-    def.peopled
-        .as_ref()
-        .unwrap_or_else(|| panic!("peopled pass over a fauna kind: '{}'", def.name))
-}
-
-/// The phenomena a species (resolved within `roster`) observes.
+/// The phenomena a species (resolved within `wc`) observes.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as_in(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     species: &str,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    let def = def_in(roster, species)?;
+    let name = resolve_kind(wc, species)?;
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
-    observed_phenomena_at(world, def, place)
+    observed_phenomena_at(world, wc, name, place)
 }
 
 /// [`observed_phenomena_as_in`]'s actual observation with the entity's
@@ -1469,13 +1485,14 @@ pub fn observed_phenomena_as_in(
 /// bare stand-in id) observes the whole, un-culled sky.
 fn observed_phenomena_at(
     world: &World,
-    def: &hornvale_species::SpeciesDef,
+    wc: &WorldComponents,
+    name: &'static str,
     place: EntityId,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    observed_phenomena_from(world, def, place, place_coord(world, place))
+    observed_phenomena_from(world, wc, name, place, place_coord(world, place))
 }
 
-/// The phenomena a species (resolved within `roster`) observes from
+/// The phenomena a species (resolved within `wc`) observes from
 /// `place`'s own committed vantage — its latitude/longitude fact culls the
 /// sky by hemisphere (SEQ-5). This is the per-entity observation glossed
 /// naming is truthful to (spec §9.3: a gloss composes THAT entity's own
@@ -1485,12 +1502,12 @@ fn observed_phenomena_at(
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as_at(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     species: &str,
     place: EntityId,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    let def = def_in(roster, species)?;
-    observed_phenomena_at(world, def, place)
+    let name = resolve_kind(wc, species)?;
+    observed_phenomena_at(world, wc, name, place)
 }
 
 /// The observation itself, factored out with an explicit `position` so
@@ -1506,11 +1523,17 @@ pub fn observed_phenomena_as_at(
 /// real coordinate is observationally identical to the committed place.
 fn observed_phenomena_from(
     world: &World,
-    def: &hornvale_species::SpeciesDef,
+    wc: &WorldComponents,
+    name: &'static str,
     place: EntityId,
     position: Option<GeoCoord>,
 ) -> Result<Vec<Phenomenon>, BuildError> {
-    let perception = &peopled(def).perception;
+    // Source the kind's perception from the world's component set (ECS c3),
+    // keyed by its `KindId` label.
+    let perception = wc
+        .perception
+        .get(&KindId(name))
+        .expect("peopled pass over a fauna kind");
     let day = observation_time(world, perception.activity)?;
     let sky = sky_of(world)?;
     let climate = UniformClimate;
@@ -1582,15 +1605,17 @@ fn sentiment_concept(sentiment: hornvale_religion::Sentiment) -> &'static str {
 /// `species` within the shipped default roster.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
-    observed_phenomena_as_in(world, &default_roster(), species)
+    let wc = WorldComponents::assemble()?;
+    observed_phenomena_as_in(world, &wc, species)
 }
 
-/// Map a species' articulation vector onto language's own `Envelope` copy
-/// (spec §7): every scalar dimension is a direct 1:1 carry — both vectors
+/// Map a kind's (language-owned) articulation vector onto language's own
+/// `Envelope` (spec §7): every scalar dimension is a direct 1:1 carry — both
 /// share the same 0–1 scale and semantics — and `ExoticManner` maps onto
-/// language's own `ExoticSeg` one variant at a time. This is the only place
-/// either vector is ever converted; language never imports species.
-pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_language::Envelope {
+/// `ExoticSeg` one variant at a time. The composition root now sources the
+/// articulation from a roster-derived `WorldComponents` (already the language
+/// type), so no species→language conversion remains here.
+pub fn envelope_of(art: &hornvale_language::ArticulationVector) -> hornvale_language::Envelope {
     hornvale_language::Envelope {
         labiality: art.labiality,
         vowel_space: art.vowel_space,
@@ -1599,56 +1624,92 @@ pub fn envelope_of(art: &hornvale_species::ArticulationVector) -> hornvale_langu
         voice_loudness: art.voice_loudness,
         tonality: art.tonality,
         exotic: match art.exotic {
-            hornvale_species::ExoticManner::None => hornvale_language::ExoticSeg::None,
-            hornvale_species::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
-            hornvale_species::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
-            hornvale_species::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
+            hornvale_language::ExoticManner::None => hornvale_language::ExoticSeg::None,
+            hornvale_language::ExoticManner::Trill => hornvale_language::ExoticSeg::Trill,
+            hornvale_language::ExoticManner::Click => hornvale_language::ExoticSeg::Click,
+            hornvale_language::ExoticManner::Ejective => hornvale_language::ExoticSeg::Ejective,
         },
     }
 }
 
 /// Draw `species`' phonology from this world's seed and its authored
-/// articulation vector, resolving `species` within `roster` — rebuildable
+/// articulation vector, resolving `species` within `wc` — rebuildable
 /// from (seed, species, envelope) alone, the same reconstruction idiom as
 /// `terrain_of`/`sky_of`/`climate_of`. The single construction site for a
-/// species' `Phonology`. Panics if `species` is not in `roster`; every
-/// caller sources `species` from the same roster it passes here.
+/// species' `Phonology`. Panics if `species` is not a speaking kind in `wc`;
+/// every caller sources `species` from the same component set it passes here.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn language_of_in(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     species: &str,
 ) -> hornvale_language::Phonology {
-    let def = def_in(roster, species).unwrap_or_else(|e| panic!("language_of_in: {e}"));
-    hornvale_language::draw_phonology(
-        &world.seed,
-        species,
-        &envelope_of(&peopled(def).articulation),
-    )
+    // The kind's phonology is sourced from the world's component set (the
+    // language-typed articulation) — a synthetic roster carries its own
+    // translated values (ECS c3). `resolve_kind` resolves `species` to its
+    // `'static` `KindId` label, the seed-derivation key.
+    let name = resolve_kind(wc, species).unwrap_or_else(|e| panic!("language_of_in: {e}"));
+    language_of_wc(world, wc, name)
+}
+
+/// [`language_of_in`]'s phonology draw against an ALREADY-built component set
+/// (ECS c3): read the kind's language-typed articulation from `wc` rather
+/// than rebuild the set from a roster per call, so a build threads its single
+/// `wc`. `name` is the kind's `KindId` key (its `'static` species name).
+/// Byte-identical to `language_of_in` on any roster whose component set is
+/// `wc`. Panics if `name` is not a speaking kind in `wc`.
+fn language_of_wc(
+    world: &World,
+    wc: &WorldComponents,
+    name: &'static str,
+) -> hornvale_language::Phonology {
+    let art = wc.articulation.get(&KindId(name)).unwrap_or_else(|| {
+        panic!("language_of_wc: '{name}' is not a speaking kind in the component set")
+    });
+    hornvale_language::draw_phonology(&world.seed, name, &envelope_of(art))
 }
 
 /// Draw a species' phonology, resolving `species` within the shipped
 /// default roster.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn language_of(world: &World, species: &str) -> hornvale_language::Phonology {
-    language_of_in(world, &default_roster(), species)
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    language_of_in(world, &wc, species)
 }
 
 /// Draw a `family`'s proto phonology from this world's seed and the
 /// family's authored proto ancestral vector
-/// ([`hornvale_species::family_registry`]) — the family name occupies the
+/// ([`hornvale_language::family_proto`]) — the family name occupies the
 /// species slot in the seed-derivation (e.g. `draw_phonology(seed,
 /// "goblinoid", env)`), a language with no speakers of its own, only
-/// daughters. Panics if `family` is not in `family_registry` (a singleton
+/// daughters. Panics if `family` is not in `family_proto` (a singleton
 /// family has no entry there and never reaches this function — see
 /// `lexicon_of`'s resolution).
 /// type-audit: bare-ok(identifier-text: family)
 pub fn proto_phonology_of(world: &World, family: &'static str) -> hornvale_language::Phonology {
-    hornvale_language::draw_phonology(
-        &world.seed,
-        family,
-        &envelope_of(&hornvale_species::family_registry()[&KindId(family)]),
-    )
+    // The convenience entry: assemble the canonical component set (the sole
+    // construction point for `family_proto`) and delegate to the wc-threaded
+    // read path, so the proto vector is always sourced from `wc.family_proto`.
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    proto_phonology_of_in(world, &wc, family)
+}
+
+/// [`proto_phonology_of`]'s proto draw against an ALREADY-built component set
+/// (ECS c3): read the family's proto ancestral vector from `wc.family_proto`
+/// — the composed proto store, `worldgen`'s sole proto read path — rather than
+/// re-fetch language's global `family_proto()` per call. A singleton family
+/// has no entry there and never reaches this function (see `lexicon_of`'s
+/// resolution). Panics if `family` is not in `wc.family_proto`.
+fn proto_phonology_of_in(
+    world: &World,
+    wc: &WorldComponents,
+    family: &'static str,
+) -> hornvale_language::Phonology {
+    let art = wc
+        .family_proto
+        .get(&KindId(family))
+        .unwrap_or_else(|| panic!("proto_phonology_of: family '{family}' has no proto vector"));
+    hornvale_language::draw_phonology(&world.seed, family, &envelope_of(art))
 }
 
 /// Map a species' perception vector onto the color pack's two acquisition
@@ -1816,8 +1877,8 @@ pub fn exposure_of(
     world: &World,
     species: &str,
 ) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
-    let roster = default_roster();
-    let def = def_in(&roster, species)?;
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
     let settled = settled_cells(world, species);
@@ -1825,7 +1886,7 @@ pub fn exposure_of(
     // querying species has settled" rule; the outer gate this replaced was
     // vestigial belt-and-suspenders from the merge reconciliation.
     let coexisting = placed_species(world);
-    exposure_of_impl(world, def, &settled, &coexisting, &terrain, &climate)
+    exposure_of_impl(world, &wc, name, &settled, &coexisting, &terrain, &climate)
 }
 
 /// [`exposure_of`]'s classification rules (spec §7), factored out so
@@ -1843,7 +1904,8 @@ pub fn exposure_of(
 /// instead; every other rule is identical to `exposure_of`'s doc comment.
 fn exposure_of_impl(
     world: &World,
-    def: &hornvale_species::SpeciesDef,
+    wc: &WorldComponents,
+    name: &'static str,
     settled: &[hornvale_kernel::CellId],
     coexisting: &std::collections::BTreeSet<String>,
     terrain: &GeneratedTerrain,
@@ -1853,8 +1915,13 @@ fn exposure_of_impl(
         ExposureClass, GapReason, body_pack, color_pack, in_ladder, kin_pack, universal_stratum,
     };
 
-    let species = def.name;
-    let perception = &peopled(def).perception;
+    let species = name;
+    // Source perception from the world's component set (ECS c3), keyed by the
+    // kind's `KindId` label.
+    let perception = wc
+        .perception
+        .get(&KindId(name))
+        .expect("peopled pass over a fauna kind");
     let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
@@ -1957,60 +2024,66 @@ fn exposure_of_impl(
 /// assemble the two into a `Lexicon` (`hornvale_language::build_lexicon`).
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_of(world: &World, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
-    lexicon_of_in(world, &default_roster(), species)
+    let wc = WorldComponents::assemble()?;
+    lexicon_of_in(world, &wc, species)
 }
 
-/// The family's members (all `roster` species sharing `family`), each as a
+/// The family's members (all kinds in `wc` sharing `family`), each as a
 /// [`hornvale_language::Daughter`] — its drawn cascade and its own phonology —
 /// so the merger-aware proto assignment (epoch `root/v3`) can choose core roots
 /// that survive every daughter's descent distinct. The rejection is
 /// order-independent (a candidate is rejected iff it merges in ANY daughter),
-/// so the roster's order does not affect the result; a singleton family yields
+/// so the iteration order does not affect the result; a singleton family yields
 /// a one-element slice (itself). Public so the proto-goblinoid reference page
 /// and the Lab's monophyly/outgroup metrics can reproduce the SAME merger-aware
 /// assignment `build_lexicon` consumes.
 /// type-audit: bare-ok(identifier-text: family)
 pub fn family_daughters(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     family: &str,
 ) -> Vec<hornvale_language::Daughter> {
-    roster
+    // Iterate the family-taxonomy store in ascending `KindId` — the same order
+    // (and same members) the default roster's `registry()`-key traversal gave.
+    wc.family_of
         .iter()
-        .filter(|d| d.family == family)
-        .map(|d| hornvale_language::Daughter {
-            cascade: hornvale_language::draw_cascade(&world.seed, d.name),
-            phonology: language_of_in(world, roster, d.name),
+        .filter(|(_, fam)| **fam == family)
+        .map(|(kind, _)| hornvale_language::Daughter {
+            cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
+            phonology: language_of_wc(world, wc, kind.0),
         })
         .collect()
 }
 
-/// Build `species`' lexicon within an explicit `roster` — the merger-aware
-/// composition-root path. Assembles the family's daughters so the proto
-/// assignment drives core homophony to zero across the whole family.
+/// Build `species`' lexicon within an explicit component set `wc` — the
+/// merger-aware composition-root path. Assembles the family's daughters so the
+/// proto assignment drives core homophony to zero across the whole family.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn lexicon_of_in(
     world: &World,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     species: &str,
 ) -> Result<hornvale_language::Lexicon, BuildError> {
-    let ph = language_of_in(world, roster, species);
+    let ph = language_of_in(world, wc, species);
     let exposures = exposure_of(world, species)?;
-    let def = def_in(roster, species)?;
-    let family = def.family;
-    // A family with more than one member has a proto ancestral vector in
-    // `family_registry` and draws a real shared proto phonology; a
+    let name = resolve_kind(wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    // A family with more than one member has a proto ancestral vector in the
+    // canonical family-proto store and draws a real shared proto phonology; a
     // singleton family (e.g. kobold) is absent there, so it stays its own
     // family label and its own phonology stands in for its proto — the
     // pre-family draw, preserved exactly.
-    let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family)) {
-        Some(_) => (family, proto_phonology_of(world, family)),
-        None => (def.name, ph.clone()),
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
+        None => (name, ph.clone()),
     };
-    let daughters = family_daughters(world, roster, family);
+    let daughters = family_daughters(world, wc, family);
     Ok(hornvale_language::build_lexicon(
         &world.seed,
-        def.name,
+        name,
         fam_label,
         &ph,
         &proto_ph,
@@ -2210,21 +2283,22 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
     }
 }
 
-/// Build a complete world against a given species `roster`: mint the world
-/// entity and record its sky choice and scenario pins first; run sky
-/// genesis for `Generated`; commit the terrain pins and run tectonic
-/// genesis; then assemble per-cell site inputs from terrain and climate,
-/// place a spaced scatter of settlements (honoring the settlement pins'
-/// suitability floor), commit each as its own place entity, and run the
+/// Build a complete world against a given component set `wc` (the world's
+/// kinds): mint the world entity and record its sky choice and scenario pins
+/// first; run sky genesis for `Generated`; commit the terrain pins and run
+/// tectonic genesis; then assemble per-cell site inputs from terrain and
+/// climate, place a spaced scatter of settlements (honoring the settlement
+/// pins' suitability floor), commit each as its own place entity, and run the
 /// culture/religion cascade on the flagship (the most-suitable settlement,
-/// placed first) from its actual environment.
-pub fn build_world_with_roster(
+/// placed first) from its actual environment. The default world passes
+/// [`WorldComponents::assemble`]; Lab passes a synthetic solo set.
+pub fn build_world_from_components(
     seed: Seed,
     pins: &SkyPins,
     sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
 ) -> Result<World, BuildError> {
     build_to(
         seed,
@@ -2232,7 +2306,7 @@ pub fn build_world_with_roster(
         sky,
         terrain_pins,
         settlement_pins,
-        roster,
+        wc,
         BuildDepth::Full,
     )
 }
@@ -2247,21 +2321,13 @@ pub fn build_world_to(
     sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
-    build_to(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        roster,
-        depth,
-    )
+    build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
-/// The full pipeline, run only as deep as `depth`. `build_world_with_roster`
+/// The full pipeline, run only as deep as `depth`. `build_world_from_components`
 /// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
 /// The only depth-dependent behavior is early `return Ok(world)` between
 /// stages — every statement's order and borrows are otherwise unchanged, so
@@ -2273,7 +2339,7 @@ fn build_to(
     sky: SkyChoice,
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
-    roster: &[hornvale_species::SpeciesDef],
+    wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
     let mut world = World::new(seed);
@@ -2350,6 +2416,12 @@ fn build_to(
         )?;
     }
 
+    // The world's component set `wc` (ECS c3) is supplied by the caller: every
+    // mind (psyche, perception), speech (articulation, lexicon, family proto),
+    // biosphere, and family-taxonomy read below sources from it, keyed by a
+    // kind's `KindId` label. The default world passes the canonical
+    // `assemble()`; a synthetic Lab roster passes its own composed set.
+
     // Reconstruct terrain + climate, build each species' carrying-capacity
     // field, condense settlements off it (demography), and commit each as its
     // own place entity.
@@ -2364,7 +2436,7 @@ fn build_to(
                 Vec<hornvale_settlement::PlacedSettlement>,
                 Vec<hornvale_demography::StackSettlement>,
                 std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
-                Vec<&hornvale_species::SpeciesDef>,
+                Vec<&'static str>,
                 std::collections::BTreeMap<&str, hornvale_language::Phonology>,
             ),
             BuildError,
@@ -2384,16 +2456,19 @@ fn build_to(
     // never settle, so pinning one must fail loudly with the physical reason
     // (constitution: "pins fail loudly") rather than reach `peopled(def)`
     // downstream and panic.
-    let species_set: Vec<&hornvale_species::SpeciesDef> = match &settlement_pins.species {
-        None => roster.iter().filter(|d| d.peopled.is_some()).collect(),
+    // The peopled kinds are exactly the psyche store's key-set (ascending
+    // `KindId`) — the same peopled subset, in the same order, the default
+    // roster's `registry()`-key filter gave.
+    let species_set: Vec<&'static str> = match &settlement_pins.species {
+        None => wc.psyche.ids().map(|k| k.0).collect(),
         Some(name) => {
-            let def = def_in(roster, name)?;
-            if def.peopled.is_none() {
+            let resolved = resolve_kind(wc, name)?;
+            if !wc.psyche.contains(&KindId(resolved)) {
                 return Err(BuildError::Pins(format!(
                     "'{name}' is not a settling people (a biosphere-only fauna kind)"
                 )));
             }
-            vec![def]
+            vec![resolved]
         }
     };
 
@@ -2414,22 +2489,37 @@ fn build_to(
     // readable off `.composition` — replacing the interim `condense_tagged`
     // path (task A14: one settlement PER SPECIES, tag-per-settlement).
     let sky = sky_of(&world)?;
-    let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    // Biosphere per placed species, sourced from the roster-derived component
+    // set (ECS c3) in `species_set` order — the mass/niche the packer input
+    // and `niche_per_species_k` read now come from `wc.biosphere`, not `def`,
+    // preserving the exact `enumerate()` tag order (the build-local dense
+    // index; the `tag as u32` contract is unchanged).
+    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> = species_set
+        .iter()
+        .map(|&name| {
+            wc.biosphere
+                .get(&KindId(name))
+                .expect("every placed kind has a biosphere component")
+        })
+        .collect();
     let per_species_k = niche_per_species_k(
         geo,
         &terrain,
         &climate,
         obliquity_deg,
         insolation_scalar,
-        &species_set,
+        &regime,
+        &species_biosphere,
     );
     // `tag as u32` here is the same build-local dense index documented on
     // `niche_per_species_k` — never serialized, never identity.
-    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> = species_set
-        .iter()
-        .enumerate()
-        .map(|(tag, def)| (tag as u32, def.biosphere.mass, def.biosphere.niche.clone()))
-        .collect();
+    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> =
+        species_biosphere
+            .iter()
+            .enumerate()
+            .map(|(tag, bio)| (tag as u32, bio.mass, bio.niche.clone()))
+            .collect();
     let stack = hornvale_demography::coexist::pack(
         geo,
         &per_species_k,
@@ -2456,7 +2546,7 @@ fn build_to(
     // de-facto (measured as a calibration, spec §9), not enforced.
     let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
-        .map(|def| (def.name, language_of_in(&world, roster, def.name)))
+        .map(|&name| (name, language_of_wc(&world, wc, name)))
         .collect();
     let namers: std::collections::BTreeMap<&str, hornvale_language::Namer> = phonologies
         .iter()
@@ -2473,7 +2563,7 @@ fn build_to(
     // settlements yet.
     let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
         std::collections::BTreeMap::new();
-    for (tag, def) in species_set.iter().enumerate() {
+    for (tag, &name) in species_set.iter().enumerate() {
         // "Settled" now means PRESENT, not merely dominant: species `tag` is
         // settled at every stack settlement whose composition lists it with
         // a strictly positive density fraction, even at a settlement where
@@ -2503,35 +2593,38 @@ fn build_to(
                         .any(|(id, frac)| *id as usize == *i && *frac > 0.0)
                 })
             })
-            .map(|(_, d)| d.name.to_string())
+            .map(|(_, n)| n.to_string())
             .collect();
         let exposures = exposure_of_impl(
             &world,
-            def,
+            wc,
+            name,
             &settled_now,
             &coexisting_now,
             &terrain,
             &climate,
         )?;
         let ph = phonologies
-            .get(def.name)
+            .get(name)
             .expect("a phonology was built for every placed species");
-        let family = def.family;
+        let family = *wc
+            .family_of
+            .get(&KindId(name))
+            .expect("every placed kind has a family row (integrity-checked)");
         // A family with more than one member has a proto ancestral vector
-        // in `family_registry` and draws a real shared proto phonology; a
-        // singleton family (e.g. kobold) is absent there, so it stays its
-        // own family label and its own phonology stands in for its proto —
-        // the pre-family draw, preserved exactly.
-        let (fam_label, proto_ph) = match hornvale_species::family_registry().get(&KindId(family))
-        {
-            Some(_) => (family, proto_phonology_of(&world, family)),
-            None => (def.name, ph.clone()),
+        // in the canonical family-proto store and draws a real shared proto
+        // phonology; a singleton family (e.g. kobold) is absent there, so it
+        // stays its own family label and its own phonology stands in for its
+        // proto — the pre-family draw, preserved exactly.
+        let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+            Some(_) => (family, proto_phonology_of_in(&world, wc, family)),
+            None => (name, ph.clone()),
         };
-        let daughters = family_daughters(&world, roster, family);
+        let daughters = family_daughters(&world, wc, family);
         lexicons.insert(
-            def.name,
+            name,
             hornvale_language::build_lexicon(
-                &seed, def.name, fam_label, ph, &proto_ph, &exposures, &daughters,
+                &seed, name, fam_label, ph, &proto_ph, &exposures, &daughters,
             ),
         );
     }
@@ -2541,15 +2634,19 @@ fn build_to(
     let mut glosses: Vec<String> = Vec::with_capacity(placements.len());
     for s in &placements {
         let tag = s.dominant;
-        let def = species_set[tag as usize];
+        let name = species_set[tag as usize];
         let coord = geo.coord(s.cell);
         let salt = u64::from(s.cell.0);
         let namer = namers
-            .get(def.name)
+            .get(name)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(&peopled(def).psych);
+        let morph = morph_options(
+            wc.psyche
+                .get(&KindId(name))
+                .expect("peopled pass over a fauna kind"),
+        );
         let lexicon = lexicons
-            .get(def.name)
+            .get(name)
             .expect("a lexicon was built for every placed species");
         let biome_concept = climate.biome_at(s.cell).concept_name();
         // The presiding phenomenon is observed from THIS settlement's own
@@ -2561,7 +2658,7 @@ fn build_to(
         // settlement entity doesn't exist yet, so `world_entity` stands in
         // as the (unread) `place` id while the real coordinate does the
         // culling — see `observed_phenomena_from`.
-        let seen = observed_phenomena_from(&world, def, world_entity, Some(coord))?;
+        let seen = observed_phenomena_from(&world, wc, name, world_entity, Some(coord))?;
         let presiding = seen.first().and_then(phenomenon_concept);
         let mut site_concepts: Vec<&str> = vec![biome_concept];
         site_concepts.extend(presiding);
@@ -2687,7 +2784,7 @@ fn build_to(
 
     stage("culture+religion+species", || -> Result<(), BuildError> {
         // Per-species flagship culture and religion.
-        for (tag, def) in species_set.iter().enumerate() {
+        for (tag, &name) in species_set.iter().enumerate() {
             let Some(pos) = placements.iter().position(|s| s.dominant as usize == tag) else {
                 continue; // a species may place nothing on a hostile world
             };
@@ -2705,18 +2802,28 @@ fn build_to(
                 population: placed[pos].population,
                 threat,
             };
-            let peopled_def = peopled(def);
+            // Mind + speech sourced from the world's component set (ECS c3):
+            // psychology from `wc.psyche`, the role vocabulary from
+            // `wc.lexicon`, both keyed by the kind's `KindId` label.
+            let psych_v = wc
+                .psyche
+                .get(&KindId(name))
+                .expect("peopled pass over a fauna kind");
+            let lex = wc
+                .lexicon
+                .get(&KindId(name))
+                .expect("peopled pass over a fauna kind");
             let psych = hornvale_culture::PsychSummary {
-                threat_response: peopled_def.psych.threat_response,
-                time_horizon: peopled_def.psych.time_horizon,
-                communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
-                rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+                threat_response: psych_v.threat_response,
+                time_horizon: psych_v.time_horizon,
+                communal: psych_v.sociality == hornvale_species::Sociality::Communal,
+                rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
                 vocabulary: hornvale_culture::RoleVocabulary {
-                    worker_override: peopled_def.worker_override.map(str::to_string),
-                    warrior: peopled_def.warrior.to_string(),
-                    artisan: peopled_def.artisan.to_string(),
-                    shaman: peopled_def.shaman.to_string(),
-                    top: peopled_def.top.to_string(),
+                    worker_override: lex.worker_override.map(str::to_string),
+                    warrior: lex.warrior.to_string(),
+                    artisan: lex.artisan.to_string(),
+                    shaman: lex.shaman.to_string(),
+                    top: lex.top.to_string(),
                 },
             };
             hornvale_culture::genesis(&mut world, flagship, &env, &psych)?;
@@ -2728,7 +2835,7 @@ fn build_to(
             let castes = hornvale_culture::castes_of(&world, flagship);
             let society = hornvale_religion::SocietySummary {
                 strata: castes.len(),
-                has_priesthood: castes.iter().any(|c| c == peopled_def.shaman),
+                has_priesthood: castes.iter().any(|c| c == lex.shaman),
             };
             // Religion (and the deity glosses drawn inside it) observes from
             // the world's first place — the flagship vantage, its hemisphere
@@ -2737,13 +2844,13 @@ fn build_to(
             // name-gloss is truthful to the phenomenon its belief was actually
             // derived from. Settlements exist by now, so the placed-observer
             // path is live.
-            let seen = observed_phenomena_as_in(&world, roster, def.name)?;
+            let seen = observed_phenomena_as_in(&world, wc, name)?;
             let namer = namers
-                .get(def.name)
+                .get(name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(&peopled_def.psych);
+            let morph = morph_options(psych_v);
             let lexicon = lexicons
-                .get(def.name)
+                .get(name)
                 .expect("a lexicon was built for every placed species");
             let mut deity_namer = LanguageDeityNamer {
                 namer,
@@ -2752,7 +2859,7 @@ fn build_to(
                 phenomena: &seen,
                 index: 0,
                 glosses: std::collections::BTreeMap::new(),
-                deity_seed: deity_base_seed(&seed, def.name),
+                deity_seed: deity_base_seed(&seed, name),
             };
             hornvale_religion::genesis(&mut world, flagship, &seen, &society, &mut deity_namer)?;
             for (salt, gloss) in &deity_namer.glosses {
@@ -2768,9 +2875,9 @@ fn build_to(
         // world must mint the exact same ids for pre-C1 entities as pre-species
         // main, so the new, Y2-1-only entities are appended last rather than
         // interleaved. Then the peopled-by link for every settlement.
-        hornvale_species::genesis_in(&mut world, roster)?;
+        species_genesis(&mut world, wc)?;
         for (id, s) in ids.iter().zip(placements.iter()) {
-            hornvale_species::people(&mut world, *id, species_set[s.dominant as usize].name)?;
+            hornvale_species::people(&mut world, *id, species_set[s.dominant as usize])?;
         }
         Ok(())
     })?;
@@ -2786,7 +2893,177 @@ fn build_to(
     Ok(world)
 }
 
-/// Build a complete world with the shipped species roster.
+/// Mint one species entity per kind in `wc` and commit its authored vector as
+/// facts, reading the composed [`WorldComponents`] rather than a god-struct
+/// roster (the composition-root relocation of `species::genesis_in`, ECS c3).
+///
+/// **Mint order is byte-identity-critical:** entities are minted in ascending
+/// `KindId` (`wc.biosphere.ids()`), which equals the default roster's slice
+/// order (`registry().into_values()` is `KindId`-ascending) and is single-
+/// element for Lab's synthetic rosters — so it reproduces `genesis_in`'s mint
+/// sequence in every real case. Every fact (predicate, value, order,
+/// `provenance="species"`, `day=Some(0.0)`) mirrors `genesis_in` exactly.
+/// type-audit: bare-ok(identifier-text)
+fn species_genesis(
+    world: &mut World,
+    wc: &WorldComponents,
+) -> Result<std::collections::BTreeMap<String, EntityId>, LedgerError> {
+    // Local mirror of species' `fact` helper: every species-genesis fact is
+    // day 0, provenance "species", placeless.
+    fn sfact(subject: EntityId, predicate: &str, object: Value) -> Fact {
+        Fact {
+            subject,
+            predicate: predicate.to_string(),
+            object,
+            place: None,
+            day: Some(0.0),
+            provenance: "species".to_string(),
+        }
+    }
+
+    use hornvale_species::{
+        ActivityCycle, DELIBERATION_LATENCY, IN_GROUP_RADIUS, SOCIALITY_MODE,
+        SPECIES_ACTIVITY_CYCLE, SPECIES_EXOTIC_MANNER, SPECIES_LABIALITY, SPECIES_NAME,
+        SPECIES_NIGHT_VISION, SPECIES_SIBILANCE, SPECIES_SKY_ATTENTION, SPECIES_TONALITY,
+        SPECIES_VOICE_LOUDNESS, SPECIES_VOICING, SPECIES_VOWEL_SPACE, STATUS_BASIS, Sociality,
+        StatusBasis, THREAT_RESPONSE, TIME_HORIZON,
+    };
+
+    let mut ids = std::collections::BTreeMap::new();
+    // Ascending KindId — the biosphere store is the canonical entity set.
+    for kind in wc.biosphere.ids() {
+        let name = kind.0;
+        let id = world.ledger.mint_entity();
+        world.ledger.commit(
+            sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
+            &world.registry,
+        )?;
+        if let Some(p) = wc.psyche.get(kind) {
+            let perception = wc
+                .perception
+                .get(kind)
+                .expect("peopled cluster shares one key-set (integrity-checked)");
+            let articulation = wc
+                .articulation
+                .get(kind)
+                .expect("peopled cluster shares one key-set (integrity-checked)");
+            let sociality = match p.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match p.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
+            world.ledger.commit(
+                sfact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    DELIBERATION_LATENCY,
+                    Value::Number(p.deliberation_latency),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, STATUS_BASIS, Value::Text(status.to_string())),
+                &world.registry,
+            )?;
+            let activity = match perception.activity {
+                ActivityCycle::Diurnal => "diurnal",
+                ActivityCycle::Nocturnal => "nocturnal",
+                ActivityCycle::Crepuscular => "crepuscular",
+            };
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_ACTIVITY_CYCLE,
+                    Value::Text(activity.to_string()),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_NIGHT_VISION,
+                    Value::Number(perception.night_vision),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_SKY_ATTENTION,
+                    Value::Number(perception.sky_attention),
+                ),
+                &world.registry,
+            )?;
+            let exotic = match articulation.exotic {
+                hornvale_language::ExoticManner::None => "none",
+                hornvale_language::ExoticManner::Trill => "trill",
+                hornvale_language::ExoticManner::Click => "click",
+                hornvale_language::ExoticManner::Ejective => "ejective",
+            };
+            world.ledger.commit(
+                sfact(id, SPECIES_LABIALITY, Value::Number(articulation.labiality)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_VOWEL_SPACE,
+                    Value::Number(articulation.vowel_space),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_VOICING, Value::Number(articulation.voicing)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_SIBILANCE, Value::Number(articulation.sibilance)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(
+                    id,
+                    SPECIES_VOICE_LOUDNESS,
+                    Value::Number(articulation.voice_loudness),
+                ),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_TONALITY, Value::Number(articulation.tonality)),
+                &world.registry,
+            )?;
+            world.ledger.commit(
+                sfact(id, SPECIES_EXOTIC_MANNER, Value::Text(exotic.to_string())),
+                &world.registry,
+            )?;
+        }
+        ids.insert(name.to_string(), id);
+    }
+    Ok(ids)
+}
+
+/// Build a complete world with the shipped species roster — the canonical
+/// component set ([`WorldComponents::assemble`], byte-equal to the default
+/// roster's composed set).
 pub fn build_world(
     seed: Seed,
     pins: &SkyPins,
@@ -2794,14 +3071,8 @@ pub fn build_world(
     terrain_pins: &TerrainPins,
     settlement_pins: &SettlementPins,
 ) -> Result<World, BuildError> {
-    build_world_with_roster(
-        seed,
-        pins,
-        sky,
-        terrain_pins,
-        settlement_pins,
-        &default_roster(),
-    )
+    let wc = WorldComponents::assemble()?;
+    build_world_from_components(seed, pins, sky, terrain_pins, settlement_pins, &wc)
 }
 
 /// The first-placed settlement of `species` (its flagship), if any.
@@ -2828,21 +3099,34 @@ pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::
     })
 }
 
+/// Every peopled species holding a flagship settlement, in registry
+/// (alphabetical) order.
+///
+/// The single basis for the almanac's name-the-species-only-when-there-is-
+/// more-than-one convention. Both the People section (`settlement_lines`)
+/// and the Gods section's pantheon attribution read this one predicate, so
+/// the two sections cannot drift into naming a world's peoples in one place
+/// and withholding them in the other.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn placed_peoples(world: &World) -> Vec<(&'static str, hornvale_settlement::VillageInfo)> {
+    hornvale_species::biosphere_registry()
+        .ids()
+        .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
+        .collect()
+}
+
 /// Headline lines describing the world's people for the almanac: how many
 /// settlements, then one chief-settlement line per species that placed
-/// (registry order, goblin first). A world with exactly one such species
-/// keeps the legacy unprefixed wording — byte-stable for goblin-only worlds;
-/// two-or-more-species worlds prefix each chief line with its species.
+/// (registry order — alphabetical; bugbear sorts first). A world with
+/// exactly one such species keeps the legacy unprefixed wording — byte-
+/// stable for goblin-only worlds; two-or-more-species worlds prefix each
+/// chief line with its species.
 /// type-audit: bare-ok(prose: return)
 pub fn settlement_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let places = hornvale_terrain::places(world);
     let mut lines = vec![format!("The land holds {} settlement(s).", places.len())];
 
-    let registry = hornvale_species::registry();
-    let flagships: Vec<(&str, hornvale_settlement::VillageInfo)> = registry
-        .keys()
-        .filter_map(|name| flagship_of(world, name.0).map(|v| (name.0, v)))
-        .collect();
+    let flagships = placed_peoples(world);
     let multi_species = flagships.len() > 1;
 
     for (species, v) in &flagships {
@@ -3311,8 +3595,8 @@ type RenderedPantheon = (
 /// content→render seam, spec §6) through.
 fn rendered_pantheon_of(
     world: &World,
+    wc: &WorldComponents,
     species: &str,
-    def: &hornvale_species::SpeciesDef,
 ) -> Result<Option<RenderedPantheon>, BuildError> {
     let Some(v) = flagship_of(world, species) else {
         return Ok(None);
@@ -3323,9 +3607,16 @@ fn rendered_pantheon_of(
     }
     let phenomena = observed_phenomena_as(world, species)?;
     // Reached only once `flagship_of` above returned `Some`: only peopled
-    // species place settlements/flagships, so `def` is guaranteed peopled
-    // here.
-    let voice = voice_params(&peopled(def).psych);
+    // species place settlements/flagships, so `species` is guaranteed peopled
+    // here. Psychology sourced from the ALREADY-built component set (ECS c3),
+    // matched by its `KindId` label (the free-text `species` is not `'static`).
+    let voice = voice_params(
+        wc.psyche
+            .iter()
+            .find(|(k, _)| k.0 == species)
+            .map(|(_, p)| p)
+            .expect("peopled pass over a fauna kind"),
+    );
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
     Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
 }
@@ -3355,19 +3646,23 @@ fn legacy_rendered_beliefs(
 }
 
 /// Every belief in the world, each paired with its rendered tenet — grouped
-/// by species-flagship pantheon in registry order (goblin first), each
-/// pantheon's beliefs head first (matching `beliefs_of`/`beliefs_held_by`'s
-/// own ordering). The seam-wiring site the REPL's `beliefs` command renders
-/// through (spec §6, Task 11); the almanac renders the same seam via
-/// [`almanac_context`]'s `PantheonBlock`s. Legacy fallback: see
-/// [`legacy_rendered_beliefs`].
+/// by species-flagship pantheon in registry order — alphabetical; bugbear
+/// sorts first — each pantheon's beliefs head first (matching
+/// `beliefs_of`/`beliefs_held_by`'s own ordering). The seam-wiring site the
+/// REPL's `beliefs` command renders through (spec §6, Task 11); the almanac
+/// renders the same seam via [`almanac_context`]'s `PantheonBlock`s. Legacy
+/// fallback: see [`legacy_rendered_beliefs`].
 /// type-audit: bare-ok(prose: return)
 pub fn rendered_beliefs(
     world: &World,
 ) -> Result<Vec<(hornvale_religion::Belief, String)>, BuildError> {
     let mut out = Vec::new();
-    for (name, def) in hornvale_species::registry() {
-        if let Some((_, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
+    // The canonical component set, built once and threaded to each pantheon
+    // (ECS c3): every species here is a canonical registry kind, so `assemble`
+    // gives the byte-identical psyche rows a per-def rebuild would.
+    let wc = WorldComponents::assemble()?;
+    for name in wc.biosphere.ids() {
+        if let Some((_, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
             out.extend(rendered);
         }
     }
@@ -3380,16 +3675,27 @@ pub fn rendered_beliefs(
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
-    let registry = hornvale_species::registry();
-    let peoples = registry
+    // Speech (the settlement noun) and the life-history line's biosphere both
+    // sourced from the canonical component set (ECS c3): every entity is a
+    // biosphere row, iterated in `KindId`-ascending order (byte-identity).
+    let wc = WorldComponents::assemble()?;
+    let peoples = wc
+        .biosphere
         .iter()
-        .filter_map(|(name, def)| {
+        .filter_map(|(name, biosphere)| {
             let flagship = flagship_of(world, name.0)?;
             let mut lines = culture_lines(world, &flagship);
-            lines.push(hornvale_almanac::render_life_history_line(def));
+            lines.push(hornvale_almanac::render_life_history_line(
+                name.0, biosphere,
+            ));
             Some(hornvale_almanac::PeopleBlock {
                 species: name.0.to_string(),
-                noun: peopled(def).noun.to_string(),
+                noun: wc
+                    .lexicon
+                    .get(name)
+                    .expect("a peopled kind with a flagship has a lexicon")
+                    .noun
+                    .to_string(),
                 name: flagship.name.clone(),
                 population: flagship.population,
                 culture_lines: lines,
@@ -3420,12 +3726,23 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         peoples,
         pantheons: {
             let mut blocks = Vec::new();
-            for (name, def) in hornvale_species::registry() {
-                if let Some((v, rendered)) = rendered_pantheon_of(world, name.0, &def)? {
+            // The almanac names a people only when there is another to
+            // distinguish them from — the same rule, and the same
+            // predicate, the People section uses (`settlement_lines`).
+            let named = placed_peoples(world).len() > 1;
+            for name in wc.biosphere.ids() {
+                if let Some((v, rendered)) = rendered_pantheon_of(world, &wc, name.0)? {
                     blocks.push(hornvale_almanac::PantheonBlock {
-                        species: name.0.to_string(),
-                        noun: peopled(&def).noun.to_string(),
-                        settlement: v.name.clone(),
+                        attribution: named.then(|| hornvale_almanac::PantheonAttribution {
+                            species: name.0.to_string(),
+                            noun: wc
+                                .lexicon
+                                .get(name)
+                                .expect("a peopled kind with a flagship has a lexicon")
+                                .noun
+                                .to_string(),
+                            settlement: v.name.clone(),
+                        }),
                         cult_form: hornvale_religion::cult_form_held_by(world, v.id),
                         beliefs: rendered
                             .into_iter()
@@ -3435,15 +3752,14 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
                 }
             }
             // Legacy fallback: pre-species saves have beliefs but no
-            // peopled-by facts — render them as the single anonymous
-            // pantheon they always were (see `legacy_rendered_beliefs`).
+            // peopled-by facts — no species is attributable, so these
+            // render as the single anonymous pantheon they always were
+            // (see `legacy_rendered_beliefs`).
             if blocks.is_empty() {
                 let rendered = legacy_rendered_beliefs(world)?;
                 if !rendered.is_empty() {
                     blocks.push(hornvale_almanac::PantheonBlock {
-                        species: String::new(),
-                        noun: String::new(),
-                        settlement: String::new(),
+                        attribution: None,
                         cult_form: hornvale_religion::cult_form_of(world),
                         beliefs: rendered
                             .into_iter()
@@ -3509,6 +3825,106 @@ mod tests {
         .unwrap()
     }
 
+    /// hornvale#1 regression: seed 42 places two peoples, so every pantheon
+    /// names the people who hold it — none is anonymous by position. This is
+    /// the test the ticket never had; it fails on the pre-campaign renderer.
+    #[test]
+    fn seed_42_names_both_its_peoples_pantheons() {
+        let world = constant(42);
+        assert!(
+            placed_peoples(&world).len() > 1,
+            "seed 42 places two peoples"
+        );
+        let ctx = almanac_context(&world).unwrap();
+        assert!(!ctx.pantheons.is_empty());
+        assert!(
+            ctx.pantheons.iter().all(|b| b.attribution.is_some()),
+            "with two peoples, every pantheon names its own"
+        );
+    }
+
+    /// A one-people builder-level fixture: the shipped goblin, placed alone.
+    /// Built from a single-kind component set (not a seed search) so the
+    /// fixture never depends on which seeds happen to place exactly one
+    /// people — the ECS-c3 analogue of the old single-species roster, keyed
+    /// by `KindId("goblin")` and composed from the domain registries.
+    fn goblin_solo(seed: u64) -> World {
+        use hornvale_kernel::ComponentStore;
+        let g = KindId("goblin");
+        let biosphere: ComponentStore<KindId, _> = [(
+            g,
+            hornvale_species::biosphere_registry()
+                .get(&g)
+                .unwrap()
+                .clone(),
+        )]
+        .into_iter()
+        .collect();
+        let psyche: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::psyche_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
+        let perception: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::perception_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
+        let articulation: ComponentStore<KindId, _> = [(
+            g,
+            *hornvale_language::articulation_registry().get(&g).unwrap(),
+        )]
+        .into_iter()
+        .collect();
+        let lexicon: ComponentStore<KindId, _> = [(
+            g,
+            hornvale_language::lexicon_registry()
+                .get(&g)
+                .unwrap()
+                .clone(),
+        )]
+        .into_iter()
+        .collect();
+        let family_of: ComponentStore<KindId, _> = [(g, "goblinoid")].into_iter().collect();
+        let wc = crate::components::WorldComponents::from_stores(
+            biosphere,
+            psyche,
+            perception,
+            articulation,
+            lexicon,
+            hornvale_language::family_proto(),
+            family_of,
+        )
+        .unwrap();
+        build_world_from_components(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &wc,
+        )
+        .unwrap()
+    }
+
+    /// The Named's headline one-people rule, exercised at the builder level:
+    /// a solo-species roster places exactly one people, and every pantheon
+    /// block withholds attribution — the same predicate the People section
+    /// uses to keep the legacy unprefixed wording (`settlement_lines`).
+    #[test]
+    fn one_peoples_pantheons_withhold_attribution() {
+        let world = goblin_solo(42);
+        assert_eq!(
+            placed_peoples(&world).len(),
+            1,
+            "a solo-species roster places exactly one people"
+        );
+        let ctx = almanac_context(&world).unwrap();
+        assert!(!ctx.pantheons.is_empty());
+        assert!(
+            ctx.pantheons.iter().all(|b| b.attribution.is_none()),
+            "with one people, no pantheon block names its species"
+        );
+    }
+
     #[test]
     fn the_default_vantage_resolves_to_the_flagship_and_is_deterministic() {
         let world = generated(42);
@@ -3565,17 +3981,43 @@ mod tests {
         // now the DOMINANT species' own rendered headcount (biomass share
         // divided by its own body mass), not the old flat-K catchment's
         // conserved population unit -- a much smaller, physically grounded
-        // number. At seed 42 the world's largest coexistence attractor
-        // (`village_info`'s first, highest-`mass_total` settlement) is a
-        // hobgoblin flagship of 17; the old `>= 40` threshold measured the
-        // pre-cutover scale and no longer applies.
+        // number; the old `>= 40` threshold measured the pre-cutover scale
+        // and no longer applies. Terrain epoch v4 (rift-and-fit) then moved
+        // the seed-42 coastline, so the settlement layout re-derived and
+        // the largest coexistence attractor (`village_info`'s first,
+        // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
+        // season moved it again within the epoch: iteration 2's clip-taper
+        // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
+        // here (with review) whenever a deliberate terrain change moves world
+        // identity.
         assert_eq!(
-            village.population, 17,
-            "the world's largest attractor is a hobgoblin flagship of 17 at this seed"
+            village.population, 8,
+            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         assert!(!hornvale_religion::beliefs_of(&world).is_empty());
+    }
+
+    #[test]
+    fn species_facts_touch_no_pre_existing_predicate() {
+        // Ported from the deleted species-genesis test (spec §8): species
+        // genesis (`provenance == "species"`) commits facts ONLY under
+        // `species-*` predicates or `PEOPLED_BY` — it never writes into
+        // another domain's predicate namespace.
+        let world = generated(42);
+        for fact in world.ledger.iter() {
+            if fact.provenance != "species" {
+                continue;
+            }
+            assert!(
+                fact.predicate.starts_with("species-")
+                    || fact.predicate == hornvale_species::PEOPLED_BY,
+                "species-provenance fact touched a non-species predicate: {:?}",
+                fact.predicate
+            );
+        }
     }
 
     #[test]
@@ -3617,6 +4059,22 @@ mod tests {
         );
     }
 
+    /// The Named: the People and Gods sections must answer to ONE predicate,
+    /// so they can never disagree about whether to name a world's peoples.
+    #[test]
+    fn placed_peoples_lists_flagship_holders_in_registry_order() {
+        let world = constant(42);
+        let placed = placed_peoples(&world);
+        assert!(!placed.is_empty(), "seed 42 places at least one people");
+        let names: Vec<&str> = placed.iter().map(|(s, _)| *s).collect();
+        let mut sorted = names.clone();
+        sorted.sort_unstable();
+        assert_eq!(
+            names, sorted,
+            "registry order is alphabetical (BTreeMap keys)"
+        );
+    }
+
     #[test]
     fn build_world_produces_the_full_cascade() {
         let world = constant(42);
@@ -3641,7 +4099,7 @@ mod tests {
 
     #[test]
     #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-    fn build_world_with_default_roster_matches_build_world_byte_for_byte() {
+    fn build_world_from_assembled_components_matches_build_world_byte_for_byte() {
         use hornvale_terrain::TerrainPins;
         let sp = SettlementPins::default();
         for seed in [Seed(7), Seed(42), Seed(1000)] {
@@ -3653,20 +4111,21 @@ mod tests {
                 &sp,
             )
             .unwrap();
-            let b = build_world_with_roster(
+            let wc = WorldComponents::assemble().unwrap();
+            let b = build_world_from_components(
                 seed,
                 &SkyPins::default(),
                 SkyChoice::Generated,
                 &TerrainPins::default(),
                 &sp,
-                &default_roster(),
+                &wc,
             )
             .unwrap();
             let fa: Vec<_> = a.ledger.iter().collect();
             let fb: Vec<_> = b.ledger.iter().collect();
             assert_eq!(
                 fa, fb,
-                "seed {seed:?}: default-roster build must equal build_world exactly"
+                "seed {seed:?}: assembled-components build must equal build_world exactly"
             );
         }
     }
@@ -4096,9 +4555,9 @@ mod tests {
     #[test]
     fn pinning_a_fauna_species_fails_loudly_instead_of_panicking() {
         // The Task 4 menagerie (windows/worldgen fold-in): a `--species`
-        // pin naming a biosphere-only (fauna) kind must never reach
-        // `peopled(def)` downstream — that call panics on a `SpeciesDef`
-        // with no `PeopledTraits`. Fauna never settle, so the pin must fail
+        // pin naming a biosphere-only (fauna) kind must never reach the
+        // peopled pass downstream — that pass has no psyche row for a fauna
+        // kind. Fauna never settle, so the pin must fail
         // loudly with the physical reason (constitution: "pins fail
         // loudly"), the same `BuildError::Pins` shape `def_in` already uses
         // for an unknown name.
@@ -4192,13 +4651,12 @@ mod tests {
             globe_level: Some(4),
             ..hornvale_terrain::TerrainPins::default()
         };
-        let world = build_world_with_roster(
+        let world = build_world(
             Seed(42),
             &SkyPins::default(),
             SkyChoice::Generated,
             &pins,
             &SettlementPins::default(),
-            &default_roster(),
         )
         .expect("level-4 world builds");
         let terrain = terrain_of(&world).expect("terrain");
@@ -4417,32 +4875,42 @@ mod tests {
         // is not necessarily goblin's a priori (at seed 42, under the
         // current world, it happens to be), so the recomputed structure
         // must use the flagship's OWN species' psychology and role
-        // vocabulary (the same construction `build_world_with_roster`
+        // vocabulary (the same construction `build_world_from_components`
         // performs per-flagship), not a fixed goblin-baseline
         // `PsychSummary::default()` a single-species world could get away
         // with.
         let flagship_species = hornvale_species::species_of(&world, village.id)
             .expect("the flagship settlement has a species fact");
-        let registry = hornvale_species::registry();
+        // Reconstruct mind + speech through the same canonical component set
+        // the production path (`build_to`) now uses (ECS c3).
+        let wc = WorldComponents::assemble().expect("well-formed canonical registries");
         // `flagship_species` is free text read from the ledger (a committed
-        // `Value::Text`), not a `KindId` — resolve it against the registry by
-        // its `name` label.
-        let def = registry
-            .values()
-            .find(|d| d.name == flagship_species.as_str())
+        // `Value::Text`), not a `KindId` — resolve it to its canonical
+        // `'static` label within the component set.
+        let kind = *wc
+            .biosphere
+            .ids()
+            .find(|k| k.0 == flagship_species.as_str())
             .expect("flagship species must be in the registry");
-        let peopled_def = peopled(def);
+        let psych_v = wc
+            .psyche
+            .get(&kind)
+            .expect("peopled pass over a fauna kind");
+        let lex = wc
+            .lexicon
+            .get(&kind)
+            .expect("peopled pass over a fauna kind");
         let psych = hornvale_culture::PsychSummary {
-            threat_response: peopled_def.psych.threat_response,
-            time_horizon: peopled_def.psych.time_horizon,
-            communal: peopled_def.psych.sociality == hornvale_species::Sociality::Communal,
-            rank_status: peopled_def.psych.status_basis == hornvale_species::StatusBasis::Rank,
+            threat_response: psych_v.threat_response,
+            time_horizon: psych_v.time_horizon,
+            communal: psych_v.sociality == hornvale_species::Sociality::Communal,
+            rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
             vocabulary: hornvale_culture::RoleVocabulary {
-                worker_override: peopled_def.worker_override.map(str::to_string),
-                warrior: peopled_def.warrior.to_string(),
-                artisan: peopled_def.artisan.to_string(),
-                shaman: peopled_def.shaman.to_string(),
-                top: peopled_def.top.to_string(),
+                worker_override: lex.worker_override.map(str::to_string),
+                warrior: lex.warrior.to_string(),
+                artisan: lex.artisan.to_string(),
+                shaman: lex.shaman.to_string(),
+                top: lex.top.to_string(),
             },
         };
 
@@ -4544,13 +5012,14 @@ mod tests {
     /// settlement depth or deeper").
     #[test]
     fn settlements_carry_founding_alignments() {
+        let wc = WorldComponents::assemble().unwrap();
         let world = build_world_to(
             Seed(42),
             &SkyPins::default(),
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
-            &default_roster(),
+            &wc,
             BuildDepth::Settlements,
         )
         .unwrap();
@@ -4570,21 +5039,32 @@ mod tests {
         }
     }
 
-    /// Task 3 (The Seam): a biosphere-only (fauna) kind carries no
-    /// `PeopledTraits` and must never reach settlement genesis — only
-    /// settling, speaking species place villages. The fixture is a goblin
-    /// biosphere clone with `peopled: None` (Task 4 mints the real
-    /// menagerie; this is a minimal stand-in for the guard alone).
+    /// Task 3 (The Seam): a biosphere-only (fauna) kind carries no peopled
+    /// components and must never reach settlement genesis — only settling,
+    /// speaking species place villages. The fixture is a single-kind component
+    /// set with a biosphere + family row but NO peopled rows (Task 4 mints the
+    /// real menagerie; this is a minimal stand-in for the guard alone).
     #[test]
     fn fauna_are_skipped_by_settlement_genesis() {
-        let goblin = hornvale_species::registry()[&KindId("goblin")].clone();
-        let fauna = hornvale_species::SpeciesDef {
-            name: "test-beast",
-            family: "test-beast",
-            peopled: None,
-            ..goblin
-        };
-        assert!(fauna.peopled.is_none());
+        use hornvale_kernel::ComponentStore;
+        let goblin_bio = hornvale_species::biosphere_registry()
+            .get(&KindId("goblin"))
+            .expect("the shipped goblin has a biosphere row")
+            .clone();
+        let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+            [(KindId("test-beast"), goblin_bio)].into_iter().collect();
+        let family_of: ComponentStore<KindId, &'static str> =
+            [(KindId("test-beast"), "test-beast")].into_iter().collect();
+        let wc = WorldComponents::from_stores(
+            biosphere,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            hornvale_language::family_proto(),
+            family_of,
+        )
+        .expect("a fauna-only component set is well-formed (no peopled rows)");
 
         let world = build_world_to(
             Seed(42),
@@ -4592,7 +5072,7 @@ mod tests {
             SkyChoice::Generated,
             &hornvale_terrain::TerrainPins::default(),
             &SettlementPins::default(),
-            &[fauna],
+            &wc,
             BuildDepth::Settlements,
         )
         .unwrap();
@@ -4690,14 +5170,14 @@ mod tests {
 
     #[test]
     fn goblin_lens_is_exactly_identity() {
-        let reg = hornvale_species::registry();
-        assert!(perception_lens(&peopled(&reg[&KindId("goblin")]).perception).is_identity());
+        let per = hornvale_species::perception_registry();
+        assert!(perception_lens(per.get(&KindId("goblin")).unwrap()).is_identity());
     }
 
     #[test]
     fn kobold_lens_matches_the_spec_derivation() {
-        let reg = hornvale_species::registry();
-        let lens = perception_lens(&peopled(&reg[&KindId("kobold")]).perception);
+        let per = hornvale_species::perception_registry();
+        let lens = perception_lens(per.get(&KindId("kobold")).unwrap());
         assert!((lens.day_sky - 0.52).abs() < 1e-12);
         assert!((lens.night_sky - 1.82).abs() < 1e-12);
         assert!((lens.ambient - 0.70).abs() < 1e-12);
@@ -4757,8 +5237,8 @@ mod tests {
 
     #[test]
     fn goblin_voice_params_are_the_baseline() {
-        let reg = hornvale_species::registry();
-        let v = voice_params(&peopled(&reg[&KindId("goblin")]).psych);
+        let psy = hornvale_species::psyche_registry();
+        let v = voice_params(psy.get(&KindId("goblin")).unwrap());
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 
@@ -5037,7 +5517,8 @@ mod tests {
         let ex = exposure_of(&world, "kobold").unwrap();
         // Singleton path: family == species, proto_ph == ph; the merger-aware
         // daughters slice is the family's one member (kobold itself).
-        let daughters = family_daughters(&world, &default_roster(), "kobold");
+        let wc = WorldComponents::assemble().unwrap();
+        let daughters = family_daughters(&world, &wc, "kobold");
         let direct = hornvale_language::build_lexicon(
             &world.seed,
             "kobold",
@@ -5057,8 +5538,15 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
-        let field = substrate_field(geo, &terrain, &climate, obliquity_deg, insolation_scalar);
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
         for cell in geo.cells() {
             let s = field.get(cell);
             assert!(s.temperature_c.is_finite());
@@ -5072,6 +5560,123 @@ mod tests {
         assert!(eq > pole, "equator {eq} > pole {pole}");
     }
 
+    /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
+    /// rewards the substellar geometry — peaking at the substellar cell,
+    /// zero at the antistellar cell (`cos_theta < 0`, floored), and
+    /// strictly between the two at a terminator-ring cell.
+    #[test]
+    fn locked_insolation_peaks_at_substellar_and_zeroes_on_night_side() {
+        let world = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(hornvale_astronomy::RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        assert!(
+            matches!(regime, RotationRegime::Locked),
+            "the Locked rotation pin must yield RotationRegime::Locked"
+        );
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+
+        // Locate the substellar cell (max substellar_cosine), the
+        // antistellar cell (min), and the cell nearest the terminator
+        // (cosine closest to zero) by scanning the geosphere.
+        let mut substellar = None;
+        let mut antistellar = None;
+        let mut terminator = None;
+        for cell in geo.cells() {
+            let cos = hornvale_climate::substellar_cosine(geo.position(cell));
+            if substellar.map(|(_, best)| cos > best).unwrap_or(true) {
+                substellar = Some((cell, cos));
+            }
+            if antistellar.map(|(_, best)| cos < best).unwrap_or(true) {
+                antistellar = Some((cell, cos));
+            }
+            if terminator
+                .map(|(_, best): (_, f64)| cos.abs() < best.abs())
+                .unwrap_or(true)
+            {
+                terminator = Some((cell, cos));
+            }
+        }
+        let (substellar_cell, _) = substellar.unwrap();
+        let (antistellar_cell, antistellar_cos) = antistellar.unwrap();
+        let (terminator_cell, _) = terminator.unwrap();
+        assert!(
+            antistellar_cos < 0.0,
+            "the antistellar cell must sit on the night side"
+        );
+
+        let ins = |c| field.get(c).insolation;
+        assert!(
+            ins(substellar_cell) > ins(terminator_cell),
+            "substellar {} must exceed terminator {}",
+            ins(substellar_cell),
+            ins(terminator_cell)
+        );
+        assert!(
+            ins(terminator_cell) >= 0.0,
+            "terminator insolation must not be negative"
+        );
+        assert_eq!(
+            ins(antistellar_cell),
+            0.0,
+            "the antistellar cell reads zero insolation (Lambert floor)"
+        );
+    }
+
+    /// SKY-24 hard guard: on a `Spinning` world, `substrate_field`'s
+    /// insolation is EXACTLY `annual_mean_insolation` per cell — the
+    /// Spinning arm is the unmodified pre-fix computation, so no spinning
+    /// world's save bytes may move.
+    #[test]
+    fn spinning_worlds_are_byte_identical_across_the_fix() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        assert!(
+            matches!(regime, RotationRegime::Spinning { .. }),
+            "seed 42's default generated sky must be Spinning"
+        );
+        let field = substrate_field(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+        );
+        for cell in geo.cells() {
+            let expected =
+                annual_mean_insolation(geo.coord(cell).latitude, obliquity_deg, insolation_scalar);
+            assert_eq!(
+                field.get(cell).insolation,
+                expected,
+                "cell {cell:?}: spinning insolation must equal the unchanged latitude-only formula exactly"
+            );
+        }
+    }
+
     #[test]
     fn niche_k_differentiates_species_with_different_temperature_optima() {
         let world = generated(42);
@@ -5079,29 +5684,32 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, _regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
 
-        let roster = default_roster();
-        let set: Vec<&hornvale_species::SpeciesDef> = roster.iter().collect();
+        let wc = WorldComponents::assemble().unwrap();
+        let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
+        let bio: Vec<&hornvale_species::BiosphereTraits> =
+            wc.biosphere.iter().map(|(_, b)| b).collect();
         let ks = niche_per_species_k(
             geo,
             &terrain,
             &climate,
             obliquity_deg,
             insolation_scalar,
-            &set,
+            &regime,
+            &bio,
         );
 
-        // default_roster() = registry().into_values() (BTreeMap key order):
+        // wc.biosphere.ids() = registry() key order (ascending KindId):
         // alphabetical -> bugbear, goblin, hobgoblin, kobold.
-        let kobold_tag = set
+        let kobold_tag = names
             .iter()
-            .position(|d| d.name == "kobold")
-            .expect("kobold in roster") as u32;
-        let bugbear_tag = set
+            .position(|n| *n == "kobold")
+            .expect("kobold in registry") as u32;
+        let bugbear_tag = names
             .iter()
-            .position(|d| d.name == "bugbear")
-            .expect("bugbear in roster") as u32;
+            .position(|n| *n == "bugbear")
+            .expect("bugbear in registry") as u32;
         let k_cool = &ks.iter().find(|(tag, _)| *tag == kobold_tag).unwrap().1;
         let k_warm = &ks.iter().find(|(tag, _)| *tag == bugbear_tag).unwrap().1;
 
@@ -5181,10 +5789,11 @@ mod tests {
                 .superpowers/sdd/task-6-report.md."]
     fn menagerie_fauna_hold_resource_partitioned_strongholds() {
         let world = generated(42);
-        let roster = default_roster();
+        let wc = WorldComponents::assemble().unwrap();
+        let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
         // Reuse the exact pack params (BETA/FLOOR) genesis and
         // `demography_report` share — no bespoke beta/floor here.
-        let report = demography_report(&world, &roster).expect("demography report");
+        let report = demography_report(&world, &wc).expect("demography report");
 
         let terrain = terrain_of(&world).unwrap();
         let geo = terrain.geosphere();
@@ -5213,7 +5822,7 @@ mod tests {
             }
         }
 
-        let name_of = |id: u32| roster[id as usize].name;
+        let name_of = |id: u32| names[id as usize];
         let mut breakdown: Vec<(&str, usize)> = dominant_counts
             .iter()
             .map(|(id, count)| (name_of(*id), *count))
@@ -5233,10 +5842,10 @@ mod tests {
         );
 
         let dominates_a_cell = |name: &str| {
-            let id = roster
+            let id = names
                 .iter()
-                .position(|d| d.name == name)
-                .expect("species in roster") as u32;
+                .position(|n| *n == name)
+                .expect("species in registry") as u32;
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
 

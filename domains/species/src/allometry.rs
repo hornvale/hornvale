@@ -82,8 +82,8 @@ pub fn reproductive_tempo(mass: Mass, class: MetabolicClass) -> f64 {
 /// falls (spec §5). Documented constant.
 const GENERATION_FRACTION: f64 = 0.3;
 
-/// A species' derived life-history profile (spec §5). Computed on demand — not
-/// stored on `SpeciesDef`. Biological fields are `None` for `Ametabolic`
+/// A species' derived life-history profile (spec §5). Computed on demand from
+/// the biosphere component — never stored. Biological fields are `None` for `Ametabolic`
 /// (a construct has no mass-derived life-history); `pace_of_life` is a
 /// size-derived position defined for anything with mass.
 /// type-audit: bare-ok(ratio: basal_metabolic_rate_w), bare-ok(ratio: reproductive_tempo), bare-ok(ratio: pace_of_life)

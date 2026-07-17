@@ -22,20 +22,20 @@ fn angle(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// maximally compact; fjorded coasts score several times that. Estimators:
 /// cell area is the equal-area approximation `4 pi / N`; the shared edge
 /// between two neighboring cells is approximated as their center distance
-/// over sqrt(3) (the regular-hexagon dual). `None` when the globe has no
-/// land or no shoreline.
-/// type-audit: bare-ok(ratio: return)
-pub fn shoreline_development(
-    geo: &Geosphere,
-    elevation: &CellMap<ReferenceElevation>,
-    sea_level: ReferenceElevation,
-) -> Option<f64> {
+/// over sqrt(3) (the regular-hexagon dual). `None` when the mask has no
+/// land or no shoreline. This is the estimator core: [`shoreline_development`]
+/// derives a mask from elevation and delegates here, so both share exactly
+/// the same iteration order and float accumulation order (rift-and-fit
+/// spec §7 — the Earth-mask anchor measures `D_earth` through this same,
+/// unchanged core).
+/// type-audit: bare-ok(flag: land), bare-ok(ratio: return)
+pub fn shoreline_development_of_mask(geo: &Geosphere, land: &CellMap<bool>) -> Option<f64> {
     let cell_area = 4.0 * std::f64::consts::PI / geo.cell_count() as f64;
     let mut land_area = 0.0;
     let mut shoreline = 0.0;
     for cell in geo.cells() {
-        let land = *elevation.get(cell) >= sea_level;
-        if land {
+        let is_land = *land.get(cell);
+        if is_land {
             land_area += cell_area;
         }
         for &neighbor in geo.neighbors(cell) {
@@ -43,8 +43,8 @@ pub fn shoreline_development(
             if neighbor.0 <= cell.0 {
                 continue;
             }
-            let neighbor_land = *elevation.get(neighbor) >= sea_level;
-            if land != neighbor_land {
+            let neighbor_land = *land.get(neighbor);
+            if is_land != neighbor_land {
                 shoreline += angle(geo.position(cell), geo.position(neighbor)) / 3f64.sqrt();
             }
         }
@@ -53,6 +53,21 @@ pub fn shoreline_development(
         return None;
     }
     Some(shoreline / (2.0 * (std::f64::consts::PI * land_area).sqrt()))
+}
+
+/// Shoreline development index over an elevation field: derives the land
+/// mask (`elevation >= sea_level`, per cell, ascending) and delegates to
+/// [`shoreline_development_of_mask`] — the estimator formula itself never
+/// changes mid-family (Census II discipline). `None` when the globe has no
+/// land or no shoreline.
+/// type-audit: bare-ok(ratio: return)
+pub fn shoreline_development(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> Option<f64> {
+    let land = CellMap::from_fn(geo, |c| *elevation.get(c) >= sea_level);
+    shoreline_development_of_mask(geo, &land)
 }
 
 /// Fraction of all cells within [`SHELF_BAND_M`] of sea level — Earth's
@@ -205,6 +220,26 @@ mod tests {
             };
             ReferenceElevation::new(m).unwrap()
         })
+    }
+
+    #[test]
+    fn mask_estimator_matches_elevation_estimator() {
+        // Same shape as other shape.rs tests: elevation = 1000·z gives a
+        // hemisphere of land. Computing D through the elevation-derived
+        // path and through a hand-built mask of the identical land/ocean
+        // split must be byte-identical — the whole point of factoring
+        // `shoreline_development` into a delegate over
+        // `shoreline_development_of_mask` (rift-and-fit spec §7).
+        let geo = Geosphere::new(3);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let elevation = CellMap::from_fn(&geo, |c| {
+            ReferenceElevation::new(1000.0 * geo.position(c)[2]).unwrap()
+        });
+        let mask = CellMap::from_fn(&geo, |c| *elevation.get(c) >= sea);
+        let d_elevation = shoreline_development(&geo, &elevation, sea);
+        let d_mask = shoreline_development_of_mask(&geo, &mask);
+        assert_eq!(d_elevation, d_mask, "elevation path and mask path diverged");
+        assert!(d_elevation.is_some(), "this configuration has a shoreline");
     }
 
     #[test]

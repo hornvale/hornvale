@@ -313,10 +313,15 @@ fn homophony_count_is_measured_and_pinned() {
     // 1.989 -> 1.755, bugbear 8.047 -> 3.007, kobold 2.384 -> 1.006 (the
     // true-name/KindId work reshapes each daughter's periphery homophony
     // draws).
-    assert!((mg - 1.852).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.755).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // Census regen (2026-07-16 #2, rift-and-fit terrain epoch v4 +
+    // the-terminator SKY-24, commit 945f62b): the epoch relocates
+    // settlements and shifts each people's naming draws; re-measured
+    // (goblin 1.852 -> 1.811, hobgoblin 1.755 -> 1.649, kobold 1.006 ->
+    // 0.920; bugbear unchanged at 3.007).
+    assert!((mg - 1.811).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.649).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     assert!((mb - 3.007).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 1.006).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 0.920).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

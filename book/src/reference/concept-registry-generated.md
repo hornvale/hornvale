@@ -7,6 +7,7 @@
 | `anchor-mass-earth` | yes | anchor world mass in Earth masses |
 | `anchor-orbit-au` | yes | anchor orbital distance in AU |
 | `biome` | yes | biome of a place |
+| `breakup-age` | no | a rifted seam's derived breakup age |
 | `brightening-per-gyr` | yes | the star's fractional main-sequence brightening per gigayear |
 | `cell-id` | yes | Geosphere cell id a settlement sits on |
 | `cult-form` | yes | the cult form of a belief (organized or folk) |
@@ -69,6 +70,7 @@
 | `population` | yes | population of a settlement |
 | `refugium` | no | a place habitable through the glacial maximum |
 | `retrograde-spin` | yes | the anchor world spins backward: the sun rises in the west |
+| `rifted-from` | no | a rifted conjugate pair of cratons whose conjugate margins fit up to subsequent erosion |
 | `scenario-pin` | no | an experimenter-supplied pin string conditioning genesis |
 | `sea-level-m` | yes | sea level in meters |
 | `sentiment` | yes | a belief's sentiment (eternal, cyclic, or ambient) |
@@ -91,6 +93,7 @@
 | `species-voice-loudness` | yes | voice-loudness range, 0-1 |
 | `species-voicing` | yes | voicing emphasis, 0-1 |
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
+| `spreading-rate` | yes | the globe's one drawn global spreading rate |
 | `star-age-gyr` | yes | the host star's age in gigayears (drawn; does not feed luminosity or the habitable zone — a deliberate containment) |
 | `star-class` | yes | the host star's descriptive spectral class |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |

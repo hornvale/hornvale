@@ -54,6 +54,246 @@ pub use phonology::{
 };
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 
+/// The speech cluster (ECS c3): the phonology envelope type
+/// ([`speech::ArticulationVector`]) and the stopgap social vocabulary
+/// ([`speech::Lexicon`]), moved here from the former species peopled
+/// component (ECS c3) — the
+/// phonology component's owner is language. A nested module (not a sibling
+/// file) because its own [`speech::Lexicon`] would otherwise collide with
+/// the generated-vocabulary [`Lexicon`] re-exported from [`lexicon`] at this
+/// same crate root; only the registry *functions* are re-exported
+/// unqualified below, not the type name.
+pub mod speech {
+    use hornvale_kernel::{Component, ComponentStore, KindId};
+
+    /// An exotic manner of articulation found in a kind's phonology.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum ExoticManner {
+        /// No exotic manner (the goblin baseline).
+        None,
+        /// Trill: rapid vibration of an articulator.
+        Trill,
+        /// Click: sharp ingressive oral sound.
+        Click,
+        /// Ejective: sharp egressive sound made with trapped air.
+        Ejective,
+    }
+
+    /// The closed seven-dimension articulation vector (spec §5, extended by
+    /// the phonology epoch with `tonality`). Scalars are bare ratios in
+    /// `[0, 1]` with 0.5 ≡ the goblin baseline (tonality 0.0 ≡ atonal, the
+    /// humanoid default); widening the vector requires its own campaign.
+    /// Every dimension is authored — nothing drawn. Moved here from
+    /// `species` (ECS c3): the phonology component's owner is language.
+    /// type-audit: bare-ok(ratio)
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct ArticulationVector {
+        /// Lip-rounding and jaw-closure degree: unrounded 0 ↔ rounded 1.
+        pub labiality: f64,
+        /// Vowel-space size: compressed 0 ↔ expanded 1.
+        pub vowel_space: f64,
+        /// Voicing emphasis: voiceless 0 ↔ voiced 1.
+        pub voicing: f64,
+        /// Sibilance emphasis: minimal 0 ↔ pronounced 1.
+        pub sibilance: f64,
+        /// Voice-loudness range: quiet 0 ↔ loud 1.
+        pub voice_loudness: f64,
+        /// Tonal propensity, authored from body plan: atonal 0 (humanoid
+        /// default) ↔ fully tonal 1. Maps to a tone-inventory size in
+        /// `draw_phonology` (1 = atonal Neutral-only, 2–3 tone-capable) and
+        /// makes tonogenesis effective. The shipped humanoids stay 0.0; the
+        /// value earns its keep as the bestiary grows (serpentine, avian).
+        pub tonality: f64,
+        /// Exotic manner of articulation.
+        pub exotic: ExoticManner,
+    }
+
+    /// The peopled social lexicon (stopgap vocabulary The Tongues will
+    /// generate). Moved here from the former species peopled component (ECS c3).
+    /// type-audit: bare-ok(identifier-text)
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct Lexicon {
+        /// The settlement noun ("village", "warren").
+        pub noun: &'static str,
+        /// Worker-role override; `None` = the subsistence word.
+        pub worker_override: Option<&'static str>,
+        /// The warrior-rung word.
+        pub warrior: &'static str,
+        /// The artisan-rung word.
+        pub artisan: &'static str,
+        /// The shaman-rung word.
+        pub shaman: &'static str,
+        /// The top-rung word.
+        pub top: &'static str,
+    }
+
+    impl Component for ArticulationVector {}
+    impl Component for Lexicon {}
+
+    /// Peopled phonology, one per speaking kind. Values are the
+    /// byte-identical articulation vectors formerly on the species peopled
+    /// component.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn articulation_registry() -> ComponentStore<KindId, ArticulationVector> {
+        [
+            (
+                KindId("goblin"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.5,
+                    sibilance: 0.5,
+                    voice_loudness: 0.5,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("kobold"),
+                ArticulationVector {
+                    labiality: 0.1,
+                    vowel_space: 0.3,
+                    voicing: 0.6,
+                    sibilance: 0.9,
+                    voice_loudness: 0.2,
+                    tonality: 0.0,
+                    exotic: ExoticManner::Trill,
+                },
+            ),
+            (
+                KindId("hobgoblin"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.6,
+                    sibilance: 0.4,
+                    voice_loudness: 0.8,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("bugbear"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.4,
+                    voicing: 0.7,
+                    sibilance: 0.2,
+                    voice_loudness: 0.3,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+        ]
+        .into_iter()
+        .collect()
+    }
+
+    /// Peopled lexicon, one per speaking kind. Byte-identical to the former
+    /// species peopled component's noun + rung words.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn lexicon_registry() -> ComponentStore<KindId, Lexicon> {
+        [
+            (
+                KindId("goblin"),
+                Lexicon {
+                    noun: "village",
+                    worker_override: None,
+                    warrior: "warrior",
+                    artisan: "artisan",
+                    shaman: "shaman",
+                    top: "chief",
+                },
+            ),
+            (
+                KindId("kobold"),
+                Lexicon {
+                    noun: "warren",
+                    worker_override: Some("digger"),
+                    warrior: "warden",
+                    artisan: "shaper",
+                    shaman: "keeper",
+                    top: "elders",
+                },
+            ),
+            (
+                KindId("hobgoblin"),
+                Lexicon {
+                    noun: "legion",
+                    worker_override: Some("laborer"),
+                    warrior: "soldier",
+                    artisan: "smith",
+                    shaman: "augur",
+                    top: "warlord",
+                },
+            ),
+            (
+                KindId("bugbear"),
+                Lexicon {
+                    noun: "lair",
+                    worker_override: Some("forager"),
+                    warrior: "mauler",
+                    artisan: "tanner",
+                    shaman: "omen-reader",
+                    top: "headman",
+                },
+            ),
+        ]
+        .into_iter()
+        .collect()
+    }
+
+    /// Proto ancestral articulation vectors keyed by family (goblinoid/
+    /// draconic/plant) — moved here from species (ECS c3).
+    /// type-audit: bare-ok(identifier-text)
+    pub fn family_proto() -> ComponentStore<KindId, ArticulationVector> {
+        [
+            (
+                KindId("goblinoid"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.5,
+                    voicing: 0.55,
+                    sibilance: 0.45,
+                    voice_loudness: 0.55,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("draconic"),
+                ArticulationVector {
+                    labiality: 0.3,
+                    vowel_space: 0.6,
+                    voicing: 0.7,
+                    sibilance: 0.6,
+                    voice_loudness: 0.8,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("plant"),
+                ArticulationVector {
+                    labiality: 0.5,
+                    vowel_space: 0.4,
+                    voicing: 0.4,
+                    sibilance: 0.3,
+                    voice_loudness: 0.3,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+        ]
+        .into_iter()
+        .collect()
+    }
+}
+
+pub use speech::{
+    ArticulationVector, ExoticManner, articulation_registry, family_proto, lexicon_registry,
+};
+
 /// Every seed-derivation label (or pattern) this crate uses, with docs.
 /// `<species>` stands for the concrete species leg of the path (e.g.
 /// `goblin`, `kobold`) and the per-entity salt leg (the settlement cell id,

@@ -257,8 +257,17 @@ fn every_default_globe_satisfies_every_invariant() {
             assert!((0.0..=1.0).contains(u), "seed {seed}: unrest {u}");
         }
         let summary = summarize(globe);
+        // L4 coarse-discretization envelope for the drawn ocean-fraction
+        // range [0.5, 0.75). Epoch v4 (rift-and-fit): the seam clip trims
+        // major caps to their conjugate margins, which lengthens the runs
+        // of tied oceanic-floor elevations near the sea-level percentile, so
+        // the strict-`<` achieved fraction misses the coarse target by a
+        // hair more than before — the observed 64-seed spread is now
+        // [0.489 (seed 54), 0.753], so the floor drops 0.49 -> 0.48. At the
+        // canonical L6 the miss is far tighter; this band only guards
+        // against gross failures (a runaway all-ocean or all-land world).
         assert!(
-            (0.49..=0.76).contains(&summary.ocean_fraction),
+            (0.48..=0.76).contains(&summary.ocean_fraction),
             "seed {seed}: ocean fraction {} misses the drawn range",
             summary.ocean_fraction
         );
@@ -469,4 +478,180 @@ fn default_worlds_never_trip_the_supply_fallback() {
         );
         assert!(notes.is_empty(), "seed {seed}: {notes:?}");
     }
+}
+
+#[test]
+fn rift_pin_isolation_supercontinent_consumes_identical_draws() {
+    // The supercontinent pin (epoch v4, spec §4) is post-draw arithmetic — a
+    // craton-center replacement at genesis, plus the pre-existing repulsion
+    // skip. Neither draws from any stream, so every position-INDEPENDENT
+    // drawn quantity, and the (unmetered, structural) notes, must be
+    // byte-identical across Some(true), Some(false), and None: the pin never
+    // changes consumption. Terrane and microcontinent CENTERS legitimately
+    // differ under Some(true) — they place against the drawn craton rims,
+    // which the repulsion skip moves — so this probes the drawn SCALARS, not
+    // the placed geometry (which is where the pin's effect legitimately
+    // shows). This is the draw-count-equality proof the wiring resolution
+    // asks for.
+    let geo = Geosphere::new(4);
+    let none = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+    let off = generate(
+        Seed(42),
+        &geo,
+        &TerrainPins {
+            supercontinent: Some(false),
+            ..TerrainPins::default()
+        },
+    )
+    .unwrap();
+    let on = generate(
+        Seed(42),
+        &geo,
+        &TerrainPins {
+            supercontinent: Some(true),
+            ..TerrainPins::default()
+        },
+    )
+    .unwrap();
+
+    for (label, outcome) in [("false", &off), ("true", &on)] {
+        // Structural pin — never metered — so the notes are identical.
+        assert_eq!(
+            outcome.notes, none.notes,
+            "supercontinent={label} perturbed the genesis notes"
+        );
+        // One spreading-rate draw off `terrain/rift`, position-independent.
+        assert_eq!(
+            outcome.globe.rift.spreading_rate, none.globe.rift.spreading_rate,
+            "supercontinent={label} perturbed the rift spreading-rate draw"
+        );
+        // Craton radii and ages are pure draws (repulsion and the center
+        // replacement touch only centers), so they match across all three.
+        assert_eq!(outcome.globe.cratons.len(), none.globe.cratons.len());
+        for (a, b) in none.globe.cratons.iter().zip(&outcome.globe.cratons) {
+            assert_eq!(a.id, b.id);
+            assert_eq!(
+                a.radius_rad, b.radius_rad,
+                "supercontinent={label}: craton {} radius consumed differently",
+                a.id
+            );
+            assert_eq!(
+                a.age, b.age,
+                "supercontinent={label}: craton {} age consumed differently",
+                a.id
+            );
+        }
+        // Terranes: count and every position-independent drawn field match —
+        // the terrane stream draws the same values regardless of the pin;
+        // only the geometric placement (center/along) rides craton positions.
+        assert_eq!(
+            outcome.globe.terranes.len(),
+            none.globe.terranes.len(),
+            "supercontinent={label}: terrane count consumed differently"
+        );
+        for (a, b) in none.globe.terranes.iter().zip(&outcome.globe.terranes) {
+            assert_eq!(a.half_len_rad, b.half_len_rad);
+            assert_eq!(a.half_wid_rad, b.half_wid_rad);
+            assert_eq!(a.age, b.age);
+            assert_eq!(a.thickness_km, b.thickness_km);
+        }
+    }
+}
+
+#[test]
+fn pinned_supercontinent_is_sutured() {
+    use hornvale_kernel::math;
+    use hornvale_terrain::crust::CONTACT_FACTOR;
+    let geo = Geosphere::new(4);
+    let on = generate(
+        Seed(42),
+        &geo,
+        &TerrainPins {
+            supercontinent: Some(true),
+            ..TerrainPins::default()
+        },
+    )
+    .unwrap();
+    let cratons = &on.globe.cratons;
+    assert!(cratons.len() > 1, "seed 42 must draw multiple majors");
+    let sep_of = |a: [f64; 3], b: [f64; 3]| {
+        math::acos((a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).clamp(-1.0, 1.0))
+    };
+    // Under the pin every major's final center IS its `rift.assembly`
+    // position, so each craton i>0 touches at least one earlier craton at
+    // the contact separation (within 1e-9 rad) and none overlaps an earlier
+    // one deeper — a sutured supercontinent.
+    for i in 1..cratons.len() {
+        let mut touched = false;
+        for j in 0..i {
+            let sep = sep_of(cratons[i].center, cratons[j].center);
+            let contact = CONTACT_FACTOR * (cratons[i].radius_rad + cratons[j].radius_rad);
+            assert!(
+                sep >= contact - 1e-9,
+                "craton {i} overlaps {j} in the sutured supercontinent (sep {sep}, contact {contact})"
+            );
+            if sep <= contact + 1e-9 {
+                touched = true;
+            }
+        }
+        assert!(
+            touched,
+            "craton {i} floats free of the sutured supercontinent"
+        );
+    }
+}
+
+#[test]
+fn default_world_carries_a_rift_history() {
+    let geo = Geosphere::new(4);
+    let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+    assert!(
+        !outcome.globe.rift.seams.is_empty(),
+        "seed 42's default globe drew no rift seams"
+    );
+    assert_eq!(
+        outcome.globe.rift.assembly.len(),
+        outcome.globe.cratons.len(),
+        "rift assembly must align index-for-index with the major cratons"
+    );
+}
+
+#[test]
+fn the_clip_reshapes_real_coastlines_on_seed_42() {
+    // Real-world exercise of the wiring (spec §3): on seed 42's actual
+    // generated globe, the seam clip must change the continental
+    // classification of at least one cell versus the same craton/terrane set
+    // built WITHOUT a rift. This is the honest, robust variant of the
+    // "coastal pair straddles a seam curve" check — reconstructing the field
+    // with and without the clip and diffing `continental_at` over every cell
+    // directly exercises the clip on real drawn geometry, without the
+    // brittleness of bisecting a seam curve and hoping a sampled forward
+    // image happens to land in a differently-classified cell.
+    use hornvale_terrain::crust::CrustField;
+    let geo = Geosphere::new(5);
+    let g = &generate(Seed(42), &geo, &TerrainPins::default())
+        .unwrap()
+        .globe;
+    let terrain_seed = Seed(42).derive(streams::ROOT);
+    let all = [g.cratons.clone(), g.microcontinents.clone()].concat();
+    let clipped = CrustField::new_with_rift(
+        terrain_seed,
+        all.clone(),
+        g.terranes.clone(),
+        Some(g.rift.clone()),
+        g.cratons.len(),
+    );
+    let plain = CrustField::new_with_terranes(terrain_seed, all, g.terranes.clone());
+    let flips = geo
+        .cells()
+        .filter(|&c| {
+            let p = geo.position(c);
+            clipped.continental_at(p) != plain.continental_at(p)
+        })
+        .count();
+    assert!(
+        flips > 0,
+        "the seam clip changed no cell's continental classification on seed 42 — \
+         the rift is not shaping real coastlines"
+    );
 }

@@ -15,6 +15,7 @@ pub mod pins;
 pub mod plates;
 pub mod provider;
 pub mod render;
+pub mod rift;
 pub mod shape;
 pub mod streams;
 
@@ -96,6 +97,27 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "terrain/lithology",
             "lithology sub-cell hash-noise (hash-noise only; no stream draws)",
         ),
+        (
+            "terrain/microcontinents",
+            "fixed candidate count, then per candidate position/radius/age",
+        ),
+        (
+            "terrain/terranes",
+            "terrane count, then per terrane host-craton index/bearing/size/age",
+        ),
+        (
+            "terrain/arc-gate",
+            "along-strike island-arc gating noise (hash-noise only; no stream draws)",
+        ),
+        (
+            "terrain/relief",
+            "fBm relief-detail noise (hash-noise only; no stream draws)",
+        ),
+        (
+            "terrain/rift",
+            "ONE spreading-rate draw; per-seam geometry via hash sub-derivations \
+             (seam-{a}-{b}); no other sequential draws",
+        ),
     ]
 }
 
@@ -129,6 +151,21 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::TERRAIN_NOTE,
         false,
         "a note recorded during tectonic genesis",
+    )?;
+    registry.register_predicate(
+        facts::RIFTED_FROM,
+        false,
+        "a rifted conjugate pair of cratons whose conjugate margins fit up to subsequent erosion",
+    )?;
+    registry.register_predicate(
+        facts::BREAKUP_AGE,
+        false,
+        "a rifted seam's derived breakup age",
+    )?;
+    registry.register_predicate(
+        facts::SPREADING_RATE,
+        true,
+        "the globe's one drawn global spreading rate",
     )?;
 
     registry.register_concept("stone", "terrain", ConceptKind::Substance, "rock")?;
@@ -226,7 +263,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 12);
+        assert_eq!(labels.len(), 17);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
