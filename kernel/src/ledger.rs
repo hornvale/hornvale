@@ -148,6 +148,22 @@ impl Ledger {
             .filter(|&p| self.facts[p].subject == subject)
             .collect()
     }
+    /// Position accessor for tests/benches (the naive refs return positions).
+    #[cfg(test)]
+    pub(crate) fn fact_at(&self, pos: usize) -> &Fact {
+        &self.facts[pos]
+    }
+    pub(crate) fn naive_find(&self, predicate: &str) -> Vec<usize> {
+        (0..self.facts.len())
+            .filter(|&p| self.facts[p].predicate == predicate)
+            .collect()
+    }
+    pub(crate) fn naive_value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
+        self.facts
+            .iter()
+            .find(|f| f.subject == subject && f.predicate == predicate)
+            .map(|f| &f.object)
+    }
 
     /// Would this fact be accepted? Used by the refinement engine to test
     /// candidates without committing.
@@ -228,18 +244,28 @@ impl Ledger {
     /// All facts with this predicate.
     /// type-audit: bare-ok(identifier-text)
     pub fn find(&self, predicate: &str) -> impl Iterator<Item = &Fact> {
-        let predicate = predicate.to_string();
-        self.facts.iter().filter(move |f| f.predicate == predicate)
+        let positions = match &self.index {
+            Some(idx) => idx.positions_for_predicate(predicate),
+            None => self.naive_find(predicate),
+        };
+        positions.into_iter().map(move |p| &self.facts[p])
     }
 
     /// First object for (subject, predicate). For functional predicates
     /// this is the unique value.
     /// type-audit: bare-ok(identifier-text)
     pub fn value_of(&self, subject: EntityId, predicate: &str) -> Option<&Value> {
-        self.facts
-            .iter()
-            .find(|f| f.subject == subject && f.predicate == predicate)
-            .map(|f| &f.object)
+        match &self.index {
+            Some(idx) => {
+                // first fact (commit order) for (subject, predicate)
+                let first = idx
+                    .positions_for_subject(subject)
+                    .into_iter()
+                    .find(|&p| self.facts[p].predicate == predicate);
+                first.map(|p| &self.facts[p].object)
+            }
+            None => self.naive_value_of(subject, predicate),
+        }
     }
 
     /// The text value of (subject, predicate), if present and textual.
@@ -616,5 +642,65 @@ mod tests {
             ],
             "facts_about must yield commit order [A, B, C], not index-key order [C, A, B]"
         );
+    }
+
+    // Tiny deterministic PRNG — no dep (splitmix64). Same "roll our own" style as
+    // the astronomy property batteries.
+    fn splitmix(state: &mut u64) -> u64 {
+        *state = state.wrapping_add(0x9E3779B97F4A7C15);
+        let mut z = *state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+        z ^ (z >> 31)
+    }
+
+    fn random_ledger(seed: u64, n: usize) -> (Ledger, ConceptRegistry, Vec<EntityId>) {
+        let r = registry(); // predicates: "name" (functional), "located-in" (non-functional)
+        let mut l = Ledger::default();
+        let subjects: Vec<EntityId> = (0..8).map(|_| l.mint_entity()).collect();
+        let mut st = seed.wrapping_add(1);
+        for _ in 0..n {
+            let s = subjects[(splitmix(&mut st) as usize) % subjects.len()];
+            // only use the non-functional predicate for bulk facts, so random
+            // objects never trip the functional-contradiction reject
+            let target = subjects[(splitmix(&mut st) as usize) % subjects.len()];
+            let _ = l.commit(
+                Fact {
+                    subject: s,
+                    predicate: "located-in".into(),
+                    object: Value::Entity(target),
+                    place: None,
+                    day: None,
+                    provenance: "t".into(),
+                },
+                &r,
+            );
+        }
+        (l, r, subjects)
+    }
+
+    #[test]
+    fn index_equals_scan_subject_and_predicate() {
+        for seed in 0..64u64 {
+            let (l, _r, subjects) = random_ledger(seed, 200);
+            // S-shape: facts_about == naive scan (same facts, same commit order)
+            for &s in &subjects {
+                let idx: Vec<&Fact> = l.facts_about(s).collect();
+                let scan: Vec<&Fact> = l
+                    .naive_facts_about(s)
+                    .iter()
+                    .map(|&p| l.fact_at(p))
+                    .collect();
+                assert_eq!(idx, scan, "facts_about seed {seed} subj {s:?}");
+            }
+            // P-shape: find == naive scan
+            let idx: Vec<&Fact> = l.find("located-in").collect();
+            let scan: Vec<&Fact> = l
+                .naive_find("located-in")
+                .iter()
+                .map(|&p| l.fact_at(p))
+                .collect();
+            assert_eq!(idx, scan, "find seed {seed}");
+        }
     }
 }

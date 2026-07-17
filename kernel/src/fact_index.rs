@@ -156,7 +156,6 @@ impl FactIndex {
     }
 
     /// Ascending positions of all facts with `pred`.
-    #[allow(dead_code)]
     pub(crate) fn positions_for_predicate(&self, pred: &str) -> Vec<usize> {
         let Some(sym) = self.interner.get(pred) else {
             return Vec::new();
