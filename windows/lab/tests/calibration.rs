@@ -100,110 +100,82 @@ fn biome_class_from_name(name: &str) -> BiomeClass {
 
 #[test]
 fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
-    // `belief-kind` is the sentiment of `beliefs_of(&world).first()` — the
-    // FIRST belief minted anywhere in the ledger, across every species, not
-    // a particular species' head deity. Which species commits first is an
-    // artifact of the species component registries' `KindId` (alphabetical)
-    // iteration order in the composition root's per-species religion loop:
-    // pre-Branches, with only `{goblin, kobold}` registered, "goblin" sorts
-    // first and ALWAYS commits first, and goblin's head deity is always
-    // solar (a separately preregistered invariant — see
-    // `goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar`)
-    // — a solar head's periodicity is an exact function of rotation (locked
-    // ⇒ aperiodic sun ⇒ eternal; spinning ⇒ periodic sun ⇒ cyclic), so
-    // "belief-kind coincides exactly with tidal locking" held as a
-    // consequence.
+    // The invariant is PHYSICAL: a tidally-locked world offers no
+    // rising-and-setting body, so no people's pantheon head can read cyclic.
+    // The tide is ambient however periodic its swell; sun and stars are
+    // eternal. Physics does not care which people the component registry
+    // happened to iterate first — so this reads EVERY people's head
+    // (`belief-kind-<species>`), not one arbitrary people's.
     //
-    // The Branches: `registry()` now holds four peoples, and "bugbear"
-    // sorts alphabetically FIRST. The founder floor (Task 6d) guarantees
-    // bugbear a flagship on every seed, so bugbear's pantheon now commits
-    // first on every world — and bugbear's head-deity selection is not
-    // domain-restricted to the sun the way goblin's is: on a SPINNING world
-    // it can still pick an aperiodic night-star as its most salient
-    // phenomenon (night-stars have no orbital period around this world,
-    // hence `Sentiment::Eternal`, regardless of rotation — the same
-    // mechanism `blind_attribution_beats_chance_decisively`'s doc comment
-    // already names). This is a genuine behavioural finding, not a bug:
-    // measured over the 500-seed drift study, the `locked ⇒ eternal`
-    // direction still holds with ZERO exceptions (23/23 locked worlds), but
-    // the converse (`spinning ⇒ ¬eternal`) now fails on 9/477 spinning
-    // worlds (seeds 49, 140, 143, 220, 223, 234, 236, 363, 447) — bugbear's
-    // night-star-headed pantheon on an otherwise-ordinary spinning world.
-    // Per ADR 0016 this is pinned as an honest measured exception count,
-    // not forced, inverted, or silently dropped.
+    // It used to read `belief-kind`: the sentiment of
+    // `beliefs_of(&world).first()`, the first belief minted anywhere in the
+    // ledger. That is a fact about a loop, not about a world — whichever
+    // people sorts first in the alphabetical component registry. The
+    // Presiding (SKY-25) retired it: a world has no religion, its peoples do.
     //
-    // SKY-5 (surfaced tides) then weakened `locked ⇒ eternal` itself,
-    // honestly: a locked world's most salient phenomenon is now usually the
-    // felt tide (`Venue::Ambient` ⇒ `Sentiment::Ambient`), not the
-    // motionless sun — SEQ-1's "locked-world religion hangs on moons,
-    // weather, and tides" made real. What survives exactly is the direction
-    // that matters: a frozen sky never yields a CYCLIC first belief (the
-    // tide is ambient however periodic its swell; sun and stars are
-    // eternal; only a rising-and-setting body could read cyclic, and a
-    // locked world offers none). Measured over the 1000-seed drift study:
-    // 48 locked worlds = 37 tide-headed (ambient) + 11 sun-headed (eternal)
-    // + 0 cyclic, pinned per ADR 0016.
+    // The record it retired was wrong about the mechanism, in this comment
+    // and in two other documents (SKY-25's row, `terminator_acceptance.rs`):
+    // all three said the founder floor guarantees BUGBEAR a flagship on every
+    // seed, so bugbear commits first. This census settles it — bugbear is
+    // Absent on 1000 of 1000 seeds; it places nowhere. The first committer is
+    // goblin (present on 999/1000), and on every seed measured it is a
+    // single founder-floor soul of population 1 speaking for a world that
+    // holds up to 27 hobgoblins.
+    //
+    // Pinned per ADR 0016 from the 2026-07-17 regen (The Presiding). These
+    // count PER-PEOPLE head readings across the 1000-seed census and are NOT
+    // comparable to the retired `belief-kind` pins they replace, which
+    // counted one reading per world:
+    //   locked:   112 eternal, 0 ambient, 0 cyclic (the invariant)
+    //   spinning:   1 eternal (a night-star-headed pantheon; the mechanism
+    //               `blind_attribution_beats_chance_decisively` names)
+    // `locked_ambient == 0` is the ambient-extinction movement (`ambient`
+    // went 69 -> 0 at the 2026-07-16 regen), still under its named
+    // investigation (rift-and-fit ledger #14/#19). The Presiding does NOT
+    // address it: measured, hobgoblin's own head is Eternal on every locked
+    // seed too, so dominance-awareness would have moved SKY-5's tide payoff
+    // 0/9 -> 0/9. This pin records the measured value, not a verdict that the
+    // movement is correct.
     let result = &*DRIFT;
     let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    let (locked_i, belief_i) = (idx("tidally-locked"), idx("belief-kind"));
-    let (mut locked_eternal, mut locked_ambient, mut spinning_eternal_exceptions) =
-        (0u32, 0u32, 0u32);
+    let locked_i = idx("tidally-locked");
+    let heads: Vec<usize> = ["bugbear", "goblin", "hobgoblin", "kobold"]
+        .iter()
+        .map(|s| idx(&format!("belief-kind-{s}")))
+        .collect();
+    let (mut locked_eternal, mut locked_ambient, mut spinning_eternal) = (0u32, 0u32, 0u32);
     for row in &result.rows {
         let locked = matches!(row.values[locked_i], MetricValue::Flag(true));
-        let kind = match &row.values[belief_i] {
-            MetricValue::Text(t) => t.as_str(),
-            other => panic!("seed {}: belief-kind not text: {other:?}", row.seed),
-        };
-        if locked {
-            match kind {
-                "eternal" => locked_eternal += 1,
-                "ambient" => locked_ambient += 1,
-                other => panic!(
-                    "seed {}: a tidally-locked world's first-minted belief is {other} — \
-                     a frozen sky must never head a cyclic pantheon",
-                    row.seed
-                ),
+        for &i in &heads {
+            let kind = match &row.values[i] {
+                MetricValue::Text(t) => t.as_str(),
+                // That people holds no pantheon on this seed.
+                MetricValue::Absent => continue,
+                other => panic!("seed {}: belief-kind not text: {other:?}", row.seed),
+            };
+            if locked {
+                match kind {
+                    "eternal" => locked_eternal += 1,
+                    "ambient" => locked_ambient += 1,
+                    other => panic!(
+                        "seed {}: a tidally-locked world has a people whose pantheon head \
+                         is {other} — a frozen sky must never head a cyclic pantheon",
+                        row.seed
+                    ),
+                }
+            } else if kind == "eternal" {
+                spinning_eternal += 1;
             }
-        } else if kind == "eternal" {
-            spinning_eternal_exceptions += 1;
         }
     }
-    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
-    // regen, commit 1c954d0): belief-kind `ambient` went extinct across the
-    // regenerated census (69 -> 0 occurrences); every locked world now mints
-    // an eternal first belief instead. The ambient-extinction / attribution-
-    // pool collapse is under a named investigation (rift-and-fit campaign
-    // ledger #14/#19); this pin records the measured canonical value, not a
-    // verdict that the movement is correct.
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (48, 0),
-        "locked-world head-belief split (eternal, ambient) drifted"
+        (112, 0),
+        "locked-world per-people head split (eternal, ambient) drifted"
     );
-    // Pinned calibration row (re-measured for the four-people world, Task
-    // 6b-2, 500-seed drift study; unchanged by SKY-5 — the same nine seeds):
-    // the exact count of spinning worlds whose first-minted belief is
-    // nonetheless eternal (a night-star-headed bugbear pantheon, per the
-    // mechanism above).
-    //
-    // Census regen (2026-07-14, the-gathering + night-sky, 1000-seed
-    // `the-census`): the night-sky campaign's new phenomena change which
-    // spinning worlds mint an eternal first belief; re-measured.
-    //
-    // Census regen (2026-07-14 #2, the merged campaign stack — Eclipse
-    // Seasons + The Long Count + The Speakable + BIO-2 + The Ground + the
-    // Niche): Eclipse Seasons re-derives the pantheon on every mooned seed
-    // (eclipse phenomena join the first-belief contest), changing which
-    // spinning worlds mint an eternal first belief; re-measured (5 -> 2).
-    // The locked-world split above is untouched — locked worlds have no
-    // eclipse cycle to observe.
-    //
-    // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
-    // regen, commit 1c954d0): re-measured (2 -> 0); this exception count is
-    // part of the same ambient-extinction movement pinned above.
     assert_eq!(
-        spinning_eternal_exceptions, 0,
-        "spinning-yet-eternal exception count drifted"
+        spinning_eternal, 1,
+        "spinning-yet-eternal per-people head count drifted"
     );
 }
 

@@ -53,12 +53,26 @@
 WITH agg AS (
   -- Single-pass conditional aggregation over "the-census" (1000 seeds).
   SELECT
-    -- a_frozen_sky_never_heads_a_cyclic_pantheon
-    count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind" = 'eternal')
+    -- a_frozen_sky_never_heads_a_cyclic_pantheon.
+    -- PER-PEOPLE readings (The Presiding, SKY-25): the world-level
+    -- "belief-kind" column is retired — it recorded whichever people the
+    -- component registry iterated first, which is a fact about a loop, not
+    -- about a world. These count one reading per (seed, people) and are NOT
+    -- comparable to the pre-2026-07-17 world-level literals.
+    (count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-bugbear" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-goblin" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-hobgoblin" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-kobold" = 'eternal'))
       AS locked_eternal,
-    count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind" = 'ambient')
+    (count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-bugbear" = 'ambient')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-goblin" = 'ambient')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-hobgoblin" = 'ambient')
+     + count(*) FILTER (WHERE "tidally-locked" = true AND "belief-kind-kobold" = 'ambient'))
       AS locked_ambient,
-    count(*) FILTER (WHERE "tidally-locked" = false AND "belief-kind" = 'eternal')
+    (count(*) FILTER (WHERE "tidally-locked" = false AND "belief-kind-bugbear" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = false AND "belief-kind-goblin" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = false AND "belief-kind-hobgoblin" = 'eternal')
+     + count(*) FILTER (WHERE "tidally-locked" = false AND "belief-kind-kobold" = 'eternal'))
       AS spinning_eternal_exceptions,
     -- goblin_flagship_coastal_split_is_pinned
     count(*) FILTER (WHERE "flagship-coastal" = true) AS flagship_coastal,
@@ -211,14 +225,14 @@ namelen_stats AS (
        WHERE pin_set = 'goblin-twin-solo') AS var_b
 ),
 checks AS (
-  SELECT 'locked-eternal head-belief count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 48.0 AS pinned, locked_eternal = 48 AS ok FROM agg
+  SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
+         CAST(locked_eternal AS DOUBLE) AS computed, 112.0 AS pinned, locked_eternal = 112 AS ok FROM agg
   UNION ALL
-  SELECT 'locked-ambient head-belief count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
+  SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
          CAST(locked_ambient AS DOUBLE), 0.0, locked_ambient = 0 FROM agg
   UNION ALL
-  SELECT 'spinning-yet-eternal exception count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(spinning_eternal_exceptions AS DOUBLE), 0.0, spinning_eternal_exceptions = 0 FROM agg
+  SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
+         CAST(spinning_eternal_exceptions AS DOUBLE), 1.0, spinning_eternal_exceptions = 1 FROM agg
   UNION ALL
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
          CAST(flagship_coastal AS DOUBLE), 316.0, flagship_coastal = 316 FROM agg
