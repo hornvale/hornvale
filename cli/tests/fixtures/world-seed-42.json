@@ -152,6 +152,11 @@
         "functional": true,
         "doc": "insolation at the anchor relative to Earth (derived L/a²)"
       },
+      "is-a": {
+        "name": "is-a",
+        "functional": true,
+        "doc": "the class an entity belongs to"
+      },
       "is-belief": {
         "name": "is-belief",
         "functional": true,
