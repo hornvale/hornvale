@@ -1,5 +1,15 @@
 # The Reckoning Implementation Plan
 
+**STATUS: COMPLETE — all 7 tasks executed and reviewed; closed 2026-07-17, pending merge.**
+Chronicle: `book/src/chronicle/the-reckoning.md`. Retrospective: `docs/retrospectives/the-reckoning.md`.
+
+**Two amendments execution made to this plan, both Nathan-ratified at execution stops — recorded here because the plan below does not describe what shipped:**
+
+1. **Task 4b (added): the eclipse small-angle correction.** The plan's Task 4 assumed the eclipse model could accept the inclinations `Capture` introduces. It could not — its forms were linear in `i`, valid only for the pre-campaign `[0, 10)` band. Correcting them to the exact spherical `β = asin(sin i · sin u)` **turned this campaign's epoch from PARTIAL to TOTAL** (decision ledger #14; spec §5.3/§7 amended at close). The plan's central property — "a world whose moons all draw `GiantImpact` is byte-identical" — is **superseded**: it holds at the *draw* level and fails at the *world* level.
+2. **Task 5b (added): unify `scene/moons/v1` onto the real density.** The header below reads "No scene contract (that is campaign B, The Moons)" — **that is no longer true.** Absorbing main pulled in *The Faces*, which shipped `scene/moons/v1` deriving moon radius at an assumed constant lunar density: the exact assumption this campaign exists to retire. Left alone, the repo would carry two answers for one quantity (ledger #11).
+
+**One plan claim was falsified and should not be inherited:** the gloss "the innermost moon is almost certainly an impact child" was unmeasured, and the `inner_rate > 0.7` threshold derived from it was arithmetically unreachable. The real distribution is an order statistic (ledger #13). See the retrospective.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the star's clock a zero point (a drawn age), give the planet an age, and give every moon an **origin story** — a drawn formation mechanism that determines its age, its density, and whether its orbit is regular or irregular.
@@ -39,7 +49,7 @@
 
 **Context:** Read `domains/astronomy/src/units.rs` first and **follow its existing newtype pattern exactly** — the file already has `LunarMasses`, `Megameters`, `StdDays`, `SolarMasses`, `SolarLuminosities`, `Au`. Match their constructor style, their doc-comment style, their `type-audit:` tags, and their derives. Do not invent a new convention.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to the tests module in `units.rs`, matching the style of the tests already there:
 
@@ -62,21 +72,21 @@ fn density_rejects_nonpositive_and_nonfinite() {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-astronomy units`
 Expected: FAIL — `Gyr` / `GramsPerCm3` do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add both newtypes to `units.rs` following the file's established pattern. Doc comments state the unit and what rejects. Zero is *valid* for `Gyr` (a star at age 0 is degenerate but not a contract violation) and *invalid* for `GramsPerCm3` (a massless body is not a body).
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-astronomy units`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cargo fmt
@@ -113,7 +123,7 @@ mechanism is known."
 
 `GYR_DAYS` already exists in this module (exported from `lib.rs`).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -167,12 +177,12 @@ fn age_is_deterministic() {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-astronomy star`
 Expected: FAIL — `age`, `main_sequence_lifetime`, `T_MAX`, `planet_age` do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `streams.rs`, matching the file's existing style (every label carries a doc comment and a `type-audit:` tag):
 
@@ -218,12 +228,12 @@ and in `generate_star`, **after** the existing luminosity/zone derivations (so t
 
 Add `age` to the `Star` struct with a doc comment naming it as drawn, and stating that **it does not feed luminosity** (spec §3).
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-astronomy star`
 Expected: PASS.
 
-- [ ] **Step 5: Write the CONTAINMENT test — the plan's most important assertion**
+- [x] **Step 5: Write the CONTAINMENT test — the plan's most important assertion**
 
 Add to `domains/astronomy/tests/genesis_properties.rs`:
 
@@ -251,12 +261,12 @@ fn stellar_age_does_not_touch_luminosity_or_the_habitable_zone() {
 
 Use the real accessor names for `HabitableZone` — read the struct first; if the bounds are public fields rather than methods, adjust.
 
-- [ ] **Step 6: Run the containment test and the full crate**
+- [x] **Step 6: Run the containment test and the full crate**
 
 Run: `cargo test -p hornvale-astronomy`
 Expected: PASS. **If any pre-existing star/anchor/climate test's expected values changed, STOP and report** — that is the containment leaking, not a re-baseline.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-astronomy --all-targets -- -D warnings
@@ -306,7 +316,7 @@ so the innermost moon is almost certainly an impact child and the outermost is p
 
 **Do not model co-accretion** (spec §5.1): it needs a massive circumplanetary disk, which is a giant-planet mechanism. Hornvale's anchor is terrestrial.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -358,7 +368,7 @@ fn formation_is_deterministic() {
 }
 ```
 
-- [ ] **Step 2: Capture the pre-campaign masses/distances, then run to verify failure**
+- [x] **Step 2: Capture the pre-campaign masses/distances, then run to verify failure**
 
 Before implementing, print seed 42's current moons so the byte-identity test has real expected values:
 
@@ -371,7 +381,7 @@ Add a temporary `println!` of `(mass.0, distance.0)` per moon, paste the values 
 Run: `cargo test -p hornvale-astronomy moons`
 Expected: FAIL — `Formation` does not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `streams.rs`:
 
@@ -426,12 +436,12 @@ and in `generate_moons`, **after** the `moons.sort_by(...)` line and **before** 
 
 Add `formation` to the `Moon` struct. Give it a placeholder in `derive_moon` (`Formation::GiantImpact`) with a comment mirroring the existing inclination/node placeholders — the real value is assigned after admission.
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-astronomy moons`
 Expected: PASS — **including the byte-identity test**. If masses or distances moved, you disturbed the admission loop: revert and re-read spec §5.3.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-astronomy --all-targets -- -D warnings
@@ -473,7 +483,7 @@ Consequence, and the property to protect: **a world whose moons all draw `GiantI
 
 **This task re-pins the eclipse goldens** — in this commit, not deferred to the close (CLAUDE.md golden-pin discipline). Find them: `grep -rn "eclipse" domains/astronomy/tests/ cli/tests/`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -524,14 +534,14 @@ fn an_all_impact_world_is_byte_identical_to_the_pre_campaign_draw() {
 }
 ```
 
-- [ ] **Step 2: Record the pre-campaign inclinations, then run to verify failure**
+- [x] **Step 2: Record the pre-campaign inclinations, then run to verify failure**
 
 Before implementing, print inclinations for a handful of seeds and identify one whose moons will all draw `GiantImpact` (Task 3 already landed, so `formation` is available). Paste that seed's pre-campaign inclinations into Step 1's third test.
 
 Run: `cargo test -p hornvale-astronomy moons`
 Expected: FAIL — captured moons are still at 0–10°.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Replace the inclination loop:
 
@@ -552,24 +562,24 @@ Replace the inclination loop:
     }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-astronomy`
 Expected: the new tests PASS. **Eclipse tests will now fail on captured-moon seeds — that is the epoch, and it is expected.**
 
-- [ ] **Step 5: Re-pin the eclipse goldens IN THIS COMMIT**
+- [x] **Step 5: Re-pin the eclipse goldens IN THIS COMMIT**
 
 Run the eclipse batteries and re-pin the drifted values. For each drifted pin, confirm the drift is explained by a captured moon (check that seed's `formation`) — **a drifted pin on an all-impact seed is a bug, not a re-pin**; stop and report that.
 
 Run: `cargo test -p hornvale-astronomy --test genesis_properties` and any eclipse test files.
 Expected: PASS after re-pinning.
 
-- [ ] **Step 6: Run the full gate**
+- [x] **Step 6: Run the full gate**
 
 Run: `make gate`
 Expected: PASS. Census fixtures may drift — **do NOT regenerate them** (`HV_CENSUS=1` is forbidden here); note the drift for Task 6.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cargo fmt
@@ -615,7 +625,7 @@ Both draws come from streams **after** formation, so they disturb nothing. Reuse
 
 Lunar mass is `7.342e22 kg`; use it to turn `LunarMasses` into a radius.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```rust
 #[test]
@@ -669,12 +679,12 @@ fn radius_follows_from_mass_and_real_density_not_an_assumption() {
 }
 ```
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-astronomy moons`
 Expected: FAIL — `age`, `density`, `radius_km` do not exist.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add the fields (with doc comments naming derived vs drawn), the density/age assignment after the formation loop, and:
 
@@ -691,12 +701,12 @@ pub fn radius_km(moon: &Moon) -> f64 {
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [x] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-astronomy`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cargo fmt && cargo clippy -p hornvale-astronomy --all-targets -- -D warnings
@@ -721,7 +731,7 @@ This is the honesty upgrade The Moons (campaign B) was blocked on."
 
 **Context:** Spec §7 says the affected fraction of seeds "is measurable before merge and **must be measured**". Nobody has this number, and it is the honest input to the census-regen conversation — which is a carve-out needing Nathan's explicit authorization.
 
-- [ ] **Step 1: Measure**
+- [x] **Step 1: Measure**
 
 Across the census seed set (1000 seeds — read `studies/the-census.study.json` for the exact set), compute and report:
 
@@ -732,11 +742,11 @@ Across the census seed set (1000 seeds — read `studies/the-census.study.json` 
 
 Run it in the foreground; it is generation-only (no census, no `HV_CENSUS`).
 
-- [ ] **Step 2: Sanity-check the number against the design**
+- [x] **Step 2: Sanity-check the number against the design**
 
 The distance weighting is `clamp(0.10, 0.85, …)`, so a lone close moon is ~10% likely to be captured and a distant one up to 85%. If the measured "worlds that moved" share is near 0% or near 100%, the weighting is wrong — **report it rather than accepting it**. A plausible outcome is a large minority.
 
-- [ ] **Step 3: Record and report — do NOT regenerate the census**
+- [x] **Step 3: Record and report — do NOT regenerate the census**
 
 Write the numbers into `.superpowers/sdd/progress.md` and your task report. **The regen itself is Nathan's carve-out; you are producing the input to that decision, not making it.**
 
@@ -755,9 +765,9 @@ Candidate predicates: `star-age-gyr`, `moon-formation`, `moon-age-gyr`, `moon-de
 
 **The model card** (`book/src/domains/astronomy.md`, "## The model card") must gain this campaign's delta — spec §6. It is the book stating plainly what is physics, what is approximation, and what is dice, and it is **not optional**: the campaign's biggest claims are admissions.
 
-- [ ] **Step 1: Add the facts, with tests, following the existing pattern**
-- [ ] **Step 2: Update the model card** — derived: planet age, coeval moon age, radius-from-real-density. Drawn: star age, formation, capture age/density. Approximated (declared): `t_MS` scaling; **`L = M^3.5` stays genesis-epoch and age does NOT correct it** (spec §3); the distance weighting is a plausibility rule; two density classes, not a composition model; **capture is modelled as an outcome, not an event** — no encounter dynamics.
-- [ ] **Step 3: Run the type audit**
+- [x] **Step 1: Add the facts, with tests, following the existing pattern**
+- [x] **Step 2: Update the model card** — derived: planet age, coeval moon age, radius-from-real-density. Drawn: star age, formation, capture age/density. Approximated (declared): `t_MS` scaling; **`L = M^3.5` stays genesis-epoch and age does NOT correct it** (spec §3); the distance weighting is a plausibility rule; two density classes, not a composition model; **capture is modelled as an outcome, not an event** — no encounter dynamics.
+- [x] **Step 3: Run the type audit**
 
 ```bash
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
@@ -767,7 +777,7 @@ Expected: PASS (default-deny — every new pub-boundary primitive needs a `type-
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 ```
 
-- [ ] **Step 4: Full gate + commit**
+- [x] **Step 4: Full gate + commit**
 
 Run: `make gate` and `mdbook build book`.
 

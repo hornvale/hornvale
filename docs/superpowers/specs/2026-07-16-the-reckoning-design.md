@@ -1,7 +1,12 @@
 # The Reckoning — Design
 
 **Date:** 2026-07-16
-**Status:** G3 RATIFIED 2026-07-16 (T_MAX = 15 Gyr; full epoch incl. Capture). Planning next. The AWS census regen remains an open carve-out — see §9.4.
+**Status:** COMPLETE — closed 2026-07-17, awaiting merge. G3 RATIFIED 2026-07-16 (T_MAX = 15 Gyr; full epoch incl. Capture).
+**Corrected at close** (this spec governs, so where execution overturned it the text below is amended in place, with the supersession marked rather than the history erased):
+- The epoch shipped **TOTAL**, not the partial epoch §5.3 and §7 designed — the eclipse-geometry correction (ledger #14) perturbs every mooned world, not only captured ones.
+- The blast radius is **measured: 633/1000 seeds** (§7, §9.4). It was an open question at ratification; it is not any more.
+- The AWS census regen was **declined by Nathan**; the resulting 633-seed staleness is **accepted debt** (§9.4).
+Chronicle: `book/src/chronicle/the-reckoning.md`. Retrospective: `docs/retrospectives/the-reckoning.md`.
 **Tickets:** none yet — this is campaign **A** of the arc split out of [hornvale#4](https://github.com/hornvale/hornvale/issues/4); campaign **B** is the parked `2026-07-16-the-moons-design.md` (moon surfaces), which is blocked on this.
 **Parent contracts:** `2026-07-14-the-long-count-design.md` (main-sequence brightening — this supplies the zero point it lacks), `2026-07-14-eclipse-seasons-design.md` (dates eclipses from moon inclination + node — **this campaign moves those**), decision 0009 (models author, dice roll), the Campaign 2 astronomy model card.
 **This is an epoch.** See §7.
@@ -167,13 +172,33 @@ The consequence is the campaign's best property:
 Same stream, same **single** draw per moon, so index-stability holds exactly as
 SKY-6 established. Therefore:
 
-- **Masses and distances never move, in any world.**
-- **A world whose moons all draw `GiantImpact` is byte-identical to today** —
-  same moons, same inclinations, same nodes, same eclipses.
-- Only worlds that actually receive a captured moon change.
+- **Masses and distances never move, in any world.** *(Survives. This half of
+  the property is intact and load-bearing.)*
+- ~~**A world whose moons all draw `GiantImpact` is byte-identical to today** —
+  same moons, same inclinations, same nodes, same eclipses.~~
+  **SUPERSEDED at execution (ledger #14).** What survives is narrower and the
+  distinction matters: an all-`GiantImpact` world's **inclinations** are
+  byte-identical — the branch draws the same roll through the same formula —
+  but its **eclipse dates are not**, because the eclipse-geometry correction
+  (§7) changed how *any* inclination maps to an ecliptic latitude. **The
+  property holds at the draw level and fails at the world level.**
+- ~~Only worlds that actually receive a captured moon change.~~ **SUPERSEDED**:
+  every world with **any** moon changes. Only **moonless** worlds are
+  byte-identical.
 
-This is a **partial epoch**, not a total one (§7), and it shrinks what the
-census regeneration must cover.
+~~This is a **partial epoch**, not a total one (§7), and it shrinks what the
+census regeneration must cover.~~
+
+**This is a TOTAL epoch** (§7). The partial-epoch design above was correct
+about its own mechanism — the mechanism draw really is free — and was
+falsified by something else entirely: the eclipse model's small-angle forms
+were only ever valid for the `[0, 10)` inclinations that existed before this
+campaign, and correcting them perturbs low-inclination moons too. The deeper
+reading, which is the campaign's own lesson: **the partial-epoch property was
+never a property of the world — it was a property of an approximation error.**
+All-impact worlds were byte-identical only because a wrong formula was applied
+uniformly to them. The cheapness was an artifact of the inaccuracy, and it was
+always going to be repaid.
 
 ## 6. The model card delta
 
@@ -181,6 +206,22 @@ census regeneration must cover.
 radius from mass and density; the ZAMS-luminosity back-derivation (§3) —
 recoverable by inverting `luminosity_at`, not a function the sim calls;
 nothing consumes it today.
+
+**Derived — added at execution (ledger #14): the exact eclipse geometry.** A
+moon's ecliptic latitude is now the exact spherical form
+
+```
+  β = asin(sin i · sin u)          (u = argument of latitude, i = inclination)
+```
+
+replacing the small-angle `β = i·sin(u)` in `moon_ecliptic_latitude_deg`,
+`node_crossing_chance` (whose statistical twin becomes
+`(2/π)·asin(sin(threshold)/sin(i))`), and `series_returns`. It is bounded by
+`±min(i, 180−i)` for any inclination, and it restores the symmetry the linear
+form silently broke: orbits at `i` and `180−i` eclipse identically, as
+`sin i = sin(180−i)` requires. **Note the direction of travel — a quantity
+moved from *approximated* toward *derived*.** That is rare on this model card,
+and it is the reason the epoch became total (§7).
 
 **Drawn:** star age (guard-railed fraction of `t_MS`); formation mechanism per
 moon; capture-mechanism density class, age, mass, distance, inclination.
@@ -192,7 +233,25 @@ moon; capture-mechanism density class, age, mass, distance, inclination.
   Age does not correct it. This is a deliberate containment, and the spec says
   so rather than pretending the mass–luminosity relation is age-aware.
 - The mechanism weighting (§5.3) is a plausibility rule, not a population
-  synthesis of satellite formation.
+  synthesis of satellite formation. **Calibrated at execution (ledger #12) to**
+
+  ```
+    p_capture = clamp(frac³, 0.02, 0.85)      (frac = distance as a fraction
+                                               of the admitted range)
+  ```
+
+  It encodes only the physical intuition that an impact child forms close and
+  tidally recedes while irregular satellites are distant — but it now carries
+  what a plausibility rule usually lacks: **an empirical anchor, and therefore
+  a falsifier.** The rule must classify the model's own exemplar correctly.
+  Luna sits at 384.4 Mm from Earth (`frac ≈ 0.386`); under the originally
+  planned **linear** map, `clamp(frac, 0.10, 0.85)`, the real Earth–Moon
+  system — the `GiantImpact` variant's own namesake — read as a **capture 39%
+  of the time**. Cubing suppresses the middle of the range hard
+  (`0.386³ ≈ 0.057`) while pinning both ends, and Luna reads as an impact
+  child **94%** of the time. This paragraph previously called the weighting
+  unfalsifiable by construction; that is no longer true, and the upgrade is
+  the point.
 - Densities are two representative classes (rocky/icy), not a composition
   model.
 - **Capture is modelled as an outcome, not an event.** No encounter dynamics,
@@ -203,21 +262,63 @@ moon; capture-mechanism density class, age, mass, distance, inclination.
 
 ## 7. The epoch, and its blast radius
 
-**This is a PARTIAL epoch** (narrowed by §5.3's amendment). `inclination_deg`
-changes **only** for a moon drawn as `Capture`. Masses and distances never
-move; a `GiantImpact` moon's inclination uses the identical formula off the
-identical stream draw. So:
+**This is a TOTAL epoch.** *(Corrected at close. This section shipped claiming
+a PARTIAL epoch; ledger #14 supersedes it. The original claim and the reason it
+failed are both kept below, because the failure is the more instructive half.)*
 
-- A **moonless** world: byte-identical.
-- A world whose moons **all** draw `GiantImpact`: byte-identical.
+The partial-epoch design was right about the mechanism draw and wrong about the
+model it fed. `inclination_deg` does indeed change **only** for a moon drawn as
+`Capture`; masses and distances never move; a `GiantImpact` moon's inclination
+uses the identical formula off the identical stream draw. All of that survives.
+What was not foreseen is that **the eclipse model could not accept the
+inclinations this campaign introduced.** `moon_ecliptic_latitude_deg` and
+`node_crossing_chance` were linear in `i` — small-angle forms, declared as such
+in their own doc comments, written when `inclination_deg` was always `[0, 10)`.
+At `i = 160°` the old form claimed an ecliptic latitude of **160°**, which is
+geometrically impossible (the maximum is 90°), and it made orbits at `i` and
+`180−i` differ by **8×** where physics demands they eclipse identically.
+Correcting it (§6) is unconditional, and the exact form perturbs
+**low-inclination moons too** — by up to **0.0185°**, four orders of magnitude
+above the 8-significant-digit quantization floor. So:
+
+- A **moonless** world: **byte-identical.** *(Survives — 0 of 155 moonless
+  seeds moved. This is the only surviving byte-identity claim at the world
+  level.)*
+- ~~A world whose moons **all** draw `GiantImpact`: byte-identical.~~
+  **SUPERSEDED.** Its moons' **inclinations** are byte-identical — the property
+  holds at the **draw** level — but its **eclipse dates** are not. It fails at
+  the **world** level. **260 of 627** all-impact-or-moonless seeds moved from
+  the geometry correction alone.
 - A world with **any** captured moon: that moon's inclination moves, and its
-  eclipses with it.
+  eclipses with it. *(Survives, and saturates: all 373 such worlds move.)*
 
-The blast radius is therefore *a fraction of seeds*, not all of them — which
-is what §5.3 bought. **The affected fraction is measurable before merge and
-must be measured** (Task 6): run the mechanism draw across the census seed set
-and report what share of worlds move. That number is the honest input to the
-regen conversation, and nobody has it yet.
+~~The blast radius is therefore *a fraction of seeds*, not all of them.~~
+**MEASURED (Task 6), against the 1000-seed census set, release-mode, real
+`windows/lab` eclipse-cadence metrics:**
+
+```
+  633 / 1000 seeds move
+    = 373  from the inclination epoch (worlds receiving a captured moon)
+    + 260  from the eclipse-geometry correction ALONE
+             (of 627 all-impact-or-moonless seeds; 0/155 moonless moved)
+```
+
+Triangulated three ways against a `git revert`-built isolation variant (epoch
+present, geometry fix reverted): the variant is identical to the baseline on
+all 627 — confirming the inclination epoch alone really is a no-op there — and
+differs from HEAD on exactly those 260. The arithmetic closes: 373 + 260 = 633.
+
+**Every prior estimate undercounted, including this spec's own instinct that
+the correction might cost nothing.** The a-priori argument was that the
+correction's O(i³) term shifts small-`i` moons by `<1e-9°`, below the
+quantization floor, so the "total" epoch might be free in practice. It is not:
+a systematic ~0.005–0.01° shift applied across thousands of threshold checks in
+a 100-year scan flips a majority of the low-inclination population's day-level
+counts. The error in the reasoning was generalising from the curve's **peak**
+(`u = 90°`, where the exact and small-angle forms agree *identically*) to the
+whole curve. **Task 6 existed precisely because nobody had the number** — §7
+said so — **and it earned its place by overturning the estimate of the person
+who commissioned it.**
 
 Known blast radius:
 
@@ -227,13 +328,33 @@ Known blast radius:
 2. **The census moves.** `windows/lab/src/metrics.rs` runs a 100-year
    dated-eclipse scan (`scan_century`, `century_cadence`) for its cadence
    metrics. Those rows change ⇒ **an AWS census regeneration is required**, and
-   that is an explicit-authorization carve-out (§9.3).
+   that is an explicit-authorization carve-out (§9.4).
 3. **Climate does NOT move** — by the §3 containment rule. If it does, the
    containment leaked and the campaign has become something else; that is a
-   stop-and-report condition, not a re-baseline.
+   stop-and-report condition, not a re-baseline. *(Verified: it held. §8's
+   containment battery passes, and it was mutation-tested — forcing `age` into
+   `luminosity` makes it fail, so its passing means something.)*
 4. **The pantheon may move on mooned seeds.** Eclipse Seasons noted that
    pantheons re-derive on mooned seeds. Anything keyed to eclipse phenomena is
    downstream.
+5. **`scene/moons/v1` moves** — *added at close (ledger #11); this spec could
+   not have listed it, because the contract did not exist when the spec was
+   written.* Absorbing main pulled in **The Faces**, which shipped
+   `scene/moons/v1` deriving `radius_km = 1737.4·mass^(1/3)` and
+   `surface_gravity_ms2` **at an assumed constant lunar density (3.34)** — the
+   exact assumption this campaign exists to retire. Task 5b unified it onto the
+   real density rather than leaving the repo with **two radius answers for one
+   quantity**. Consequences: the `scene/moons/seed-42` golden re-pins;
+   `bright-icy` keys off real density instead of a hash-derived albedo; the
+   reference page's constant-density caveat retires; and **the orrery — a
+   released consumer — renders changed radii for captured moons** (an icy body
+   at ρ=1.6 is ~28% larger than scene previously reported).
+6. **The eclipse-geometry correction itself** — *added at close (ledger #14).*
+   Not a downstream consequence of the epoch but a **cause** of it, and the
+   larger cause at that: **260 of the 633 moved seeds are its alone**, worlds
+   the epoch proper never touches. Any consumer reading
+   `moon_ecliptic_latitude_deg`, `node_crossing_chance`, or `series_returns` —
+   the almanac among them — moves with it.
 
 **Epoch discipline** (CLAUDE.md): deliberate regeneration takes an epoch
 suffix, never a rename. The affected stream labels get `/v2` suffixes rather
@@ -281,13 +402,32 @@ than new names, so an old save's derivation is still legible.
    `star-age`, `moon-formation`. Changed derivation for the existing per-moon
    draws ⇒ epoch suffixes (`/v2`), not renames. Every seeded world's moons
    change; every world's climate does not (§3).
-4. **AWS census regeneration — STILL AN OPEN CARVE-OUT.** Authorising the epoch
-   is not authorising the spend. The eclipse-cadence metrics move, so a regen
-   is required *at merge*, and it needs explicit authorization at the point of
-   running it. **rift-and-fit is a terrain epoch v4 already at G3 with its own
-   census-sequencing flag** — two epochs, one census budget, and the sequencing
-   between them is unresolved. This is the one thing that can still block the
-   close.
+4. **AWS census regeneration — RESOLVED AT CLOSE: DECLINED. The staleness is
+   accepted debt.** *(This section shipped reading "STILL AN OPEN CARVE-OUT …
+   the one thing that can still block the close." It did not block the close;
+   it was answered. Recorded here rather than deleted, because both halves of
+   the question resolved in ways the spec did not predict.)*
+
+   - **The spend: Nathan declined the regen.** Authorising the epoch was never
+     authorising the spend, and the two decisions came apart exactly as this
+     section anticipated they might. The campaign closes with the census
+     fixtures (`book/src/laboratory/generated/*/rows.csv`) **knowingly stale
+     for 633 of 1000 seeds**, and main red on the census tests until a future
+     campaign batches that spend. **This is the authorized state, not an
+     oversight** — it is the project's standing tolerated-lag policy (CLAUDE.md:
+     "that lag is the chosen trade") applied to a measured number rather than an
+     estimated one.
+   - **The sequencing: answered by events, not by adjudication.** "Two epochs,
+     one census budget, and the sequencing between them is unresolved" —
+     **rift-and-fit's regen already ran** (`945f62b`), absorbed into this branch
+     with main's 68 commits. Terrain went first. The question this spec flagged
+     as potentially close-blocking dissolved without anyone having to rule on
+     it, which is worth recording precisely because the spec was right that it
+     was a real contention and wrong about how it would end.
+   - **The honest input the spec asked for now exists.** §7 said the affected
+     fraction "must be measured … and nobody has it yet." It is **633/1000**
+     (373 + 260; see §7). That number, not an estimate, is what a future regen
+     campaign inherits.
 
 ### 9.1 Registry context (scanned 2026-07-16)
 

@@ -107,6 +107,25 @@ it, and the discipline this bet still lacks is the check — at a producer
 campaign's close, not a campaign later — that some consumer draws what was
 just shipped ([The Lens](./chronicle/the-lens.md)).
 
+The mirror image of that caveat arrived next, and it closes the pair: a
+consumer can also draw a distinction the producer never made. *The Faces*
+shipped `scene/moons/v1` with `bright-icy` as a surface class, selected off a
+hash-derived albedo — the client rendering the **word** for an icy moon while
+the model held no concept of ice, and deriving every moon's radius from an
+**assumed** constant lunar density because composition was never drawn. *The
+Reckoning* then drew composition for real, and for the length of one campaign
+the repository held **two answers for one quantity**: an icy captured body is
+~28% larger at its true density than the contract reported. Unified rather
+than deferred ([The Reckoning](./chronicle/the-reckoning.md)). So the bet's
+honest statement now has two failure modes on the same axis, and neither is a
+seam failure: **the seam holding says nothing about whether the data is drawn
+(The Lens), and nothing about whether the data is grounded (The Reckoning).**
+A schema is a contract about *shape*, and both campaigns found that shape is
+the easy half — a field can be faithfully transported, correctly parsed,
+beautifully rendered, and still refer to nothing. The check this bet lacks is
+therefore larger than The Lens made it look: not only *does some consumer draw
+this?* but *does the producer actually know what it is asserting?*
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
