@@ -98,6 +98,7 @@
 - [The Reckoning](./chronicle/the-reckoning.md)
 - [The Concordance](./chronicle/the-concordance.md)
 - [The Presiding](./chronicle/the-presiding.md)
+- [The Real Sky](./chronicle/the-real-sky.md)
 
 # The Gallery
 
