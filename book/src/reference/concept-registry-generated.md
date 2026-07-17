@@ -82,8 +82,10 @@
 | `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |
 | `species-in-group-radius` | yes | how wide 'us' is drawn, 0-1 |
 | `species-labiality` | yes | lip-rounding and jaw-closure, 0-1 |
+| `species-mass-kg` | no | body mass in kilograms (latest wins) |
 | `species-name` | yes | a species entity's name |
 | `species-night-vision` | yes | night-sky acuity, 0-1 |
+| `species-potency` | no | magical potency (latest wins) |
 | `species-sibilance` | yes | sibilance emphasis, 0-1 |
 | `species-sky-attention` | yes | sky vs. ground attention, 0-1 |
 | `species-sociality-mode` | yes | hierarchic or communal |

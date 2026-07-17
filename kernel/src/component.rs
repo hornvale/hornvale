@@ -55,6 +55,16 @@ impl<K: Ord, C> ComponentStore<K, C> {
     }
 }
 
+impl<C> ComponentStore<crate::KindId, C> {
+    /// The component of the kind whose label equals `label`, if present.
+    /// Runtime labels (e.g. from ledger text) cannot construct a `KindId`
+    /// key, so this compares label content; rosters are small.
+    /// type-audit: bare-ok(identifier-text: label)
+    pub fn get_by_label(&self, label: &str) -> Option<&C> {
+        self.iter().find(|(k, _)| k.0 == label).map(|(_, c)| c)
+    }
+}
+
 impl<K: Ord, C> Default for ComponentStore<K, C> {
     fn default() -> Self {
         Self::new()
