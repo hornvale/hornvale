@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "hornvale-almanac",
  "hornvale-astronomy",
+ "hornvale-book",
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-explain",
