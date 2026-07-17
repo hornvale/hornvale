@@ -2,6 +2,10 @@
 
 [Introduction](./introduction.md)
 
+# The Book
+
+- [The Book](./gallery/the-book.md)
+
 # The Constitution
 
 - [Six Principles](./constitution.md)
@@ -29,7 +33,61 @@
   - [Religion](./domains/religion.md)
   - [Paleoclimate](./domains/paleoclimate.md)
 
-# The Chronicle
+# The Gallery
+
+- [First Light (seed 42)](./gallery/first-light.md)
+- [The Almanac of Seed 42](./gallery/almanac.md)
+- [The Sky of Seed 42](./gallery/the-sky.md)
+- [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
+- [The Land of Seed 42](./gallery/elevation-seed-42.md)
+- [The Biomes of Seed 42](./gallery/biome-seed-42.md)
+- [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
+- [The Peoples of Seed 42](./gallery/settlement-seed-42.md)
+- [The Peoples of Seed 42 (tidally locked)](./gallery/settlement-seed-42-locked.md)
+- [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
+- [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
+- [The Atlas of Seed 42](./gallery/atlas.md)
+- [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
+- [A Possession — Seed 42](./gallery/possession-seed-42.md)
+- [A Possession, Live](./gallery/possession-live.md)
+
+# The Laboratory
+
+- [The Laboratory](./laboratory/overview.md)
+- [Study 001: The Census of Skies](./laboratory/study-001.md)
+- [Study 002: The Census of Lands](./laboratory/study-002.md)
+- [Study 003: The Census of Peoples](./laboratory/study-003.md)
+- [Study 004: The Census of Faiths](./laboratory/study-004.md)
+- [Study 005: The Frozen Worlds](./laboratory/study-005.md)
+- [Study 006: The Census of Peoples II: Two Peoples](./laboratory/study-006.md)
+- [Study 007: The Census of Eyes](./laboratory/study-007.md)
+- [Study 008: The Census of Tongues](./laboratory/study-008.md)
+- [Study 009: The Census of the Meeting](./laboratory/study-009.md)
+- [Study 010: The Census of Coasts](./laboratory/study-010.md)
+- [Study 011: The Census of Words](./laboratory/study-011.md)
+- [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
+- [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
+- [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
+- [The Terminator Probe](./laboratory/the-terminator-probe.md)
+
+# Reference
+
+- [The Concept Registry](./reference/concept-registry.md)
+- [The Stream Manifest](./reference/stream-manifest.md)
+- [Phonology](./reference/phonology.md)
+- [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
+- [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
+- [Scene Schema: system v1](./reference/scene-system-v1.md)
+- [Scene Schema: moons v1](./reference/scene-moons-v1.md)
+- [Dictionary](./reference/dictionary-generated.md)
+- [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
+- [The Layering](./reference/layering.md)
+
+# Open Questions
+
+- [The Confidence Gradient](./open-questions.md)
+
+# Appendix: The Chronicle
 
 - [Campaign 1a: The Kernel](./chronicle/campaign-1a.md)
 - [Campaign 1b: The Tier-0 Cascade](./chronicle/campaign-1b.md)
@@ -99,61 +157,7 @@
 - [The Concordance](./chronicle/the-concordance.md)
 - [The Presiding](./chronicle/the-presiding.md)
 
-# The Gallery
-
-- [First Light (seed 42)](./gallery/first-light.md)
-- [The Almanac of Seed 42](./gallery/almanac.md)
-- [The Sky of Seed 42](./gallery/the-sky.md)
-- [The Night Sky of Seed 42](./gallery/star-chart-seed-42.md)
-- [The Land of Seed 42](./gallery/elevation-seed-42.md)
-- [The Biomes of Seed 42](./gallery/biome-seed-42.md)
-- [The Biomes of Seed 42 (tidally locked)](./gallery/biome-seed-42-locked.md)
-- [The Peoples of Seed 42](./gallery/settlement-seed-42.md)
-- [The Peoples of Seed 42 (tidally locked)](./gallery/settlement-seed-42-locked.md)
-- [The Gods of Seed 42](./gallery/the-gods-seed-42.md)
-- [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
-- [The Atlas of Seed 42](./gallery/atlas.md)
-- [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
-- [A Possession — Seed 42](./gallery/possession-seed-42.md)
-- [A Possession, Live](./gallery/possession-live.md)
-
-# The Laboratory
-
-- [The Laboratory](./laboratory/overview.md)
-- [Study 001: The Census of Skies](./laboratory/study-001.md)
-- [Study 002: The Census of Lands](./laboratory/study-002.md)
-- [Study 003: The Census of Peoples](./laboratory/study-003.md)
-- [Study 004: The Census of Faiths](./laboratory/study-004.md)
-- [Study 005: The Frozen Worlds](./laboratory/study-005.md)
-- [Study 006: The Census of Peoples II: Two Peoples](./laboratory/study-006.md)
-- [Study 007: The Census of Eyes](./laboratory/study-007.md)
-- [Study 008: The Census of Tongues](./laboratory/study-008.md)
-- [Study 009: The Census of the Meeting](./laboratory/study-009.md)
-- [Study 010: The Census of Coasts](./laboratory/study-010.md)
-- [Study 011: The Census of Words](./laboratory/study-011.md)
-- [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
-- [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
-- [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
-- [The Terminator Probe](./laboratory/the-terminator-probe.md)
-
-# Reference
-
-- [The Concept Registry](./reference/concept-registry.md)
-- [The Stream Manifest](./reference/stream-manifest.md)
-- [Phonology](./reference/phonology.md)
-- [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
-- [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
-- [Scene Schema: system v1](./reference/scene-system-v1.md)
-- [Scene Schema: moons v1](./reference/scene-moons-v1.md)
-- [Dictionary](./reference/dictionary-generated.md)
-- [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
-- [The Layering](./reference/layering.md)
-
-# Open Questions
-
-- [The Confidence Gradient](./open-questions.md)
-
-# The Frontier
+# Appendix: The Frontier
 
 - [The Frontier](./frontier/frontier.md)
 - [The Idea Registry](./frontier/idea-registry.md)
