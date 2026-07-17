@@ -42,9 +42,13 @@ pub struct Moon {
     pub angular_diameter_rel: f64,
     /// Tidal strength relative to Luna-on-Earth (derived: m/d³).
     pub tide_rel: f64,
-    /// Orbital inclination to the anchor's orbital plane, in degrees
-    /// (drawn 0–10, own stream — SKY-6): the node geometry that decides
-    /// how often a new moon actually crosses the sun.
+    /// Orbital inclination to the anchor's orbital plane, in degrees (own
+    /// stream — SKY-6): the node geometry that decides how often a moon
+    /// actually crosses the sun. **Mechanism-dependent since The Reckoning**:
+    /// a `GiantImpact` moon is regular (0–10, the pre-campaign formula
+    /// unchanged), a `Capture` moon is irregular (20–160, and **above 90 it
+    /// is retrograde** — Triton's case). Both branches consume exactly one
+    /// draw from the same stream, which is what keeps the draws index-stable.
     /// type-audit: pending(wave-1)
     pub inclination_deg: f64,
     /// Ecliptic longitude of the ascending node at genesis, in degrees
@@ -82,6 +86,17 @@ pub fn hill_radius_mm(star: &Star, anchor: &Anchor) -> f64 {
 const ATTEMPTS_PER_MOON: u32 = 128;
 const TIDE_CAP: f64 = 8.0;
 
+/// A giant-impact moon's bulk density, g/cm³ — **derived, not drawn**:
+/// re-accreted mantle debris carries no iron core, which is exactly why Luna
+/// is 3.34 against Earth's 5.51.
+const IMPACT_DENSITY_G_CM3: f64 = 3.34;
+/// A captured rocky body's bulk density, g/cm³ — a different reservoir than
+/// the anchor's own mantle.
+const CAPTURE_ROCKY_DENSITY_G_CM3: f64 = 3.0;
+/// A captured icy body's bulk density, g/cm³ — the reason a captured moon can
+/// be markedly larger than an impact child of the same mass.
+const CAPTURE_ICY_DENSITY_G_CM3: f64 = 1.6;
+
 /// The probability that a moon admitted at `distance` Mm is a captured stray,
 /// given the system's admitted ceiling `max_distance` Mm. The single
 /// definition: `generate_moons` and the Luna calibration test both call this,
@@ -118,7 +133,7 @@ fn derive_moon(mass: f64, distance: f64, anchor: &Anchor) -> Moon {
         formation: Formation::GiantImpact,
         // Placeholder; overwritten after formation is known (The
         // Reckoning), like formation/inclination/node above it.
-        density: GramsPerCm3(3.34),
+        density: GramsPerCm3(IMPACT_DENSITY_G_CM3),
         // Placeholder; overwritten after formation is known (The
         // Reckoning), like formation/inclination/node above it.
         age: Gyr(0.0),
@@ -274,14 +289,14 @@ pub fn generate_moons(
             // Derived, not drawn: re-accreted mantle debris with no iron
             // core. This is exactly why Luna is 3.34 against Earth's
             // 5.51. The roll above is discarded.
-            Formation::GiantImpact => GramsPerCm3(3.34),
+            Formation::GiantImpact => GramsPerCm3(IMPACT_DENSITY_G_CM3),
             // Drawn from a different reservoir entirely: a captured body
             // may be rocky or icy, unrelated to the anchor's composition.
             Formation::Capture => {
                 if roll < 0.5 {
-                    GramsPerCm3(3.0)
+                    GramsPerCm3(CAPTURE_ROCKY_DENSITY_G_CM3)
                 } else {
-                    GramsPerCm3(1.6)
+                    GramsPerCm3(CAPTURE_ICY_DENSITY_G_CM3)
                 }
             }
         };
@@ -722,7 +737,7 @@ mod tests {
         // Luna: 1.0 lunar mass at 3.34 g/cm3 -> ~1737 km.
         let luna = Moon {
             mass: LunarMasses(1.0),
-            density: GramsPerCm3(3.34),
+            density: GramsPerCm3(IMPACT_DENSITY_G_CM3),
             ..base
         };
         let r = radius_km(&luna);

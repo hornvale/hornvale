@@ -27,7 +27,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/star-age` | stellar age draw |
 | `astronomy/moon-formation` | per-moon formation-mechanism draw (giant impact vs. capture) |
 | `astronomy/moon-density` | per-moon density draw (drawn only for captured moons; impact moons still consume it) |
-| `astronomy/moon-age` | per-moon age draw (jitter around the planet's age either way) |
+| `astronomy/moon-age` | per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it) |
 
 ### hornvale-climate
 

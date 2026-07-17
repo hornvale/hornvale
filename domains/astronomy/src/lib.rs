@@ -125,7 +125,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "astronomy/moon-age",
-            "per-moon age draw (jitter around the planet's age either way)",
+            "per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it)",
         ),
     ]
 }
