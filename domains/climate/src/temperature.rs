@@ -91,8 +91,9 @@ pub fn seasonal_amplitude(
 }
 
 /// Temperature at a cell on a given day: the annual mean plus a
-/// hemisphere-signed seasonal sinusoid on the year phase. Locked worlds have
-/// no seasonal term (no year phase organizes their fixed day/night).
+/// hemisphere-signed seasonal sinusoid on the orbital year phase,
+/// `frac(day / year_length_std + year_phase_offset)`. Locked worlds have no
+/// seasonal term (no year phase organizes their fixed day/night).
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
@@ -101,11 +102,14 @@ pub fn temperature_at(
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     obliquity_deg: f64,
+    insolation: f64,
     year_length_std: f64,
+    year_phase_offset: f64,
     regime: &RotationRegime,
     cell: CellId,
     day: f64,
 ) -> Temperature {
+    let _ = insolation; // Unused until Task 3's locked-libration evaluator.
     let base = *mean.get(cell);
     match regime {
         RotationRegime::Locked => base,
@@ -114,7 +118,7 @@ pub fn temperature_at(
                 return base;
             }
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
-            let phase = (day / year_length_std).rem_euclid(1.0);
+            let phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
             base + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase))
         }
@@ -217,6 +221,39 @@ mod tests {
             *mean.get(sub) > *mean.get(anti) + TempAnomaly::from_offset_c(50.0),
             "substellar must tower over antistellar"
         );
+    }
+
+    #[test]
+    fn spinning_seasonal_peak_tracks_the_year_phase_offset() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // A clearly-northern cell.
+        let north = geo
+            .cells()
+            .max_by(|a, b| geo.coord(*a).latitude.total_cmp(&geo.coord(*b).latitude))
+            .unwrap();
+        let year = 360.0;
+        let offset = 0.2;
+        // Final signature: (…, obliquity, insolation, year_length, year_phase_offset, …)
+        let t = |day: f64| {
+            temperature_at(
+                &mean, &geo, &elevation, sea, 23.5, 1.0, year, offset, &regime, north, day,
+            )
+            .get()
+        };
+        // Northern summer (max) is at frac(day/year + offset) = 0.25 -> day = (0.25 - offset)*year (mod year).
+        let summer_day = ((0.25 - offset).rem_euclid(1.0)) * year;
+        let winter_day = ((0.75 - offset).rem_euclid(1.0)) * year;
+        assert!(
+            t(summer_day) > t(winter_day) + 1.0,
+            "north is warmest near its offset-shifted summer"
+        );
+        // And at the offset-shifted equinox the anomaly is ~0 (mean).
+        let equinox_day = ((0.0 - offset).rem_euclid(1.0)) * year;
+        assert!((t(equinox_day) - mean.get(north).get()).abs() < 0.2);
     }
 
     #[test]

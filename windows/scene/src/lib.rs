@@ -1070,12 +1070,17 @@ mod tests {
             }
         }
 
-        // At day 0 the seasonal sine term is exactly zero, so temperature_grid
-        // must agree with tiles_scene's t_mean_c (mean at zero phase).
-        let zero_grid = temperature_grid(&world, width, 0.0).expect("grid builds");
+        // At the true zero-phase day the seasonal sine term is exactly zero, so
+        // temperature_grid must agree with tiles_scene's t_mean_c (mean at zero
+        // phase). Day zero only coincides with zero phase when
+        // `year_phase_offset` is zero, so shift the probed day by the offset.
+        let period = climate.year_length_std();
+        let offset = climate.year_phase_offset();
+        let zero_phase_day = (-offset).rem_euclid(1.0) * period;
+        let zero_grid = temperature_grid(&world, width, zero_phase_day).expect("grid builds");
         let scene = tiles_scene(&world, width).expect("scene builds");
         for (g, m) in zero_grid.iter().zip(scene.t_mean_c.iter()) {
-            assert_eq!(*g, *m, "day-0 temperature_grid must equal t_mean_c");
+            assert_eq!(*g, *m, "zero-phase temperature_grid must equal t_mean_c");
         }
     }
 
