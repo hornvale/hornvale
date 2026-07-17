@@ -153,3 +153,21 @@ fn species_pin_restricts_and_unknown_species_fail_loudly() {
     };
     assert!(msg.contains("elf") && msg.contains("goblin") && msg.contains("kobold"));
 }
+
+#[test]
+fn genesis_commits_no_instance_of_facts() {
+    // Spec §3 (the shadow contract): no shipped world mints an instance this
+    // campaign. The mechanism exists; the cutover is a later campaign's
+    // deliberate, drift-owning decision. If this test reddens, someone wired
+    // instance minting into genesis -- that is a save-format event, not a bug
+    // fix. Talk to Nathan first.
+    let w = build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .unwrap();
+    assert_eq!(w.ledger.find(hornvale_kernel::INSTANCE_OF).count(), 0);
+}

@@ -12,6 +12,14 @@ use std::path::Path;
 /// type-audit: bare-ok(identifier-text)
 pub const NAME: &str = "name";
 
+/// The kind an entity is an instance of (object: `Value::Text` kind label).
+/// NON-functional: a kind can change over sim time (awakened beast, corpse,
+/// lich); each change is a new day-stamped fact and the CURRENT kind is the
+/// latest one (`Ledger::kind_of`). Kind references serialize as labels,
+/// never positions (metaplan §7).
+/// type-audit: bare-ok(identifier-text)
+pub const INSTANCE_OF: &str = "instance-of";
+
 /// A world is a seed plus everything ever observed about it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
@@ -30,6 +38,13 @@ impl World {
         let mut registry = ConceptRegistry::default();
         registry
             .register_predicate(NAME, true, "canonical name of an entity")
+            .expect("core concept registration cannot conflict in an empty registry");
+        registry
+            .register_predicate(
+                INSTANCE_OF,
+                false,
+                "the kind an entity is an instance of; the latest fact is its current kind",
+            )
             .expect("core concept registration cannot conflict in an empty registry");
         World {
             seed,

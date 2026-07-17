@@ -34,6 +34,7 @@
 | `high-god` | yes | the presiding deity of a ranked pantheon |
 | `highest-elevation-m` | yes | highest globe cell elevation in meters |
 | `insolation-rel` | yes | insolation at the anchor relative to Earth (derived L/a²) |
+| `instance-of` | no | the kind an entity is an instance of; the latest fact is its current kind |
 | `is-belief` | yes | subject is a belief |
 | `is-neighbor` | yes | a minted entity is a notable neighbor star |
 | `is-place` | yes | subject is a traversable place |
