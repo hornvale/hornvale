@@ -55,3 +55,6 @@ pub const STARFIELD: &str = "starfield";
 /// Per-moon ascending-node longitude draws (Eclipse Seasons).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_NODES: &str = "moon-nodes";
+/// Stellar age draw (The Reckoning).
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_AGE: &str = "star-age";

@@ -280,7 +280,7 @@ mod tests {
     use crate::star::Star;
     use crate::system::StarSystem;
     use crate::units::{
-        Au, Degrees, EarthMasses, HabitableZone, LunarMasses, Megameters, SolarLuminosities,
+        Au, Degrees, EarthMasses, Gyr, HabitableZone, LunarMasses, Megameters, SolarLuminosities,
         SolarMasses, StdDays,
     };
 
@@ -357,6 +357,7 @@ mod tests {
                 class_name: "yellow dwarf".to_string(),
                 habitable_zone: HabitableZone::new(Au::new(0.9).unwrap(), Au::new(1.4).unwrap())
                     .unwrap(),
+                age: Gyr::new(4.5).unwrap(),
             },
             anchor: Anchor {
                 mass: EarthMasses::new(1.0).unwrap(),
