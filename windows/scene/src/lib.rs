@@ -713,6 +713,109 @@ pub fn moons_json(scene: &MoonsScene) -> String {
     serde_json::to_string(scene).expect("a MoonsScene always serializes")
 }
 
+/// The `scene/neighbors/v1` schema tag.
+/// type-audit: bare-ok(identifier-text)
+pub const NEIGHBORS_SCHEMA: &str = "scene/neighbors/v1";
+
+/// One notable neighbor star as drawn by the generator, brightest first.
+/// type-audit: bare-ok(count: index), bare-ok(identifier-text: class_name), bare-ok(identifier-text: color), pending(wave-1: distance_ly), bare-ok(ratio: brightness_rel), pending(wave-1: ra_deg), pending(wave-1: dec_deg)
+#[derive(Debug, Serialize)]
+pub struct NeighborElem {
+    /// Generation index (stable identity; matches the ledger entity order).
+    pub index: usize,
+    /// Prose spectral class ("red giant"; `color` is the producer's color
+    /// word, not this).
+    pub class_name: String,
+    /// The producer's color word (e.g. "smoldering red").
+    pub color: String,
+    /// Distance in light-years (drawn, 4-80).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub distance_ly: f64,
+    /// Apparent brightness, relative units (derived L/d²).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub brightness_rel: f64,
+    /// Right ascension, degrees [0, 360) — genesis-epoch equatorial.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub ra_deg: f64,
+    /// Declination, degrees [-90, 90] — genesis-epoch equatorial.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub dec_deg: f64,
+}
+
+/// One anonymous background field star (texture, not a ledger entity).
+/// type-audit: pending(wave-1: ra_deg), pending(wave-1: dec_deg), bare-ok(count: magnitude_class)
+#[derive(Debug, Serialize)]
+pub struct FieldStarElem {
+    /// Right ascension, degrees [0, 360) — genesis-epoch equatorial.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub ra_deg: f64,
+    /// Declination, degrees [-90, 90] — genesis-epoch equatorial.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub dec_deg: f64,
+    /// Brightness class, 1 (brightest) ..= 5 (faintest).
+    pub magnitude_class: u8,
+}
+
+/// One `scene/neighbors/v1` document: the night sky's two populations.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed)
+#[derive(Debug, Serialize)]
+pub struct NeighborsScene {
+    /// Always `scene/neighbors/v1`.
+    pub schema: String,
+    /// The world's seed.
+    pub seed: u64,
+    /// The notable neighbors, generation order (brightest first).
+    pub neighbors: Vec<NeighborElem>,
+    /// The background starfield, derivation order.
+    pub stars: Vec<FieldStarElem>,
+}
+
+/// Build the `scene/neighbors/v1` scene for `world`. Errors when the world
+/// has no generated sky — mirrors [`moons_scene`]. Pure reads: consumes no
+/// genesis draws (the starfield derives on demand from the astronomy seed,
+/// exactly as the almanac's figures path does).
+pub fn neighbors_scene(world: &World) -> Result<NeighborsScene, SceneError> {
+    let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let system = sky
+        .system()
+        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let neighbors = system
+        .neighbors
+        .iter()
+        .enumerate()
+        .map(|(index, n)| NeighborElem {
+            index,
+            class_name: hornvale_astronomy::class_name(n.class).to_string(),
+            color: n.color.clone(),
+            distance_ly: n.distance.get(),
+            brightness_rel: n.apparent_brightness,
+            ra_deg: n.right_ascension,
+            dec_deg: n.declination,
+        })
+        .collect();
+    let astronomy_seed = world.seed.derive(hornvale_astronomy::streams::ROOT);
+    let stars = hornvale_astronomy::starfield(astronomy_seed)
+        .into_iter()
+        .map(|s| FieldStarElem {
+            ra_deg: s.ra_deg,
+            dec_deg: s.dec_deg,
+            magnitude_class: s.magnitude_class,
+        })
+        .collect();
+    Ok(NeighborsScene {
+        schema: NEIGHBORS_SCHEMA.to_string(),
+        seed: world.seed.0,
+        neighbors,
+        stars,
+    })
+}
+
+/// Serialize a `NeighborsScene` to compact JSON (mirrors [`moons_json`]).
+/// type-audit: bare-ok(artifact: return)
+pub fn neighbors_json(scene: &NeighborsScene) -> String {
+    serde_json::to_string(scene).expect("a NeighborsScene always serializes")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1237,5 +1340,66 @@ mod tests {
         assert_eq!(moon_surface_class(false, 0.1, 0.5), "maria-rich");
         assert_eq!(moon_surface_class(false, 0.8, 0.1), "heavily-cratered");
         assert_eq!(moon_surface_class(false, 0.3, 0.1), "cratered-highland");
+    }
+
+    #[test]
+    fn neighbors_scene_has_schema_populations_and_is_deterministic() {
+        let a = neighbors_scene(&mooned_world()).expect("generated world has a sky");
+        assert_eq!(a.schema, "scene/neighbors/v1");
+        assert_eq!(a.seed, mooned_world().seed.0);
+        assert!(
+            (2..=5).contains(&a.neighbors.len()),
+            "2-5 notable neighbors"
+        );
+        assert!((100..=300).contains(&a.stars.len()), "100-300 field stars");
+        for (i, n) in a.neighbors.iter().enumerate() {
+            assert_eq!(n.index, i);
+        }
+        // Brightest first — the generator's own ordering, preserved.
+        for w in a.neighbors.windows(2) {
+            assert!(w[0].brightness_rel >= w[1].brightness_rel);
+        }
+        // Byte-identical on rebuild (determinism from the seed alone).
+        assert_eq!(
+            neighbors_json(&a),
+            neighbors_json(&neighbors_scene(&mooned_world()).unwrap())
+        );
+    }
+
+    #[test]
+    fn neighbors_scene_fields_are_in_range() {
+        let a = neighbors_scene(&mooned_world()).unwrap();
+        for n in &a.neighbors {
+            assert!((-90.0..=90.0).contains(&n.dec_deg));
+            assert!((0.0..360.0).contains(&n.ra_deg));
+            assert!(n.brightness_rel > 0.0);
+            assert!((4.0..=80.0).contains(&n.distance_ly));
+            assert!(!n.class_name.is_empty() && !n.color.is_empty());
+        }
+        for s in &a.stars {
+            assert!((-90.0..=90.0).contains(&s.dec_deg));
+            assert!((0.0..360.0).contains(&s.ra_deg));
+            assert!((1..=5).contains(&s.magnitude_class));
+        }
+    }
+
+    #[test]
+    fn neighbors_scene_errors_on_a_constant_sun() {
+        assert!(
+            neighbors_scene(&world()).is_err(),
+            "constant sun has no neighbors"
+        );
+    }
+
+    #[test]
+    fn neighbors_scene_does_not_consume_draws_or_mutate_the_world() {
+        // The save-format guard: the document is a pure read (plus an
+        // on-demand starfield derivation from the astronomy seed), so
+        // building it leaves the world byte-identical.
+        let w = mooned_world();
+        let before = serde_json::to_string(&w).unwrap();
+        let _ = neighbors_scene(&w).unwrap();
+        let after = serde_json::to_string(&w).unwrap();
+        assert_eq!(before, after, "neighbors_scene must not alter the world");
     }
 }
