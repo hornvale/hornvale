@@ -92,9 +92,9 @@ fn repro_command(study: &Study, seed: u64, pin_set_label: &str) -> String {
 /// type-audit: bare-ok(constructor-edge: seed), bare-ok(identifier-text: pin_set_label)
 pub fn record_failure(study: &Study, seed: u64, pin_set_label: &str) -> io::Result<PathBuf> {
     let (pins, roster_name) = find_pin_set(study, pin_set_label)?;
-    let roster = resolve_roster(roster_name.as_deref()).map_err(io::Error::other)?;
+    let wc = resolve_roster(roster_name.as_deref()).map_err(io::Error::other)?;
     let view =
-        crate::WorldView::build_with_roster(Seed(seed), &pins, roster).map_err(io::Error::other)?;
+        crate::WorldView::build_with_components(Seed(seed), &pins, wc).map_err(io::Error::other)?;
 
     let dir = workspace_root().join(FAILURES_DIR);
     std::fs::create_dir_all(&dir)?;

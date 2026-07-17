@@ -134,16 +134,11 @@ fn derivations_replay() {
     let mut checked = 0;
 
     // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // `PeopledTraits` and never speak); the Task 4 menagerie grew
-    // `default_roster()` to include biosphere-only kinds, so this loop
-    // filters to the settling, speaking species — matching the same
-    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
-    // pass applies before it ever calls `peopled(def)`.
-    for def in hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
-    {
-        let species = def.name;
+    // psyche row and never speak); the psyche registry holds exactly the
+    // settling, speaking kinds, so iterating its keys matches the same
+    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
+    for kind in hornvale_species::psyche_registry().ids() {
+        let species = kind.0;
         let ph = hornvale_worldgen::language_of(&world, species);
         let cascade = hornvale_language::draw_cascade(&world.seed, species);
         let lex = hornvale_worldgen::lexicon_of(&world, species)
@@ -179,22 +174,18 @@ fn every_concept_resolves_once() {
     assert!(concept_count > 0, "the registry should hold concepts");
 
     // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // `PeopledTraits` and never speak); the Task 4 menagerie grew
-    // `default_roster()` to include biosphere-only kinds, so this loop
-    // filters to the settling, speaking species — matching the same
-    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
-    // pass applies before it ever calls `peopled(def)`.
-    for def in hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
-    {
-        let lex = hornvale_worldgen::lexicon_of(&world, def.name)
-            .unwrap_or_else(|e| panic!("lexicon_of({}) failed: {e:?}", def.name));
+    // psyche row and never speak); the psyche registry holds exactly the
+    // settling, speaking kinds, so iterating its keys matches the same
+    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
+    for kind in hornvale_species::psyche_registry().ids() {
+        let species = kind.0;
+        let lex = hornvale_worldgen::lexicon_of(&world, species)
+            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
         for concept in world.registry.concepts() {
             assert!(
                 lex.entry(&concept.name).is_some(),
                 "species {} has no lexicon entry for registered concept {:?}",
-                def.name,
+                species,
                 concept.name
             );
         }
@@ -203,7 +194,7 @@ fn every_concept_resolves_once() {
             concept_count,
             "species {}'s lexicon fabricated or dropped entries relative to \
              the registry",
-            def.name
+            species
         );
     }
 }
@@ -228,17 +219,13 @@ fn gaps_have_reasons() {
     ];
 
     // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // `PeopledTraits` and never speak); the Task 4 menagerie grew
-    // `default_roster()` to include biosphere-only kinds, so this loop
-    // filters to the settling, speaking species — matching the same
-    // `peopled.is_some()` boundary `windows/worldgen`'s settlement-genesis
-    // pass applies before it ever calls `peopled(def)`.
-    for def in hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
-    {
-        let lex = hornvale_worldgen::lexicon_of(&world, def.name)
-            .unwrap_or_else(|e| panic!("lexicon_of({}) failed: {e:?}", def.name));
+    // psyche row and never speak); the psyche registry holds exactly the
+    // settling, speaking kinds, so iterating its keys matches the same
+    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
+    for kind in hornvale_species::psyche_registry().ids() {
+        let species = kind.0;
+        let lex = hornvale_worldgen::lexicon_of(&world, species)
+            .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
         for (concept, entry) in lex.entries() {
             if let LexEntry::Gap { reason } = entry {
                 checked += 1;
@@ -248,14 +235,12 @@ fn gaps_have_reasons() {
                 };
                 assert!(
                     !text.is_empty(),
-                    "species {} concept {concept:?} has an empty gap reason",
-                    def.name
+                    "species {species} concept {concept:?} has an empty gap reason"
                 );
                 assert!(
                     markers.iter().any(|m| text.contains(m)),
-                    "species {} concept {concept:?} gap reason {text:?} \
-                     names neither a recognizable fact nor a vector dimension",
-                    def.name
+                    "species {species} concept {concept:?} gap reason {text:?} \
+                     names neither a recognizable fact nor a vector dimension"
                 );
             }
         }

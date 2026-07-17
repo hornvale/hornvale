@@ -103,7 +103,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // `belief-kind` is the sentiment of `beliefs_of(&world).first()` — the
     // FIRST belief minted anywhere in the ledger, across every species, not
     // a particular species' head deity. Which species commits first is an
-    // artifact of `hornvale_species::registry()`'s `BTreeMap` (alphabetical)
+    // artifact of the species component registries' `KindId` (alphabetical)
     // iteration order in the composition root's per-species religion loop:
     // pre-Branches, with only `{goblin, kobold}` registered, "goblin" sorts
     // first and ALWAYS commits first, and goblin's head deity is always

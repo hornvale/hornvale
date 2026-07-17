@@ -255,11 +255,34 @@ fn world_level_population_conserves_against_total_capacity() {
         &hornvale_worldgen::SettlementPins::default(),
     )
     .expect("seed-42 world must build");
-    let roster: Vec<hornvale_species::SpeciesDef> = hornvale_worldgen::default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
+    // The peopled-only component set (the psyche key-set; fauna are
+    // biosphere-only), byte-identical to the pre-ECS peopled roster this
+    // conservation guard has always measured.
+    use hornvale_kernel::{ComponentStore, KindId};
+    let psyche = hornvale_species::psyche_registry();
+    let peopled: std::collections::BTreeSet<KindId> = psyche.ids().copied().collect();
+    let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+        hornvale_species::biosphere_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
+    let family_of: ComponentStore<KindId, &'static str> = hornvale_species::family_of()
+        .iter()
+        .filter(|(k, _)| peopled.contains(k))
+        .map(|(k, v)| (*k, *v))
         .collect();
-    let report = hornvale_worldgen::demography_report(&world, &roster)
+    let wc = hornvale_worldgen::WorldComponents::from_stores(
+        biosphere,
+        psyche,
+        hornvale_species::perception_registry(),
+        hornvale_language::articulation_registry(),
+        hornvale_language::lexicon_registry(),
+        hornvale_language::family_proto(),
+        family_of,
+    )
+    .expect("the peopled-only component set is well-formed");
+    let report = hornvale_worldgen::demography_report(&world, &wc)
         .expect("demography_report must recompute over an already-built world's committed facts");
     // Sum the niche-differentiated K (the coexistence stack's actual
     // packing capacity) over every peopled species and every cell —

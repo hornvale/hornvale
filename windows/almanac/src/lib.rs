@@ -151,12 +151,15 @@ pub struct AlmanacContext {
 /// figures when the species has biological traits at all. Suppressed for
 /// `Ametabolic` species (constructs, undead), which carry no mass-derived
 /// life-history to report — only the metabolic clause renders for those.
-/// type-audit: bare-ok(prose: return)
-pub fn render_life_history_line(def: &hornvale_species::SpeciesDef) -> String {
-    let history = hornvale_species::life_history(def.biosphere.mass, def.biosphere.metabolic_class);
+/// type-audit: bare-ok(identifier-text: name), bare-ok(prose: return)
+pub fn render_life_history_line(
+    name: &str,
+    biosphere: &hornvale_species::BiosphereTraits,
+) -> String {
+    let history = hornvale_species::life_history(biosphere.mass, biosphere.metabolic_class);
     let mut line = format!(
         "The {} run a basal metabolism of {:.0} W",
-        def.name, history.basal_metabolic_rate_w
+        name, history.basal_metabolic_rate_w
     );
     if let (Some(lifespan), Some(maturity)) = (history.lifespan, history.age_at_maturity) {
         let headline = if history.pace_of_life < 0.33 {
@@ -899,13 +902,13 @@ mod tests {
 
     #[test]
     fn almanac_species_block_shows_life_history() {
-        // Model on the registry's real goblin def (BIO-2 Task 5) — the
-        // helper is a pure function of `SpeciesDef`, no world needed.
-        let registry = hornvale_species::registry();
-        let goblin = registry
+        // Model on the registry's real goblin biosphere (BIO-2 Task 5) — the
+        // helper is a pure function of a name + biosphere row, no world needed.
+        let biosphere = hornvale_species::biosphere_registry();
+        let goblin = biosphere
             .get(&hornvale_kernel::KindId("goblin"))
             .expect("goblin is in the registry");
-        let line = render_life_history_line(goblin);
+        let line = render_life_history_line("goblin", goblin);
         assert!(line.contains("lifespan"), "missing lifespan figure: {line}");
         assert!(
             line.contains("fast") || line.contains("slow") || line.contains("moderate"),
@@ -918,13 +921,13 @@ mod tests {
         use hornvale_kernel::Mass;
         use hornvale_species::MetabolicClass;
 
-        let mut construct = hornvale_species::registry()
+        let mut construct = hornvale_species::biosphere_registry()
             .get(&hornvale_kernel::KindId("goblin"))
             .expect("goblin is in the registry")
             .clone();
-        construct.biosphere.metabolic_class = MetabolicClass::Ametabolic;
-        construct.biosphere.mass = Mass::new(500.0).unwrap();
-        let line = render_life_history_line(&construct);
+        construct.metabolic_class = MetabolicClass::Ametabolic;
+        construct.mass = Mass::new(500.0).unwrap();
+        let line = render_life_history_line("goblin", &construct);
         assert!(
             !line.contains("lifespan"),
             "ametabolic species must suppress the life-history clause: {line}"

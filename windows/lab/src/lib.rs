@@ -20,7 +20,9 @@ pub use metrics::{
     SettlementView, SummaryKind, TerrainView, WorldView, registry, render_metric_list,
 };
 pub use publish::publish;
-pub use roster::{goblin_solo_roster, goblin_twin_solo_roster, serpent_tonal_solo_roster};
+pub use roster::{
+    goblin_solo_components, goblin_twin_solo_components, serpent_tonal_solo_components,
+};
 pub use runner::{Row, RunResult, canonical_row, load_rows, run, run_forced_full, write_csv};
 pub use schema::{fnv1a64, render_schema};
 pub use study::{MetricSelection, PinSet, Seeds, Study, StudyError, load_study};

@@ -36,17 +36,15 @@ pub fn render_phonology() -> String {
          the third view, authored to clips by `hornvale voice`.\n\n"
     ));
 
-    // peopled-only: fauna carry no `PeopledTraits`/articulation vector and
-    // never speak (Task 4 widened `registry()` to include biosphere-only
-    // kinds); `sample_names_for` below reaches `peopled(def)`, so this
-    // filter must run before it.
-    for (species, def) in hornvale_species::registry() {
-        if def.peopled.is_none() {
-            continue;
-        }
-        let phonology = world_builder::language_of(&world, species.0);
+    // peopled-only: fauna never speak, so the phonology page covers exactly
+    // the psyche key-set (the peopled kinds); fauna carry no psyche row and so
+    // never appear here. `iter()` is `KindId`-ascending, byte-identical to the
+    // old registry-then-filter order.
+    for (kind, psych) in hornvale_species::psyche_registry().iter() {
+        let species = kind.0;
+        let phonology = world_builder::language_of(&world, species);
 
-        doc.push_str(&format!("## {}\n\n", capitalize(species.0)));
+        doc.push_str(&format!("## {}\n\n", capitalize(species)));
 
         doc.push_str("### Inventory\n\n");
         doc.push_str("| Segment | Romanization | IPA | Features |\n|---|---|---|---|\n");
@@ -77,10 +75,10 @@ pub fn render_phonology() -> String {
 
         doc.push_str("### Sample names\n\n");
         doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
-        for (kind, name) in sample_names_for(&world, species.0, &def) {
+        for (name_kind, name) in sample_names_for(&world, species, psych) {
             doc.push_str(&format!(
                 "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
-                kind,
+                name_kind,
                 name.roman,
                 name.ipa,
                 name.espeak,
@@ -99,11 +97,11 @@ pub fn render_phonology() -> String {
 pub(crate) fn sample_names_for(
     world: &World,
     species: &str,
-    def: &hornvale_species::SpeciesDef,
+    psych: &hornvale_species::PsychVector,
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
+    let morph = world_builder::morph_options(psych);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -209,12 +207,10 @@ mod tests {
     #[test]
     fn renders_every_species_with_an_ipa_column_and_sample_names() {
         let doc = render_phonology();
-        // peopled-only: the page never renders a fauna heading.
-        for (species, def) in hornvale_species::registry() {
-            if def.peopled.is_none() {
-                continue;
-            }
-            let species = species.0;
+        // peopled-only: the page never renders a fauna heading, so it covers
+        // exactly the psyche key-set (the peopled kinds).
+        for kind in hornvale_species::psyche_registry().ids() {
+            let species = kind.0;
             assert!(
                 doc.contains(&capitalize(species)),
                 "missing species heading for {species}"
@@ -238,19 +234,15 @@ mod tests {
     #[test]
     fn a_sample_name_carries_both_romanization_and_ipa() {
         let world = World::new(Seed(REFERENCE_SEED));
-        let registry = hornvale_species::registry();
-        // A peopled species: fauna carry no `PeopledTraits` and `peopled()`
-        // panics on them, so `.next()` alone (grabbing the alphabetically
-        // first registry entry) is no longer safe now that fauna sort ahead
-        // of every people (Task 4).
-        let (species, def) = registry
-            .iter()
-            .find(|(_, def)| def.peopled.is_some())
-            .expect("at least one peopled species");
-        let species = species.0;
+        let psyche = hornvale_species::psyche_registry();
+        // A peopled species: the psyche registry holds exactly the peopled
+        // kinds, so its first key is a safe pick now that fauna (biosphere-only,
+        // no psyche row) sort ahead of every people (Task 4).
+        let (kind, psych) = psyche.iter().next().expect("at least one peopled species");
+        let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&world_builder::peopled(def).psych);
+        let morph = world_builder::morph_options(psych);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");
@@ -269,16 +261,12 @@ mod tests {
         let doc = render_phonology();
         assert!(doc.contains("Espeak"), "missing the Espeak column");
         let world = World::new(Seed(REFERENCE_SEED));
-        let registry = hornvale_species::registry();
-        // A peopled species: fauna carry no `PeopledTraits` and `peopled()`
-        // panics on them, so `.next()` alone (grabbing the alphabetically
-        // first registry entry) is no longer safe now that fauna sort ahead
-        // of every people (Task 4).
-        let (species, def) = registry
-            .iter()
-            .find(|(_, def)| def.peopled.is_some())
-            .expect("at least one peopled species");
-        let samples = sample_names_for(&world, species.0, def);
+        let psyche = hornvale_species::psyche_registry();
+        // A peopled species: the psyche registry holds exactly the peopled
+        // kinds, so its first key is a safe pick now that fauna (biosphere-only,
+        // no psyche row) sort ahead of every people (Task 4).
+        let (kind, psych) = psyche.iter().next().expect("at least one peopled species");
+        let samples = sample_names_for(&world, kind.0, psych);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {
             assert!(

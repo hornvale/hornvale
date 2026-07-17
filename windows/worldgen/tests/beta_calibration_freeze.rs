@@ -69,7 +69,7 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, SettlementPins, SkyChoice, build_world_to, default_roster, demography_report,
+    BuildDepth, SettlementPins, SkyChoice, WorldComponents, build_world_to, demography_report,
 };
 
 /// A handful of seeds (not a census — `HV_CENSUS`/`make rebaseline` stay
@@ -79,19 +79,19 @@ const SEEDS: [u64; 5] = [1, 2, 3, 4, 42];
 
 /// Mean `byproducts.strife` over habitable cells CLAIMED (Σ species density
 /// > 0) by at least one species, for one seed's world at the frozen β.
-fn claimed_diversity(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> f64 {
+fn claimed_diversity(seed: u64, wc: &WorldComponents) -> f64 {
     let world = build_world_to(
         Seed(seed),
         &SkyPins::default(),
         SkyChoice::Generated,
         &TerrainPins::default(),
         &SettlementPins::default(),
-        roster,
+        wc,
         BuildDepth::Terrain,
     )
     .expect("seed builds at BuildDepth::Terrain");
 
-    let report = demography_report(&world, roster).expect("demography report reconstructs");
+    let report = demography_report(&world, wc).expect("demography report reconstructs");
 
     let mut sum = 0.0_f64;
     let mut n = 0u32;
@@ -106,6 +106,37 @@ fn claimed_diversity(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> f64 
     sum / f64::from(n)
 }
 
+/// The 4-goblinoid peopled component set: the canonical registries scoped to
+/// the peopled kinds (the `psyche` key-set — fauna are biosphere-only, so they
+/// carry no psyche row). Byte-identical to the four-goblinoid component set the
+/// freeze was originally preregistered against.
+fn peopled_components() -> WorldComponents {
+    use hornvale_kernel::{ComponentStore, KindId};
+    let psyche = hornvale_species::psyche_registry();
+    let peopled: std::collections::BTreeSet<KindId> = psyche.ids().copied().collect();
+    let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+        hornvale_species::biosphere_registry()
+            .iter()
+            .filter(|(k, _)| peopled.contains(k))
+            .map(|(k, v)| (*k, v.clone()))
+            .collect();
+    let family_of: ComponentStore<KindId, &'static str> = hornvale_species::family_of()
+        .iter()
+        .filter(|(k, _)| peopled.contains(k))
+        .map(|(k, v)| (*k, *v))
+        .collect();
+    WorldComponents::from_stores(
+        biosphere,
+        psyche,
+        hornvale_species::perception_registry(),
+        hornvale_language::articulation_registry(),
+        hornvale_language::lexicon_registry(),
+        hornvale_language::family_proto(),
+        family_of,
+    )
+    .expect("the peopled-only component set is well-formed")
+}
+
 /// The preregistered freeze check: at the frozen β, the mean per-claimed-cell
 /// effective diversity across a handful of seeds lands in `[1.5, 3.0]` — see
 /// the module doc for the niche-era re-baseline and the weak-knob caveat.
@@ -113,20 +144,17 @@ fn claimed_diversity(seed: u64, roster: &[hornvale_species::SpeciesDef]) -> f64 
 fn beta_yields_realistic_coexistence() {
     // This freeze is preregistered against "the shipped 4-goblinoid roster"
     // (module doc, top). Task 4 (the canonical-5E menagerie) widened
-    // `default_roster()` with 12 biosphere-only fauna, but those are not
+    // the roster with 12 biosphere-only fauna, but those are not
     // yet folded into the coexistence packer's competition — that cutover
     // is Task 5's (niche-K), which re-measures this band against the
     // richer roster per the module doc's own Stage-B caveat. Scope this
     // read to the peopled species so it keeps measuring what it always
     // measured until that re-measurement lands.
-    let roster: Vec<hornvale_species::SpeciesDef> = default_roster()
-        .into_iter()
-        .filter(|d| d.peopled.is_some())
-        .collect();
+    let wc = peopled_components();
 
     let per_seed: Vec<(u64, f64)> = SEEDS
         .iter()
-        .map(|&seed| (seed, claimed_diversity(seed, &roster)))
+        .map(|&seed| (seed, claimed_diversity(seed, &wc)))
         .collect();
 
     let mean: f64 = per_seed.iter().map(|(_, d)| *d).sum::<f64>() / per_seed.len() as f64;

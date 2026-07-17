@@ -58,7 +58,7 @@ use hornvale_astronomy::{NeighborClass, RotationPin, SkyPins};
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, BuildError, SettlementPins, SkyChoice, build_world_to, default_roster,
+    BuildDepth, BuildError, SettlementPins, SkyChoice, WorldComponents, build_world_to,
 };
 
 /// Every discrete value of the four enumerated pins, in a stable order.
@@ -131,13 +131,14 @@ fn build(combo: &Combo) -> Result<hornvale_kernel::World, BuildError> {
         supercontinent: Some(combo.supercontinent),
         ..TerrainPins::default()
     };
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     build_world_to(
         Seed(42),
         &sky_pins,
         combo.sky,
         &terrain_pins,
         &SettlementPins::default(),
-        &default_roster(),
+        &wc,
         BuildDepth::Terrain,
     )
 }
