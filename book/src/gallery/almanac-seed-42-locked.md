@@ -153,7 +153,7 @@ The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, m
 
 ## The Gods
 
-In the village of **Fnebvnobzxadnoaboo**, an organized priesthood tends its own pantheon:
+In the village of **Nadngotvnekbeetao**, an organized priesthood tends its own pantheon:
 
 > Toeteanoaboo the Vnodtoetea is ever: Toeteanoaboo the Vnodtoetea watches unceasing. So it was, so it is.
 >
