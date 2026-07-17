@@ -2890,7 +2890,59 @@ fn build_to(
         Ok(())
     })?;
 
+    stage("planet", || -> Result<(), BuildError> {
+        // The planet asserts, in the ledger, what it is and what its
+        // dominant people call it. Classification is read from structure (no
+        // draw); the name is a lexicon lookup of the universal-stratum
+        // `earth` concept (no draw). Run last, after peoples/settlements are
+        // placed, so `world_name` (which reads `dominant_people` ->
+        // `flagship_of`) resolves.
+        let planet = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject: planet,
+                    predicate: hornvale_kernel::world::IS_A.into(),
+                    object: Value::Text("planet".into()),
+                    place: None,
+                    day: None,
+                    provenance: "astronomy: the central body is a planet".into(),
+                },
+                &world.registry,
+            )
+            .expect("is-a on a fresh entity cannot conflict");
+        if let Some(name) = world_name(&world) {
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: planet,
+                        predicate: hornvale_kernel::NAME.into(),
+                        object: Value::Text(name),
+                        place: None,
+                        day: None,
+                        provenance: "the dominant people's word for the world".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("name on a fresh entity cannot conflict");
+        }
+        Ok(())
+    })?;
+
     Ok(world)
+}
+
+/// The entity carrying the world's planet classification (`is-a`,
+/// `"planet"`), if one has been minted — `None` before `build_to` reaches
+/// its final "planet" stage (e.g. a world stopped early via `BuildDepth`).
+pub fn planet_entity(world: &World) -> Option<EntityId> {
+    world
+        .ledger
+        .find(hornvale_kernel::world::IS_A)
+        .find(|f| f.object == Value::Text("planet".into()))
+        .map(|f| f.subject)
 }
 
 /// Mint one species entity per kind in `wc` and commit its authored vector as
@@ -3960,6 +4012,28 @@ mod tests {
             flagship_of(&world, kind.0).is_some(),
             "dominant_people must never name a species that holds no flagship settlement"
         );
+    }
+
+    /// C1 T4: the composition root mints a planet entity and commits its
+    /// classification and endonym, so the book (Task 5) can render "‹Endonym›
+    /// is a planet" from committed facts alone.
+    #[test]
+    fn built_world_names_and_classifies_its_planet() {
+        let world = constant(1);
+        let p = planet_entity(&world).expect("a built world has a planet entity");
+        assert_eq!(world.ledger.text_of(p, "is-a"), Some("planet"));
+        let n = world
+            .ledger
+            .text_of(p, "name")
+            .expect("the planet is named");
+        assert_eq!(Some(n.to_string()), world_name(&world));
+    }
+
+    /// The planet's facts are a pure function of the seed, like every other
+    /// committed fact — no draw, no wall-clock, no entity-order sensitivity.
+    #[test]
+    fn planet_facts_are_deterministic() {
+        assert_eq!(constant(1).to_json(), constant(1).to_json());
     }
 
     /// C1 T2 review regression: `dominant_people_in`'s candidacy loop must
