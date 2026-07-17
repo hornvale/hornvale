@@ -3545,19 +3545,42 @@ mod tests {
         );
     }
 
-    /// The builder withholds attribution exactly when the People section
-    /// withholds its species prefix — one predicate, one voice.
+    /// A one-people builder-level fixture: the shipped goblin, placed alone.
+    /// Built from a single-species roster (not a seed search) so the fixture
+    /// never depends on which seeds happen to place exactly one people —
+    /// mirrors `fauna_are_skipped_by_settlement_genesis`'s
+    /// `hornvale_species::registry()[&KindId("goblin")].clone()` idiom.
+    fn goblin_solo(seed: u64) -> World {
+        let goblin = hornvale_species::registry()[&KindId("goblin")].clone();
+        build_world_with_roster(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Constant,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &[goblin],
+        )
+        .unwrap()
+    }
+
+    /// The Named's headline one-people rule, exercised at the builder level:
+    /// a solo-species roster places exactly one people, and every pantheon
+    /// block withholds attribution — the same predicate the People section
+    /// uses to keep the legacy unprefixed wording (`settlement_lines`).
     #[test]
-    fn attribution_tracks_the_people_sections_predicate() {
-        let world = constant(42);
-        let multi = placed_peoples(&world).len() > 1;
+    fn one_peoples_pantheons_withhold_attribution() {
+        let world = goblin_solo(42);
+        assert_eq!(
+            placed_peoples(&world).len(),
+            1,
+            "a solo-species roster places exactly one people"
+        );
         let ctx = almanac_context(&world).unwrap();
-        for block in &ctx.pantheons {
-            assert!(
-                block.attribution.is_none() || multi,
-                "a one-people world never names a pantheon's species"
-            );
-        }
+        assert!(!ctx.pantheons.is_empty());
+        assert!(
+            ctx.pantheons.iter().all(|b| b.attribution.is_none()),
+            "with one people, no pantheon block names its species"
+        );
     }
 
     #[test]
