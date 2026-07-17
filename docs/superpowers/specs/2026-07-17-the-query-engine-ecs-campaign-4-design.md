@@ -1,5 +1,7 @@
 # The Query Engine (ECS Campaign 4) — Design
 
+> **STATUS: SHIPPED** — *The Concordance*, merged to main 2026-07-17 (byte-identical; full gate green). Chronicle: `book/src/chronicle/the-concordance.md`.
+
 Program: **The Entity-Component Substrate** (metaplan
 `docs/superpowers/specs/2026-07-14-ecs-program-metaplan-design.md`, campaign 4;
 registry **UNI-22**). Base: local main `@2eb570f` (campaigns 1–3 shipped: The

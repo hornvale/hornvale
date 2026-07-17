@@ -1,5 +1,7 @@
 # The Query Engine (ECS Campaign 4) Implementation Plan
 
+> **STATUS: SHIPPED** — *The Concordance*, merged to main 2026-07-17. All 5 tasks landed byte-identical; INDEX≡SCAN green across S/P/O (incl. the signed-zero fix); full gate green (nextest 1286 passed). See the chronicle `book/src/chronicle/the-concordance.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the Fact ledger three triple-store permutation indexes (SPO/PSO/OSP) plus predicate interning, as in-memory derived views, so `commit` and all pattern queries become O(log n) — fixing the O(n²) world-build (metaplan §12) — with the serialized world byte-identical throughout.
@@ -810,11 +812,12 @@ Expected: PASS; printed timings show the indexed commit scaling sub-quadraticall
 
 Run: `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings`
 Run: `cargo nextest run --workspace 2>&1 | tee /tmp/hv-c4.txt` (inspect the file; trust the exit code)
-Run the artifact freshness check (the CI "Artifacts are current" shape):
+Run the artifact freshness check via the **local** regenerator, which skips the
+census by default (NEVER run `lab run studies/the-census.study.json` locally —
+that is the ~1–2 h live 1000-seed census; census fixtures ride the shared AWS
+regen only):
 ```bash
-cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
-cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
-cargo run -p hornvale -- lab run studies/the-census.study.json
+bash scripts/regenerate-artifacts.sh   # regenerates seed-42 artifacts + lab studies; census skipped
 git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 ```
 Expected: all green; **`git diff --exit-code` is clean** — the campaign is byte-identical (this is the master proof). (Census fixtures may already be red from the shared AWS-regen batch inherited from main; a byte-identical refactor cannot add new census reds — confirm any red predates this branch.)
