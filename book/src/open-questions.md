@@ -16,6 +16,18 @@ Confidence still runs bottom-up; but the gradient it runs along is
 *checkability*, and any claim about the top of the stack made with the
 assurance of the bottom should be distrusted.
 
+One sharpening, learned the hard way (The Named, 2026-07-16): **the
+drift-check is not the checkable part — the anchor is.** A drift check pins
+output against change and has no opinion about whether the output was ever
+right, so a wrong number drift-checks green forever and every regeneration
+re-ratifies it. The bets below are self-scorable because their metrics are
+measured against something outside the generator (Earth's shoreline
+development index, a null control, a preregistered threshold); the
+drift-check only stops the answer moving once found. Where a committed
+artifact has no external anchor — a rendered page, say — drift-checking it
+buys stability and nothing else. The Named's defect sat in a drift-checked
+artifact, in plain English, for eight days of green runs.
+
 ## What the world can already check itself on (high confidence)
 
 **The kernel substrate.** Hash-based seeding, coherent noise, append-only

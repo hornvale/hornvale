@@ -93,6 +93,7 @@
 - [The Faces](./chronicle/the-faces.md)
 - [Rift-and-Fit](./chronicle/rift-and-fit.md)
 - [The Terminator](./chronicle/the-terminator.md)
+- [The Named](./chronicle/the-named.md)
 - [The Dissolution](./chronicle/the-dissolution.md)
 
 # The Gallery
