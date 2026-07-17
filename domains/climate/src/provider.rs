@@ -31,6 +31,10 @@ pub struct ClimateInputs<'a> {
     pub regime: RotationRegime,
     /// Year length in standard days (for time-varying temperature).
     pub year_length_std: f64,
+    /// The orbital phase offset at epoch, in turns (`0.0..1.0`) — the same
+    /// value `Calendar::year_phase` reads off the astronomy forcing.
+    /// type-audit: bare-ok(ratio)
+    pub year_phase_offset: f64,
 }
 
 /// The tier-1 climate: derived temperature/moisture/biome/habitability over
@@ -48,6 +52,8 @@ pub struct GeneratedClimate {
     band_count: Option<u32>,
     obliquity_deg: f64,
     year_length_std: f64,
+    year_phase_offset: f64,
+    insolation: f64,
     regime: RotationRegime,
 }
 
@@ -133,6 +139,8 @@ impl GeneratedClimate {
             band_count,
             obliquity_deg: inputs.obliquity_deg,
             year_length_std: inputs.year_length_std,
+            year_phase_offset: inputs.year_phase_offset,
+            insolation: inputs.insolation,
             regime: inputs.regime,
         }
     }
@@ -174,6 +182,23 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(diagnostic-value: return)
     pub fn year_length_std(&self) -> f64 {
         self.year_length_std
+    }
+
+    /// The orbital phase offset at epoch, in turns, this climate was built
+    /// with — the seasonal phase `temperature_at` will need to evaluate the
+    /// time-varying term against a moving substellar point (Task 2/3).
+    /// type-audit: bare-ok(ratio: return)
+    pub fn year_phase_offset(&self) -> f64 {
+        self.year_phase_offset
+    }
+
+    /// The stellar insolation relative to Earth this climate was built with
+    /// (`L / d²`, solar units / AU²) — retained (not just consumed at
+    /// generation) so the locked-libration temperature evaluator can
+    /// recompute the `S^{1/4}` scale as the substellar point moves (Task 3).
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn insolation(&self) -> f64 {
+        self.insolation
     }
 
     /// The hemisphere-signed seasonal half-swing at a cell, °C: the
@@ -284,6 +309,7 @@ mod tests {
             obliquity_deg: 23.5,
             regime,
             year_length_std: 365.25,
+            year_phase_offset: 0.0,
         }
     }
 
@@ -388,5 +414,26 @@ mod tests {
                 cell.0
             );
         }
+    }
+
+    #[test]
+    fn climate_carries_the_year_phase_offset() {
+        // Build a climate with a known offset and confirm it is retained for
+        // the time-varying temperature phase (regression guard for the plumbing).
+        let geo = Geosphere::new(2);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let seafloor = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let climate = GeneratedClimate::generate(&ClimateInputs {
+            geosphere: &geo,
+            elevation: &elevation,
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            seafloor: &seafloor,
+            insolation: 1.0,
+            obliquity_deg: 23.5,
+            regime: RotationRegime::Spinning { day_std: 1.0 },
+            year_length_std: 360.0,
+            year_phase_offset: 0.2,
+        });
+        assert_eq!(climate.year_phase_offset(), 0.2);
     }
 }

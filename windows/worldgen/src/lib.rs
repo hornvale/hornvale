@@ -593,7 +593,8 @@ pub fn demography_report_with_beta(
     let climate = climate_of(world)?;
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
-    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky);
     // Biosphere per kind, read from the world's component set (ECS c3) in
     // ascending-`KindId` order — the build-local dense index the `tag`s below
     // and `niche_per_species_k`'s returned `u32` share. This is the WHOLE
@@ -665,9 +666,15 @@ pub fn demography_report(
 /// The scalar stellar inputs climate needs, derived from this world's sky.
 /// Constant-sky worlds get an Earth baseline so the biome map exists for
 /// every world (spec: the coarse globe is generated for all).
-fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
+fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
     match sky {
-        Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
+        Sky::Constant(_) => (
+            1.0,
+            23.5,
+            RotationRegime::Spinning { day_std: 1.0 },
+            365.25,
+            0.0,
+        ),
         Sky::Generated(generated) => {
             let system = generated.system();
             // Insolation relative to Earth: the single shared definition (SKY-15).
@@ -680,7 +687,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
                 hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
             };
             let year = generated.calendar().year_length().get();
-            (insolation, obliquity, regime, year)
+            let year_phase_offset = system.forcing.year_phase_offset;
+            (insolation, obliquity, regime, year, year_phase_offset)
         }
     }
 }
@@ -696,7 +704,8 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
     let elevation = &terrain.globe().elevation;
     let seafloor =
         hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
-    let (insolation, obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    let (insolation, obliquity_deg, regime, year_length_std, year_phase_offset) =
+        stellar_inputs(&sky);
     Ok(GeneratedClimate::generate(&ClimateInputs {
         geosphere: geo,
         elevation,
@@ -706,6 +715,7 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
         obliquity_deg,
         regime,
         year_length_std,
+        year_phase_offset,
     }))
 }
 
@@ -847,6 +857,10 @@ struct EraContext<'a> {
     regime: RotationRegime,
     /// The calendar year length, standard days (constant per world).
     year_length_std: f64,
+    /// The orbital phase offset at epoch, in turns (constant per world) —
+    /// threaded through so a full climate rebuild (`glacial_maximum_habitable`)
+    /// can retain it on `GeneratedClimate` just as `climate_of` does.
+    year_phase_offset: f64,
     /// The world's own present-day ice mask (diagnosed from
     /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
     /// no albedo offset) — the baseline every era's advance is measured
@@ -972,6 +986,7 @@ fn glacial_maximum_habitable(
         obliquity_deg: inputs.obliquity_deg,
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
+        year_phase_offset: ctx.year_phase_offset,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -1018,7 +1033,8 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     // diagnostic nor the present-temperature baseline needs those — so the
     // world's mean obliquity is unused here; `glacial_maximum_habitable`
     // reads each era's own obliquity from its `EraInputs` instead.
-    let (insolation, _obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    let (insolation, _obliquity_deg, regime, year_length_std, year_phase_offset) =
+        stellar_inputs(&sky);
 
     // The world's own unforced present temperature (era_day = 0, no albedo
     // offset), one per cell, absolute — the field every era's offset is
@@ -1060,6 +1076,7 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
         insolation,
         regime,
         year_length_std,
+        year_phase_offset,
         present_ice: &present_ice,
         freeze,
     };
@@ -2489,7 +2506,7 @@ fn build_to(
     // readable off `.composition` — replacing the interim `condense_tagged`
     // path (task A14: one settlement PER SPECIES, tag-per-settlement).
     let sky = sky_of(&world)?;
-    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) = stellar_inputs(&sky);
     // Biosphere per placed species, sourced from the roster-derived component
     // set (ECS c3) in `species_set` order — the mass/niche the packer input
     // and `niche_per_species_k` read now come from `wc.biosphere`, not `def`,
@@ -5538,7 +5555,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         let field = substrate_field(
             geo,
             &terrain,
@@ -5581,7 +5599,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         assert!(
             matches!(regime, RotationRegime::Locked),
             "the Locked rotation pin must yield RotationRegime::Locked"
@@ -5653,7 +5672,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         assert!(
             matches!(regime, RotationRegime::Spinning { .. }),
             "seed 42's default generated sky must be Spinning"
@@ -5684,7 +5704,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
 
         let wc = WorldComponents::assemble().unwrap();
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
