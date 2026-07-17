@@ -753,9 +753,9 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// (scene/tiles-region/v1), `scene system` renders the system's orbital
 /// elements for the orrery (scene/system/v1), `scene moons` renders each
 /// moon's per-surface descriptors (scene/moons/v1), and `scene neighbors`
-/// renders the night sky's two visible populations, neighbor stars and
-/// moons (scene/neighbors/v1). Deterministic; CI drift-checks the
-/// committed example scene.
+/// renders the night sky's two star populations, the notable neighbor
+/// stars and the background starfield (scene/neighbors/v1). Deterministic;
+/// CI drift-checks the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
