@@ -63,13 +63,7 @@ pub fn mean_temperature(
             RotationRegime::Locked => {
                 let p = geo.position(cell);
                 let cos_theta = crate::substellar_cosine(p);
-                if cos_theta > 0.0 {
-                    // Day side: hot at substellar, ~0 °C toward the terminator.
-                    (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
-                } else {
-                    // Night side: a deep frozen floor.
-                    -60.0 - lapse
-                }
+                crate::locked_cell_temperature(cos_theta, scale, lapse)
             }
         };
         Temperature::new(c).expect("temperature is finite")
@@ -109,10 +103,22 @@ pub fn temperature_at(
     cell: CellId,
     day: f64,
 ) -> Temperature {
-    let _ = insolation; // Unused until Task 3's locked-libration evaluator.
     let base = *mean.get(cell);
     match regime {
-        RotationRegime::Locked => base,
+        RotationRegime::Locked => {
+            if obliquity_deg == 0.0 || year_length_std <= 0.0 {
+                return base; // no libration to apply
+            }
+            let year_phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
+            let sub_lat = obliquity_deg * math::sin(std::f64::consts::TAU * year_phase);
+            let dir = crate::substellar_at(sub_lat);
+            let cos_theta = crate::substellar_cosine_dir(geo.position(cell), dir);
+            let scale = math::powf(insolation.max(0.0), 0.25);
+            let above = (*elevation.get(cell) - sea_level).max(0.0);
+            let lapse = LAPSE_C_PER_M * above;
+            Temperature::new(crate::locked_cell_temperature(cos_theta, scale, lapse))
+                .expect("temperature is finite")
+        }
         RotationRegime::Spinning { .. } => {
             if year_length_std <= 0.0 || obliquity_deg == 0.0 {
                 return base;
@@ -283,5 +289,61 @@ mod tests {
         let ac = seasonal_amplitude(&geo, &elev, sea, 23.5, coastal);
         let ai = seasonal_amplitude(&geo, &elev, sea, 23.5, inland);
         assert!(ac < ai, "coastal swing {ac} not smaller than inland {ai}");
+    }
+
+    #[test]
+    fn locked_substellar_hot_spot_librates_with_obliquity() {
+        let geo = Geosphere::new(4);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let year = 240.0;
+        let obliq = 22.0;
+        // At the northern solstice (frac(day/year + 0) = 0.25) the substellar
+        // latitude is +obliquity, so the warmest cell sits near +22 deg lat,
+        // not the equator.
+        let solstice = 0.25 * year;
+        let warmest = geo
+            .cells()
+            .max_by(|a, b| {
+                let ta = temperature_at(
+                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *a, solstice,
+                )
+                .get();
+                let tb = temperature_at(
+                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *b, solstice,
+                )
+                .get();
+                ta.total_cmp(&tb)
+            })
+            .unwrap();
+        let lat = geo.coord(warmest).latitude;
+        assert!(
+            lat > 10.0,
+            "at northern solstice the hot spot has climbed north, got lat {lat}"
+        );
+    }
+
+    #[test]
+    fn locked_temperature_is_static_at_zero_obliquity() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let cell = CellId(0);
+        let a = temperature_at(
+            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 0.0,
+        )
+        .get();
+        let b = temperature_at(
+            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 120.0,
+        )
+        .get();
+        assert_eq!(
+            a, b,
+            "zero obliquity: no libration, temperature is day-independent"
+        );
     }
 }
