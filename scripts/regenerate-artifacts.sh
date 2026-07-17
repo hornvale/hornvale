@@ -51,6 +51,9 @@ run -p hornvale -- almanac --world "$w42" > book/src/gallery/almanac-seed-42.md
 run -p hornvale -- almanac --world "$wsky" > book/src/gallery/almanac-seed-42-sky.md
 run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42-locked.md
 
+echo "regenerate-artifacts: the book" >&2
+run -p hornvale -- book > book/src/gallery/the-book.md
+
 echo "regenerate-artifacts: explain" >&2
 run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 
