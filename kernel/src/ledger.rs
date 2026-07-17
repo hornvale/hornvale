@@ -766,4 +766,83 @@ mod tests {
             .collect();
         assert_eq!(found, vec![a]);
     }
+
+    #[test]
+    fn symbol_is_four_bytes() {
+        // The interning space contract: a predicate key is a u32, not a String.
+        assert_eq!(std::mem::size_of::<crate::fact_index::Symbol>(), 4);
+    }
+
+    #[test]
+    fn index_is_absent_until_first_use_then_complete() {
+        // The lifecycle invariant: a freshly-deserialized ledger has no index;
+        // a query over it still returns the right answers (naive fallback), and a
+        // commit builds it. (Byte-identity of the serialized form is covered by
+        // ledger_serializes_roundtrip_including_minting_state.)
+        let r = registry();
+        let mut l = Ledger::default();
+        let f = named(&mut l, "Zaggrak");
+        let s = f.subject;
+        l.commit(f, &r).unwrap();
+        let json = serde_json::to_string(&l).unwrap();
+        let l2: Ledger = serde_json::from_str(&json).unwrap();
+        // index skipped on the wire => rebuilt-on-use; answers match
+        assert_eq!(l2.facts_about(s).count(), 1);
+        assert_eq!(l2.value_of(s, "name"), Some(&Value::Text("Zaggrak".into())));
+    }
+
+    // This is a wall-time micro-bench of `Ledger::commit`'s scaling, not a
+    // live-worldgen battery — but `cli/tests/heavy_tier.rs` requires every
+    // `#[ignore]` reason containing "heavy:" to be the one verbatim
+    // canonical string (checked by `heavy_tier_reason_strings_are_canonical`),
+    // so it shares that string with the other heavy-tier deferrals: both are
+    // deferred from the commit gate to `make gate-full` for the same reason
+    // (too slow to run every commit).
+    #[test]
+    #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+    // Wall-clock time is banned everywhere the sim computes (decision 0001):
+    // world time is `WorldTime`, never `Instant`. This test measures the
+    // *build's* wall-clock cost of commits, off the sim compute path and
+    // never serialized/gated — a justified, scoped exception.
+    #[allow(clippy::disallowed_types)]
+    fn bench_commit_scaling_before_vs_after_index() {
+        use std::hint::black_box;
+        use std::time::Instant;
+        let r = registry();
+        for n in [1_000usize, 5_000, 20_000] {
+            // AFTER: index-backed commit (each commit maintains the index).
+            let mut l = Ledger::default();
+            let subj = l.mint_entity();
+            let start = Instant::now();
+            for i in 0..n {
+                let target = l.mint_entity();
+                let _ = black_box(l.commit(
+                    Fact {
+                        subject: subj,
+                        predicate: "located-in".into(),
+                        object: Value::Entity(target),
+                        place: None,
+                        day: None,
+                        provenance: "b".into(),
+                    },
+                    &r,
+                ));
+                let _ = i;
+            }
+            let after = start.elapsed();
+            // BEFORE (reference): the naive O(n) contradiction+dedup scans over the
+            // same facts, showing the quadratic the index removes.
+            let facts: Vec<Fact> = l.iter().cloned().collect();
+            let scan_start = Instant::now();
+            let probe = Ledger::default();
+            for f in &facts {
+                let _ = black_box(probe.naive_has_conflict(f) || probe.naive_contains(f));
+                // (probe is not mutated; this measures the scan cost per fact)
+            }
+            let before = scan_start.elapsed();
+            eprintln!(
+                "n={n:>6}  after(indexed commit)={after:?}  before(naive scans/one pass)={before:?}"
+            );
+        }
+    }
 }
