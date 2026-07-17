@@ -1,0 +1,26 @@
+[package]
+name = "earth-mask"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+# Empty table: this package is deliberately outside the main workspace,
+# mirroring tools/type-audit/Cargo.toml (decision 0027). An empty
+# [workspace] here (not just the main Cargo.toml's `exclude`) stops cargo's
+# ancestor search at this manifest unconditionally — without it, a checkout
+# nested under another Cargo workspace (e.g. a worktree under
+# `.claude/worktrees/` inside the main repo tree) makes cargo walk past this
+# package's own workspace root and mistakenly bind to the outer one.
+[workspace]
+
+[[bin]]
+name = "earth-mask"
+path = "src/main.rs"
+
+[dependencies]
+hornvale-kernel = { path = "../../kernel" }
+# Pinned to the version resolved in the main workspace's Cargo.lock
+# (rift-and-fit spec §7 controller resolution) so the tool's untyped
+# GeoJSON parsing stays byte-for-byte comparable to workspace behavior.
+serde_json = "1.0.150"

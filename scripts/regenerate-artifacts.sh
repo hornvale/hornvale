@@ -97,6 +97,7 @@ run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-
 echo "regenerate-artifacts: scene exports" >&2
 run -p hornvale -- scene tiles --world "$wsky" > book/src/gallery/scene-tiles-seed-42.json
 run -p hornvale -- scene tiles-region --world "$wsky" --face 0 --level 3 --ix 4 --iy 4 --samples 16 > book/src/gallery/scene-tiles-region-seed-42.json
+run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-seed-42.json
 
 # OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
 # local box unless Nathan explicitly says so. The sanctioned path is the
