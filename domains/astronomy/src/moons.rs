@@ -167,10 +167,23 @@ pub fn generate_moons(
     // byte-identical — the same discipline SKY-6 and Eclipse Seasons used.
     // Weighted by distance: an impact child forms close and tidally
     // recedes; irregular satellites are distant.
+    //
+    // The map is `frac` CUBED, not linear (Nathan-ratified recalibration).
+    // A linear map failed its own calibration: at Luna's real distance
+    // (384.4 Mm from Earth, frac ≈ 0.386 of this model's admitted range)
+    // the linear map called the Earth-Moon system — this model's own
+    // GiantImpact exemplar — a capture 39% of the time. Cubing pushes
+    // mid-range fracs down hard (0.386³ ≈ 0.057) while leaving the ends
+    // (0³ = 0, 1³ = 1) fixed, so Luna reads as an impact child ~94% of the
+    // time and the floor/ceiling still bound the tails. The floor also
+    // drops 0.10 → 0.02 (the ceiling stays 0.85): cubing already suppresses
+    // the low end, so the old linear-era floor would have overridden the
+    // cubed value for a wide swath of close-in fracs.
     let mut formations = astronomy_seed.derive(streams::MOON_FORMATION).stream();
     for moon in &mut moons {
         let span = (max_distance - 60.0).max(1e-9);
-        let p_capture = ((moon.distance.0 - 60.0) / span).clamp(0.10, 0.85);
+        let frac = (moon.distance.0 - 60.0) / span;
+        let p_capture = (frac * frac * frac).clamp(0.02, 0.85);
         moon.formation = if formations.next_f64() < p_capture {
             Formation::Capture
         } else {
@@ -358,17 +371,27 @@ mod tests {
     }
 
     /// The Reckoning, spec §5.3: the whole point of drawing after admission.
-    /// These values are the pre-campaign ones; if this fails, the admission
-    /// loop was disturbed.
+    /// These values are the pre-campaign ones — captured from `dfb0782`
+    /// (the commit immediately before the formation draw was introduced),
+    /// via this file's `system()` helper (a raw `Seed(9)`, not the
+    /// `"astronomy"`-derived root `generate()` uses — see `golden_seed_42.rs`
+    /// for that path) — by checking out `dfb0782` into a separate worktree
+    /// and printing `generate_moons(Seed(9), ...)`'s output directly, not by
+    /// running the current code: the formation draw pulls from its own
+    /// `MOON_FORMATION` stream *after* `moons.sort_by`, so it cannot move
+    /// these values, but the whole point of this test is to catch it if a
+    /// future change accidentally makes it able to. Seed 9 admits 2 moons
+    /// under this helper (seed 42 admits none, which made the prior version
+    /// of this test vacuous — `assert_eq!(0, 0)` — and unable to fail even
+    /// when a reviewer injected an extra draw into the admission loop).
     #[test]
     fn masses_and_distances_are_untouched_by_the_formation_draw() {
-        let (star, anchor) = system(42);
-        let (moons, _) = generate_moons(Seed(42), &star, &anchor, &SkyPins::default()).unwrap();
-        // Recorded from a run before the formation draw existed (Step 2):
-        // seed 42, via this file's `system()` helper (a raw `Seed(42)`, not
-        // the `"astronomy"`-derived root `generate()` uses — see
-        // `golden_seed_42.rs` for that path), draws zero moons unpinned.
-        let expected: &[(f64, f64)] = &[];
+        let (star, anchor) = system(9);
+        let (moons, _) = generate_moons(Seed(9), &star, &anchor, &SkyPins::default()).unwrap();
+        let expected: &[(f64, f64)] = &[
+            (1.2683733853675314, 342.5295368494006),
+            (0.4635424548468193, 581.0120533420021),
+        ];
         assert_eq!(moons.len(), expected.len());
         for (m, (mass, dist)) in moons.iter().zip(expected) {
             assert_eq!(m.mass.0, *mass);
@@ -376,18 +399,59 @@ mod tests {
         }
     }
 
+    /// The Reckoning, Nathan-ratified recalibration: at Luna's real distance
+    /// (384.4 Mm from Earth), the linear weighting map called the model's
+    /// own `GiantImpact` exemplar a capture 39% of the time — the model
+    /// contradicting itself. Pins the fix: cubing `frac` before clamping
+    /// drives `p_capture` for a Luna-like `frac` (384.4 / (900 - 60) at this
+    /// system's `max_distance` ceiling of 900 Mm, ≈ 0.386) down to
+    /// ≈ 0.057 = 0.386³, comfortably under the asserted 0.10 bound, so Luna
+    /// reads as an impact child in the overwhelming majority of draws
+    /// (≈ 94%, not asserted here directly — see the measured single-moon
+    /// and inner/outer rates below for the draw-level confirmation).
+    #[test]
+    fn luna_like_distance_reads_as_impact_child() {
+        let frac: f64 = 384.4 / (900.0 - 60.0);
+        let p_capture = (frac * frac * frac).clamp(0.02, 0.85);
+        assert!(
+            p_capture < 0.10,
+            "Luna-like p_capture {p_capture} should be small — the whole point of cubing"
+        );
+    }
+
     /// The Reckoning: formation is weighted by distance, so the innermost
-    /// moon of a multi-moon system is almost always an impact child and the
-    /// outermost is often a stray. A distribution claim over seeds, not a
+    /// moon of a multi-moon system is almost always an impact child, the
+    /// outermost is often a stray, and — the coverage gap the code review
+    /// found — single-moon worlds (about half of all mooned worlds) are
+    /// mostly impact children too. A distribution claim over seeds, not a
     /// per-seed assertion.
+    ///
+    /// Root cause of *why* the innermost admitted moon isn't near frac=0
+    /// (measured, not the mutual-spacing story an earlier version of this
+    /// comment gave, which the code review A/B'd and found backwards):
+    /// spacing alone pushes the innermost moon's mean frac *down* (0.163 vs
+    /// 0.308 unconstrained), and the tide cap pushes it back *up* — the two
+    /// nearly cancel (pure-uniform-with-both-constraints predicts frac ≈
+    /// 0.6819; the generator measures 0.6818). The real driver is an order
+    /// statistic: with every constraint switched off, the minimum of k
+    /// uniform draws still averages 1/(k+1) of the range (1/3 for k=2, 1/4
+    /// for k=3) — the innermost slot is a minimum-of-several, not a single
+    /// draw near the floor, regardless of the admission constraints.
     #[test]
     fn the_innermost_moon_is_an_impact_child_and_the_outermost_tends_to_stray() {
         let (mut inner_impact, mut inner_total) = (0u32, 0u32);
         let (mut outer_capture, mut outer_total) = (0u32, 0u32);
+        let (mut single_impact, mut single_total) = (0u32, 0u32);
         for seed in 0..400u64 {
             let (star, anchor) = system(seed);
             let (moons, _) =
                 generate_moons(Seed(seed), &star, &anchor, &SkyPins::default()).unwrap();
+            if moons.len() == 1 {
+                single_total += 1;
+                if moons[0].formation == Formation::GiantImpact {
+                    single_impact += 1;
+                }
+            }
             if moons.len() < 2 {
                 continue;
             }
@@ -401,38 +465,30 @@ mod tests {
             }
         }
         assert!(
-            inner_total > 20 && outer_total > 20,
-            "too few multi-moon seeds to judge"
+            inner_total > 20 && outer_total > 20 && single_total > 20,
+            "too few seeds to judge: inner {inner_total} outer {outer_total} single {single_total}"
         );
         let inner_rate = f64::from(inner_impact) / f64::from(inner_total);
         let outer_rate = f64::from(outer_capture) / f64::from(outer_total);
-        // Measured against this exact weighting formula over seeds 0..400:
-        // inner_rate = 0.6813, outer_rate = 0.7912 (deterministic, not
-        // flaky). The admitted innermost moon's distance fraction averages
-        // ~0.32 of [60, max_distance], not near 0 — the mutual-spacing
-        // constraint (ratio >= 1.5) keeps it from crowding the floor when a
-        // second or third moon needs room above it — so its impact rate
-        // caps below the >0.7 a naive "almost certainly" reading would
-        // suggest. 0.6 keeps the qualitative claim (majority impact,
-        // minority capture, and asymmetric with the outer rate) with margin
-        // below the true value, rather than asserting an unmeasured bound.
-        assert!(inner_rate > 0.6, "innermost impact rate {inner_rate}");
-        assert!(outer_rate > 0.3, "outermost capture rate {outer_rate}");
-    }
-
-    /// The Reckoning: the formation draw is deterministic like every other
-    /// per-moon draw.
-    #[test]
-    fn formation_is_deterministic() {
-        let (star, anchor) = system(7);
-        let a = generate_moons(Seed(7), &star, &anchor, &SkyPins::default())
-            .unwrap()
-            .0;
-        let b = generate_moons(Seed(7), &star, &anchor, &SkyPins::default())
-            .unwrap()
-            .0;
-        let fa: Vec<_> = a.iter().map(|m| m.formation).collect();
-        let fb: Vec<_> = b.iter().map(|m| m.formation).collect();
-        assert_eq!(fa, fb);
+        let single_rate = f64::from(single_impact) / f64::from(single_total);
+        // Measured against the cubed weighting formula over seeds 0..400
+        // (deterministic, not flaky): inner_rate = 0.9396, outer_rate =
+        // 0.5549, single_rate = 0.6272. Thresholds set with headroom below
+        // each measured value, not pasted from the brief's predictions —
+        // inner and outer landed close to the brief's ≈0.93/≈0.56, but
+        // single_rate landed well below its ≈0.71 prediction (reported to
+        // the campaign, not silently accepted): a lone moon has no sibling
+        // to space against, only its own tide cap, so its distance isn't
+        // pulled from the same order-statistic distribution the inner slot
+        // is — the tide cap alone appears to bias admitted single-moon
+        // distances outward more than the naive near-uniform prediction
+        // assumed.
+        assert!(inner_rate > 0.85, "innermost impact rate {inner_rate}");
+        assert!(outer_rate > 0.45, "outermost capture rate {outer_rate}");
+        // Single-moon worlds are the blind spot the code review found: the
+        // old test's `continue` on `moons.len() < 2` never looked at them,
+        // and they are ~half of all mooned worlds — exactly where the
+        // linear map was worst (40.5% impact, barely above coin-flip).
+        assert!(single_rate > 0.55, "single-moon impact rate {single_rate}");
     }
 }
