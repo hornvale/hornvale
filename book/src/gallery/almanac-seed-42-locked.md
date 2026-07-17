@@ -24,7 +24,7 @@ A rock wanderer rounds the sun every 7527 days.
 
 The sky holds 2 figures; 1 stands on the sun's road.
 
-On day 86, the first moon devours the sun whole along latitude 83°.
+On day 86, the first moon devours the sun whole along latitude 82°.
 
 On day 94, the full first moon darkens to a bloodred coal.
 
@@ -172,11 +172,11 @@ An organized priesthood tends a pantheon:
 >
 > — derived from the phenomenon *celestial-body*
 
-> Ngadxngak the Svatvnakvnak returns every 71.11 days. So it was, so it is.
+> Ngadxngak the Svatvnakvnak returns every 71.04 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Zvakngek the Nodsfobsvad returns every 4586.51 days. So it was, so it is.
+> Zvakngek the Nodsfobsvad returns every 1991.56 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
@@ -194,11 +194,11 @@ In the legion of **Gkaavoonoagoo**, an organized priesthood tends its own panthe
 >
 > — derived from the phenomenon *celestial-body*
 
-> Feonjaagbee the Qgoaveofoa returns every 71.11 days. So it was, so it is.
+> Feonjaagbee the Qgoaveofoa returns every 71.04 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
-> Kqeotgaetgeo the Mjoeggoexeo returns every 4586.51 days. So it was, so it is.
+> Kqeotgaetgeo the Mjoeggoexeo returns every 1991.56 days. So it was, so it is.
 >
 > — derived from the phenomenon *eclipse*
 
