@@ -40,13 +40,16 @@
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
 | `max-ice-fraction` | yes | land fraction under ice at the glacial maximum |
+| `moon-age-gyr` | no | a moon's age in gigayears |
 | `moon-angular-size-rel` | no | apparent size of a moon relative to Luna-from-Earth |
 | `moon-count` | yes | how many moons the anchor world has |
+| `moon-density` | no | a moon's bulk density in grams per cubic centimeter |
 | `moon-distance-mm` | no | orbital distance of a moon in megameters |
+| `moon-formation` | no | how a moon formed: giant-impact or capture |
 | `moon-inclination-degrees` | no | orbital inclination of a moon to the anchor's orbital plane, in degrees |
 | `moon-mass-lunar` | no | mass of a moon in lunar masses |
 | `moon-node-longitude-degrees` | no | ascending-node ecliptic longitude of a moon at genesis, in degrees |
-| `moon-node-period-days` | no | nodal-regression period of a moon, in standard days |
+| `moon-node-period-days` | no | nodal-regression period of a moon, in standard days — signed: negative for a retrograde orbit, whose nodes precess prograde (eastward) rather than the usual westward regression |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |
@@ -88,6 +91,7 @@
 | `species-voice-loudness` | yes | voice-loudness range, 0-1 |
 | `species-voicing` | yes | voicing emphasis, 0-1 |
 | `species-vowel-space` | yes | vowel-space size, 0-1 |
+| `star-age-gyr` | yes | the host star's age in gigayears (drawn; does not feed luminosity or the habitable zone — a deliberate containment) |
 | `star-class` | yes | the host star's descriptive spectral class |
 | `star-luminosity-solar` | yes | host star luminosity in solar units (derived M^3.5) |
 | `star-mass-solar` | yes | host star mass in solar masses |

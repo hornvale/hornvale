@@ -304,6 +304,118 @@ after every existing draw so no previously generated sky moves.
 coordinate — is not drawn at all; it falls out of wherever settlement placed
 the flagship, deterministic because placement is.
 
+**Ages and origins, added by The Reckoning.** Until this campaign the star's
+brightening clock had no zero point — `brightening_per_gyr` knew how fast the
+star brightens but never how far along it already was — and each moon's
+mass, distance, inclination, age, and density floated free of one another:
+four independent draws standing in for what should be one story. The
+Reckoning draws the star an age and each moon a **formation mechanism**
+(`{GiantImpact, Capture}`; co-accretion is deliberately absent — it needs a
+massive circumplanetary disk, a giant-planet mechanism the terrestrial
+anchor does not have, and fission is discredited) that now drives that
+moon's age, density, and orbital regularity. This section's biggest claims
+are admissions, stated plainly rather than left implicit in the code.
+
+**Derived, added by The Reckoning:** the planet's age,
+`planet_age = max(0, star_age − 0.05 Gyr)` — terrestrial accretion finishes
+within ~30–100 Myr of the star, so the gap is under 1% and modelled only so
+the number exists and is honest about its own precision; a coeval
+(`GiantImpact`) moon's age, the planet's age less a small drawn jitter
+(Luna comes out 4.51 Gyr against Earth's 4.54); a moon's bulk radius from
+its mass **and a real density**, `r = (3M/4πρ)^{1/3}`, rather than from mass
+and an assumed density — the honesty upgrade the parked Moons campaign was
+blocked on; and the ZAMS-luminosity back-derivation, `L_ZAMS = L / (1 +
+b·age)` — anyone wanting the star's luminosity at the start of its
+main-sequence life, before the brightening this age now dates, recovers it
+by inverting `luminosity_at`'s own genesis anchoring. Nothing in the sim
+consumes it today; it exists for a future consumer to call.
+
+**Drawn, added by The Reckoning:** the star's age, a guard-railed fraction
+of its main-sequence lifetime — `age = U(0.05, 0.95) · min(t_MS(M), T_MAX)`,
+off its own stream (`astronomy/star-age`) — bounding the star away from both
+the pre- and post-main-sequence edges, where none of this model's physics
+applies (`T_MAX = 15 Gyr` is a **bound, not a cosmology**: capping at 13.8
+Gyr would have imported this world's origin from ours as a side effect of a
+generator constant, silently settling a metaphysical question the project
+deliberately leaves open); each moon's formation mechanism, drawn *after*
+the distance sort from its own stream (`astronomy/moon-formation`),
+weighted by distance (declared below) — so masses and distances never move
+in any world, and a world whose moons all draw `GiantImpact` is
+byte-identical to the pre-campaign generator; and, for a `Capture` moon
+specifically, its density class (rocky 3.0 or icy 1.6 g/cm³, its own
+stream), its age (decoupled from the planet's), and its inclination
+(irregular, `U(20, 160)°`, retrograde past 90°).
+
+**Approximated, added by The Reckoning — and *why* each is an
+approximation, not merely that it is:**
+
+- `t_MS = 10 Gyr · M^-2.5` is the existing Sol-calibrated scaling already
+  implicit in `brightening_per_gyr`, made explicit here — not a
+  stellar-structure model.
+- **`L = M^3.5` stays the genesis-epoch approximation it already was, and
+  age does not correct it.** This is the campaign's central decision, not
+  an oversight: `Star::luminosity` feeds the habitable zone, which feeds
+  orbit admission, which feeds insolation and every climate derivation
+  downstream. Letting a drawn age correct luminosity toward a proper
+  ZAMS-plus-brightening value would move every world's habitable zone,
+  orbit, and climate — an epoch across the entire simulation, not a
+  campaign about moons. So age describes pre-genesis history only, and the
+  corrected value stays one division away for anyone who wants it (the
+  ZAMS back-derivation above), unused by the sim itself. A deliberate
+  containment, stated here rather than left implicit.
+- The distance weighting `p_capture = clamp(frac³, 0.02, 0.85)` is a
+  **plausibility rule, not a population synthesis** of satellite
+  formation — it encodes only the physical intuition that an impact child
+  forms close and tidally recedes while irregular satellites are distant.
+  But it carries something a plausibility rule usually lacks: an empirical
+  anchor. It is calibrated so that a moon at Luna's real distance (384.4 Mm
+  from Earth, `frac ≈ 0.386` of this model's admitted range) reads as a
+  `GiantImpact` child in roughly 94% of draws. A linear map in `frac` failed
+  that same check first — it called the real Earth–Moon system, this
+  model's own `GiantImpact` exemplar, a capture 39% of the time, the model
+  contradicting its own example — which is what forced the cube: cubing
+  suppresses the middle of the range hard (`0.386³ ≈ 0.057`) while leaving
+  both ends fixed.
+- Densities are **two representative classes** (rocky 3.0, icy 1.6 g/cm³),
+  not a composition model.
+- **Capture is modelled as an outcome, not an event.** There is no
+  encounter dynamics, no binary-exchange capture, no post-capture orbital
+  evolution — the generator draws that a body *was* captured and gives it
+  the statistics of an irregular satellite (wide, inclined, often
+  retrograde). A real capture requires energy dissipation — tidal,
+  gas-drag, or three-body — that this model does not simulate; it authors
+  the outcome and rolls the dice on which bodies it happened to.
+- **A captured moon's age is bounded `[0.05, 0.95] · planet_age` — an
+  approximation, not a derivation.** A captured body can, in reality, be
+  *older* than the planet it now orbits — Triton most likely predates
+  Neptune's final assembly. The bound is a modelling choice made for
+  simplicity; it is not a physical requirement that a capture event cannot
+  postdate its own body's formation, and it is declared as a choice here
+  rather than left to read as physics.
+
+**Eclipse geometry, corrected by The Reckoning.**
+`moon_ecliptic_latitude_deg`, `node_crossing_chance`, and `series_returns`
+used to compute a moon's ecliptic latitude with the small-angle form
+`β = i·sin(u)`, linear in the inclination `i`. That was honest for the
+`[0, 10)°` band every moon occupied before this campaign, but `Capture`
+draws inclinations up to 160°, and the small-angle form does not know the
+90° ceiling: at `i = 160°` it reported a latitude of 160°, which is not a
+physically possible ecliptic latitude (the maximum is 90°). All three now
+use the **exact spherical form**, `β = asin(sin i · sin u)`, bounded by
+`±min(i, 180−i)` for any inclination — which also restores a symmetry the
+small-angle form silently broke: an orbit at `i` and one at `180 − i` now
+eclipse identically, as physics requires (`sin i = sin(180 − i)`). This is a
+rare direction of travel for this model card: a quantity that moved from
+**approximated** toward **derived**, not the reverse.
+
+**The-node-period sign, clarified (not changed) by this campaign.** A
+moon's nodal-regression period (`moon-node-period-days`) has always been
+signed in code — negative for `i > 90°`, where a retrograde orbit's nodes
+regress the opposite way from a prograde one's — but the registered
+predicate's description did not say so, which read to a consumer as an
+undocumented negative "period." The registration now states the sign; the
+physics, and the value, are unchanged.
+
 **The tier ladder ahead:**
 
 3. Realistic multi-body configurations: binary suns, moons in resonance,

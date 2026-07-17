@@ -182,6 +182,11 @@
         "functional": true,
         "doc": "land fraction under ice at the glacial maximum"
       },
+      "moon-age-gyr": {
+        "name": "moon-age-gyr",
+        "functional": false,
+        "doc": "a moon's age in gigayears"
+      },
       "moon-angular-size-rel": {
         "name": "moon-angular-size-rel",
         "functional": false,
@@ -192,10 +197,20 @@
         "functional": true,
         "doc": "how many moons the anchor world has"
       },
+      "moon-density": {
+        "name": "moon-density",
+        "functional": false,
+        "doc": "a moon's bulk density in grams per cubic centimeter"
+      },
       "moon-distance-mm": {
         "name": "moon-distance-mm",
         "functional": false,
         "doc": "orbital distance of a moon in megameters"
+      },
+      "moon-formation": {
+        "name": "moon-formation",
+        "functional": false,
+        "doc": "how a moon formed: giant-impact or capture"
       },
       "moon-inclination-degrees": {
         "name": "moon-inclination-degrees",
@@ -215,7 +230,7 @@
       "moon-node-period-days": {
         "name": "moon-node-period-days",
         "functional": false,
-        "doc": "nodal-regression period of a moon, in standard days"
+        "doc": "nodal-regression period of a moon, in standard days — signed: negative for a retrograde orbit, whose nodes precess prograde (eastward) rather than the usual westward regression"
       },
       "moon-period-std": {
         "name": "moon-period-std",
@@ -421,6 +436,11 @@
         "name": "species-vowel-space",
         "functional": true,
         "doc": "vowel-space size, 0-1"
+      },
+      "star-age-gyr": {
+        "name": "star-age-gyr",
+        "functional": true,
+        "doc": "the host star's age in gigayears (drawn; does not feed luminosity or the habitable zone — a deliberate containment)"
       },
       "star-class": {
         "name": "star-class",
@@ -1092,6 +1112,16 @@
       },
       {
         "subject": 1,
+        "predicate": "star-age-gyr",
+        "object": {
+          "Number": 6.7763047
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
         "predicate": "moon-period-std",
         "object": {
           "Number": 15.993805
@@ -1172,6 +1202,36 @@
       },
       {
         "subject": 1,
+        "predicate": "moon-formation",
+        "object": {
+          "Text": "giant-impact"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-age-gyr",
+        "object": {
+          "Number": 6.6316462
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-density",
+        "object": {
+          "Number": 3.34
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
         "predicate": "moon-period-std",
         "object": {
           "Number": 32.555
@@ -1245,6 +1305,36 @@
         "predicate": "moon-angular-size-rel",
         "object": {
           "Number": 0.69049995
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-formation",
+        "object": {
+          "Text": "capture"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-age-gyr",
+        "object": {
+          "Number": 3.7705432
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-density",
+        "object": {
+          "Number": 3.0
         },
         "place": null,
         "day": 0.0,

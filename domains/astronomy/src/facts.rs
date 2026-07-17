@@ -50,8 +50,11 @@ pub const MOON_INCLINATION_DEGREES: &str = "moon-inclination-degrees";
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_NODE_LONGITUDE_DEGREES: &str = "moon-node-longitude-degrees";
 /// Predicate: a moon's nodal-regression period, standard days
-/// (non-functional, Number — one per moon; Eclipse Seasons). The
-/// standstill interpretation of this beat is the deferred follow-up row.
+/// (non-functional, Number — one per moon; Eclipse Seasons). **Signed**:
+/// negative for a retrograde orbit (`Formation::Capture` past 90°
+/// inclination), whose nodes precess prograde rather than the usual
+/// westward regression — see [`crate::eclipses::node_regression_period`].
+/// The standstill interpretation of this beat is the deferred follow-up row.
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_NODE_PERIOD_DAYS: &str = "moon-node-period-days";
 /// Mass of a moon in lunar masses (non-functional, Number — one per moon).
@@ -184,6 +187,31 @@ pub const FIGURE_ON_ECLIPTIC: &str = "figure-on-ecliptic";
 /// whose deep-time drift makes the sky an archaeological clock.
 /// type-audit: bare-ok(identifier-text)
 pub const FOUNDING_SOLSTICE_AZIMUTH_DEGREES: &str = "founding-solstice-azimuth-degrees";
+/// Predicate: the host star's age in gigayears (functional, Number; drawn,
+/// The Reckoning). Bounded by the main-sequence lifetime and `T_MAX`; a
+/// deliberate containment (spec §3) keeps this out of `star-luminosity-solar`
+/// and the habitable-zone facts, which stay exactly `M^3.5`-derived.
+/// type-audit: bare-ok(identifier-text)
+pub const STAR_AGE_GYR: &str = "star-age-gyr";
+/// Predicate: how a moon formed — `"giant-impact"` or `"capture"`
+/// (non-functional, Text — one per moon; The Reckoning). The mechanism
+/// drives the moon's age, density, and orbital regularity — see
+/// [`MOON_AGE_GYR`], [`MOON_DENSITY`], and [`MOON_INCLINATION_DEGREES`].
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_FORMATION: &str = "moon-formation";
+/// Predicate: a moon's age in gigayears (non-functional, Number — one per
+/// moon; The Reckoning). A `GiantImpact` moon is coeval with its planet
+/// (drawn jitter under the planet's age); a `Capture` moon's age is drawn
+/// independently, decoupled from the planet's.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_AGE_GYR: &str = "moon-age-gyr";
+/// Predicate: a moon's bulk density in g/cm3 (non-functional, Number — one
+/// per moon; The Reckoning). A `GiantImpact` moon's density is the derived
+/// constant 3.34 (re-accreted mantle debris, no iron core); a `Capture`
+/// moon's is drawn from a different reservoir entirely (rocky 3.0 or icy
+/// 1.6).
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_DENSITY: &str = "moon-density";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -193,6 +221,18 @@ fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         place: None,
         day: Some(0.0),
         provenance: "astronomy".to_string(),
+    }
+}
+
+/// The stable text this crate publishes for a moon's formation mechanism —
+/// the single definition `genesis` and any test asserting the committed
+/// value both use, so the string cannot drift between the two (the same
+/// discipline `crate::wanderers::WandererClass`'s ledger mapping follows).
+/// Matches `windows/scene`'s own presentation mapping (scene/moons/v1).
+fn formation_name(formation: crate::moons::Formation) -> &'static str {
+    match formation {
+        crate::moons::Formation::GiantImpact => "giant-impact",
+        crate::moons::Formation::Capture => "capture",
     }
 }
 
@@ -349,6 +389,10 @@ pub fn genesis(
         ),
         &world.registry,
     )?;
+    world.ledger.commit(
+        fact(subject, STAR_AGE_GYR, Value::Number(system.star.age.get())),
+        &world.registry,
+    )?;
 
     for moon in &system.moons {
         world.ledger.commit(
@@ -408,6 +452,22 @@ pub fn genesis(
                 MOON_ANGULAR_SIZE_REL,
                 Value::Number(moon.angular_diameter_rel),
             ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(
+                subject,
+                MOON_FORMATION,
+                Value::Text(formation_name(moon.formation).to_string()),
+            ),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(subject, MOON_AGE_GYR, Value::Number(moon.age.get())),
+            &world.registry,
+        )?;
+        world.ledger.commit(
+            fact(subject, MOON_DENSITY, Value::Number(moon.density.get())),
             &world.registry,
         )?;
     }
@@ -1191,5 +1251,136 @@ mod tests {
                 .count();
             assert_eq!(count, moons, "{predicate}");
         }
+    }
+
+    /// The Reckoning: the star's drawn age reaches the ledger, quantized
+    /// like every numeric object on commit.
+    #[test]
+    fn genesis_commits_the_star_age_fact() {
+        let (world, subject, outcome) = committed_world(42);
+        assert_eq!(
+            world.ledger.value_of(subject, STAR_AGE_GYR),
+            Some(&Value::Number(hornvale_kernel::quantize(
+                outcome.system.star.age.get()
+            )))
+        );
+    }
+
+    /// The Reckoning: every moon commits its formation mechanism, age, and
+    /// density — one of each per moon, following the mass/distance/size
+    /// trio's pattern (`genesis_commits_mass_distance_and_size_per_moon`).
+    #[test]
+    fn each_moon_commits_formation_age_and_density_facts() {
+        let (world, subject, outcome) = committed_world(42);
+        let moons = outcome.system.moons.len();
+        assert!(moons > 0);
+        for predicate in [MOON_FORMATION, MOON_AGE_GYR, MOON_DENSITY] {
+            let count = world
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == predicate)
+                .count();
+            assert_eq!(count, moons, "{predicate}");
+        }
+    }
+
+    /// The Reckoning: the committed formation/age/density facts match the
+    /// generated moons exactly, in commit order (distance-sorted, the same
+    /// order `system.moons` iterates) — not merely a membership check.
+    #[test]
+    fn moon_formation_age_and_density_facts_match_the_generated_moons_in_order() {
+        let (world, subject, outcome) = committed_world(42);
+        assert!(!outcome.system.moons.is_empty());
+
+        let formations: Vec<String> = world
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == MOON_FORMATION)
+            .filter_map(|f| match &f.object {
+                Value::Text(t) => Some(t.clone()),
+                _ => None,
+            })
+            .collect();
+        let expected_formations: Vec<String> = outcome
+            .system
+            .moons
+            .iter()
+            .map(|m| formation_name(m.formation).to_string())
+            .collect();
+        assert_eq!(formations, expected_formations);
+
+        let ages: Vec<f64> = world
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == MOON_AGE_GYR)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_ages: Vec<f64> = outcome
+            .system
+            .moons
+            .iter()
+            .map(|m| hornvale_kernel::quantize(m.age.get()))
+            .collect();
+        assert_eq!(ages, expected_ages);
+
+        let densities: Vec<f64> = world
+            .ledger
+            .facts_about(subject)
+            .filter(|f| f.predicate == MOON_DENSITY)
+            .filter_map(|f| match f.object {
+                Value::Number(n) => Some(n),
+                _ => None,
+            })
+            .collect();
+        let expected_densities: Vec<f64> = outcome
+            .system
+            .moons
+            .iter()
+            .map(|m| hornvale_kernel::quantize(m.density.get()))
+            .collect();
+        assert_eq!(densities, expected_densities);
+    }
+
+    /// The Reckoning: a seed sweep must actually exercise a captured moon,
+    /// or the formation-fact test above could pass while only ever
+    /// checking `"giant-impact"` — the same vacuous-sweep trap the
+    /// pole-star test above guards against.
+    #[test]
+    fn moon_formation_fact_reads_capture_for_a_captured_moon_across_a_seed_sweep() {
+        let mut found = false;
+        for seed in 0..64u64 {
+            let (world, subject, outcome) = committed_world(seed);
+            if !outcome
+                .system
+                .moons
+                .iter()
+                .any(|m| m.formation == crate::moons::Formation::Capture)
+            {
+                continue;
+            }
+            found = true;
+            let texts: Vec<&str> = world
+                .ledger
+                .facts_about(subject)
+                .filter(|f| f.predicate == MOON_FORMATION)
+                .filter_map(|f| match &f.object {
+                    Value::Text(t) => Some(t.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert!(
+                texts.contains(&"capture"),
+                "seed {seed}: expected a committed \"capture\" formation fact"
+            );
+            break;
+        }
+        assert!(
+            found,
+            "BLOCKED: no seed in 0..64 drew a captured moon — the capture-text \
+             assertion is untested"
+        );
     }
 }

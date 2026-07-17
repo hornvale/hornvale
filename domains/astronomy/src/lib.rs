@@ -207,7 +207,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(
         facts::MOON_NODE_PERIOD_DAYS,
         false,
-        "nodal-regression period of a moon, in standard days",
+        "nodal-regression period of a moon, in standard days — signed: \
+         negative for a retrograde orbit, whose nodes precess prograde \
+         (eastward) rather than the usual westward regression",
     )?;
     registry.register_predicate(
         facts::MOON_MASS_LUNAR,
@@ -371,6 +373,23 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
         true,
         "solstice-sunrise azimuth at a settlement's founding, degrees clockwise from north",
+    )?;
+    registry.register_predicate(
+        facts::STAR_AGE_GYR,
+        true,
+        "the host star's age in gigayears (drawn; does not feed luminosity \
+         or the habitable zone — a deliberate containment)",
+    )?;
+    registry.register_predicate(
+        facts::MOON_FORMATION,
+        false,
+        "how a moon formed: giant-impact or capture",
+    )?;
+    registry.register_predicate(facts::MOON_AGE_GYR, false, "a moon's age in gigayears")?;
+    registry.register_predicate(
+        facts::MOON_DENSITY,
+        false,
+        "a moon's bulk density in grams per cubic centimeter",
     )?;
 
     registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
