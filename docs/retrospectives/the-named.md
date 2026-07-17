@@ -185,6 +185,42 @@ Carried from `.superpowers/sdd/followups.md`:
    `render` reacts to `attribution` alone, not to block count — but the
    docstring describes the scenario that motivated it rather than what it
    builds.
+7. **SKY-25 corrected at close (someone else's row).** The Terminator's
+   registry row asserted *"bugbear gets the first pantheon on every seed"*.
+   Measured on the merged epoch-v4 tree: bugbear places a flagship on **0 of
+   30 seeds**; goblin is the alphabetically-first placer on all 25 that place
+   anyone. The row's mechanism (alphabetical registry order gates the
+   presiding belief, not dominance) is real and untouched; only the species
+   is corrected, in place, per the never-delete-a-row rule. SKY-25 stays
+   `raw`/`high` — this campaign did not fix it.
+8. **`book/src/SUMMARY.md` on main carried committed conflict markers**
+   (from `de7ddbe`, The Terminator's absorb merge) — mdbook would have
+   rendered them. Resolved in this campaign's merge because the merge had to
+   touch that region anyway. Not caused here; flagged because a broken merge
+   reached main and nothing caught it.
+
+## The bugbear inference, made twice, independently, on one day
+
+Worth its own heading because it is the campaign's most transferable finding.
+Two campaigns — The Terminator (SKY-25) and this one — independently reasoned:
+*the species registry is alphabetical → bugbear sorts first → bugbear is the
+one that renders/presides first.* Both shipped it into a durable artifact
+(a registry row; a spec, plan, and chronicle). Both were wrong for the same
+reason: **bugbear sorts first but never places.** Registry-first is not
+placed-first, and the sort order is right there in the code to be read while
+the placement outcome requires generating worlds.
+
+The inference is seductive because its premise is verifiable and true, and
+the false step is invisible — you never notice you assumed the roster and the
+world agree. The counter is cheap and neither of us reached for it: generate
+worlds and look. This campaign only caught it because a reviewer read the git
+log; the registry row was caught only because the close ran the mandated
+grep. Neither would have surfaced from more careful reasoning about the same
+evidence.
+
+**Concrete change to try:** any claim of the form "species X is first/
+dominant/absent" is a measurement, not a deduction. If a spec asserts one
+without a pasted command output, treat it as unverified.
 
 ## What went right, briefly
 
