@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -137,6 +137,11 @@ pub struct TilesScene {
     /// Hemisphere-signed seasonal half-swing per tile, °C (0 when locked/zero-obliquity).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub t_swing_c: Vec<f64>,
+    /// Per-tile diurnal half-range amplitude, °C (always `>= 0`; the
+    /// coefficient a client scales the diurnal waveform by — see
+    /// `hornvale_climate::diurnal_waveform`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_diurnal_amp_c: Vec<f64>,
     /// The seasonal sinusoid's period, standard days (the world's year).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub season_period_days: f64,
@@ -186,6 +191,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut unrest = Vec::with_capacity(tiles);
     let mut t_mean_c = Vec::with_capacity(tiles);
     let mut t_swing_c = Vec::with_capacity(tiles);
+    let mut t_diurnal_amp_c = Vec::with_capacity(tiles);
     let mut moisture = Vec::with_capacity(tiles);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -205,6 +211,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             unrest.push(terrain.unrest_at(t_cell));
             t_mean_c.push(climate.mean_temperature_at(c_cell).get());
             t_swing_c.push(climate.seasonal_swing_at(c_cell));
+            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_cell));
             moisture.push(climate.moisture_at(c_cell));
         }
     }
@@ -214,6 +221,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(unrest.iter())
             .chain(t_mean_c.iter())
             .chain(t_swing_c.iter())
+            .chain(t_diurnal_amp_c.iter())
             .chain(moisture.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
@@ -233,6 +241,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         features: features_of(world),
         t_mean_c,
         t_swing_c,
+        t_diurnal_amp_c,
         season_period_days: climate.year_length_std(),
         circulation_bands: climate.band_count(),
         moisture,
@@ -1042,6 +1051,13 @@ mod tests {
         let tiles = (scene.width * scene.height) as usize;
         assert_eq!(scene.t_mean_c.len(), tiles);
         assert_eq!(scene.t_swing_c.len(), tiles);
+        assert_eq!(scene.t_diurnal_amp_c.len(), tiles);
+        assert!(
+            scene
+                .t_diurnal_amp_c
+                .iter()
+                .all(|a| a.is_finite() && *a >= 0.0)
+        );
         assert_eq!(scene.moisture.len(), tiles);
         assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
         assert_eq!(scene.season_period_days, 365.25); // constant-sun default year
