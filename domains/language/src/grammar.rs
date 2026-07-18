@@ -19,6 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
+use crate::lexicon::{GapReason, LexEntry, Lexicon};
 use crate::naming::{Namer, render_views, segments_of};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
@@ -135,11 +136,96 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     }
 }
 
+/// One nominal-predication clause for a tongue: an already-surfaced subject
+/// (autonym / proper name — tongue words already) and the complement as a
+/// CONCEPT id to lexicalize in the speaker's lexicon.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TongueClause {
+    /// The subject, already in surface form.
+    pub subject: String,
+    /// The complement concept id (e.g. `"goblin-kind"`), lexicalized via
+    /// the speaker's lexicon.
+    pub complement_concept: String,
+}
+
+/// A whole-sentence gap: the tongue could not say this clause because its
+/// complement concept has no word (spec §4 — a clause renders fully or gaps
+/// entirely, never partially).
+/// type-audit: bare-ok(identifier-text), bare-ok(prose)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TongueGap {
+    /// The concept that failed to lexicalize.
+    pub concept: String,
+    /// The recountable reason (from the lexicon's own gap, or "no entry"
+    /// when the concept has no entry at all).
+    pub reason: String,
+}
+
+/// Render a [`GapReason`]'s recountable text, tagged with its provenance
+/// kind — the same rendering the `cli` crate's dictionary dump uses for a
+/// lexicon gap (`cli/src/dictionary.rs`'s `gap_text`), reproduced locally
+/// since a domain crate may not depend on `cli` (constitutional layering).
+/// Never `{reason:?}`: the reason is prose meant to be recounted, not
+/// debugged.
+fn gap_reason_text(reason: &GapReason) -> String {
+    match reason {
+        GapReason::Experiential(text) => format!("gap (experiential): {text}"),
+        GapReason::Perceptual(text) => format!("gap (perceptual): {text}"),
+    }
+}
+
+/// Realize a nominal-predication clause in a tongue: lexicalize the
+/// complement, order the constituents per the grammar, include the copula
+/// if the tongue bears one. Renders fully or gaps entirely (spec §4).
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue(
+    clause: &TongueClause,
+    grammar: &TongueGrammar,
+    lexicon: &Lexicon,
+) -> Result<String, TongueGap> {
+    let complement = match lexicon.entry(&clause.complement_concept) {
+        Some(LexEntry::Root { views, .. }) | Some(LexEntry::Compound { views, .. }) => {
+            views.roman.clone()
+        }
+        Some(LexEntry::Gap { reason }) => {
+            return Err(TongueGap {
+                concept: clause.complement_concept.clone(),
+                reason: gap_reason_text(reason),
+            });
+        }
+        None => {
+            return Err(TongueGap {
+                concept: clause.complement_concept.clone(),
+                reason: "no entry in this lexicon".to_string(),
+            });
+        }
+    };
+    let s = clause.subject.as_str();
+    let v = grammar.copula.as_deref();
+    let o = complement.as_str();
+    // Order the present constituents; a `None` copula simply drops out.
+    let ordered: Vec<&str> = match grammar.order {
+        ConstituentOrder::Sov => [Some(s), Some(o), v],
+        ConstituentOrder::Svo => [Some(s), v, Some(o)],
+        ConstituentOrder::Vso => [v, Some(s), Some(o)],
+        ConstituentOrder::Vos => [v, Some(o), Some(s)],
+        ConstituentOrder::Ovs => [Some(o), v, Some(s)],
+        ConstituentOrder::Osv => [Some(o), Some(s), v],
+    }
+    .into_iter()
+    .flatten()
+    .collect();
+    Ok(format!("{}.", ordered.join(" ")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
+    use std::collections::BTreeMap;
 
     /// A goblin-baseline articulation envelope — per `phonology.rs`'s own
     /// test-constructor pattern (`goblin_env`), reconstructed locally here
@@ -256,5 +342,200 @@ mod tests {
             .copula
             .expect("re-draw at the same seed must also draw a copula");
         assert_eq!(form, again, "copula form is a deterministic draw");
+    }
+
+    /// Build a tiny real lexicon (via `build_lexicon`'s own machinery, per
+    /// `lexicon.rs`'s test pattern — never a mock) exposing exactly
+    /// `concepts`, all `family == species == "test-tongue"` and
+    /// `proto_ph == ph` (a singleton stock, collapsing family-level
+    /// cognate-sharing to a single tongue drawing its own roots directly).
+    fn tiny_lexicon_with(concepts: &[(&str, ExposureClass)]) -> Lexicon {
+        let ph = test_phonology();
+        let mut exposures = BTreeMap::new();
+        for (concept, class) in concepts {
+            exposures.insert((*concept).to_string(), class.clone());
+        }
+        build_lexicon(
+            &Seed(1),
+            "test-tongue",
+            "test-tongue",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+        )
+    }
+
+    #[test]
+    fn realize_tongue_orders_and_copula() {
+        // Grammar fixed by hand (not drawn) to pin each transform: the
+        // copula's TEST value "gha" is arbitrary — production forms are
+        // always drawn (see the module doc and `draw_copula_form`).
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "goblin-kind".into(),
+        };
+        let svo = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            articles: false,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &svo, &lex).unwrap(),
+            format!("Vavako gha {word}.")
+        );
+        let sov = TongueGrammar {
+            order: ConstituentOrder::Sov,
+            copula: Some("gha".into()),
+            articles: false,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &sov, &lex).unwrap(),
+            format!("Vavako {word} gha.")
+        );
+        let zero_copula = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: None,
+            articles: false,
+        };
+        assert_eq!(
+            realize_tongue(&clause, &zero_copula, &lex).unwrap(),
+            format!("Vavako {word}.")
+        );
+    }
+
+    #[test]
+    fn realize_tongue_gaps_whole_sentence() {
+        let lex = tiny_lexicon_with(&[]); // no entries → concept is a gap
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "planet".into(),
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            articles: false,
+        };
+        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        assert_eq!(gap.concept, "planet");
+        assert!(!gap.reason.is_empty(), "recountable reason required");
+    }
+
+    #[test]
+    fn realize_tongue_gaps_with_the_lexicon_own_gap_reason() {
+        // A concept that IS in the lexicon but as a `LexEntry::Gap` (not
+        // simply absent) must surface that gap's own recountable reason,
+        // rendered via its Display-style text (not `{:?}`).
+        let mut exposures = BTreeMap::new();
+        exposures.insert(
+            "blue".to_string(),
+            ExposureClass::Unknown {
+                reason: crate::lexicon::GapReason::Perceptual(
+                    "hue ladder depth 3 from night-vision 0.8".to_string(),
+                ),
+            },
+        );
+        let ph = test_phonology();
+        let lex = build_lexicon(
+            &Seed(1),
+            "test-tongue",
+            "test-tongue",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+        );
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "blue".into(),
+        };
+        let g = TongueGrammar {
+            order: ConstituentOrder::Svo,
+            copula: Some("gha".into()),
+            articles: false,
+        };
+        let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
+        assert_eq!(gap.concept, "blue");
+        assert!(
+            gap.reason
+                .contains("hue ladder depth 3 from night-vision 0.8"),
+            "gap reason must recount the lexicon's own reason text, got {:?}",
+            gap.reason
+        );
+        assert!(
+            !gap.reason.contains("Perceptual("),
+            "gap reason must not be the Debug form, got {:?}",
+            gap.reason
+        );
+    }
+
+    #[test]
+    fn realize_tongue_exhaustive_orders_and_copula() {
+        // All 6 orders × copula Some/None = 12 exact-string assertions for a
+        // fixed clause — pins every transform's exact surface shape.
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let word = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { views, .. } => views.roman.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "goblin-kind".into(),
+        };
+        let cases: [(ConstituentOrder, Option<&str>, String); 12] = [
+            (
+                ConstituentOrder::Sov,
+                Some("gha"),
+                format!("Vavako {word} gha."),
+            ),
+            (ConstituentOrder::Sov, None, format!("Vavako {word}.")),
+            (
+                ConstituentOrder::Svo,
+                Some("gha"),
+                format!("Vavako gha {word}."),
+            ),
+            (ConstituentOrder::Svo, None, format!("Vavako {word}.")),
+            (
+                ConstituentOrder::Vso,
+                Some("gha"),
+                format!("gha Vavako {word}."),
+            ),
+            (ConstituentOrder::Vso, None, format!("Vavako {word}.")),
+            (
+                ConstituentOrder::Vos,
+                Some("gha"),
+                format!("gha {word} Vavako."),
+            ),
+            (ConstituentOrder::Vos, None, format!("{word} Vavako.")),
+            (
+                ConstituentOrder::Ovs,
+                Some("gha"),
+                format!("{word} gha Vavako."),
+            ),
+            (ConstituentOrder::Ovs, None, format!("{word} Vavako.")),
+            (
+                ConstituentOrder::Osv,
+                Some("gha"),
+                format!("{word} Vavako gha."),
+            ),
+            (ConstituentOrder::Osv, None, format!("{word} Vavako.")),
+        ];
+        for (order, copula, expected) in cases {
+            let grammar = TongueGrammar {
+                order,
+                copula: copula.map(String::from),
+                articles: false,
+            };
+            assert_eq!(
+                realize_tongue(&clause, &grammar, &lex).unwrap(),
+                expected,
+                "order {order:?} copula {copula:?}"
+            );
+        }
     }
 }

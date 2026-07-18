@@ -46,7 +46,9 @@ pub use etymology::{
     AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
     draw_cascade, evolve, proto_root,
 };
-pub use grammar::{ConstituentOrder, TongueGrammar, tongue_grammar};
+pub use grammar::{
+    ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, tongue_grammar,
+};
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
     draw_headedness,
