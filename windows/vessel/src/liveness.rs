@@ -236,6 +236,36 @@ pub fn drive_at(ledger: &Ledger, entity: EntityId, t: WorldTime, p: &DriveParams
     (p.rise * (t.day - last_drank)).clamp(0.0, 1.0)
 }
 
+/// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
+/// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
+/// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
+/// by ascending `RoomAddr`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
+/// no stored belief — it re-derives from facts already committed (the matrix
+/// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+/// type-audit: bare-ok(count: budget)
+pub fn believed_water(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
+        let sighted = f.day.map(|d| d <= t.day).unwrap_or(false);
+        if sighted && let Value::Text(s) = &f.object {
+            let room = room_from_text(s);
+            if is_water(&room, terrain) {
+                seen.insert(room);
+            }
+        }
+    }
+    seen.into_iter()
+        .filter_map(|r| plan_to_room(&npc.home, &r, budget).map(|p| (p.len(), r)))
+        .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
+        .map(|(_, r)| r)
+}
+
 /// What the agent perceives of the world — the `view` the decision reads. Today
 /// its contents are ground truth; PSY-6's "plan over belief, not truth" (UNI-16)
 /// is later a change to what fills this, not to the seam.
@@ -653,7 +683,177 @@ pub fn plan_to_room(from: &RoomAddr, dest: &RoomAddr, budget: usize) -> Option<V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
+    fn commit_agent_at(
+        ledger: &mut Ledger,
+        reg: &ConceptRegistry,
+        entity: EntityId,
+        room: &RoomAddr,
+        day: f64,
+    ) {
+        ledger
+            .commit(agent_at_fact(entity, room, day, "test"), reg)
+            .unwrap();
+    }
+
+    /// A registry with just `AGENT_AT` registered, for the belief-fold tests.
+    fn agent_at_reg() -> ConceptRegistry {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg
+    }
+
+    #[test]
+    fn believed_water_is_none_until_the_agent_has_stood_in_water() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        // no agent-at yet -> ignorant
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+        // stood in the water room on day 2 -> now believes it
+        commit_agent_at(&mut ledger, &reg, e, &water, 2.0);
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(water)
+        );
+    }
+
+    #[test]
+    fn believed_water_ignores_dry_rooms_the_agent_stood_in() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let dry = home.neighbors()[0].clone();
+        let t = PlantedTerrain([(dry.clone(), WATER_LEVEL + 1.0)].into_iter().collect());
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn believed_water_keeps_the_nearest_to_home_of_several_known_sources() {
+        // THE MULTI-SOURCE FOLD: the agent has stood in a NEAR and a FAR water room;
+        // belief is the near one (fewer hops from home).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let near = home.neighbors()[0].clone(); // 1 hop
+        let far = near
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone(); // 2 hops
+        let t = PlantedTerrain(
+            [
+                (near.clone(), WATER_LEVEL - 1.0),
+                (far.clone(), WATER_LEVEL - 1.0),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: near.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(far.clone())
+        );
+        commit_agent_at(&mut ledger, &reg, e, &near, 3.0); // later discovers the nearer one
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(near),
+            "belief switches to the nearer known source"
+        );
+    }
+
+    #[test]
+    fn believed_water_only_counts_sightings_at_or_before_t() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn believed_water_is_deterministic_reload_stable_and_per_agent() {
+        // BELIEF == FOLD: same ledger+t -> same value; reload-stable; another agent's
+        // sightings never leak in (subject-scoped).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let other = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None,
+            "another agent's sighting does not become e's belief"
+        );
+        commit_agent_at(&mut ledger, &reg, e, &water, 3.0);
+        let a = believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000);
+        let json = serde_json::to_string(&ledger).unwrap();
+        let reloaded: Ledger = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            a
+        );
+        assert_eq!(a, Some(water));
+    }
 
     #[test]
     fn derive_npcs_are_distinct_and_placed() {
