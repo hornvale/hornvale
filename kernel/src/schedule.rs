@@ -131,12 +131,18 @@ impl CapabilitySchema {
     /// Enforce metaplan §7: each *functional* predicate is written by at most
     /// one system, making same-tick write conflicts unrepresentable. Reads the
     /// registry for functionality; non-functional and unregistered predicates
-    /// are unconstrained. `Err(MultipleWriters)` names the first offending
-    /// predicate (ascending) and its writers (ascending label).
-    /// type-audit: bare-ok(identifier-text: return)
+    /// are unconstrained. `exempt` names predicates excused from the single-
+    /// writer rule — shared kernel-core infrastructure (e.g.
+    /// [`crate::world::KERNEL_CORE_PREDICATES`]) that is legitimately written
+    /// by more than one system on disjoint subjects, where this check's
+    /// predicate-level granularity cannot see the subject disjointness
+    /// (ecs-c6 T3). `Err(MultipleWriters)` names the first offending,
+    /// non-exempt predicate (ascending) and its writers (ascending label).
+    /// type-audit: bare-ok(identifier-text: exempt)
     pub fn single_writer_check(
         &self,
         registry: &crate::registry::ConceptRegistry,
+        exempt: &[&'static str],
     ) -> Result<(), ScheduleError> {
         let mut writers: BTreeMap<&'static str, Vec<&'static str>> = BTreeMap::new();
         for s in &self.systems {
@@ -145,6 +151,9 @@ impl CapabilitySchema {
             }
         }
         for (&predicate, systems) in &writers {
+            if exempt.contains(&predicate) {
+                continue;
+            }
             let functional = registry.predicate(predicate).is_some_and(|d| d.functional);
             if functional && systems.len() > 1 {
                 let mut systems = systems.clone();
@@ -232,7 +241,7 @@ mod tests {
             sys("a", &[], &["here"]),
             sys("b", &[], &["here"]),
         ]);
-        assert!(schema.single_writer_check(&r).is_ok());
+        assert!(schema.single_writer_check(&r, &[]).is_ok());
     }
 
     #[test]
@@ -244,7 +253,7 @@ mod tests {
             sys("terrain", &[], &["elev"]),
             sys("rogue", &[], &["elev"]),
         ]);
-        match schema.single_writer_check(&r) {
+        match schema.single_writer_check(&r, &[]) {
             Err(ScheduleError::MultipleWriters { predicate, systems }) => {
                 assert_eq!(predicate, "elev");
                 assert_eq!(systems, vec!["rogue", "terrain"]); // ascending label
@@ -262,6 +271,47 @@ mod tests {
         let r = ConceptRegistry::default();
         let schema =
             CapabilitySchema::new(vec![sys("a", &[], &["ghost"]), sys("b", &[], &["ghost"])]);
-        assert!(schema.single_writer_check(&r).is_ok());
+        assert!(schema.single_writer_check(&r, &[]).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_exempts_a_listed_functional_predicate_with_two_writers() {
+        // An exempt functional predicate (shared kernel-core infrastructure,
+        // written by two systems on subjects the check cannot see are
+        // disjoint — e.g. `name-gloss` on a settlement vs. a belief) passes.
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("name-gloss", true, "kernel-core, shared")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("settlement", &[], &["name-gloss"]),
+            sys("religion", &[], &["name-gloss"]),
+        ]);
+        assert!(schema.single_writer_check(&r, &["name-gloss"]).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_exemption_does_not_swallow_a_real_non_exempt_violation() {
+        // Exempting one predicate must not blind the check to a genuine
+        // two-writer violation on a DIFFERENT, non-exempt functional
+        // predicate in the same schema.
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        r.register_predicate("name-gloss", true, "kernel-core, shared")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            sys("rogue", &[], &["elev"]),
+            sys("settlement", &[], &["name-gloss"]),
+            sys("religion", &[], &["name-gloss"]),
+        ]);
+        match schema.single_writer_check(&r, &["name-gloss"]) {
+            Err(ScheduleError::MultipleWriters { predicate, systems }) => {
+                assert_eq!(predicate, "elev");
+                assert_eq!(systems, vec!["rogue", "terrain"]);
+            }
+            other => panic!("expected MultipleWriters on the non-exempt 'elev', got {other:?}"),
+        }
     }
 }

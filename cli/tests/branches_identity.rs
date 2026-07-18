@@ -378,10 +378,7 @@ fn deities_with_distinct_glosses_carry_distinct_names_at_seed_42() {
         // gloss -> set of deity names carrying it (skip empty-gloss beliefs).
         let mut by_gloss: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         for belief in &beliefs {
-            let Some(gloss) = world
-                .ledger
-                .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
-            else {
+            let Some(gloss) = world.ledger.text_of(belief.id, hornvale_kernel::NAME_GLOSS) else {
                 continue;
             };
             if gloss.is_empty() {
@@ -458,10 +455,7 @@ fn the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42() {
         let gloom_gods: Vec<String> = hornvale_religion::beliefs_held_by(&world, village.id)
             .into_iter()
             .filter(|belief| {
-                world
-                    .ledger
-                    .text_of(belief.id, hornvale_worldgen::NAME_GLOSS)
-                    == Some("gloom")
+                world.ledger.text_of(belief.id, hornvale_kernel::NAME_GLOSS) == Some("gloom")
             })
             .map(|belief| belief.deity)
             .collect();

@@ -252,7 +252,8 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         // A generated proper name carries a `name-gloss`
                         // fact (Task 9 of The Words) when its site had a
                         // true story to tell; recount it too.
-                        if let Some(gloss) = world.ledger.text_of(target, world_builder::NAME_GLOSS)
+                        if let Some(gloss) =
+                            world.ledger.text_of(target, hornvale_kernel::NAME_GLOSS)
                         {
                             writeln!(
                                 output,
@@ -757,14 +758,14 @@ mod tests {
             .find(|f| {
                 world
                     .ledger
-                    .text_of(f.subject, world_builder::NAME_GLOSS)
+                    .text_of(f.subject, hornvale_kernel::NAME_GLOSS)
                     .is_some()
             })
             .map(|f| f.subject.0)
             .expect("seed 42 glosses at least one settlement");
         let gloss = world
             .ledger
-            .text_of(EntityId(glossed_id), world_builder::NAME_GLOSS)
+            .text_of(EntityId(glossed_id), hornvale_kernel::NAME_GLOSS)
             .unwrap()
             .to_string();
         let mut out = Vec::new();

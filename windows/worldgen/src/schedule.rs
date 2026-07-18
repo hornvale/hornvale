@@ -54,6 +54,15 @@ pub const GENESIS_HAND_ORDER: &[&str] = &[
 /// - `paleoclimate` reconstructs terrain and sky the same way `settlement`
 ///   does (same `TERRAIN_PIN`/`sky-provider`/`scenario-pin` reads) before
 ///   committing its deep-time summary facts.
+///
+/// `settlement` and `religion` both declare [`hornvale_kernel::NAME_GLOSS`]
+/// in `writes` — both commits are real (a settlement's name-gloss, a
+/// deity's name-gloss), on disjoint subjects. `NAME_GLOSS` is kernel-core
+/// (registered by `World::new`, not by any one domain), which is exactly
+/// why [`hornvale_kernel::KERNEL_CORE_PREDICATES`] exists: it is shared
+/// infrastructure `single_writer_check`'s exemption list excuses from the
+/// single-writer rule, rather than a declaration this schema should hide
+/// (ecs-c6 T3 — see `genesis_declarations_pass_the_single_writer_check`).
 pub fn genesis_systems() -> CapabilitySchema {
     CapabilitySchema::new(vec![
         System::new(
@@ -148,7 +157,7 @@ pub fn genesis_systems() -> CapabilitySchema {
                 hornvale_settlement::CELL_ID,
                 hornvale_settlement::LATITUDE,
                 hornvale_settlement::LONGITUDE,
-                crate::NAME_GLOSS,
+                hornvale_kernel::NAME_GLOSS,
                 hornvale_astronomy::facts::FOUNDING_SOLSTICE_AZIMUTH_DEGREES,
             ],
         ),
@@ -180,7 +189,7 @@ pub fn genesis_systems() -> CapabilitySchema {
                 hornvale_religion::DEITY_EPITHET,
                 hornvale_religion::DEITY_EPITHET_IPA,
                 hornvale_religion::SENTIMENT,
-                crate::NAME_GLOSS,
+                hornvale_kernel::NAME_GLOSS,
             ],
         ),
         System::new(
@@ -266,42 +275,21 @@ mod tests {
     #[test]
     fn genesis_declarations_pass_the_single_writer_check() {
         // The §7 contract MEASURED on the real declarations against the full
-        // registry (all domains registered). MEASURED OUTCOME (ecs-c6 T3,
-        // reported at close as a BLOCKED finding, not silenced): this is a
-        // genuine violation, not a declaration bug. `crate::NAME_GLOSS`
-        // (functional Text — the composition root's own predicate; see its
-        // doc comment) is committed from TWO points in `build_to`'s pipeline:
-        // the `settlement` stage glosses each placed settlement's name, and
-        // the `religion` stage separately glosses each deity's name. Both
-        // commits are real and correctly attributed to their stage (`writes`
-        // = every predicate the stage actually `.commit(...)`s) — they write
-        // to disjoint subjects (a settlement entity vs. a belief entity), so
-        // the ledger's own per-subject functional-uniqueness never conflicts,
-        // but `single_writer_check` is deliberately coarser than that (predicate-
-        // level, not (predicate, subject)-level — see its doc comment: "makes
-        // same-tick write conflicts unrepresentable"), so two declared writers
-        // of one functional predicate trip it regardless of subject-disjointness.
-        // This is why `build_to` does NOT call `single_writer_check` on the
-        // load path (brief Step 5 intentionally not wired): doing so
-        // unconditionally rejects every settlement-depth-or-deeper world
-        // build. Resolving it (e.g. splitting `name-gloss` into a
-        // settlement-name-gloss/deity-name-gloss pair, a save-format change)
-        // is out of this task's scope; asserting the measured `Err` here
-        // keeps this keystone honest about what the real pipeline does
-        // instead of silently declaring victory over an assumption the
-        // measurement falsified.
+        // registry (all domains registered), WITH the kernel-core exemption
+        // (ecs-c6 T3 resolution): `settlement` and `religion` both really do
+        // write `NAME_GLOSS` (a settlement's name-gloss, a deity's
+        // name-gloss — disjoint subjects, both genuine, neither hidden from
+        // this schema). That is no longer a violation because `NAME_GLOSS`
+        // moved to the kernel as shared kernel-core infrastructure
+        // (`hornvale_kernel::KERNEL_CORE_PREDICATES`), which
+        // `single_writer_check`'s `exempt` list excuses by design — the
+        // ledger's own per-`(subject, predicate)` functional-uniqueness
+        // still applies and is untouched; only this coarser, predicate-only
+        // schema check is relaxed for kernel-core predicates.
         let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
         crate::register_all(&mut world.registry).expect("concept registration");
-        match genesis_systems().single_writer_check(&world.registry) {
-            Err(hornvale_kernel::ScheduleError::MultipleWriters { predicate, systems }) => {
-                assert_eq!(predicate, crate::NAME_GLOSS);
-                assert_eq!(systems, vec!["religion", "settlement"]);
-            }
-            other => panic!(
-                "expected the measured name-gloss MultipleWriters violation, got {other:?} — \
-                 if this now passes, the pipeline changed and this test (and the BLOCKED \
-                 finding it documents) needs re-examination"
-            ),
-        }
+        genesis_systems()
+            .single_writer_check(&world.registry, hornvale_kernel::KERNEL_CORE_PREDICATES)
+            .expect("no non-exempt functional predicate has two declared genesis writers");
     }
 }
