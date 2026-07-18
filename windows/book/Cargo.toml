@@ -3,7 +3,7 @@ name = "hornvale-book"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Hornvale book window: render a world's committed is-a facts as Common sentences."
+description = "Hornvale book window: render a world's committed classification facts (is-a, instance-of) as Common sentences."
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }

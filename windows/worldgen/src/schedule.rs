@@ -21,8 +21,10 @@
 //! remain governed by the ledger's own per-`(subject, predicate)` checks.
 use hornvale_kernel::{CapabilitySchema, System};
 
-/// The order genesis stages actually commit in `build_to` — the ground truth
-/// the derived schedule is validated against.
+/// The order the eight schema-covered genesis stages actually commit in
+/// `build_to` — the ground truth the derived schedule is validated against.
+/// (The classification tail — `planet`, `peoples` — is outside the schema;
+/// see the module doc's scope boundary.)
 /// type-audit: bare-ok(identifier-text)
 pub const GENESIS_HAND_ORDER: &[&str] = &[
     "world-entity",

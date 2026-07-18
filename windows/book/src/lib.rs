@@ -209,7 +209,7 @@ pub fn uncovered_predicates(world: &World) -> Vec<String> {
     let mut gaps: BTreeSet<String> = BTreeSet::new();
     for predicate in world.registry.predicates() {
         let name = predicate.name.as_str();
-        let covered = name == "is-a"
+        let covered = name == hornvale_kernel::world::IS_A
             || name == hornvale_kernel::INSTANCE_OF
             || CONSTRUCTION_ORDER.contains(&name);
         if !covered && world.ledger.find(name).next().is_some() {
