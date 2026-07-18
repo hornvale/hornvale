@@ -4029,6 +4029,9 @@ mod tests {
             wc.lexicon.clone(),
             wc.family_proto.clone(),
             wc.family_of.clone(),
+            wc.deity.clone(),
+            wc.culture.clone(),
+            wc.material.clone(),
         )
         .expect("cloned canonical stores stay integrity-valid");
 
@@ -4201,6 +4204,9 @@ mod tests {
             ComponentStore::new(),
             hornvale_language::family_proto(),
             family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
         )
         .expect("a fauna-only component set is well-formed (no peopled rows)");
 
