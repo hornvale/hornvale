@@ -245,6 +245,32 @@ mod tests {
             heard.0.get(&format!("{subject}::is-a")).map(String::as_str),
             Some("planet")
         );
-        assert!(heard.0.contains_key(&format!("{subject}::moon-count")));
+        // The surface values, pinned exactly — one integral, one
+        // fractional, so BOTH number-formatting branches are verified
+        // against how the sentence carried them. Seed 1's planet line
+        // (see windows/book's seed-1 test: two moons, day 1.5507196 →
+        // "about 1.5") says "with two moons" and "about 1.5 standard
+        // days"; the listener's belief reads back "2" and "1.5".
+        assert!(
+            planet_line.contains("with two moons")
+                && planet_line.contains("about 1.5 standard days"),
+            "seed 1's planet line carries both number fragments: {planet_line}"
+        );
+        assert_eq!(
+            heard
+                .0
+                .get(&format!("{subject}::moon-count"))
+                .map(String::as_str),
+            Some("2"),
+            "a whole count surfaces bare"
+        );
+        assert_eq!(
+            heard
+                .0
+                .get(&format!("{subject}::day-length-std"))
+                .map(String::as_str),
+            Some("1.5"),
+            "a fractional quantity keeps its digits"
+        );
     }
 }
