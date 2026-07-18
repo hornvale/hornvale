@@ -956,6 +956,57 @@ mod tests {
     }
 
     #[test]
+    fn domain_distortion_measures_only_the_named_domain() {
+        let params = AccountParams {
+            hold_all: false,
+            holdings: holdings_of(&["planet", "moon", "star", "sun", "goblin-kind"]),
+            observability: fixture_table(),
+            sky_capability: 0.5,
+            order: OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: Some("earth".to_string()),
+        };
+        let acc = account_of(&fixture_ground(), &params);
+
+        // The 4 sky-domain facts: is-a Substituted, moon-count Lost
+        // (0.5 < the 0.6 threshold), star-class Lost (Instrumental),
+        // day-length-std Lost (CrossReferential) — 4 of 4 non-Kept.
+        assert_eq!(domain_distortion(&acc, &params, "sky"), 1.0);
+
+        // The lone peoples-domain fact (instance-of) is Kept.
+        assert_eq!(domain_distortion(&acc, &params, "peoples"), 0.0);
+
+        // A domain with no matching entries returns 0.0, never NaN.
+        assert_eq!(domain_distortion(&acc, &params, "nonesuch"), 0.0);
+    }
+
+    #[test]
+    fn unknown_predicate_fails_closed() {
+        let fact = GroundFact {
+            subject: "Vebe".to_string(),
+            predicate: "totally-unknown-predicate".to_string(),
+            object: Value::Text("mystery".to_string()),
+        };
+        let params = AccountParams {
+            hold_all: false,
+            holdings: BTreeSet::new(),
+            observability: fixture_table(),
+            sky_capability: 1.0,
+            order: OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: None,
+        };
+        let acc = account_of(std::slice::from_ref(&fact), &params);
+        assert_eq!(
+            acc.entries[0].disposition,
+            Disposition::Lost(LossReason::BeyondCapability { domain: "unknown" })
+        );
+
+        let acc_identity = account_of(&[fact], &identity_params());
+        assert_eq!(acc_identity.entries[0].disposition, Disposition::Kept);
+    }
+
+    #[test]
     fn distinctiveness_is_zero_for_clones_and_positive_for_divergents() {
         let mut stances_a = BTreeMap::new();
         stances_a.insert("goblin".to_string(), Stance::Rivals);
