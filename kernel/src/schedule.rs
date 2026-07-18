@@ -3,6 +3,8 @@
 //! topological order of the resulting data-dependency DAG, tie-broken by stable
 //! label — a derived view over the declarations, never serialized. Genesis is
 //! this schedule's first turn (tick 0); the running tick is deferred.
+use crate::ledger::{Fact, Ledger, LedgerError};
+use crate::registry::ConceptRegistry;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One system's capability declaration: a stable label plus the predicate
@@ -165,6 +167,43 @@ impl CapabilitySchema {
     }
 }
 
+/// The runnable interface a sim-dynamic system implements — the bulk-
+/// synchronous step (decision-ledger #40). `step` reads the FROZEN tick-N
+/// ledger (it never sees another system's same-tick write) and returns the
+/// facts to commit into tick-N+1. Exercised by a toy system this campaign; no
+/// real domain implements it yet (genesis is not rerouted through `tick`).
+pub trait TickSystem {
+    /// The system's stable label (its schedule key).
+    /// type-audit: bare-ok(identifier-text: return)
+    fn label(&self) -> &'static str;
+    /// Read the frozen tick-N ledger; return the facts to commit next tick.
+    fn step(&self, frozen: &Ledger) -> Vec<Fact>;
+}
+
+/// Run one bulk-synchronous tick: every system reads the same `frozen` ledger
+/// (parallel-safe, pure), then their writes are committed into a fresh tick-N+1
+/// ledger **in `order`** (the schedule), single-threaded and deterministic.
+/// Cross-system effects have one tick of latency by default. Returns the
+/// tick-N+1 ledger. `order` lists system labels; systems not in `order` are a
+/// caller error (skipped).
+/// type-audit: bare-ok(identifier-text: order)
+pub fn tick(
+    frozen: &Ledger,
+    systems: &[&dyn TickSystem],
+    order: &[&'static str],
+    registry: &ConceptRegistry,
+) -> Result<Ledger, LedgerError> {
+    let mut next = frozen.clone();
+    for &label in order {
+        if let Some(s) = systems.iter().find(|s| s.label() == label) {
+            for fact in s.step(frozen) {
+                next.commit(fact, registry)?;
+            }
+        }
+    }
+    Ok(next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,5 +352,100 @@ mod tests {
             }
             other => panic!("expected MultipleWriters on the non-exempt 'elev', got {other:?}"),
         }
+    }
+
+    // A toy system that reads the frozen ledger and writes one fact. Proves the
+    // bulk-synchronous mechanism without any real domain.
+    struct CountThenName {
+        label: &'static str,
+        subject: crate::EntityId,
+        predicate: &'static str,
+        // writes Number(count of facts it saw in the frozen ledger)
+    }
+    impl TickSystem for CountThenName {
+        fn label(&self) -> &'static str {
+            self.label
+        }
+        fn step(&self, frozen: &crate::Ledger) -> Vec<crate::Fact> {
+            vec![crate::Fact {
+                subject: self.subject,
+                predicate: self.predicate.to_string(),
+                object: crate::Value::Number(frozen.len() as f64),
+                place: None,
+                day: None,
+                provenance: self.label.to_string(),
+            }]
+        }
+    }
+
+    #[test]
+    fn tick_reads_frozen_snapshot_so_systems_do_not_see_each_others_writes() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("count-a", false, "").unwrap();
+        r.register_predicate("count-b", false, "").unwrap();
+        let mut base = crate::Ledger::default();
+        let e = base.mint_entity();
+        // frozen ledger has 0 facts. Two systems each write frozen.len() == 0.
+        let a = CountThenName {
+            label: "a",
+            subject: e,
+            predicate: "count-a",
+        };
+        let b = CountThenName {
+            label: "b",
+            subject: e,
+            predicate: "count-b",
+        };
+        let systems: Vec<&dyn TickSystem> = vec![&a, &b];
+        let next = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        // BOTH see the frozen snapshot (0 facts) — b does NOT see a's write.
+        assert_eq!(
+            next.value_of(e, "count-a"),
+            Some(&crate::Value::Number(0.0))
+        );
+        assert_eq!(
+            next.value_of(e, "count-b"),
+            Some(&crate::Value::Number(0.0))
+        );
+        // The next tick's ledger has the base fact-count plus the two writes.
+        assert_eq!(next.len(), base.len() + 2);
+    }
+
+    #[test]
+    fn tick_commits_in_schedule_order_then_is_deterministic() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("count-a", false, "").unwrap();
+        r.register_predicate("count-b", false, "").unwrap();
+        let mut base = crate::Ledger::default();
+        let e = base.mint_entity();
+        let a = CountThenName {
+            label: "a",
+            subject: e,
+            predicate: "count-a",
+        };
+        let b = CountThenName {
+            label: "b",
+            subject: e,
+            predicate: "count-b",
+        };
+        let systems: Vec<&dyn TickSystem> = vec![&b, &a]; // input order reversed...
+        // ...but `order` is the schedule: commits follow it, not input order.
+        let n1 = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        let n2 = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        // Deterministic: same base + same order -> byte-identical ledgers.
+        assert_eq!(
+            serde_json::to_string(&n1).unwrap(),
+            serde_json::to_string(&n2).unwrap()
+        );
+        // Commit order follows the schedule: a's fact precedes b's.
+        let preds: Vec<&str> = n1.iter().map(|f| f.predicate.as_str()).collect();
+        let ia = preds.iter().position(|&p| p == "count-a").unwrap();
+        let ib = preds.iter().position(|&p| p == "count-b").unwrap();
+        assert!(
+            ia < ib,
+            "commits follow schedule order [a, b], not input order [b, a]"
+        );
     }
 }

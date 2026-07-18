@@ -42,7 +42,7 @@ pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};
 pub use refine::choose_consistent;
 pub use registry::{ConceptDef, ConceptKind, ConceptRegistry, PredicateDef, RegistryError};
 pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
-pub use schedule::{CapabilitySchema, ScheduleError, System};
+pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
 pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years};
