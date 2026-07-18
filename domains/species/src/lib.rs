@@ -11,9 +11,10 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ANIMAL_PREY, Component, ComponentStore, ConceptKind, ConceptRegistry, ConditionResponse,
-    DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError, MINERAL, Mass, PHOTOSYNTHATE,
-    PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
+    ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
+    ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError,
+    MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
+    Void, World,
 };
 
 mod allometry;
@@ -1022,7 +1023,12 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register species' contribution to the concept registry.
-#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
+///
+/// The `*-kind` concepts register through their correspondence [`Manifest`].
+/// Like climate's biome classes, these are taxonomic class labels no language
+/// pack names yet, so each lexeme edge is a `Gap`; species emits no phenomenon
+/// kind for them, so the percept edge is a `Gap`; and cognition voids to the
+/// future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(SPECIES_NAME, true, "a species entity's name")?;
     registry.register_predicate(THREAT_RESPONSE, true, "flee 0 ↔ stand 1")?;
@@ -1061,15 +1067,26 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "tonal propensity, 0 atonal ↔ 1 tonal",
     )?;
 
-    registry.register_concept("goblin-kind", "species", ConceptKind::Living, "a goblin")?;
-    registry.register_concept("kobold-kind", "species", ConceptKind::Living, "a kobold")?;
-    registry.register_concept(
-        "hobgoblin-kind",
-        "species",
-        ConceptKind::Living,
-        "a hobgoblin",
-    )?;
-    registry.register_concept("bugbear-kind", "species", ConceptKind::Living, "a bugbear")?;
+    for (name, doc) in [
+        ("goblin-kind", "a goblin"),
+        ("kobold-kind", "a kobold"),
+        ("hobgoblin-kind", "a hobgoblin"),
+        ("bugbear-kind", "a bugbear"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "species".to_string(),
+                kind: ConceptKind::Living,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names species kinds yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
     Ok(())
 }
 

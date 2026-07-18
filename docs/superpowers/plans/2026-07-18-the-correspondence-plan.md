@@ -78,7 +78,12 @@ Manifest (grep proves no `register_concept` call sites remain).
 **Tests:** full `make gate` (fmt + clippy + nextest + doctests); artifact
 drift-check; the existing roster/order tests
 (`domains_roster_registers_language_after_its_lenders`) still green.
-**Status:** Not Started
+**Status:** Complete — all 6 domains migrated to `register_manifest`; public
+`register_concept` DELETED (private `insert_concept` helper is the shared insert;
+`register_manifest` is the sole public path — the API-level construction proof).
+Byte-identity independently verified (regen + `git diff --exit-code` = 0, dump
+unchanged); `cargo test --workspace` green; roster/architecture/docs_consistency
+green; clippy/type-audit/fmt clean.
 
 ## Stage 4: The manifestation view + reconciliation + the book
 **Goal:** the folded UNI-28 view over all Manifests, with the lexeme

@@ -5,8 +5,8 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptKind, ConceptRegistry, EntityId, Fact, LedgerError, Phenomenon, RegistryError, Value,
-    Venue, World,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError,
+    Lexicalization, Manifest, Phenomenon, RegistryError, Value, Venue, Void, World,
 };
 
 /// Predicate marking an entity as a belief.
@@ -62,7 +62,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register religion's contribution to the concept registry.
-#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
+///
+/// The god/spirit concepts register through their correspondence [`Manifest`]:
+/// each is a nameable supernatural presence, so its lexeme edge declares
+/// `Expected`; religion emits no phenomenon kind for them, so the percept edge
+/// is a `Gap`; and cognition voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_BELIEF, true, "subject is a belief")?;
     registry.register_predicate(HELD_BY, false, "a community holding a belief")?;
@@ -96,13 +100,25 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a belief's sentiment (eternal, cyclic, or ambient)",
     )?;
 
-    registry.register_concept("god", "religion", ConceptKind::Social, "a deity")?;
-    registry.register_concept(
-        "spirit",
-        "religion",
-        ConceptKind::Social,
-        "a lesser or unseen supernatural presence",
-    )
+    for (name, doc) in [
+        ("god", "a deity"),
+        ("spirit", "a lesser or unseen supernatural presence"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "religion".to_string(),
+                kind: ConceptKind::Social,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    Ok(())
 }
 
 /// Religion as a registrable unit for the composition-root roster.

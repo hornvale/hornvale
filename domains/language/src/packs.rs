@@ -15,7 +15,10 @@
 //! two rooted concepts (e.g. `sea` = "many water").
 #![warn(missing_docs)]
 
-use hornvale_kernel::{ConceptKind, ConceptRegistry, RegistryError};
+use hornvale_kernel::{
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
+    RegistryError, Void,
+};
 
 /// One entry in a vocabulary pack: a concept id, its broad category, a doc,
 /// and its rank on whichever acquisition ladder it belongs to (0 for
@@ -408,7 +411,12 @@ pub fn in_ladder(entry: &PackEntry, depths: &PackDepths) -> bool {
 /// god/spirit) — is skipped rather than re-registered, so this function is
 /// order-independent: it may run before or after the other domains'
 /// `register_concepts` in `register_all` without conflict.
-#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
+///
+/// Each language-owned concept registers through its correspondence
+/// [`Manifest`]. These are the lexeme owner, so every one declares `Expected`
+/// (the concrete word is realized per-species later, per the hybrid model);
+/// language emits no phenomenon kind for them, so the percept edge is a `Gap`;
+/// and cognition voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     let packs = universal_stratum()
         .iter()
@@ -419,7 +427,19 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         if registry.concept(entry.concept).is_some() {
             continue;
         }
-        registry.register_concept(entry.concept, "language", entry.kind, entry.doc)?;
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: entry.concept.to_string(),
+                domain: "language".to_string(),
+                kind: entry.kind,
+                doc: entry.doc.to_string(),
+            },
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
     }
     Ok(())
 }
@@ -494,11 +514,22 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
     fn registering_after_astronomy_does_not_conflict_on_sun() {
         let mut r = ConceptRegistry::default();
-        r.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")
-            .unwrap();
+        r.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: "sun".to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: "the sun".to_string(),
+            },
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })
+        .unwrap();
         register_concepts(&mut r).unwrap();
         assert_eq!(
             r.concept("sun").unwrap().domain,
