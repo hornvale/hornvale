@@ -1,6 +1,6 @@
 # The Wandering Sun — design
 
-**Date:** 2026-07-17 · **Status:** awaiting G3 review
+**Date:** 2026-07-17 · **Status:** shipped (2026-07-17)
 **Origin:** seed 8 diagnosis (locked world, 21.79° obliquity: ice sits ~22°
 off the night-region center at solstice).
 
