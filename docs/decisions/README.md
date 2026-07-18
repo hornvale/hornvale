@@ -97,3 +97,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0055](0055-external-clients-consume-a-versioned-wasm-catalog.md) | External clients consume Hornvale as a versioned wasm catalog | Accepted |
 | [0056](0056-sculpting-is-terrain-epoch-v3.md) | Sculpting is terrain epoch v3 | Accepted |
 | [0057](0057-banked-coastal-mechanisms-activate-on-measured-demand.md) | Banked coastal mechanisms activate on measured demand, not by default | Accepted |
+| [0058](0058-the-book-is-a-derived-view-grammar-is-build-state.md) | The Book is a derived view; grammar is build-state, never world-state | Accepted |
+| [0059](0059-the-book-is-the-primary-artifact.md) | The Book is the primary published artifact; Chronicle and Frontier become appendices | Accepted |
+| [0060](0060-the-is-a-classification-predicate.md) | `is-a` is a kernel-core classification predicate | Accepted |
+| [0061](0061-x86-sse41-for-hardware-exact-rounding.md) | x86 builds enable SSE4.1 so exact rounding uses hardware `roundsd` (byte-identical; ~15% compute win) | Proposed |
