@@ -55,7 +55,9 @@ usage:
                           describe one room: biome, fields, regime, exits
   hornvale locale --world W --sample N [--depth D]
                           sample N rooms across the globe: biome, strangeness, descriptor
-  hornvale concepts                        dump the concept registry as markdown
+  hornvale concepts [--manifest]           dump the concept registry as markdown
+                          (--manifest: the correspondence ledger — per-concept
+                          lexeme/percept/cognition coverage + trial balance)
   hornvale streams                         dump the stream manifest as markdown
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
@@ -104,7 +106,7 @@ fn main() -> ExitCode {
         Some("star-chart") => cmd_star_chart(&args),
         Some("scene") => cmd_scene(&args),
         Some("locale") => cmd_locale(&args),
-        Some("concepts") => cmd_concepts(),
+        Some("concepts") => cmd_concepts(&args),
         Some("streams") => cmd_streams(),
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
@@ -621,10 +623,12 @@ fn cmd_star_chart(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_concepts() -> Result<(), String> {
+fn cmd_concepts(args: &[String]) -> Result<(), String> {
     // Generated, not constant: the registry is identical either way (every
     // predicate is registered up front), but this exercises the fuller
-    // pipeline as a bonus smoke test of the sky genesis wiring.
+    // pipeline as a bonus smoke test of the sky genesis wiring. Building a
+    // fresh world (rather than loading one from JSON) is what populates the
+    // in-memory `#[serde(skip)]` manifests the `--manifest` view reads.
     let world = world_builder::build_world(
         Seed(0),
         &SkyPins::default(),
@@ -633,7 +637,11 @@ fn cmd_concepts() -> Result<(), String> {
         &world_builder::SettlementPins::default(),
     )
     .map_err(|e| e.to_string())?;
-    print!("{}", concepts::render_concepts(&world.registry));
+    if args.iter().any(|a| a == "--manifest") {
+        print!("{}", concepts::render_manifest(&world.registry));
+    } else {
+        print!("{}", concepts::render_concepts(&world.registry));
+    }
     Ok(())
 }
 

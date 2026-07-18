@@ -5,8 +5,8 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError,
-    Lexicalization, Manifest, Phenomenon, RegistryError, Value, Venue, Void, World,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Fact, LedgerError, Manifest,
+    Phenomenon, RegistryError, Value, Venue, Void, World,
 };
 
 /// Predicate marking an entity as a belief.
@@ -100,6 +100,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a belief's sentiment (eternal, cyclic, or ambient)",
     )?;
 
+    // No language pack names god/spirit yet, so the lexeme edge is an honest
+    // Gap rather than an over-optimistic `Expected` (The Correspondence
+    // reconciliation).
     for (name, doc) in [
         ("god", "a deity"),
         ("spirit", "a lesser or unseen supernatural presence"),
@@ -111,7 +114,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 kind: ConceptKind::Social,
                 doc: doc.to_string(),
             },
-            lexeme: Correspondent::Present(Lexicalization::Expected),
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
             percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",

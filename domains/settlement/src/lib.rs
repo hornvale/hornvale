@@ -8,8 +8,8 @@ pub mod render;
 pub use genesis::{PlacedSettlement, genesis};
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Lexicalization, Manifest,
-    RegistryError, Value, Void, World,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Manifest, RegistryError,
+    Value, Void, World,
 };
 
 /// Predicate marking an entity as a settlement.
@@ -112,6 +112,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a settlement scenario pin, round-trippable",
     )?;
 
+    // No language pack names home/hearth yet, so the lexeme edge is an honest
+    // Gap rather than an over-optimistic `Expected` (The Correspondence
+    // reconciliation).
     for (name, doc) in [
         ("home", "one's dwelling"),
         ("hearth", "the fire at the center of a home"),
@@ -123,7 +126,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 kind: ConceptKind::Social,
                 doc: doc.to_string(),
             },
-            lexeme: Correspondent::Present(Lexicalization::Expected),
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
             percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",

@@ -98,7 +98,13 @@ foots; the reconciliation test passes; the architecture test passes.
 **Tests:** `cargo test -p hornvale --test docs_consistency` (new book page links);
 `cargo test -p hornvale --test architecture`; the manifest-view drift-check;
 full `make gate`.
-**Status:** Not Started
+**Status:** Complete — `concepts --manifest` (backlog + matrix); the drift-checked
+`concept-manifest-generated.md` (72 concepts; lexeme 40/32, percept 3/69,
+cognition 0/72); `cli/tests/correspondence.rs` (trial-balance foots, lexeme
+reconciliation, non-vacuity, every-concept-has-a-manifest); the no-god-enum
+openness test. 7 over-optimistic `Expected` flipped to honest `Gap`
+(snow/rain/ice, god/spirit, home/hearth). Byte-identity independently verified;
+`wind`'s percept gap surfaced (the Wave-1 target).
 
 ---
 

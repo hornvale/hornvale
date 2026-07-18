@@ -20,8 +20,8 @@ pub use substellar::{
 pub use temperature::locked_temperature_at_position;
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
-    ObserverContext, PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, ObserverContext,
+    PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -39,16 +39,19 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 /// Each concept is registered through its correspondence [`Manifest`], which
 /// records — honestly, per edge — how the concept is (or is not yet) carried
 /// across the lexicon, perception, and cognition ledgers:
-/// - **lexeme**: the everyday substances (snow/rain/ice) declare `Expected`, a
-///   word a language pack is expected to realize; the biome-class concepts
-///   declare a `Gap` (no pack names biome classes yet).
+/// - **lexeme**: no language pack names any of climate's concepts yet —
+///   neither the everyday substances (snow/rain/ice) nor the biome classes —
+///   so every lexeme edge is a `Gap`. (The Correspondence campaign's
+///   reconciliation drift-check made the earlier over-optimistic `Expected`
+///   on snow/rain/ice honest: an `Expected` a pack must actually cover.)
 /// - **percept**: climate emits only the AMBIENT wind gloss, which is none of
 ///   these substances or biomes, so every edge is a `Gap` — not `AMBIENT`.
 /// - **cognition**: the whole column voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")?;
 
-    // The everyday precipitation/frozen-water substances: a word is expected.
+    // The everyday precipitation/frozen-water substances. No language pack
+    // names them yet, so the lexeme edge is an honest Gap (not `Expected`).
     for (name, doc) in [
         ("snow", "frozen precipitation"),
         ("rain", "liquid precipitation"),
@@ -61,7 +64,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 kind: ConceptKind::Substance,
                 doc: doc.to_string(),
             },
-            lexeme: Correspondent::Present(Lexicalization::Expected),
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
             percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",

@@ -74,6 +74,7 @@
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
+- [The Concept Manifest](./reference/concept-manifest-generated.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
