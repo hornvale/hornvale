@@ -54,6 +54,9 @@ run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42
 echo "regenerate-artifacts: the book" >&2
 run -p hornvale -- book > book/src/gallery/the-book.md
 
+echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
+run_release -p hornvale -- lab run studies/the-chorus.study.json
+
 echo "regenerate-artifacts: explain" >&2
 run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 
