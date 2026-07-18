@@ -166,6 +166,7 @@
 - [The Ordination](./chronicle/the-ordination.md)
 - [The Predicates & the Grammar](./chronicle/the-predicates-and-the-grammar.md)
 - [The Quickening](./chronicle/the-quickening.md)
+- [The Shadow Track](./chronicle/the-shadow-track.md)
 
 # Appendix: The Frontier
 

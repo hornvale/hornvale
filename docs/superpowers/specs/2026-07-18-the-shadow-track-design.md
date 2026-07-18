@@ -1,6 +1,7 @@
 # The Shadow Track — design
 
-**Date:** 2026-07-18 · **Status:** awaiting G3 review
+**Date:** 2026-07-18 · **Status:** SHIPPED (2026-07-18) — `scene/eclipses/v1`
+producer + Orrery consumer merged; see [chronicle](../../../book/src/chronicle/the-shadow-track.md).
 **Sequel to:** The Real Sky (the designated `scene/eclipses/v1` follow-on).
 
 ## 1. Goal

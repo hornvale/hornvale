@@ -1,5 +1,10 @@
 # The Shadow Track Implementation Plan
 
+> **Status: COMPLETE (2026-07-18).** All 9 tasks shipped; final review fixes
+> applied (closed-interval docs, band-occlusion lift, orphaned golden removed).
+> See the [chronicle](../../../book/src/chronicle/the-shadow-track.md) and
+> [retrospective](../../retrospectives/the-shadow-track.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Export the sim's dated eclipses (`scene/eclipses/v1`: solar+lunar
