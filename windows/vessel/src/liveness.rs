@@ -118,6 +118,79 @@ pub const SUSTENANCE: DriveParams = DriveParams {
     sated: 0.15,
 };
 
+/// The elevation field the belief/exploration logic reads, abstracted so pure
+/// tests plant synthetic terrain without building a world. The session backs it
+/// with a `LocaleContext` (see `session.rs::LocaleTerrain`).
+pub trait Terrain {
+    /// The room's elevation in metres (INFINITY for an undescribable room —
+    /// never water, never chosen downhill).
+    /// type-audit: waiver(elevation-convention: return)
+    fn elevation(&self, room: &RoomAddr) -> f64;
+}
+
+/// The elevation at or below which a room is water (spec §8, tuned for the
+/// seed-42 demo in the closing task). A room is water iff it lies this low.
+/// type-audit: waiver(elevation-convention)
+pub const WATER_LEVEL: f64 = 0.0;
+
+/// Water-truth (L0): a room is water iff its elevation is at or below
+/// `WATER_LEVEL`. Pure over the terrain field; the low ground is water, so
+/// sources scatter naturally by terrain (many, not one).
+/// type-audit: bare-ok(flag: return)
+pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
+    terrain.elevation(room).total_cmp(&WATER_LEVEL).is_le()
+}
+
+/// The single steepest-descent neighbour ("water lies low" — the prior an
+/// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
+/// tie-break (the constitutional no-native-float-cmp rule), exactly
+/// `resource_room`'s existing rule. Always a neighbour (never `from` itself).
+pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in from.neighbors() {
+        let elev = terrain.elevation(&n);
+        let keep_existing = match &best {
+            Some((ba, be)) => elev.total_cmp(be).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((n, elev));
+        }
+    }
+    best.expect("a room has three neighbors").0
+}
+
+/// The true nearest water room to `from` (ground-truth-best) — a deterministic
+/// breadth-first walk over the mesh to the closest `is_water` room, frontier
+/// processed in `RoomAddr` order, capped at `budget` expansions (`None` if no
+/// water within it). The agent does not know this until it has PERCEIVED it.
+/// type-audit: bare-ok(count: budget)
+pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> Option<RoomAddr> {
+    let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut frontier: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    frontier.insert(from.clone());
+    let mut expansions = 0usize;
+    while let Some(room) = frontier.iter().next().cloned() {
+        frontier.remove(&room);
+        if !visited.insert(room.clone()) {
+            continue;
+        }
+        if is_water(&room, terrain) {
+            return Some(room);
+        }
+        expansions += 1;
+        if expansions >= budget {
+            return None;
+        }
+        for n in room.neighbors() {
+            if !visited.contains(&n) {
+                frontier.insert(n);
+            }
+        }
+    }
+    None
+}
+
 /// The resource cell the drive seeks: the lowest-elevation of `home`'s three
 /// mesh neighbors ("toward water"), ties broken by `RoomAddr` order for
 /// determinism. Reads the locale elevation field.
@@ -1091,5 +1164,77 @@ mod tests {
         let plan = plan_to_room(&home, &dest, 10_000).unwrap();
         assert!(plan.iter().all(|a| matches!(a, Action::MoveTo(_))));
         assert!(!plan.is_empty());
+    }
+
+    /// A synthetic elevation field for pure tests: planted heights, INFINITY elsewhere
+    /// (INFINITY = "not water, never chosen downhill" — mirrors resource_room's
+    /// undescribable-room fallback).
+    struct PlantedTerrain(std::collections::BTreeMap<RoomAddr, f64>);
+    impl Terrain for PlantedTerrain {
+        fn elevation(&self, room: &RoomAddr) -> f64 {
+            self.0.get(room).copied().unwrap_or(f64::INFINITY)
+        }
+    }
+
+    #[test]
+    fn is_water_is_the_elevation_threshold() {
+        // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
+        // normalizes its input direction first — so `raddr(1.0)` and `raddr(2.0)`
+        // collapse to the SAME room (both are the direction [1,0,0]). Use a
+        // genuine mesh neighbor for `high` instead, so the two planted rooms
+        // are actually distinct (deviation from the brief's literal `raddr(2.0)`;
+        // see task-1-report.md).
+        let low = raddr(1.0);
+        let high = low.neighbors()[0].clone();
+        let t = PlantedTerrain(
+            [
+                (low.clone(), WATER_LEVEL - 1.0),
+                (high.clone(), WATER_LEVEL + 1.0),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        assert!(is_water(&low, &t));
+        assert!(!is_water(&high, &t));
+    }
+
+    #[test]
+    fn downhill_step_picks_the_lowest_neighbor_deterministically() {
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // Make ns[1] strictly lowest; others high.
+        let mut m = std::collections::BTreeMap::new();
+        for (i, n) in ns.iter().enumerate() {
+            m.insert(n.clone(), if i == 1 { 0.0 } else { 100.0 });
+        }
+        let t = PlantedTerrain(m);
+        assert_eq!(downhill_step(&home, &t), ns[1]);
+    }
+
+    #[test]
+    fn nearest_water_finds_the_closest_water_room_by_hops() {
+        // home (dry) -> a neighbor that is water: 1 hop.
+        let home = raddr(1.0);
+        let near = home.neighbors()[0].clone();
+        let t = PlantedTerrain(
+            [(home.clone(), 100.0), (near.clone(), WATER_LEVEL - 1.0)]
+                .into_iter()
+                .collect(),
+        );
+        assert_eq!(nearest_water(&home, &t, 10_000), Some(near));
+    }
+
+    #[test]
+    fn nearest_water_returns_from_itself_when_already_on_water() {
+        let here = raddr(1.0);
+        let t = PlantedTerrain([(here.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        assert_eq!(nearest_water(&here, &t, 10_000), Some(here));
+    }
+
+    #[test]
+    fn nearest_water_gives_up_within_budget_when_no_water() {
+        let home = raddr(1.0); // all-INFINITY terrain: no water anywhere
+        let t = PlantedTerrain(std::collections::BTreeMap::new());
+        assert_eq!(nearest_water(&home, &t, 50), None);
     }
 }
