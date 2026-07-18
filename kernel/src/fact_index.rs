@@ -20,7 +20,7 @@ pub(crate) struct ObjKey(pub Value);
 
 impl ObjKey {
     /// Lowest possible key, for `(prefix, .., MIN)` range starts.
-    pub(crate) const MIN: ObjKey = ObjKey(Value::Entity(EntityId(0)));
+    pub(crate) const MIN: ObjKey = ObjKey(Value::Entity(EntityId::MIN));
     /// Highest possible key, for `(prefix, .., MAX)` range ends.
     pub(crate) const MAX: ObjKey = ObjKey(Value::Flag(true));
 }
@@ -171,7 +171,7 @@ impl FactIndex {
         };
         let mut v: Vec<usize> = self
             .pso
-            .range((sym, EntityId(0), ObjKey::MIN)..=(sym, EntityId(u64::MAX), ObjKey::MAX))
+            .range((sym, EntityId::MIN, ObjKey::MIN)..=(sym, EntityId::MAX, ObjKey::MAX))
             .flat_map(|(_, ps)| ps.iter().copied())
             .collect();
         v.sort_unstable();
@@ -183,7 +183,7 @@ impl FactIndex {
         let obj = ObjKey(object.clone());
         let mut v: Vec<usize> = self
             .osp
-            .range((obj.clone(), EntityId(0), Symbol::MIN)..=(obj, EntityId(u64::MAX), Symbol::MAX))
+            .range((obj.clone(), EntityId::MIN, Symbol::MIN)..=(obj, EntityId::MAX, Symbol::MAX))
             .flat_map(|(_, ps)| ps.iter().copied())
             .collect();
         v.sort_unstable();
@@ -210,7 +210,7 @@ mod tests {
     #[test]
     fn objkey_orders_numbers_by_total_cmp_and_ranks_variants() {
         assert!(ObjKey(Value::Number(-1.0)) < ObjKey(Value::Number(1.0)));
-        assert!(ObjKey(Value::Entity(EntityId(9))) < ObjKey(Value::Text("a".into())));
+        assert!(ObjKey(Value::Entity(EntityId::new(9).unwrap())) < ObjKey(Value::Text("a".into())));
         assert!(ObjKey::MIN <= ObjKey(Value::Number(0.0)));
         assert!(ObjKey(Value::Number(0.0)) <= ObjKey::MAX);
     }

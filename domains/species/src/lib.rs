@@ -12,8 +12,8 @@
 
 use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptKind, ConceptRegistry, ConditionResponse,
-    DETRITUS, EntityId, Fact, KindId, LedgerError, MINERAL, Mass, PHOTOSYNTHATE, PLANT_FORAGE,
-    RegistryError, ResourceVector, Value, World,
+    DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError, MINERAL, Mass, PHOTOSYNTHATE,
+    PLANT_FORAGE, RegistryError, ResourceVector, Value, World,
 };
 
 mod allometry;
@@ -25,6 +25,16 @@ pub use allometry::{
 /// Predicate: a species entity's name (functional, Text).
 /// type-audit: bare-ok(identifier-text)
 pub const SPECIES_NAME: &str = "species-name";
+/// Body mass in kilograms — a level-agnostic trait predicate: the subject
+/// may be a kind-representative entity or an instance (the instance fact is
+/// the prototype-inheritance override). Non-functional: sim-mutable, the
+/// latest fact wins (`Ledger::latest_value_of`).
+/// type-audit: bare-ok(identifier-text)
+pub const SPECIES_MASS_KG: &str = "species-mass-kg";
+/// Magical potency override — level-agnostic, non-functional, latest-wins
+/// (see `SPECIES_MASS_KG`).
+/// type-audit: bare-ok(identifier-text)
+pub const SPECIES_POTENCY: &str = "species-potency";
 /// Predicate: how a species answers threat, flee 0 ↔ stand 1 (functional, Number).
 /// type-audit: bare-ok(identifier-text)
 pub const THREAT_RESPONSE: &str = "species-threat-response";
@@ -1022,6 +1032,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(STATUS_BASIS, true, "rank, knowledge, or generosity")?;
     registry.register_predicate(PEOPLED_BY, true, "the species that peoples a settlement")?;
     registry.register_predicate(
+        SPECIES_MASS_KG,
+        false,
+        "body mass in kilograms (latest wins)",
+    )?;
+    registry.register_predicate(SPECIES_POTENCY, false, "magical potency (latest wins)")?;
+    registry.register_predicate(
         SPECIES_ACTIVITY_CYCLE,
         true,
         "when a species is awake: diurnal, nocturnal, crepuscular",
@@ -1113,6 +1129,30 @@ pub fn species_entity(world: &World, name: &str) -> Option<EntityId> {
         .find(SPECIES_NAME)
         .find(|f| matches!(&f.object, Value::Text(t) if t == name))
         .map(|f| f.subject)
+}
+
+/// The instance-component lens (spec §4.3): the effective `BiosphereTraits`
+/// of an instance — its (latest) numeric override facts applied over its
+/// current kind's authored registry default. Materialized per call; derived,
+/// never serialized, never cached (the tick cache is c6). Total: `None` for
+/// a kindless entity, a dangling label, or a physically invalid override.
+pub fn instance_biosphere(
+    ledger: &Ledger,
+    e: EntityId,
+    biosphere: &ComponentStore<KindId, BiosphereTraits>,
+) -> Option<BiosphereTraits> {
+    let label = ledger.kind_of(e)?;
+    let mut traits = biosphere.get_by_label(label)?.clone();
+    if let Some(Value::Number(m)) = ledger.latest_value_of(e, SPECIES_MASS_KG) {
+        traits.mass = Mass::new(*m).ok()?;
+    }
+    if let Some(Value::Number(p)) = ledger.latest_value_of(e, SPECIES_POTENCY) {
+        if !p.is_finite() || *p < 0.0 {
+            return None;
+        }
+        traits.potency = *p;
+    }
+    Some(traits)
 }
 
 #[cfg(test)]

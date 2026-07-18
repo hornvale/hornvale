@@ -137,7 +137,10 @@ mod tests {
     #[test]
     fn climate_contributes_a_low_salience_phenomenon() {
         let c = UniformClimate;
-        let seen = c.phenomena(&ObserverContext::at(EntityId(1), WorldTime { day: 3.0 }));
+        let seen = c.phenomena(&ObserverContext::at(
+            EntityId::new(1).unwrap(),
+            WorldTime { day: 3.0 },
+        ));
         assert_eq!(seen.len(), 1);
         assert_eq!(seen[0].kind, AMBIENT);
         assert!(seen[0].salience < 0.5);

@@ -99,6 +99,7 @@
 - [The Concordance](./chronicle/the-concordance.md)
 - [The Presiding](./chronicle/the-presiding.md)
 - [The Real Sky](./chronicle/the-real-sky.md)
+- [The Individuation](./chronicle/the-individuation.md)
 
 # The Gallery
 

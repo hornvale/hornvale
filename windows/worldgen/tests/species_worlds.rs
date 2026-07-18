@@ -153,3 +153,34 @@ fn species_pin_restricts_and_unknown_species_fail_loudly() {
     };
     assert!(msg.contains("elf") && msg.contains("goblin") && msg.contains("kobold"));
 }
+
+#[test]
+fn minting_validates_the_kind_against_the_union_roster() {
+    let wc = hornvale_worldgen::WorldComponents::assemble().unwrap();
+    let mut w = hornvale_kernel::World::new(hornvale_kernel::Seed(9));
+    // A canonical non-species kind mints fine…
+    let d =
+        hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "deity", Some(0.0), "test").unwrap();
+    assert_eq!(w.ledger.kind_of(d), Some("deity"));
+    // …an unknown kind fails loudly with the physical reason.
+    let err = hornvale_worldgen::mint_instance_of_kind(&mut w, &wc, "tarrasque", None, "test");
+    assert!(err.is_err(), "unknown kind must be rejected: {err:?}");
+}
+
+#[test]
+fn genesis_commits_no_instance_of_facts() {
+    // Spec §3 (the shadow contract): no shipped world mints an instance this
+    // campaign. The mechanism exists; the cutover is a later campaign's
+    // deliberate, drift-owning decision. If this test reddens, someone wired
+    // instance minting into genesis -- that is a save-format event, not a bug
+    // fix. Talk to Nathan first.
+    let w = build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .unwrap();
+    assert_eq!(w.ledger.find(hornvale_kernel::INSTANCE_OF).count(), 0);
+}

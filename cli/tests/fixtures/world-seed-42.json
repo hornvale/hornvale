@@ -152,6 +152,11 @@
         "functional": true,
         "doc": "insolation at the anchor relative to Earth (derived L/a²)"
       },
+      "instance-of": {
+        "name": "instance-of",
+        "functional": false,
+        "doc": "the kind an entity is an instance of; the latest fact is its current kind"
+      },
       "is-belief": {
         "name": "is-belief",
         "functional": true,
@@ -387,6 +392,11 @@
         "functional": true,
         "doc": "lip-rounding and jaw-closure, 0-1"
       },
+      "species-mass-kg": {
+        "name": "species-mass-kg",
+        "functional": false,
+        "doc": "body mass in kilograms (latest wins)"
+      },
       "species-name": {
         "name": "species-name",
         "functional": true,
@@ -396,6 +406,11 @@
         "name": "species-night-vision",
         "functional": true,
         "doc": "night-sky acuity, 0-1"
+      },
+      "species-potency": {
+        "name": "species-potency",
+        "functional": false,
+        "doc": "magical potency (latest wins)"
       },
       "species-sibilance": {
         "name": "species-sibilance",

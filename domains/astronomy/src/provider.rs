@@ -25,7 +25,7 @@ mod tests {
     }
 
     fn ctx(day: f64) -> ObserverContext {
-        ObserverContext::at(EntityId(1), WorldTime { day })
+        ObserverContext::at(EntityId::new(1).unwrap(), WorldTime { day })
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod tests {
             ..SkyPins::default()
         });
         let night = ObserverContext::at_position(
-            EntityId(1),
+            EntityId::new(1).unwrap(),
             WorldTime { day: 0.0 },
             GeoCoord {
                 latitude: 10.0,
@@ -185,7 +185,7 @@ mod tests {
             ..SkyPins::default()
         });
         let day = ObserverContext::at_position(
-            EntityId(1),
+            EntityId::new(1).unwrap(),
             WorldTime { day: 0.0 },
             GeoCoord {
                 latitude: 10.0,
@@ -218,7 +218,7 @@ mod tests {
             ..SkyPins::default()
         });
         let obs = ObserverContext::at_position(
-            EntityId(1),
+            EntityId::new(1).unwrap(),
             WorldTime { day: 10.5 },
             GeoCoord {
                 latitude: 40.0,
@@ -501,7 +501,7 @@ mod tests {
         });
         let at = |longitude: f64| {
             let obs = ObserverContext::at_position(
-                EntityId(1),
+                EntityId::new(1).unwrap(),
                 WorldTime { day: 0.0 },
                 GeoCoord {
                     latitude: 10.0,
@@ -574,7 +574,7 @@ mod tests {
         let ss = sub_solar_longitude_deg(&calendar, solar.day);
         let at = |day: f64| {
             let obs = ObserverContext::at_position(
-                EntityId(0),
+                EntityId::new(1).unwrap(),
                 WorldTime { day },
                 GeoCoord {
                     latitude: track.center_lat_deg,
@@ -620,7 +620,7 @@ mod tests {
         // offset — before reducing mod 360.
         let night_lon = (ss + 360.0).rem_euclid(360.0) - 180.0;
         let obs = ObserverContext::at_position(
-            EntityId(0),
+            EntityId::new(1).unwrap(),
             WorldTime { day: lunar.day.0 },
             GeoCoord {
                 latitude: 0.0,
@@ -693,7 +693,7 @@ mod tests {
         });
         assert!(s.phenomena(&ctx(0.0)).iter().any(|p| p.kind == TIDE));
         let day_side = ObserverContext::at_position(
-            EntityId(1),
+            EntityId::new(1).unwrap(),
             WorldTime { day: 0.0 },
             GeoCoord {
                 latitude: 10.0,
@@ -891,7 +891,7 @@ mod tests {
         let mut found_rising = false;
         for k in 0..365 {
             let obs = ObserverContext::at_position(
-                EntityId(1),
+                EntityId::new(1).unwrap(),
                 WorldTime {
                     day: k as f64 * year / 365.0,
                 },
@@ -938,7 +938,7 @@ mod tests {
         for k in 0..60 {
             let t = k as f64 * span / 60.0;
             let obs = ObserverContext::at_position(
-                EntityId(1),
+                EntityId::new(1).unwrap(),
                 WorldTime { day: t },
                 GeoCoord {
                     latitude: 35.0,
@@ -1014,7 +1014,7 @@ mod tests {
         for k in 0..samples {
             let t = k as f64 * span / samples as f64;
             let obs = ObserverContext::at_position(
-                EntityId(1),
+                EntityId::new(1).unwrap(),
                 WorldTime { day: t },
                 GeoCoord {
                     latitude: 35.0,

@@ -34,6 +34,7 @@
 | `high-god` | yes | the presiding deity of a ranked pantheon |
 | `highest-elevation-m` | yes | highest globe cell elevation in meters |
 | `insolation-rel` | yes | insolation at the anchor relative to Earth (derived L/a²) |
+| `instance-of` | no | the kind an entity is an instance of; the latest fact is its current kind |
 | `is-belief` | yes | subject is a belief |
 | `is-neighbor` | yes | a minted entity is a notable neighbor star |
 | `is-place` | yes | subject is a traversable place |
@@ -81,8 +82,10 @@
 | `species-exotic-manner` | yes | exotic manner: none, trill, click, ejective |
 | `species-in-group-radius` | yes | how wide 'us' is drawn, 0-1 |
 | `species-labiality` | yes | lip-rounding and jaw-closure, 0-1 |
+| `species-mass-kg` | no | body mass in kilograms (latest wins) |
 | `species-name` | yes | a species entity's name |
 | `species-night-vision` | yes | night-sky acuity, 0-1 |
+| `species-potency` | no | magical potency (latest wins) |
 | `species-sibilance` | yes | sibilance emphasis, 0-1 |
 | `species-sky-attention` | yes | sky vs. ground attention, 0-1 |
 | `species-sociality-mode` | yes | hierarchic or communal |

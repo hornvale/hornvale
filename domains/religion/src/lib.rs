@@ -123,6 +123,26 @@ impl hornvale_kernel::Domain for Religion {
     }
 }
 
+/// Authored kind-level traits of deity kinds — the religion-owned component.
+/// Deliberately thin (spec §4.4): enrichment is content work for the
+/// campaign that ships deity instances in worlds.
+/// type-audit: bare-ok(flag)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DeityTraits {
+    /// Whether the kind takes physical form in the world.
+    pub manifest: bool,
+}
+
+/// The canonical deity-kind registry. One kind today: `deity`, unmanifest.
+pub fn deity_registry() -> hornvale_kernel::ComponentStore<hornvale_kernel::KindId, DeityTraits> {
+    [(
+        hornvale_kernel::KindId("deity"),
+        DeityTraits { manifest: false },
+    )]
+    .into_iter()
+    .collect()
+}
+
 /// A summary of the flagship society's shape, mapped at the composition root
 /// from its committed castes. Religion consumes this instead of importing
 /// culture (the trace discipline).
@@ -267,7 +287,7 @@ pub fn genesis(
         let sentiment = Sentiment::of(p);
 
         let belief = world.ledger.mint_entity();
-        let salt = belief.0;
+        let salt = belief.get();
         let (deity_name, deity_ipa) = names.deity(salt);
         let (epithet, epithet_ipa) = names.epithet(salt, sentiment);
 
