@@ -1621,4 +1621,16 @@ mod tests {
         let w = world();
         assert!(eclipses_scene(&w, 0.0, 100.0).is_err());
     }
+
+    #[test]
+    fn eclipses_scene_does_not_consume_draws_or_mutate_the_world() {
+        // The save-format guard, mirroring the moons/neighbors parity tests:
+        // the document is a pure read of already-derived astronomy, so building
+        // it leaves the world byte-identical (no Stream draw, no mutation).
+        let w = mooned_world();
+        let before = serde_json::to_string(&w).unwrap();
+        let _ = eclipses_scene(&w, 0.0, 2000.0).unwrap();
+        let after = serde_json::to_string(&w).unwrap();
+        assert_eq!(before, after, "eclipses_scene must not alter the world");
+    }
 }

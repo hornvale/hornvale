@@ -802,7 +802,7 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// moon's per-surface descriptors (scene/moons/v1), and `scene neighbors`
 /// renders the night sky's two star populations, the notable neighbor
 /// stars and the background starfield (scene/neighbors/v1), and `scene
-/// eclipses` renders dated eclipse events over a `[from, until)` day window
+/// eclipses` renders dated eclipse events over a closed `[from, until]` day window
 /// (scene/eclipses/v1). Deterministic; CI drift-checks the committed example
 /// scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {

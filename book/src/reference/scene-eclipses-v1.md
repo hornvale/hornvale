@@ -16,8 +16,10 @@ Every other scene schema in the book so far is a **snapshot**: give it a
 world, and it hands back the one document that world has. `scene/eclipses/v1`
 is different — it is a **query**, the same shape as
 [`scene/tiles-region/v1`](./scene-tiles-region-v1.md)'s addressed tile
-request. A client asks for `[from_day, until_day)` and the document echoes
-that window back alongside the events found inside it:
+request. A client asks for `[from_day, until_day]` and the document echoes
+that window back alongside the events found inside it. The window is
+**closed** — both endpoints inclusive: an eclipse landing exactly on
+`until_day` is returned (the producer filters `day < from || day > until`).
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -47,7 +49,7 @@ incidental):
 | `seed` | integer | The world's seed. This is a u64; JavaScript consumers parsing the document with plain `JSON.parse` lose integer precision above 2^53, so use BigInt-aware parsing when the exact seed matters. |
 | `from_day` | number | The queried window start, echoed back — see above. |
 | `until_day` | number | The queried window end, echoed back — see above. |
-| `events` | array of object | The dated eclipses inside `[from_day, until_day)`, day-ascending. |
+| `events` | array of object | The dated eclipses inside the closed window `[from_day, until_day]`, day-ascending. |
 
 Each entry in `events` is:
 
@@ -110,7 +112,7 @@ and behaves smoothly in between, but a client should not treat
 `center_lat_deg` as more precise than that: it is the declared shape of an
 approximation, not a re-derivation of the umbra's true footprint.
 
-An excerpt of a `scene/eclipses/v1` document (seed 42, window `[0, 2000)`
+An excerpt of a `scene/eclipses/v1` document (seed 42, window `[0, 2000]`
 standard days; the full document has 50 events — 31 solar, 19 lunar,
 drawn from 2 moons):
 
