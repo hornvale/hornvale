@@ -140,6 +140,7 @@ impl Default for CarveParams {
 /// unit through `carve` → `deposit_wedge`/`raise_barriers`, so they ride as
 /// one context rather than three positional arguments. Purely a grouping of
 /// the same three references — byte-identical to passing them separately.
+/// type-audit: bare-ok(index: plate_of)
 #[derive(Clone, Copy)]
 pub struct MarginGeometry<'a> {
     /// Passive/active margin polarity per cell.
@@ -790,7 +791,7 @@ pub fn route_sediment(
 /// however large their volume. Every mouth, eligible or not, still takes
 /// the ordinary wedge spread.
 ///
-/// type-audit: pending(wave-2: mouths), bare-ok(index: plate_of), pending(wave-2: return)
+/// type-audit: pending(wave-2: mouths), pending(wave-2: return)
 pub fn deposit_wedge(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
@@ -1063,7 +1064,7 @@ pub fn deposit_wedge(
 /// `elevation_after_wedge` before atolls cap, and the sea-trim
 /// ([`trim_to_sea`]) must exempt `barrier_cells` like `delta_cells` — a
 /// barrier is meant to stay subaerial past the final re-solve.
-/// type-audit: bare-ok(index: plate_of), pending(wave-2: mouths), pending(wave-2: return)
+/// type-audit: pending(wave-2: mouths), pending(wave-2: return)
 pub fn raise_barriers(
     geo: &Geosphere,
     elevation_after_wedge: &CellMap<ReferenceElevation>,
@@ -1332,7 +1333,7 @@ pub fn trim_to_sea(
 /// `eroded ≈ deposited + ocean_loss` holds end to end. `CarveDelta::mouths`
 /// retains the RIVER mouths only — wave micro-mouths are transient shelf
 /// supply, not river mouths.
-/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(ratio: induration), bare-ok(ratio: carbonate), bare-ok(index: plate_of)
+/// type-audit: bare-ok(count: drainage), bare-ok(flag: endorheic), bare-ok(ratio: induration), bare-ok(ratio: carbonate)
 #[allow(clippy::too_many_arguments)]
 pub fn carve(
     geo: &Geosphere,
