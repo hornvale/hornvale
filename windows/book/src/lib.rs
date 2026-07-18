@@ -1453,17 +1453,46 @@ mod tests {
         );
     }
 
-    /// C4 T4, the margin law (spec §4.3): parse every emic + margin line;
-    /// the union of recovered facts ⊇ chorus_ground, per culture — nothing
-    /// silently vanishes (checked THROUGH the parser, not narrated).
+    /// C4 T4, the margin law (spec §4.3): per culture, `emic ∪ margin ⊇
+    /// chorus_ground` — measured by actually parsing every emic + margin
+    /// line and checking each ground-truth fact against what the parser
+    /// recovered, not by a subject-name tally that never touches
+    /// `chorus_ground` or `ParsedLine.facts` (a fact silently vanishing
+    /// from both registers must redden this test).
+    ///
+    /// Recovery, per parsed line: the fragment facts in `parsed.facts`
+    /// (moon-count/star-class/day-length-std, verbatim), plus the
+    /// classification itself — `parsed.kind`, already recovered singular
+    /// by `parse_line` regardless of the clause's number. A parsed line's
+    /// facts are filed under its own subject, canonicalized by stripping a
+    /// collective's leading `"The "` (the only surface dressing between a
+    /// `chorus_ground` subject and its emic display name); a pronoun
+    /// re-mention (`"it"`) files under the section's most recently named
+    /// subject, matching how the surface actually reads.
+    ///
+    /// Coverage, per `GroundFact`: a fragment fact must appear verbatim in
+    /// its subject's recovered `(predicate, value)` pairs, with the one
+    /// documented exception that `day-length-std`'s surface value is the
+    /// `quantity`-truncated number (mirrors
+    /// `fact_for_inverts_fragment_for_over_the_closed_space`'s `(days *
+    /// 10.0).trunc() / 10.0`); an `is-a` or `instance-of` fact must appear
+    /// as a recovered kind equal to its own ground-truth text for that
+    /// subject — the margin law's whole point is that the TRUTH stays
+    /// recoverable even when the emic paragraph substitutes ("Vebe is the
+    /// earth"), so the truth text itself (not the substitution target) is
+    /// what this test requires to surface, via the margin's "In truth, ⟨
+    /// name⟩ is a planet" when the emic line alone lost it.
     #[test]
     fn emic_union_margin_covers_ground_truth() {
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             let ctx = parse_context(&world);
+            let ground = hornvale_worldgen::chorus_ground(&world);
             let vol = render_volume(&world);
             for section in &vol.chorus {
-                let mut recovered_subjects: BTreeSet<String> = BTreeSet::new();
+                let mut recovered_facts: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
+                let mut recovered_kinds: BTreeMap<String, Vec<String>> = BTreeMap::new();
+                let mut current_subject: Option<String> = None;
                 for line in section.emic.iter().chain(section.margin.iter()) {
                     let (parsed, _dress) = parse_chorus_line(line, &ctx).unwrap_or_else(|e| {
                         panic!(
@@ -1471,21 +1500,87 @@ mod tests {
                             section.kind
                         )
                     });
-                    recovered_subjects.insert(parsed.subject.clone());
+                    let subject = if parsed.subject == "it" {
+                        current_subject.clone().unwrap_or_else(|| {
+                            panic!(
+                                "seed {seed} {}: pronoun re-mention with no prior \
+                                 subject: {line}",
+                                section.kind
+                            )
+                        })
+                    } else {
+                        let canonical = parsed
+                            .subject
+                            .strip_prefix("The ")
+                            .unwrap_or(&parsed.subject)
+                            .to_string();
+                        current_subject = Some(canonical.clone());
+                        canonical
+                    };
+                    recovered_facts
+                        .entry(subject.clone())
+                        .or_default()
+                        .extend(parsed.facts.iter().cloned());
+                    recovered_kinds
+                        .entry(subject)
+                        .or_default()
+                        .push(parsed.kind.clone());
                 }
-                // Every subject this culture's account carries an is-a or
-                // instance-of entry for must be named somewhere across
-                // emic + margin (the union-covers-ground-truth law) — the
-                // WORLD subject is always recovered indirectly via "it"
-                // reduction only if re-mentioned, so we assert on kind
-                // coverage instead: the recovered set is non-empty
-                // whenever the section itself is non-empty.
-                assert_eq!(
-                    recovered_subjects.is_empty(),
-                    section.emic.is_empty() && section.margin.is_empty(),
-                    "seed {seed} {}: every non-empty section names at least one subject",
-                    section.kind
-                );
+
+                for gf in &ground {
+                    let facts = recovered_facts.get(&gf.subject);
+                    let kinds = recovered_kinds.get(&gf.subject);
+                    if gf.predicate == MOON_COUNT || gf.predicate == STAR_CLASS {
+                        let ok = facts.is_some_and(|fs| {
+                            fs.iter()
+                                .any(|(p, v)| p == &gf.predicate && v == &gf.object)
+                        });
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground fact {}={:?} on {:?} vanished from \
+                             emic+margin — recovered facts for that subject: {:?}",
+                            section.kind, gf.predicate, gf.object, gf.subject, facts
+                        );
+                    } else if gf.predicate == DAY_LENGTH_STD {
+                        let Value::Number(days) = &gf.object else {
+                            panic!(
+                                "seed {seed} {}: day-length-std ground fact is non-numeric: \
+                                 {:?}",
+                                section.kind, gf.object
+                            );
+                        };
+                        let truncated = (days * 10.0).trunc() / 10.0;
+                        let ok = facts.is_some_and(|fs| {
+                            fs.iter().any(|(p, v)| {
+                                p == DAY_LENGTH_STD
+                                    && matches!(v, Value::Number(n) if *n == truncated)
+                            })
+                        });
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground fact day-length-std={days} (surfaces as \
+                             {truncated}) on {:?} vanished from emic+margin — recovered \
+                             facts for that subject: {:?}",
+                            section.kind, gf.subject, facts
+                        );
+                    } else if gf.predicate == hornvale_kernel::world::IS_A
+                        || gf.predicate == hornvale_kernel::INSTANCE_OF
+                    {
+                        let Value::Text(truth) = &gf.object else {
+                            panic!(
+                                "seed {seed} {}: classification ground fact is non-text: {:?}",
+                                section.kind, gf.object
+                            );
+                        };
+                        let ok = kinds.is_some_and(|ks| ks.iter().any(|k| k == truth));
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground truth kind {truth:?} for {:?} vanished \
+                             from emic+margin — recovered kinds for that subject: {:?}",
+                            section.kind, gf.subject, kinds
+                        );
+                    }
+                }
             }
         }
     }
