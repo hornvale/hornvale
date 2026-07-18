@@ -12,6 +12,14 @@ use std::path::Path;
 /// type-audit: bare-ok(identifier-text)
 pub const NAME: &str = "name";
 
+/// The classification predicate: `(entity, is-a, <class-label>)`. Functional —
+/// an entity has one immutable concept-class (celestial classes: planet, star,
+/// moon). Object is a `Value::Text` class label. Distinct from [`INSTANCE_OF`]:
+/// `is-a` is a fixed concept-class (contradiction-checked); `instance-of` is a
+/// mutable roster-kind (latest-wins). C2 decides their long-term relationship.
+/// type-audit: bare-ok(identifier-text)
+pub const IS_A: &str = "is-a";
+
 /// The kind an entity is an instance of (object: `Value::Text` kind label).
 /// NON-functional: a kind can change over sim time (awakened beast, corpse,
 /// lich); each change is a new day-stamped fact and the CURRENT kind is the
@@ -60,6 +68,9 @@ impl World {
         let mut registry = ConceptRegistry::default();
         registry
             .register_predicate(NAME, true, "canonical name of an entity")
+            .expect("core concept registration cannot conflict in an empty registry");
+        registry
+            .register_predicate(IS_A, true, "the class an entity belongs to")
             .expect("core concept registration cannot conflict in an empty registry");
         registry
             .register_predicate(
@@ -188,6 +199,19 @@ mod tests {
         );
         assert_ne!(json, corrupt, "test setup must actually corrupt the json");
         assert!(World::from_json(&corrupt).is_err());
+    }
+
+    #[test]
+    fn every_world_registers_is_a() {
+        let w = World::new(Seed(1));
+        assert!(
+            w.registry.predicate("is-a").is_some(),
+            "is-a must be registered"
+        );
+        assert!(
+            w.registry.predicate("is-a").unwrap().functional,
+            "is-a is functional"
+        );
     }
 
     #[test]

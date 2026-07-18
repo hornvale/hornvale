@@ -59,6 +59,7 @@ usage:
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
+  hornvale book                            render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
@@ -107,6 +108,7 @@ fn main() -> ExitCode {
         Some("phonology") => cmd_phonology(),
         Some("dictionary") => cmd_dictionary(&args),
         Some("proto") => cmd_proto(),
+        Some("book") => cmd_book(&args),
         Some("voice") => audio::cmd_voice(&args),
         Some("lab") => cmd_lab(&args),
         Some("help") | None => {
@@ -657,6 +659,50 @@ fn cmd_dictionary(args: &[String]) -> Result<(), String> {
 /// `dictionary` this takes no `--world`.
 fn cmd_proto() -> Result<(), String> {
     print!("{}", proto::render_proto()?);
+    Ok(())
+}
+
+/// Render The Book: three volumes, one per seed in `1, 2, 3`, built through
+/// the composition root with default pins and a generated sky (matching
+/// `cmd_new`'s builder call). Each volume's title is the committed `name`
+/// fact on the world's planet entity (the dominant people's endonym, read
+/// back from the ledger rather than re-derived), or `"Untitled"` for a
+/// world with no dominant peopled race to name it. After the Book is
+/// printed to stdout, a PROC-15 coverage report (unrendered predicates per
+/// volume) is printed to stderr. Markdown to stdout; deterministic.
+fn cmd_book(_args: &[String]) -> Result<(), String> {
+    let mut out = String::from("# The Book\n");
+    let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
+    for seed in [1u64, 2, 3] {
+        let world = world_builder::build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            world_builder::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &world_builder::SettlementPins::default(),
+        )
+        .map_err(|e| e.to_string())?;
+        let vol = hornvale_book::render_volume(&world);
+        let title = world_builder::planet_entity(&world)
+            .and_then(|p| world.ledger.text_of(p, hornvale_kernel::NAME))
+            .map(str::to_string)
+            .unwrap_or_else(|| "Untitled".to_string());
+        out.push_str(&format!("\n## Volume {seed}: {title}\n\n"));
+        for line in vol.lines {
+            out.push_str(&line);
+            out.push('\n');
+        }
+        coverage.push((seed, hornvale_book::uncovered_predicates(&world)));
+    }
+    print!("{out}");
+    for (seed, gaps) in &coverage {
+        let gaps = if gaps.is_empty() {
+            "none".to_string()
+        } else {
+            gaps.join(", ")
+        };
+        eprintln!("coverage — volume {seed}: unrendered predicates: {gaps}");
+    }
     Ok(())
 }
 

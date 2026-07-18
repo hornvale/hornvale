@@ -2903,7 +2903,59 @@ fn build_to(
         Ok(())
     })?;
 
+    stage("planet", || -> Result<(), BuildError> {
+        // The planet asserts, in the ledger, what it is and what its
+        // dominant people call it. Classification is read from structure (no
+        // draw); the name is a lexicon lookup of the universal-stratum
+        // `earth` concept (no draw). Run last, after peoples/settlements are
+        // placed, so `world_name` (which reads `dominant_people` ->
+        // `flagship_of`) resolves.
+        let planet = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject: planet,
+                    predicate: hornvale_kernel::world::IS_A.into(),
+                    object: Value::Text("planet".into()),
+                    place: None,
+                    day: None,
+                    provenance: "astronomy: the central body is a planet".into(),
+                },
+                &world.registry,
+            )
+            .expect("is-a on a fresh entity cannot conflict");
+        if let Some(name) = world_name_in(&world, wc) {
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: planet,
+                        predicate: hornvale_kernel::NAME.into(),
+                        object: Value::Text(name),
+                        place: None,
+                        day: None,
+                        provenance: "the dominant people's word for the world".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("name on a fresh entity cannot conflict");
+        }
+        Ok(())
+    })?;
+
     Ok(world)
+}
+
+/// The entity carrying the world's planet classification (`is-a`,
+/// `"planet"`), if one has been minted — `None` before `build_to` reaches
+/// its final "planet" stage (e.g. a world stopped early via `BuildDepth`).
+pub fn planet_entity(world: &World) -> Option<EntityId> {
+    world
+        .ledger
+        .find(hornvale_kernel::world::IS_A)
+        .find(|f| f.object == Value::Text("planet".into()))
+        .map(|f| f.subject)
 }
 
 /// Mint one species entity per kind in `wc` and commit its authored vector as
@@ -3132,6 +3184,80 @@ pub fn flagship_of(world: &World, species: &str) -> Option<hornvale_settlement::
         name,
         population,
     })
+}
+
+/// The peopled race with the greatest `Σ(population × mass)`, tie-broken by
+/// ascending [`KindId`]. `None` if the world has no peopled race (or if
+/// component assembly fails).
+///
+/// Population is the flagship settlement's population — the documented C1
+/// stand-in; no reusable "total settled population per species" accessor
+/// exists yet (a follow-up would sum every settlement a species holds, not
+/// just its flagship). Mass is the biosphere component's authored value.
+/// Comparison uses `f64::total_cmp` for determinism (no `partial_cmp`).
+pub fn dominant_people(world: &World) -> Option<KindId> {
+    let wc = WorldComponents::assemble().ok()?;
+    dominant_people_in(world, &wc)
+}
+
+/// [`dominant_people`] over an explicit component set — the testable core
+/// (mirrors `lexicon_of`/`lexicon_of_in`), so a mutation check can perturb a
+/// candidate's mass without touching the canonical registries.
+pub fn dominant_people_in(world: &World, wc: &WorldComponents) -> Option<KindId> {
+    let mut best: Option<(f64, KindId)> = None;
+    for (kind, bio) in wc.biosphere.iter() {
+        if wc.lexicon.get(kind).is_none() {
+            // Biosphere-only (a dragon/fungus) — not a naming candidate.
+            continue;
+        }
+        // Candidacy requires actual placement (registry-first-is-not-
+        // placed-first): a registered-but-unplaced kind must never compete
+        // at weight 0.0 against a placed kind — it isn't a candidate at all.
+        let Some(flagship) = flagship_of(world, kind.0) else {
+            continue;
+        };
+        let weight = flagship.population as f64 * bio.mass.kilograms();
+        let better = match best {
+            None => true,
+            Some((best_weight, best_kind)) => {
+                weight.total_cmp(&best_weight).is_gt()
+                    || (weight.total_cmp(&best_weight).is_eq() && *kind < best_kind)
+            }
+        };
+        if better {
+            best = Some((weight, *kind));
+        }
+    }
+    best.map(|(_, kind)| kind)
+}
+
+/// The dominant race's word for "earth" — its endonym for the world it
+/// inhabits — capitalized per the lexicon's surface-view convention.
+/// `None` if the world has no dominant race, or if that race's lexicon has
+/// no entry for the concept (a coverage gap, never a silent fallback).
+///
+/// Assembles the canonical [`WorldComponents`] and delegates to
+/// [`world_name_in`]; callers that already hold a `wc` (e.g. the planet
+/// genesis stage) should call that directly instead of re-deriving.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name(world: &World) -> Option<String> {
+    let wc = WorldComponents::assemble().ok()?;
+    world_name_in(world, &wc)
+}
+
+/// [`world_name`] over an explicit component set — the testable core
+/// (mirrors `lexicon_of`/`lexicon_of_in` and `dominant_people`/
+/// `dominant_people_in`), so the planet genesis stage can use the SAME
+/// injected `wc` it already built rather than re-assembling components.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
+    let kind = dominant_people_in(world, wc)?;
+    let lex = lexicon_of_in(world, wc, kind.0).ok()?;
+    match lex.entry("earth")? {
+        hornvale_language::LexEntry::Root { views, .. }
+        | hornvale_language::LexEntry::Compound { views, .. } => Some(views.roman.clone()),
+        hornvale_language::LexEntry::Gap { .. } => None,
+    }
 }
 
 /// Every peopled species holding a flagship settlement, in registry
@@ -3858,6 +3984,258 @@ mod tests {
             &SettlementPins::default(),
         )
         .unwrap()
+    }
+
+    /// C1 T2: the dominant race is the peopled kind maximizing
+    /// `Σ(population × mass)`, deterministic across rebuilds; `world_name`
+    /// is that race's capitalized word for "earth" (its endonym).
+    #[test]
+    fn dominant_people_weights_by_mass_not_headcount() {
+        let world = constant(1);
+        let d = dominant_people(&world).expect("a peopled world has a dominant race");
+        // deterministic across rebuilds
+        assert_eq!(dominant_people(&world), Some(d));
+        // the world name is that race's word for "earth", capitalized
+        let name = world_name(&world).expect("dominant race names the world");
+        assert!(
+            name.chars().next().unwrap().is_uppercase(),
+            "endonym is capitalized"
+        );
+    }
+
+    /// Mutation check ([[measure-dont-narrate-the-mechanism]]): assert the
+    /// weighing MECHANISM, not a hard-coded winner. Seed 1's constant world
+    /// places goblin (population 1) and hobgoblin (population 18); hobgoblin
+    /// wins on `Σ(population × mass)` (18 × 74.8 kg ≫ 1 × 18.1 kg). Crushing
+    /// hobgoblin's mass to near-zero in a rebuilt component set must flip the
+    /// winner to goblin — if it didn't, `dominant_people` would be reading
+    /// headcount alone and this test would catch it.
+    #[test]
+    fn dominant_people_changes_when_the_winners_mass_is_crushed() {
+        let world = constant(1);
+        let wc = WorldComponents::assemble().unwrap();
+        let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
+
+        let shrunk_biosphere: hornvale_kernel::ComponentStore<
+            KindId,
+            hornvale_species::BiosphereTraits,
+        > = wc
+            .biosphere
+            .iter()
+            .map(|(k, bio)| {
+                let mut bio = bio.clone();
+                if *k == winner {
+                    bio.mass = hornvale_kernel::Mass::new(bio.mass.kilograms() * 0.001).unwrap();
+                }
+                (*k, bio)
+            })
+            .collect();
+        let shrunk_wc = WorldComponents::from_stores(
+            shrunk_biosphere,
+            wc.psyche.clone(),
+            wc.perception.clone(),
+            wc.articulation.clone(),
+            wc.lexicon.clone(),
+            wc.family_proto.clone(),
+            wc.family_of.clone(),
+            wc.deity.clone(),
+            wc.culture.clone(),
+            wc.material.clone(),
+        )
+        .expect("cloned canonical stores stay integrity-valid");
+
+        let new_winner = dominant_people_in(&world, &shrunk_wc)
+            .expect("still a peopled world after the mass edit");
+        assert_ne!(
+            new_winner, winner,
+            "crushing the winner's mass must change who wins — dominant_people is \
+             mass-weighted, not headcount-only"
+        );
+    }
+
+    /// A minimal peopled world: one settlement per `(kind, population)`
+    /// pair, each `peopled-by` its kind, with NO other facts. Lets a test
+    /// hold every candidate's canonical (`wc`) mass fixed while choosing its
+    /// population freely — `constant(1)`'s real settlements already carry a
+    /// committed `population` fact, and that predicate is functional (a
+    /// second commit to the same subject would be rejected as a
+    /// contradiction), so population can only be varied on fresh entities.
+    fn synthetic_peopled_world(seed: Seed, placements: &[(KindId, u32)]) -> World {
+        let mut world = World::new(seed);
+        hornvale_settlement::register_concepts(&mut world.registry)
+            .expect("settlement concepts register on a fresh registry");
+        hornvale_species::register_concepts(&mut world.registry)
+            .expect("species concepts register on a fresh registry");
+        for (kind, population) in placements {
+            let id = world.ledger.mint_entity();
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_settlement::IS_SETTLEMENT.into(),
+                        object: Value::Flag(true),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic flagship".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("is-settlement on a fresh entity cannot conflict");
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_settlement::POPULATION.into(),
+                        object: Value::Number(f64::from(*population)),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic population".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("population on a fresh entity cannot conflict");
+            world
+                .ledger
+                .commit(
+                    Fact {
+                        subject: id,
+                        predicate: hornvale_species::PEOPLED_BY.into(),
+                        object: Value::Text(kind.0.to_string()),
+                        place: None,
+                        day: None,
+                        provenance: "test: synthetic peopled-by".into(),
+                    },
+                    &world.registry,
+                )
+                .expect("peopled-by on a fresh entity cannot conflict");
+        }
+        world
+    }
+
+    /// Companion to `dominant_people_changes_when_the_winners_mass_is_crushed`:
+    /// that test crushes MASS and proves the result isn't headcount-only, but
+    /// a mass-only (population-blind) implementation — `weight = bio.mass`,
+    /// ignoring population entirely — would still pass it, because crushing
+    /// the winner's mass flips the mass-only ranking too. This test isolates
+    /// the OTHER factor: hold both candidates' masses at their canonical
+    /// (`wc`) values (mass ranking unchanged from `constant(1)`) and instead
+    /// invert POPULATION — give the real winner a population of 1 and the
+    /// real loser a landslide population. A mass-only mutant, which never
+    /// looks at population, would still declare the same winner (mass
+    /// ranking didn't move) and this assertion would fail; the real
+    /// `Σ(population × mass)` formula flips.
+    #[test]
+    fn dominant_people_changes_when_the_winners_population_is_crushed() {
+        let world = constant(1);
+        let wc = WorldComponents::assemble().unwrap();
+        let winner = dominant_people_in(&world, &wc).expect("a peopled world has a dominant race");
+        let loser = if winner == KindId("goblin") {
+            KindId("hobgoblin")
+        } else {
+            KindId("goblin")
+        };
+
+        let synth = synthetic_peopled_world(world.seed, &[(winner, 1), (loser, 100_000)]);
+        let new_winner =
+            dominant_people_in(&synth, &wc).expect("the synthetic world has two candidates");
+        assert_ne!(
+            new_winner, winner,
+            "crushing the winner's population (while holding both masses fixed at their \
+             canonical values) must change who wins — dominant_people is population-weighted, \
+             not mass-only"
+        );
+    }
+
+    /// Correctness guard (registry-first-is-not-placed-first, the class
+    /// behind hornvale#1): the chosen dominant race must always be a race
+    /// actually PLACED on this world, never a registered-but-unplaced kind
+    /// that merely tied at weight zero.
+    #[test]
+    fn dominant_people_is_always_a_placed_race() {
+        let world = constant(1);
+        let kind = dominant_people(&world).expect("a peopled world has a dominant race");
+        assert!(
+            flagship_of(&world, kind.0).is_some(),
+            "dominant_people must never name a species that holds no flagship settlement"
+        );
+    }
+
+    /// C1 T4: the composition root mints a planet entity and commits its
+    /// classification and endonym, so the book (Task 5) can render "‹Endonym›
+    /// is a planet" from committed facts alone.
+    #[test]
+    fn built_world_names_and_classifies_its_planet() {
+        let world = constant(1);
+        let p = planet_entity(&world).expect("a built world has a planet entity");
+        assert_eq!(world.ledger.text_of(p, "is-a"), Some("planet"));
+        let n = world
+            .ledger
+            .text_of(p, "name")
+            .expect("the planet is named");
+        assert_eq!(Some(n.to_string()), world_name(&world));
+    }
+
+    /// The planet's facts are a pure function of the seed, like every other
+    /// committed fact — no draw, no wall-clock, no entity-order sensitivity.
+    #[test]
+    fn planet_facts_are_deterministic() {
+        assert_eq!(constant(1).to_json(), constant(1).to_json());
+    }
+
+    /// C1 T2 review regression: `dominant_people_in`'s candidacy loop must
+    /// treat "registered but unplaced" differently from "placed with zero
+    /// population" — both weighed 0.0 before the fix, so an unplaced species
+    /// could win by alphabetical tie-break instead of the doc-promised
+    /// `None`. Built with a fauna-only component set at `build_world_to`
+    /// (mirrors `fauna_are_skipped_by_settlement_genesis`) so the world
+    /// itself places no settlements at all, then queried against the
+    /// CANONICAL component set (real lexicon entries for goblin, hobgoblin,
+    /// …) so every candidate passes the "is a naming candidate" filter and
+    /// none is placed — the exact shape of the bug.
+    #[test]
+    fn dominant_people_returns_none_when_no_peopled_race_is_placed() {
+        use hornvale_kernel::ComponentStore;
+        let goblin_bio = hornvale_species::biosphere_registry()
+            .get(&KindId("goblin"))
+            .expect("the shipped goblin has a biosphere row")
+            .clone();
+        let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
+            [(KindId("test-beast"), goblin_bio)].into_iter().collect();
+        let family_of: ComponentStore<KindId, &'static str> =
+            [(KindId("test-beast"), "test-beast")].into_iter().collect();
+        let fauna_only_wc = WorldComponents::from_stores(
+            biosphere,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+            hornvale_language::family_proto(),
+            family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+        )
+        .expect("a fauna-only component set is well-formed (no peopled rows)");
+
+        let world = build_world_to(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+            &fauna_only_wc,
+            BuildDepth::Settlements,
+        )
+        .unwrap();
+
+        let canonical_wc = WorldComponents::assemble().unwrap();
+        assert_eq!(
+            dominant_people_in(&world, &canonical_wc),
+            None,
+            "a world with no placed peopled race must have no dominant race"
+        );
     }
 
     /// hornvale#1 regression: seed 42 places two peoples, so every pantheon
