@@ -1,5 +1,16 @@
 # The Wanting (The Walk · Milestone 2 · the drive rung) — Design
 
+> **STATUS: SHIPPED** — *The Wanting*, all four tasks landed on
+> `worktree-the-wanting` 2026-07-18 (byte-identical; census-free; the drive
+> lives only inside a possess session). PSY-6's drive rung: a homeostatic
+> sustenance drive, a pure fold over an NPC's own `agent-at` history, with a
+> hysteresis dead-band closing the gap it feels between its setpoint and its
+> state; the meaningless destination becomes the resource that satisfies it;
+> a discrete-event tick advances exactly to each closed-form threshold
+> crossing; the GOAP goal rung's seam (`decide`/`Goal`/`view`) is reserved,
+> interface-shape only. `needs` reads a co-located NPC's felt state as
+> diegetic prose; `why` recounts the drive's own reason for each move.
+
 Program: **The Walk** (metaplan `docs/superpowers/specs/2026-07-11-the-walk-metaplan-design.md`,
 Milestone 2 "the living world," Campaign V "The World Moves" — the SECOND
 liveness slice: the motivation engine's first rung, PSY-6). Base: main

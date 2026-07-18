@@ -161,6 +161,68 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
         !recount.contains("No one here answers"),
         "the label must resolve to the NPC that actually moved: {recount}"
     );
+    // THE WANTING T4: the drive-driven move's provenance ("sought water
+    // (thirst)") must surface through the SAME recount, not just an
+    // undifferentiated "it moved" — the drive is what gives the routine a
+    // WHY. Mutation-verify: blanking `DriveMovements::step`'s provenance
+    // string in `liveness.rs` reds this assertion while leaving every other
+    // assertion in this test green (the day/name/resolution checks above
+    // don't touch provenance text at all).
+    assert!(
+        recount.contains("sought water (thirst)"),
+        "the recount names the drive's own reason for the move: {recount}"
+    );
+}
+
+#[test]
+fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cycle() {
+    // THE FELT-STATE READ (the-wanting T4): `needs` renders a co-located
+    // NPC's drive as diegetic prose, never a number, and that prose must
+    // actually track the drive over time — not a static line. The
+    // possessed agent's own settlement guarantees a co-located NPC at the
+    // starting room (the-quickening T3 review), and every derived NPC
+    // starts away from its resource with drive 0 at world day 0, rising at
+    // SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(_) => panic!("needs never releases"),
+    };
+
+    // Day 0.5 (PossessOpts::default, before any wait): the co-located
+    // home-settlement NPC's drive is barely risen (0.5 * 0.15 = 0.075),
+    // at or below the `sated` threshold (0.15) -> "seems content".
+    let early = out_text(session.handle("needs"));
+    assert!(
+        early.contains("seems content"),
+        "a freshly derived NPC reads content at day 0.5: {early}"
+    );
+    assert!(
+        !early.contains("No one else is here"),
+        "the home settlement's NPC must be co-located at the start: {early}"
+    );
+
+    // Wait to day 5.5: still short of the ~5.667 seek crossing (still away
+    // from the resource, still co-located at home), but the drive has
+    // risen into the dead-band (5.5 * 0.15 = 0.825, between sated and act)
+    // -> "could do with a drink", not "seems content" anymore.
+    session.handle("wait 5");
+    let later = out_text(session.handle("needs"));
+    assert!(
+        later.contains("could do with a drink"),
+        "a risen drive reads as wanting, not content: {later}"
+    );
+
+    // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
+    // drive cycle. Fixing the drive to a constant (e.g. always returning
+    // `SUSTENANCE.initial`) would make `early == later` (both "seems
+    // content") and red this line.
+    assert_ne!(
+        early, later,
+        "the felt state must differ across the drive cycle: {early} / {later}"
+    );
 }
 
 #[test]

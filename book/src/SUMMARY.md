@@ -165,6 +165,7 @@
 - [The Ordination](./chronicle/the-ordination.md)
 - [The Predicates & the Grammar](./chronicle/the-predicates-and-the-grammar.md)
 - [The Quickening](./chronicle/the-quickening.md)
+- [The Wanting](./chronicle/the-wanting.md)
 
 # Appendix: The Frontier
 
