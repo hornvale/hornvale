@@ -52,6 +52,13 @@ fn indefinite_article(word: &str) -> &'static str {
     }
 }
 
+/// The construction table's authored predicate order: fragments join the
+/// sentence in THIS order (the G3-approved surface — moons, then star, then
+/// day length), not ledger commit order. Deterministic without sorting:
+/// the array is fixed, and each lookup takes the subject's first committed
+/// fact per predicate.
+const CONSTRUCTION_ORDER: &[&str] = &[MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
+
 /// The construction table: maps a (predicate, object) pair to the fragment
 /// it contributes, or `None` if this predicate has no construction yet
 /// (leaving it on [`uncovered_predicates`]'s list).
@@ -92,8 +99,9 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 /// Render a volume: one Common sentence per `is-a` fact, subject resolved to
 /// its `name` (or a synthetic `Entity <id>` label when genuinely unnamed),
 /// aggregating that subject's other facts into the sentence via the
-/// construction table (`fragment_for`) — facts iterate in ledger commit
-/// order, so the modifier order is deterministic without sorting.
+/// construction table (`fragment_for`), in the table's authored order
+/// ([`CONSTRUCTION_ORDER`]) — the sentence's surface order is an authored
+/// grammar decision, not an echo of ledger commit order.
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
@@ -110,8 +118,14 @@ pub fn render_volume(world: &World) -> BookVolume {
 
         let mut modifiers = Vec::new();
         let mut trailing = Vec::new();
-        for subject_fact in world.ledger.facts_about(subject_entity) {
-            match fragment_for(&subject_fact.predicate, &subject_fact.object) {
+        for predicate in CONSTRUCTION_ORDER {
+            // First committed fact per (subject, predicate) — all three
+            // construction predicates are functional, so "first" is "the"
+            // value; still deterministic, no sorting.
+            let Some(object) = world.ledger.value_of(subject_entity, predicate) else {
+                continue;
+            };
+            match fragment_for(predicate, object) {
                 Some(Fragment::Modifier(m)) => modifiers.push(m),
                 Some(Fragment::Trailing(t)) => trailing.push(t),
                 None => {}
@@ -151,11 +165,11 @@ pub fn render_volume(world: &World) -> BookVolume {
 /// predicates), sorted and deduped.
 /// type-audit: bare-ok(identifier-text)
 pub fn uncovered_predicates(world: &World) -> Vec<String> {
-    const COVERED: &[&str] = &["is-a", MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
     let mut gaps: BTreeSet<String> = BTreeSet::new();
     for predicate in world.registry.predicates() {
         let name = predicate.name.as_str();
-        if !COVERED.contains(&name) && world.ledger.find(name).next().is_some() {
+        let covered = name == "is-a" || CONSTRUCTION_ORDER.contains(&name);
+        if !covered && world.ledger.find(name).next().is_some() {
             gaps.insert(name.to_string());
         }
     }
@@ -239,9 +253,9 @@ mod tests {
     /// star class "yellow-white dwarf (F)", two moons, day-length-std
     /// 1.5507196 std days (`quantity` truncates that to "about 1.5"). This
     /// is the exact volume `hornvale -- book` renders for seed 1 ("Vebe").
-    /// Modifier order follows `astronomy::facts::genesis`'s commit order
-    /// (star-class, then day-length-std, then ... then moon-count) — the
-    /// construction table does not sort, per the task's determinism rule.
+    /// Modifier order is the construction table's AUTHORED order
+    /// (`CONSTRUCTION_ORDER`: moons, then star, then day length — the
+    /// G3-approved surface), independent of ledger commit order.
     #[test]
     fn planet_sentence_aggregates_moons_star_and_day_length() {
         let world = generated(1);
@@ -253,7 +267,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Vebe is a planet orbiting a yellow-white dwarf (F), with two moons; \
+            "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -293,7 +307,6 @@ mod tests {
     /// rather than through `render_volume`.
     #[test]
     fn subject_for_uses_a_pronoun_on_remention() {
-        use std::collections::BTreeSet;
         let entity = hornvale_kernel::EntityId::new(1).expect("1 is a valid entity id");
         let mut named = BTreeSet::new();
 
