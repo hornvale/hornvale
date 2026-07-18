@@ -63,13 +63,7 @@ pub fn mean_temperature(
             RotationRegime::Locked => {
                 let p = geo.position(cell);
                 let cos_theta = crate::substellar_cosine(p);
-                if cos_theta > 0.0 {
-                    // Day side: hot at substellar, ~0 °C toward the terminator.
-                    (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
-                } else {
-                    // Night side: a deep frozen floor.
-                    -60.0 - lapse
-                }
+                crate::locked_cell_temperature(cos_theta, scale, lapse)
             }
         };
         Temperature::new(c).expect("temperature is finite")
@@ -91,8 +85,9 @@ pub fn seasonal_amplitude(
 }
 
 /// Temperature at a cell on a given day: the annual mean plus a
-/// hemisphere-signed seasonal sinusoid on the year phase. Locked worlds have
-/// no seasonal term (no year phase organizes their fixed day/night).
+/// hemisphere-signed seasonal sinusoid on the orbital year phase,
+/// `frac(day / year_length_std + year_phase_offset)`. Locked worlds have no
+/// seasonal term (no year phase organizes their fixed day/night).
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
@@ -101,24 +96,66 @@ pub fn temperature_at(
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     obliquity_deg: f64,
+    insolation: f64,
     year_length_std: f64,
+    year_phase_offset: f64,
     regime: &RotationRegime,
     cell: CellId,
     day: f64,
 ) -> Temperature {
     let base = *mean.get(cell);
     match regime {
-        RotationRegime::Locked => base,
+        RotationRegime::Locked => {
+            if obliquity_deg == 0.0 || year_length_std <= 0.0 {
+                return base; // no libration to apply
+            }
+            let year_phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
+            let sub_lat = obliquity_deg * math::sin(std::f64::consts::TAU * year_phase);
+            let dir = crate::substellar_at(sub_lat);
+            let cos_theta = crate::substellar_cosine_dir(geo.position(cell), dir);
+            let scale = math::powf(insolation.max(0.0), 0.25);
+            let above = (*elevation.get(cell) - sea_level).max(0.0);
+            let lapse = LAPSE_C_PER_M * above;
+            Temperature::new(crate::locked_cell_temperature(cos_theta, scale, lapse))
+                .expect("temperature is finite")
+        }
         RotationRegime::Spinning { .. } => {
             if year_length_std <= 0.0 || obliquity_deg == 0.0 {
                 return base;
             }
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
-            let phase = (day / year_length_std).rem_euclid(1.0);
+            let phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
             base + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase))
         }
     }
+}
+
+/// Locked-world seasonal temperature (°C) at an arbitrary unit position `p`
+/// (not snapped to a climate cell), for the librating substellar at `day`.
+/// The client reconstructs exactly this at each tile-center; the golden
+/// (windows/scene/examples/locked_temperature_golden.rs) pins it. `lapse` is
+/// the caller's precomputed elevation lapse (LAPSE_C_PER_M · max(0, elev−sea)).
+/// Arithmetically identical to `temperature_at`'s `RotationRegime::Locked`
+/// branch — same year_phase/sub_lat/dir/scale/mapping — with a position in
+/// place of a `CellId` (so it never touches a `Geosphere` or `CellMap`).
+/// type-audit: bare-ok(ratio: p), bare-ok(ratio: insolation), pending(wave-2: lapse), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase_offset), bare-ok(diagnostic-value: year_length_std), pending(wave-2: return)
+#[allow(clippy::too_many_arguments)]
+pub fn locked_temperature_at_position(
+    p: [f64; 3],
+    insolation: f64,
+    lapse: f64,
+    day: f64,
+    obliquity_deg: f64,
+    year_phase_offset: f64,
+    year_length_std: f64,
+) -> f64 {
+    let year_phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
+    let sub_lat = obliquity_deg * math::sin(std::f64::consts::TAU * year_phase);
+    let dir = crate::substellar_at(sub_lat);
+    let cos_theta = crate::substellar_cosine_dir(p, dir);
+    let scale = math::powf(insolation.max(0.0), 0.25);
+    crate::locked_cell_temperature(cos_theta, scale, lapse)
 }
 
 #[cfg(test)]
@@ -220,6 +257,39 @@ mod tests {
     }
 
     #[test]
+    fn spinning_seasonal_peak_tracks_the_year_phase_offset() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // A clearly-northern cell.
+        let north = geo
+            .cells()
+            .max_by(|a, b| geo.coord(*a).latitude.total_cmp(&geo.coord(*b).latitude))
+            .unwrap();
+        let year = 360.0;
+        let offset = 0.2;
+        // Final signature: (…, obliquity, insolation, year_length, year_phase_offset, …)
+        let t = |day: f64| {
+            temperature_at(
+                &mean, &geo, &elevation, sea, 23.5, 1.0, year, offset, &regime, north, day,
+            )
+            .get()
+        };
+        // Northern summer (max) is at frac(day/year + offset) = 0.25 -> day = (0.25 - offset)*year (mod year).
+        let summer_day = ((0.25 - offset).rem_euclid(1.0)) * year;
+        let winter_day = ((0.75 - offset).rem_euclid(1.0)) * year;
+        assert!(
+            t(summer_day) > t(winter_day) + 1.0,
+            "north is warmest near its offset-shifted summer"
+        );
+        // And at the offset-shifted equinox the anomaly is ~0 (mean).
+        let equinox_day = ((0.0 - offset).rem_euclid(1.0)) * year;
+        assert!((t(equinox_day) - mean.get(north).get()).abs() < 0.2);
+    }
+
+    #[test]
     fn coastal_seasonal_swing_is_smaller_than_continental() {
         let geo = Geosphere::new(4);
         let sea = ReferenceElevation::new(0.0).unwrap();
@@ -246,5 +316,96 @@ mod tests {
         let ac = seasonal_amplitude(&geo, &elev, sea, 23.5, coastal);
         let ai = seasonal_amplitude(&geo, &elev, sea, 23.5, inland);
         assert!(ac < ai, "coastal swing {ac} not smaller than inland {ai}");
+    }
+
+    #[test]
+    fn locked_substellar_hot_spot_librates_with_obliquity() {
+        let geo = Geosphere::new(4);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let year = 240.0;
+        let obliq = 22.0;
+        // At the northern solstice (frac(day/year + 0) = 0.25) the substellar
+        // latitude is +obliquity, so the warmest cell sits near +22 deg lat,
+        // not the equator.
+        let solstice = 0.25 * year;
+        let warmest = geo
+            .cells()
+            .max_by(|a, b| {
+                let ta = temperature_at(
+                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *a, solstice,
+                )
+                .get();
+                let tb = temperature_at(
+                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *b, solstice,
+                )
+                .get();
+                ta.total_cmp(&tb)
+            })
+            .unwrap();
+        let lat = geo.coord(warmest).latitude;
+        assert!(
+            lat > 10.0,
+            "at northern solstice the hot spot has climbed north, got lat {lat}"
+        );
+    }
+
+    #[test]
+    fn locked_temperature_at_position_matches_temperature_at_the_cells_own_position() {
+        let geo = Geosphere::new(4);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let elevation = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[0] > 0.0 { 500.0 } else { 0.0 };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // The substellar-ish cell: the position formula must agree with the
+        // cell-based one everywhere, but pick a cell with nonzero lapse too
+        // (elevation above sea level) so the lapse term is exercised.
+        let cell = geo
+            .cells()
+            .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
+            .unwrap();
+        let obliquity = 21.8;
+        let year = 240.0;
+        let offset = 0.15;
+        let day = 63.0;
+        let expected = temperature_at(
+            &mean, &geo, &elevation, sea, obliquity, 1.0, year, offset, &regime, cell, day,
+        )
+        .get();
+        let p = geo.position(cell);
+        let above = (*elevation.get(cell) - sea).max(0.0);
+        let lapse = LAPSE_C_PER_M * above;
+        let actual = locked_temperature_at_position(p, 1.0, lapse, day, obliquity, offset, year);
+        assert!(
+            (expected - actual).abs() < 1e-9,
+            "expected {expected} got {actual}"
+        );
+    }
+
+    #[test]
+    fn locked_temperature_is_static_at_zero_obliquity() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let cell = CellId(0);
+        let a = temperature_at(
+            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 0.0,
+        )
+        .get();
+        let b = temperature_at(
+            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 120.0,
+        )
+        .get();
+        assert_eq!(
+            a, b,
+            "zero obliquity: no libration, temperature is day-independent"
+        );
     }
 }

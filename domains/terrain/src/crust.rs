@@ -79,36 +79,90 @@ const LOBE_AMP: f64 = 0.5;
 #[allow(dead_code)]
 const REBALANCE_GAIN: f64 = 15.0;
 
-/// Seam-free fBm in [0, 1) on the unit sphere: the mean of three
-/// orthogonal coordinate-plane slices (the `coast_render` construction).
-#[allow(dead_code)]
-pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
-    let slices = [
-        (seed.derive("slice-0"), p[0], p[1]),
-        (seed.derive("slice-1"), p[1], p[2]),
-        (seed.derive("slice-2"), p[2], p[0]),
-    ];
-    slices
-        .iter()
-        .map(|(s, a, b)| noise::fbm_2d(*s, frequency * a, frequency * b, octaves))
-        .sum::<f64>()
-        / 3.0
+/// Precomputed seam-free spherical fBm: derives the three slice seeds and
+/// their per-octave seeds **once**, then samples many positions with no
+/// further derivation. Bit-identical to [`sphere_fbm01`] — same slice
+/// labels, same slice-plane pairing, same summation order — it only hoists
+/// the per-call `Seed::derive`s out of the per-cell loop. Build one per
+/// field (the seed/frequency/octaves are loop-invariant) and call
+/// [`SphereFbm::sample`] per cell.
+#[derive(Clone, Debug)]
+pub(crate) struct SphereFbm {
+    /// The three orthogonal coordinate-plane slice samplers, in the
+    /// `slice-0`/`slice-1`/`slice-2` order `sphere_fbm01` derives them.
+    slices: [noise::Fbm; 3],
+    /// Spatial frequency, applied to each coordinate at sample time.
+    frequency: f64,
 }
 
-/// Lobed envelope of one craton: 1 at the center, tapering to 0 at a rim
-/// whose radius varies with direction (the fBm lobing), hard 0 beyond
-/// 1.5x the nominal radius. Flat-topped quartic taper.
+impl SphereFbm {
+    /// Precompute the slice samplers for `octaves` octaves at `frequency`,
+    /// rooted at `seed` exactly as `sphere_fbm01` does.
+    pub(crate) fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
+        Self {
+            slices: [
+                noise::Fbm::new(seed.derive("slice-0"), octaves),
+                noise::Fbm::new(seed.derive("slice-1"), octaves),
+                noise::Fbm::new(seed.derive("slice-2"), octaves),
+            ],
+            frequency,
+        }
+    }
+
+    /// Sample the mean of the three orthogonal slices at position `p`.
+    pub(crate) fn sample(&self, p: [f64; 3]) -> f64 {
+        let f = self.frequency;
+        (self.slices[0].sample(f * p[0], f * p[1])
+            + self.slices[1].sample(f * p[1], f * p[2])
+            + self.slices[2].sample(f * p[2], f * p[0]))
+            / 3.0
+    }
+}
+
+/// Seam-free fBm in [0, 1) on the unit sphere: the mean of three
+/// orthogonal coordinate-plane slices (the `coast_render` construction).
+///
+/// Random-access convenience form; a hot per-cell loop with a fixed seed
+/// should build a [`SphereFbm`] once and reuse it.
 #[allow(dead_code)]
-pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
+pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
+    SphereFbm::new(seed, frequency, octaves).sample(p)
+}
+
+/// Lobed envelope of one craton over a **precomputed** lobing sampler:
+/// 1 at the center, tapering to 0 at a rim whose radius varies with
+/// direction (the fBm lobing), hard 0 beyond 1.5x the nominal radius.
+/// Flat-topped quartic taper. `fbm` must be `SphereFbm::new(seed,
+/// LOBE_FREQ, LOBE_OCTAVES)` — sampling it is bit-identical to
+/// `sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES)`.
+pub(crate) fn lobed_envelope_with(
+    fbm: &SphereFbm,
+    center: [f64; 3],
+    p: [f64; 3],
+    radius_rad: f64,
+) -> f64 {
     let angle = math::acos(dot(center, p).clamp(-1.0, 1.0));
     if angle >= 1.5 * radius_rad {
         return 0.0;
     }
-    let n = sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES);
+    let n = fbm.sample(p);
     let centered = 0.5 * math::tanh(REBALANCE_GAIN * (n - 0.5));
     let rim = radius_rad * (1.0 + 2.0 * LOBE_AMP * centered);
     let x = (angle / rim).clamp(0.0, 1.0);
     (1.0 - x * x).powi(2)
+}
+
+/// Lobed envelope of one craton (random-access convenience form). A hot
+/// per-cell loop should build a [`SphereFbm`] once and call
+/// [`lobed_envelope_with`]; this constructs one per call.
+#[allow(dead_code)]
+pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
+    lobed_envelope_with(
+        &SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES),
+        center,
+        p,
+        radius_rad,
+    )
 }
 
 /// Thin oceanic floor thickness, km.
@@ -874,12 +928,13 @@ pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
 pub struct CrustField {
     /// The drawn cratons.
     cratons: Vec<Craton>,
-    /// Per-craton lobing-kernel seeds, indexed by craton id — the exact
-    /// `craton-{id}` derivations `strongest` used to recompute on every
-    /// sample. Precomputed once here so per-cell and per-pixel sampling
-    /// (millions of calls at the canonical grid) allocates and hashes
-    /// nothing per craton. Byte-identical to the per-sample derivation.
-    lobing_seeds: Vec<Seed>,
+    /// Per-craton lobing samplers, indexed by craton id — one
+    /// `SphereFbm::new(craton-{id}, LOBE_FREQ, LOBE_OCTAVES)` per craton.
+    /// Precomputed once here so per-cell and per-pixel sampling (millions
+    /// of calls at the canonical grid) allocates and derives nothing per
+    /// craton: not the `craton-{id}` seed, and not the slice/octave seeds
+    /// inside `sphere_fbm01`. Byte-identical to the per-sample path.
+    lobing_fbms: Vec<SphereFbm>,
     /// The drawn terrane set (empty when built via `new`).
     terranes: Vec<Terrane>,
     /// The drawn rift history (rift-and-fit, spec §3.3), or `None` for the
@@ -935,9 +990,12 @@ impl CrustField {
         major_count: usize,
     ) -> CrustField {
         let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
-        let lobing_seeds = cratons
+        let lobing_fbms = cratons
             .iter()
-            .map(|c| lobing_root.derive(&format!("craton-{}", c.id)))
+            .map(|c| {
+                let seed = lobing_root.derive(&format!("craton-{}", c.id));
+                SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES)
+            })
             .collect();
         let craton_rotations = match &rift {
             Some(r) => (0..major_count.min(cratons.len()))
@@ -953,7 +1011,7 @@ impl CrustField {
         };
         CrustField {
             cratons,
-            lobing_seeds,
+            lobing_fbms,
             terranes,
             rift,
             craton_rotations,
@@ -974,16 +1032,16 @@ impl CrustField {
                 .cratons
                 .iter()
                 .map(|c| {
-                    let seed = self.lobing_seeds[c.id as usize];
-                    (lobed_envelope(seed, c.center, p, c.radius_rad), c)
+                    let fbm = &self.lobing_fbms[c.id as usize];
+                    (lobed_envelope_with(fbm, c.center, p, c.radius_rad), c)
                 })
                 .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
             Some(rift) => self
                 .cratons
                 .iter()
                 .map(|c| {
-                    let seed = self.lobing_seeds[c.id as usize];
-                    let envelope = lobed_envelope(seed, c.center, p, c.radius_rad);
+                    let fbm = &self.lobing_fbms[c.id as usize];
+                    let envelope = lobed_envelope_with(fbm, c.center, p, c.radius_rad);
                     // Two byte-identity-preserving skips, not fidelity calls
                     // (the Task 6 perf budget's recovery — ~2.7x over ->
                     // within budget — with zero output bytes moved):

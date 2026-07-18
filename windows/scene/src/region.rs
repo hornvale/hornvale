@@ -612,10 +612,11 @@ mod tests {
             samples,
         };
         let period = climate.year_length_std();
+        let offset = climate.year_phase_offset();
         let tau = std::f64::consts::TAU;
         for day in [0.0_f64, 91.3, 200.0, 366.5] {
             let grid = temperature_grid_region(&w, face, level, ix, iy, samples, day).unwrap();
-            let theta = hornvale_kernel::math::sin(tau * (day / period).fract());
+            let theta = hornvale_kernel::math::sin(tau * (day / period + offset).rem_euclid(1.0));
             for (i, s) in addr.node_units().iter().enumerate() {
                 // `grid[i]` is interp(temperature_at) (form A); `rhs` is
                 // interp(mean) + interp(swing)·θ (form B). Commutation is exact
@@ -640,15 +641,22 @@ mod tests {
     }
 
     #[test]
-    fn temperature_grid_region_at_day_zero_equals_t_mean() {
+    fn temperature_grid_region_at_zero_phase_equals_t_mean() {
         let w = gen42();
-        let grid = temperature_grid_region(&w, 0, 3, 4, 4, 16, 0.0).unwrap();
+        let climate = climate_of(&w).unwrap();
+        // The seasonal term vanishes at `frac(day/year + offset) = 0`, which is
+        // day zero only when `year_phase_offset` is zero — so shift the probed
+        // day by the true offset rather than assuming day zero.
+        let period = climate.year_length_std();
+        let offset = climate.year_phase_offset();
+        let zero_phase_day = (-offset).rem_euclid(1.0) * period;
+        let grid = temperature_grid_region(&w, 0, 3, 4, 4, 16, zero_phase_day).unwrap();
         let scene = tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap();
         for (g, m) in grid.iter().zip(scene.t_mean_c.iter()) {
             // grid is full precision; t_mean_c is quantized — agree to ~8 sig digits.
             assert!(
                 (g - m).abs() <= 1e-6 * g.abs().max(1.0),
-                "day-0 grid vs t_mean: {g} vs {m}"
+                "zero-phase grid vs t_mean: {g} vs {m}"
             );
         }
     }

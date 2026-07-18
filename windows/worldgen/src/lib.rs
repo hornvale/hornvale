@@ -75,6 +75,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 
 pub mod components;
+pub mod schedule;
 pub mod settlement_pins;
 pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;
@@ -96,6 +97,10 @@ pub enum BuildError {
     /// A kind's component-set is malformed (referential-integrity failure at
     /// assembly): e.g. a peopled kind missing a biosphere or a speech row.
     MalformedKind(String),
+    /// The genesis capability schema rejected the world's registry (a
+    /// declared cycle, or a functional predicate with two declared writers —
+    /// spec §7 as a load-time gate, ecs-c6 T3).
+    Schedule(hornvale_kernel::ScheduleError),
 }
 
 impl std::fmt::Display for BuildError {
@@ -107,6 +112,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
             BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
             BuildError::MalformedKind(reason) => write!(f, "malformed kind: {reason}"),
+            BuildError::Schedule(e) => write!(f, "schedule: {e:?}"),
         }
     }
 }
@@ -197,13 +203,6 @@ impl PhenomenaSource for Sky {
     }
 }
 
-/// Predicate: the glossed meaning of an entity's generated name (functional
-/// Text) — the composition root's own predicate (Task 9 of The Words),
-/// since it names a fact about the *pairing* of a generated name with the
-/// site facts it compounds over, which no single domain crate owns.
-/// type-audit: bare-ok(identifier-text)
-pub const NAME_GLOSS: &str = "name-gloss";
-
 /// The composition root's domain roster — the single membership list every
 /// per-domain aggregation draws on (registration; the streams manifest).
 ///
@@ -232,16 +231,16 @@ pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_paleoclimate::Paleoclimate,
 ];
 
-/// Register every domain's concepts, plus the composition root's own.
+/// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
+/// (ecs-c6 T3): `World::new` already registers it, so this no longer
+/// registers it — a predicate is owned by its single definition site (the
+/// kernel), so registration lives there. (Re-registering the identical
+/// definition would be idempotent, not an error; the registry only rejects a
+/// *conflicting* redefinition — but the ownership model keeps it in one place.)
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     for domain in DOMAINS {
         domain.register_concepts(registry)?;
     }
-    registry.register_predicate(
-        NAME_GLOSS,
-        true,
-        "the glossed meaning of an entity's generated name",
-    )?;
     Ok(())
 }
 
@@ -271,13 +270,14 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     }
 }
 
-/// A `name-gloss` fact for `subject` — the composition root's own
-/// predicate (see [`NAME_GLOSS`]), so its provenance is `"worldgen"`
-/// rather than any one domain's tag.
+/// A `name-gloss` fact for `subject` — kernel-core (see
+/// [`hornvale_kernel::NAME_GLOSS`]), committed by both the settlement and
+/// religion genesis stages on disjoint subjects, so its provenance is
+/// `"worldgen"` rather than any one domain's tag.
 fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
     Fact {
         subject,
-        predicate: NAME_GLOSS.to_string(),
+        predicate: hornvale_kernel::NAME_GLOSS.to_string(),
         object: Value::Text(gloss.to_string()),
         place: None,
         day: Some(0.0),
@@ -593,7 +593,8 @@ pub fn demography_report_with_beta(
     let climate = climate_of(world)?;
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
-    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+        stellar_inputs(&sky);
     // Biosphere per kind, read from the world's component set (ECS c3) in
     // ascending-`KindId` order — the build-local dense index the `tag`s below
     // and `niche_per_species_k`'s returned `u32` share. This is the WHOLE
@@ -665,9 +666,15 @@ pub fn demography_report(
 /// The scalar stellar inputs climate needs, derived from this world's sky.
 /// Constant-sky worlds get an Earth baseline so the biome map exists for
 /// every world (spec: the coarse globe is generated for all).
-fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
+fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
     match sky {
-        Sky::Constant(_) => (1.0, 23.5, RotationRegime::Spinning { day_std: 1.0 }, 365.25),
+        Sky::Constant(_) => (
+            1.0,
+            23.5,
+            RotationRegime::Spinning { day_std: 1.0 },
+            365.25,
+            0.0,
+        ),
         Sky::Generated(generated) => {
             let system = generated.system();
             // Insolation relative to Earth: the single shared definition (SKY-15).
@@ -680,7 +687,8 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64) {
                 hornvale_astronomy::Rotation::Locked => RotationRegime::Locked,
             };
             let year = generated.calendar().year_length().get();
-            (insolation, obliquity, regime, year)
+            let year_phase_offset = system.forcing.year_phase_offset;
+            (insolation, obliquity, regime, year, year_phase_offset)
         }
     }
 }
@@ -696,7 +704,8 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
     let elevation = &terrain.globe().elevation;
     let seafloor =
         hornvale_kernel::CellMap::from_fn(geo, |cell| seafloor_feature(terrain.boundary_at(cell)));
-    let (insolation, obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    let (insolation, obliquity_deg, regime, year_length_std, year_phase_offset) =
+        stellar_inputs(&sky);
     Ok(GeneratedClimate::generate(&ClimateInputs {
         geosphere: geo,
         elevation,
@@ -706,6 +715,7 @@ pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
         obliquity_deg,
         regime,
         year_length_std,
+        year_phase_offset,
     }))
 }
 
@@ -847,6 +857,10 @@ struct EraContext<'a> {
     regime: RotationRegime,
     /// The calendar year length, standard days (constant per world).
     year_length_std: f64,
+    /// The orbital phase offset at epoch, in turns (constant per world) —
+    /// threaded through so a full climate rebuild (`glacial_maximum_habitable`)
+    /// can retain it on `GeneratedClimate` just as `climate_of` does.
+    year_phase_offset: f64,
     /// The world's own present-day ice mask (diagnosed from
     /// `paleoclimate_of`'s present-temperature field against [`FREEZE_C`],
     /// no albedo offset) — the baseline every era's advance is measured
@@ -972,6 +986,7 @@ fn glacial_maximum_habitable(
         obliquity_deg: inputs.obliquity_deg,
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
+        year_phase_offset: ctx.year_phase_offset,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -1018,7 +1033,8 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
     // diagnostic nor the present-temperature baseline needs those — so the
     // world's mean obliquity is unused here; `glacial_maximum_habitable`
     // reads each era's own obliquity from its `EraInputs` instead.
-    let (insolation, _obliquity_deg, regime, year_length_std) = stellar_inputs(&sky);
+    let (insolation, _obliquity_deg, regime, year_length_std, year_phase_offset) =
+        stellar_inputs(&sky);
 
     // The world's own unforced present temperature (era_day = 0, no albedo
     // offset), one per cell, absolute — the field every era's offset is
@@ -1060,6 +1076,7 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
         insolation,
         regime,
         year_length_std,
+        year_phase_offset,
         present_ice: &present_ice,
         freeze,
     };
@@ -2344,6 +2361,15 @@ fn build_to(
 ) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
+    // ecs-c6 T3, spec §7 as a load-time gate: every functional predicate the
+    // genesis pipeline commits has exactly one declared writer, except
+    // shared kernel-core infrastructure (`hornvale_kernel::NAME_GLOSS`
+    // et al.), which `KERNEL_CORE_PREDICATES` exempts — see
+    // `schedule::genesis_systems`'s doc comment for why `name-gloss`
+    // specifically has two real, disjoint-subject writers.
+    schedule::genesis_systems()
+        .single_writer_check(&world.registry, hornvale_kernel::KERNEL_CORE_PREDICATES)
+        .map_err(BuildError::Schedule)?;
 
     let world_entity = world.ledger.mint_entity();
     let choice_text = match sky {
@@ -2489,7 +2515,7 @@ fn build_to(
     // readable off `.composition` — replacing the interim `condense_tagged`
     // path (task A14: one settlement PER SPECIES, tag-per-settlement).
     let sky = sky_of(&world)?;
-    let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) = stellar_inputs(&sky);
     // Biosphere per placed species, sourced from the roster-derived component
     // set (ECS c3) in `species_set` order — the mass/niche the packer input
     // and `niche_per_species_k` read now come from `wc.biosphere`, not `def`,
@@ -5781,10 +5807,13 @@ mod tests {
 
     #[test]
     fn name_gloss_predicate_is_registered_functional() {
-        let mut registry = hornvale_kernel::ConceptRegistry::default();
-        register_all(&mut registry).unwrap();
-        let def = registry
-            .predicate(NAME_GLOSS)
+        // NAME_GLOSS is kernel-core (ecs-c6 T3): `World::new` registers it,
+        // not `register_all` — build the registry the way `build_to` does.
+        let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+        register_all(&mut world.registry).unwrap();
+        let def = world
+            .registry
+            .predicate(hornvale_kernel::NAME_GLOSS)
             .expect("name-gloss must be registered");
         assert!(def.functional, "an entity has exactly one glossed meaning");
     }
@@ -5829,10 +5858,19 @@ mod tests {
 
     #[test]
     fn register_all_via_roster_registers_name_gloss() {
-        let mut registry = hornvale_kernel::ConceptRegistry::default();
-        register_all(&mut registry).expect("register_all succeeds on a fresh registry");
-        // NAME_GLOSS is registered as a predicate after the roster loop.
-        assert!(registry.predicate(NAME_GLOSS).is_some());
+        // NAME_GLOSS is kernel-core (ecs-c6 T3): registered by `World::new`
+        // itself, ahead of `register_all`'s domain roster loop — this test now
+        // pins that `build_to`'s actual registration sequence (`World::new`
+        // then `register_all`) leaves it registered, not that `register_all`
+        // registers it a second time (that would be a `RegistryError`).
+        let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+        register_all(&mut world.registry).expect("register_all succeeds after World::new");
+        assert!(
+            world
+                .registry
+                .predicate(hornvale_kernel::NAME_GLOSS)
+                .is_some()
+        );
     }
 
     #[test]
@@ -5841,11 +5879,18 @@ mod tests {
         let settlement_glossed = world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
-            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
-        let deity_glossed = world
-            .ledger
-            .find(hornvale_religion::IS_BELIEF)
-            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
+            .any(|f| {
+                world
+                    .ledger
+                    .text_of(f.subject, hornvale_kernel::NAME_GLOSS)
+                    .is_some()
+            });
+        let deity_glossed = world.ledger.find(hornvale_religion::IS_BELIEF).any(|f| {
+            world
+                .ledger
+                .text_of(f.subject, hornvale_kernel::NAME_GLOSS)
+                .is_some()
+        });
         assert!(
             settlement_glossed,
             "seed 42 should gloss at least one settlement (the sun is a Steeped concept for \
@@ -5864,7 +5909,7 @@ mod tests {
         let mut checked_any = false;
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
-            let Some(gloss) = world.ledger.text_of(id, NAME_GLOSS) else {
+            let Some(gloss) = world.ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
                 continue;
             };
             checked_any = true;
@@ -6037,7 +6082,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         let field = substrate_field(
             geo,
             &terrain,
@@ -6080,7 +6126,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         assert!(
             matches!(regime, RotationRegime::Locked),
             "the Locked rotation pin must yield RotationRegime::Locked"
@@ -6152,7 +6199,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
         assert!(
             matches!(regime, RotationRegime::Spinning { .. }),
             "seed 42's default generated sky must be Spinning"
@@ -6183,7 +6231,8 @@ mod tests {
         let climate = climate_of(&world).unwrap();
         let sky = sky_of(&world).unwrap();
         let geo = terrain.geosphere();
-        let (insolation_scalar, obliquity_deg, regime, _year) = stellar_inputs(&sky);
+        let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
+            stellar_inputs(&sky);
 
         let wc = WorldComponents::assemble().unwrap();
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();

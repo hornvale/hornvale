@@ -64,31 +64,75 @@ const OCTAVE_LABELS: [&str; 16] = [
     "octave-15",
 ];
 
+/// Derive octave `n`'s seed from a base `seed`, exactly as `fbm_2d` always
+/// has: the seed directly for octave 0, else `seed.derive("octave-{n}")`
+/// (via the `OCTAVE_LABELS` table when in range). Isolated so the sampler
+/// and the free function share one definition and cannot drift.
+fn octave_seed(seed: Seed, octave: u32) -> Seed {
+    if octave == 0 {
+        seed
+    } else if (octave as usize) < OCTAVE_LABELS.len() {
+        seed.derive(OCTAVE_LABELS[octave as usize])
+    } else {
+        seed.derive(&format!("octave-{octave}"))
+    }
+}
+
+/// A precomputed fBm sampler: derives the per-octave seeds **once**, then
+/// evaluates many points with no further derivation. Bit-identical to
+/// `fbm_2d` — same derived seeds, same accumulation order, same math — it
+/// only hoists the per-octave `Seed::derive` out of the per-sample loop.
+///
+/// Build one per field (the seed and octave count are loop-invariant) and
+/// call [`Fbm::sample`] per cell; a `Seed::derive`-dominated profile
+/// (world generation) collapses `O(cells × octaves)` derivations to
+/// `O(octaves)`.
+#[derive(Clone, Debug)]
+pub struct Fbm {
+    /// Octave `i`'s seed, precomputed by [`octave_seed`]; `len() == octaves`.
+    octave_seeds: Vec<Seed>,
+}
+
+impl Fbm {
+    /// Precompute the octave seeds for `octaves` octaves rooted at `seed`.
+    /// Panics if `octaves == 0` (fBm needs at least one octave).
+    /// type-audit: bare-ok(count: octaves)
+    #[must_use]
+    pub fn new(seed: Seed, octaves: u32) -> Self {
+        assert!(octaves > 0, "Fbm::new: octaves must be >= 1");
+        let octave_seeds = (0..octaves).map(|o| octave_seed(seed, o)).collect();
+        Self { octave_seeds }
+    }
+
+    /// Sample the fractal at `(x, y)`, normalized to [0, 1). Gain 0.5,
+    /// lacunarity 2.0 — identical to `fbm_2d` with the same base seed.
+    /// type-audit: pending(wave-1: x), pending(wave-1: y), bare-ok(ratio: return)
+    #[must_use]
+    pub fn sample(&self, x: f64, y: f64) -> f64 {
+        let mut sum = 0.0;
+        let mut amplitude = 1.0;
+        let mut frequency = 1.0;
+        let mut max = 0.0;
+        for &s in &self.octave_seeds {
+            sum += amplitude * value_noise_2d(s, x * frequency, y * frequency);
+            max += amplitude;
+            amplitude *= 0.5;
+            frequency *= 2.0;
+        }
+        sum / max
+    }
+}
+
 /// Fractal Brownian motion over `value_noise_2d`, normalized to [0, 1).
 /// Gain 0.5, lacunarity 2.0. Octave 0 uses the seed directly so that
 /// one-octave fbm equals plain value noise. Panics if octaves == 0.
 /// Internally derives per-octave streams labeled "octave-{n}" (n ≥ 1).
+///
+/// This is the random-access convenience form; for a hot per-cell loop
+/// with a fixed seed, build an [`Fbm`] once and reuse it.
 /// type-audit: pending(wave-1: x), pending(wave-1: y), bare-ok(count: octaves), bare-ok(ratio: return)
 pub fn fbm_2d(seed: Seed, x: f64, y: f64, octaves: u32) -> f64 {
-    assert!(octaves > 0, "fbm_2d: octaves must be >= 1");
-    let mut sum = 0.0;
-    let mut amplitude = 1.0;
-    let mut frequency = 1.0;
-    let mut max = 0.0;
-    for octave in 0..octaves {
-        let s = if octave == 0 {
-            seed
-        } else if (octave as usize) < OCTAVE_LABELS.len() {
-            seed.derive(OCTAVE_LABELS[octave as usize])
-        } else {
-            seed.derive(&format!("octave-{octave}"))
-        };
-        sum += amplitude * value_noise_2d(s, x * frequency, y * frequency);
-        max += amplitude;
-        amplitude *= 0.5;
-        frequency *= 2.0;
-    }
-    sum / max
+    Fbm::new(seed, octaves).sample(x, y)
 }
 
 #[cfg(test)]
@@ -141,5 +185,27 @@ mod tests {
     fn fbm_with_one_octave_matches_value_noise() {
         let s = Seed(5);
         assert_eq!(fbm_2d(s, 1.5, 2.5, 1), value_noise_2d(s, 1.5, 2.5));
+    }
+
+    #[test]
+    fn precomputed_fbm_is_bit_identical_to_the_free_function() {
+        // The save-format contract: `Fbm::sample` must return the exact bits
+        // `fbm_2d` returns, for every octave count and sample point, or worlds
+        // built through the hoisted sampler would diverge from history.
+        for octaves in 1..=18u32 {
+            let seed = Seed(0x51ED ^ u64::from(octaves));
+            let fbm = Fbm::new(seed, octaves);
+            for i in -7..7 {
+                for j in -7..7 {
+                    let x = f64::from(i) * 1.37 + 0.11;
+                    let y = f64::from(j) * 0.53 - 0.29;
+                    assert_eq!(
+                        fbm.sample(x, y),
+                        fbm_2d(seed, x, y, octaves),
+                        "divergence at octaves={octaves}, x={x}, y={y}"
+                    );
+                }
+            }
+        }
     }
 }

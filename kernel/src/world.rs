@@ -28,6 +28,28 @@ pub const IS_A: &str = "is-a";
 /// type-audit: bare-ok(identifier-text)
 pub const INSTANCE_OF: &str = "instance-of";
 
+/// The glossed meaning of an entity's generated name (functional, Text):
+/// what a settlement's or a deity's name-gloss says the name compounds over.
+/// Kernel-core (not domain-owned, ecs-c6 T3): it names a fact about the
+/// pairing of a generated name with the site facts it compounds over, which
+/// no single domain crate owns — a settlement's name-gloss and a deity's
+/// name-gloss are the same predicate on disjoint subjects, written by
+/// different composition-root stages. Registering it here (rather than in
+/// `windows/worldgen`, where it previously lived) lets `single_writer_check`
+/// exempt it by [`KERNEL_CORE_PREDICATES`] instead of flagging a false
+/// same-predicate conflict between disjoint-subject writers.
+/// type-audit: bare-ok(identifier-text)
+pub const NAME_GLOSS: &str = "name-gloss";
+
+/// Every predicate `World::new` registers as shared kernel-core
+/// infrastructure — writable by more than one system on disjoint subjects,
+/// so [`crate::schedule::CapabilitySchema::single_writer_check`] exempts
+/// exactly this set rather than flagging a false conflict (ecs-c6 T3, spec
+/// §7). Kept in lockstep with `World::new`'s `register_predicate` calls by
+/// construction (this literally lists their subjects).
+/// type-audit: bare-ok(identifier-text)
+pub const KERNEL_CORE_PREDICATES: &[&str] = &[NAME, INSTANCE_OF, NAME_GLOSS];
+
 /// A world is a seed plus everything ever observed about it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct World {
@@ -55,6 +77,13 @@ impl World {
                 INSTANCE_OF,
                 false,
                 "the kind an entity is an instance of; the latest fact is its current kind",
+            )
+            .expect("core concept registration cannot conflict in an empty registry");
+        registry
+            .register_predicate(
+                NAME_GLOSS,
+                true,
+                "the glossed meaning of an entity's generated name",
             )
             .expect("core concept registration cannot conflict in an empty registry");
         World {

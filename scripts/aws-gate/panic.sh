@@ -17,8 +17,10 @@ panic_all() {
   local ids; ids="$(aws_admin ec2 describe-instances --filters "Name=tag:project,Values=hornvale-gate" \
       "Name=instance-state-name,Values=pending,running,stopping,stopped" \
       --query 'Reservations[].Instances[].InstanceId' --output text || true)"
-  # shellcheck disable=SC2086
-  [ -n "$ids" ] && aws_admin ec2 terminate-instances --instance-ids $ids || true
+  if [ -n "$ids" ]; then
+    # shellcheck disable=SC2086
+    aws_admin ec2 terminate-instances --instance-ids $ids || true
+  fi
   echo "PANIC: deleting the launch template (belt-and-suspenders; key-disable already blocks launches)"
   # One-time spot requests auto-close when their instance terminates and are not
   # separately tagged, so there is nothing safe to bulk-cancel here (cancelling

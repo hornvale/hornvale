@@ -14,6 +14,15 @@ serde_json = "1"
 # platforms; amends the decision-0004 dependency allowlist.
 libm = "0.2"
 
+# TOOL-hot-crate-opt: the kernel noise field (fbm/value-noise/lattice) and
+# seed derivation are the innermost primitive of ALL world generation; a
+# flamegraph of the worldgen test suite attributed ~42% of self time to
+# hornvale_kernel::noise + hornvale_kernel::seed. Every opted domain crate
+# below calls into this hot loop, so leaving the kernel at debug opt-level
+# defeats their optimization. O2 here optimizes the shared inner loop.
+[profile.dev.package.hornvale-kernel]
+opt-level = 2
+
 # TOOL-hot-crate-opt: hornvale-language's tests sweep 1,000-seed language
 # evolution; O2 here buys release-grade test speed while every other crate
 # keeps fast debug compiles.

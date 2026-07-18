@@ -14,7 +14,10 @@ pub use biome::{Biome, SeafloorFeature};
 pub use circulation::{RotationRegime, band_count_for};
 pub use habitability::{habitable_fraction, is_habitable};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
-pub use substellar::{SUBSTELLAR, substellar_cosine};
+pub use substellar::{
+    SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
+};
+pub use temperature::locked_temperature_at_position;
 
 use hornvale_kernel::{
     ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position,

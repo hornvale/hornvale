@@ -35,9 +35,10 @@ incidental):
 | `features` | array of object | Named points on the lattice — settlements, described below. |
 | `t_mean_c` | array of number, one per tile | Annual-mean temperature at the tile, °C (the climate model's canonical unit; sampled through the same nearest-cell path as every other layer). |
 | `t_swing_c` | array of number, one per tile | **Hemisphere-signed** seasonal half-swing, °C: the coefficient of the seasonal sinusoid, `amplitude × sign(source-cell latitude)`. Positive in the north, negative in the south, exactly `0` on tidally locked and zero-obliquity worlds. Signed at the source so clients never apply a hemisphere sign themselves — a tile near the equator may sample a cell on the other side of it, and the sign travels with the data. |
-| `season_period_days` | number | The period, in standard days, of the seasonal sinusoid the temperature layers parameterize. The document is self-contained: its evaluator never needs a second document. On generated-sky worlds this equals `scene/system/v1`'s `year_days`; on constant-sun worlds (which have no system document) it is the tier-0 default year, and this field is the only honest way a client can know it. |
+| `season_period_days` | number | The period, in standard days, of the seasonal sinusoid the temperature layers parameterize. On generated-sky worlds this equals `scene/system/v1`'s `year_days`; on constant-sun worlds (which have no system document) it is the tier-0 default year, and this field is the only honest way a client can know it. The evaluator reads one scalar from `scene/system/v1` besides this — `year_phase_offset` — to phase the season on the true orbit (see *Reading temperature over the year*); everything else it needs is here. |
 | `circulation_bands` | integer, **absent when tidally locked** | The number of atmospheric circulation cells per hemisphere (Earth-like day → 3). Document-level, not per-tile: the wind model is a pure function of latitude and this count, and the contract does not pretend otherwise. Absence follows the `day_length_days` precedent in [`scene/system/v1`](./scene-system-v1.md). |
 | `moisture` | array of number, one per tile | Dimensionless moisture index in [0, 1] — the climate model's own quantity (band base, ocean proximity, single-pass rain shadow). Deliberately **not** mm/yr: a physical precipitation calibration would be invented precision; that promotion would arrive as a *new* additive field, never a re-meaning of this one. |
+| `locked` | boolean | Whether the world is tidally locked. On a locked world the seasonal temperature is **not** `t_mean_c + t_swing_c·sin(…)` — `t_swing_c` is `0` there — but a *librating substellar* field the client reconstructs from the world's obliquity and the year phase (see below), so a consumer reads this flag to choose its evaluator. |
 
 `elevation_m`, `ocean`, `biome`, `plate`, and `unrest` are the five per-tile
 layers: each is an array of exactly `width × height` entries, in the grid
@@ -92,7 +93,8 @@ An excerpt of the committed seed-42 example (arrays elided; see
   "t_swing_c": [ ... 32768 entries ... ],
   "season_period_days": 368.05357,
   "circulation_bands": 3,
-  "moisture": [ ... 32768 entries ... ]
+  "moisture": [ ... 32768 entries ... ],
+  "locked": false
 }
 ```
 
@@ -120,23 +122,33 @@ the normative evaluator, and it is exact — the same arithmetic the
 simulation itself uses to produce `t_mean_c`/`t_swing_c` in the first place:
 
 ```
-t(tile, day) = t_mean_c[tile] + t_swing_c[tile] · sin(τ · frac(day / season_period_days))
+t(tile, day) = t_mean_c[tile] + t_swing_c[tile] · sin(τ · frac(day / season_period_days + year_phase_offset))
 ```
 
-where `day` is absolute standard days (`WorldTime`), `τ = 2π`, and
-`frac(x) = x − floor(x)`.
+where `day` is absolute standard days (`WorldTime`), `τ = 2π`,
+`frac(x) = x − floor(x)`, and `year_phase_offset` is `scene/system/v1`'s
+field of that name (`0` on constant-sun worlds, which have no system
+document).
 
-**The seasonal phase is `frac(day / season_period_days)` — it is not offset
-by `scene/system/v1`'s `year_phase_offset`.** That offset is orbital
-geometry: where the world sits on its orbit at day 0. The climate model's
-seasonal sinusoid is a separate clock that starts at zero phase at day 0 by
-construction (`temperature_at`, `domains/climate/src/temperature.rs`). A
-client that reuses `year_phase_offset` here will get a plausible-looking but
-wrong season — this is the likeliest client bug in this contract, so read
-this paragraph twice before wiring the evaluator.
+**The seasonal phase is `frac(day / season_period_days + year_phase_offset)`
+— it carries the orbital offset.** The season is *caused* by the sun's
+declination, which is itself phased on `frac(day / year + year_phase_offset)`
+(`Calendar::year_phase`); the two must share a phase or the ice will lead or
+lag the sun by that offset. This is the one place the seasonal evaluator
+reaches outside this document — for the offset only, a single scalar from
+`scene/system/v1` — so a generated-sky client passes it through; a
+constant-sun client uses `0`.
 
-Locked worlds need no special case: `t_swing_c` is `0` there, so the
-evaluator degenerates to the mean regardless of `day`.
+Locked worlds are the exception, and read the `locked` flag to take it:
+`t_swing_c` is `0`, but the seasonal temperature is not the mean. A tidally
+locked world with axial tilt *librates* — its substellar point swings north
+and south in latitude by `obliquity · sin(τ · frac(day / season_period_days
++ year_phase_offset))` over the year. The client reconstructs the surface
+temperature from that moving substellar point (the day-side substellar
+cosine, the night floor, and the elevation lapse), evaluated at each tile's
+own centre — the same closed-form evaluator the producer exposes as
+`locked_temperature_at_position`, pinned by a producer-sourced golden. The
+hot spot, and the ice at the freeze line, track the sun across the year.
 
 **Precision:** producer-side, this formula reproduces the simulation's
 `temperature_at` to exact `f64` equality — it is the same arithmetic,

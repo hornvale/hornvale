@@ -4,6 +4,8 @@
 //! makes "a new field forgot to branch on the locked regime" (SKY-24)
 //! structurally hard: the geometry has one definition.
 
+use hornvale_kernel::math;
+
 /// The substellar point of a locked world (spec convention: `+x`,
 /// latitude 0 on the substellar axis).
 /// type-audit: bare-ok(ratio)
@@ -15,6 +17,33 @@ pub const SUBSTELLAR: [f64; 3] = [1.0, 0.0, 0.0];
 /// type-audit: bare-ok(ratio: p), bare-ok(ratio: return)
 pub fn substellar_cosine(p: [f64; 3]) -> f64 {
     p[0] * SUBSTELLAR[0] + p[1] * SUBSTELLAR[1] + p[2] * SUBSTELLAR[2]
+}
+
+/// Unit substellar direction at latitude `lat_deg`, longitude 0 — the
+/// locked world's sub-solar point as it librates over the year. At
+/// latitude 0 this is `SUBSTELLAR`.
+/// type-audit: pending(wave-2: lat_deg), bare-ok(ratio: return)
+pub fn substellar_at(lat_deg: f64) -> [f64; 3] {
+    let lat = lat_deg.to_radians();
+    [math::cos(lat), 0.0, math::sin(lat)]
+}
+
+/// Cosine of the angle between `p` and an arbitrary substellar direction.
+/// type-audit: bare-ok(ratio: p), bare-ok(ratio: dir), bare-ok(ratio: return)
+pub fn substellar_cosine_dir(p: [f64; 3], dir: [f64; 3]) -> f64 {
+    p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2]
+}
+
+/// The locked-world surface temperature (°C) from the substellar cosine, the
+/// insolation `scale` (S^{1/4}), and the lapse cooling — the one mapping
+/// `mean_temperature` and the librating `temperature_at` both use.
+/// type-audit: bare-ok(ratio: cos_theta), bare-ok(ratio: scale), pending(wave-2: lapse), pending(wave-2: return)
+pub fn locked_cell_temperature(cos_theta: f64, scale: f64, lapse: f64) -> f64 {
+    if cos_theta > 0.0 {
+        (-18.0 + 78.0 * math::powf(cos_theta, 0.3) * scale) - lapse
+    } else {
+        -60.0 - lapse
+    }
 }
 
 #[cfg(test)]

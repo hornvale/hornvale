@@ -50,7 +50,11 @@ everything else, and measure whether the downstream culture differs *legibly*.
 Year 1 varied the sky: the same land and society under a spinning sky crowned
 the cyclic [Wheel-Turner](./gallery/the-gods-seed-42.md), and under a tidally
 locked twin crowned the eternal Still Crown — a world with no seasons to
-mythologize ([Campaign 5](./chronicle/campaign-5.md)). Year 2 inverted it,
+mythologize ([Campaign 5](./chronicle/campaign-5.md); a near-upright locked
+world still has none, but [The Wandering Sun](./chronicle/the-wandering-sun.md)
+later gave a *tilted* locked world its own libration season, so the Still
+Crown reads now as the zero-obliquity limit rather than the whole locked
+case). Year 2 inverted it,
 varying the observer and holding the sky: two species differing only in their
 authored parameter vectors grew different languages and religions, verified by
 a 500/500 null control and a blind-attribution metric pinned honest at 0.875
@@ -94,7 +98,20 @@ the seasonal evaluator documented normatively in one place and pinned by a
 producer-sourced contract test on both sides of the boundary
 ([The Isotherm](./chronicle/the-isotherm.md)). The seam holds not just for
 static quantities but for the small closed-form functions of them, which is
-the more demanding form of the same bet. A refinement arrived from the
+the more demanding form of the same bet — and
+[The Wandering Sun](./chronicle/the-wandering-sun.md) added a second such
+function (a locked world's librating-substellar temperature) and, in doing
+so, sharpened what "the same function on both sides" requires: not just the
+same formula but the same *point of evaluation*. Every earlier cross-seam
+value the client read pre-computed off a scene layer, so the producer's
+nearest-cell snapping was baked in and invisible; the first value the client
+*recomputed* from position diverged from the golden by up to a degree,
+because it evaluated at the tile centre while the golden had snapped to a
+mesh cell. A closed-form function crosses the seam faithfully only when both
+sides sample it at the same coordinate — the fix was a position-based
+producer evaluator sampled at the tile centres the client uses, and the
+lesson is that the golden must pin the client's computation, geometry
+included, not merely its arithmetic. A refinement arrived from the
 consumer's side, and it sharpens what the bet does *not* buy: **the seam
 holding is not the same as the data being drawn.** A rendering debt had
 accumulated silently across three producer campaigns — four layers shipped

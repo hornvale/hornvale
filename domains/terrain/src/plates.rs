@@ -149,15 +149,24 @@ const EDGE_AMP: f64 = 0.06;
 /// type-audit: bare-ok(index)
 pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> CellMap<u32> {
     let edge_root = terrain_seed.derive(crate::streams::PLATE_EDGE);
+    // Precompute one edge-noise sampler per plate: its seed depends only on
+    // the plate id, not the cell, so the `format!`, the `derive`, and the
+    // slice/octave-seed derivations run once per plate instead of once per
+    // (cell × plate). Byte-identical — same per-plate seed, same sampler.
+    let plate_fbms: Vec<crate::crust::SphereFbm> = plates
+        .iter()
+        .map(|plate| {
+            let noise_seed = edge_root.derive(&format!("plate-{}", plate.id));
+            crate::crust::SphereFbm::new(noise_seed, 8.0, 4)
+        })
+        .collect();
     CellMap::from_fn(geo, |cell| {
         let position = geo.position(cell);
         let mut best = 0u32;
         let mut best_score = f64::INFINITY;
-        for plate in plates {
+        for (plate, fbm) in plates.iter().zip(&plate_fbms) {
             let angle = math::acos(dot(position, plate.seed_position).clamp(-1.0, 1.0));
-            let noise_seed = edge_root.derive(&format!("plate-{}", plate.id));
-            let noise =
-                EDGE_AMP * (2.0 * crate::crust::sphere_fbm01(noise_seed, position, 8.0, 4) - 1.0);
+            let noise = EDGE_AMP * (2.0 * fbm.sample(position) - 1.0);
             let score = (angle + noise).max(0.0) / plate.weight;
             if score < best_score {
                 best_score = score;
