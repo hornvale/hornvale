@@ -66,38 +66,93 @@ fn indefinite_article(word: &str) -> &'static str {
     }
 }
 
+/// One slot or literal in a construction's surface form.
+/// type-audit: bare-ok(prose: Literal.0)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Part {
+    /// The subject slot (a `Subject::Name` or `Subject::Pronoun`).
+    Subject,
+    /// The copula, agreeing with `ClauseSpec.number` (`is`/`are`).
+    Copula,
+    /// The determiner slot (`the `/`a `/`an `/bare), from definiteness + number.
+    Determiner,
+    /// The complement lexeme.
+    Complement,
+    /// The modifier tail: first joins with `' '`, later with `", "`.
+    ModifierTail,
+    /// A fixed literal (spacing, terminal punctuation).
+    Literal(&'static str),
+}
+
+/// A form↔meaning pairing: one clause frame's surface as an ordered part
+/// list. The same entry realizes forward and parses backward — a future
+/// frame is added HERE, and is bidirectional by construction.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Copy, Debug)]
+pub struct Construction {
+    /// The frame this entry realizes/recognizes.
+    pub frame: Frame,
+    /// The ordered surface parts.
+    pub parts: &'static [Part],
+}
+
+/// The Common construction inventory. One entry today (`Classify`); every
+/// future frame adds an entry, never a second code path.
+/// type-audit: bare-ok(identifier-text)
+pub fn common_constructions() -> &'static [Construction] {
+    const CLASSIFY: &[Part] = &[
+        Part::Subject,
+        Part::Literal(" "),
+        Part::Copula,
+        Part::Literal(" "),
+        Part::Determiner,
+        Part::Complement,
+        Part::ModifierTail,
+        Part::Literal("."),
+    ];
+    &[Construction {
+        frame: Frame::Classify,
+        parts: CLASSIFY,
+    }]
+}
+
 /// Realize a ClauseSpec as a Common (≈ limited English) sentence.
 /// type-audit: bare-ok(prose)
 pub fn realize_common(spec: &ClauseSpec) -> String {
-    match spec.frame {
-        Frame::Classify => {
-            let subject = match &spec.subject {
+    let construction = common_constructions()
+        .iter()
+        .find(|c| c.frame == spec.frame)
+        .expect("every Frame has a construction");
+    let mut out = String::new();
+    for part in construction.parts {
+        match part {
+            Part::Subject => out.push_str(match &spec.subject {
                 Subject::Name(name) => name.as_str(),
                 Subject::Pronoun(pronoun) => pronoun,
-            };
-            let copula = match spec.number {
+            }),
+            Part::Copula => out.push_str(match spec.number {
                 Number::Sg => "is",
                 Number::Pl => "are",
-            };
-            let det = match (spec.definiteness, spec.number) {
-                (Definiteness::Def, _) => "the ".to_string(),
+            }),
+            Part::Determiner => match (spec.definiteness, spec.number) {
+                (Definiteness::Def, _) => out.push_str("the "),
                 (Definiteness::Indef, Number::Sg) => {
-                    format!("{} ", indefinite_article(&spec.complement))
+                    out.push_str(indefinite_article(&spec.complement));
+                    out.push(' ');
                 }
-                (Definiteness::Indef, Number::Pl) => String::new(), // bare generic
-            };
-            let mut head = format!("{det}{}", spec.complement);
-            for (i, modifier) in spec.modifiers.iter().enumerate() {
-                if i == 0 {
-                    head.push(' ');
-                } else {
-                    head.push_str(", ");
+                (Definiteness::Indef, Number::Pl) => {} // bare generic
+            },
+            Part::Complement => out.push_str(&spec.complement),
+            Part::ModifierTail => {
+                for (i, modifier) in spec.modifiers.iter().enumerate() {
+                    out.push_str(if i == 0 { " " } else { ", " });
+                    out.push_str(modifier);
                 }
-                head.push_str(modifier);
             }
-            format!("{subject} {copula} {head}.")
+            Part::Literal(text) => out.push_str(text),
         }
     }
+    out
 }
 
 /// Render a small cardinal number as an English word (`0` through `12`);
@@ -195,5 +250,13 @@ mod tests {
     #[test]
     fn quantity_rounds() {
         assert_eq!(quantity(1.5507), "about 1.5");
+    }
+
+    #[test]
+    fn classify_has_one_declared_construction() {
+        let inv = common_constructions();
+        assert_eq!(inv.len(), 1);
+        assert_eq!(inv[0].frame, Frame::Classify);
+        assert!(matches!(inv[0].parts.first(), Some(Part::Subject)));
     }
 }
