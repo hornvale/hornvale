@@ -1,6 +1,6 @@
 # The Echo — Design
 
-**Status:** Draft for G3 review (2026-07-18) · **Author:** Claude
+**Status:** G3-approved (2026-07-18) · **Author:** Claude
 (campaign-autopilot) · **Decider:** Nathan · **Program:**
 [The Self-Writing Book metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md)
 (inserted campaign — see §8) · **Serves also:** the game arc's
@@ -155,6 +155,16 @@ serialization quantization draws (0033), and the honest one for speech.
 - No morphology (LANG-43's paradigms are a different campaign).
 
 ## 8. Flagged for G3
+
+> **G3 OUTCOME (Nathan, 2026-07-18): APPROVED.** Item 1 ratified (the
+> insertion stands). Item 2: floor as specified (mechanism + test; `tell`
+> only if trivial). Item 3 confirmed — quantized knowledge is the intended
+> semantics, with an owner direction going further: most creatures should
+> not understand "1.5" / "one and a half" / "three over two" at all —
+> numeracy as a per-listener comprehension filter. Deliberately deferred
+> ("cross that bridge later") and banked as registry row **LANG-44**
+> (numeracy as a quantity register); The Echo ships the surface-value
+> contract unchanged.
 
 1. **The metaplan insertion itself** (program-level): The Echo slots
    between C2 and C3; the metaplan gets an addendum note and the standing
