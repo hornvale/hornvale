@@ -1,7 +1,9 @@
 # The Chorus (C4) — Design
 
 **Date:** 2026-07-18
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** **Approved at G3 (2026-07-18)** — census regen for the dial
+metrics authorized at the same stop; ledger digest of post-G3 entries due at
+G6.
 **Campaign:** C4 of the self-writing-book program
 (metaplan: [program metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md) §3 C4, §8 flag 3)
 **Theory:** registry rows LANG-36 (the epistemic filter stack) and LANG-41
