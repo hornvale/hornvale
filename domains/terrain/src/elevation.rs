@@ -431,6 +431,12 @@ fn assemble_elevation(
     induration: &CellMap<f64>,
     relief_seed: Seed,
 ) -> CellMap<ReferenceElevation> {
+    // Hoist the two spherical-fBm samplers out of the per-cell loop: their
+    // seeds/frequencies/octaves are loop-invariant, so the slice- and
+    // octave-seed derivations run once per field instead of once per cell
+    // (byte-identical — same seeds, same math). See `crust::SphereFbm`.
+    let arc_gate_fbm = crate::crust::SphereFbm::new(arc_gate_seed, ARC_SPACING, ARC_GATE_OCTAVES);
+    let relief_fbm = crate::crust::SphereFbm::new(relief_seed, RELIEF_FREQUENCY, RELIEF_OCTAVES);
     CellMap::from_fn(geo, |cell| {
         let plate = &plates[*plate_of.get(cell) as usize];
         let cell_continental = *continental.get(cell);
@@ -456,12 +462,7 @@ fn assemble_elevation(
                 // it is hash-noise (no draw-order contract), so sampling
                 // is safely skipped everywhere else.
                 let gate = if contact.kind == BoundaryKind::IslandArc {
-                    crate::crust::sphere_fbm01(
-                        arc_gate_seed,
-                        geo.position(source),
-                        ARC_SPACING,
-                        ARC_GATE_OCTAVES,
-                    )
+                    arc_gate_fbm.sample(geo.position(source))
                 } else {
                     0.0
                 };
@@ -490,8 +491,7 @@ fn assemble_elevation(
         // same-plate boundary (`None`) is treated as far from any belt
         // (12 hops — already past `relief_scale`'s decay length).
         let hops = (*distances.get(cell)).map_or(12, |(distance, _)| distance);
-        let relief_noise =
-            crate::crust::sphere_fbm01(relief_seed, position, RELIEF_FREQUENCY, RELIEF_OCTAVES);
+        let relief_noise = relief_fbm.sample(position);
         let relief_term = RELIEF_AMPLITUDE_M
             * relief_scale(*induration.get(cell), hops)
             * (relief_noise - 0.5)

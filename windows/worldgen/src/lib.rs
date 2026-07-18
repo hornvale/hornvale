@@ -75,6 +75,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 
 pub mod components;
+pub mod schedule;
 pub mod settlement_pins;
 pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;
@@ -96,6 +97,10 @@ pub enum BuildError {
     /// A kind's component-set is malformed (referential-integrity failure at
     /// assembly): e.g. a peopled kind missing a biosphere or a speech row.
     MalformedKind(String),
+    /// The genesis capability schema rejected the world's registry (a
+    /// declared cycle, or a functional predicate with two declared writers —
+    /// spec §7 as a load-time gate, ecs-c6 T3).
+    Schedule(hornvale_kernel::ScheduleError),
 }
 
 impl std::fmt::Display for BuildError {
@@ -107,6 +112,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
             BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
             BuildError::MalformedKind(reason) => write!(f, "malformed kind: {reason}"),
+            BuildError::Schedule(e) => write!(f, "schedule: {e:?}"),
         }
     }
 }
@@ -197,13 +203,6 @@ impl PhenomenaSource for Sky {
     }
 }
 
-/// Predicate: the glossed meaning of an entity's generated name (functional
-/// Text) — the composition root's own predicate (Task 9 of The Words),
-/// since it names a fact about the *pairing* of a generated name with the
-/// site facts it compounds over, which no single domain crate owns.
-/// type-audit: bare-ok(identifier-text)
-pub const NAME_GLOSS: &str = "name-gloss";
-
 /// The composition root's domain roster — the single membership list every
 /// per-domain aggregation draws on (registration; the streams manifest).
 ///
@@ -232,16 +231,16 @@ pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_paleoclimate::Paleoclimate,
 ];
 
-/// Register every domain's concepts, plus the composition root's own.
+/// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
+/// (ecs-c6 T3): `World::new` already registers it, so this no longer
+/// registers it — a predicate is owned by its single definition site (the
+/// kernel), so registration lives there. (Re-registering the identical
+/// definition would be idempotent, not an error; the registry only rejects a
+/// *conflicting* redefinition — but the ownership model keeps it in one place.)
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     for domain in DOMAINS {
         domain.register_concepts(registry)?;
     }
-    registry.register_predicate(
-        NAME_GLOSS,
-        true,
-        "the glossed meaning of an entity's generated name",
-    )?;
     Ok(())
 }
 
@@ -271,13 +270,14 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     }
 }
 
-/// A `name-gloss` fact for `subject` — the composition root's own
-/// predicate (see [`NAME_GLOSS`]), so its provenance is `"worldgen"`
-/// rather than any one domain's tag.
+/// A `name-gloss` fact for `subject` — kernel-core (see
+/// [`hornvale_kernel::NAME_GLOSS`]), committed by both the settlement and
+/// religion genesis stages on disjoint subjects, so its provenance is
+/// `"worldgen"` rather than any one domain's tag.
 fn name_gloss_fact(subject: EntityId, gloss: &str) -> Fact {
     Fact {
         subject,
-        predicate: NAME_GLOSS.to_string(),
+        predicate: hornvale_kernel::NAME_GLOSS.to_string(),
         object: Value::Text(gloss.to_string()),
         place: None,
         day: Some(0.0),
@@ -2361,6 +2361,15 @@ fn build_to(
 ) -> Result<World, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
+    // ecs-c6 T3, spec §7 as a load-time gate: every functional predicate the
+    // genesis pipeline commits has exactly one declared writer, except
+    // shared kernel-core infrastructure (`hornvale_kernel::NAME_GLOSS`
+    // et al.), which `KERNEL_CORE_PREDICATES` exempts — see
+    // `schedule::genesis_systems`'s doc comment for why `name-gloss`
+    // specifically has two real, disjoint-subject writers.
+    schedule::genesis_systems()
+        .single_writer_check(&world.registry, hornvale_kernel::KERNEL_CORE_PREDICATES)
+        .map_err(BuildError::Schedule)?;
 
     let world_entity = world.ledger.mint_entity();
     let choice_text = match sky {
@@ -5709,10 +5718,13 @@ mod tests {
 
     #[test]
     fn name_gloss_predicate_is_registered_functional() {
-        let mut registry = hornvale_kernel::ConceptRegistry::default();
-        register_all(&mut registry).unwrap();
-        let def = registry
-            .predicate(NAME_GLOSS)
+        // NAME_GLOSS is kernel-core (ecs-c6 T3): `World::new` registers it,
+        // not `register_all` — build the registry the way `build_to` does.
+        let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+        register_all(&mut world.registry).unwrap();
+        let def = world
+            .registry
+            .predicate(hornvale_kernel::NAME_GLOSS)
             .expect("name-gloss must be registered");
         assert!(def.functional, "an entity has exactly one glossed meaning");
     }
@@ -5757,10 +5769,19 @@ mod tests {
 
     #[test]
     fn register_all_via_roster_registers_name_gloss() {
-        let mut registry = hornvale_kernel::ConceptRegistry::default();
-        register_all(&mut registry).expect("register_all succeeds on a fresh registry");
-        // NAME_GLOSS is registered as a predicate after the roster loop.
-        assert!(registry.predicate(NAME_GLOSS).is_some());
+        // NAME_GLOSS is kernel-core (ecs-c6 T3): registered by `World::new`
+        // itself, ahead of `register_all`'s domain roster loop — this test now
+        // pins that `build_to`'s actual registration sequence (`World::new`
+        // then `register_all`) leaves it registered, not that `register_all`
+        // registers it a second time (that would be a `RegistryError`).
+        let mut world = hornvale_kernel::World::new(hornvale_kernel::Seed(1));
+        register_all(&mut world.registry).expect("register_all succeeds after World::new");
+        assert!(
+            world
+                .registry
+                .predicate(hornvale_kernel::NAME_GLOSS)
+                .is_some()
+        );
     }
 
     #[test]
@@ -5769,11 +5790,18 @@ mod tests {
         let settlement_glossed = world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
-            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
-        let deity_glossed = world
-            .ledger
-            .find(hornvale_religion::IS_BELIEF)
-            .any(|f| world.ledger.text_of(f.subject, NAME_GLOSS).is_some());
+            .any(|f| {
+                world
+                    .ledger
+                    .text_of(f.subject, hornvale_kernel::NAME_GLOSS)
+                    .is_some()
+            });
+        let deity_glossed = world.ledger.find(hornvale_religion::IS_BELIEF).any(|f| {
+            world
+                .ledger
+                .text_of(f.subject, hornvale_kernel::NAME_GLOSS)
+                .is_some()
+        });
         assert!(
             settlement_glossed,
             "seed 42 should gloss at least one settlement (the sun is a Steeped concept for \
@@ -5792,7 +5820,7 @@ mod tests {
         let mut checked_any = false;
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
-            let Some(gloss) = world.ledger.text_of(id, NAME_GLOSS) else {
+            let Some(gloss) = world.ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
                 continue;
             };
             checked_any = true;

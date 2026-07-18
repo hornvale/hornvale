@@ -79,20 +79,54 @@ const LOBE_AMP: f64 = 0.5;
 #[allow(dead_code)]
 const REBALANCE_GAIN: f64 = 15.0;
 
+/// Precomputed seam-free spherical fBm: derives the three slice seeds and
+/// their per-octave seeds **once**, then samples many positions with no
+/// further derivation. Bit-identical to [`sphere_fbm01`] — same slice
+/// labels, same slice-plane pairing, same summation order — it only hoists
+/// the per-call `Seed::derive`s out of the per-cell loop. Build one per
+/// field (the seed/frequency/octaves are loop-invariant) and call
+/// [`SphereFbm::sample`] per cell.
+#[derive(Clone, Debug)]
+pub(crate) struct SphereFbm {
+    /// The three orthogonal coordinate-plane slice samplers, in the
+    /// `slice-0`/`slice-1`/`slice-2` order `sphere_fbm01` derives them.
+    slices: [noise::Fbm; 3],
+    /// Spatial frequency, applied to each coordinate at sample time.
+    frequency: f64,
+}
+
+impl SphereFbm {
+    /// Precompute the slice samplers for `octaves` octaves at `frequency`,
+    /// rooted at `seed` exactly as `sphere_fbm01` does.
+    pub(crate) fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
+        Self {
+            slices: [
+                noise::Fbm::new(seed.derive("slice-0"), octaves),
+                noise::Fbm::new(seed.derive("slice-1"), octaves),
+                noise::Fbm::new(seed.derive("slice-2"), octaves),
+            ],
+            frequency,
+        }
+    }
+
+    /// Sample the mean of the three orthogonal slices at position `p`.
+    pub(crate) fn sample(&self, p: [f64; 3]) -> f64 {
+        let f = self.frequency;
+        (self.slices[0].sample(f * p[0], f * p[1])
+            + self.slices[1].sample(f * p[1], f * p[2])
+            + self.slices[2].sample(f * p[2], f * p[0]))
+            / 3.0
+    }
+}
+
 /// Seam-free fBm in [0, 1) on the unit sphere: the mean of three
 /// orthogonal coordinate-plane slices (the `coast_render` construction).
+///
+/// Random-access convenience form; a hot per-cell loop with a fixed seed
+/// should build a [`SphereFbm`] once and reuse it.
 #[allow(dead_code)]
 pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
-    let slices = [
-        (seed.derive("slice-0"), p[0], p[1]),
-        (seed.derive("slice-1"), p[1], p[2]),
-        (seed.derive("slice-2"), p[2], p[0]),
-    ];
-    slices
-        .iter()
-        .map(|(s, a, b)| noise::fbm_2d(*s, frequency * a, frequency * b, octaves))
-        .sum::<f64>()
-        / 3.0
+    SphereFbm::new(seed, frequency, octaves).sample(p)
 }
 
 /// Lobed envelope of one craton: 1 at the center, tapering to 0 at a rim

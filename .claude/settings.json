@@ -2,5 +2,20 @@
   "env": {
     "BASH_DEFAULT_TIMEOUT_MS": "1200000",
     "BASH_MAX_TIMEOUT_MS": "3600000"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git -C \"${CLAUDE_PROJECT_DIR:-.}\" fetch origin main --quiet 2>/dev/null || true",
+            "async": true,
+            "timeout": 30,
+            "statusMessage": "Fetching origin/main"
+          }
+        ]
+      }
+    ]
   }
 }

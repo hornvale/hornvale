@@ -161,6 +161,7 @@
 - [The Individuation](./chronicle/the-individuation.md)
 - [The First Sentence](./chronicle/the-first-sentence.md)
 - [The Wandering Sun](./chronicle/the-wandering-sun.md)
+- [The Ordination](./chronicle/the-ordination.md)
 
 # Appendix: The Frontier
 

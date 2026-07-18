@@ -1,0 +1,451 @@
+//! The capability schema and the derived execution schedule (metaplan §4.6).
+//! A `System` declares the predicates it reads and writes; the schedule is the
+//! topological order of the resulting data-dependency DAG, tie-broken by stable
+//! label — a derived view over the declarations, never serialized. Genesis is
+//! this schedule's first turn (tick 0); the running tick is deferred.
+use crate::ledger::{Fact, Ledger, LedgerError};
+use crate::registry::ConceptRegistry;
+use std::collections::{BTreeMap, BTreeSet};
+
+/// One system's capability declaration: a stable label plus the predicate
+/// names it reads and writes. A declaration, not a behavior (the runnable
+/// interface is `TickSystem`). The schedulable unit UNI-21 names.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct System {
+    /// Stable id; the schedule's tie-break key (never registration position).
+    pub label: &'static str,
+    /// Predicate names this system reads.
+    pub reads: BTreeSet<&'static str>,
+    /// Predicate names this system writes.
+    pub writes: BTreeSet<&'static str>,
+}
+
+impl System {
+    /// Declare a system from slices (deduped into the sets).
+    /// type-audit: bare-ok(identifier-text)
+    pub fn new(label: &'static str, reads: &[&'static str], writes: &[&'static str]) -> System {
+        System {
+            label,
+            reads: reads.iter().copied().collect(),
+            writes: writes.iter().copied().collect(),
+        }
+    }
+}
+
+/// The systems' declarations — the capability schema. Build-state, never
+/// serialized; the schedule and the single-writer check are pure functions of it.
+#[derive(Clone, Debug, Default)]
+pub struct CapabilitySchema {
+    /// The declared systems.
+    pub systems: Vec<System>,
+}
+
+/// Why a schedule could not be derived.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Debug, PartialEq, Eq)]
+pub enum ScheduleError {
+    /// The read/write DAG has a cycle; no total order exists. Names the
+    /// systems remaining when Kahn's algorithm stalled.
+    Cycle {
+        /// The labels caught in (or downstream of) the cycle.
+        labels: Vec<&'static str>,
+    },
+    /// A functional predicate is written by more than one system.
+    MultipleWriters {
+        /// The over-written functional predicate.
+        predicate: &'static str,
+        /// The systems declaring it in `writes`, ascending by label.
+        systems: Vec<&'static str>,
+    },
+}
+
+impl CapabilitySchema {
+    /// Construct from declarations.
+    pub fn new(systems: Vec<System>) -> Self {
+        CapabilitySchema { systems }
+    }
+
+    /// The dependency edges `writer_label -> reader_label` for every predicate a
+    /// system writes and another reads. Deterministic (BTree-ordered).
+    fn edges(&self) -> BTreeSet<(&'static str, &'static str)> {
+        let mut edges = BTreeSet::new();
+        for w in &self.systems {
+            for r in &self.systems {
+                if w.label == r.label {
+                    continue;
+                }
+                if w.writes.iter().any(|p| r.reads.contains(p)) {
+                    edges.insert((w.label, r.label));
+                }
+            }
+        }
+        edges
+    }
+
+    /// Topological order, ties broken by ascending label (Kahn's algorithm with
+    /// a stable-label ready set). `Err(Cycle)` if no total order exists.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn schedule(&self) -> Result<Vec<&'static str>, ScheduleError> {
+        let edges = self.edges();
+        let mut indegree: BTreeMap<&'static str, usize> =
+            self.systems.iter().map(|s| (s.label, 0usize)).collect();
+        for (_, to) in &edges {
+            *indegree.get_mut(to).expect("edge endpoints are systems") += 1;
+        }
+        let mut order = Vec::with_capacity(self.systems.len());
+        loop {
+            // ready = indegree 0, not yet emitted; BTreeMap iteration is label-sorted
+            let next = indegree.iter().find(|&(_, &d)| d == 0).map(|(&l, _)| l);
+            let Some(label) = next else { break };
+            indegree.remove(&label);
+            order.push(label);
+            for (from, to) in &edges {
+                if *from == label
+                    && let Some(d) = indegree.get_mut(to)
+                {
+                    *d -= 1;
+                }
+            }
+        }
+        if order.len() != self.systems.len() {
+            let mut labels: Vec<&'static str> = indegree.keys().copied().collect();
+            labels.sort_unstable();
+            return Err(ScheduleError::Cycle { labels });
+        }
+        Ok(order)
+    }
+
+    /// True iff `order` is a permutation of the systems' labels that respects
+    /// every dependency edge (writer before reader). The keystone's checker.
+    /// type-audit: bare-ok(identifier-text: order), bare-ok(flag: return)
+    pub fn is_valid_order(&self, order: &[&'static str]) -> bool {
+        let want: BTreeSet<&'static str> = self.systems.iter().map(|s| s.label).collect();
+        let got: BTreeSet<&'static str> = order.iter().copied().collect();
+        if want != got || order.len() != self.systems.len() {
+            return false;
+        }
+        let pos: BTreeMap<&'static str, usize> =
+            order.iter().enumerate().map(|(i, &l)| (l, i)).collect();
+        self.edges().iter().all(|(from, to)| pos[from] < pos[to])
+    }
+
+    /// Enforce metaplan §7: each *functional* predicate is written by at most
+    /// one system, making same-tick write conflicts unrepresentable. Reads the
+    /// registry for functionality; non-functional and unregistered predicates
+    /// are unconstrained. `exempt` names predicates excused from the single-
+    /// writer rule — shared kernel-core infrastructure (e.g.
+    /// [`crate::world::KERNEL_CORE_PREDICATES`]) that is legitimately written
+    /// by more than one system on disjoint subjects, where this check's
+    /// predicate-level granularity cannot see the subject disjointness
+    /// (ecs-c6 T3). `Err(MultipleWriters)` names the first offending,
+    /// non-exempt predicate (ascending) and its writers (ascending label).
+    /// type-audit: bare-ok(identifier-text: exempt)
+    pub fn single_writer_check(
+        &self,
+        registry: &crate::registry::ConceptRegistry,
+        exempt: &[&'static str],
+    ) -> Result<(), ScheduleError> {
+        let mut writers: BTreeMap<&'static str, Vec<&'static str>> = BTreeMap::new();
+        for s in &self.systems {
+            for &p in &s.writes {
+                writers.entry(p).or_default().push(s.label);
+            }
+        }
+        for (&predicate, systems) in &writers {
+            if exempt.contains(&predicate) {
+                continue;
+            }
+            let functional = registry.predicate(predicate).is_some_and(|d| d.functional);
+            if functional && systems.len() > 1 {
+                let mut systems = systems.clone();
+                systems.sort_unstable();
+                return Err(ScheduleError::MultipleWriters { predicate, systems });
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The runnable interface a sim-dynamic system implements — the bulk-
+/// synchronous step (decision-ledger #40). `step` reads the FROZEN tick-N
+/// ledger (it never sees another system's same-tick write) and returns the
+/// facts to commit into tick-N+1. Exercised by a toy system this campaign; no
+/// real domain implements it yet (genesis is not rerouted through `tick`).
+pub trait TickSystem {
+    /// The system's stable label (its schedule key).
+    /// type-audit: bare-ok(identifier-text: return)
+    fn label(&self) -> &'static str;
+    /// Read the frozen tick-N ledger; return the facts to commit next tick.
+    fn step(&self, frozen: &Ledger) -> Vec<Fact>;
+}
+
+/// Run one bulk-synchronous tick: every system reads the same `frozen` ledger
+/// (parallel-safe, pure), then their writes are committed into a fresh tick-N+1
+/// ledger **in `order`** (the schedule), single-threaded and deterministic.
+/// Cross-system effects have one tick of latency by default. Returns the
+/// tick-N+1 ledger. `order` lists system labels; systems not in `order` are a
+/// caller error (skipped).
+/// type-audit: bare-ok(identifier-text: order)
+pub fn tick(
+    frozen: &Ledger,
+    systems: &[&dyn TickSystem],
+    order: &[&'static str],
+    registry: &ConceptRegistry,
+) -> Result<Ledger, LedgerError> {
+    let mut next = frozen.clone();
+    for &label in order {
+        if let Some(s) = systems.iter().find(|s| s.label() == label) {
+            for fact in s.step(frozen) {
+                next.commit(fact, registry)?;
+            }
+        }
+    }
+    Ok(next)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sys(label: &'static str, reads: &[&'static str], writes: &[&'static str]) -> System {
+        System::new(label, reads, writes)
+    }
+
+    #[test]
+    fn schedule_orders_a_chain() {
+        // a writes P, b reads P and writes Q, c reads Q -> a,b,c
+        let schema = CapabilitySchema::new(vec![
+            sys("c", &["Q"], &[]),
+            sys("a", &[], &["P"]),
+            sys("b", &["P"], &["Q"]),
+        ]);
+        assert_eq!(schema.schedule().unwrap(), vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn independent_systems_break_ties_by_label() {
+        // no edges: pure label order, NOT input order
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            sys("sky", &[], &["sun"]),
+        ]);
+        assert_eq!(schema.schedule().unwrap(), vec!["sky", "terrain"]);
+    }
+
+    #[test]
+    fn diamond_respects_all_edges_and_ties_by_label() {
+        // root -> {left, right} -> join. left/right independent -> label order.
+        let schema = CapabilitySchema::new(vec![
+            sys("join", &["L", "R"], &[]),
+            sys("right", &["base"], &["R"]),
+            sys("left", &["base"], &["L"]),
+            sys("root", &[], &["base"]),
+        ]);
+        let order = schema.schedule().unwrap();
+        assert_eq!(order, vec!["root", "left", "right", "join"]);
+    }
+
+    #[test]
+    fn a_cycle_is_an_error_naming_its_systems() {
+        // a reads Q writes P; b reads P writes Q -> cycle
+        let schema =
+            CapabilitySchema::new(vec![sys("a", &["Q"], &["P"]), sys("b", &["P"], &["Q"])]);
+        match schema.schedule() {
+            Err(ScheduleError::Cycle { labels }) => {
+                assert!(labels.contains(&"a") && labels.contains(&"b"));
+            }
+            other => panic!("expected Cycle, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn is_valid_order_accepts_topo_sorts_and_rejects_violations() {
+        let schema = CapabilitySchema::new(vec![sys("a", &[], &["P"]), sys("b", &["P"], &[])]);
+        assert!(schema.is_valid_order(&["a", "b"])); // edge a->b respected
+        assert!(!schema.is_valid_order(&["b", "a"])); // edge violated
+        assert!(!schema.is_valid_order(&["a"])); // not a permutation
+    }
+
+    #[test]
+    fn single_writer_check_passes_when_each_functional_predicate_has_one_writer() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        r.register_predicate("here", false, "non-functional")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            // two writers of a NON-functional predicate is allowed
+            sys("a", &[], &["here"]),
+            sys("b", &[], &["here"]),
+        ]);
+        assert!(schema.single_writer_check(&r, &[]).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_rejects_two_writers_of_a_functional_predicate() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            sys("rogue", &[], &["elev"]),
+        ]);
+        match schema.single_writer_check(&r, &[]) {
+            Err(ScheduleError::MultipleWriters { predicate, systems }) => {
+                assert_eq!(predicate, "elev");
+                assert_eq!(systems, vec!["rogue", "terrain"]); // ascending label
+            }
+            other => panic!("expected MultipleWriters, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn single_writer_check_ignores_unregistered_predicates() {
+        // A predicate not in the registry has unknown functionality; the check only
+        // constrains registered functional predicates (the load path registers all
+        // real predicates before checking).
+        use crate::registry::ConceptRegistry;
+        let r = ConceptRegistry::default();
+        let schema =
+            CapabilitySchema::new(vec![sys("a", &[], &["ghost"]), sys("b", &[], &["ghost"])]);
+        assert!(schema.single_writer_check(&r, &[]).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_exempts_a_listed_functional_predicate_with_two_writers() {
+        // An exempt functional predicate (shared kernel-core infrastructure,
+        // written by two systems on subjects the check cannot see are
+        // disjoint — e.g. `name-gloss` on a settlement vs. a belief) passes.
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("name-gloss", true, "kernel-core, shared")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("settlement", &[], &["name-gloss"]),
+            sys("religion", &[], &["name-gloss"]),
+        ]);
+        assert!(schema.single_writer_check(&r, &["name-gloss"]).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_exemption_does_not_swallow_a_real_non_exempt_violation() {
+        // Exempting one predicate must not blind the check to a genuine
+        // two-writer violation on a DIFFERENT, non-exempt functional
+        // predicate in the same schema.
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        r.register_predicate("name-gloss", true, "kernel-core, shared")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            sys("rogue", &[], &["elev"]),
+            sys("settlement", &[], &["name-gloss"]),
+            sys("religion", &[], &["name-gloss"]),
+        ]);
+        match schema.single_writer_check(&r, &["name-gloss"]) {
+            Err(ScheduleError::MultipleWriters { predicate, systems }) => {
+                assert_eq!(predicate, "elev");
+                assert_eq!(systems, vec!["rogue", "terrain"]);
+            }
+            other => panic!("expected MultipleWriters on the non-exempt 'elev', got {other:?}"),
+        }
+    }
+
+    // A toy system that reads the frozen ledger and writes one fact. Proves the
+    // bulk-synchronous mechanism without any real domain.
+    struct CountThenName {
+        label: &'static str,
+        subject: crate::EntityId,
+        predicate: &'static str,
+        // writes Number(count of facts it saw in the frozen ledger)
+    }
+    impl TickSystem for CountThenName {
+        fn label(&self) -> &'static str {
+            self.label
+        }
+        fn step(&self, frozen: &crate::Ledger) -> Vec<crate::Fact> {
+            vec![crate::Fact {
+                subject: self.subject,
+                predicate: self.predicate.to_string(),
+                object: crate::Value::Number(frozen.len() as f64),
+                place: None,
+                day: None,
+                provenance: self.label.to_string(),
+            }]
+        }
+    }
+
+    #[test]
+    fn tick_reads_frozen_snapshot_so_systems_do_not_see_each_others_writes() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("count-a", false, "").unwrap();
+        r.register_predicate("count-b", false, "").unwrap();
+        let mut base = crate::Ledger::default();
+        let e = base.mint_entity();
+        // frozen ledger has 0 facts. Two systems each write frozen.len() == 0.
+        let a = CountThenName {
+            label: "a",
+            subject: e,
+            predicate: "count-a",
+        };
+        let b = CountThenName {
+            label: "b",
+            subject: e,
+            predicate: "count-b",
+        };
+        let systems: Vec<&dyn TickSystem> = vec![&a, &b];
+        let next = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        // BOTH see the frozen snapshot (0 facts) — b does NOT see a's write.
+        assert_eq!(
+            next.value_of(e, "count-a"),
+            Some(&crate::Value::Number(0.0))
+        );
+        assert_eq!(
+            next.value_of(e, "count-b"),
+            Some(&crate::Value::Number(0.0))
+        );
+        // The next tick's ledger has the base fact-count plus the two writes.
+        assert_eq!(next.len(), base.len() + 2);
+    }
+
+    #[test]
+    fn tick_commits_in_schedule_order_then_is_deterministic() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("count-a", false, "").unwrap();
+        r.register_predicate("count-b", false, "").unwrap();
+        let mut base = crate::Ledger::default();
+        let e = base.mint_entity();
+        let a = CountThenName {
+            label: "a",
+            subject: e,
+            predicate: "count-a",
+        };
+        let b = CountThenName {
+            label: "b",
+            subject: e,
+            predicate: "count-b",
+        };
+        let systems: Vec<&dyn TickSystem> = vec![&b, &a]; // input order reversed...
+        // ...but `order` is the schedule: commits follow it, not input order.
+        let n1 = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        let n2 = tick(&base, &systems, &["a", "b"], &r).unwrap();
+        // Deterministic: same base + same order -> byte-identical ledgers.
+        assert_eq!(
+            serde_json::to_string(&n1).unwrap(),
+            serde_json::to_string(&n2).unwrap()
+        );
+        // Commit order follows the schedule: a's fact precedes b's.
+        let preds: Vec<&str> = n1.iter().map(|f| f.predicate.as_str()).collect();
+        let ia = preds.iter().position(|&p| p == "count-a").unwrap();
+        let ib = preds.iter().position(|&p| p == "count-b").unwrap();
+        assert!(
+            ia < ib,
+            "commits follow schedule order [a, b], not input order [b, a]"
+        );
+    }
+}

@@ -3290,7 +3290,7 @@ fn name_gloss_true(v: &FullView) -> MetricValue {
     let mut all_true = true;
     for f in v.world().ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
-        let Some(gloss) = v.world().ledger.text_of(id, hornvale_worldgen::NAME_GLOSS) else {
+        let Some(gloss) = v.world().ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
             continue;
         };
         checked = true;

@@ -13,5 +13,7 @@ panic_all
 # The access key must be deactivated BEFORE any terminate call.
 key_line=$(grep -n "update-access-key.*Inactive" "$HVG_STUB_LOG" | head -1 | cut -d: -f1)
 term_line=$(grep -n "terminate-instances" "$HVG_STUB_LOG" | head -1 | cut -d: -f1)
-[ -n "$key_line" ] && [ "$key_line" -lt "${term_line:-99999}" ] || { echo "FAIL: deactivate key before terminate"; exit 1; }
+if ! { [ -n "$key_line" ] && [ "$key_line" -lt "${term_line:-99999}" ]; }; then
+  echo "FAIL: deactivate key before terminate"; exit 1
+fi
 echo "test_panic: OK"
