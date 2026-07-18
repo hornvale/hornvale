@@ -210,6 +210,15 @@ impl GeneratedClimate {
         self.insolation
     }
 
+    /// This climate's axial tilt, degrees — retained alongside
+    /// `insolation()`/`year_length_std()`/`year_phase_offset()` so the
+    /// locked-libration temperature evaluator can recompute the substellar
+    /// latitude as the year turns (Task 3, The Wandering Sun).
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn obliquity_deg(&self) -> f64 {
+        self.obliquity_deg
+    }
+
     /// The hemisphere-signed seasonal half-swing at a cell, °C: the
     /// coefficient of the seasonal sinusoid, `amplitude × sign(latitude)`.
     /// Positive north, negative south, exactly `0.0` when locked, when the

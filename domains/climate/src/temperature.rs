@@ -131,6 +131,33 @@ pub fn temperature_at(
     }
 }
 
+/// Locked-world seasonal temperature (°C) at an arbitrary unit position `p`
+/// (not snapped to a climate cell), for the librating substellar at `day`.
+/// The client reconstructs exactly this at each tile-center; the golden
+/// (windows/scene/examples/locked_temperature_golden.rs) pins it. `lapse` is
+/// the caller's precomputed elevation lapse (LAPSE_C_PER_M · max(0, elev−sea)).
+/// Arithmetically identical to `temperature_at`'s `RotationRegime::Locked`
+/// branch — same year_phase/sub_lat/dir/scale/mapping — with a position in
+/// place of a `CellId` (so it never touches a `Geosphere` or `CellMap`).
+/// type-audit: bare-ok(ratio: p), bare-ok(ratio: insolation), pending(wave-2: lapse), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase_offset), bare-ok(diagnostic-value: year_length_std), pending(wave-2: return)
+#[allow(clippy::too_many_arguments)]
+pub fn locked_temperature_at_position(
+    p: [f64; 3],
+    insolation: f64,
+    lapse: f64,
+    day: f64,
+    obliquity_deg: f64,
+    year_phase_offset: f64,
+    year_length_std: f64,
+) -> f64 {
+    let year_phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
+    let sub_lat = obliquity_deg * math::sin(std::f64::consts::TAU * year_phase);
+    let dir = crate::substellar_at(sub_lat);
+    let cos_theta = crate::substellar_cosine_dir(p, dir);
+    let scale = math::powf(insolation.max(0.0), 0.25);
+    crate::locked_cell_temperature(cos_theta, scale, lapse)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,6 +349,41 @@ mod tests {
         assert!(
             lat > 10.0,
             "at northern solstice the hot spot has climbed north, got lat {lat}"
+        );
+    }
+
+    #[test]
+    fn locked_temperature_at_position_matches_temperature_at_the_cells_own_position() {
+        let geo = Geosphere::new(4);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let elevation = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[0] > 0.0 { 500.0 } else { 0.0 };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // The substellar-ish cell: the position formula must agree with the
+        // cell-based one everywhere, but pick a cell with nonzero lapse too
+        // (elevation above sea level) so the lapse term is exercised.
+        let cell = geo
+            .cells()
+            .max_by(|a, b| geo.position(*a)[0].total_cmp(&geo.position(*b)[0]))
+            .unwrap();
+        let obliquity = 21.8;
+        let year = 240.0;
+        let offset = 0.15;
+        let day = 63.0;
+        let expected = temperature_at(
+            &mean, &geo, &elevation, sea, obliquity, 1.0, year, offset, &regime, cell, day,
+        )
+        .get();
+        let p = geo.position(cell);
+        let above = (*elevation.get(cell) - sea).max(0.0);
+        let lapse = LAPSE_C_PER_M * above;
+        let actual = locked_temperature_at_position(p, 1.0, lapse, day, obliquity, offset, year);
+        assert!(
+            (expected - actual).abs() < 1e-9,
+            "expected {expected} got {actual}"
         );
     }
 
