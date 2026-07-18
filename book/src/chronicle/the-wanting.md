@@ -136,10 +136,10 @@ project's `models author, dice roll` discipline exists to keep out.
 
 So the campaign reserves the seam instead of building past it. Three small
 pieces, interface shape only: a `Goal` naming the sole desired state (be at
-the resource); a `decide(npc, world_view, t) -> Intent` function whose
-signature is already the shape a real planner will fill — the tick depends
-only on its output, an intended position, never on the drive's internals,
-so the body is replaceable without touching the caller; and a `world_view`
+the resource); a `decide(home, resource, view, params) -> Intent` function
+whose signature is already the shape a real planner will fill — the tick
+depends only on its output, an intended position, never on the drive's
+internals, so the body is replaceable without touching the caller; and a `view`
 parameter standing in for "what the agent perceives," ground truth today,
 the belief layer tomorrow. None of this is a planner in miniature.
 It is one function shaped correctly, so that the eventual campaign which

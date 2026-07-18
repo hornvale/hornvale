@@ -25,7 +25,9 @@ pub struct Npc {
     /// The room its sustenance drive seeks (the-wanting supersedes the old
     /// fixed-schedule destination: this IS the drive's resource anchor now).
     pub resource: RoomAddr,
-    /// The species activity-cycle driving the routine.
+    /// The species activity-cycle. Write-only this slice: the drive is the sole
+    /// mover (the activity gate was dropped), retained for the deferred
+    /// activity-gating followup (a diurnal NPC seeking water only while awake).
     pub activity: ActivityCycle,
     /// A short human label for prose ("the herder").
     pub label: String,
