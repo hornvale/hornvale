@@ -209,6 +209,19 @@ sitting behind it. Persist meaning, render surface: the same principle a
 romanization states about one phoneme sequence, restated one level up about
 an entire told belief.
 
+The seam has since grown a second, more general storey: the **clause
+layer** (`clause.rs`), where a language-neutral `ClauseSpec` — frame,
+subject, complement, number, definiteness, a modifier tail — realizes into
+a Common sentence through a **construction inventory**: the grammar as
+data, an ordered list of surface parts one interpreter walks forward. The
+Self-Writing Book program builds on this layer ("Vebe is a planet with two
+moons…"), and since The Echo the same inventory runs **backward**: a
+parser binds the parts against a closed complement lexicon and
+reconstructs the `ClauseSpec` a sentence came from, under the standing
+round-trip law `parse(realize(spec)) == spec`. One committed grammar, two
+directions — production and comprehension cannot drift apart, because
+they are the same data read opposite ways.
+
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
 domain builds *from* that envelope sorts into the same four kinds
