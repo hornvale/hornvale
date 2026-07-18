@@ -129,20 +129,40 @@ pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32
     SphereFbm::new(seed, frequency, octaves).sample(p)
 }
 
-/// Lobed envelope of one craton: 1 at the center, tapering to 0 at a rim
-/// whose radius varies with direction (the fBm lobing), hard 0 beyond
-/// 1.5x the nominal radius. Flat-topped quartic taper.
-#[allow(dead_code)]
-pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
+/// Lobed envelope of one craton over a **precomputed** lobing sampler:
+/// 1 at the center, tapering to 0 at a rim whose radius varies with
+/// direction (the fBm lobing), hard 0 beyond 1.5x the nominal radius.
+/// Flat-topped quartic taper. `fbm` must be `SphereFbm::new(seed,
+/// LOBE_FREQ, LOBE_OCTAVES)` — sampling it is bit-identical to
+/// `sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES)`.
+pub(crate) fn lobed_envelope_with(
+    fbm: &SphereFbm,
+    center: [f64; 3],
+    p: [f64; 3],
+    radius_rad: f64,
+) -> f64 {
     let angle = math::acos(dot(center, p).clamp(-1.0, 1.0));
     if angle >= 1.5 * radius_rad {
         return 0.0;
     }
-    let n = sphere_fbm01(seed, p, LOBE_FREQ, LOBE_OCTAVES);
+    let n = fbm.sample(p);
     let centered = 0.5 * math::tanh(REBALANCE_GAIN * (n - 0.5));
     let rim = radius_rad * (1.0 + 2.0 * LOBE_AMP * centered);
     let x = (angle / rim).clamp(0.0, 1.0);
     (1.0 - x * x).powi(2)
+}
+
+/// Lobed envelope of one craton (random-access convenience form). A hot
+/// per-cell loop should build a [`SphereFbm`] once and call
+/// [`lobed_envelope_with`]; this constructs one per call.
+#[allow(dead_code)]
+pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
+    lobed_envelope_with(
+        &SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES),
+        center,
+        p,
+        radius_rad,
+    )
 }
 
 /// Thin oceanic floor thickness, km.
@@ -908,12 +928,13 @@ pub fn assemble_cratons(cratons: &[Craton]) -> Vec<[f64; 3]> {
 pub struct CrustField {
     /// The drawn cratons.
     cratons: Vec<Craton>,
-    /// Per-craton lobing-kernel seeds, indexed by craton id — the exact
-    /// `craton-{id}` derivations `strongest` used to recompute on every
-    /// sample. Precomputed once here so per-cell and per-pixel sampling
-    /// (millions of calls at the canonical grid) allocates and hashes
-    /// nothing per craton. Byte-identical to the per-sample derivation.
-    lobing_seeds: Vec<Seed>,
+    /// Per-craton lobing samplers, indexed by craton id — one
+    /// `SphereFbm::new(craton-{id}, LOBE_FREQ, LOBE_OCTAVES)` per craton.
+    /// Precomputed once here so per-cell and per-pixel sampling (millions
+    /// of calls at the canonical grid) allocates and derives nothing per
+    /// craton: not the `craton-{id}` seed, and not the slice/octave seeds
+    /// inside `sphere_fbm01`. Byte-identical to the per-sample path.
+    lobing_fbms: Vec<SphereFbm>,
     /// The drawn terrane set (empty when built via `new`).
     terranes: Vec<Terrane>,
     /// The drawn rift history (rift-and-fit, spec §3.3), or `None` for the
@@ -969,9 +990,12 @@ impl CrustField {
         major_count: usize,
     ) -> CrustField {
         let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
-        let lobing_seeds = cratons
+        let lobing_fbms = cratons
             .iter()
-            .map(|c| lobing_root.derive(&format!("craton-{}", c.id)))
+            .map(|c| {
+                let seed = lobing_root.derive(&format!("craton-{}", c.id));
+                SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES)
+            })
             .collect();
         let craton_rotations = match &rift {
             Some(r) => (0..major_count.min(cratons.len()))
@@ -987,7 +1011,7 @@ impl CrustField {
         };
         CrustField {
             cratons,
-            lobing_seeds,
+            lobing_fbms,
             terranes,
             rift,
             craton_rotations,
@@ -1008,16 +1032,16 @@ impl CrustField {
                 .cratons
                 .iter()
                 .map(|c| {
-                    let seed = self.lobing_seeds[c.id as usize];
-                    (lobed_envelope(seed, c.center, p, c.radius_rad), c)
+                    let fbm = &self.lobing_fbms[c.id as usize];
+                    (lobed_envelope_with(fbm, c.center, p, c.radius_rad), c)
                 })
                 .max_by(|(a, ca), (b, cb)| a.total_cmp(b).then(cb.id.cmp(&ca.id))),
             Some(rift) => self
                 .cratons
                 .iter()
                 .map(|c| {
-                    let seed = self.lobing_seeds[c.id as usize];
-                    let envelope = lobed_envelope(seed, c.center, p, c.radius_rad);
+                    let fbm = &self.lobing_fbms[c.id as usize];
+                    let envelope = lobed_envelope_with(fbm, c.center, p, c.radius_rad);
                     // Two byte-identity-preserving skips, not fidelity calls
                     // (the Task 6 perf budget's recovery — ~2.7x over ->
                     // within budget — with zero output bytes moved):
