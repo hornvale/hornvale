@@ -856,6 +856,56 @@ mod tests {
     }
 
     #[test]
+    fn believed_water_breaks_equal_hop_ties_by_ascending_room_addr() {
+        // DETERMINISM UNDER GENUINE TIES (the tie-break the reload/isolation test
+        // can't reach — it never has two equal-distance candidates): two water
+        // sources the SAME hop-distance from home (two neighbours, both 1 hop) must
+        // resolve to the smaller-`RoomAddr` one, identically every run and across
+        // reload. A nondeterministic (HashSet) accumulation would make this flaky;
+        // the `BTreeSet` + `min_by((hop, RoomAddr))` fold makes it total.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let n = home.neighbors();
+        let (first, second) = (n[0].clone(), n[1].clone()); // both exactly 1 hop from home
+        let smaller = std::cmp::min(first.clone(), second.clone());
+        let larger = std::cmp::max(first.clone(), second.clone());
+        let t = PlantedTerrain(
+            [
+                (first.clone(), WATER_LEVEL - 1.0),
+                (second.clone(), WATER_LEVEL - 1.0),
+            ]
+            .into_iter()
+            .collect(),
+        );
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: first.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        // Stand in the LARGER-addr source first, then the smaller — so a naive
+        // "first sighting wins" would pick the larger; the tie-break must not.
+        commit_agent_at(&mut ledger, &reg, e, &larger, 2.0);
+        commit_agent_at(&mut ledger, &reg, e, &smaller, 3.0);
+        let got = believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000);
+        assert_eq!(
+            got,
+            Some(smaller.clone()),
+            "an equal-hop tie resolves to the smaller RoomAddr, not sighting order"
+        );
+        let json = serde_json::to_string(&ledger).unwrap();
+        let reloaded: Ledger = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            got,
+            "the tie resolves identically after reload"
+        );
+    }
+
+    #[test]
     fn derive_npcs_are_distinct_and_placed() {
         // Use the real worldgen build for a populated world:
         let world = hornvale_worldgen::build_world(
