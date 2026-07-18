@@ -1,4 +1,4 @@
-# 0061. The classification split: `is-a` and `instance-of` coexist
+# 0062. The classification split: `is-a` and `instance-of` coexist
 
 **Status:** Accepted (2026-07-17) · **Decider:** Nathan (C2, The
 Predicates & the Grammar)

@@ -46,7 +46,7 @@ and tested against the day the volumes grow long enough to need it.
 ## Two classification predicates, on purpose
 
 The kernel now carries two ways to say what a thing is, and a decision
-(0061) ratifying that the split is permanent rather than transitional.
+(0062) ratifying that the split is permanent rather than transitional.
 `is-a` is functional and immutable: the world *is* a planet, written once
 at genesis, contradiction-checked forever. `instance-of` — shipped by the
 ECS program's Individuation campaign in deliberate shadow, with genesis
