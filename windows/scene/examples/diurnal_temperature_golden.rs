@@ -37,10 +37,10 @@ const DAY: f64 = 0.0;
 const LAND_PICKS: usize = 7;
 
 /// One golden row: the client's TS `diurnalWaveform` port must reproduce
-/// `diurnal_c` from `amplitude_c * diurnalWaveform(lat_deg, obliquity_deg,
-/// year_phase, day_fraction, day_length_std)` (obliquity/year_phase/
-/// day_length_std are fixed per-run system constants documented in the
-/// header comment above, not repeated per row).
+/// `diurnal_c` from `amplitude_c * diurnalWaveform(lat_deg, lon_deg,
+/// obliquity_deg, year_phase, day_fraction, day_length_std)` (obliquity/
+/// year_phase/day_length_std are fixed per-run system constants documented
+/// in the header comment above, not repeated per row).
 #[derive(Serialize)]
 struct Row {
     lat_deg: f64,
@@ -127,6 +127,7 @@ fn main() {
         for &day_fraction in &DAY_FRACTIONS {
             let d = diurnal_waveform(
                 coord.latitude,
+                coord.longitude,
                 obliquity_deg,
                 year_phase,
                 day_fraction,

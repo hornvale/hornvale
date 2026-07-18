@@ -619,11 +619,12 @@ mod tests {
             return 0.0;
         };
         interp(climate.geosphere(), c_index, s, |c| {
-            let lat = climate.geosphere().coord(c).latitude;
+            let coord = climate.geosphere().coord(c);
             let amp = climate.diurnal_amp_at(c);
             hornvale_climate::diurnal_anomaly(
                 amp,
-                lat,
+                coord.latitude,
+                coord.longitude,
                 obliquity_deg,
                 year_phase,
                 day_fraction,

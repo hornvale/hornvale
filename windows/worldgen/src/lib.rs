@@ -1196,11 +1196,15 @@ pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
     let geo = terrain.geosphere();
     let obliquity = climate.obliquity_deg();
 
+    // Longitude 0.0: sweeping `day_fraction` over a full rotation sweeps all
+    // local solar times regardless of longitude (a pure phase shift), so the
+    // peak found here is longitude-invariant.
     let geo_peak_at = |latitude_deg: f64| -> f64 {
         (0..DIURNAL_PEAK_SAMPLES)
             .map(|i| {
                 diurnal_waveform(
                     latitude_deg,
+                    0.0,
                     obliquity,
                     0.0,
                     f64::from(i) / f64::from(DIURNAL_PEAK_SAMPLES),

@@ -145,6 +145,7 @@ pub fn temperature_at(
                 + diurnal_anomaly(
                     *diurnal_amp.get(cell),
                     geo.coord(cell).latitude,
+                    geo.coord(cell).longitude,
                     obliquity_deg,
                     phase,
                     day.rem_euclid(1.0),
@@ -600,6 +601,12 @@ mod tests {
         let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
         let year = 360.0;
         let day = 100.0;
+        // The diurnal term is phased on LOCAL solar time (day_fraction +
+        // longitude/360), so the real `day_fraction` that lands the cell in
+        // its local afternoon/pre-dawn depends on the cell's own longitude.
+        let lon = geo.coord(cell).longitude;
+        let local_to_day_fraction =
+            |local_solar_time: f64| (local_solar_time - lon / 360.0).rem_euclid(1.0);
         let t = |day_fraction: f64| {
             temperature_at(
                 &mean,
@@ -617,8 +624,8 @@ mod tests {
             )
             .get()
         };
-        let afternoon = t(0.60);
-        let predawn = t(0.05);
+        let afternoon = t(local_to_day_fraction(0.60));
+        let predawn = t(local_to_day_fraction(0.05));
         assert!(
             afternoon > predawn + 5.0,
             "afternoon {afternoon} should tower over predawn {predawn} by a physical margin"
@@ -648,6 +655,12 @@ mod tests {
         let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
         let year = 360.0;
         let day = 100.0;
+        // The diurnal term is phased on LOCAL solar time (day_fraction +
+        // longitude/360), so the real `day_fraction` that lands the cell in
+        // its local afternoon/pre-dawn depends on the cell's own longitude.
+        let lon = geo.coord(cell).longitude;
+        let local_to_day_fraction =
+            |local_solar_time: f64| (local_solar_time - lon / 360.0).rem_euclid(1.0);
         let t = |day_fraction: f64| {
             temperature_at(
                 &mean,
@@ -665,8 +678,8 @@ mod tests {
             )
             .get()
         };
-        let afternoon = t(0.60);
-        let predawn = t(0.05);
+        let afternoon = t(local_to_day_fraction(0.60));
+        let predawn = t(local_to_day_fraction(0.05));
         assert!(
             afternoon > predawn + 5.0,
             "afternoon {afternoon} should tower over predawn {predawn} by a physical margin \

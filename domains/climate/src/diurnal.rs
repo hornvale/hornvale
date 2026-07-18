@@ -41,11 +41,17 @@ pub fn diurnal_amplitude(moisture: f64, continentality: f64, elevation_above_sea
 }
 
 /// The normalized diurnal waveform `D`: zero-mean over `day_fraction ∈
-/// [0,1)`, afternoon-peaked, damped by thermal inertia, and zero when the
-/// sun never rises (polar night).
-/// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std), bare-ok(ratio: return)
+/// [0,1)`, afternoon-peaked on LOCAL solar time (phased by `longitude_deg`,
+/// not the planet-wide `day_fraction` alone), damped by thermal inertia, and
+/// zero when the sun never rises (polar night). A real day/night cycle is
+/// per-longitude: at any instant half the planet is in daytime and half in
+/// night, and the warm band sweeps as the planet turns — `longitude_deg`
+/// shifts the phase so cells at different meridians peak at different
+/// moments of the same rotation.
+/// type-audit: bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std), bare-ok(ratio: return)
 pub fn diurnal_waveform(
     latitude_deg: f64,
+    longitude_deg: f64,
     obliquity_deg: f64,
     year_phase: f64,
     day_fraction: f64,
@@ -57,16 +63,18 @@ pub fn diurnal_waveform(
     let noon_sin = math::sin(lat) * math::sin(dec) + math::cos(lat) * math::cos(dec);
     let a_geo = noon_sin.max(0.0);
     let inertia = 1.0 - math::exp(-day_length_std.max(0.0) / TAU_THERMAL);
-    a_geo * inertia * math::cos(TAU * (day_fraction - PEAK_FRAC))
+    let local_solar_time = (day_fraction + longitude_deg / 360.0).rem_euclid(1.0);
+    a_geo * inertia * math::cos(TAU * (local_solar_time - PEAK_FRAC))
 }
 
 /// The diurnal temperature anomaly at a cell and moment: `amplitude *
 /// diurnal_waveform(...)`, wrapped as a [`TempAnomaly`].
-/// type-audit: bare-ok(diagnostic-value: amplitude), bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std)
+/// type-audit: bare-ok(diagnostic-value: amplitude), bare-ok(diagnostic-value: latitude_deg), bare-ok(diagnostic-value: longitude_deg), bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: year_phase), bare-ok(ratio: day_fraction), bare-ok(diagnostic-value: day_length_std)
 #[allow(clippy::too_many_arguments)]
 pub fn diurnal_anomaly(
     amplitude: f64,
     latitude_deg: f64,
+    longitude_deg: f64,
     obliquity_deg: f64,
     year_phase: f64,
     day_fraction: f64,
@@ -74,6 +82,7 @@ pub fn diurnal_anomaly(
 ) -> TempAnomaly {
     let d = diurnal_waveform(
         latitude_deg,
+        longitude_deg,
         obliquity_deg,
         year_phase,
         day_fraction,
@@ -88,11 +97,15 @@ mod tests {
 
     // The keystone: the waveform integrates to ~0 over one rotation (so the daily
     // mean, and thus mean_temperature, is preserved). Sample 1000 fractions.
+    // A fixed nonzero longitude (40.0) is used throughout: per-cell,
+    // sweeping `day_fraction` over `[0,1)` still sweeps all local solar
+    // times (just phase-shifted), so the integral is still zero regardless
+    // of longitude.
     #[test]
     fn waveform_is_zero_mean_over_a_rotation() {
         let n = 1000;
         let sum: f64 = (0..n)
-            .map(|i| diurnal_waveform(23.4, 23.4, 0.25, i as f64 / n as f64, 1.0))
+            .map(|i| diurnal_waveform(23.4, 40.0, 23.4, 0.25, i as f64 / n as f64, 1.0))
             .sum();
         assert!(
             (sum / n as f64).abs() < 1e-3,
@@ -105,18 +118,19 @@ mod tests {
     #[test]
     fn equatorial_day_has_a_real_swing() {
         let peak = (0..100)
-            .map(|i| diurnal_waveform(0.0, 23.4, 0.0, i as f64 / 100.0, 1.0))
+            .map(|i| diurnal_waveform(0.0, 40.0, 23.4, 0.0, i as f64 / 100.0, 1.0))
             .fold(f64::MIN, f64::max);
         assert!(peak > 0.2, "equatorial day should swing; peak D = {peak}");
     }
 
-    // Phase: the warmest moment is in the local afternoon (day_fraction > 0.5).
+    // Phase: the warmest moment is in the local afternoon (local_solar_time > 0.5).
+    // At longitude 0, local solar time == day_fraction.
     #[test]
     fn peak_is_in_the_afternoon() {
         let (mut best_frac, mut best) = (0.0, f64::MIN);
         for i in 0..1000 {
             let f = i as f64 / 1000.0;
-            let d = diurnal_waveform(0.0, 0.0, 0.0, f, 1.0);
+            let d = diurnal_waveform(0.0, 0.0, 0.0, 0.0, f, 1.0);
             if d > best {
                 best = d;
                 best_frac = f;
@@ -128,11 +142,56 @@ mod tests {
         );
     }
 
+    // Two cells 180 deg apart in longitude, at a FIXED day_fraction, are in
+    // opposite local times of day: one in local afternoon (warm), the other
+    // in local pre-dawn/night (cool) — the anti-regression guard for the
+    // planet-synchronized bug. This FAILS against the old longitude-free
+    // formula (both cells would read the identical D) and PASSES now.
+    #[test]
+    fn two_longitudes_have_different_local_phase() {
+        // day_fraction = 0.60 puts longitude 0 exactly at its local peak
+        // (PEAK_FRAC = 0.60); the antipodal longitude (180) is then exactly
+        // half a rotation off local solar time, deep in its local night.
+        let day_fraction = 0.60;
+        let lat = 20.0; // nonzero a_geo (away from the terminator/pole edge cases)
+        let obliquity = 23.4;
+        let year_phase = 0.0;
+        let day_length_std = 1.0;
+        let d_here = diurnal_waveform(
+            lat,
+            0.0,
+            obliquity,
+            year_phase,
+            day_fraction,
+            day_length_std,
+        );
+        let d_antipode = diurnal_waveform(
+            lat,
+            180.0,
+            obliquity,
+            year_phase,
+            day_fraction,
+            day_length_std,
+        );
+        assert!(
+            d_here > 0.0,
+            "longitude 0 at day_fraction 0.60 should be near its local peak; got {d_here}"
+        );
+        assert!(
+            d_antipode < 0.0,
+            "longitude 180 at the same instant should be in local night; got {d_antipode}"
+        );
+        assert!(
+            d_here.signum() != d_antipode.signum(),
+            "antipodal longitudes at the same instant must be in opposite local phase: {d_here} vs {d_antipode}"
+        );
+    }
+
     // Polar night: sun never rises -> no diurnal swing. North pole at northern-winter solstice.
     #[test]
     fn polar_night_has_no_swing() {
         for i in 0..100 {
-            let d = diurnal_waveform(89.0, 23.4, 0.75, i as f64 / 100.0, 1.0);
+            let d = diurnal_waveform(89.0, 40.0, 23.4, 0.75, i as f64 / 100.0, 1.0);
             assert!(d.abs() < 1e-6, "polar night must not swing; got {d}");
         }
     }
@@ -142,7 +201,7 @@ mod tests {
     fn longer_day_swings_harder() {
         let amp = |dl: f64| {
             (0..200)
-                .map(|i| diurnal_waveform(0.0, 0.0, 0.0, i as f64 / 200.0, dl))
+                .map(|i| diurnal_waveform(0.0, 0.0, 0.0, 0.0, i as f64 / 200.0, dl))
                 .fold(f64::MIN, f64::max)
         };
         assert!(
@@ -177,7 +236,7 @@ mod tests {
     fn desert_range_is_earth_like() {
         let a = diurnal_amplitude(0.05, 1.0, 0.0); // A_climate (half-range)
         let geo_peak = (0..200)
-            .map(|i| diurnal_waveform(0.0, 0.0, 0.0, i as f64 / 200.0, 1.0))
+            .map(|i| diurnal_waveform(0.0, 0.0, 0.0, 0.0, i as f64 / 200.0, 1.0))
             .fold(f64::MIN, f64::max);
         let peak_to_peak = 2.0 * a * geo_peak;
         assert!(

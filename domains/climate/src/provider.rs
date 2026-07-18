@@ -402,6 +402,7 @@ mod tests {
                 let diurnal = crate::diurnal::diurnal_anomaly(
                     diurnal_amp,
                     geo.coord(cell).latitude,
+                    geo.coord(cell).longitude,
                     climate.obliquity_deg(),
                     phase,
                     day.rem_euclid(1.0),

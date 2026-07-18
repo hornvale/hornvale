@@ -1261,6 +1261,7 @@ mod tests {
                     RotationRegime::Spinning { day_std } => hornvale_climate::diurnal_anomaly(
                         climate.diurnal_amp_at(c_cell),
                         climate.geosphere().coord(c_cell).latitude,
+                        climate.geosphere().coord(c_cell).longitude,
                         obliquity_deg,
                         0.0, // year phase is exactly zero at zero_phase_day, by construction
                         day_fraction,
