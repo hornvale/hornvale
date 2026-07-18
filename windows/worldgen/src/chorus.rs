@@ -27,6 +27,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// astronomy predicates use their domain's own constants rather than string
 /// literals; `is-a` and `instance-of` use the kernel's world-fact
 /// constants.
+/// type-audit: bare-ok(identifier-text)
 pub fn observability_table() -> BTreeMap<String, Observability> {
     let mut table = BTreeMap::new();
     table.insert(
@@ -83,6 +84,7 @@ pub fn observability_table() -> BTreeMap<String, Observability> {
 /// without touching the filter contract (`Requirement`/[`Observability`]
 /// stay exactly as authored; only how a culture's `sky_capability` scalar
 /// is computed would change).
+/// type-audit: bare-ok(ratio)
 pub fn sky_capability(p: &PerceptionVector) -> f64 {
     let bonus = match p.activity {
         ActivityCycle::Nocturnal => 0.15,
@@ -116,6 +118,8 @@ pub fn sky_capability(p: &PerceptionVector) -> f64 {
 ///   floor for every culture today, but this must track holdings, not
 ///   assume them).
 /// - `hold_all: false` always; the real [`observability_table`].
+///
+/// type-audit: bare-ok(identifier-text: species)
 pub fn account_params_of(world: &World, species: &str) -> Result<AccountParams, BuildError> {
     let wc = WorldComponents::assemble()?;
     let perception = wc.perception.get_by_label(species).ok_or_else(|| {
@@ -284,6 +288,7 @@ pub fn chorus_ground(world: &World) -> Vec<GroundFact> {
 
 /// One placed people's rendered account: its kind label, the derived
 /// [`AccountParams`] that produced it, and the resulting [`Account`].
+/// type-audit: bare-ok(identifier-text: kind)
 #[derive(Debug)]
 pub struct ChorusVoice {
     /// The people's kind label (e.g. `"goblin"`).
