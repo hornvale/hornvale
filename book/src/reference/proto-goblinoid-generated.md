@@ -78,6 +78,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `night` | the dark half of the day-night cycle | *Naeqaa | /naeqaa/ |
 | `one` | the cardinal number 1 | *Kaokao | /kaokao/ |
 | `parent` | one's father or mother | *Goatee | /goatee/ |
+| `person` | a person; a member of a people (the autonym root) | *Neekoa | /neekoa/ |
 | `rain` | liquid precipitation | *Doe | /doe/ |
 | `red` | the color term for red | *Noe | /noe/ |
 | `savanna` | a biome class | *Naadae | /naadae/ |

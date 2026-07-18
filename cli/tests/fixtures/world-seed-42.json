@@ -813,6 +813,12 @@
         "kind": "Kin",
         "doc": "one's father or mother"
       },
+      "person": {
+        "name": "person",
+        "domain": "language",
+        "kind": "Living",
+        "doc": "a person; a member of a people (the autonym root)"
+      },
       "rain": {
         "name": "rain",
         "domain": "climate",
