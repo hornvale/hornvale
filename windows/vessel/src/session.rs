@@ -1,12 +1,17 @@
 //! The possession session: a pure step function over a frozen world. Every
 //! verb is read-only; possessing a world never changes it.
 
+use crate::liveness::{AGENT_AT, AgentMovements, Npc, agent_position, derive_npcs};
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, mint_flagship, observable,
 };
-use hornvale_kernel::{RoomAddr, World, WorldTime};
+use hornvale_kernel::{ConceptRegistry, Ledger, RoomAddr, World, WorldTime, tick};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
+
+/// How many NPCs a session derives (spec §4: a small authored constant, not
+/// every settlement — the flagship's own leader plus a couple of neighbors).
+const NPC_COUNT: usize = 3;
 
 const HELP: &str = "\
 verbs:
@@ -14,13 +19,15 @@ verbs:
   go <dir>         walk a compass exit (n ne e se s sw w nw)
   examine <thing>  anything look mentions
   back             retrace your last step
-  wait [N]         let N days pass overhead (default 1); the world stays still
+  wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen
   release          let go (quit works too)
 ";
 
-/// A live possession over a frozen world.
+/// A live possession over a frozen world. The possessed agent's own senses
+/// stay pinned to the frozen `world` (byte-identical, never mutated); only
+/// the NPC layer evolves, in a session-owned ledger clone (the-quickening).
 pub struct Session<'w> {
     world: &'w World,
     ctx: LocaleContext,
@@ -30,6 +37,14 @@ pub struct Session<'w> {
     day: WorldTime,
     focalizer: TemplateFocalizer,
     projection: IdentityProjection,
+    /// The evolving ledger: a clone of the frozen world's ledger, mutated
+    /// only by `wait`'s tick (NPC `agent-at` facts). Never written back.
+    ledger: Ledger,
+    /// A clone of the world's registry, extended with `AGENT_AT` (registered
+    /// per-session, never at genesis — spec §3).
+    registry: ConceptRegistry,
+    /// The NPCs this session derived at `start` (re-derivable, never saved).
+    npcs: Vec<Npc>,
 }
 
 impl<'w> Session<'w> {
@@ -42,6 +57,14 @@ impl<'w> Session<'w> {
     ) -> Result<(Session<'w>, String), VesselError> {
         let ctx = LocaleContext::build(world).map_err(VesselError::Locale)?;
         let agent = mint_flagship(world, &ctx)?;
+        let mut ledger = world.ledger.clone();
+        let mut registry = world.registry.clone();
+        // Idempotent (same def every session): never conflicts, since
+        // AGENT_AT is never registered at genesis (spec §3).
+        registry
+            .register_predicate(AGENT_AT, false, "an agent's position on a day")
+            .expect("AGENT_AT registers identically every session");
+        let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT);
         let mut session = Session {
             world,
             ctx,
@@ -51,6 +74,9 @@ impl<'w> Session<'w> {
             day: opts.day,
             focalizer: TemplateFocalizer,
             projection: IdentityProjection,
+            ledger,
+            registry,
+            npcs,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -70,6 +96,21 @@ impl<'w> Session<'w> {
     /// The locale context this session walks (for the battery's checks).
     pub fn context(&self) -> &LocaleContext {
         &self.ctx
+    }
+
+    /// How many `agent-at` facts the session's owned ledger has committed —
+    /// zero until the first `wait` (test accessor: T3's day-zero guard).
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_agent_at_count(&self) -> usize {
+        self.ledger.find(AGENT_AT).count()
+    }
+
+    /// The session's owned, evolving ledger, serialized — a determinism
+    /// accessor: same seed + same waits must yield the same bytes (test
+    /// accessor: T3's determinism test).
+    /// type-audit: bare-ok(artifact: return)
+    pub fn session_ledger_json(&self) -> String {
+        serde_json::to_string(&self.ledger).expect("a ledger always serializes")
     }
 
     /// The current room, focalized (for the battery's checks).
@@ -201,8 +242,10 @@ impl<'w> Session<'w> {
     }
 
     fn wait(&mut self, arg: &str) -> Turn {
-        // Re-parameterize the freeze, never thaw it: nothing steps, the
-        // ledger is untouched — only the observation day moves.
+        // The world moves without you: advance the day, then run the NPC
+        // layer's tick against the session-owned ledger (the possessed
+        // agent's own frozen reads are untouched — only `self.ledger`
+        // evolves).
         let days: f64 = if arg.is_empty() {
             1.0
         } else {
@@ -214,7 +257,45 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        self.out(self.describe_here())
+        let sys = AgentMovements {
+            npcs: self.npcs.clone(),
+            at_time: self.day,
+        };
+        match tick(&self.ledger, &[&sys], &["agent-movements"], &self.registry) {
+            Ok(next) => {
+                let moved = next.len() - self.ledger.len();
+                self.ledger = next;
+                // Re-absorb the (possibly changed) here into knowledge; the
+                // possessed agent's own scenery is still read from the
+                // frozen `self.world`, so this cannot change day-0 output.
+                if let Err(e) = self.absorb_here() {
+                    return Turn::Out(format!("error: {e}"));
+                }
+                Turn::Out(self.narrate_motion(moved))
+            }
+            Err(e) => Turn::Out(format!("Time falters: {e}")),
+        }
+    }
+
+    /// Narrate what the tick committed: silence if nothing moved, else name
+    /// any derived NPC now sharing the possessed agent's room (a real
+    /// observation — colocation is read back from the just-committed
+    /// ledger, not decorative flavor text).
+    fn narrate_motion(&self, moved: usize) -> String {
+        if moved == 0 {
+            return "Time passes; the world keeps its shape.".to_string();
+        }
+        let here: Vec<&str> = self
+            .npcs
+            .iter()
+            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
+            .map(|npc| npc.label.as_str())
+            .collect();
+        if here.is_empty() {
+            format!("Time passes. You sense movement nearby ({moved} stirred).")
+        } else {
+            format!("Time passes. You notice {} here now.", here.join(", "))
+        }
     }
 
     fn examine(&self, noun: &str) -> Turn {
