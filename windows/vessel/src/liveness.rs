@@ -137,64 +137,23 @@ pub fn resource_room(home: &RoomAddr, ctx: &LocaleContext) -> RoomAddr {
     best.expect("a room has three neighbors").0
 }
 
-/// The drive at `t`: a fold over the entity's committed `agent-at` history.
-/// Rises `p.rise`/day away from `resource`, falls `p.fall`/day at it, clamped to
-/// [0, 1], starting from `p.initial` before any committed move. A pure derived
-/// view over the ledger (never stored) — DRIVE == FOLD.
+/// A game-layer predicate: the agent drank (satisfied its sustenance goal) on
+/// this day. Registered by the session, NOT at genesis.
+/// type-audit: bare-ok(identifier-text)
+pub const DRANK: &str = "drank";
+
+/// The drive at `t`: time since the last drink, a fold over committed `drank`
+/// events. Rises `p.rise`/day since `last_drank_day` (0 before any drink),
+/// clamped [0,1]. DRIVE == FOLD, now over `drank` — drinking is a PLANNED
+/// action (The Foresight), not automatic proximity (The Wanting).
 /// type-audit: bare-ok(ratio: return)
-pub fn drive_at(
-    ledger: &Ledger,
-    entity: EntityId,
-    resource: &RoomAddr,
-    t: WorldTime,
-    p: &DriveParams,
-) -> f64 {
-    // The entity's dated agent-at history, ascending by day (commit order is
-    // ascending day within a session; sort defensively).
-    let mut hist: Vec<(f64, RoomAddr)> = ledger
-        .find(AGENT_AT)
+pub fn drive_at(ledger: &Ledger, entity: EntityId, t: WorldTime, p: &DriveParams) -> f64 {
+    let last_drank = ledger
+        .find(DRANK)
         .filter(|f| f.subject == entity)
-        .filter_map(|f| match (&f.object, f.day) {
-            (Value::Text(s), Some(day)) => Some((day, room_from_text(s))),
-            _ => None,
-        })
-        .collect();
-    hist.sort_by(|a, b| a.0.total_cmp(&b.0));
-
-    // Walk the timeline from day 0, integrating the piecewise-linear drive.
-    let mut drive = p.initial;
-    let mut cursor = 0.0_f64;
-    // Segment before the first move: position is the NPC's *home* (unknown here);
-    // treat "away from resource" as the default (drive rises) unless the first
-    // fact is at the resource. We reconstruct position per segment from history.
-    let mut at_resource = false; // NPCs start at home (not the resource)
-    for (day, pos) in hist.iter().filter(|(d, _)| *d <= t.day) {
-        drive = integrate(drive, at_resource, day - cursor, p);
-        cursor = *day;
-        at_resource = pos == resource;
-    }
-    // Final segment to t.
-    integrate(drive, at_resource, t.day - cursor, p)
-}
-
-fn integrate(drive: f64, at_resource: bool, dt: f64, p: &DriveParams) -> f64 {
-    let delta = if at_resource {
-        -p.fall * dt
-    } else {
-        p.rise * dt
-    };
-    (drive + delta).clamp(0.0, 1.0)
-}
-
-/// A desired world-state — the agent's active goal. This slice generates exactly
-/// one goal (the drive's setpoint); it is named so that "the drive *generates a
-/// goal*" is explicit. The future GOAP planner selects among many and plans to
-/// reach the chosen one (decision #9 — reserved seam, not built here).
-/// type-audit: bare-ok(return)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Goal {
-    /// Be at the resource (satisfy the sustenance drive).
-    AtResource,
+        .filter_map(|f| f.day)
+        .fold(0.0_f64, f64::max);
+    (p.rise * (t.day - last_drank)).clamp(0.0, 1.0)
 }
 
 /// What the agent perceives of the world — the `view` the decision reads. Today
@@ -209,68 +168,100 @@ pub struct Perceived {
     pub drive: f64,
 }
 
-/// The decision's output: where the agent intends to be. The tick depends ONLY
-/// on this — never on the drive internals — so the decision body can be replaced
-/// (by the GOAP planner) without touching the caller.
+/// The decision's output — the FIRST action of the agent's current plan, or
+/// Hold. The tick depends only on this; the planner fills the body without
+/// changing the seam (The Wanting decision #9).
 /// type-audit: bare-ok(return)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
-    /// Move toward this room.
-    GoTo(RoomAddr),
-    /// Stay put (the hysteresis dead-band).
+    /// Perform this action next (the first step of the least-cost plan).
+    Do(Action),
+    /// No action (goal already met and at home, or the plan is unreachable
+    /// within `budget`).
     Hold,
 }
 
-/// The reactive controller (decision #9): the degenerate one-goal case of
-/// goal-selection-then-planning. Generate the sole goal when the drive crosses
-/// `act`, plan the one-step route to it (go to the resource), and return home
-/// when sated — with a dead-band (`sated < act`) between to prevent thrashing.
-/// type-audit: bare-ok(return)
-pub fn decide(home: &RoomAddr, resource: &RoomAddr, view: &Perceived, p: &DriveParams) -> Intent {
-    let at_resource = &view.position == resource;
-    if !at_resource && view.drive >= p.act {
-        Intent::GoTo(resource.clone()) // goal generated: AtResource; one-step plan
-    } else if at_resource && view.drive <= p.sated {
-        Intent::GoTo(home.clone()) // goal satisfied; return
-    } else {
-        Intent::Hold // dead-band
-    }
-}
-
-/// The closed-form day the drive next reaches its governing threshold from
-/// `(from_day, drive0)`: `act` while away (rising), `sated` while at the
-/// resource (falling). `Some(from_day)` if already past it in the travel
-/// direction; `None` if the rate is zero and it never arrives.
-/// type-audit: bare-ok(ratio: from_day), bare-ok(ratio: drive0), bare-ok(flag: at_resource), bare-ok(ratio: return)
-pub fn next_crossing(
-    from_day: f64,
-    drive0: f64,
-    at_resource: bool,
+/// The planner (The Foresight): the drive generates a goal, A* plans to it, and
+/// `decide` returns the plan's first action. Two goal-states of the ONE drive
+/// (no arbitration): thirsty (`view.drive >= act`) -> plan to water + drink;
+/// otherwise -> return home. `budget` bounds the search (Hold if unreachable).
+///
+/// PRESERVES The Wanting's reserved `view` seam: `decide` reads `view`
+/// (`Perceived { position, drive }`) — ground-truth today; PSY-6's
+/// "plan over belief, not truth" (UNI-16) is later a change to what FILLS
+/// `view`, not to this signature. `water`/`home`/`budget` are the planner's
+/// static inputs. The tick still depends only on the `Intent` output.
+/// type-audit: bare-ok(count: budget)
+pub fn decide(
+    view: &Perceived,
+    home: &RoomAddr,
+    water: &RoomAddr,
     p: &DriveParams,
-) -> Option<f64> {
-    if at_resource {
-        if drive0 <= p.sated {
-            return Some(from_day);
+    budget: usize,
+) -> Intent {
+    if view.drive >= p.act {
+        match plan_to_water(&view.position, water, budget).and_then(|plan| plan.into_iter().next())
+        {
+            Some(a) => Intent::Do(a),
+            None => Intent::Hold, // water unreachable within budget
         }
-        if p.fall <= 0.0 {
-            return None;
+    } else if &view.position != home {
+        match plan_to_room(&view.position, home, budget).and_then(|plan| plan.into_iter().next()) {
+            Some(a) => Intent::Do(a),
+            None => Intent::Hold, // home unreachable within budget
         }
-        Some(from_day + (drive0 - p.sated) / p.fall)
     } else {
-        if drive0 >= p.act {
-            return Some(from_day);
-        }
-        if p.rise <= 0.0 {
-            return None;
-        }
-        Some(from_day + (p.act - drive0) / p.rise)
+        Intent::Hold
     }
 }
 
-/// The drive-driven movement system (spec §4.4): over (from, to], advance each
-/// NPC through its closed-form drive-threshold crossings in order, committing a
-/// dated `agent-at` at each crossing with provenance naming the drive. A
-/// discrete-event tick (exact, no integrator). Run through c6's `tick`.
+/// The plan search's node-expansion budget: generous for the short local
+/// journeys every derived NPC actually walks (`resource_room` always anchors
+/// water at a single mesh hop from home), but finite so a pathological
+/// distance genuinely gives up (`Intent::Hold`) rather than paying for a
+/// global search — the one search-budget judgment call (spec §8).
+const PLAN_BUDGET: usize = 1_000;
+
+/// One action's duration: the one authored action-duration judgment call
+/// (spec §8). Small relative to a drive cycle (SUSTENANCE's ~5.7-day rise) so
+/// a multi-room journey still resolves within a single `wait`.
+const MOVE_DURATION: f64 = 0.1;
+
+/// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
+/// strict-progress guard's backstop: even if a decision loop somehow failed
+/// to advance `day` on every iteration, this bounds total work per tick
+/// (termination guarantee, The Foresight T3 review).
+const MAX_STEPS: usize = 10_000;
+
+/// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
+/// `provenance` naming why.
+fn agent_at_fact(entity: EntityId, target: &RoomAddr, day: f64, provenance: &str) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: AGENT_AT.to_string(),
+        object: Value::Text(room_to_text(target)),
+        place: None,
+        day: Some(day),
+        provenance: provenance.to_string(),
+    }
+}
+
+/// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
+fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: DRANK.to_string(),
+        object: Value::Flag(true),
+        place: None,
+        day: Some(day),
+        provenance: provenance.to_string(),
+    }
+}
+
+/// The drive-driven movement system (The Foresight): over (from, to], each NPC
+/// steps through its planned actions (A* over `GoapSpace`/`NavSpace`) —
+/// walking, drinking, walking home — committing a dated `agent-at`/`drank` at
+/// each executed step. Run through c6's `tick`.
 /// type-audit: bare-ok(return)
 pub struct DriveMovements {
     /// The NPCs this tick advances.
@@ -290,71 +281,60 @@ impl TickSystem for DriveMovements {
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         let mut out = Vec::new();
         for npc in &self.npcs {
-            // Reconstruct the NPC's state at `from` from the frozen history.
+            let water = &npc.resource;
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
-            let mut drive = drive_at(frozen, npc.entity, &npc.resource, self.from, &self.params);
-            // The day of the last move COMMITTED this tick (None before the
-            // first). An immediate crossing (`cross == self.from.day`) is
-            // legitimate on the very first iteration — a prior tick may have
-            // ended exactly on a threshold — so the strict-progress guard
-            // below only fires once a commit has actually happened this tick.
-            let mut last_move_day: Option<f64> = None;
-            // Advance crossing by crossing until past `to`.
+            // A scratch ledger view isn't available; track drank locally: derive
+            // the starting last-drank day from `frozen`, then simulate forward,
+            // updating a local `last_drank` as we emit `DRANK` facts.
+            let mut last_drank = frozen
+                .find(DRANK)
+                .filter(|f| f.subject == npc.entity)
+                .filter_map(|f| f.day)
+                .fold(0.0_f64, f64::max);
+            let mut steps = 0usize;
             loop {
-                let at_resource = pos == npc.resource;
-                let Some(cross) = next_crossing(day, drive, at_resource, &self.params) else {
-                    break;
-                };
-                if cross > self.to.day {
+                if day > self.to.day || steps >= MAX_STEPS {
                     break;
                 }
-                // A misconfigured `DriveParams` (e.g. `sated >= act`) can
-                // make a crossing fail to strictly advance the day, which
-                // would otherwise commit `GoTo`/`GoTo` forever with zero
-                // progress (hang/OOM). Fail fast instead: once this tick has
-                // committed at least one move, any crossing that doesn't
-                // strictly exceed that move's day terminates the tick.
-                if let Some(prev) = last_move_day
-                    && cross <= prev
-                {
-                    break;
-                }
-                // At the crossing the drive is exactly at its threshold; decide.
-                let drive_at_cross = if at_resource {
-                    self.params.sated
-                } else {
-                    self.params.act
+                steps += 1;
+                let drive = (self.params.rise * (day - last_drank)).clamp(0.0, 1.0);
+                let view = Perceived {
+                    position: pos.clone(),
+                    drive,
                 };
-                let intent = decide(
-                    &npc.home,
-                    &npc.resource,
-                    &Perceived {
-                        position: pos.clone(),
-                        drive: drive_at_cross,
-                    },
-                    &self.params,
-                );
-                match intent {
-                    Intent::GoTo(target) if target != pos => {
-                        out.push(Fact {
-                            subject: npc.entity,
-                            predicate: AGENT_AT.to_string(),
-                            object: Value::Text(room_to_text(&target)),
-                            place: None,
-                            day: Some(cross),
-                            provenance: "sought water (thirst)".to_string(),
-                        });
-                        pos = target;
-                        drive = drive_at_cross; // reset to threshold at the move
-                        day = cross;
-                        last_move_day = Some(cross);
+                let seeking_water = drive >= self.params.act;
+                match decide(&view, &npc.home, water, &self.params, PLAN_BUDGET) {
+                    Intent::Do(Action::MoveTo(n)) => {
+                        day += MOVE_DURATION;
+                        if day > self.to.day {
+                            break;
+                        }
+                        let provenance = if seeking_water {
+                            "walking to water (thirst)"
+                        } else {
+                            "walking home (sated)"
+                        };
+                        out.push(agent_at_fact(npc.entity, &n, day, provenance));
+                        pos = n;
                     }
-                    // `Hold` at an exact-threshold crossing shouldn't happen
-                    // (see the strict-progress guard above for the real
-                    // anti-loop protection); `GoTo` to the current position
-                    // is the defensive case (e.g. `home == resource`).
-                    _ => break,
+                    Intent::Do(Action::Drink) => {
+                        out.push(drank_fact(npc.entity, day, "drank (thirst sated)"));
+                        last_drank = day;
+                    }
+                    Intent::Hold => {
+                        // Idle (or unreachable): jump to the next act-crossing
+                        // in closed form rather than spinning day-by-day. The
+                        // strict-progress guarantee: `next_act <= day` breaks
+                        // (a thirsty-but-unreachable Hold recomputes the SAME
+                        // next_act every iteration — without this check, that
+                        // spins to `MAX_STEPS` for nothing).
+                        let next_act = last_drank + self.params.act / self.params.rise;
+                        if next_act <= day || next_act > self.to.day {
+                            break;
+                        }
+                        day = next_act;
+                    }
                 }
             }
         }
@@ -698,61 +678,55 @@ mod tests {
     }
 
     #[test]
-    fn drive_rises_while_away_and_is_clamped() {
-        // No agent-at history: the entity has been "away" since day 0 at rate rise.
-        let p = DriveParams {
-            rise: 0.1,
-            fall: 0.5,
-            act: 0.8,
-            sated: 0.2,
-            initial: 0.0,
-        };
-        let ledger = Ledger::default();
-        let e = EntityId::new(1).unwrap();
-        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
-        assert!((drive_at(&ledger, e, &res, WorldTime { day: 3.0 }, &p) - 0.3).abs() < 1e-9);
-        // clamps at 1.0
-        assert_eq!(
-            drive_at(&ledger, e, &res, WorldTime { day: 100.0 }, &p),
-            1.0
-        );
-    }
-
-    #[test]
-    fn drive_falls_while_at_the_resource() {
-        // History: at the resource since day 2. Drive rose to 0.2 by day 2, then falls.
-        let p = DriveParams {
-            rise: 0.1,
-            fall: 0.5,
-            act: 0.8,
-            sated: 0.2,
-            initial: 0.0,
-        };
+    fn drive_folds_drank_events_rising_since_the_last_drink() {
+        // drive = rise * (t - last_drank_day), clamped [0,1]; last_drank = latest DRANK day.
+        let p = SUSTENANCE;
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
-        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
         let e = ledger.mint_entity();
-        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
-        // commit: at resource on day 2
+        // no drank yet: rises from day 0
+        assert!((drive_at(&ledger, e, WorldTime { day: 2.0 }, &p) - (p.rise * 2.0)).abs() < 1e-9);
+        // drank on day 5 -> resets; by day 6 it has risen rise*1
         ledger
             .commit(
                 hornvale_kernel::Fact {
                     subject: e,
-                    predicate: AGENT_AT.to_string(),
-                    object: Value::Text(room_to_text(&res)),
+                    predicate: DRANK.to_string(),
+                    object: Value::Flag(true),
                     place: None,
-                    day: Some(2.0),
-                    provenance: "test".into(),
+                    day: Some(5.0),
+                    provenance: "t".into(),
                 },
                 &reg,
             )
             .unwrap();
-        // by day 2 drive was ~0.2 (rose from 0 at 0.1/day); at day 3 (1 day at resource) it fell 0.5 -> ~0 (floored)
-        let d = drive_at(&ledger, e, &res, WorldTime { day: 3.0 }, &p);
-        assert!(
-            d <= 0.001,
-            "drive should fall to ~0 after a day at the resource, got {d}"
-        );
+        assert!((drive_at(&ledger, e, WorldTime { day: 6.0 }, &p) - (p.rise * 1.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn drive_at_clamps_at_one_and_ignores_other_entities_drank_events() {
+        let p = SUSTENANCE;
+        let mut ledger = Ledger::default();
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        let e = ledger.mint_entity();
+        let other = ledger.mint_entity();
+        // Another entity's drink must not affect `e`'s drive (subject-scoped fold).
+        ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject: other,
+                    predicate: DRANK.to_string(),
+                    object: Value::Flag(true),
+                    place: None,
+                    day: Some(1.0),
+                    provenance: "t".into(),
+                },
+                &reg,
+            )
+            .unwrap();
+        assert_eq!(drive_at(&ledger, e, WorldTime { day: 1_000.0 }, &p), 1.0);
     }
 
     #[test]
@@ -762,16 +736,15 @@ mod tests {
         let p = SUSTENANCE;
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
-        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
         let e = ledger.mint_entity();
-        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
         for day in [1.0, 4.0, 9.0] {
             ledger
                 .commit(
                     hornvale_kernel::Fact {
                         subject: e,
-                        predicate: AGENT_AT.to_string(),
-                        object: Value::Text(room_to_text(&res)),
+                        predicate: DRANK.to_string(),
+                        object: Value::Flag(true),
                         place: None,
                         day: Some(day),
                         provenance: "t".into(),
@@ -781,13 +754,13 @@ mod tests {
                 .unwrap();
         }
         let t = WorldTime { day: 12.3 };
-        let a = drive_at(&ledger, e, &res, t, &p);
-        let b = drive_at(&ledger, e, &res, t, &p);
+        let a = drive_at(&ledger, e, t, &p);
+        let b = drive_at(&ledger, e, t, &p);
         assert_eq!(a, b);
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
         assert_eq!(
-            drive_at(&reloaded, e, &res, t, &p),
+            drive_at(&reloaded, e, t, &p),
             a,
             "drive re-derives identically after reload"
         );
@@ -798,72 +771,85 @@ mod tests {
     }
 
     #[test]
-    fn decide_seeks_when_parched_and_returns_when_sated() {
+    fn decide_plans_to_water_when_thirsty_and_home_when_not() {
         let p = SUSTENANCE;
         let home = addr(1.0);
-        let resource = home.neighbors()[0].clone();
-        // parched (drive >= act), at home -> go to resource
+        let water = home.neighbors()[0].clone();
+        // parched (drive >= act), at home -> the plan's first step, toward water
         let v = Perceived {
             position: home.clone(),
             drive: 0.9,
         };
         assert_eq!(
-            decide(&home, &resource, &v, &p),
-            Intent::GoTo(resource.clone())
+            decide(&v, &home, &water, &p, 10_000),
+            Intent::Do(Action::MoveTo(water.clone()))
         );
-        // at resource, sated (drive <= sated) -> go home
+        // not thirsty, away from home (at water) -> the plan's first step home
         let v = Perceived {
-            position: resource.clone(),
+            position: water.clone(),
             drive: 0.1,
         };
-        assert_eq!(decide(&home, &resource, &v, &p), Intent::GoTo(home.clone()));
-        // in the dead-band (sated < drive < act) -> hold, wherever you are
+        assert_eq!(
+            decide(&v, &home, &water, &p, 10_000),
+            Intent::Do(Action::MoveTo(home.clone()))
+        );
+        // not thirsty, at home -> nothing to do
         let v = Perceived {
             position: home.clone(),
-            drive: 0.5,
+            drive: 0.1,
         };
-        assert_eq!(decide(&home, &resource, &v, &p), Intent::Hold);
-        let v = Perceived {
-            position: resource.clone(),
-            drive: 0.5,
-        };
-        assert_eq!(decide(&home, &resource, &v, &p), Intent::Hold);
+        assert_eq!(decide(&v, &home, &water, &p, 10_000), Intent::Hold);
     }
 
     #[test]
-    fn next_crossing_is_closed_form_and_exact() {
-        let p = DriveParams {
-            rise: 0.1,
-            fall: 0.5,
-            act: 0.8,
-            sated: 0.2,
-            initial: 0.0,
-        };
-        // away, drive 0.0, rises at 0.1/day -> reaches act 0.8 at day 8.
-        assert!((next_crossing(0.0, 0.0, false, &p).unwrap() - 8.0).abs() < 1e-9);
-        // at resource, drive 0.8, falls at 0.5/day -> reaches sated 0.2 at day 1.2.
-        assert!((next_crossing(0.0, 0.8, true, &p).unwrap() - 1.2).abs() < 1e-9);
-        // already past the threshold in the direction of travel -> immediate (day = from_day)
-        assert_eq!(next_crossing(5.0, 0.9, false, &p), Some(5.0));
-    }
-
-    #[test]
-    fn a_long_wait_commits_only_the_few_genuine_crossings_not_one_per_tick() {
-        // THE NO-THRASH GUARD (the campaign's characteristic risk). One NPC, a 40-day
-        // wait. With SUSTENANCE (rise 0.15, fall 0.6, act 0.85, sated 0.15): a cycle
-        // is ~ (0.85/0.15) away + (0.7/0.6) at-resource ≈ 5.67 + 1.17 ≈ 6.8 days, so
-        // ~40/6.8 ≈ 5-6 cycles -> ~10-12 crossings, NOT 40. Assert the bound.
+    fn decide_holds_when_the_plan_is_unreachable_within_budget() {
+        // A zero search budget can never find even a one-step plan: both the
+        // thirsty (plan-to-water) and homeward (plan-to-room) branches must
+        // give up rather than loop.
         let p = SUSTENANCE;
-        let mut ledger = Ledger::default();
-        let mut reg = hornvale_kernel::ConceptRegistry::default();
-        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
-        let e = ledger.mint_entity();
         let home = addr(1.0);
-        let resource = home.neighbors()[0].clone();
+        let water = home.neighbors()[0].clone();
+        let thirsty = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+        };
+        assert_eq!(decide(&thirsty, &home, &water, &p, 0), Intent::Hold);
+        let away_not_thirsty = Perceived {
+            position: water.clone(),
+            drive: 0.1,
+        };
+        assert_eq!(
+            decide(&away_not_thirsty, &home, &water, &p, 0),
+            Intent::Hold
+        );
+    }
+
+    fn raddr(seed: f64) -> RoomAddr {
+        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    }
+
+    #[test]
+    fn a_thirsty_agent_plans_to_water_and_the_tick_walks_it() {
+        // Over a wait long enough to grow thirsty, the tick commits a run of agent-at
+        // moves ending at water plus a `drank`, and the drive resets.
+        let mut world_reg = hornvale_kernel::ConceptRegistry::default();
+        world_reg
+            .register_predicate(AGENT_AT, false, "pos")
+            .unwrap();
+        world_reg.register_predicate(DRANK, false, "drank").unwrap();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0]
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone();
         let npc = Npc {
             entity: e,
             home: home.clone(),
-            resource: resource.clone(),
+            resource: water.clone(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
@@ -871,88 +857,63 @@ mod tests {
             npcs: vec![npc.clone()],
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
-            params: p,
+            params: SUSTENANCE,
         };
-        let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
+        // At least one drank committed (the agent reached water and drank).
+        let drank_count = next.find(DRANK).filter(|f| f.subject == e).count();
+        assert!(drank_count >= 1, "the agent drank");
+        // agent-at moves committed (the journey), and bounded (not one per
+        // tick / not exploding — THE NO-THRASH GUARD, the campaign's
+        // characteristic risk): a ~5.7-day rise cycle over 40 days is ~7
+        // cycles, each a small, fixed number of moves.
         let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
+        assert!(moves >= 1, "the agent walked");
         assert!(
-            (6..=16).contains(&moves),
-            "expected a few genuine crossings, got {moves}"
+            moves <= 60,
+            "expected a bounded number of moves, not one per tick or an explosion; got {moves}"
         );
-        // consecutive moves alternate resource<->home (no resource->resource thrash)
-        let positions: Vec<RoomAddr> = next
-            .find(AGENT_AT)
-            .filter(|f| f.subject == e)
-            .filter_map(|f| match &f.object {
-                Value::Text(s) => Some(room_from_text(s)),
-                _ => None,
-            })
-            .collect();
-        for w in positions.windows(2) {
-            assert_ne!(w[0], w[1], "no repeated position (thrash)");
-        }
-        // post-tick position matches decide at t=40 (jump coherence, extended)
-        let drive40 = drive_at(&next, e, &resource, WorldTime { day: 40.0 }, &p);
-        let intent = decide(
-            &home,
-            &resource,
-            &Perceived {
-                position: agent_position(&next, &npc, WorldTime { day: 40.0 }),
-                drive: drive40,
-            },
-            &p,
-        );
-        // if intent is Hold, position is already coherent; if GoTo, it equals the target
-        if let Intent::GoTo(target) = intent {
-            assert_eq!(agent_position(&next, &npc, WorldTime { day: 40.0 }), target);
-        }
         let _ = ledger;
     }
 
     #[test]
-    fn a_misconfigured_drive_terminates_instead_of_hanging() {
-        // THE ANTI-HANG GUARD (the-wanting T3 review): a `DriveParams` where
-        // `sated >= act` makes a crossing land back on the SAME day it was
-        // just committed (zero day-progress), which without the
-        // strict-day-progress guard would commit `GoTo`/`GoTo` forever —
-        // hang/OOM. `to` is a very long interval (10_000 days): if this test
-        // completes at all (let alone fast, under the harness's short
-        // timeout) and asserts a small bound on the move count, the guard is
-        // proven, not just documented.
-        let p = DriveParams {
-            rise: 0.1,
-            fall: 0.1,
-            act: 0.85,
-            sated: 0.85, // sated == act: no genuine dead-band, no forward progress
-            initial: 0.0,
-        };
-        let mut ledger = Ledger::default();
+    fn thirsty_but_unreachable_water_gives_up_quickly_not_at_max_steps() {
+        // THE ANTI-HANG GUARD (The Foresight T3 review): if water is
+        // unreachable within `PLAN_BUDGET`, `decide` returns `Hold`, and the
+        // idle-jump's strict-progress guard (`next_act <= day` breaks) must
+        // fire on the FIRST such Hold — not spin to `MAX_STEPS`. Antipodal
+        // water (the far side of the mesh) is far beyond any reasonable
+        // search budget, so this is a genuine unreachable-within-budget case,
+        // not a contrived one.
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
-        let e = ledger.mint_entity();
-        let home = addr(1.0);
-        let resource = home.neighbors()[0].clone();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        let ledger = Ledger::default();
+        let e = EntityId::new(1).unwrap();
+        let home = raddr(1.0);
+        let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // antipodal: unreachable within PLAN_BUDGET
         let npc = Npc {
             entity: e,
             home: home.clone(),
-            resource: resource.clone(),
+            resource: water,
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
+        // A long wait: if the guard didn't fire, the tick would burn
+        // MAX_STEPS re-searching the same unreachable plan every iteration.
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10_000.0 },
-            params: p,
+            params: SUSTENANCE,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
-        let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
-        assert!(
-            moves <= 3,
-            "the strict-day-progress guard should terminate the tick after a \
-             tiny, bounded number of moves for a misconfigured DriveParams; got {moves}"
-        );
-        let _ = ledger;
+        // No agent-at/drank ever committed (water is never reached); the tick
+        // still returns promptly (this test's own harness timeout is the
+        // proof it didn't hang).
+        assert_eq!(next.find(AGENT_AT).filter(|f| f.subject == e).count(), 0);
+        assert_eq!(next.find(DRANK).filter(|f| f.subject == e).count(), 0);
     }
 
     #[test]
@@ -961,6 +922,7 @@ mod tests {
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
         let e = ledger.mint_entity();
         let home = addr(1.0);
         let resource = home.neighbors()[0].clone();
@@ -987,10 +949,6 @@ mod tests {
             first.provenance
         );
         let _ = ledger;
-    }
-
-    fn raddr(seed: f64) -> RoomAddr {
-        RoomAddr::containing([seed, 0.0, 0.0], 6)
     }
 
     #[test]
