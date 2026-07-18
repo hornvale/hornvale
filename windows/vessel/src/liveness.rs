@@ -302,7 +302,7 @@ pub fn decide(home: &RoomAddr, resource: &RoomAddr, view: &Perceived, p: &DriveP
 /// `(from_day, drive0)`: `act` while away (rising), `sated` while at the
 /// resource (falling). `Some(from_day)` if already past it in the travel
 /// direction; `None` if the rate is zero and it never arrives.
-/// type-audit: bare-ok(ratio: return)
+/// type-audit: bare-ok(ratio: from_day), bare-ok(ratio: drive0), bare-ok(flag: at_resource), bare-ok(ratio: return)
 pub fn next_crossing(
     from_day: f64,
     drive0: f64,
