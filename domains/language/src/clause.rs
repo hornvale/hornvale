@@ -115,8 +115,12 @@ pub fn cardinal(n: u64) -> String {
 }
 
 /// Render an approximate quantity to one decimal place, prefixed `"about "`
-/// (e.g. `1.5507 -> "about 1.5"`). Truncates rather than rounds, so the
-/// stated tenth is never an overstatement.
+/// (e.g. `1.5507 -> "about 1.5"`). Truncates toward zero rather than
+/// rounds, so for non-negative inputs the stated tenth is never an
+/// overstatement (for negative inputs, toward-zero truncation can
+/// overstate: `-1.55 -> "about -1.5"`). Non-finite inputs render
+/// literally (`"about NaN"` / `"about inf"`), deterministically; callers
+/// should pass finite values.
 /// type-audit: bare-ok(prose)
 pub fn quantity(x: f64) -> String {
     let truncated = (x * 10.0).trunc() / 10.0;
@@ -185,6 +189,7 @@ mod tests {
     #[test]
     fn cardinal_words() {
         assert_eq!(cardinal(2), "two");
+        assert_eq!(cardinal(12), "twelve");
         assert_eq!(cardinal(13), "13");
     }
     #[test]
