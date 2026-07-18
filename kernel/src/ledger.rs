@@ -4,11 +4,34 @@
 
 use crate::registry::ConceptRegistry;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU64;
 
-/// Opaque entity handle. Minted by the ledger, never reused.
+/// Opaque entity handle. Minted by the ledger, never reused. `NonZeroU64`:
+/// 0 has always been reserved as "never valid", so the niche is free and
+/// `Option<EntityId>` is 8 bytes. Serializes as the bare number.
 /// type-audit: bare-ok(constructor-edge)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct EntityId(pub u64);
+pub struct EntityId(pub NonZeroU64);
+
+impl EntityId {
+    /// Construct from a raw id; `None` for the reserved 0.
+    /// type-audit: bare-ok(constructor-edge)
+    pub const fn new(raw: u64) -> Option<EntityId> {
+        match NonZeroU64::new(raw) {
+            Some(n) => Some(EntityId(n)),
+            None => None,
+        }
+    }
+    /// The raw id value.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub const fn get(self) -> u64 {
+        self.0.get()
+    }
+    /// Smallest valid id (1) — index range sentinel.
+    pub(crate) const MIN: EntityId = EntityId(NonZeroU64::MIN);
+    /// Largest valid id — index range sentinel.
+    pub(crate) const MAX: EntityId = EntityId(NonZeroU64::MAX);
+}
 
 /// The stable identity of a *kind* — the authored label a kind is known by
 /// ("red-dragon", "kobold"). A kind's identity is its label, never its
@@ -121,7 +144,9 @@ impl Ledger {
     /// Mint a fresh entity id. Ids start at 1; 0 is reserved as "never valid".
     pub fn mint_entity(&mut self) -> EntityId {
         self.next_entity += 1;
-        EntityId(self.next_entity)
+        EntityId(
+            NonZeroU64::new(self.next_entity).expect("next_entity starts at 0 and only increments"),
+        )
     }
 
     /// Ensure the derived index exists and is current (rebuild-if-absent).
@@ -312,10 +337,10 @@ impl Ledger {
             .iter()
             .flat_map(|f| {
                 let object_id = match f.object {
-                    Value::Entity(e) => Some(e.0),
+                    Value::Entity(e) => Some(e.get()),
                     _ => None,
                 };
-                [Some(f.subject.0), object_id, f.place.map(|p| p.0)]
+                [Some(f.subject.get()), object_id, f.place.map(|p| p.get())]
             })
             .flatten()
             .max()
@@ -332,6 +357,79 @@ impl Ledger {
     /// Iterate over every committed fact, in commit order.
     pub fn iter(&self) -> impl Iterator<Item = &Fact> {
         self.facts.iter()
+    }
+
+    /// Mint a fresh entity and commit its `instance-of` fact in one
+    /// operation — the sole writer of the predicate (single-writer by
+    /// construction). The kernel is roster-blind: label validation is the
+    /// composition root's job (worldgen).
+    /// type-audit: bare-ok(identifier-text: kind_label), waiver(decision-0014: day), bare-ok(prose: provenance)
+    pub fn mint_instance(
+        &mut self,
+        kind_label: &str,
+        day: Option<f64>,
+        provenance: &str,
+        registry: &ConceptRegistry,
+    ) -> Result<EntityId, LedgerError> {
+        let e = self.mint_entity();
+        self.commit(
+            Fact {
+                subject: e,
+                predicate: crate::world::INSTANCE_OF.to_string(),
+                object: Value::Text(kind_label.to_string()),
+                place: None,
+                day,
+                provenance: provenance.to_string(),
+            },
+            registry,
+        )?;
+        Ok(e)
+    }
+
+    /// Commit a kind-change fact for an existing entity (owlbear ->
+    /// awakened-owlbear). Appends; never edits. No transition constraints
+    /// here — guards ride the c6 capability schema.
+    /// type-audit: bare-ok(identifier-text: kind_label), waiver(decision-0014: day), bare-ok(prose: provenance)
+    pub fn change_kind(
+        &mut self,
+        e: EntityId,
+        kind_label: &str,
+        day: Option<f64>,
+        provenance: &str,
+        registry: &ConceptRegistry,
+    ) -> Result<(), LedgerError> {
+        self.commit(
+            Fact {
+                subject: e,
+                predicate: crate::world::INSTANCE_OF.to_string(),
+                object: Value::Text(kind_label.to_string()),
+                place: None,
+                day,
+                provenance: provenance.to_string(),
+            },
+            registry,
+        )
+        .map(|_| ())
+    }
+
+    /// The LAST committed object for (subject, predicate) — the read for
+    /// sim-mutable non-functional predicates, where commit order is time
+    /// order. Contrast `value_of` (first object; the functional read).
+    /// type-audit: bare-ok(identifier-text: predicate)
+    pub fn latest_value_of(&self, e: EntityId, predicate: &str) -> Option<&Value> {
+        self.facts_about(e)
+            .filter(|f| f.predicate == predicate)
+            .last()
+            .map(|f| &f.object)
+    }
+
+    /// The entity's current kind label: the latest `instance-of` fact.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn kind_of(&self, e: EntityId) -> Option<&str> {
+        match self.latest_value_of(e, crate::world::INSTANCE_OF) {
+            Some(Value::Text(t)) => Some(t.as_str()),
+            _ => None,
+        }
     }
 }
 
@@ -364,6 +462,24 @@ mod tests {
     fn mint_entity_yields_distinct_ids() {
         let mut l = Ledger::default();
         assert_ne!(l.mint_entity(), l.mint_entity());
+    }
+
+    #[test]
+    fn option_entity_id_is_niche_packed() {
+        // The c4-deferred perf contract: the NonZeroU64 niche halves Option<EntityId>.
+        assert_eq!(std::mem::size_of::<Option<EntityId>>(), 8);
+    }
+
+    #[test]
+    fn entity_id_zero_is_unrepresentable() {
+        assert!(EntityId::new(0).is_none());
+        assert_eq!(EntityId::new(7).unwrap().get(), 7);
+        // A forged 0 in a save now fails loudly at deserialize.
+        assert!(serde_json::from_str::<EntityId>("0").is_err());
+        assert_eq!(
+            serde_json::from_str::<EntityId>("7").unwrap(),
+            EntityId::new(7).unwrap()
+        );
     }
 
     #[test]
@@ -550,7 +666,7 @@ mod tests {
         // Minting must resume without colliding with existing entities.
         let fresh = l2.mint_entity();
         assert!(l2.facts_about(fresh).count() == 0);
-        assert!(fresh.0 > 1);
+        assert!(fresh.get() > 1);
     }
 
     #[test]
@@ -839,6 +955,82 @@ mod tests {
         // index skipped on the wire => rebuilt-on-use; answers match
         assert_eq!(l2.facts_about(s).count(), 1);
         assert_eq!(l2.value_of(s, "name"), Some(&Value::Text("Zaggrak".into())));
+    }
+
+    #[test]
+    fn mint_instance_commits_an_instance_of_fact() {
+        let mut w = crate::World::new(crate::Seed(1));
+        let e = w
+            .ledger
+            .mint_instance("owlbear", Some(0.0), "test", &w.registry)
+            .unwrap();
+        assert_eq!(w.ledger.kind_of(e), Some("owlbear"));
+        assert_eq!(w.ledger.find(crate::INSTANCE_OF).count(), 1);
+    }
+
+    #[test]
+    fn kind_change_is_a_fact_and_kind_of_is_latest_wins() {
+        let mut w = crate::World::new(crate::Seed(1));
+        let e = w
+            .ledger
+            .mint_instance("owlbear", Some(0.0), "test", &w.registry)
+            .unwrap();
+        w.ledger
+            .change_kind(
+                e,
+                "awakened-owlbear",
+                Some(12.5),
+                "test: the awakening",
+                &w.registry,
+            )
+            .unwrap();
+        // Current kind is the LATEST fact (contrast value_of's first-wins).
+        assert_eq!(w.ledger.kind_of(e), Some("awakened-owlbear"));
+        // The history is the ledger's native state machine: both transitions
+        // survive, in commit order, day-stamped.
+        let history: Vec<&Value> = w
+            .ledger
+            .facts_about(e)
+            .filter(|f| f.predicate == crate::INSTANCE_OF)
+            .map(|f| &f.object)
+            .collect();
+        assert_eq!(
+            history,
+            vec![
+                &Value::Text("owlbear".to_string()),
+                &Value::Text("awakened-owlbear".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn latest_value_of_returns_the_last_committed_value() {
+        let mut w = crate::World::new(crate::Seed(1));
+        let e = w
+            .ledger
+            .mint_instance("owlbear", None, "test", &w.registry)
+            .unwrap();
+        w.ledger
+            .change_kind(e, "corpse", None, "test", &w.registry)
+            .unwrap();
+        assert_eq!(
+            w.ledger.latest_value_of(e, crate::INSTANCE_OF),
+            Some(&Value::Text("corpse".to_string()))
+        );
+        assert_eq!(w.ledger.latest_value_of(e, "name"), None);
+    }
+
+    #[test]
+    fn kind_of_survives_serialization_roundtrip() {
+        let mut w = crate::World::new(crate::Seed(1));
+        let e = w
+            .ledger
+            .mint_instance("granite", None, "test", &w.registry)
+            .unwrap();
+        let json = serde_json::to_string(&w.ledger).unwrap();
+        let l2: Ledger = serde_json::from_str(&json).unwrap();
+        // Exercises the lazy index rebuild path on a fresh deserialize.
+        assert_eq!(l2.kind_of(e), Some("granite"));
     }
 
     // This is a wall-time micro-bench of `Ledger::commit`'s scaling, not a

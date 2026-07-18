@@ -12,10 +12,21 @@ use std::path::Path;
 /// type-audit: bare-ok(identifier-text)
 pub const NAME: &str = "name";
 
-/// The classification predicate: `(entity, is-a, <kind-label>)`. Functional —
-/// an entity has one class. Object is a `Value::Text` KindId label.
+/// The classification predicate: `(entity, is-a, <class-label>)`. Functional —
+/// an entity has one immutable concept-class (celestial classes: planet, star,
+/// moon). Object is a `Value::Text` class label. Distinct from [`INSTANCE_OF`]:
+/// `is-a` is a fixed concept-class (contradiction-checked); `instance-of` is a
+/// mutable roster-kind (latest-wins). C2 decides their long-term relationship.
 /// type-audit: bare-ok(identifier-text)
 pub const IS_A: &str = "is-a";
+
+/// The kind an entity is an instance of (object: `Value::Text` kind label).
+/// NON-functional: a kind can change over sim time (awakened beast, corpse,
+/// lich); each change is a new day-stamped fact and the CURRENT kind is the
+/// latest one (`Ledger::kind_of`). Kind references serialize as labels,
+/// never positions (metaplan §7).
+/// type-audit: bare-ok(identifier-text)
+pub const INSTANCE_OF: &str = "instance-of";
 
 /// A world is a seed plus everything ever observed about it.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -38,6 +49,13 @@ impl World {
             .expect("core concept registration cannot conflict in an empty registry");
         registry
             .register_predicate(IS_A, true, "the class an entity belongs to")
+            .expect("core concept registration cannot conflict in an empty registry");
+        registry
+            .register_predicate(
+                INSTANCE_OF,
+                false,
+                "the kind an entity is an instance of; the latest fact is its current kind",
+            )
             .expect("core concept registration cannot conflict in an empty registry");
         World {
             seed,

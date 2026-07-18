@@ -79,6 +79,7 @@
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
+- [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)
@@ -156,6 +157,9 @@
 - [The Reckoning](./chronicle/the-reckoning.md)
 - [The Concordance](./chronicle/the-concordance.md)
 - [The Presiding](./chronicle/the-presiding.md)
+- [The Real Sky](./chronicle/the-real-sky.md)
+- [The Individuation](./chronicle/the-individuation.md)
+- [The First Sentence](./chronicle/the-first-sentence.md)
 
 # Appendix: The Frontier
 

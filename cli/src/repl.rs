@@ -232,15 +232,16 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 Err(e) => writeln!(output, "error: {e}")?,
             },
             "why" => match argument.and_then(|a| a.parse::<u64>().ok()) {
-                Some(id) => match hornvale_historiography::recount(world, EntityId(id)) {
-                    Some(text) => {
+                Some(id) => match EntityId::new(id).and_then(|target| {
+                    hornvale_historiography::recount(world, target).map(|text| (target, text))
+                }) {
+                    Some((target, text)) => {
                         write!(output, "{text}")?;
                         // A belief recounts onward to the eyes that ranked
                         // its phenomenon: held-by → settlement → peopled-by
                         // → the species entity's authored vector.
-                        if let Some(Value::Entity(community)) = world
-                            .ledger
-                            .value_of(EntityId(id), hornvale_religion::HELD_BY)
+                        if let Some(Value::Entity(community)) =
+                            world.ledger.value_of(target, hornvale_religion::HELD_BY)
                             && let Some(species) = hornvale_species::species_of(world, *community)
                             && let Some(entity) = hornvale_species::species_entity(world, &species)
                             && let Some(text) = hornvale_historiography::recount(world, entity)
@@ -251,9 +252,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                         // A generated proper name carries a `name-gloss`
                         // fact (Task 9 of The Words) when its site had a
                         // true story to tell; recount it too.
-                        if let Some(gloss) = world
-                            .ledger
-                            .text_of(EntityId(id), world_builder::NAME_GLOSS)
+                        if let Some(gloss) = world.ledger.text_of(target, world_builder::NAME_GLOSS)
                         {
                             writeln!(
                                 output,
@@ -322,10 +321,12 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 None => writeln!(output, "usage: word <concept>")?,
             },
             "facts" => {
-                let id = argument.and_then(|a| a.parse::<u64>().ok());
+                let id = argument
+                    .and_then(|a| a.parse::<u64>().ok())
+                    .and_then(EntityId::new);
                 match id {
                     Some(id) => {
-                        for f in world.ledger.facts_about(EntityId(id)) {
+                        for f in world.ledger.facts_about(id) {
                             writeln!(
                                 output,
                                 "{} = {} ({})",

@@ -282,6 +282,9 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
         hornvale_language::lexicon_registry(),
         hornvale_language::family_proto(),
         family_of,
+        ComponentStore::new(),
+        ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("the peopled-only component set is well-formed");
     let report = hornvale_worldgen::demography_report(&world, &wc)

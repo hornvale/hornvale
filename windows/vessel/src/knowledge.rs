@@ -73,7 +73,8 @@ pub fn knowledge_is_subset(
             }
             ["settlement", id, field] => {
                 let raw: u64 = id.parse().map_err(|_| format!("bad key {key}"))?;
-                let entity = hornvale_kernel::EntityId(raw);
+                let entity = hornvale_kernel::EntityId::new(raw)
+                    .ok_or_else(|| format!("bad key {key}: entity id 0 is never valid"))?;
                 let truth = match *field {
                     "name" => world
                         .ledger

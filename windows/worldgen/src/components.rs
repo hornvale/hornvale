@@ -6,6 +6,8 @@
 //! canonical registries with per-kind overrides). Both enforce referential
 //! integrity (the load-time invariant that replaces the old optional peopled
 //! component: a psyche/perception key with no biosphere row is rejected).
+//! The biosphere store is the set of kinds with bodies; the kind roster is
+//! [`WorldComponents::kinds`], the union of every store's key-set.
 #![warn(missing_docs)]
 
 use hornvale_kernel::{ComponentStore, KindId};
@@ -34,6 +36,12 @@ pub struct WorldComponents {
     pub family_proto: ComponentStore<KindId, hornvale_language::ArticulationVector>,
     /// Universal taxonomy: a kind's family label.
     pub family_of: ComponentStore<KindId, &'static str>,
+    /// Deity-kind traits (religion-owned; no biosphere row).
+    pub deity: ComponentStore<KindId, hornvale_religion::DeityTraits>,
+    /// Culture-kind traits (culture-owned; no biosphere row).
+    pub culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
+    /// Material-kind traits (terrain-owned; no biosphere row).
+    pub material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
 }
 
 impl WorldComponents {
@@ -48,6 +56,9 @@ impl WorldComponents {
         let lexicon = hornvale_language::lexicon_registry();
         let family_proto = hornvale_language::family_proto();
         let family_of = hornvale_species::family_of();
+        let deity = hornvale_religion::deity_registry();
+        let culture = hornvale_culture::culture_registry();
+        let material = hornvale_terrain::material_registry();
 
         check_integrity(
             &biosphere,
@@ -67,6 +78,9 @@ impl WorldComponents {
             lexicon,
             family_proto,
             family_of,
+            deity,
+            culture,
+            material,
         })
     }
 
@@ -87,6 +101,9 @@ impl WorldComponents {
         lexicon: ComponentStore<KindId, hornvale_language::speech::Lexicon>,
         family_proto: ComponentStore<KindId, hornvale_language::ArticulationVector>,
         family_of: ComponentStore<KindId, &'static str>,
+        deity: ComponentStore<KindId, hornvale_religion::DeityTraits>,
+        culture: ComponentStore<KindId, hornvale_culture::CultureTraits>,
+        material: ComponentStore<KindId, hornvale_terrain::MaterialTraits>,
     ) -> Result<Self, BuildError> {
         check_integrity(
             &biosphere,
@@ -106,6 +123,9 @@ impl WorldComponents {
             lexicon,
             family_proto,
             family_of,
+            deity,
+            culture,
+            material,
         })
     }
 }
@@ -129,6 +149,12 @@ pub enum ComponentTag {
     FamilyProto,
     /// Taxonomy family label.
     FamilyOf,
+    /// Deity-kind traits.
+    Deity,
+    /// Culture-kind traits.
+    Culture,
+    /// Material-kind traits.
+    Material,
 }
 
 impl WorldComponents {
@@ -142,7 +168,29 @@ impl WorldComponents {
             ComponentTag::Lexicon => self.lexicon.ids().copied().collect(),
             ComponentTag::FamilyProto => self.family_proto.ids().copied().collect(),
             ComponentTag::FamilyOf => self.family_of.ids().copied().collect(),
+            ComponentTag::Deity => self.deity.ids().copied().collect(),
+            ComponentTag::Culture => self.culture.ids().copied().collect(),
+            ComponentTag::Material => self.material.ids().copied().collect(),
         }
+    }
+
+    /// Every kind in the world: the union of all component stores' key-sets,
+    /// ascending. The kind roster — NOT the biosphere store, which is only
+    /// the set of kinds with bodies (genesis iterates biosphere for species
+    /// entities; deity/culture/material kinds have no biosphere row).
+    pub fn kinds(&self) -> Vec<KindId> {
+        let mut all: std::collections::BTreeSet<KindId> = std::collections::BTreeSet::new();
+        all.extend(self.biosphere.ids().copied());
+        all.extend(self.psyche.ids().copied());
+        all.extend(self.perception.ids().copied());
+        all.extend(self.articulation.ids().copied());
+        all.extend(self.lexicon.ids().copied());
+        all.extend(self.family_proto.ids().copied());
+        all.extend(self.family_of.ids().copied());
+        all.extend(self.deity.ids().copied());
+        all.extend(self.culture.ids().copied());
+        all.extend(self.material.ids().copied());
+        all.into_iter().collect()
     }
 }
 
@@ -416,6 +464,50 @@ mod tests {
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn the_kind_roster_is_the_union_of_all_stores() {
+        // Spec §4.4: "the biosphere store is the canonical entity set" is
+        // retired — deity/culture/material kinds carry no biosphere row.
+        let wc = WorldComponents::assemble().unwrap();
+        let kinds = wc.kinds();
+        for label in [
+            "deity",
+            "culture",
+            "granite",
+            "limestone",
+            "owlbear",
+            "goblin",
+        ] {
+            assert!(
+                kinds.iter().any(|k| k.0 == label),
+                "union roster must contain {label}"
+            );
+        }
+        // Non-species kinds are NOT in the biosphere store (the genesis /
+        // placement constraint): genesis must not mint them as species.
+        for label in ["deity", "culture", "granite", "limestone"] {
+            assert!(wc.biosphere.get_by_label(label).is_none());
+        }
+        // Ascending order (BTree-backed union).
+        let mut sorted = kinds.clone();
+        sorted.sort();
+        assert_eq!(kinds, sorted);
+    }
+
+    #[test]
+    fn kinds_with_covers_the_new_component_tags() {
+        let wc = WorldComponents::assemble().unwrap();
+        assert_eq!(wc.kinds_with(ComponentTag::Deity), vec![KindId("deity")]);
+        assert_eq!(
+            wc.kinds_with(ComponentTag::Culture),
+            vec![KindId("culture")]
+        );
+        assert_eq!(
+            wc.kinds_with(ComponentTag::Material),
+            vec![KindId("granite"), KindId("limestone")]
+        );
     }
 
     #[test]

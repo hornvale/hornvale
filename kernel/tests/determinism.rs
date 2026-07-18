@@ -122,5 +122,5 @@ fn entity_ids_are_never_reused_after_reload() {
     let mut world = World::from_json(&json).unwrap();
     let fresh = world.ledger.mint_entity();
     // vale = 1, village = 2 in mini_genesis; fresh must not collide.
-    assert!(fresh != EntityId(1) && fresh != EntityId(2));
+    assert!(fresh != EntityId::new(1).unwrap() && fresh != EntityId::new(2).unwrap());
 }

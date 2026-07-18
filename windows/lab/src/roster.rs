@@ -74,6 +74,9 @@ fn goblin_derived(
         lexicon,
         hornvale_language::family_proto(),
         family_of,
+        ComponentStore::new(),
+        ComponentStore::new(),
+        ComponentStore::new(),
     )
     .expect("a goblin-derived single-kind component set is well-formed")
 }
@@ -105,4 +108,80 @@ pub fn serpent_tonal_solo_components() -> WorldComponents {
         ..base
     };
     goblin_derived("serpent", "serpent", Some(serpent_articulation))
+}
+
+/// The Individuation's two-kind test roster: `owlbear` (the canonical beast,
+/// biosphere only) and `awakened-owlbear` (the same body, `potency: 0.6`,
+/// plus the full goblin-derived peopled cluster — an awakened beast speaks,
+/// and check_integrity's peopled invariant is kept, not relaxed). Test/lab
+/// only: canonical registries must never carry these rows (genesis would
+/// mint and place them; spec §4.4).
+pub fn awakened_owlbear_components() -> WorldComponents {
+    let g = KindId("goblin");
+    let beast = KindId("owlbear");
+    let awakened = KindId("awakened-owlbear");
+    let canon_bio = hornvale_species::biosphere_registry();
+    let beast_traits = canon_bio
+        .get(&beast)
+        .expect("the shipped owlbear has a biosphere row")
+        .clone();
+    let mut awakened_traits = beast_traits.clone();
+    awakened_traits.potency = 0.6;
+
+    let mut biosphere: ComponentStore<KindId, _> = ComponentStore::new();
+    biosphere.insert(beast, beast_traits);
+    biosphere.insert(awakened, awakened_traits);
+
+    let psyche: ComponentStore<KindId, _> = [(
+        awakened,
+        *hornvale_species::psyche_registry()
+            .get(&g)
+            .expect("the shipped goblin has a psyche row"),
+    )]
+    .into_iter()
+    .collect();
+    let perception: ComponentStore<KindId, _> = [(
+        awakened,
+        *hornvale_species::perception_registry()
+            .get(&g)
+            .expect("the shipped goblin has a perception row"),
+    )]
+    .into_iter()
+    .collect();
+    let articulation: ComponentStore<KindId, _> = [(
+        awakened,
+        *hornvale_language::articulation_registry()
+            .get(&g)
+            .expect("the shipped goblin has an articulation row"),
+    )]
+    .into_iter()
+    .collect();
+    let lexicon: ComponentStore<KindId, _> = [(
+        awakened,
+        hornvale_language::lexicon_registry()
+            .get(&g)
+            .expect("the shipped goblin has a lexicon row")
+            .clone(),
+    )]
+    .into_iter()
+    .collect();
+    // Singleton families need no family_proto entry.
+    let family_of: ComponentStore<KindId, &'static str> =
+        [(beast, "owlbear"), (awakened, "awakened-owlbear")]
+            .into_iter()
+            .collect();
+
+    WorldComponents::from_stores(
+        biosphere,
+        psyche,
+        perception,
+        articulation,
+        lexicon,
+        hornvale_language::family_proto(),
+        family_of,
+        ComponentStore::new(), // deity
+        ComponentStore::new(), // culture
+        ComponentStore::new(), // material
+    )
+    .expect("the awakened-owlbear roster is well-formed")
 }
