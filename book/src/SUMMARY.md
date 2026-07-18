@@ -162,6 +162,7 @@
 - [The First Sentence](./chronicle/the-first-sentence.md)
 - [The Wandering Sun](./chronicle/the-wandering-sun.md)
 - [The Ordination](./chronicle/the-ordination.md)
+- [The Predicates & the Grammar](./chronicle/the-predicates-and-the-grammar.md)
 
 # Appendix: The Frontier
 
