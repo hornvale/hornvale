@@ -292,4 +292,35 @@ mod tests {
             .single_writer_check(&world.registry, hornvale_kernel::KERNEL_CORE_PREDICATES)
             .expect("no non-exempt functional predicate has two declared genesis writers");
     }
+
+    #[test]
+    fn derived_schedule_is_pinned() {
+        // The derived schedule of the real genesis declarations is a fixed,
+        // drift-checkable sequence (spec §6). If this changes, a declaration's
+        // reads/writes moved — re-derive deliberately and confirm byte-identity
+        // still holds (genesis executes GENESIS_HAND_ORDER, not this, so worlds
+        // are unaffected either way). This is label-tie-broken (Kahn's algorithm,
+        // ties resolved alphabetically), NOT GENESIS_HAND_ORDER: independent
+        // stages (culture, sky, species, terrain, world-entity all start at
+        // indegree 0) sort alphabetically before the dependency chain
+        // (world-entity -> {settlement, religion, paleoclimate};
+        // terrain -> {settlement, paleoclimate}; culture -> religion;
+        // settlement -> religion) resolves the rest — the
+        // hand_order_is_a_valid_topological_sort_of_the_declarations test above
+        // already proves both orders are valid linearizations of the same DAG.
+        let order = genesis_systems()
+            .schedule()
+            .expect("declared DAG is acyclic");
+        let expected: Vec<&str> = vec![
+            "culture",
+            "sky",
+            "species",
+            "terrain",
+            "world-entity",
+            "paleoclimate",
+            "settlement",
+            "religion",
+        ];
+        assert_eq!(order, expected);
+    }
 }

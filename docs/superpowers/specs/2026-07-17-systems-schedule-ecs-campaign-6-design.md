@@ -1,5 +1,14 @@
 # Systems & Schedule (ECS Campaign 6) — Design
 
+> **STATUS: SHIPPED** — *The Ordination*, all five tasks landed on
+> `worktree-the-ordination` 2026-07-17 (byte-identical; shadow posture —
+> genesis still executes `build_to`, not the derived schedule; full gate
+> green). The single-writer check, run for real against the genesis
+> declarations, surfaced a genuine `name-gloss` multi-writer, resolved by
+> promoting it to a kernel-core predicate with an explicit exemption
+> (decision-ledger #89). FF to main is Nathan's G6 call. Chronicle:
+> `book/src/chronicle/the-ordination.md`.
+
 Program: **The Entity-Component Substrate** (metaplan
 `docs/superpowers/specs/2026-07-14-ecs-program-metaplan-design.md`, campaign 6;
 registry **UNI-22**). Base: main `@1acbe98` (campaigns 1–5 shipped: The

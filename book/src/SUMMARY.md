@@ -100,6 +100,7 @@
 - [The Presiding](./chronicle/the-presiding.md)
 - [The Real Sky](./chronicle/the-real-sky.md)
 - [The Individuation](./chronicle/the-individuation.md)
+- [The Ordination](./chronicle/the-ordination.md)
 
 # The Gallery
 
