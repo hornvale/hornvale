@@ -33,7 +33,7 @@ sky, species, terrain, world-entity, paleoclimate, settlement, religion`.
 
 That is not the hand-order, and it should not be. The label tie-break has no
 reason to reproduce a sequence a person chose for readability; it only has to
-respect the *dependencies* a person happened to get right. Four stages —
+respect the *dependencies* a person happened to get right. Five stages —
 `culture`, `sky`, `species`, `terrain`, `world-entity` — read nothing from
 the ledger and so start the graph with no incoming edges at all; the
 scheduler places them alphabetically because nothing else constrains them.
