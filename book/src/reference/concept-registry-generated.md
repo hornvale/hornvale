@@ -174,6 +174,7 @@
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
 | `one` | language | quality | the cardinal number 1 |
 | `parent` | language | kin | one's father or mother |
+| `person` | language | living | a person; a member of a people (the autonym root) |
 | `rain` | climate | substance | liquid precipitation |
 | `red` | language | quality | the color term for red |
 | `savanna` | climate | terrain | a biome class |

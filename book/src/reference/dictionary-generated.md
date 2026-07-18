@@ -51,6 +51,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `night` | the dark half of the day-night cycle | Daoqaa | /daoqaa/ | Naeqaa | Naeqaa → no change → Daoqaa |
 | `one` | the cardinal number 1 | Kaokao | /kaokao/ | Kaokao | Kaokao → no change → Kaokao |
 | `parent` | one's father or mother | Goatoo | /goatoo/ | Goatee | Goatee → no change → Goatoo |
+| `person` | a person; a member of a people (the autonym root) | Dookoa | /dookoa/ | Neekoa | Neekoa → no change → Dookoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
 | `red` | the color term for red | Doo | /doo/ | Noe | Noe → no change → Doo |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -127,6 +128,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `night` | the dark half of the day-night cycle | Naetaa | /naetaa/ | Naeqaa | Naeqaa → no change → Naetaa |
 | `one` | the cardinal number 1 | Kaokao | /kaokao/ | Kaokao | Kaokao → no change → Kaokao |
 | `parent` | one's father or mother | Boatee | /boatee/ | Goatee | Goatee → no change → Boatee |
+| `person` | a person; a member of a people (the autonym root) | Neekoa | /neekoa/ | Neekoa | Neekoa → no change → Neekoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
 | `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -203,6 +205,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `night` | the dark half of the day-night cycle | Naeqaa | /naeqaa/ | Naeqaa | Naeqaa → no change → Naeqaa |
 | `one` | the cardinal number 1 | Gaogao | /gaogao/ | Kaokao | Kaokao → lenition → Gaogao |
 | `parent` | one's father or mother | Goatee | /goatee/ | Goatee | Goatee → no change → Goatee |
+| `person` | a person; a member of a people (the autonym root) | Neegoa | /neegoa/ | Neekoa | Neekoa → lenition → Neegoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -279,6 +282,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `night` | the dark half of the day-night cycle | Xaxa | /xaxa/ | Xaxag | Xaxag → finalloss → Xaxa |
 | `one` | the cardinal number 1 | Xoxo | /xoxo/ | Xoxo | Xoxo → no change → Xoxo |
 | `parent` | one's father or mother | Xaxo | /xaxo/ | Xaxoq | Xaxoq → finalloss → Xaxo |
+| `person` | a person; a member of a people (the autonym root) | Raxo | /raxo/ | Rraxog | Rraxog → finalloss → clustersimplify → Raxo |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
 | `red` | the color term for red | Rara | /rara/ | Rrarag | Rrarag → finalloss → clustersimplify → Rara |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
@@ -286,7 +290,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Xogrra | /xogrra/ | Xogrra | Xogrra → no change → Xogrra |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
-| `sibling` | one's brother or sister | Raxo | /raxo/ | Rraxo | Rraxo → clustersimplify → Raxo |
+| `sibling` | one's brother or sister | Rotrra | /rotrra/ | Rrotrra | Rrotrra → clustersimplify → Rotrra |
 | `sleep` | to rest unconscious | Roqxa | /roqxa/ | Roqxa | Roqxa → no change → Roqxa |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): kobold has no exposure to 'snow' |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): kobold has no exposure to 'spirit' |
@@ -338,6 +342,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `night` | the dark half of the day-night cycle | *Naeqaa /naeqaa/ | Daoqaa /daoqaa/ | Naetaa /naetaa/ | Naeqaa /naeqaa/ | *Naeqaa → Daoqaa / Naetaa / Naeqaa |
 | `one` | the cardinal number 1 | *Kaokao /kaokao/ | Kaokao /kaokao/ | Kaokao /kaokao/ | Gaogao /gaogao/ | *Kaokao → Kaokao / Kaokao / Gaogao |
 | `parent` | one's father or mother | *Goatee /goatee/ | Goatoo /goatoo/ | Boatee /boatee/ | Goatee /goatee/ | *Goatee → Goatoo / Boatee / Goatee |
+| `person` | a person; a member of a people (the autonym root) | *Neekoa /neekoa/ | Dookoa /dookoa/ | Neekoa /neekoa/ | Neegoa /neegoa/ | *Neekoa → Dookoa / Neekoa / Neegoa |
 | `red` | the color term for red | *Noe /noe/ | Doo /doo/ | Noe /noe/ | Noe /noe/ | *Noe → Doo / Noe / Noe |
 | `sibling` | one's brother or sister | *Peonae /peonae/ | Boodao /boodao/ | Beonae /beonae/ | Beonae /beonae/ | *Peonae → Boodao / Beonae / Beonae |
 | `sleep` | to rest unconscious | *Neepeo /neepeo/ | Dooboo /dooboo/ | Neebeo /neebeo/ | Neebeo /neebeo/ | *Neepeo → Dooboo / Neebeo / Neebeo |

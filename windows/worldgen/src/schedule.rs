@@ -3,10 +3,28 @@
 //! topological sort of the declared read/write DAG (and a dependency-violating
 //! order is rejected — the anti-vacuity half). Genesis still executes via
 //! `build_to`'s hand-order; this schema validates it (shadow, spec §4.5).
+//!
+//! **Scope boundary (deliberate):** the classification tail of `build_to` —
+//! the `"planet"` stage (C1: `is-a` + the world's endonym `name` on the world
+//! root) and the `"peoples"` stage (C2: one `instance-of` collective per
+//! placed people, `name` = autonym) — is **outside** this schema. Declaring
+//! those stages truthfully (`writes: NAME`) manufactures a false cycle:
+//! `religion` reads `NAME` (place names committed by `settlement`), and the
+//! schema's edges are predicate-granular but subject-blind, so a late
+//! world/collective `NAME` writer is forced *before* an early place-`NAME`
+//! reader. Their real ordering constraint (peoples must be placed first) is
+//! an in-memory dependency this predicate-level schema cannot express, so an
+//! edge exemption would not repair it — the derived schedule would falsely
+//! float the tail to the front. Subject-aware (or exemption-aware) edges are
+//! an ECS-program follow-up; until then this schema covers exactly
+//! [`GENESIS_HAND_ORDER`]'s eight core systems, and the tail's ledger effects
+//! remain governed by the ledger's own per-`(subject, predicate)` checks.
 use hornvale_kernel::{CapabilitySchema, System};
 
-/// The order genesis stages actually commit in `build_to` — the ground truth
-/// the derived schedule is validated against.
+/// The order the eight schema-covered genesis stages actually commit in
+/// `build_to` — the ground truth the derived schedule is validated against.
+/// (The classification tail — `planet`, `peoples` — is outside the schema;
+/// see the module doc's scope boundary.)
 /// type-audit: bare-ok(identifier-text)
 pub const GENESIS_HAND_ORDER: &[&str] = &[
     "world-entity",

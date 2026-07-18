@@ -41,6 +41,7 @@ name: Needea /needea/
 night: Noa /noa/
 one: Naogoa /naogoa/
 parent: Noenee /noenee/
+person: Nea /nea/
 rain: Kaa /kaa/
 red: Needao /needao/
 savanna: Tee /tee/

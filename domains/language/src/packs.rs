@@ -154,6 +154,12 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             doc: "an indefinitely large count",
             ladder_rank: 0,
         },
+        PackEntry {
+            concept: "person",
+            kind: ConceptKind::Living,
+            doc: "a person; a member of a people (the autonym root)",
+            ladder_rank: 0,
+        },
     ]
 }
 
@@ -476,6 +482,14 @@ mod tests {
                 "recipe head '{head}' for '{concept}' is not a registered concept"
             );
         }
+    }
+
+    #[test]
+    fn person_is_a_registered_universal_concept() {
+        assert!(
+            universal_stratum().iter().any(|e| e.concept == "person"),
+            "person is in the universal stratum"
+        );
     }
 
     #[test]
