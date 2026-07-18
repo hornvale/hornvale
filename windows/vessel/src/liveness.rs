@@ -6,7 +6,9 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
-use hornvale_kernel::{EntityId, Ledger, RoomAddr, Value, World, WorldTime};
+use hornvale_kernel::{
+    EntityId, Fact, Ledger, RoomAddr, RoomId, TickSystem, Value, World, WorldTime,
+};
 use hornvale_locale::LocaleContext;
 use hornvale_species::ActivityCycle;
 
@@ -57,6 +59,88 @@ pub fn scheduled_position(npc: &Npc, t: WorldTime) -> RoomAddr {
     } else {
         npc.home.clone()
     }
+}
+
+/// A game-layer predicate: an agent's room position on a day. Non-functional
+/// (position changes over sim time — c5's kind-change shape); the current
+/// position is the latest committed one. Registered by the possess session,
+/// NOT at genesis (spec §3).
+/// type-audit: bare-ok(identifier-text)
+pub const AGENT_AT: &str = "agent-at";
+
+/// The movement system (spec §4.3): for each NPC, derive its scheduled
+/// position at `at_time` and, if it differs from the last committed position
+/// (else the NPC's genesis home), emit a dated `agent-at` fact. Run through
+/// c6's `tick`.
+pub struct AgentMovements {
+    /// The NPCs this tick advances.
+    pub npcs: Vec<Npc>,
+    /// The world-time being advanced to.
+    pub at_time: WorldTime,
+}
+
+impl TickSystem for AgentMovements {
+    fn label(&self) -> &'static str {
+        "agent-movements"
+    }
+    fn step(&self, frozen: &Ledger) -> Vec<Fact> {
+        self.npcs
+            .iter()
+            .filter_map(|npc| {
+                let want = scheduled_position(npc, self.at_time);
+                let current =
+                    latest_committed_position(frozen, npc).unwrap_or_else(|| npc.home.clone());
+                if want == current {
+                    None
+                } else {
+                    Some(Fact {
+                        subject: npc.entity,
+                        predicate: AGENT_AT.to_string(),
+                        object: Value::Text(room_to_text(&want)),
+                        place: None,
+                        day: Some(self.at_time.day),
+                        provenance: "the-quickening".to_string(),
+                    })
+                }
+            })
+            .collect()
+    }
+}
+
+/// The NPC's current position: latest committed `agent-at` ELSE the derived
+/// scheduled position at `t`.
+pub fn agent_position(ledger: &Ledger, npc: &Npc, t: WorldTime) -> RoomAddr {
+    latest_committed_position(ledger, npc).unwrap_or_else(|| scheduled_position(npc, t))
+}
+
+/// The last committed `agent-at` position for `npc`, if any.
+fn latest_committed_position(ledger: &Ledger, npc: &Npc) -> Option<RoomAddr> {
+    match ledger.latest_value_of(npc.entity, AGENT_AT) {
+        Some(Value::Text(s)) => Some(room_from_text(s)),
+        _ => None,
+    }
+}
+
+/// Encode a `RoomAddr` as save-format text: the packed `RoomId` (decision
+/// 0006), rendered as a decimal `u64` string. Reuses the existing pack/unpack
+/// contract rather than inventing a new encoding.
+fn room_to_text(r: &RoomAddr) -> String {
+    r.pack()
+        .expect("a scheduled room is always within MAX_DEPTH")
+        .0
+        .to_string()
+}
+
+/// Decode a `RoomAddr` from its packed-`RoomId` decimal text. Panics on a
+/// malformed committed value — a corrupted save is a bug, not a runtime case
+/// to route around.
+fn room_from_text(s: &str) -> RoomAddr {
+    let id: u64 = s
+        .parse()
+        .unwrap_or_else(|_| panic!("agent-at text '{s}' is not a decimal RoomId"));
+    RoomId(id)
+        .unpack()
+        .unwrap_or_else(|_| panic!("agent-at RoomId {id} does not unpack to a valid RoomAddr"))
 }
 
 /// Derive `k` NPCs from the `k` most-populous settlements. Each NPC is minted
@@ -215,5 +299,116 @@ mod tests {
                 n.label
             );
         }
+    }
+
+    #[test]
+    fn room_text_round_trips() {
+        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let dest = home.neighbors()[0].clone();
+        for r in [home, dest] {
+            assert_eq!(room_from_text(&room_to_text(&r)), r);
+        }
+    }
+
+    fn registry_with_agent_at() -> hornvale_kernel::ConceptRegistry {
+        let mut r = hornvale_kernel::ConceptRegistry::default();
+        r.register_predicate(AGENT_AT, false, "an agent's position on a day")
+            .unwrap();
+        r
+    }
+
+    #[test]
+    fn tick_commits_agent_at_when_the_npc_moves() {
+        let r = registry_with_agent_at();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            destination: home.neighbors()[0].clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        // Advance to noon (active) -> the NPC is at its destination -> one agent-at fact.
+        let sys = AgentMovements {
+            npcs: vec![npc.clone()],
+            at_time: WorldTime { day: 0.5 },
+        };
+        let next = hornvale_kernel::tick(&ledger, &[&sys], &["agent-movements"], &r).unwrap();
+        assert_eq!(
+            agent_position(&next, &npc, WorldTime { day: 0.5 }),
+            npc.destination
+        );
+        assert_eq!(next.find(AGENT_AT).count(), 1);
+        ledger = next;
+        // Advance to midnight (rest) -> back home -> a second agent-at fact.
+        let sys2 = AgentMovements {
+            npcs: vec![npc.clone()],
+            at_time: WorldTime { day: 1.0 },
+        };
+        let n2 = hornvale_kernel::tick(&ledger, &[&sys2], &["agent-movements"], &r).unwrap();
+        assert_eq!(agent_position(&n2, &npc, WorldTime { day: 1.0 }), npc.home);
+        assert_eq!(n2.find(AGENT_AT).count(), 2);
+    }
+
+    #[test]
+    fn tick_commits_nothing_when_position_unchanged() {
+        let r = registry_with_agent_at();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            destination: home.neighbors()[0].clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        // Two ticks both at rest (midnight) -> position never changes -> at most one fact.
+        let s1 = AgentMovements {
+            npcs: vec![npc.clone()],
+            at_time: WorldTime { day: 1.0 },
+        };
+        let n1 = hornvale_kernel::tick(&ledger, &[&s1], &["agent-movements"], &r).unwrap();
+        let s2 = AgentMovements {
+            npcs: vec![npc.clone()],
+            at_time: WorldTime { day: 2.0 },
+        };
+        let n2 = hornvale_kernel::tick(&n1, &[&s2], &["agent-movements"], &r).unwrap();
+        // home == genesis default, so the first tick may emit 0 (already home); the
+        // key invariant: no SPURIOUS second fact for an unchanged position.
+        assert!(
+            n2.find(AGENT_AT).count() <= 1,
+            "no spurious agent-at for an unchanged position"
+        );
+    }
+
+    #[test]
+    fn jump_past_a_phase_lands_coherent() {
+        // THE JUMP CASE (spec §5.2): a single wait from day 0.2 (rest) to day 1.9
+        // (rest again, after a full active phase) must leave the ledger coherent:
+        // the NPC's latest committed position equals its scheduled position at 1.9.
+        let r = registry_with_agent_at();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            destination: home.neighbors()[0].clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        let sys = AgentMovements {
+            npcs: vec![npc.clone()],
+            at_time: WorldTime { day: 1.9 },
+        };
+        let next = hornvale_kernel::tick(&ledger, &[&sys], &["agent-movements"], &r).unwrap();
+        assert_eq!(
+            agent_position(&next, &npc, WorldTime { day: 1.9 }),
+            scheduled_position(&npc, WorldTime { day: 1.9 }),
+            "after a multi-day jump, the committed position matches the schedule at t_new"
+        );
     }
 }
