@@ -8,7 +8,7 @@ use crate::biome::{self, Biome, SeafloorFeature};
 use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
 use crate::habitability;
 use crate::moisture::moisture_field;
-use crate::temperature::{mean_temperature, temperature_at};
+use crate::temperature::{diurnal_amplitude_field, mean_temperature, temperature_at};
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Temperature};
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -47,6 +47,7 @@ pub struct GeneratedClimate {
     sea_level: ReferenceElevation,
     mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
+    diurnal_amp: CellMap<f64>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
     band_count: Option<u32>,
@@ -107,6 +108,8 @@ impl GeneratedClimate {
             &inputs.regime,
         );
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
+        let diurnal_amp =
+            diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
         let biome = CellMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
             let upwell = is_upwelling(geo, inputs.elevation, inputs.sea_level, cell, band_count);
@@ -134,6 +137,7 @@ impl GeneratedClimate {
             sea_level: inputs.sea_level,
             mean_temp,
             moisture,
+            diurnal_amp,
             biome,
             habitability,
             band_count,
@@ -174,6 +178,7 @@ impl GeneratedClimate {
     pub fn temperature_at(&self, cell: CellId, day: f64) -> Temperature {
         temperature_at(
             &self.mean_temp,
+            &self.diurnal_amp,
             &self.geosphere,
             &self.elevation,
             self.sea_level,
@@ -250,6 +255,15 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(ratio)
     pub fn moisture_at(&self, cell: CellId) -> f64 {
         *self.moisture.get(cell)
+    }
+    /// The precomputed diurnal half-range amplitude at a cell, °C: the
+    /// coefficient `temperature_at` scales its diurnal waveform by. Zero has
+    /// no special meaning here (unlike `seasonal_swing_at`, which is exactly
+    /// zero when locked) — the amplitude is always computed, but only the
+    /// `Spinning` branch of `temperature_at` ever applies it.
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn diurnal_amp_at(&self, cell: CellId) -> f64 {
+        *self.diurnal_amp.get(cell)
     }
     /// The biome at a cell.
     pub fn biome_at(&self, cell: CellId) -> Biome {
@@ -371,6 +385,9 @@ mod tests {
         let elev = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
         let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
         let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let RotationRegime::Spinning { day_std } = regime else {
+            unreachable!("this test builds a spinning regime")
+        };
         let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
         let period = climate.year_length_std();
         assert!(period > 0.0);
@@ -379,9 +396,19 @@ mod tests {
         for cell in geo.cells() {
             let mean = climate.mean_temperature_at(cell).get();
             let swing = climate.seasonal_swing_at(cell);
+            let diurnal_amp = climate.diurnal_amp_at(cell);
             for &day in &[0.0_f64, 30.0, 91.3, 182.6, 300.0, 365.25, 800.0] {
                 let phase = (day / period).rem_euclid(1.0);
-                let documented = mean + swing * math::sin(std::f64::consts::TAU * phase);
+                let diurnal = crate::diurnal::diurnal_anomaly(
+                    diurnal_amp,
+                    geo.coord(cell).latitude,
+                    climate.obliquity_deg(),
+                    phase,
+                    day.rem_euclid(1.0),
+                    day_std,
+                )
+                .get();
+                let documented = mean + swing * math::sin(std::f64::consts::TAU * phase) + diurnal;
                 let actual = climate.temperature_at(cell, day).get();
                 assert_eq!(
                     documented.to_bits(),

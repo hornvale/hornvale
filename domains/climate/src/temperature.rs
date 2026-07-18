@@ -8,6 +8,7 @@
 //! no ocean currents, smooth-sinusoid seasons, prograde-only.
 
 use crate::circulation::RotationRegime;
+use crate::diurnal::{diurnal_amplitude, diurnal_anomaly};
 use hornvale_kernel::math;
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, TempAnomaly, Temperature};
 
@@ -86,12 +87,16 @@ pub fn seasonal_amplitude(
 
 /// Temperature at a cell on a given day: the annual mean plus a
 /// hemisphere-signed seasonal sinusoid on the orbital year phase,
-/// `frac(day / year_length_std + year_phase_offset)`. Locked worlds have no
-/// seasonal term (no year phase organizes their fixed day/night).
+/// `frac(day / year_length_std + year_phase_offset)`, plus (spinning worlds
+/// only) a zero-mean diurnal swing over the rotation. Locked worlds have no
+/// seasonal term (no year phase organizes their fixed day/night) and no
+/// diurnal term (no rotation to swing over) — the `Locked` branch never
+/// reads `diurnal_amp`.
 /// type-audit: pending(wave-2)
 #[allow(clippy::too_many_arguments)]
 pub fn temperature_at(
     mean: &CellMap<Temperature>,
+    diurnal_amp: &CellMap<f64>,
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
@@ -119,16 +124,43 @@ pub fn temperature_at(
             Temperature::new(crate::locked_cell_temperature(cos_theta, scale, lapse))
                 .expect("temperature is finite")
         }
-        RotationRegime::Spinning { .. } => {
+        RotationRegime::Spinning { day_std } => {
             if year_length_std <= 0.0 || obliquity_deg == 0.0 {
                 return base;
             }
             let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
             let phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
             let hemi = geo.coord(cell).latitude.signum();
-            base + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase))
+            let seasonal = base
+                + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase));
+            seasonal
+                + diurnal_anomaly(
+                    *diurnal_amp.get(cell),
+                    geo.coord(cell).latitude,
+                    obliquity_deg,
+                    phase,
+                    day.rem_euclid(1.0),
+                    *day_std,
+                )
         }
     }
+}
+
+/// The precomputed per-cell diurnal half-range field, °C: [`diurnal_amplitude`]
+/// evaluated at each cell from its moisture, continentality, and elevation
+/// above sea level. Mirrors how [`mean_temperature`] is precomputed once per
+/// world; the provider stores this field and threads it into `temperature_at`.
+pub fn diurnal_amplitude_field(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    moisture: &CellMap<f64>,
+) -> CellMap<f64> {
+    CellMap::from_fn(geo, |cell| {
+        let cont = continentality(geo, elevation, sea_level, cell);
+        let above = (*elevation.get(cell) - sea_level).max(0.0);
+        diurnal_amplitude(*moisture.get(cell), cont, above)
+    })
 }
 
 /// Locked-world seasonal temperature (°C) at an arbitrary unit position `p`
@@ -263,6 +295,8 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Spinning { day_std: 1.0 };
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // Zero diurnal amplitude: this test targets the seasonal term only.
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         // A clearly-northern cell.
         let north = geo
             .cells()
@@ -273,7 +307,18 @@ mod tests {
         // Final signature: (…, obliquity, insolation, year_length, year_phase_offset, …)
         let t = |day: f64| {
             temperature_at(
-                &mean, &geo, &elevation, sea, 23.5, 1.0, year, offset, &regime, north, day,
+                &mean,
+                &diurnal_amp,
+                &geo,
+                &elevation,
+                sea,
+                23.5,
+                1.0,
+                year,
+                offset,
+                &regime,
+                north,
+                day,
             )
             .get()
         };
@@ -325,6 +370,7 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         let year = 240.0;
         let obliq = 22.0;
         // At the northern solstice (frac(day/year + 0) = 0.25) the substellar
@@ -335,11 +381,33 @@ mod tests {
             .cells()
             .max_by(|a, b| {
                 let ta = temperature_at(
-                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *a, solstice,
+                    &mean,
+                    &diurnal_amp,
+                    &geo,
+                    &elevation,
+                    sea,
+                    obliq,
+                    1.0,
+                    year,
+                    0.0,
+                    &regime,
+                    *a,
+                    solstice,
                 )
                 .get();
                 let tb = temperature_at(
-                    &mean, &geo, &elevation, sea, obliq, 1.0, year, 0.0, &regime, *b, solstice,
+                    &mean,
+                    &diurnal_amp,
+                    &geo,
+                    &elevation,
+                    sea,
+                    obliq,
+                    1.0,
+                    year,
+                    0.0,
+                    &regime,
+                    *b,
+                    solstice,
                 )
                 .get();
                 ta.total_cmp(&tb)
@@ -362,6 +430,7 @@ mod tests {
         });
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         // The substellar-ish cell: the position formula must agree with the
         // cell-based one everywhere, but pick a cell with nonzero lapse too
         // (elevation above sea level) so the lapse term is exercised.
@@ -374,7 +443,18 @@ mod tests {
         let offset = 0.15;
         let day = 63.0;
         let expected = temperature_at(
-            &mean, &geo, &elevation, sea, obliquity, 1.0, year, offset, &regime, cell, day,
+            &mean,
+            &diurnal_amp,
+            &geo,
+            &elevation,
+            sea,
+            obliquity,
+            1.0,
+            year,
+            offset,
+            &regime,
+            cell,
+            day,
         )
         .get();
         let p = geo.position(cell);
@@ -394,18 +474,207 @@ mod tests {
         let sea = ReferenceElevation::new(0.0).unwrap();
         let regime = RotationRegime::Locked;
         let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 0.0);
         let cell = CellId(0);
         let a = temperature_at(
-            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 0.0,
+            &mean,
+            &diurnal_amp,
+            &geo,
+            &elevation,
+            sea,
+            0.0,
+            1.0,
+            240.0,
+            0.0,
+            &regime,
+            cell,
+            0.0,
         )
         .get();
         let b = temperature_at(
-            &mean, &geo, &elevation, sea, 0.0, 1.0, 240.0, 0.0, &regime, cell, 120.0,
+            &mean,
+            &diurnal_amp,
+            &geo,
+            &elevation,
+            sea,
+            0.0,
+            1.0,
+            240.0,
+            0.0,
+            &regime,
+            cell,
+            120.0,
         )
         .get();
         assert_eq!(
             a, b,
             "zero obliquity: no libration, temperature is day-independent"
+        );
+    }
+
+    // Locked worlds have no diurnal term regardless of time-of-day. Zero
+    // obliquity makes the *existing* Locked branch exactly day-independent
+    // (it early-returns `base`), so this isolates the diurnal wiring: the
+    // diurnal amplitude is deliberately nonzero (anti-vacuity) — if the
+    // diurnal term were ever mistakenly wired into the Locked branch, these
+    // two day fractions (differing local time-of-day) would diverge, since
+    // `diurnal_waveform` depends on `day_fraction` even at zero obliquity.
+    #[test]
+    fn locked_worlds_have_no_diurnal_term() {
+        let geo = Geosphere::new(3);
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(0.0).unwrap());
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let regime = RotationRegime::Locked;
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 12.0);
+        let cell = geo
+            .cells()
+            .find(|c| {
+                let lat = geo.coord(*c).latitude.abs();
+                lat > 5.0 && lat < 80.0
+            })
+            .unwrap();
+        let a = temperature_at(
+            &mean,
+            &diurnal_amp,
+            &geo,
+            &elevation,
+            sea,
+            0.0,
+            1.0,
+            240.0,
+            0.0,
+            &regime,
+            cell,
+            0.2,
+        )
+        .get();
+        let b = temperature_at(
+            &mean,
+            &diurnal_amp,
+            &geo,
+            &elevation,
+            sea,
+            0.0,
+            1.0,
+            240.0,
+            0.0,
+            &regime,
+            cell,
+            0.7,
+        )
+        .get();
+        assert_eq!(
+            a, b,
+            "locked worlds must have no diurnal term, even with a nonzero amplitude field"
+        );
+    }
+
+    // Spinning: local afternoon must be markedly warmer than local pre-dawn
+    // for a dry, fully-continental cell — the diurnal mechanism actually
+    // firing, not stubbed to zero.
+    #[test]
+    fn spinning_afternoon_is_warmer_than_predawn() {
+        let geo = Geosphere::new(4);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        // All land, well above sea level: every cell is fully continental.
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // A near-equatorial cell: the sun reliably rises there every day.
+        let cell = geo
+            .cells()
+            .find(|c| geo.coord(*c).latitude.abs() < 15.0)
+            .unwrap();
+        // A dry, fully-continental amplitude (desert-like swing) at that cell.
+        let dry_amplitude = diurnal_amplitude(0.05, 1.0, 0.0);
+        let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
+        let year = 360.0;
+        let day = 100.0;
+        let t = |day_fraction: f64| {
+            temperature_at(
+                &mean,
+                &diurnal_amp,
+                &geo,
+                &elevation,
+                sea,
+                23.5,
+                1.0,
+                year,
+                0.0,
+                &regime,
+                cell,
+                day + day_fraction,
+            )
+            .get()
+        };
+        let afternoon = t(0.60);
+        let predawn = t(0.05);
+        assert!(
+            afternoon > predawn + 5.0,
+            "afternoon {afternoon} should tower over predawn {predawn} by a physical margin"
+        );
+    }
+
+    // The daily mean is unchanged by the diurnal term: averaging
+    // `temperature_at` over many day-fractions within one rotation recovers
+    // the pre-diurnal mean+seasonal value (the load-bearing zero-mean
+    // invariant that keeps `mean_temperature` — and the census — untouched).
+    #[test]
+    fn daily_mean_is_unchanged_by_the_diurnal_term() {
+        let geo = Geosphere::new(4);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // An equatorial cell: away from any polar-night clamp in the
+        // waveform, so the zero-mean cancellation converges cleanly.
+        let cell = geo
+            .cells()
+            .find(|c| geo.coord(*c).latitude.abs() < 10.0)
+            .unwrap();
+        // A real, nonzero diurnal amplitude everywhere — a stubbed-to-zero
+        // diurnal term would trivially pass this test too, but
+        // `spinning_afternoon_is_warmer_than_predawn` above already catches
+        // that; here the amplitude stays nonzero so this test exercises the
+        // actual zero-mean cancellation, not an absent term.
+        let diurnal_amp = CellMap::from_fn(&geo, |_| 20.0);
+        // A deliberately long year: the seasonal phase must stay effectively
+        // fixed across the single rotation this test averages over, so the
+        // only thing under test is the diurnal term's zero-mean cancellation
+        // (not the seasonal term's ordinary drift across a day).
+        let year = 36_525.0;
+        let offset = 0.1;
+        let day = 100.0;
+        let n = 200;
+        let sum: f64 = (0..n)
+            .map(|i| {
+                let frac = i as f64 / f64::from(n);
+                temperature_at(
+                    &mean,
+                    &diurnal_amp,
+                    &geo,
+                    &elevation,
+                    sea,
+                    23.5,
+                    1.0,
+                    year,
+                    offset,
+                    &regime,
+                    cell,
+                    day + frac,
+                )
+                .get()
+            })
+            .sum();
+        let daily_mean = sum / f64::from(n);
+        let amp = seasonal_amplitude(&geo, &elevation, sea, 23.5, cell);
+        let hemi = geo.coord(cell).latitude.signum();
+        let phase = (day / year + offset).rem_euclid(1.0);
+        let expected = mean.get(cell).get() + amp * hemi * math::sin(std::f64::consts::TAU * phase);
+        assert!(
+            (daily_mean - expected).abs() < 1e-2,
+            "daily mean {daily_mean} should equal the pre-diurnal mean+seasonal {expected}"
         );
     }
 }
