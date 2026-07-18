@@ -41,14 +41,11 @@ impl CrustKm {
 /// iteration 3': lowered from 6.0 so lobes are fewer and larger — smaller,
 /// higher-frequency lobes were pinching craton margins into detached rim
 /// fragments).
-#[allow(dead_code)]
 const LOBE_FREQ: f64 = 4.0;
 /// fBm octaves for the lobing noise.
-#[allow(dead_code)]
 const LOBE_OCTAVES: u32 = 4;
 /// Lobe amplitude: the rim radius varies in [1 - AMP, 1 + AMP] x radius,
 /// i.e. [0.5, 1.5] x radius_rad at this value.
-#[allow(dead_code)]
 const LOBE_AMP: f64 = 0.5;
 
 /// Contrast gain compensating the three-slice averaging in
@@ -76,7 +73,6 @@ const LOBE_AMP: f64 = 0.5;
 /// map needs a higher gain than the clamp's 6.0 because it saturates
 /// only asymptotically where the clamp cut off exactly; see the Task 9
 /// iteration-2 report for the full sweep table.
-#[allow(dead_code)]
 const REBALANCE_GAIN: f64 = 15.0;
 
 /// Precomputed seam-free spherical fBm: derives the three slice seeds and
@@ -124,7 +120,6 @@ impl SphereFbm {
 ///
 /// Random-access convenience form; a hot per-cell loop with a fixed seed
 /// should build a [`SphereFbm`] once and reuse it.
-#[allow(dead_code)]
 pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
     SphereFbm::new(seed, frequency, octaves).sample(p)
 }
@@ -155,7 +150,6 @@ pub(crate) fn lobed_envelope_with(
 /// Lobed envelope of one craton (random-access convenience form). A hot
 /// per-cell loop should build a [`SphereFbm`] once and call
 /// [`lobed_envelope_with`]; this constructs one per call.
-#[allow(dead_code)]
 pub(crate) fn lobed_envelope(seed: Seed, center: [f64; 3], p: [f64; 3], radius_rad: f64) -> f64 {
     lobed_envelope_with(
         &SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES),

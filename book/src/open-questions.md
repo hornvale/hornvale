@@ -143,6 +143,29 @@ beautifully rendered, and still refer to nothing. The check this bet lacks is
 therefore larger than The Lens made it look: not only *does some consumer draw
 this?* but *does the producer actually know what it is asserting?*
 
+[The Shadow Track](./chronicle/the-shadow-track.md) took the interface across
+a fifth layer — `scene/eclipses/v1`, a *parameterized temporal* query in the
+shape of tiles-region: a client asks for a day window and receives that
+world's dated eclipses with their solar ground tracks. Two of the bet's open
+disciplines got exercised rather than merely restated. The Lens's "does some
+consumer draw this?" check was run at the *producer* campaign's own close, and
+it earned its keep: the shadow band shipped, parsed, and unit-passed, yet
+rendered nothing a viewer could see — it sat at a radius just above the sphere,
+beneath the globe's sixty-times-exaggerated mountains, occluded from every
+camera angle. jsdom and the geometry unit tests could not see an occlusion; a
+screenshot could, and the fix (lift the band above the tallest exaggerated
+peak) is a change no non-visual gate would have prompted. And the golden
+discipline sharpened in the other direction: the campaign's plan mandated a
+committed producer-sourced golden by reflex, but the whole-branch review found
+it pinned nothing and contradicted the client's own documented convention. The
+distinction the earlier campaigns had blurred is that a golden is the right
+instrument only for a value the client *recomputes* (the climate and ephemeris
+re-derivations); for a scene document the client merely *parses*, the
+end-to-end fixture that reads the real wasm binary **is** the contract, and a
+second committed copy only adds a thing to drift. The seam generalizes; the
+check that it is *seen* is now practiced at the source; and the golden is
+calibrated to the one case that needs it.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
