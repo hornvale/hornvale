@@ -75,6 +75,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 }
 
 pub mod components;
+pub mod schedule;
 pub mod settlement_pins;
 pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;
@@ -96,6 +97,10 @@ pub enum BuildError {
     /// A kind's component-set is malformed (referential-integrity failure at
     /// assembly): e.g. a peopled kind missing a biosphere or a speech row.
     MalformedKind(String),
+    /// The genesis capability schema rejected the world's registry (a
+    /// declared cycle, or a functional predicate with two declared writers —
+    /// spec §7 as a load-time gate, ecs-c6 T3).
+    Schedule(hornvale_kernel::ScheduleError),
 }
 
 impl std::fmt::Display for BuildError {
@@ -107,6 +112,7 @@ impl std::fmt::Display for BuildError {
             BuildError::Pins(reason) => write!(f, "pins: {reason}"),
             BuildError::TerrainGenesis(e) => write!(f, "terrain genesis: {e}"),
             BuildError::MalformedKind(reason) => write!(f, "malformed kind: {reason}"),
+            BuildError::Schedule(e) => write!(f, "schedule: {e:?}"),
         }
     }
 }
