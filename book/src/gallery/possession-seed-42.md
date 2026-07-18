@@ -28,9 +28,7 @@ Ways on: N, SW, SE.
 You stand in temperate forest — a mossy hollow damp in a hollow — in the lands of Feefaenoagoo. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 Ways on: NW, S, NE.
 > wait 90
-[room 815726603, day 90]
-You stand in temperate forest — a mossy hollow damp in a hollow — in the lands of Feefaenoagoo. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
-Ways on: NW, S, NE.
+Time passes; the world keeps its shape.
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 > knows

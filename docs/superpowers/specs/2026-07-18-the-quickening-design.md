@@ -1,5 +1,16 @@
 # The Quickening (The Walk · Milestone 2 · first liveness) — Design
 
+> **STATUS: SHIPPED** — *The Quickening*, all four tasks landed on
+> `worktree-the-quickening` 2026-07-18 (byte-identical; census-free; the
+> world moves only inside a possess session). The world's first autonomous
+> motion: a derived NPC's deterministic daily route, committed as dated
+> `agent-at` events via c6's tick, observed on `look`/`wait` and recounted
+> by a new `why`/`npcs` provenance read. Plan-time pivot: the original
+> demography-growth actor was measured inert (population is a conserved
+> equilibrium, decision-ledger #8) and replaced with NPC movement before
+> any code was written. FF to main is Nathan's G6 call. Chronicle:
+> `book/src/chronicle/the-quickening.md`.
+
 Program: **The Walk** (metaplan `docs/superpowers/specs/2026-07-11-the-walk-metaplan-design.md`,
 Milestone 2 "the living world," Campaign V "The World Moves" — first minimal
 slice). Base: main `@7305dfc`. This is **not** the ECS substrate program (that

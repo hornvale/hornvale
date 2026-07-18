@@ -188,12 +188,34 @@ pub fn derive_npcs(
                 .unwrap_or_else(|| "goblin".to_string());
             let activity = species_activity(world, &species);
             let entity = ledger.mint_entity();
+            let label = format!("{species} of {}", village.name);
+            // A NAME fact so the provenance read (`why`, backed by
+            // `windows/historiography::recount`) leads with the NPC's own
+            // label rather than a bare entity id — NAME is kernel-core, so
+            // it is already registered in `world.registry` (never a new
+            // per-session predicate the way AGENT_AT is). Committed once,
+            // at derivation, to the session-owned ledger clone only — never
+            // genesis (this function never runs against a world's own
+            // ledger, only a session's clone; see `liveness_genesis.rs`).
+            ledger
+                .commit(
+                    Fact {
+                        subject: entity,
+                        predicate: hornvale_kernel::NAME.to_string(),
+                        object: Value::Text(label.clone()),
+                        place: None,
+                        day: None,
+                        provenance: "the-quickening".to_string(),
+                    },
+                    &world.registry,
+                )
+                .expect("a freshly minted NPC entity's first NAME fact always commits");
             Npc {
                 entity,
                 home,
                 destination,
                 activity,
-                label: format!("{species} of {}", village.name),
+                label,
             }
         })
         .collect()

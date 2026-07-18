@@ -19,8 +19,15 @@ fn render_value(value: &Value) -> String {
 
 /// Recount an entity from its committed facts: a lead line naming it (by its
 /// `name` fact if present), then one bullet per fact — the predicate's
-/// registry doc (falling back to the predicate key), the rendered value, and
-/// the system that asserted it. `None` if nothing is recorded about `entity`.
+/// registry doc (falling back to the predicate key), the rendered value, the
+/// system that asserted it, and — when the fact carries one (decision 0014:
+/// `Fact.day` is a bare `Option<f64>`) — the sim day it was asserted on. The
+/// day is what makes a recount of a *non-functional*, dated predicate (an
+/// NPC's `agent-at`, one fact per position change) legible: without it, every
+/// position an agent has ever held reads as an undated, unordered pile
+/// ("the herder was at the river" — which time?); with it, the recount is a
+/// timeline ("the herder was at the river on day 5"). `None` if nothing is
+/// recorded about `entity`.
 /// type-audit: bare-ok(artifact: return)
 pub fn recount(world: &World, entity: EntityId) -> Option<String> {
     let facts: Vec<&hornvale_kernel::Fact> = world.ledger.facts_about(entity).collect();
@@ -39,11 +46,18 @@ pub fn recount(world: &World, entity: EntityId) -> Option<String> {
             .predicate(&f.predicate)
             .map(|p| p.doc.clone())
             .unwrap_or_else(|| f.predicate.clone());
-        out.push_str(&format!(
-            "- {label}: {} (asserted by {})\n",
-            render_value(&f.object),
-            f.provenance
-        ));
+        match f.day {
+            Some(day) => out.push_str(&format!(
+                "- {label}: {} (asserted by {}, day {day})\n",
+                render_value(&f.object),
+                f.provenance
+            )),
+            None => out.push_str(&format!(
+                "- {label}: {} (asserted by {})\n",
+                render_value(&f.object),
+                f.provenance
+            )),
+        }
     }
     Some(out)
 }
@@ -121,6 +135,60 @@ mod tests {
     fn recount_is_none_for_an_unknown_entity() {
         let w = world();
         assert!(recount(&w, EntityId::new(999).unwrap()).is_none());
+    }
+
+    #[test]
+    fn recount_names_the_day_a_dated_fact_was_asserted() {
+        // THE PROVENANCE READ (the-quickening T4): a non-functional, dated
+        // predicate (like an NPC's `agent-at`) is only legible as a timeline
+        // if the recount names the day, not just the value. Mutation-verify:
+        // reverting the `f.day` branch above to the undated format string
+        // reds this test (it would no longer contain "day 5").
+        let mut w = world();
+        let e = w.ledger.mint_entity();
+        w.ledger
+            .commit(
+                Fact {
+                    day: Some(5.0),
+                    ..fact(
+                        e,
+                        "tenet",
+                        Value::Text("at the river".to_string()),
+                        "the-quickening",
+                    )
+                },
+                &w.registry,
+            )
+            .unwrap();
+        let text = recount(&w, e).expect("entity has facts");
+        assert!(
+            text.contains("at the river (asserted by the-quickening, day 5)"),
+            "recount names the day a dated fact was asserted: {text}"
+        );
+    }
+
+    #[test]
+    fn recount_omits_the_day_when_a_fact_carries_none() {
+        // The day suffix must be conditional, not always-on: an undated fact
+        // (day: None) should read exactly as it always has, with no
+        // dangling "day" text.
+        let mut w = world();
+        let e = w.ledger.mint_entity();
+        w.ledger
+            .commit(
+                Fact {
+                    day: None,
+                    ..fact(e, "tenet", Value::Text("undated".to_string()), "religion")
+                },
+                &w.registry,
+            )
+            .unwrap();
+        let text = recount(&w, e).expect("entity has facts");
+        assert!(
+            text.contains("undated (asserted by religion)\n"),
+            "an undated fact renders with no day suffix: {text}"
+        );
+        assert!(!text.contains("day"), "no dangling day text: {text}");
     }
 
     #[test]

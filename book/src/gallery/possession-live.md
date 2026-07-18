@@ -22,8 +22,10 @@ browser, and something has to run it.</p></noscript>
 <p class="casement-docent">Genesis takes a few seconds — everything above
 derives from the seed, every time. The verbs: <code>look</code>,
 <code>go n|ne|e|se|s|sw|w|nw</code>, <code>examine</code>, <code>back</code>,
-<code>wait</code>, <code>whoami</code>, <code>knows</code>,
-<code>release</code>. This terminal is
+<code>wait</code> (the world moves too — a derived NPC keeps its own daily
+route, departing and returning), <code>npcs</code>, <code>why</code>,
+<code>whoami</code>, <code>knows</code>, <code>release</code>. This terminal
+is
 <a href="https://github.com/hornvale/hornvale/tree/main/clients/vessel">clients/vessel</a>;
 the world it derives is the same
 <a href="https://github.com/hornvale/hornvale/tree/main/windows/worldgen">worldgen</a>

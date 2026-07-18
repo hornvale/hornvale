@@ -49,6 +49,7 @@
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
+- [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
 
 # The Laboratory
@@ -162,6 +163,7 @@
 - [The First Sentence](./chronicle/the-first-sentence.md)
 - [The Wandering Sun](./chronicle/the-wandering-sun.md)
 - [The Ordination](./chronicle/the-ordination.md)
+- [The Quickening](./chronicle/the-quickening.md)
 
 # Appendix: The Frontier
 

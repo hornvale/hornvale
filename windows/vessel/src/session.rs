@@ -6,7 +6,7 @@ use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, mint_flagship, observable,
 };
-use hornvale_kernel::{ConceptRegistry, Ledger, RoomAddr, World, WorldTime, tick};
+use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, World, WorldTime, tick};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
 /// How many NPCs a session derives (spec §4: a small authored constant, not
@@ -22,6 +22,8 @@ verbs:
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen
+  npcs             the derived NPCs sharing this world (label, id)
+  why <who>        recount an NPC's dated history (by label or id)
   release          let go (quit works too)
 ";
 
@@ -165,6 +167,8 @@ impl<'w> Session<'w> {
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
             "knows" => Turn::Out(self.knows()),
+            "npcs" => Turn::Out(self.list_npcs()),
+            "why" => Turn::Out(self.why(rest)),
             "enter" | "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
                     .to_string(),
@@ -363,6 +367,61 @@ impl<'w> Session<'w> {
                 .map(|r| r.0.to_string())
                 .unwrap_or_else(|_| "?".to_string()),
         )
+    }
+
+    /// List every derived NPC this session knows about, with the entity id
+    /// `why` accepts (mirrors the repl's `beliefs` → `why <id>` pattern: an
+    /// id-listing verb feeding the recount verb).
+    fn list_npcs(&self) -> String {
+        let mut lines = vec![format!("{} NPC(s) derived this session:", self.npcs.len())];
+        for npc in &self.npcs {
+            lines.push(format!("  [{}] {}", npc.entity.0, npc.label));
+        }
+        lines.join("\n")
+    }
+
+    /// Recount an NPC's dated history — the provenance read (the-quickening
+    /// T4): the world remembers, so `why` over an NPC that has moved names
+    /// each committed `agent-at` with the day it was asserted (`recount` in
+    /// `windows/historiography` renders the day suffix). `who` is matched
+    /// first as a numeric entity id, else as a case-insensitive substring of
+    /// an NPC's label — this mirrors the CLI repl's `why <id>` (see
+    /// `cli/src/repl.rs`) over the one kind of subject a possess session
+    /// actually has on hand without a prior id-listing step: a name.
+    fn why(&self, who: &str) -> String {
+        let who = who.trim();
+        if who.is_empty() {
+            return "Why what? Name an NPC (label or id — see 'npcs').".to_string();
+        }
+        let target = who
+            .parse::<u64>()
+            .ok()
+            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .or_else(|| {
+                let needle = who.to_lowercase();
+                self.npcs
+                    .iter()
+                    .find(|n| n.label.to_lowercase().contains(&needle))
+            });
+        let Some(npc) = target else {
+            return format!("No one here answers to '{who}' (see 'npcs').");
+        };
+        self.recount(npc.entity)
+            .unwrap_or_else(|| format!("Nothing is yet recorded of {}.", npc.label))
+    }
+
+    /// The provenance read itself: a temporary `World` wrapping this
+    /// session's OWN evolving ledger/registry (never the frozen `self.world`
+    /// — an NPC's `agent-at` facts live only in the session's evolved
+    /// state), handed to the domain-agnostic historiography window exactly
+    /// as the CLI repl's `why` hands it the genesis world.
+    fn recount(&self, entity: EntityId) -> Option<String> {
+        let evolved = World {
+            seed: self.world.seed,
+            registry: self.registry.clone(),
+            ledger: self.ledger.clone(),
+        };
+        hornvale_historiography::recount(&evolved, entity)
     }
 
     fn knows(&self) -> String {

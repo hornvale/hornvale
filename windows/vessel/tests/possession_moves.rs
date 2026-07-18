@@ -105,3 +105,75 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
         "the specific colocation branch must fire on return too, got: {return_text}"
     );
 }
+
+#[test]
+fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
+    // THE PROVENANCE READ (the-quickening T4): a committed `agent-at` is a
+    // dated, provenanced fact, so the world remembers — `why <npc>` must
+    // recount it with the day it was asserted, not just that it happened.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let labels: Vec<String> = session
+        .npc_labels()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+    let label = labels.first().expect("a session always derives NPCs");
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(_) => panic!("why never releases"),
+    };
+
+    // Before any wait, the NPC has no committed agent-at yet (day-0 pin):
+    // recounting it either says nothing is recorded, or (since the NPC
+    // entity was minted this session) never mentions "day".
+    let before = out_text(session.handle(&format!("why {label}")));
+    assert!(
+        !before.contains("day"),
+        "before any wait, no dated agent-at exists to recount: {before}"
+    );
+
+    // Advance across a phase so the tick commits at least one agent-at.
+    session.handle("wait 1");
+    assert!(session.committed_agent_at_count() >= 1, "the NPC moved");
+
+    let recount = out_text(session.handle(&format!("why {label}")));
+    assert!(
+        recount.contains(label.as_str()),
+        "the recount leads with the NPC's own name: {recount}"
+    );
+    assert!(
+        recount.contains("day"),
+        "the recount names the day the position was asserted: {recount}"
+    );
+    assert!(
+        !recount.contains("No one here answers"),
+        "the label must resolve to the NPC that actually moved: {recount}"
+    );
+}
+
+#[test]
+fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let listing = match session.handle("npcs") {
+        Turn::Out(s) => s,
+        _ => panic!("npcs must not release"),
+    };
+    let id: u64 = listing
+        .lines()
+        .nth(1)
+        .and_then(|l| l.split(['[', ']']).nth(1))
+        .and_then(|s| s.parse().ok())
+        .expect("npcs lists at least one [id] label line");
+    session.handle("wait 1");
+    match session.handle(&format!("why {id}")) {
+        Turn::Out(s) => assert!(s.contains("day"), "id-resolved recount names a day: {s}"),
+        _ => panic!("why must not release"),
+    }
+    match session.handle("why nobody-by-this-name") {
+        Turn::Out(s) => assert!(s.contains("No one here answers")),
+        _ => panic!("why must not release"),
+    }
+}

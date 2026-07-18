@@ -1,0 +1,10 @@
+look
+npcs
+wait 0.5
+look
+wait 0.5
+look
+why hobgoblin
+wait 90
+look
+release

@@ -77,6 +77,21 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt 
 } > book/src/gallery/possession-seed-42.md
 rm -f "$possess_tmp"
 
+# The over-time transcript (the-quickening, T4): a NEW, separate recording —
+# the day-0 transcript above never advances time, so it cannot show the
+# world moving. This one `wait`s across an activity phase, so a derived NPC
+# departs and returns (named on `look`/`wait`'s own narration) and a `why`
+# recounts its dated `agent-at` history. Wiring it here (rather than editing
+# the day-0 script) is what keeps the day-0 transcript byte-identical.
+possess_ot_tmp="$(mktemp)"
+run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
+{
+    head -n 1 "$possess_ot_tmp"
+    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s: watch a\nderived NPC depart and return as sim time advances, and `why` recount its\ndated history. The world still moves only inside a possess session; a\nfreshly built world commits none of this.)*\n'
+    tail -n +2 "$possess_ot_tmp"
+} > book/src/gallery/possession-over-time-seed-42.md
+rm -f "$possess_ot_tmp"
+
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
     > book/src/gallery/elevation-seed-42.md
