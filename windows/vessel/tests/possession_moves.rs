@@ -1,6 +1,6 @@
 //! The world moves without you: possess, wait across a phase, observe an NPC's
 //! motion; and the same script is byte-deterministic.
-use hornvale_vessel::{PossessOpts, Session};
+use hornvale_vessel::{PossessOpts, Session, Turn};
 
 fn world() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
@@ -53,5 +53,55 @@ fn the_same_script_is_byte_deterministic() {
         run(),
         run(),
         "same seed + same waits -> byte-identical session ledger"
+    );
+}
+
+#[test]
+fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
+    // THE OBSERVATION PAYOFF (T3 review): the possessed agent's own
+    // settlement is guaranteed to contribute a derived NPC sharing the
+    // player's starting room, and `wait`'s narration must name that NPC's
+    // actual transition through the room — not just count a generic
+    // "stirred" tally. Seed 42, day 0.5 (noon, PossessOpts::default) starts
+    // in the diurnal active band, so the home-settlement NPC is already at
+    // its destination; the schedule then alternates rest/active every half
+    // day at this fraction, giving a clean departure-then-return sequence.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let labels: Vec<String> = session
+        .npc_labels()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+    assert!(!labels.is_empty(), "a session always derives NPCs");
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(_) => panic!("wait never releases"),
+    };
+
+    // day 0.5 -> 1.0 (midnight, rest): no transition yet.
+    let _ = session.handle("wait 0.5");
+    // day 1.0 -> 1.5 (noon, active): the co-located NPC departs; the
+    // colocation branch must name it, not fall back to "stirred".
+    let departure = out_text(session.handle("wait 0.5"));
+    assert!(
+        labels.iter().any(|l| departure.contains(l.as_str())),
+        "departure must name a co-located NPC by label, got: {departure}"
+    );
+    assert!(
+        !departure.contains("stirred"),
+        "the specific colocation branch must fire, not the generic fallback: {departure}"
+    );
+
+    // day 1.5 -> 2.0 (midnight, rest): the NPC returns; must also be named.
+    let return_text = out_text(session.handle("wait 0.5"));
+    assert!(
+        labels.iter().any(|l| return_text.contains(l.as_str())),
+        "return must also name the co-located NPC, got: {return_text}"
+    );
+    assert!(
+        !return_text.contains("stirred"),
+        "the specific colocation branch must fire on return too, got: {return_text}"
     );
 }

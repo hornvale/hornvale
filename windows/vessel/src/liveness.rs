@@ -143,14 +143,40 @@ fn room_from_text(s: &str) -> RoomAddr {
         .unwrap_or_else(|_| panic!("agent-at RoomId {id} does not unpack to a valid RoomAddr"))
 }
 
-/// Derive `k` NPCs from the `k` most-populous settlements. Each NPC is minted
-/// in `ledger` (a session-owned clone), homed at its settlement's cell room,
-/// with a deterministic destination neighbor and its species' activity-cycle.
-/// type-audit: bare-ok(count: k)
-pub fn derive_npcs(world: &World, ctx: &LocaleContext, ledger: &mut Ledger, k: usize) -> Vec<Npc> {
-    // Settlements by population, ties broken by EntityId for determinism.
-    let mut settlements = hornvale_settlement::all_settlements(world);
+/// Order settlements for NPC derivation: population descending (ties broken
+/// by `EntityId`), with `home_settlement` pulled to the front regardless of
+/// its rank. Pure and independently testable (no world/ledger needed) so the
+/// colocation guarantee is mutation-provable on its own, not just as an
+/// emergent property of a particular seed's population distribution.
+fn ordered_for_derivation(
+    mut settlements: Vec<hornvale_settlement::VillageInfo>,
+    home_settlement: EntityId,
+) -> Vec<hornvale_settlement::VillageInfo> {
     settlements.sort_by(|a, b| b.population.cmp(&a.population).then(a.id.cmp(&b.id)));
+    if let Some(pos) = settlements.iter().position(|v| v.id == home_settlement) {
+        let home = settlements.remove(pos);
+        settlements.insert(0, home);
+    }
+    settlements
+}
+
+/// Derive `k` NPCs from the `k` most-populous settlements, GUARANTEEING the
+/// possessed agent's own home settlement (`home_settlement`) is among them —
+/// otherwise no NPC is ever co-located with the player and the observation
+/// payoff (spec: "the herder has gone down to the river") can never fire
+/// (the-quickening T3 review). Each NPC is minted in `ledger` (a
+/// session-owned clone), homed at its settlement's cell room, with a
+/// deterministic destination neighbor and its species' activity-cycle.
+/// type-audit: bare-ok(count: k)
+pub fn derive_npcs(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    k: usize,
+    home_settlement: EntityId,
+) -> Vec<Npc> {
+    let settlements = hornvale_settlement::all_settlements(world);
+    let mut settlements = ordered_for_derivation(settlements, home_settlement);
     settlements.truncate(k);
 
     settlements
@@ -287,7 +313,8 @@ mod tests {
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
         let mut ledger = world.ledger.clone();
-        let npcs = derive_npcs(&world, &ctx, &mut ledger, 3);
+        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
         assert_eq!(npcs.len(), 3);
         // distinct entities, and each moves (home != destination)
         let ids: std::collections::BTreeSet<_> = npcs.iter().map(|n| n.entity).collect();
@@ -299,6 +326,71 @@ mod tests {
                 n.label
             );
         }
+    }
+
+    #[test]
+    fn derive_npcs_actually_includes_the_home_settlement() {
+        // An end-to-end smoke check on a real world (seed 42): the possessed
+        // agent's own settlement is among the derived NPCs even at k=1. (The
+        // precise "regardless of population rank" guarantee is proven
+        // adversarially, independent of any one seed's incidental population
+        // distribution, by `ordered_for_derivation_prioritizes_home_over_population_rank`
+        // below.)
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut ledger = world.ledger.clone();
+        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let npcs = derive_npcs(&world, &ctx, &mut ledger, 1, home);
+        assert_eq!(npcs.len(), 1);
+        let want_home_room = settlement_room(&world, &ctx, home);
+        assert_eq!(
+            npcs[0].home, want_home_room,
+            "the possessed agent's own settlement's NPC must be derived"
+        );
+    }
+
+    #[test]
+    fn ordered_for_derivation_prioritizes_home_over_population_rank() {
+        // THE COLOCATION GUARANTEE (T3 review), proven directly on the pure
+        // selection function with adversarial data: a home settlement with
+        // the LOWEST population must still land first, ahead of settlements
+        // with far larger populations — otherwise, with k smaller than the
+        // settlement count, no NPC could ever be co-located with the player
+        // and the observation payoff would never fire.
+        let home_id = EntityId::new(5).unwrap();
+        let settlements = vec![
+            hornvale_settlement::VillageInfo {
+                id: EntityId::new(1).unwrap(),
+                name: "Big".to_string(),
+                population: 10_000,
+            },
+            hornvale_settlement::VillageInfo {
+                id: EntityId::new(2).unwrap(),
+                name: "Bigger".to_string(),
+                population: 20_000,
+            },
+            hornvale_settlement::VillageInfo {
+                id: home_id,
+                name: "Home".to_string(),
+                population: 1,
+            },
+        ];
+        let ordered = ordered_for_derivation(settlements, home_id);
+        assert_eq!(
+            ordered[0].id, home_id,
+            "the home settlement must be first regardless of its population rank"
+        );
+        // Truncating to k=1 (the adversarial case) must still keep it.
+        let mut truncated = ordered;
+        truncated.truncate(1);
+        assert_eq!(truncated[0].id, home_id);
     }
 
     #[test]

@@ -64,7 +64,10 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
-        let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT);
+        // Guarantee the possessed agent's OWN settlement contributes a
+        // derived NPC (the-quickening T3 review): otherwise no NPC is ever
+        // co-located with the player and the observation payoff can't fire.
+        let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
         let mut session = Session {
             world,
             ctx,
@@ -111,6 +114,14 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(artifact: return)
     pub fn session_ledger_json(&self) -> String {
         serde_json::to_string(&self.ledger).expect("a ledger always serializes")
+    }
+
+    /// The derived NPCs' labels (test accessor: the T3 review's colocation
+    /// test names the specific NPC whose motion narrates in `wait`'s output,
+    /// without hardcoding world-generated prose into the test itself).
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn npc_labels(&self) -> Vec<&str> {
+        self.npcs.iter().map(|n| n.label.as_str()).collect()
     }
 
     /// The current room, focalized (for the battery's checks).
@@ -254,6 +265,15 @@ impl<'w> Session<'w> {
                 _ => return Turn::Out(format!("Wait how long? '{arg}' is no span of days.")),
             }
         };
+        // Snapshot every NPC's position as of NOW (the day about to end),
+        // before advancing — the "before" half of the departure/arrival
+        // comparison `narrate_motion` needs to name a specific transition
+        // rather than just count facts.
+        let before: Vec<RoomAddr> = self
+            .npcs
+            .iter()
+            .map(|npc| agent_position(&self.ledger, npc, self.day))
+            .collect();
         self.day = WorldTime {
             day: self.day.day + days,
         };
@@ -271,30 +291,47 @@ impl<'w> Session<'w> {
                 if let Err(e) = self.absorb_here() {
                     return Turn::Out(format!("error: {e}"));
                 }
-                Turn::Out(self.narrate_motion(moved))
+                Turn::Out(self.narrate_motion(moved, &before))
             }
             Err(e) => Turn::Out(format!("Time falters: {e}")),
         }
     }
 
     /// Narrate what the tick committed: silence if nothing moved, else name
-    /// any derived NPC now sharing the possessed agent's room (a real
-    /// observation — colocation is read back from the just-committed
-    /// ledger, not decorative flavor text).
-    fn narrate_motion(&self, moved: usize) -> String {
+    /// any derived NPC's PERCEPTIBLE TRANSITION through the possessed
+    /// agent's own room — an arrival (the NPC was elsewhere, now shares the
+    /// room) or a departure (the NPC was here, now elsewhere; an absence is
+    /// a real observation too, not just an arrival). `before` is each NPC's
+    /// position as of the day just ended (captured by `wait` prior to the
+    /// tick); both halves are read back from ledgers, never decorative
+    /// flavor text. The generic "stirred" line is the fallback only for
+    /// motion that never touches the player's own room.
+    fn narrate_motion(&self, moved: usize, before: &[RoomAddr]) -> String {
         if moved == 0 {
             return "Time passes; the world keeps its shape.".to_string();
         }
-        let here: Vec<&str> = self
-            .npcs
-            .iter()
-            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
-            .map(|npc| npc.label.as_str())
-            .collect();
-        if here.is_empty() {
+        let mut arrived: Vec<&str> = Vec::new();
+        let mut departed: Vec<&str> = Vec::new();
+        for (npc, prior) in self.npcs.iter().zip(before) {
+            let was_here = *prior == self.agent.position;
+            let is_here = agent_position(&self.ledger, npc, self.day) == self.agent.position;
+            match (was_here, is_here) {
+                (false, true) => arrived.push(npc.label.as_str()),
+                (true, false) => departed.push(npc.label.as_str()),
+                _ => {}
+            }
+        }
+        let mut parts: Vec<String> = Vec::new();
+        if !departed.is_empty() {
+            parts.push(format!("You watch {} go.", departed.join(", ")));
+        }
+        if !arrived.is_empty() {
+            parts.push(format!("You notice {} here now.", arrived.join(", ")));
+        }
+        if parts.is_empty() {
             format!("Time passes. You sense movement nearby ({moved} stirred).")
         } else {
-            format!("Time passes. You notice {} here now.", here.join(", "))
+            format!("Time passes. {}", parts.join(" "))
         }
     }
 
