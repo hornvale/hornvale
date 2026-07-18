@@ -7,7 +7,8 @@
 
 use crate::agent::{settlement_position, walk_depth};
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, RoomAddr, RoomId, TickSystem, Value, World, WorldTime,
+    EntityId, Fact, Ledger, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime,
+    astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::ActivityCycle;
@@ -475,6 +476,120 @@ fn parse_activity(t: &str) -> ActivityCycle {
     }
 }
 
+/// A GOAP action — a precondition/effect transformation over the plan state.
+/// Minimal + heterogeneous (the precondition chain needs two kinds); the MAP-27
+/// authored-verb DSL is a followup.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Action {
+    /// Walk to an adjacent room (precondition: adjacency; effect: position).
+    MoveTo(RoomAddr),
+    /// Drink (precondition: at the water room; effect: hydrated).
+    Drink,
+}
+
+/// The GOAP planning state A* searches: where the agent is and whether it has
+/// drunk. `Ord` for the deterministic search.
+/// type-audit: bare-ok(flag: hydrated)
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PlanState {
+    /// The agent's room.
+    pub position: RoomAddr,
+    /// Whether the sustenance goal is met (has drunk this plan).
+    pub hydrated: bool,
+}
+
+/// The GOAP search space for the sustenance goal: reach water and drink.
+/// type-audit: bare-ok(return)
+pub struct GoapSpace {
+    /// The water room the `Drink` action requires.
+    pub water: RoomAddr,
+}
+impl SearchSpace for GoapSpace {
+    type State = PlanState;
+    type Action = Action;
+    fn successors(&self, s: &PlanState) -> Vec<(Action, PlanState, u64)> {
+        if s.hydrated {
+            return Vec::new(); // goal reached; no need to expand
+        }
+        let mut out: Vec<(Action, PlanState, u64)> = s
+            .position
+            .neighbors()
+            .into_iter()
+            .map(|n| {
+                (
+                    Action::MoveTo(n.clone()),
+                    PlanState {
+                        position: n,
+                        hydrated: false,
+                    },
+                    1,
+                )
+            })
+            .collect();
+        if s.position == self.water {
+            out.push((
+                Action::Drink,
+                PlanState {
+                    position: s.position.clone(),
+                    hydrated: true,
+                },
+                1,
+            ));
+        }
+        out
+    }
+    fn goal(&self, s: &PlanState) -> bool {
+        s.hydrated
+    }
+    fn heuristic(&self, _s: &PlanState) -> u64 {
+        0 // Dijkstra-mode; a geometric heuristic is a followup
+    }
+}
+
+/// Plan the `[move*, drink]` journey to satisfy the sustenance goal, or `None`
+/// if water is unreachable within `budget`.
+/// type-audit: bare-ok(count: budget)
+pub fn plan_to_water(from: &RoomAddr, water: &RoomAddr, budget: usize) -> Option<Vec<Action>> {
+    astar(
+        &GoapSpace {
+            water: water.clone(),
+        },
+        PlanState {
+            position: from.clone(),
+            hydrated: false,
+        },
+        budget,
+    )
+}
+
+/// A navigation-only space (the home-return goal — no Drink): goal is arrival.
+struct NavSpace {
+    dest: RoomAddr,
+}
+impl SearchSpace for NavSpace {
+    type State = RoomAddr;
+    type Action = Action;
+    fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
+        s.neighbors()
+            .into_iter()
+            .map(|n| (Action::MoveTo(n.clone()), n, 1))
+            .collect()
+    }
+    fn goal(&self, s: &RoomAddr) -> bool {
+        *s == self.dest
+    }
+    fn heuristic(&self, _s: &RoomAddr) -> u64 {
+        0
+    }
+}
+
+/// Plan a pure navigation path to `dest` (the home-return goal), or `None`.
+/// type-audit: bare-ok(count: budget)
+pub fn plan_to_room(from: &RoomAddr, dest: &RoomAddr, budget: usize) -> Option<Vec<Action>> {
+    astar(&NavSpace { dest: dest.clone() }, from.clone(), budget)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -872,5 +987,74 @@ mod tests {
             first.provenance
         );
         let _ = ledger;
+    }
+
+    fn raddr(seed: f64) -> RoomAddr {
+        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    }
+
+    #[test]
+    fn plan_to_water_is_a_precondition_chain_move_then_drink() {
+        // Water is a mesh neighbor of home (one step away): plan is [MoveTo(water), Drink].
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let plan = plan_to_water(&home, &water, 10_000).expect("reachable");
+        assert_eq!(plan.len(), 2);
+        assert!(matches!(plan[0], Action::MoveTo(ref r) if *r == water));
+        assert!(matches!(plan[1], Action::Drink));
+    }
+
+    #[test]
+    fn plan_to_water_when_already_there_is_just_drink() {
+        let water = raddr(1.0);
+        let plan = plan_to_water(&water, &water, 10_000).unwrap();
+        assert_eq!(plan, vec![Action::Drink]);
+    }
+
+    #[test]
+    fn every_action_in_a_plan_has_its_precondition_satisfied_in_sequence() {
+        // Execute the plan from `home`, checking each action's precondition holds in
+        // order (the precondition-chain validity: Drink is only ever preceded by
+        // arrival at water). Water two rooms away for a genuine multi-step chain.
+        let home = raddr(1.0);
+        let mid = home.neighbors()[0].clone();
+        let water = mid
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone();
+        let plan = plan_to_water(&home, &water, 10_000).expect("reachable");
+        let mut pos = home.clone();
+        let mut hydrated = false;
+        for a in &plan {
+            match a {
+                Action::MoveTo(n) => {
+                    assert!(
+                        pos.neighbors().contains(n),
+                        "MoveTo precondition: adjacency"
+                    );
+                    pos = n.clone();
+                }
+                Action::Drink => {
+                    assert_eq!(pos, water, "Drink precondition: at water");
+                    hydrated = true;
+                }
+            }
+        }
+        assert!(hydrated, "the plan achieves the goal");
+        assert!(
+            plan.len() >= 3,
+            "multi-step: at least two moves then a drink"
+        );
+    }
+
+    #[test]
+    fn plan_to_room_is_pure_navigation_no_drink() {
+        let home = raddr(1.0);
+        let dest = home.neighbors()[0].clone();
+        let plan = plan_to_room(&home, &dest, 10_000).unwrap();
+        assert!(plan.iter().all(|a| matches!(a, Action::MoveTo(_))));
+        assert!(!plan.is_empty());
     }
 }
