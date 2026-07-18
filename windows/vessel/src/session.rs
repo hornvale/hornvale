@@ -1,7 +1,7 @@
 //! The possession session: a pure step function over a frozen world. Every
 //! verb is read-only; possessing a world never changes it.
 
-use crate::liveness::{AGENT_AT, AgentMovements, Npc, agent_position, derive_npcs};
+use crate::liveness::{AGENT_AT, DriveMovements, Npc, SUSTENANCE, agent_position, derive_npcs};
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, mint_flagship, observable,
@@ -278,14 +278,17 @@ impl<'w> Session<'w> {
             .iter()
             .map(|npc| agent_position(&self.ledger, npc, self.day))
             .collect();
+        let from = self.day;
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let sys = AgentMovements {
+        let sys = DriveMovements {
             npcs: self.npcs.clone(),
-            at_time: self.day,
+            from,
+            to: self.day,
+            params: SUSTENANCE,
         };
-        match tick(&self.ledger, &[&sys], &["agent-movements"], &self.registry) {
+        match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
                 self.ledger = next;
