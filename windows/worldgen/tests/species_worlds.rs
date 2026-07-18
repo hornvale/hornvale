@@ -168,12 +168,14 @@ fn minting_validates_the_kind_against_the_union_roster() {
 }
 
 #[test]
-fn genesis_commits_no_instance_of_facts() {
-    // Spec §3 (the shadow contract): no shipped world mints an instance this
-    // campaign. The mechanism exists; the cutover is a later campaign's
-    // deliberate, drift-owning decision. If this test reddens, someone wired
-    // instance minting into genesis -- that is a save-format event, not a bug
-    // fix. Talk to Nathan first.
+fn genesis_commits_one_instance_of_fact_per_placed_people() {
+    // The ECS Individuation campaign's shadow contract (no shipped world
+    // ever minted an instance) held through that campaign and stayed true
+    // until C2 T5 deliberately lifted it for placed peopled species: each
+    // one now gets exactly one `instance-of` collective (spec §3/§4). The
+    // shadow contract otherwise still holds -- no other roster kind
+    // (deities, culture, material, awakened) mints an instance yet, so the
+    // count here is exactly the placed-people count, not more.
     let w = build_world(
         hornvale_kernel::Seed(42),
         &hornvale_astronomy::SkyPins::default(),
@@ -182,5 +184,10 @@ fn genesis_commits_no_instance_of_facts() {
         &SettlementPins::default(),
     )
     .unwrap();
-    assert_eq!(w.ledger.find(hornvale_kernel::INSTANCE_OF).count(), 0);
+    let placed = hornvale_worldgen::placed_peoples(&w);
+    assert_eq!(
+        w.ledger.find(hornvale_kernel::INSTANCE_OF).count(),
+        placed.len(),
+        "one instance-of collective per placed peopled species"
+    );
 }

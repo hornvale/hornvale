@@ -19,12 +19,14 @@ use hornvale_language::clause::{
 use std::collections::BTreeSet;
 
 /// One world's volume of The Book: the seed it was rendered from plus the
-/// sentences the ledger's `is-a` facts realize.
+/// sentences the ledger's `is-a` and `instance-of` facts realize.
 /// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: lines)
 pub struct BookVolume {
     /// The seed that generated the world this volume renders.
     pub seed: u64,
-    /// One Common sentence per rendered `is-a` fact, in ledger commit order.
+    /// One Common sentence per rendered `is-a` fact (ledger commit order),
+    /// then one per rendered `instance-of` fact (C2 T5: a placed peopled
+    /// species' collective, "The ⟨Autonym⟩ are ⟨species⟩.").
     pub lines: Vec<String>,
 }
 
@@ -50,6 +52,16 @@ fn indefinite_article(word: &str) -> &'static str {
         Some('a' | 'e' | 'i' | 'o' | 'u') => "an",
         _ => "a",
     }
+}
+
+/// An `instance-of` collective's species complement, pluralized: a naive
+/// regular English plural (append `"s"`) — every peopled kind in today's
+/// roster (goblin, hobgoblin, kobold, bugbear) pluralizes regularly, so no
+/// irregular table exists yet. `kind` is the species `KindId` label
+/// committed as the `instance-of` fact's object (e.g. `"goblin"`).
+/// type-audit: bare-ok(identifier-text: kind)
+fn species_label(kind: &str) -> String {
+    format!("{kind}s")
 }
 
 /// The construction table's authored predicate order: fragments join the
@@ -101,7 +113,9 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 /// aggregating that subject's other facts into the sentence via the
 /// construction table (`fragment_for`), in the table's authored order
 /// ([`CONSTRUCTION_ORDER`]) — the sentence's surface order is an authored
-/// grammar decision, not an echo of ledger commit order.
+/// grammar decision, not an echo of ledger commit order. Then one more
+/// sentence per `instance-of` fact (C2 T5): a placed peopled species'
+/// collective, named by its autonym.
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
@@ -153,6 +167,33 @@ pub fn render_volume(world: &World) -> BookVolume {
         }
         lines.push(line);
     }
+    for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
+        // C2 T5: one collective per placed peopled species — "The
+        // ⟨Autonym⟩ are ⟨species⟩." The subject carries its own leading
+        // "The " (there is no per-subject determiner slot in `ClauseSpec`;
+        // `definiteness` here governs only the bare-plural complement, per
+        // the grammar's existing `classify_generic_plural` shape), so this
+        // is the one place that article is written, never doubled.
+        let Value::Text(kind) = &fact.object else {
+            continue;
+        };
+        let subject_entity = fact.subject;
+        let name = world
+            .ledger
+            .text_of(subject_entity, hornvale_kernel::NAME)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
+        let subject = subject_for(subject_entity, format!("The {name}"), &mut named);
+        let line = realize_common(&ClauseSpec {
+            frame: Frame::Classify,
+            subject,
+            complement: species_label(kind),
+            number: Number::Pl,
+            definiteness: Definiteness::Indef,
+            modifiers: Vec::new(),
+        });
+        lines.push(line);
+    }
     BookVolume {
         seed: world.seed.0,
         lines,
@@ -168,7 +209,9 @@ pub fn uncovered_predicates(world: &World) -> Vec<String> {
     let mut gaps: BTreeSet<String> = BTreeSet::new();
     for predicate in world.registry.predicates() {
         let name = predicate.name.as_str();
-        let covered = name == "is-a" || CONSTRUCTION_ORDER.contains(&name);
+        let covered = name == "is-a"
+            || name == hornvale_kernel::INSTANCE_OF
+            || CONSTRUCTION_ORDER.contains(&name);
         if !covered && world.ledger.find(name).next().is_some() {
             gaps.insert(name.to_string());
         }
@@ -298,6 +341,39 @@ mod tests {
             _ => panic!("expected a Modifier fragment"),
         };
         assert_eq!(modifier, "orbiting an orange dwarf (K)");
+    }
+
+    /// C2 T5: every placed peopled species' `instance-of` collective
+    /// renders as "The ⟨Autonym⟩ are ⟨species⟩." — exact strings, seed 1's
+    /// real committed values (verified against the world json): goblin's
+    /// collective is named "Vavako", hobgoblin's "Babako".
+    #[test]
+    fn instance_of_collective_renders_the_autonym_are_species() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        assert!(
+            vol.lines.iter().any(|l| l == "The Vavako are goblins."),
+            "goblin collective renders as the autonym: {:?}",
+            vol.lines
+        );
+        assert!(
+            vol.lines.iter().any(|l| l == "The Babako are hobgoblins."),
+            "hobgoblin collective renders as the autonym: {:?}",
+            vol.lines
+        );
+    }
+
+    /// PROC-15 coverage: `instance-of` is now rendered, so it must drop off
+    /// the uncovered list too.
+    #[test]
+    fn instance_of_drops_off_the_uncovered_list() {
+        let world = generated(1);
+        let gaps = uncovered_predicates(&world);
+        assert!(
+            !gaps.contains(&"instance-of".to_string()),
+            "instance-of is now rendered: {:?}",
+            gaps
+        );
     }
 
     /// Referring-expression reduction: a subject already named earlier in

@@ -2942,6 +2942,54 @@ fn build_to(
         Ok(())
     })?;
 
+    stage("peoples", || -> Result<(), BuildError> {
+        // Every placed peopled species gets one collective entity: an
+        // `instance-of` fact naming the species kind (the ECS Individuation
+        // campaign's mechanism, first wired to genesis here — C2 §3), named
+        // by that people's own word for "person" (Task 1's universal-stratum
+        // concept). Mint order is `placed_peoples`' own order — already
+        // deterministic (alphabetical, `BTreeMap`-backed registry keys; see
+        // `placed_peoples_lists_flagship_holders_in_registry_order`). `day`
+        // is `None` (no draw) and the mint provenance is fixed, matching
+        // every other roster-kind mint's convention.
+        //
+        // A people whose lexicon has no "person" entry (a `LexEntry::Gap`,
+        // or an absent entry) is left unnamed rather than erroring — a
+        // PROC-15 coverage gap, not a build failure. Task 1's `person`
+        // concept is universal-stratum (every lexicon resolves it today),
+        // so this branch is not exercised by any current seed.
+        for kind in placed_peoples(&world) {
+            let collective =
+                mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
+            let autonym = lexicon_of_in(&world, wc, kind.0)?
+                .entry("person")
+                .and_then(|entry| match entry {
+                    hornvale_language::LexEntry::Root { views, .. }
+                    | hornvale_language::LexEntry::Compound { views, .. } => {
+                        Some(views.roman.clone())
+                    }
+                    hornvale_language::LexEntry::Gap { .. } => None,
+                });
+            if let Some(autonym) = autonym {
+                world
+                    .ledger
+                    .commit(
+                        Fact {
+                            subject: collective,
+                            predicate: hornvale_kernel::NAME.into(),
+                            object: Value::Text(autonym),
+                            place: None,
+                            day: None,
+                            provenance: "the people's own word for 'person'".into(),
+                        },
+                        &world.registry,
+                    )
+                    .expect("a freshly minted collective has no prior name fact, so this cannot conflict");
+            }
+        }
+        Ok(())
+    })?;
+
     Ok(world)
 }
 
@@ -4508,6 +4556,19 @@ mod tests {
             names, sorted,
             "registry order is alphabetical (BTreeMap keys)"
         );
+    }
+
+    /// C2 T5: every placed peopled species gets its own collective entity,
+    /// `instance-of` the species kind and named by that people's own word
+    /// for "person" (the autonym).
+    #[test]
+    fn each_placed_people_has_a_named_instance_of_collective() {
+        let world = constant(1);
+        // at least one entity carries instance-of a placed species kind + a name
+        let has = world.ledger.find("instance-of").any(|f| {
+            matches!(&f.object, Value::Text(_)) && world.ledger.text_of(f.subject, "name").is_some()
+        });
+        assert!(has, "a named collective per placed people");
     }
 
     #[test]

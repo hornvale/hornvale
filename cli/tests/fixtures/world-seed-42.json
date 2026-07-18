@@ -11460,8 +11460,48 @@
         "place": null,
         "day": null,
         "provenance": "the dominant people's word for the world"
+      },
+      {
+        "subject": 103,
+        "predicate": "instance-of",
+        "object": {
+          "Text": "goblin"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "the people as a roster kind"
+      },
+      {
+        "subject": 103,
+        "predicate": "name",
+        "object": {
+          "Text": "Neekoa"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "the people's own word for 'person'"
+      },
+      {
+        "subject": 104,
+        "predicate": "instance-of",
+        "object": {
+          "Text": "hobgoblin"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "the people as a roster kind"
+      },
+      {
+        "subject": 104,
+        "predicate": "name",
+        "object": {
+          "Text": "Neegoa"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "the people's own word for 'person'"
       }
     ],
-    "next_entity": 102
+    "next_entity": 104
   }
 }
