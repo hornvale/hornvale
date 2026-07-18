@@ -85,7 +85,7 @@ impl Interner {
     pub(crate) fn get(&self, s: &str) -> Option<Symbol> {
         self.to_symbol.get(s).copied()
     }
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) fn resolve(&self, sym: Symbol) -> &str {
         &self.labels[sym as usize]
     }
