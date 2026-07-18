@@ -158,6 +158,13 @@ impl GeneratedClimate {
     pub fn regime(&self) -> RotationRegime {
         self.regime
     }
+    /// Whether this world is tidally locked — the true source, kept
+    /// separate from `band_count()` even though locked worlds also have no
+    /// bands, so callers don't conflate "no circulation bands" with "locked".
+    /// type-audit: bare-ok(flag)
+    pub fn is_locked(&self) -> bool {
+        matches!(self.regime, RotationRegime::Locked)
+    }
     /// Annual-mean temperature at a cell, °C.
     pub fn mean_temperature_at(&self, cell: CellId) -> Temperature {
         *self.mean_temp.get(cell)

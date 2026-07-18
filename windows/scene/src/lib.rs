@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -146,6 +146,11 @@ pub struct TilesScene {
     /// Moisture index per tile, dimensionless [0, 1].
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub moisture: Vec<f64>,
+    /// Whether this world is tidally locked — the client reads its seasonal
+    /// temperature from the librating-substellar reconstruction rather than
+    /// the hemisphere-signed sinusoid. Appended per the schema stability
+    /// contract.
+    pub locked: bool,
 }
 
 /// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
@@ -231,6 +236,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         season_period_days: climate.year_length_std(),
         circulation_bands: climate.band_count(),
         moisture,
+        locked: climate.is_locked(),
     })
 }
 
@@ -957,6 +963,30 @@ mod tests {
             "absent field must not serialize"
         );
         assert!(json.contains("season_period_days"));
+    }
+
+    #[test]
+    fn tiles_scene_marks_locked_worlds() {
+        use hornvale_kernel::Seed;
+        use hornvale_worldgen::{SkyChoice, build_world};
+        let build = |s| {
+            build_world(
+                Seed(s),
+                &Default::default(),
+                SkyChoice::Generated,
+                &Default::default(),
+                &Default::default(),
+            )
+            .unwrap()
+        };
+        assert!(
+            tiles_scene(&build(8), 16).unwrap().locked,
+            "seed 8 is tidally locked"
+        );
+        assert!(
+            !tiles_scene(&build(42), 16).unwrap().locked,
+            "seed 42 spins"
+        );
     }
 
     #[test]
