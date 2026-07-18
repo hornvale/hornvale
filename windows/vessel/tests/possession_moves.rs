@@ -25,9 +25,13 @@ fn day_zero_session_is_unchanged_until_you_wait() {
 fn waiting_moves_an_npc_and_it_is_observed() {
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
-    // Wait long enough to cross into an active phase for at least one NPC.
-    let out = session.handle("wait 1");
-    // After a day of waiting, at least one agent-at has been committed.
+    // The drive model (the-wanting): an NPC starts away from its resource
+    // with drive 0 at world day 0, rising at SUSTENANCE's 0.15/day. Starting
+    // at day 0.5 (PossessOpts::default), the seek threshold (0.85) is
+    // crossed at world day ~5.667 and the return (sated 0.15) at ~6.833 — a
+    // "wait 7" spans one full genuine drive cycle (departure + return).
+    let out = session.handle("wait 7");
+    // After a full drive cycle, at least one agent-at has been committed.
     assert!(
         session.committed_agent_at_count() >= 1,
         "the world moved on wait"
@@ -62,10 +66,13 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
     // settlement is guaranteed to contribute a derived NPC sharing the
     // player's starting room, and `wait`'s narration must name that NPC's
     // actual transition through the room — not just count a generic
-    // "stirred" tally. Seed 42, day 0.5 (noon, PossessOpts::default) starts
-    // in the diurnal active band, so the home-settlement NPC is already at
-    // its destination; the schedule then alternates rest/active every half
-    // day at this fraction, giving a clean departure-then-return sequence.
+    // "stirred" tally. The drive model (the-wanting) replaces the old
+    // fixed half-day schedule: every derived NPC starts away from its
+    // resource with drive 0 at world day 0, rising at SUSTENANCE's
+    // 0.15/day, so (from day 0.5, PossessOpts::default) the seek threshold
+    // (0.85) is crossed at world day ~5.667 (departure) and the return
+    // (sated 0.15, falling at 0.6/day) at ~6.833 — giving a clean
+    // departure-then-return sequence across three waits.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
     let labels: Vec<String> = session
@@ -80,11 +87,12 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
         Turn::Released(_) => panic!("wait never releases"),
     };
 
-    // day 0.5 -> 1.0 (midnight, rest): no transition yet.
-    let _ = session.handle("wait 0.5");
-    // day 1.0 -> 1.5 (noon, active): the co-located NPC departs; the
-    // colocation branch must name it, not fall back to "stirred".
-    let departure = out_text(session.handle("wait 0.5"));
+    // day 0.5 -> 5.5: still short of the ~5.667 departure crossing: no
+    // transition yet.
+    let _ = session.handle("wait 5");
+    // day 5.5 -> 6.5: crosses the ~5.667 seek threshold: the co-located NPC
+    // departs; the colocation branch must name it, not fall back to "stirred".
+    let departure = out_text(session.handle("wait 1"));
     assert!(
         labels.iter().any(|l| departure.contains(l.as_str())),
         "departure must name a co-located NPC by label, got: {departure}"
@@ -94,8 +102,9 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
         "the specific colocation branch must fire, not the generic fallback: {departure}"
     );
 
-    // day 1.5 -> 2.0 (midnight, rest): the NPC returns; must also be named.
-    let return_text = out_text(session.handle("wait 0.5"));
+    // day 6.5 -> 8.5: crosses the ~6.833 return threshold (and no further
+    // crossing until ~11.5): the NPC returns; must also be named.
+    let return_text = out_text(session.handle("wait 2"));
     assert!(
         labels.iter().any(|l| return_text.contains(l.as_str())),
         "return must also name the co-located NPC, got: {return_text}"
@@ -134,8 +143,9 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
         "before any wait, no dated agent-at exists to recount: {before}"
     );
 
-    // Advance across a phase so the tick commits at least one agent-at.
-    session.handle("wait 1");
+    // Advance across a full drive cycle (the-wanting: ~5.667 days to the
+    // seek crossing) so the tick commits at least one agent-at.
+    session.handle("wait 7");
     assert!(session.committed_agent_at_count() >= 1, "the NPC moved");
 
     let recount = out_text(session.handle(&format!("why {label}")));
@@ -150,6 +160,68 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
     assert!(
         !recount.contains("No one here answers"),
         "the label must resolve to the NPC that actually moved: {recount}"
+    );
+    // THE WANTING T4: the drive-driven move's provenance ("sought water
+    // (thirst)") must surface through the SAME recount, not just an
+    // undifferentiated "it moved" — the drive is what gives the routine a
+    // WHY. Mutation-verify: blanking `DriveMovements::step`'s provenance
+    // string in `liveness.rs` reds this assertion while leaving every other
+    // assertion in this test green (the day/name/resolution checks above
+    // don't touch provenance text at all).
+    assert!(
+        recount.contains("sought water (thirst)"),
+        "the recount names the drive's own reason for the move: {recount}"
+    );
+}
+
+#[test]
+fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cycle() {
+    // THE FELT-STATE READ (the-wanting T4): `needs` renders a co-located
+    // NPC's drive as diegetic prose, never a number, and that prose must
+    // actually track the drive over time — not a static line. The
+    // possessed agent's own settlement guarantees a co-located NPC at the
+    // starting room (the-quickening T3 review), and every derived NPC
+    // starts away from its resource with drive 0 at world day 0, rising at
+    // SUSTENANCE's 0.15/day (act 0.85, sated 0.15).
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(_) => panic!("needs never releases"),
+    };
+
+    // Day 0.5 (PossessOpts::default, before any wait): the co-located
+    // home-settlement NPC's drive is barely risen (0.5 * 0.15 = 0.075),
+    // at or below the `sated` threshold (0.15) -> "seems content".
+    let early = out_text(session.handle("needs"));
+    assert!(
+        early.contains("seems content"),
+        "a freshly derived NPC reads content at day 0.5: {early}"
+    );
+    assert!(
+        !early.contains("No one else is here"),
+        "the home settlement's NPC must be co-located at the start: {early}"
+    );
+
+    // Wait to day 5.5: still short of the ~5.667 seek crossing (still away
+    // from the resource, still co-located at home), but the drive has
+    // risen into the dead-band (5.5 * 0.15 = 0.825, between sated and act)
+    // -> "could do with a drink", not "seems content" anymore.
+    session.handle("wait 5");
+    let later = out_text(session.handle("needs"));
+    assert!(
+        later.contains("could do with a drink"),
+        "a risen drive reads as wanting, not content: {later}"
+    );
+
+    // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
+    // drive cycle. Fixing the drive to a constant (e.g. always returning
+    // `SUSTENANCE.initial`) would make `early == later` (both "seems
+    // content") and red this line.
+    assert_ne!(
+        early, later,
+        "the felt state must differ across the drive cycle: {early} / {later}"
     );
 }
 
@@ -167,7 +239,9 @@ fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
         .and_then(|l| l.split(['[', ']']).nth(1))
         .and_then(|s| s.parse().ok())
         .expect("npcs lists at least one [id] label line");
-    session.handle("wait 1");
+    // Advance across a full drive cycle (the-wanting) so the id-resolved
+    // NPC has a committed, dated agent-at to recount.
+    session.handle("wait 7");
     match session.handle(&format!("why {id}")) {
         Turn::Out(s) => assert!(s.contains("day"), "id-resolved recount names a day: {s}"),
         _ => panic!("why must not release"),

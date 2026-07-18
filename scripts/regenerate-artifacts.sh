@@ -77,17 +77,20 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-walk.txt 
 } > book/src/gallery/possession-seed-42.md
 rm -f "$possess_tmp"
 
-# The over-time transcript (the-quickening, T4): a NEW, separate recording —
-# the day-0 transcript above never advances time, so it cannot show the
-# world moving. This one `wait`s across an activity phase, so a derived NPC
-# departs and returns (named on `look`/`wait`'s own narration) and a `why`
-# recounts its dated `agent-at` history. Wiring it here (rather than editing
-# the day-0 script) is what keeps the day-0 transcript byte-identical.
+# The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
+# separate recording — the day-0 transcript above never advances time, so it
+# cannot show the world moving. This one `wait`s across a full drive cycle,
+# so a derived NPC's homeostatic thirst rises, it departs for its resource
+# and returns (named on `look`/`wait`'s own narration and readable directly
+# via `needs`'s diegetic felt-state prose), and `why` recounts its dated
+# `agent-at` history with the drive's own provenance ("sought water
+# (thirst)"). Wiring it here (rather than editing the day-0 script) is what
+# keeps the day-0 transcript byte-identical.
 possess_ot_tmp="$(mktemp)"
 run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
 {
     head -n 1 "$possess_ot_tmp"
-    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s: watch a\nderived NPC depart and return as sim time advances, and `why` recount its\ndated history. The world still moves only inside a possess session; a\nfreshly built world commits none of this.)*\n'
+    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty, seek its\nresource, and return — narrated by `wait`, felt directly through `needs`,\nand recounted with its own reason by `why`. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
 } > book/src/gallery/possession-over-time-seed-42.md
 rm -f "$possess_ot_tmp"

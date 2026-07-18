@@ -1,7 +1,9 @@
 //! The possession session: a pure step function over a frozen world. Every
 //! verb is read-only; possessing a world never changes it.
 
-use crate::liveness::{AGENT_AT, AgentMovements, Npc, agent_position, derive_npcs};
+use crate::liveness::{
+    AGENT_AT, DriveMovements, Npc, SUSTENANCE, agent_position, derive_npcs, drive_at,
+};
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable,
@@ -24,6 +26,7 @@ verbs:
   knows            everything they have seen
   npcs             the derived NPCs sharing this world (label, id)
   why <who>        recount an NPC's dated history (by label or id)
+  needs            read the felt state of anyone sharing this room
   tell <sentence>  speak a line of Common; you absorb what it says
   release          let go (quit works too)
 ";
@@ -170,6 +173,7 @@ impl<'w> Session<'w> {
             "knows" => Turn::Out(self.knows()),
             "npcs" => Turn::Out(self.list_npcs()),
             "why" => Turn::Out(self.why(rest)),
+            "needs" => Turn::Out(self.needs()),
             "tell" => Turn::Out(self.tell(rest)),
             "enter" | "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
@@ -280,14 +284,17 @@ impl<'w> Session<'w> {
             .iter()
             .map(|npc| agent_position(&self.ledger, npc, self.day))
             .collect();
+        let from = self.day;
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let sys = AgentMovements {
+        let sys = DriveMovements {
             npcs: self.npcs.clone(),
-            at_time: self.day,
+            from,
+            to: self.day,
+            params: SUSTENANCE,
         };
-        match tick(&self.ledger, &[&sys], &["agent-movements"], &self.registry) {
+        match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
                 self.ledger = next;
@@ -424,6 +431,46 @@ impl<'w> Session<'w> {
             ledger: self.ledger.clone(),
         };
         hornvale_historiography::recount(&evolved, entity)
+    }
+
+    /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):
+    /// diegetic prose for every CO-LOCATED NPC's drive, never a raw number.
+    /// Deliberately reads the NPCs, not the possessed agent — the player's
+    /// own moves are never committed as `agent-at` (only NPCs' are), so
+    /// `drive_at` for the player would fold an empty history and read
+    /// eternally parched (a followup, decision-ledger #8 / G4 correction (a)
+    /// rides player-acts-mutate, Campaign IV). A co-located NPC's drive IS a
+    /// real fold over its own committed history, so its felt state is
+    /// meaningful the moment the drive model exists.
+    fn needs(&self) -> String {
+        let here: Vec<&Npc> = self
+            .npcs
+            .iter()
+            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
+            .collect();
+        if here.is_empty() {
+            return "No one else is here to read.".to_string();
+        }
+        here.iter()
+            .map(|npc| {
+                let drive = drive_at(
+                    &self.ledger,
+                    npc.entity,
+                    &npc.resource,
+                    self.day,
+                    &SUSTENANCE,
+                );
+                let felt = if drive >= SUSTENANCE.act {
+                    "looks parched"
+                } else if drive <= SUSTENANCE.sated {
+                    "seems content"
+                } else {
+                    "could do with a drink"
+                };
+                format!("The {} {felt}.", npc.label)
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     /// Speak a Common sentence: the session absorbs its own spoken line

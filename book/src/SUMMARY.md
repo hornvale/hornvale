@@ -168,6 +168,7 @@
 - [The Quickening](./chronicle/the-quickening.md)
 - [The Shadow Track](./chronicle/the-shadow-track.md)
 - [The Echo](./chronicle/the-echo.md)
+- [The Wanting](./chronicle/the-wanting.md)
 
 # Appendix: The Frontier
 
