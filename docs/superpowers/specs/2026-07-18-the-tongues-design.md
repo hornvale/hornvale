@@ -1,6 +1,6 @@
 # C3 — The Tongues: Design
 
-**Status:** Draft for G3 review (2026-07-18) · **Author:** Claude
+**Status:** G3-approved (2026-07-18) · **Author:** Claude
 (campaign-autopilot) · **Decider:** Nathan · **Program:**
 [The Self-Writing Book metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md)
 (committed campaign C3; follows the inserted Echo).
@@ -139,6 +139,10 @@ tongues sections (drifting commit). Census: untouched.
   translation is LANG-3's sequel territory).
 
 ## 8. Flagged for G3
+
+> **G3 OUTCOME (Nathan, 2026-07-18): APPROVED as written** — stream naming
+> confirmed (flag 1), drawn-not-derived ratified (flag 2), the honest-gap
+> presentation stands (flag 3).
 
 1. **New permanent stream labels** (save-format surface, additive):
    `language/<species>/grammar/{constituent-order,copula,articles}` —
