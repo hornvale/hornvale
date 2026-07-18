@@ -189,6 +189,21 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
         recount.contains("walking to water (thirst)"),
         "the recount names the drive's own reason for the move: {recount}"
     );
+    // THE FORESIGHT T4: `why` is domain-agnostic (`historiography::recount`
+    // replays every fact `facts_about(entity)` yields, regardless of
+    // predicate), so the SAME recount that names the moves must also name
+    // the `drank` fact the journey was FOR — the precondition chain's
+    // payoff (`[move*, drink]`) is only legible as a story if the recount
+    // shows the goal being MET, not just the route to it. "wait 7" spans
+    // the full ~5.667-day crossing plus the two MOVE_DURATION hops, so by
+    // day 7 the NPC has walked to water AND drunk. Mutation-verify: blanking
+    // `drank_fact`'s provenance string ("drank (thirst sated)") in
+    // `liveness.rs` reds this assertion alone, leaving the move-provenance
+    // assertion above (a distinct string) green.
+    assert!(
+        recount.contains("drank (thirst sated)"),
+        "the recount also names the drink that satisfied the goal: {recount}"
+    );
 }
 
 #[test]

@@ -169,6 +169,7 @@
 - [The Shadow Track](./chronicle/the-shadow-track.md)
 - [The Echo](./chronicle/the-echo.md)
 - [The Wanting](./chronicle/the-wanting.md)
+- [The Foresight](./chronicle/the-foresight.md)
 
 # Appendix: The Frontier
 

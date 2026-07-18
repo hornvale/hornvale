@@ -1,5 +1,17 @@
 # The Foresight (The Walk · Milestone 2 · the GOAP goal rung) — Design
 
+> **STATUS: SHIPPED** — *The Foresight*, all four tasks landed on
+> `worktree-the-foresight` 2026-07-18 (byte-identical; census-free; the
+> planner runs only inside a possess session). PSY-6's goal rung: a
+> general, tense-agnostic deterministic A* in the kernel (`SearchSpace` +
+> `astar`), GOAP as its first instantiation over a minimal two-action space
+> (`MoveTo`/`Drink`) whose precondition chain (`Drink` gated by at-water)
+> makes the planner discover `[move*, drink]`, not just a path; `decide`'s
+> body swaps in as The Wanting's reserved seam anticipated. Arbitration, the
+> psychology-vector cost, and planning-over-belief stay reserved as the next
+> three body-swaps (§9). Chronicle: `book/src/chronicle/the-foresight.md`.
+> Retrospective: `docs/retrospectives/the-foresight.md`.
+
 Program: **The Walk** (metaplan `docs/superpowers/specs/2026-07-11-the-walk-metaplan-design.md`,
 Milestone 2 "the living world," Campaign V — the THIRD liveness slice: PSY-6's
 **goal rung**, the A* planner). Base: main `@36cd84c`. Builds on **The Wanting**
