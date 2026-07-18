@@ -82,8 +82,11 @@ Individuation) never collided on a subject.
   this entity currently rostered as" (species, settlement-kind,
   deity-kind, material) and survives a kind change that `is-a` could
   never represent.
-- Both are kernel-core predicates (`KERNEL_CORE_PREDICATES`), registered
-  by `World::new`, and both are legitimate inputs to The Book's
+- Both are kernel-registered predicates (`World::new` registers `IS_A`
+  and `INSTANCE_OF` directly, not any one domain). Of the two, only
+  `instance-of` sits in `KERNEL_CORE_PREDICATES` — the shared multi-writer
+  exemption list for `single_writer_check` — because `is-a` has a single
+  genesis writer and needs no exemption. Both are legitimate inputs to The Book's
   construction table: C2 wires `is-a` for the planet's opening sentence
   and `instance-of` for placed-people collectives in the same
   aggregation pass, with neither predicate standing in for the other.
