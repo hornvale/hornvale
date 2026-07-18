@@ -832,6 +832,126 @@ pub fn neighbors_json(scene: &NeighborsScene) -> String {
     serde_json::to_string(scene).expect("a NeighborsScene always serializes")
 }
 
+/// The `scene/eclipses/v1` schema tag.
+/// type-audit: bare-ok(identifier-text)
+pub const ECLIPSES_SCHEMA: &str = "scene/eclipses/v1";
+
+/// One solar eclipse's shadow band on the globe.
+/// type-audit: pending(wave-1: center_lat_deg), pending(wave-1: half_width_deg), pending(wave-1: start_lon_deg), pending(wave-1: end_lon_deg), pending(wave-2: duration_days)
+#[derive(Debug, Serialize)]
+pub struct GroundTrackElem {
+    /// Band-center latitude at mid-event, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub center_lat_deg: f64,
+    /// Half-width of the full-omen band, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub half_width_deg: f64,
+    /// Sub-solar longitude at crossing start, degrees [-180, 180).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub start_lon_deg: f64,
+    /// Sub-solar longitude at crossing end, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub end_lon_deg: f64,
+    /// Crossing duration, standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub duration_days: f64,
+}
+
+/// One dated eclipse.
+/// type-audit: pending(wave-2: day), bare-ok(count: moon_index), bare-ok(identifier-text: body), bare-ok(identifier-text: kind)
+#[derive(Debug, Serialize)]
+pub struct EclipseElem {
+    /// The syzygy, absolute standard days.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub day: f64,
+    /// Distance-sorted index into the system's moons.
+    pub moon_index: usize,
+    /// "solar" or "lunar".
+    pub body: String,
+    /// "total" or "annular".
+    pub kind: String,
+    /// The shadow band — `Some` for solar events, `None` (serialized as JSON
+    /// `null`) for lunar (the anchor's shadow is the whole night side). NOT
+    /// `skip_serializing_if` — the field is always present so the client sees
+    /// an explicit `"track": null`, matching the spec's `track | null`.
+    pub track: Option<GroundTrackElem>,
+}
+
+/// One `scene/eclipses/v1` document: the dated eclipses in a queried window.
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), pending(wave-2: from_day), pending(wave-2: until_day)
+#[derive(Debug, Serialize)]
+pub struct EclipsesScene {
+    /// Always `scene/eclipses/v1`.
+    pub schema: String,
+    /// The world's seed.
+    pub seed: u64,
+    /// The queried window start, echoed back (standard days).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub from_day: f64,
+    /// The queried window end.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub until_day: f64,
+    /// The dated eclipses, day-ascending.
+    pub events: Vec<EclipseElem>,
+}
+
+/// Build the `scene/eclipses/v1` scene for `world` over `[from, until]`
+/// standard days. Errors when the world has no generated sky (no moons, no
+/// eclipses) or when the window itself is invalid (`from`/`until` negative
+/// or non-finite) — mirrors [`moons_scene`]. Pure read: consumes no draws.
+/// type-audit: pending(wave-2: from), pending(wave-2: until)
+pub fn eclipses_scene(world: &World, from: f64, until: f64) -> Result<EclipsesScene, SceneError> {
+    use hornvale_astronomy::StdDays;
+    let sky = hornvale_worldgen::sky_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let system = sky
+        .system()
+        .ok_or_else(|| SceneError::Build("this world has no generated sky".to_string()))?;
+    let from_day = StdDays::new(from).map_err(|e| SceneError::Build(e.to_string()))?;
+    let until_day = StdDays::new(until).map_err(|e| SceneError::Build(e.to_string()))?;
+    let calendar = hornvale_astronomy::calendar_of(system);
+    let events = hornvale_astronomy::eclipse_events(system, &calendar, from_day, until_day)
+        .into_iter()
+        .map(|ev| {
+            let track =
+                hornvale_astronomy::ground_track(system, &calendar, &ev).map(|g| GroundTrackElem {
+                    center_lat_deg: g.center_lat_deg,
+                    half_width_deg: g.half_width_deg,
+                    start_lon_deg: g.start_lon_deg,
+                    end_lon_deg: g.end_lon_deg,
+                    duration_days: g.duration_days,
+                });
+            EclipseElem {
+                day: ev.day.get(),
+                moon_index: ev.moon,
+                body: match ev.body {
+                    hornvale_astronomy::EclipseBody::Solar => "solar",
+                    hornvale_astronomy::EclipseBody::Lunar => "lunar",
+                }
+                .to_string(),
+                kind: match ev.kind {
+                    hornvale_astronomy::EclipseKind::Total => "total",
+                    hornvale_astronomy::EclipseKind::Annular => "annular",
+                }
+                .to_string(),
+                track,
+            }
+        })
+        .collect();
+    Ok(EclipsesScene {
+        schema: ECLIPSES_SCHEMA.to_string(),
+        seed: world.seed.0,
+        from_day: from,
+        until_day: until,
+        events,
+    })
+}
+
+/// Serialize an `EclipsesScene` to compact JSON (mirrors [`moons_json`]).
+/// type-audit: bare-ok(artifact: return)
+pub fn eclipses_json(scene: &EclipsesScene) -> String {
+    serde_json::to_string(scene).expect("an EclipsesScene always serializes")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1454,5 +1574,51 @@ mod tests {
         let _ = neighbors_scene(&w).unwrap();
         let after = serde_json::to_string(&w).unwrap();
         assert_eq!(before, after, "neighbors_scene must not alter the world");
+    }
+
+    #[test]
+    fn eclipses_scene_has_schema_window_and_is_deterministic() {
+        let w = mooned_world();
+        // A wide window so seed 42's two moons produce several events.
+        let a = eclipses_scene(&w, 0.0, 2000.0).expect("mooned world has eclipses");
+        assert_eq!(a.schema, "scene/eclipses/v1");
+        assert_eq!(a.seed, w.seed.0);
+        assert_eq!(a.from_day, 0.0);
+        assert_eq!(a.until_day, 2000.0);
+        assert!(
+            !a.events.is_empty(),
+            "seed 42's moons eclipse within 2000 days"
+        );
+        // Day-ascending, inside the window.
+        for e in &a.events {
+            assert!((0.0..=2000.0).contains(&e.day));
+            assert!(e.body == "solar" || e.body == "lunar");
+            assert!(e.kind == "total" || e.kind == "annular");
+        }
+        for win in a.events.windows(2) {
+            assert!(win[0].day <= win[1].day, "events are day-ascending");
+        }
+        // Solar events carry a track; lunar events carry none.
+        for e in &a.events {
+            if e.body == "solar" {
+                let t = e.track.as_ref().expect("a solar event has a ground track");
+                assert!((-90.0..=90.0).contains(&t.center_lat_deg));
+                assert!((-180.0..180.0).contains(&t.start_lon_deg));
+            } else {
+                assert!(e.track.is_none(), "a lunar event has no ground track");
+            }
+        }
+        // Byte-identical on rebuild.
+        assert_eq!(
+            eclipses_json(&a),
+            eclipses_json(&eclipses_scene(&w, 0.0, 2000.0).unwrap())
+        );
+    }
+
+    #[test]
+    fn eclipses_scene_rejects_a_world_with_no_generated_sky() {
+        // Mirror the moons/neighbors constant-sun refusal test.
+        let w = world();
+        assert!(eclipses_scene(&w, 0.0, 100.0).is_err());
     }
 }
