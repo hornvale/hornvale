@@ -182,6 +182,129 @@ pub fn quantity(x: f64) -> String {
     format!("about {truncated:.1}")
 }
 
+/// The closed complement lexeme set a parse call recognizes, e.g. every
+/// concept name registered for the calling culture/world. Longest-match
+/// wins when one complement is a prefix of another (`"dwarf"` vs.
+/// `"yellow-white dwarf"`).
+/// type-audit: bare-ok(identifier-text: complements)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParseContext {
+    /// The recognized complement lexemes, e.g. `"planet"`,
+    /// `"yellow-white dwarf"`.
+    pub complements: std::collections::BTreeSet<String>,
+}
+
+/// Why `parse_common` refused to invert a sentence — each variant is a
+/// recountable, specific reason rather than a bare "parse failed".
+/// type-audit: bare-ok(prose: UnknownComplement.after), bare-ok(prose: BadTail.tail)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ParseError {
+    /// Neither `" is "` nor `" are "` appears, so no subject/copula split
+    /// exists.
+    NoCopula,
+    /// The text after the determiner doesn't match (a prefix of) any
+    /// complement in the caller's `ParseContext`.
+    UnknownComplement {
+        /// The unrecognized text following the determiner.
+        after: String,
+    },
+    /// Text follows the matched complement that is neither empty nor a
+    /// `' '`-prefixed modifier tail.
+    BadTail {
+        /// The offending trailing text.
+        tail: String,
+    },
+    /// The text has no terminal `.`, so the construction's final literal
+    /// never matched.
+    Unterminated,
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseError::NoCopula => write!(f, "no ' is '/' are ' copula found"),
+            ParseError::UnknownComplement { after } => {
+                write!(f, "no registered complement matches '{after}'")
+            }
+            ParseError::BadTail { tail } => {
+                write!(f, "trailing text '{tail}' is not a valid modifier tail")
+            }
+            ParseError::Unterminated => write!(f, "sentence has no terminal '.'"),
+        }
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+/// Invert `realize_common`: parse a Common sentence back into the
+/// `ClauseSpec` that would realize it. Walks the `Classify` construction's
+/// entry backward — the boundaries come from the construction's shape, and
+/// the subject/copula split happens at the EARLIEST `" is "`/`" are "`
+/// occurrence (so a subject itself never contains the copula word).
+/// type-audit: bare-ok(prose)
+pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseError> {
+    // Terminal literal first.
+    let body = text.strip_suffix('.').ok_or(ParseError::Unterminated)?;
+    // Subject | Copula: split at the earliest " is " / " are ".
+    let is_at = body.find(" is ");
+    let are_at = body.find(" are ");
+    let (subject_text, number, rest) = match (is_at, are_at) {
+        (Some(i), Some(a)) if i < a => (&body[..i], Number::Sg, &body[i + 4..]),
+        (Some(i), None) => (&body[..i], Number::Sg, &body[i + 4..]),
+        (_, Some(a)) => (&body[..a], Number::Pl, &body[a + 5..]),
+        (None, None) => return Err(ParseError::NoCopula),
+    };
+    let subject = match subject_text {
+        "it" => Subject::Pronoun("it"),
+        "its" => Subject::Pronoun("its"),
+        name => Subject::Name(name.to_string()),
+    };
+    // Determiner.
+    let (definiteness, after_det) = if let Some(r) = rest.strip_prefix("the ") {
+        (Definiteness::Def, r)
+    } else if let Some(r) = rest.strip_prefix("an ") {
+        (Definiteness::Indef, r)
+    } else if let Some(r) = rest.strip_prefix("a ") {
+        (Definiteness::Indef, r)
+    } else {
+        (Definiteness::Indef, rest) // bare plural generic
+    };
+    // Complement: longest match from the closed set.
+    let complement = ctx
+        .complements
+        .iter()
+        .filter(|c| {
+            after_det == c.as_str()
+                || after_det
+                    .strip_prefix(c.as_str())
+                    .is_some_and(|r| r.starts_with(' '))
+        })
+        .max_by_key(|c| c.len())
+        .cloned()
+        .ok_or_else(|| ParseError::UnknownComplement {
+            after: after_det.to_string(),
+        })?;
+    // Modifier tail: '' or ' m1' or ' m1, m2, …'.
+    let tail = &after_det[complement.len()..];
+    let modifiers: Vec<String> = if tail.is_empty() {
+        Vec::new()
+    } else if let Some(t) = tail.strip_prefix(' ') {
+        t.split(", ").map(str::to_string).collect()
+    } else {
+        return Err(ParseError::BadTail {
+            tail: tail.to_string(),
+        });
+    };
+    Ok(ClauseSpec {
+        frame: Frame::Classify,
+        subject,
+        complement,
+        number,
+        definiteness,
+        modifiers,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -257,6 +380,240 @@ mod tests {
         let inv = common_constructions();
         assert_eq!(inv.len(), 1);
         assert_eq!(inv[0].frame, Frame::Classify);
-        assert!(matches!(inv[0].parts.first(), Some(Part::Subject)));
+        assert_eq!(
+            inv[0].parts,
+            &[
+                Part::Subject,
+                Part::Literal(" "),
+                Part::Copula,
+                Part::Literal(" "),
+                Part::Determiner,
+                Part::Complement,
+                Part::ModifierTail,
+                Part::Literal("."),
+            ]
+        );
+    }
+
+    fn ctx(words: &[&str]) -> ParseContext {
+        ParseContext {
+            complements: words.iter().map(|w| (*w).to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn parse_inverts_the_c2_target_sentence() {
+        let spec = parse_common(
+            "Vebe is a planet with two moons, orbiting a yellow-white dwarf.",
+            &ctx(&["planet"]),
+        )
+        .unwrap();
+        assert_eq!(spec.subject, Subject::Name("Vebe".into()));
+        assert_eq!(spec.complement, "planet");
+        assert_eq!(spec.number, Number::Sg);
+        assert_eq!(spec.definiteness, Definiteness::Indef);
+        assert_eq!(
+            spec.modifiers,
+            vec![
+                "with two moons".to_string(),
+                "orbiting a yellow-white dwarf".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_inverts_the_plural_generic() {
+        let spec = parse_common("The Vavako are goblins.", &ctx(&["goblins"])).unwrap();
+        assert_eq!(spec.subject, Subject::Name("The Vavako".into()));
+        assert_eq!(spec.number, Number::Pl);
+        assert_eq!(spec.definiteness, Definiteness::Indef);
+        assert_eq!(spec.modifiers, Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_reports_a_recountable_failure() {
+        assert!(matches!(
+            parse_common("Vebe is a carriage.", &ctx(&["planet"])),
+            Err(ParseError::UnknownComplement { .. })
+        ));
+        // "wordless" has no terminal '.', hitting Unterminated before the
+        // copula search ever runs — the terminal check is the FIRST gate.
+        // NoCopula needs a terminated sentence that still lacks " is "/" are ".
+        assert!(matches!(
+            parse_common("wordless.", &ctx(&["planet"])),
+            Err(ParseError::NoCopula)
+        ));
+        assert!(matches!(
+            parse_common("wordless", &ctx(&["planet"])),
+            Err(ParseError::Unterminated)
+        ));
+    }
+
+    // --- The round-trip property: parse_common(realize_common(s), ctx_from(s)) == Ok(s) ---
+
+    /// Classify a subject into the coverage axis the property test tracks.
+    fn subject_kind(s: &Subject) -> &'static str {
+        match s {
+            Subject::Pronoun(_) => "pronoun",
+            Subject::Name(n) if n.contains(' ') => "multi-word-name",
+            Subject::Name(_) => "single-word-name",
+        }
+    }
+
+    /// Classify a complement lexeme into the coverage axis the property
+    /// test tracks. Multi-word wins over vowel-initial so a phrase like
+    /// "ancient artifact" (both) still counts toward multi-word coverage;
+    /// "elemental" alone covers vowel-initial.
+    fn complement_kind(c: &str) -> &'static str {
+        if c.contains(' ') {
+            "multi-word"
+        } else if matches!(c.chars().next(), Some('a' | 'e' | 'i' | 'o' | 'u')) {
+            "vowel-initial"
+        } else {
+            "consonant-initial"
+        }
+    }
+
+    fn number_str(n: Number) -> &'static str {
+        match n {
+            Number::Sg => "sg",
+            Number::Pl => "pl",
+        }
+    }
+
+    fn definiteness_str(d: Definiteness) -> &'static str {
+        match d {
+            Definiteness::Indef => "indef",
+            Definiteness::Def => "def",
+        }
+    }
+
+    /// Build the closed complement set a real caller would hand
+    /// `parse_common`: the spec's own complement, plus decoys that probe
+    /// longest-match — other legal complements from the same closed
+    /// vocabulary, the first word of a multi-word complement (a genuine
+    /// prefix that must lose to the full phrase), and a same-phrase-minus-
+    /// one-character truncation (must NOT match at all: the boundary check
+    /// requires the character after a matched prefix to be a space).
+    fn ctx_from(spec: &ClauseSpec) -> ParseContext {
+        let mut complements = std::collections::BTreeSet::new();
+        complements.insert(spec.complement.clone());
+        // Stock decoys: other legal complements from the closed vocabulary,
+        // always present as noise the true complement must outrank.
+        for stock in [
+            "planet",
+            "goblins",
+            "elemental",
+            "yellow-white dwarf",
+            "ancient artifact",
+            "dwarf",
+        ] {
+            complements.insert(stock.to_string());
+        }
+        // Prefix-of-longer probe: the first word of a multi-word complement.
+        if let Some((first, _)) = spec.complement.split_once(' ') {
+            complements.insert(first.to_string());
+        }
+        // Must-not-match probe: one character short of the real complement.
+        if spec.complement.len() > 1 {
+            let mut truncated = spec.complement.clone();
+            truncated.pop();
+            complements.insert(truncated);
+        }
+        ParseContext { complements }
+    }
+
+    #[test]
+    fn round_trip_over_the_closed_value_space() {
+        // Full-factorial enumeration, NOT a Stream draw: the value space
+        // here is small and genuinely closed (5 subjects x 5 complements x
+        // 2 numbers x 2 definitenesses x 4 modifier-counts = 400 cases), so
+        // exhaustive enumeration GUARANTEES every combo fires at least
+        // once. A drawn sample only gives that probabilistically — and the
+        // Concordance campaign shipped a property test whose random
+        // generator never once emitted the one value (signed zero) that
+        // broke the invariant. Enumeration is strictly stronger here and
+        // costs nothing extra since the space is small.
+        let subjects: Vec<Subject> = vec![
+            Subject::Name("Vebe".into()),
+            Subject::Name("Aoth".into()),
+            Subject::Name("MacTavish".into()), // mixed-case: interior capital
+            Subject::Name("The Vavako".into()), // multi-word
+            Subject::Pronoun("it"),
+        ];
+        let complements = [
+            "planet",             // consonant-initial
+            "goblins",            // consonant-initial
+            "elemental",          // vowel-initial
+            "yellow-white dwarf", // multi-word, hyphenated first word
+            "ancient artifact",   // multi-word AND vowel-initial
+        ];
+        let modifier_pool = [
+            "with two moons",
+            "orbiting a yellow-white dwarf",
+            "beneath ancient stars",
+        ];
+
+        let mut covered: std::collections::BTreeSet<(
+            &'static str,
+            &'static str,
+            &'static str,
+            &'static str,
+            usize,
+        )> = std::collections::BTreeSet::new();
+        let mut cases = 0usize;
+
+        for subject in &subjects {
+            for complement in complements {
+                for number in [Number::Sg, Number::Pl] {
+                    for definiteness in [Definiteness::Indef, Definiteness::Def] {
+                        for modifier_count in 0..=3usize {
+                            let modifiers: Vec<String> = modifier_pool[..modifier_count]
+                                .iter()
+                                .map(|m| (*m).to_string())
+                                .collect();
+                            let spec = ClauseSpec {
+                                frame: Frame::Classify,
+                                subject: subject.clone(),
+                                complement: complement.to_string(),
+                                number,
+                                definiteness,
+                                modifiers,
+                            };
+                            let text = realize_common(&spec);
+                            let ctx = ctx_from(&spec);
+                            assert_eq!(
+                                parse_common(&text, &ctx),
+                                Ok(spec.clone()),
+                                "round-trip failed for {text:?}"
+                            );
+                            covered.insert((
+                                subject_kind(&spec.subject),
+                                complement_kind(&spec.complement),
+                                number_str(spec.number),
+                                definiteness_str(spec.definiteness),
+                                modifier_count,
+                            ));
+                            cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        assert!(cases >= 200, "expected >= 200 cases, got {cases}");
+
+        // The generator's value-space coverage IS the test's strength (the
+        // Concordance lesson): assert every (subject-kind x complement-kind
+        // x number x definiteness x modifier-count) combo was actually
+        // emitted, not merely that the loop ran. 3 subject kinds x 3
+        // complement kinds x 2 numbers x 2 definitenesses x 4 modifier
+        // counts.
+        let expected_combos = 3 * 3 * 2 * 2 * 4;
+        assert_eq!(
+            covered.len(),
+            expected_combos,
+            "generator did not cover every combo: {covered:?}"
+        );
     }
 }

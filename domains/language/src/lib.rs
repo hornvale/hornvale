@@ -35,7 +35,9 @@ pub mod phonology;
 /// seam.
 pub mod register;
 
-pub use clause::{ClauseSpec, Definiteness, Frame, Number, realize_common};
+pub use clause::{
+    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
+};
 pub use etymology::{
     AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
     draw_cascade, evolve, proto_root,
