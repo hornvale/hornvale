@@ -652,8 +652,17 @@ mod tests {
     /// parses, and re-realizing the recovered `ParsedLine` reproduces the
     /// identical line — the Book's construction table is a true bijection
     /// over the lines it actually emits, not just a one-way renderer.
+    ///
+    /// The same pass also stands as the standing coverage gate: it collects
+    /// every predicate any parsed line's `facts` actually contributed
+    /// across seeds 1..=3, and asserts [`CONSTRUCTION_ORDER`] is a subset
+    /// of what the corpus exercised. A future predicate added to the
+    /// construction table but never surfaced by any of these three seeds
+    /// reddens this assertion, forcing a corpus extension rather than
+    /// letting an unexercised construction hide behind a green gate.
     #[test]
     fn every_book_line_round_trips() {
+        let mut predicates_exercised: BTreeSet<String> = BTreeSet::new();
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
             let ctx = parse_context(&world);
@@ -663,7 +672,18 @@ mod tests {
                     .unwrap_or_else(|e| panic!("seed {seed} line failed: {line} ({e:?})"));
                 let again = rerender(&parsed);
                 assert_eq!(&again, line, "seed {seed}: re-realization drifted");
+                for (predicate, _) in &parsed.facts {
+                    predicates_exercised.insert(predicate.clone());
+                }
             }
+        }
+        for predicate in CONSTRUCTION_ORDER {
+            assert!(
+                predicates_exercised.contains(*predicate),
+                "{predicate} is in CONSTRUCTION_ORDER but no line across seeds 1..=3 \
+                 exercised it: {:?}",
+                predicates_exercised
+            );
         }
     }
 

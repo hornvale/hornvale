@@ -446,6 +446,24 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn pronoun_subjects_are_lowercase_by_contract() {
+        // The re-mention path emits lowercase "it"; parse binds it as a
+        // Pronoun. A capitalized "It" is NOT recognized as a pronoun — if a
+        // future construction capitalizes sentence-initial pronouns, this
+        // canary reddens and the parse-side binding must learn case together
+        // with it (never separately).
+        let c = ctx(&["planet"]);
+        assert_eq!(
+            parse_common("it is a planet.", &c).unwrap().subject,
+            Subject::Pronoun("it")
+        );
+        assert_eq!(
+            parse_common("It is a planet.", &c).unwrap().subject,
+            Subject::Name("It".into())
+        );
+    }
+
     // --- The round-trip property: parse_common(realize_common(s), ctx_from(s)) == Ok(s) ---
 
     /// Classify a subject into the coverage axis the property test tracks.

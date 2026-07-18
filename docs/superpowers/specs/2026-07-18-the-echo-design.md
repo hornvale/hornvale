@@ -165,6 +165,10 @@ serialization quantization draws (0033), and the honest one for speech.
 > ("cross that bridge later") and banked as registry row **LANG-44**
 > (numeracy as a quantity register); The Echo ships the surface-value
 > contract unchanged.
+>
+> **Flag 2 resolution note:** the `tell` verb DID ship — it fell out
+> trivially (~16 lines + an integration test), so item 2's conditional
+> ("only if trivial") is satisfied and the verb is committed, not deferred.
 
 1. **The metaplan insertion itself** (program-level): The Echo slots
    between C2 and C3; the metaplan gets an addendum note and the standing

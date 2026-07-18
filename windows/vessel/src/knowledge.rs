@@ -10,8 +10,14 @@ use hornvale_locale::LocaleContext;
 use hornvale_species::PerceptionVector;
 use std::collections::BTreeMap;
 
-/// What an agent knows: key → value, every entry re-derivable from ground
-/// truth (the subset contract).
+/// What an agent knows: key → value. Projection-derived entries (the
+/// `room/<id>` and `settlement/<id>/<field>` shapes written by
+/// [`Projection::project`]) carry the subset contract — every one
+/// re-derivable from ground truth, checked by [`knowledge_is_subset`].
+/// Heard entries (the `"{subject}::{predicate}"` shape written by
+/// [`absorb_common`]) are deliberately outside that contract: `tell` can
+/// transfer a false belief into a listener's knowledge, and heard ≠ true
+/// is the epistemic point (The Echo, spec §6).
 /// type-audit: bare-ok(artifact: 0)
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Knowledge(pub BTreeMap<String, String>);
@@ -92,9 +98,15 @@ impl Projection for IdentityProjection {
     }
 }
 
-/// The subset contract, mechanically: every entry must re-derive from the
-/// world. `room/<id>` re-describes through the locale window; settlement
-/// entries re-read the ledger. Unknown key shapes are violations.
+/// The subset contract, mechanically, for projection-derived entries only:
+/// every one must re-derive from the world. `room/<id>` re-describes
+/// through the locale window; settlement entries re-read the ledger.
+/// Heard entries (the `::`-keyed shape [`absorb_common`] writes) are
+/// deliberately outside this contract — a listener can absorb a false
+/// heard statement, so a `::`-keyed key is an unknown shape here by
+/// design, not an oversight; callers must not run heard knowledge through
+/// this check. Unknown key shapes among the checked (non-heard) entries
+/// are violations.
 /// type-audit: bare-ok(prose: return)
 pub fn knowledge_is_subset(
     k: &Knowledge,
