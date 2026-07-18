@@ -9,7 +9,7 @@ description = "Hornvale book window: render a world's committed classification f
 hornvale-kernel = { path = "../../kernel" }
 hornvale-language = { path = "../../domains/language" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-worldgen = { path = "../worldgen" }
 
 [dev-dependencies]
 hornvale-terrain = { path = "../../domains/terrain" }
-hornvale-worldgen = { path = "../worldgen" }

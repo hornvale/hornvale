@@ -62,6 +62,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/goblin/lexicon/root/<concept>` | (retired at The Branches, superseded by language/goblinoid/lexicon/root/<concept>) pre-Branches per-species goblin proto-root |
 | `language/<species>/lexicon/cascade` | the species' 2-4 rule sound-change cascade, applied by evolve() to every proto-root |
 | `language/<species>/lexicon/headedness` | the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order |
+| `language/<species>/grammar/constituent-order` | the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights) |
+| `language/<species>/grammar/copula` | whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology |
+| `language/<species>/grammar/articles` | whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign) |
 
 ### hornvale-locale
 

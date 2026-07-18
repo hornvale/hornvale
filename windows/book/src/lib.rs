@@ -17,11 +17,12 @@ use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
     parse_common, quantity, realize_common,
 };
-use std::collections::BTreeSet;
+use hornvale_language::{TongueClause, realize_tongue, tongue_grammar};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// One world's volume of The Book: the seed it was rendered from plus the
 /// sentences the ledger's `is-a` and `instance-of` facts realize.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: lines), bare-ok(prose: tongue_lines), bare-ok(prose: tongue_gaps)
 pub struct BookVolume {
     /// The seed that generated the world this volume renders.
     pub seed: u64,
@@ -29,6 +30,17 @@ pub struct BookVolume {
     /// then one per rendered `instance-of` fact (C2 T5: a placed peopled
     /// species' collective, "The ⟨Autonym⟩ are ⟨species⟩.").
     pub lines: Vec<String>,
+    /// C3 T3: one self-statement per placed people, realized in its own
+    /// tongue (`realize_tongue` over that people's `TongueGrammar` and
+    /// lexicon) — "⟨autonym⟩ ⟨copula?⟩ ⟨own-kind⟩." glossed with the
+    /// matching Common line. The self-statement law (spec §5): autonym and
+    /// own-kind are Steeped by construction, so this never gaps — see
+    /// `every_placed_people_self_states_in_its_own_tongue`.
+    pub tongue_lines: Vec<String>,
+    /// C3 T3: the per-tongue coverage report — one gap line per placed
+    /// people recording that its tongue cannot yet state the planet's own
+    /// kind (no culture holds the `planet` concept; spec §5's gap law).
+    pub tongue_gaps: Vec<String>,
 }
 
 /// One fact's rendering, tagged by how it joins the sentence: a noun
@@ -139,6 +151,13 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
+    // The planet's own committed name — reused as the subject of every
+    // tongue's planet-gap attempt below. `is-a` commits exactly one fact
+    // today (the planet's own classification), so this is captured on that
+    // single iteration; a future second `is-a` subject would leave this at
+    // whichever committed first, which is fine (the gap path's subject text
+    // is immaterial to the law being exercised — see the module doc).
+    let mut planet_name: Option<String> = None;
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         let Value::Text(kind) = &fact.object else {
             continue;
@@ -149,6 +168,9 @@ pub fn render_volume(world: &World) -> BookVolume {
             .text_of(subject_entity, hornvale_kernel::NAME)
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
+        if kind == "planet" {
+            planet_name = Some(name.clone());
+        }
 
         let mut modifiers = Vec::new();
         let mut trailing = Vec::new();
@@ -178,6 +200,15 @@ pub fn render_volume(world: &World) -> BookVolume {
         let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
+    // (kind, autonym, common_line) per placed people — the autonym (no
+    // English "The " prefix) is the tongue subject the section below
+    // reuses; `common_line` is the exact rendered English sentence its
+    // tongue line's gloss echoes. Keyed for lookup against
+    // `hornvale_worldgen::placed_peoples`' own registry order below (the
+    // two orders coincide by construction — worldgen mints each collective
+    // in `placed_peoples`' order — but a map lookup stays correct even if
+    // that ever changed).
+    let mut people_by_kind: BTreeMap<String, (String, String)> = BTreeMap::new();
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         // C2 T5: one collective per placed peopled species — "The
         // ⟨Autonym⟩ are ⟨species⟩." The subject carries its own leading
@@ -203,11 +234,60 @@ pub fn render_volume(world: &World) -> BookVolume {
             definiteness: Definiteness::Indef,
             modifiers: Vec::new(),
         });
+        people_by_kind.insert(kind.clone(), (name, line.clone()));
         lines.push(line);
     }
+
+    // C3 T3: each placed people states its own kind in its own tongue,
+    // then every tongue's attempt to state the PLANET's kind is recorded as
+    // a coverage gap (spec §5 — no culture holds `planet`). Iterated over
+    // `placed_peoples` (registry order, deterministic) rather than the
+    // ledger scan above so the section's order matches every other
+    // peoples-keyed section in the almanac/book.
+    let mut tongue_lines = Vec::new();
+    let mut tongue_gaps = Vec::new();
+    let planet_subject = planet_name.unwrap_or_else(|| "the world".to_string());
+    for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
+        let Some((autonym, common_line)) = people_by_kind.get(kind) else {
+            continue;
+        };
+        let ph = hornvale_worldgen::language_of(world, kind);
+        let grammar = tongue_grammar(&world.seed, kind, &ph);
+        let Ok(lexicon) = hornvale_worldgen::lexicon_of(world, kind) else {
+            continue;
+        };
+
+        let own_kind = format!("{kind}-kind");
+        let self_statement = TongueClause {
+            subject: autonym.clone(),
+            complement_concept: own_kind,
+        };
+        let tongue_line =
+            realize_tongue(&self_statement, &grammar, &lexicon).unwrap_or_else(|gap| {
+                panic!(
+                    "the self-statement law (spec §5) is violated for {kind}: \
+                     gap on {} ({})",
+                    gap.concept, gap.reason
+                )
+            });
+        tongue_lines.push(format!(
+            "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
+        ));
+
+        let planet_statement = TongueClause {
+            subject: planet_subject.clone(),
+            complement_concept: "planet".to_string(),
+        };
+        if let Err(gap) = realize_tongue(&planet_statement, &grammar, &lexicon) {
+            tongue_gaps.push(format!("{kind}: gap — {} ({})", gap.concept, gap.reason));
+        }
+    }
+
     BookVolume {
         seed: world.seed.0,
         lines,
+        tongue_lines,
+        tongue_gaps,
     }
 }
 
@@ -646,6 +726,54 @@ mod tests {
             subject_for(entity, "Vebe".to_string(), &mut named),
             Subject::Pronoun("it")
         );
+    }
+
+    /// C3 T3's self-statement law (spec §5): every placed people's autonym
+    /// and own-kind concept are Steeped by construction (worldgen's
+    /// `exposure_of`), so every placed people's tongue self-statement
+    /// renders — no gaps.
+    #[test]
+    fn every_placed_people_self_states_in_its_own_tongue() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            let peoples = hornvale_worldgen::placed_peoples(&world);
+            assert_eq!(
+                vol.tongue_lines.len(),
+                peoples.len(),
+                "seed {seed}: one tongue line per placed people"
+            );
+            for line in &vol.tongue_lines {
+                assert!(line.contains(" ("), "line carries a gloss: {line}");
+            }
+        }
+    }
+
+    /// C3 T3's gap law (spec §5): no culture holds `planet` — every
+    /// tongue's attempt to state the planet's kind gaps.
+    #[test]
+    fn the_planet_sentence_gaps_in_every_tongue() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        let peoples = hornvale_worldgen::placed_peoples(&world);
+        assert_eq!(
+            vol.tongue_gaps.len(),
+            peoples.len(),
+            "one planet gap per tongue"
+        );
+        for gap in &vol.tongue_gaps {
+            assert!(gap.contains("planet"), "the gap names the concept: {gap}");
+        }
+    }
+
+    /// Tongue lines are a pure function of the world (same reconstruction
+    /// idiom as every other C3 draw): re-rendering the same seed must
+    /// reproduce byte-identical lines.
+    #[test]
+    fn tongue_lines_are_deterministic() {
+        let a = render_volume(&generated(1)).tongue_lines;
+        let b = render_volume(&generated(1)).tongue_lines;
+        assert_eq!(a, b);
     }
 
     /// The Echo T3's corpus law: for each seed volume, every rendered line
