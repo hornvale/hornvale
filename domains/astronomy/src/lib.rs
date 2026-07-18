@@ -131,6 +131,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register astronomy's contribution to the concept registry.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")?;
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;

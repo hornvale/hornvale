@@ -408,6 +408,7 @@ pub fn in_ladder(entry: &PackEntry, depths: &PackDepths) -> bool {
 /// god/spirit) — is skipped rather than re-registered, so this function is
 /// order-independent: it may run before or after the other domains'
 /// `register_concepts` in `register_all` without conflict.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     let packs = universal_stratum()
         .iter()
@@ -493,6 +494,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
     fn registering_after_astronomy_does_not_conflict_on_sun() {
         let mut r = ConceptRegistry::default();
         r.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")

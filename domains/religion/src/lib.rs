@@ -62,6 +62,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register religion's contribution to the concept registry.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_BELIEF, true, "subject is a belief")?;
     registry.register_predicate(HELD_BY, false, "a community holding a belief")?;

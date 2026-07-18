@@ -1022,6 +1022,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register species' contribution to the concept registry.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(SPECIES_NAME, true, "a species entity's name")?;
     registry.register_predicate(THREAT_RESPONSE, true, "flee 0 ↔ stand 1")?;

@@ -58,7 +58,12 @@ concepts still register with identical `ConceptDef`s.
 **Tests:** `cargo test -p hornvale-climate`; the artifact drift-check
 (`.github/workflows/ci.yml` "Artifacts are current" command list) run locally;
 `make gate-fast` scoped to kernel+climate+worldgen.
-**Status:** Not Started
+**Status:** Complete — `register_manifest` (reuses decision-0025 conflict shape;
+`#[serde(skip)] manifests` field keeps saves byte-identical); climate migrated;
+**byte-identity independently verified** (regenerate-artifacts.sh + `git diff
+--exit-code book/` → exit 0). 6 `register_manifest` tests incl. the
+same-ConceptDef guarantee; type-audit/clippy/fmt clean. `register_concept`
+`#[deprecated]`; remaining domains carry `#[allow(deprecated)]` until Stage 3.
 
 ## Stage 3: Full migration + close the public path
 **Goal:** every concept registration across all 9 domains flows through

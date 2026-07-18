@@ -123,6 +123,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 
 /// Register terrain's contribution to the concept registry: the tier-0
 /// place predicates plus the tectonic summary predicates. Idempotent.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_PLACE, true, "subject is a traversable place")?;
     registry.register_predicate(BIOME, true, "biome of a place")?;

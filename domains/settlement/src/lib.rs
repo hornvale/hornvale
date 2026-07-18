@@ -92,6 +92,7 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register settlement's contribution to the concept registry.
+#[allow(deprecated)] // register_concept deprecated; migrated in Stage 3
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_SETTLEMENT, true, "subject is a settlement")?;
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
