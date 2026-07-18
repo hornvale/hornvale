@@ -19,3 +19,22 @@ fn a_genesis_world_has_no_agent_at_facts() {
         0
     );
 }
+
+/// Genesis commits NO `drank` fact either (The Foresight): drinking is a
+/// planned action inside a possess session, never something world build
+/// commits (same save-format contract as `agent-at` above).
+#[test]
+fn a_genesis_world_has_no_drank_facts() {
+    let world = hornvale_worldgen::build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        hornvale_worldgen::SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &hornvale_worldgen::SettlementPins::default(),
+    )
+    .unwrap();
+    assert_eq!(
+        world.ledger.find(hornvale_vessel::liveness::DRANK).count(),
+        0
+    );
+}
