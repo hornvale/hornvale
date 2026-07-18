@@ -1,7 +1,7 @@
 # C2 — The Predicates & the Grammar: Design
 
-**Status:** Draft for G3 review (2026-07-17) · **Author:** Claude (campaign-
-autopilot) · **Decider:** Nathan · **Program:**
+**Status:** **Approved at G3 (2026-07-17)** — proceed to the implementation plan
+· **Author:** Claude (campaign-autopilot) · **Decider:** Nathan · **Program:**
 [The Self-Writing Book metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md)
 
 > C2 is the second campaign of the Self-Writing Book program. C1 got one true
@@ -34,12 +34,16 @@ its name (referring expressions):
 > Vebe is a planet with two moons, orbiting a yellow-white dwarf; its day lasts
 > about 1.5 standard days.
 
-**The classification proof (`instance-of`, species).** C2 wires the first
-`instance-of` facts into genesis and teaches the Book to read them, validating
-the dual model ratified this campaign. A collective entity is minted per placed
-peopled species, named by the people's **autonym** (their lexicon word for
-"person/people" — the C1 endonym move applied to a people), and classified
-`instance-of` its species kind:
+**The classification proof (`instance-of`, species) — and the first concept
+addition.** No `person`/`people` concept exists in the lexicon yet, so C2 **adds
+one** to the universal stratum. This is the first rep of a motion the program
+will repeat constantly: the concept inventory is the world's vocabulary of
+meaning, and PROC-15's coverage report is driven by missing concepts as much as
+missing constructions — "add concepts for everything meaningful" (owner
+direction, 2026-07-17) is the Book's own thesis, not scope creep. With `person`
+registered, every culture lexicalizes it, and each people's word for it is its
+**autonym**. C2 then mints a collective entity per placed peopled species, names
+it by that autonym, and classifies it `instance-of` its species kind:
 
 > The Grobnar are goblins.
 
@@ -103,15 +107,22 @@ collective species entity: name "Grobnar" · instance-of "goblin"
 
 ## 5. Determinism & contracts
 
-- **No new seeded draws.** The autonym is a lexicon lookup (existing seed-derived
-  material), like C1's endonym; classification is structural; number/quantity
-  formatting is pure. Per metaplan decision #1 this stays a derived view.
-- **Ledger changes → local regen + golden re-pin.** Moving `is-a`/`name` to the
-  world-root entity and adding per-species collective entities changes each
-  world's ledger; re-pin `world-seed-42.json` **in the drifting commit**
-  (rebaseline-golden-pins) and regenerate the reference dumps + `the-book.md`.
-  No new predicate is added (`instance-of` already exists), so the `concepts`
-  dump is unchanged.
+- **One deliberate new concept (a lexicon draw per culture), otherwise pure.**
+  Adding the `person` concept makes every culture draw a root word for it — a new
+  seeded draw per culture. Streams are concept-keyed, so existing lexemes stay
+  byte-identical (the draw is additive, not a reordering); grammar realization
+  (number-to-words, quantity formatting, aggregation) is pure. The autonym is
+  then a lookup of the newly-registered concept.
+- **Ledger + lexicon changes → local regen + golden re-pin + a census check.**
+  Adding the `person` concept, moving `is-a`/`name` to the world-root entity, and
+  minting per-species collective entities all change each world's ledger and/or
+  derived lexicon. Re-pin `world-seed-42.json` **in the drifting commit**
+  (rebaseline-golden-pins) and regenerate the reference dumps (`concepts` gains
+  `person`; `dictionary-generated` gains each people's word for it) + `the-book.md`.
+  **The concept addition may move lexicon-sensitive census metrics** (capacity,
+  homophony, gap-rate) — verified at `make gate-full`; if the census moves, that
+  is a carve-out needing the owner's explicit authorization (the AWS regen), NOT
+  a local fix.
 - **Byte-identity.** Same seed → identical Book. Aggregation order is the ledger's
   commit order (deterministic); number-to-words and rounding are pure.
 - **The Book stays a derived view / sink.** Nothing reads rendered text back in.
@@ -161,11 +172,16 @@ collective species entity: name "Grobnar" · instance-of "goblin"
 
 ## 9. Flagged for G3
 
-1. **Golden re-pin / determinism:** moving the planet's `is-a`/`name` to the
-   world-root entity and adding collective species entities changes every world's
-   ledger — a local reference-dump + `the-book.md` regen and a `world-seed-42`
-   re-pin, verified census-clean at `make gate-full`. No new predicate, so no
-   `concepts`-dump growth.
+1. **The concept addition's census risk (leads — determinism carve-out).** C2
+   adds the `person` universal-stratum concept, so every culture lexicalizes it.
+   This changes derived lexicons and may move lexicon-sensitive census metrics.
+   The plan re-pins `world-seed-42.json` and regenerates the reference dumps +
+   `the-book.md` locally, then verifies at `make gate-full`. **If the census
+   moves, STOP** — an AWS census regen is a carve-out needing your explicit
+   authorization; the campaign cannot merge until you approve it. This is the
+   first test of whether routine concept-adds reliably move the census (a
+   program-level tension to watch). Also in this bucket: the planet-identity fix
+   and the collective species entities change the ledger (local re-pin).
 2. **The "standard days" unit:** `day-length-std` is in standard days; whether the
    Book says "standard days" or converts to "earth-days" (the etic cross-world
    unit) is a wording call — C2 uses "standard days" plainly and leaves the
