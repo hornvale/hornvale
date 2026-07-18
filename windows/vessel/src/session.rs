@@ -2,7 +2,7 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, DriveMovements, Npc, SUSTENANCE, agent_position, derive_npcs, drive_at,
+    AGENT_AT, DRANK, DriveMovements, Npc, SUSTENANCE, agent_position, derive_npcs, drive_at,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -70,6 +70,11 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(AGENT_AT, false, "an agent's position on a day")
             .expect("AGENT_AT registers identically every session");
+        // Idempotent (same def every session): never conflicts, since DRANK
+        // is never registered at genesis either (spec §3).
+        registry
+            .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
+            .expect("DRANK registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
@@ -453,13 +458,7 @@ impl<'w> Session<'w> {
         }
         here.iter()
             .map(|npc| {
-                let drive = drive_at(
-                    &self.ledger,
-                    npc.entity,
-                    &npc.resource,
-                    self.day,
-                    &SUSTENANCE,
-                );
+                let drive = drive_at(&self.ledger, npc.entity, self.day, &SUSTENANCE);
                 let felt = if drive >= SUSTENANCE.act {
                     "looks parched"
                 } else if drive <= SUSTENANCE.sated {

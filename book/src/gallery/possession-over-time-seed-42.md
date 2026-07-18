@@ -31,15 +31,15 @@ Ways on: NW, S, NE.
 > needs
 The hobgoblin of Feefaenoagoo could do with a drink.
 > wait 1
-Time passes. You watch hobgoblin of Feefaenoagoo go.
+Time passes. You sense movement nearby (9 stirred).
 > look
 [room 815726603, day 6]
 You stand in temperate forest — a mossy hollow damp in a hollow — in the lands of Feefaenoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest.
 Ways on: NW, S, NE.
 > needs
-No one else is here to read.
+The hobgoblin of Feefaenoagoo seems content.
 > wait 1
-Time passes. You notice hobgoblin of Feefaenoagoo here now.
+Time passes; the world keeps its shape.
 > look
 [room 815726603, day 7]
 You stand in temperate forest — a mossy hollow damp in a hollow — in the lands of Feefaenoagoo. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
@@ -49,17 +49,18 @@ The hobgoblin of Feefaenoagoo could do with a drink.
 > why hobgoblin
 hobgoblin of Feefaenoagoo:
 - canonical name of an entity: hobgoblin of Feefaenoagoo (asserted by the-quickening)
-- an agent's position on a day: 815562763 (asserted by sought water (thirst), day 5.6666667)
-- an agent's position on a day: 815726603 (asserted by sought water (thirst), day 6.8333334)
+- an agent's position on a day: 815562763 (asserted by walking to water (thirst), day 5.7666667)
+- an agent satisfied its sustenance goal: true (asserted by drank (thirst sated), day 5.7666667)
+- an agent's position on a day: 815726603 (asserted by walking home (sated), day 5.8666667)
 
 > wait 90
-Time passes. You sense movement nearby (90 stirred).
+Time passes; the world keeps its shape.
 > look
 [room 815726603, day 97]
 You stand in temperate forest — a mossy hollow damp in a hollow — in the lands of Feefaenoagoo. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
 Ways on: NW, S, NE.
 > needs
-The hobgoblin of Feefaenoagoo could do with a drink.
+The hobgoblin of Feefaenoagoo looks parched.
 > release
 You let go.
 ```

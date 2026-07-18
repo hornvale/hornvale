@@ -5,6 +5,7 @@
 
 #![warn(missing_docs)]
 
+pub mod astar;
 pub mod component;
 pub mod domain;
 pub mod ecology;
@@ -27,6 +28,7 @@ pub mod streams;
 pub mod units;
 pub mod world;
 
+pub use astar::{SearchSpace, astar};
 pub use component::{Component, ComponentStore};
 pub use domain::Domain;
 pub use ecology::{
