@@ -277,6 +277,24 @@ spine (measure-don't-narrate; the Concordance generator lesson applies to
 the reference configurations — the pathological pole must actually exercise
 every disposition, asserted, not assumed).
 
+> **Addendum (2026-07-18, execution T3 — criterion amendment after partial
+> unblinding; decision ledger #13):** criterion 1 as written ordered the
+> poles on the *distortion aggregate* (mean of loss/order/stance). T3
+> measured that clause **false** at seeds 1–6, and the T3 reviewer
+> reproduced the values independently: a shipped voice's salience reorder —
+> lossless and fully recoverable — contributes more order-distance than the
+> pathological pole's total-loss account, so the aggregate inverts. Order
+> divergence is a distinctiveness-flavored quantity, not destruction;
+> putting it in the pole-ordering statistic was a plan-time category error,
+> caught by the dial's own per-component decomposition. **Amended criterion
+> 1** (no threshold relaxed; the poles remain strictly separable on the
+> same measured data): (a) loss-fraction monotonicity null < shipped <
+> pathological; (b) recoverability(null)=1, recoverability(pathological) ≤
+> 0.25; (c) null-pole pairwise distinctiveness = 0 (the uncanny pole is
+> *measured* uncanny). `chorus-distortion` remains a census metric but is
+> no longer the pole-ordering statistic. The amendment postdates
+> measurement and is flagged as such — it leads the G6 digest.
+
 ## 7. Non-goals
 
 - The **causal-model filter** and schema library — C5 (LANG-37/38).

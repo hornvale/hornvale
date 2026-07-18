@@ -783,11 +783,19 @@ only 1000-world instrument.)
 preregistered; thresholds are FROZEN here before first measurement:**
 
 ```rust
-//! The bet, preregistered (spec §6): known-groups validation of the
-//! LANG-41 dial. Criteria frozen before first measurement (2026-07-18):
-//! C1 pole ordering: distortion(null)=0 < distortion(shipped) <
-//!    distortion(pathological), every measured multi-people world;
-//!    recoverability(null)=1; recoverability(pathological) <= 0.25.
+//! The bet, preregistered (spec §6) — AS AMENDED after T3's partial
+//! unblinding (decision ledger #13; spec §6 addendum): the original C1
+//! ordered the poles on the distortion AGGREGATE, and T3 measured that
+//! clause false at seeds 1–6 (a shipped voice's lossless salience reorder
+//! outweighs the pathological pole's total loss — order divergence is
+//! distinctiveness, not destruction). The amended criteria return to
+//! LANG-41's named axes; no threshold was relaxed.
+//! C1a loss-monotonicity: loss_fraction(null)=0 < loss_fraction(shipped)
+//!    < loss_fraction(pathological)=1, every measured multi-people world.
+//! C1b recoverability ordering: recoverability(null)=1;
+//!    recoverability(pathological) <= 0.25.
+//! C1c the null pole is uncanny: pairwise distinctiveness of null-filter
+//!    voices == 0.0 exactly.
 //! C2 band: shipped mean distinctiveness >= 0.05 on at least one measured
 //!    multi-people world; per world, shipped recoverability >=
 //!    pathological recoverability + 0.25.
