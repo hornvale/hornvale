@@ -183,9 +183,16 @@ pub fn resource_room(home: &RoomAddr, ctx: &LocaleContext) -> RoomAddr {
             .describe(&n, WorldTime { day: 0.0 })
             .map(|loc| loc.fields.elevation_m)
             .unwrap_or(f64::INFINITY);
-        match &best {
-            Some((ba, be)) if (elev, &n) >= (*be, ba) => {}
-            _ => best = Some((n, elev)),
+        // Float ordering uses `total_cmp` with a deterministic tie-break (the
+        // constitutional no-native-float-cmp rule; CLAUDE.md determinism), ties
+        // broken by ascending `RoomAddr`. Keep `n` only when it is strictly
+        // lower (or equal-and-smaller-addr) than the current best.
+        let keep_existing = match &best {
+            Some((ba, be)) => elev.total_cmp(be).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((n, elev));
         }
     }
     best.expect("a room has three neighbors").0
