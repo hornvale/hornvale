@@ -19,7 +19,7 @@
 //! authored surface text anywhere in a generated tongue (the program
 //! thesis).
 
-use crate::lexicon::{GapReason, LexEntry, Lexicon};
+use crate::lexicon::{LexEntry, Lexicon};
 use crate::naming::{Namer, render_views, segments_of};
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
@@ -162,19 +162,6 @@ pub struct TongueGap {
     pub reason: String,
 }
 
-/// Render a [`GapReason`]'s recountable text, tagged with its provenance
-/// kind — the same rendering the `cli` crate's dictionary dump uses for a
-/// lexicon gap (`cli/src/dictionary.rs`'s `gap_text`), reproduced locally
-/// since a domain crate may not depend on `cli` (constitutional layering).
-/// Never `{reason:?}`: the reason is prose meant to be recounted, not
-/// debugged.
-fn gap_reason_text(reason: &GapReason) -> String {
-    match reason {
-        GapReason::Experiential(text) => format!("gap (experiential): {text}"),
-        GapReason::Perceptual(text) => format!("gap (perceptual): {text}"),
-    }
-}
-
 /// Realize a nominal-predication clause in a tongue: lexicalize the
 /// complement, order the constituents per the grammar, include the copula
 /// if the tongue bears one. Renders fully or gaps entirely (spec §4).
@@ -189,9 +176,12 @@ pub fn realize_tongue(
             views.roman.clone()
         }
         Some(LexEntry::Gap { reason }) => {
+            // `GapReason`'s Display is the canonical recountable rendering
+            // ("gap (experiential): ..." / "gap (perceptual): ...") — never
+            // `{reason:?}`; the reason is prose to recount, not debug.
             return Err(TongueGap {
                 concept: clause.complement_concept.clone(),
-                reason: gap_reason_text(reason),
+                reason: reason.to_string(),
             });
         }
         None => {

@@ -51,6 +51,20 @@ pub enum GapReason {
     Perceptual(String),
 }
 
+impl std::fmt::Display for GapReason {
+    /// The canonical recountable rendering of a gap's reason, tagged with
+    /// its provenance kind: `gap (experiential): <text>` /
+    /// `gap (perceptual): <text>`. Every surface that recounts a gap (the
+    /// tongue realizer's [`crate::grammar::TongueGap`]; the CLI's
+    /// dictionary dump) should render through this, never `{:?}`.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GapReason::Experiential(text) => write!(f, "gap (experiential): {text}"),
+            GapReason::Perceptual(text) => write!(f, "gap (perceptual): {text}"),
+        }
+    }
+}
+
 /// Which component comes first when [`build_lexicon`] joins a compound's two
 /// root forms. Modifier-head order varies by language, so this is drawn per
 /// species rather than fixed.
