@@ -157,6 +157,11 @@
         "functional": false,
         "doc": "the kind an entity is an instance of; the latest fact is its current kind"
       },
+      "is-a": {
+        "name": "is-a",
+        "functional": true,
+        "doc": "the class an entity belongs to"
+      },
       "is-belief": {
         "name": "is-belief",
         "functional": true,
@@ -11429,8 +11434,28 @@
         "place": null,
         "day": 0.0,
         "provenance": "paleoclimate"
+      },
+      {
+        "subject": 103,
+        "predicate": "is-a",
+        "object": {
+          "Text": "planet"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "astronomy: the central body is a planet"
+      },
+      {
+        "subject": 103,
+        "predicate": "name",
+        "object": {
+          "Text": "Bee"
+        },
+        "place": null,
+        "day": null,
+        "provenance": "the dominant people's word for the world"
       }
     ],
-    "next_entity": 102
+    "next_entity": 103
   }
 }

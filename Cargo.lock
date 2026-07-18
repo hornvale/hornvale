@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "hornvale-almanac",
  "hornvale-astronomy",
+ "hornvale-book",
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-explain",
@@ -46,6 +47,17 @@ name = "hornvale-astronomy"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-book"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-terrain",
+ "hornvale-worldgen",
 ]
 
 [[package]]

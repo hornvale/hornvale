@@ -6,7 +6,7 @@ use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{BuildProfile, SettlementPins, SkyChoice, build_world, profiled};
 
 #[test]
-fn profiled_records_the_six_stages() {
+fn profiled_records_the_seven_stages() {
     let (world, profile): (_, BuildProfile) = profiled(|| {
         build_world(
             Seed(42),
@@ -27,6 +27,7 @@ fn profiled_records_the_six_stages() {
             "alignments",
             "culture+religion+species",
             "deep-time",
+            "planet",
         ]
     );
     // The build still produced a real world.
