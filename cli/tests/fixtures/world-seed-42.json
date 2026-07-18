@@ -11442,7 +11442,7 @@
         "provenance": "paleoclimate"
       },
       {
-        "subject": 103,
+        "subject": 1,
         "predicate": "is-a",
         "object": {
           "Text": "planet"
@@ -11452,7 +11452,7 @@
         "provenance": "astronomy: the central body is a planet"
       },
       {
-        "subject": 103,
+        "subject": 1,
         "predicate": "name",
         "object": {
           "Text": "Bee"
@@ -11462,6 +11462,6 @@
         "provenance": "the dominant people's word for the world"
       }
     ],
-    "next_entity": 103
+    "next_entity": 102
   }
 }

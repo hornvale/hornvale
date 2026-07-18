@@ -2901,7 +2901,14 @@ fn build_to(
         // `earth` concept (no draw). Run last, after peoples/settlements are
         // placed, so `world_name` (which reads `dominant_people` ->
         // `flagship_of`) resolves.
-        let planet = world.ledger.mint_entity();
+        //
+        // The planet IS `world_entity`, the root fact-holder bound at the
+        // top of `build_to` — not a fresh mint. `world_entity` already
+        // carries every astronomical/terrain fact (moon-count, star-class,
+        // …), so classifying it here (rather than an otherwise-empty
+        // phantom entity) lets a single subject aggregate all of a world's
+        // planetary facts into one rendered sentence.
+        let planet = world_entity;
         world
             .ledger
             .commit(
@@ -2915,7 +2922,7 @@ fn build_to(
                 },
                 &world.registry,
             )
-            .expect("is-a on a fresh entity cannot conflict");
+            .expect("world_entity has no prior is-a fact, so this cannot conflict");
         if let Some(name) = world_name_in(&world, wc) {
             world
                 .ledger
@@ -2930,7 +2937,7 @@ fn build_to(
                     },
                     &world.registry,
                 )
-                .expect("name on a fresh entity cannot conflict");
+                .expect("world_entity has no prior name fact, so this cannot conflict");
         }
         Ok(())
     })?;
@@ -2939,8 +2946,9 @@ fn build_to(
 }
 
 /// The entity carrying the world's planet classification (`is-a`,
-/// `"planet"`), if one has been minted — `None` before `build_to` reaches
-/// its final "planet" stage (e.g. a world stopped early via `BuildDepth`).
+/// `"planet"`) — `world_entity`, the root fact-holder, once `build_to`
+/// reaches its final "planet" stage. Returns `None` before that (e.g. a
+/// world stopped early via `BuildDepth`).
 pub fn planet_entity(world: &World) -> Option<EntityId> {
     world
         .ledger
@@ -4153,9 +4161,10 @@ mod tests {
         );
     }
 
-    /// C1 T4: the composition root mints a planet entity and commits its
-    /// classification and endonym, so the book (Task 5) can render "‹Endonym›
-    /// is a planet" from committed facts alone.
+    /// C1 T4: the composition root commits the planet's classification and
+    /// endonym (C2 T2: onto `world_entity`, not a fresh mint), so the book
+    /// (Task 5) can render "‹Endonym› is a planet" from committed facts
+    /// alone.
     #[test]
     fn built_world_names_and_classifies_its_planet() {
         let world = constant(1);
@@ -4166,6 +4175,25 @@ mod tests {
             .text_of(p, "name")
             .expect("the planet is named");
         assert_eq!(Some(n.to_string()), world_name(&world));
+    }
+
+    /// C2 T2: the planet classification lands on `world_entity`, the root
+    /// fact-holder that already carries the astronomical/terrain facts —
+    /// not a fresh, otherwise-empty mint. This lets a later stage (book
+    /// Task 4) aggregate moon-count/star-class/etc. onto the same subject
+    /// the "is a planet" sentence names.
+    #[test]
+    fn the_planet_is_the_world_root_fact_holder() {
+        // Generated (not Constant) sky: moon-count is only ever committed
+        // under `SkyChoice::Generated` (`astronomy::facts::genesis` is
+        // gated on it), so this is the sky choice that actually exercises
+        // "the planet carries the astronomical facts."
+        let world = generated(1);
+        let p = planet_entity(&world).expect("a planet entity");
+        assert!(
+            world.ledger.value_of(p, "moon-count").is_some(),
+            "the planet entity holds the astronomical facts"
+        );
     }
 
     /// The planet's facts are a pure function of the seed, like every other
