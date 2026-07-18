@@ -709,6 +709,22 @@ fn cmd_book(_args: &[String]) -> Result<(), String> {
                 out.push('\n');
             }
         }
+        if !vol.chorus.is_empty() {
+            out.push_str("\n### The Chorus\n");
+            for section in vol.chorus {
+                out.push_str(&format!("\n#### {}\n\n", section.heading));
+                for line in &section.emic {
+                    out.push_str(line);
+                    out.push('\n');
+                }
+                if !section.margin.is_empty() {
+                    out.push('\n');
+                    for line in &section.margin {
+                        out.push_str(&format!("*{line}*\n"));
+                    }
+                }
+            }
+        }
         coverage.push((seed, hornvale_book::uncovered_predicates(&world)));
     }
     print!("{out}");
