@@ -13,6 +13,10 @@ pub mod clause;
 /// cascade of sound-change rules (`evolve`, pure and total, Neogrammarian)
 /// that turns a proto-root into its modern form.
 pub mod etymology;
+/// A tongue's drawn surface grammar (C3, The Tongues): constituent order,
+/// copula presence and drawn form, and article presence — the floor slice
+/// of LANG-40's grammaticalization-depth vector.
+pub mod grammar;
 /// The lexicon: two-pass assembly over a culture's concept exposures —
 /// `Steeped` concepts become roots (Task 6's `proto_root`/`evolve`),
 /// `KnowsOf` concepts become recipe compounds joined under a drawn
@@ -42,6 +46,7 @@ pub use etymology::{
     AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
     draw_cascade, evolve, proto_root,
 };
+pub use grammar::{ConstituentOrder, TongueGrammar, tongue_grammar};
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
     draw_headedness,
@@ -371,6 +376,18 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/lexicon/headedness",
             "the species' drawn compound-joining order (HeadFirst/HeadLast), gating LexEntry::Compound component order",
+        ),
+        (
+            "language/<species>/grammar/constituent-order",
+            "the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights)",
+        ),
+        (
+            "language/<species>/grammar/copula",
+            "whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology",
+        ),
+        (
+            "language/<species>/grammar/articles",
+            "whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign)",
         ),
     ]
 }
