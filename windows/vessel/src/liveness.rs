@@ -143,6 +143,103 @@ fn room_from_text(s: &str) -> RoomAddr {
         .unwrap_or_else(|_| panic!("agent-at RoomId {id} does not unpack to a valid RoomAddr"))
 }
 
+/// The homeostatic-drive parameters (authored constants; §4.2/§4.3): the rise
+/// rate while away from the resource, the fall (satiety) rate while at it, and
+/// the hysteresis thresholds `act` (seek) and `sated` (leave), plus the
+/// pre-history initial value. Dimensionless; the drive lives in [0, 1].
+/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: fall), bare-ok(ratio: act), bare-ok(ratio: sated), bare-ok(ratio: initial)
+#[derive(Clone, Copy, Debug)]
+pub struct DriveParams {
+    /// Drive gained per day while away from the resource.
+    pub rise: f64,
+    /// Drive lost per day while at the resource (satiety).
+    pub fall: f64,
+    /// The seek threshold: drive >= act -> go to the resource.
+    pub act: f64,
+    /// The leave threshold: drive <= sated -> return home.
+    pub sated: f64,
+    /// The drive before any committed move.
+    pub initial: f64,
+}
+
+/// The one authored sustenance drive (thirst/foraging). act > sated (the
+/// hysteresis dead-band); rates chosen so a cycle spans a few days.
+pub const SUSTENANCE: DriveParams = DriveParams {
+    rise: 0.15,
+    fall: 0.6,
+    act: 0.85,
+    sated: 0.15,
+    initial: 0.0,
+};
+
+/// The resource cell the drive seeks: the lowest-elevation of `home`'s three
+/// mesh neighbors ("toward water"), ties broken by `RoomAddr` order for
+/// determinism. Reads the locale elevation field.
+/// type-audit: bare-ok(return)
+pub fn resource_room(home: &RoomAddr, ctx: &LocaleContext) -> RoomAddr {
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in home.neighbors() {
+        let elev = ctx
+            .describe(&n, WorldTime { day: 0.0 })
+            .map(|loc| loc.fields.elevation_m)
+            .unwrap_or(f64::INFINITY);
+        match &best {
+            Some((ba, be)) if (elev, &n) >= (*be, ba) => {}
+            _ => best = Some((n, elev)),
+        }
+    }
+    best.expect("a room has three neighbors").0
+}
+
+/// The drive at `t`: a fold over the entity's committed `agent-at` history.
+/// Rises `p.rise`/day away from `resource`, falls `p.fall`/day at it, clamped to
+/// [0, 1], starting from `p.initial` before any committed move. A pure derived
+/// view over the ledger (never stored) — DRIVE == FOLD.
+/// type-audit: bare-ok(ratio: return)
+pub fn drive_at(
+    ledger: &Ledger,
+    entity: EntityId,
+    resource: &RoomAddr,
+    t: WorldTime,
+    p: &DriveParams,
+) -> f64 {
+    // The entity's dated agent-at history, ascending by day (commit order is
+    // ascending day within a session; sort defensively).
+    let mut hist: Vec<(f64, RoomAddr)> = ledger
+        .find(AGENT_AT)
+        .filter(|f| f.subject == entity)
+        .filter_map(|f| match (&f.object, f.day) {
+            (Value::Text(s), Some(day)) => Some((day, room_from_text(s))),
+            _ => None,
+        })
+        .collect();
+    hist.sort_by(|a, b| a.0.total_cmp(&b.0));
+
+    // Walk the timeline from day 0, integrating the piecewise-linear drive.
+    let mut drive = p.initial;
+    let mut cursor = 0.0_f64;
+    // Segment before the first move: position is the NPC's *home* (unknown here);
+    // treat "away from resource" as the default (drive rises) unless the first
+    // fact is at the resource. We reconstruct position per segment from history.
+    let mut at_resource = false; // NPCs start at home (not the resource)
+    for (day, pos) in hist.iter().filter(|(d, _)| *d <= t.day) {
+        drive = integrate(drive, at_resource, day - cursor, p);
+        cursor = *day;
+        at_resource = pos == resource;
+    }
+    // Final segment to t.
+    integrate(drive, at_resource, t.day - cursor, p)
+}
+
+fn integrate(drive: f64, at_resource: bool, dt: f64, p: &DriveParams) -> f64 {
+    let delta = if at_resource {
+        -p.fall * dt
+    } else {
+        p.rise * dt
+    };
+    (drive + delta).clamp(0.0, 1.0)
+}
+
 /// Order settlements for NPC derivation: population descending (ties broken
 /// by `EntityId`), with `home_settlement` pulled to the front regardless of
 /// its rank. Pure and independently testable (no world/ledger needed) so the
@@ -523,6 +620,102 @@ mod tests {
             agent_position(&next, &npc, WorldTime { day: 1.9 }),
             scheduled_position(&npc, WorldTime { day: 1.9 }),
             "after a multi-day jump, the committed position matches the schedule at t_new"
+        );
+    }
+
+    #[test]
+    fn drive_rises_while_away_and_is_clamped() {
+        // No agent-at history: the entity has been "away" since day 0 at rate rise.
+        let p = DriveParams {
+            rise: 0.1,
+            fall: 0.5,
+            act: 0.8,
+            sated: 0.2,
+            initial: 0.0,
+        };
+        let ledger = Ledger::default();
+        let e = EntityId::new(1).unwrap();
+        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
+        assert!((drive_at(&ledger, e, &res, WorldTime { day: 3.0 }, &p) - 0.3).abs() < 1e-9);
+        // clamps at 1.0
+        assert_eq!(
+            drive_at(&ledger, e, &res, WorldTime { day: 100.0 }, &p),
+            1.0
+        );
+    }
+
+    #[test]
+    fn drive_falls_while_at_the_resource() {
+        // History: at the resource since day 2. Drive rose to 0.2 by day 2, then falls.
+        let p = DriveParams {
+            rise: 0.1,
+            fall: 0.5,
+            act: 0.8,
+            sated: 0.2,
+            initial: 0.0,
+        };
+        let mut ledger = Ledger::default();
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        let e = ledger.mint_entity();
+        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
+        // commit: at resource on day 2
+        ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject: e,
+                    predicate: AGENT_AT.to_string(),
+                    object: Value::Text(room_to_text(&res)),
+                    place: None,
+                    day: Some(2.0),
+                    provenance: "test".into(),
+                },
+                &reg,
+            )
+            .unwrap();
+        // by day 2 drive was ~0.2 (rose from 0 at 0.1/day); at day 3 (1 day at resource) it fell 0.5 -> ~0 (floored)
+        let d = drive_at(&ledger, e, &res, WorldTime { day: 3.0 }, &p);
+        assert!(
+            d <= 0.001,
+            "drive should fall to ~0 after a day at the resource, got {d}"
+        );
+    }
+
+    #[test]
+    fn drive_at_is_deterministic_and_reload_stable() {
+        // Fold determinism: same ledger + t -> same value; and serialize->reload of
+        // the ledger yields the identical drive (the DRIVE == FOLD contract).
+        let p = SUSTENANCE;
+        let mut ledger = Ledger::default();
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        let e = ledger.mint_entity();
+        let res = RoomAddr::containing([1.0, 0.0, 0.0], 6).neighbors()[0].clone();
+        for day in [1.0, 4.0, 9.0] {
+            ledger
+                .commit(
+                    hornvale_kernel::Fact {
+                        subject: e,
+                        predicate: AGENT_AT.to_string(),
+                        object: Value::Text(room_to_text(&res)),
+                        place: None,
+                        day: Some(day),
+                        provenance: "t".into(),
+                    },
+                    &reg,
+                )
+                .unwrap();
+        }
+        let t = WorldTime { day: 12.3 };
+        let a = drive_at(&ledger, e, &res, t, &p);
+        let b = drive_at(&ledger, e, &res, t, &p);
+        assert_eq!(a, b);
+        let json = serde_json::to_string(&ledger).unwrap();
+        let reloaded: Ledger = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            drive_at(&reloaded, e, &res, t, &p),
+            a,
+            "drive re-derives identically after reload"
         );
     }
 }
