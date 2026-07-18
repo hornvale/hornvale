@@ -81,6 +81,7 @@
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
+- [Scene Schema: eclipses v1](./reference/scene-eclipses-v1.md)
 - [Dictionary](./reference/dictionary-generated.md)
 - [Proto-goblinoid](./reference/proto-goblinoid-generated.md)
 - [The Layering](./reference/layering.md)
@@ -165,6 +166,7 @@
 - [The Ordination](./chronicle/the-ordination.md)
 - [The Predicates & the Grammar](./chronicle/the-predicates-and-the-grammar.md)
 - [The Quickening](./chronicle/the-quickening.md)
+- [The Shadow Track](./chronicle/the-shadow-track.md)
 
 # Appendix: The Frontier
 
