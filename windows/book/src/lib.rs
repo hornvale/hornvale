@@ -1,9 +1,22 @@
 //! The Book window: render a world's committed classification facts as
 //! Common sentences. Reads only the ledger; realizes via `domains/language`.
+//!
+//! Aggregation seam (C2 T4): `domains/language`'s `ClauseSpec.modifiers`
+//! only ever joins fragments into one clause's tail ("`X`, `Y`"), and stays
+//! that way — the seam between a noun-modifier ("with two moons") and a
+//! trailing independent clause ("its day lasts about 1.5 standard days")
+//! belongs here, at the one call site that knows a sentence is about to be
+//! finished. [`fragment_for`] tags each fact's rendering as one or the
+//! other; [`render_volume`] strips the realized clause's terminal period
+//! and re-joins any trailing clauses with `"; "` before restoring it.
 #![warn(missing_docs)]
 
-use hornvale_kernel::{Value, World};
-use hornvale_language::clause::{ClauseSpec, Definiteness, Frame, Number, Subject, realize_common};
+use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
+use hornvale_kernel::{EntityId, Value, World};
+use hornvale_language::clause::{
+    ClauseSpec, Definiteness, Frame, Number, Subject, cardinal, quantity, realize_common,
+};
+use std::collections::BTreeSet;
 
 /// One world's volume of The Book: the seed it was rendered from plus the
 /// sentences the ledger's `is-a` facts realize.
@@ -15,27 +28,116 @@ pub struct BookVolume {
     pub lines: Vec<String>,
 }
 
+/// One fact's rendering, tagged by how it joins the sentence: a noun
+/// modifier folded into the main clause's tail, or an independent trailing
+/// clause appended after a semicolon (see the module doc's aggregation
+/// seam).
+enum Fragment {
+    /// Joins `ClauseSpec.modifiers`, e.g. `"with two moons"`.
+    Modifier(String),
+    /// Appended after the main clause, semicolon-joined, e.g. `"its day
+    /// lasts about 1.5 standard days"`.
+    Trailing(String),
+}
+
+/// `"a"` or `"an"`, by `word`'s first letter. Duplicated from
+/// `domains/language::clause`'s private helper of the same name rather than
+/// exposed from there — this predicate-specific modifier text is windows/
+/// book's own construction, and the aggregation seam keeps
+/// `domains/language` untouched (see the module doc).
+fn indefinite_article(word: &str) -> &'static str {
+    match word.chars().next().map(|c| c.to_ascii_lowercase()) {
+        Some('a' | 'e' | 'i' | 'o' | 'u') => "an",
+        _ => "a",
+    }
+}
+
+/// The construction table: maps a (predicate, object) pair to the fragment
+/// it contributes, or `None` if this predicate has no construction yet
+/// (leaving it on [`uncovered_predicates`]'s list).
+fn fragment_for(predicate: &str, object: &Value) -> Option<Fragment> {
+    match (predicate, object) {
+        (MOON_COUNT, Value::Number(n)) => {
+            let count = *n as u64;
+            Some(Fragment::Modifier(format!(
+                "with {} moon{}",
+                cardinal(count),
+                if count == 1 { "" } else { "s" }
+            )))
+        }
+        (STAR_CLASS, Value::Text(class)) => Some(Fragment::Modifier(format!(
+            "orbiting {} {class}",
+            indefinite_article(class)
+        ))),
+        (DAY_LENGTH_STD, Value::Number(days)) => Some(Fragment::Trailing(format!(
+            "its day lasts {} standard days",
+            quantity(*days)
+        ))),
+        _ => None,
+    }
+}
+
+/// Resolve the surface subject for `entity`'s clause within one volume: its
+/// resolved `name` on first mention, a fixed pronoun on re-mention. `seen`
+/// accumulates entities already named — share one set across a volume's
+/// render loop so a later sentence about the same subject reduces to "it".
+fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) -> Subject {
+    if seen.insert(entity) {
+        Subject::Name(name)
+    } else {
+        Subject::Pronoun("it")
+    }
+}
+
 /// Render a volume: one Common sentence per `is-a` fact, subject resolved to
-/// its `name` (or a synthetic `Entity <id>` label when genuinely unnamed).
+/// its `name` (or a synthetic `Entity <id>` label when genuinely unnamed),
+/// aggregating that subject's other facts into the sentence via the
+/// construction table (`fragment_for`) — facts iterate in ledger commit
+/// order, so the modifier order is deterministic without sorting.
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
+    let mut named: BTreeSet<EntityId> = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         let Value::Text(kind) = &fact.object else {
             continue;
         };
-        let subject = world
+        let subject_entity = fact.subject;
+        let name = world
             .ledger
-            .text_of(fact.subject, hornvale_kernel::NAME)
+            .text_of(subject_entity, hornvale_kernel::NAME)
             .map(str::to_string)
-            .unwrap_or_else(|| format!("Entity {}", fact.subject.0));
-        lines.push(realize_common(&ClauseSpec {
+            .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
+
+        let mut modifiers = Vec::new();
+        let mut trailing = Vec::new();
+        for subject_fact in world.ledger.facts_about(subject_entity) {
+            match fragment_for(&subject_fact.predicate, &subject_fact.object) {
+                Some(Fragment::Modifier(m)) => modifiers.push(m),
+                Some(Fragment::Trailing(t)) => trailing.push(t),
+                None => {}
+            }
+        }
+
+        let subject = subject_for(subject_entity, name, &mut named);
+        let mut line = realize_common(&ClauseSpec {
             frame: Frame::Classify,
-            subject: Subject::Name(subject),
+            subject,
             complement: kind.clone(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
-            modifiers: vec![],
-        }));
+            modifiers,
+        });
+        if !trailing.is_empty() {
+            // `realize_common` always terminates with '.': drop it, join the
+            // trailing clause(s) with "; ", then restore the final period.
+            line.pop();
+            for t in &trailing {
+                line.push_str("; ");
+                line.push_str(t);
+            }
+            line.push('.');
+        }
+        lines.push(line);
     }
     BookVolume {
         seed: world.seed.0,
@@ -45,11 +147,11 @@ pub fn render_volume(world: &World) -> BookVolume {
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
 /// registered predicates with at least one committed fact, excluding those
-/// the grammar already covers (`is-a`), sorted and deduped.
+/// the grammar already covers (`is-a`, plus the construction table's
+/// predicates), sorted and deduped.
 /// type-audit: bare-ok(identifier-text)
 pub fn uncovered_predicates(world: &World) -> Vec<String> {
-    use std::collections::BTreeSet;
-    const COVERED: &[&str] = &["is-a"];
+    const COVERED: &[&str] = &["is-a", MOON_COUNT, STAR_CLASS, DAY_LENGTH_STD];
     let mut gaps: BTreeSet<String> = BTreeSet::new();
     for predicate in world.registry.predicates() {
         let name = predicate.name.as_str();
@@ -115,6 +217,93 @@ mod tests {
             vol.lines.iter().any(|l| l.ends_with(" is a planet.")),
             "the volume classifies the planet: {:?}",
             vol.lines
+        );
+    }
+
+    fn generated(seed: u64) -> World {
+        use hornvale_astronomy::SkyPins;
+        use hornvale_terrain::TerrainPins;
+        use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+        build_world(
+            hornvale_kernel::Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("generated world builds")
+    }
+
+    /// Seed 1's real, committed values (verified against the world json):
+    /// star class "yellow-white dwarf (F)", two moons, day-length-std
+    /// 1.5507196 std days (`quantity` truncates that to "about 1.5"). This
+    /// is the exact volume `hornvale -- book` renders for seed 1 ("Vebe").
+    /// Modifier order follows `astronomy::facts::genesis`'s commit order
+    /// (star-class, then day-length-std, then ... then moon-count) — the
+    /// construction table does not sort, per the task's determinism rule.
+    #[test]
+    fn planet_sentence_aggregates_moons_star_and_day_length() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        let line = vol
+            .lines
+            .iter()
+            .find(|l| l.contains(" is a planet"))
+            .expect("the planet's sentence is present");
+        assert_eq!(
+            line,
+            "Vebe is a planet orbiting a yellow-white dwarf (F), with two moons; \
+             its day lasts about 1.5 standard days."
+        );
+    }
+
+    /// PROC-15 coverage: predicates the construction table now renders must
+    /// drop off the uncovered list.
+    #[test]
+    fn aggregated_predicates_drop_off_the_uncovered_list() {
+        let world = generated(1);
+        let gaps = uncovered_predicates(&world);
+        for predicate in ["moon-count", "star-class", "day-length-std"] {
+            assert!(
+                !gaps.contains(&predicate.to_string()),
+                "{predicate} is now rendered, so it should be covered: {:?}",
+                gaps
+            );
+        }
+    }
+
+    /// Vowel-initial star classes (e.g. seed 3's "orange dwarf (K)") need
+    /// "an", not "a" — a real seed exposed this via `regenerate-artifacts.sh`
+    /// ("Zhqea is a planet orbiting a orange dwarf (K)…").
+    #[test]
+    fn star_class_modifier_chooses_an_before_a_vowel() {
+        let value = Value::Text("orange dwarf (K)".to_string());
+        let modifier = match fragment_for(STAR_CLASS, &value) {
+            Some(Fragment::Modifier(m)) => m,
+            _ => panic!("expected a Modifier fragment"),
+        };
+        assert_eq!(modifier, "orbiting an orange dwarf (K)");
+    }
+
+    /// Referring-expression reduction: a subject already named earlier in
+    /// the volume is re-mentioned with a pronoun, not its name again. No
+    /// real volume exercises this today (exactly one `is-a` fact ever lands
+    /// per subject — see C2 T2), so this drives the mechanism directly
+    /// rather than through `render_volume`.
+    #[test]
+    fn subject_for_uses_a_pronoun_on_remention() {
+        use std::collections::BTreeSet;
+        let entity = hornvale_kernel::EntityId::new(1).expect("1 is a valid entity id");
+        let mut named = BTreeSet::new();
+
+        assert_eq!(
+            subject_for(entity, "Vebe".to_string(), &mut named),
+            Subject::Name("Vebe".to_string())
+        );
+        assert_eq!(
+            subject_for(entity, "Vebe".to_string(), &mut named),
+            Subject::Pronoun("it")
         );
     }
 }
