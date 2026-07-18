@@ -668,9 +668,13 @@ fn cmd_proto() -> Result<(), String> {
 /// `cmd_new`'s builder call). Each volume's title is the committed `name`
 /// fact on the world's planet entity (the dominant people's endonym, read
 /// back from the ledger rather than re-derived), or `"Untitled"` for a
-/// world with no dominant peopled race to name it. After the Book is
-/// printed to stdout, a PROC-15 coverage report (unrendered predicates per
-/// volume) is printed to stderr. Markdown to stdout; deterministic.
+/// world with no dominant peopled race to name it. Each volume's Common
+/// lines are followed by a `### Tongues` subsection (C3 T3): one
+/// self-statement per placed people realized in its own tongue, then that
+/// tongue's per-tongue coverage note (the planet-kind gap every tongue
+/// carries — spec §5). After the Book is printed to stdout, a PROC-15
+/// coverage report (unrendered predicates per volume) is printed to
+/// stderr. Markdown to stdout; deterministic.
 fn cmd_book(_args: &[String]) -> Result<(), String> {
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
@@ -692,6 +696,18 @@ fn cmd_book(_args: &[String]) -> Result<(), String> {
         for line in vol.lines {
             out.push_str(&line);
             out.push('\n');
+        }
+        if !vol.tongue_lines.is_empty() {
+            out.push_str("\n### Tongues\n\n");
+            for line in vol.tongue_lines {
+                out.push_str(&line);
+                out.push('\n');
+            }
+            out.push('\n');
+            for gap in vol.tongue_gaps {
+                out.push_str(&gap);
+                out.push('\n');
+            }
         }
         coverage.push((seed, hornvale_book::uncovered_predicates(&world)));
     }
