@@ -291,6 +291,12 @@ impl TickSystem for DriveMovements {
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
             let mut drive = drive_at(frozen, npc.entity, &npc.resource, self.from, &self.params);
+            // The day of the last move COMMITTED this tick (None before the
+            // first). An immediate crossing (`cross == self.from.day`) is
+            // legitimate on the very first iteration — a prior tick may have
+            // ended exactly on a threshold — so the strict-progress guard
+            // below only fires once a commit has actually happened this tick.
+            let mut last_move_day: Option<f64> = None;
             // Advance crossing by crossing until past `to`.
             loop {
                 let at_resource = pos == npc.resource;
@@ -298,6 +304,17 @@ impl TickSystem for DriveMovements {
                     break;
                 };
                 if cross > self.to.day {
+                    break;
+                }
+                // A misconfigured `DriveParams` (e.g. `sated >= act`) can
+                // make a crossing fail to strictly advance the day, which
+                // would otherwise commit `GoTo`/`GoTo` forever with zero
+                // progress (hang/OOM). Fail fast instead: once this tick has
+                // committed at least one move, any crossing that doesn't
+                // strictly exceed that move's day terminates the tick.
+                if let Some(prev) = last_move_day
+                    && cross <= prev
+                {
                     break;
                 }
                 // At the crossing the drive is exactly at its threshold; decide.
@@ -328,8 +345,13 @@ impl TickSystem for DriveMovements {
                         pos = target;
                         drive = drive_at_cross; // reset to threshold at the move
                         day = cross;
+                        last_move_day = Some(cross);
                     }
-                    _ => break, // Hold at a crossing shouldn't happen; guard against a loop
+                    // `Hold` at an exact-threshold crossing shouldn't happen
+                    // (see the strict-progress guard above for the real
+                    // anti-loop protection); `GoTo` to the current position
+                    // is the defensive case (e.g. `home == resource`).
+                    _ => break,
                 }
             }
         }
@@ -767,6 +789,52 @@ mod tests {
         if let Intent::GoTo(target) = intent {
             assert_eq!(agent_position(&next, &npc, WorldTime { day: 40.0 }), target);
         }
+        let _ = ledger;
+    }
+
+    #[test]
+    fn a_misconfigured_drive_terminates_instead_of_hanging() {
+        // THE ANTI-HANG GUARD (the-wanting T3 review): a `DriveParams` where
+        // `sated >= act` makes a crossing land back on the SAME day it was
+        // just committed (zero day-progress), which without the
+        // strict-day-progress guard would commit `GoTo`/`GoTo` forever —
+        // hang/OOM. `to` is a very long interval (10_000 days): if this test
+        // completes at all (let alone fast, under the harness's short
+        // timeout) and asserts a small bound on the move count, the guard is
+        // proven, not just documented.
+        let p = DriveParams {
+            rise: 0.1,
+            fall: 0.1,
+            act: 0.85,
+            sated: 0.85, // sated == act: no genuine dead-band, no forward progress
+            initial: 0.0,
+        };
+        let mut ledger = Ledger::default();
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        let e = ledger.mint_entity();
+        let home = addr(1.0);
+        let resource = home.neighbors()[0].clone();
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: resource.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: WorldTime { day: 0.0 },
+            to: WorldTime { day: 10_000.0 },
+            params: p,
+        };
+        let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+        let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
+        assert!(
+            moves <= 3,
+            "the strict-day-progress guard should terminate the tick after a \
+             tiny, bounded number of moves for a misconfigured DriveParams; got {moves}"
+        );
         let _ = ledger;
     }
 
