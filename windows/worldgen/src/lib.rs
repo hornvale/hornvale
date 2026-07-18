@@ -233,7 +233,10 @@ pub const DOMAINS: &[&dyn Domain] = &[
 
 /// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
 /// (ecs-c6 T3): `World::new` already registers it, so this no longer
-/// registers it a second time — doing so would be a `RegistryError`.
+/// registers it — a predicate is owned by its single definition site (the
+/// kernel), so registration lives there. (Re-registering the identical
+/// definition would be idempotent, not an error; the registry only rejects a
+/// *conflicting* redefinition — but the ownership model keeps it in one place.)
 pub fn register_all(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     for domain in DOMAINS {
         domain.register_concepts(registry)?;
