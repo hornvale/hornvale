@@ -247,6 +247,87 @@ fn integrate(drive: f64, at_resource: bool, dt: f64, p: &DriveParams) -> f64 {
     (drive + delta).clamp(0.0, 1.0)
 }
 
+/// A desired world-state — the agent's active goal. This slice generates exactly
+/// one goal (the drive's setpoint); it is named so that "the drive *generates a
+/// goal*" is explicit. The future GOAP planner selects among many and plans to
+/// reach the chosen one (decision #9 — reserved seam, not built here).
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Goal {
+    /// Be at the resource (satisfy the sustenance drive).
+    AtResource,
+}
+
+/// What the agent perceives of the world — the `view` the decision reads. Today
+/// its contents are ground truth; PSY-6's "plan over belief, not truth" (UNI-16)
+/// is later a change to what fills this, not to the seam.
+/// type-audit: bare-ok(ratio: drive)
+#[derive(Clone, Debug)]
+pub struct Perceived {
+    /// The agent's current room.
+    pub position: RoomAddr,
+    /// The agent's perceived drive level.
+    pub drive: f64,
+}
+
+/// The decision's output: where the agent intends to be. The tick depends ONLY
+/// on this — never on the drive internals — so the decision body can be replaced
+/// (by the GOAP planner) without touching the caller.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Intent {
+    /// Move toward this room.
+    GoTo(RoomAddr),
+    /// Stay put (the hysteresis dead-band).
+    Hold,
+}
+
+/// The reactive controller (decision #9): the degenerate one-goal case of
+/// goal-selection-then-planning. Generate the sole goal when the drive crosses
+/// `act`, plan the one-step route to it (go to the resource), and return home
+/// when sated — with a dead-band (`sated < act`) between to prevent thrashing.
+/// type-audit: bare-ok(return)
+pub fn decide(home: &RoomAddr, resource: &RoomAddr, view: &Perceived, p: &DriveParams) -> Intent {
+    let at_resource = &view.position == resource;
+    if !at_resource && view.drive >= p.act {
+        Intent::GoTo(resource.clone()) // goal generated: AtResource; one-step plan
+    } else if at_resource && view.drive <= p.sated {
+        Intent::GoTo(home.clone()) // goal satisfied; return
+    } else {
+        Intent::Hold // dead-band
+    }
+}
+
+/// The closed-form day the drive next reaches its governing threshold from
+/// `(from_day, drive0)`: `act` while away (rising), `sated` while at the
+/// resource (falling). `Some(from_day)` if already past it in the travel
+/// direction; `None` if the rate is zero and it never arrives.
+/// type-audit: bare-ok(return)
+pub fn next_crossing(
+    from_day: f64,
+    drive0: f64,
+    at_resource: bool,
+    p: &DriveParams,
+) -> Option<f64> {
+    if at_resource {
+        if drive0 <= p.sated {
+            return Some(from_day);
+        }
+        if p.fall <= 0.0 {
+            return None;
+        }
+        Some(from_day + (drive0 - p.sated) / p.fall)
+    } else {
+        if drive0 >= p.act {
+            return Some(from_day);
+        }
+        if p.rise <= 0.0 {
+            return None;
+        }
+        Some(from_day + (p.act - drive0) / p.rise)
+    }
+}
+
 /// Order settlements for NPC derivation: population descending (ties broken
 /// by `EntityId`), with `home_settlement` pulled to the front regardless of
 /// its rank. Pure and independently testable (no world/ledger needed) so the
@@ -724,5 +805,59 @@ mod tests {
             a,
             "drive re-derives identically after reload"
         );
+    }
+
+    fn addr(seed: f64) -> RoomAddr {
+        RoomAddr::containing([seed, 0.0, 0.0], 6)
+    }
+
+    #[test]
+    fn decide_seeks_when_parched_and_returns_when_sated() {
+        let p = SUSTENANCE;
+        let home = addr(1.0);
+        let resource = home.neighbors()[0].clone();
+        // parched (drive >= act), at home -> go to resource
+        let v = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+        };
+        assert_eq!(
+            decide(&home, &resource, &v, &p),
+            Intent::GoTo(resource.clone())
+        );
+        // at resource, sated (drive <= sated) -> go home
+        let v = Perceived {
+            position: resource.clone(),
+            drive: 0.1,
+        };
+        assert_eq!(decide(&home, &resource, &v, &p), Intent::GoTo(home.clone()));
+        // in the dead-band (sated < drive < act) -> hold, wherever you are
+        let v = Perceived {
+            position: home.clone(),
+            drive: 0.5,
+        };
+        assert_eq!(decide(&home, &resource, &v, &p), Intent::Hold);
+        let v = Perceived {
+            position: resource.clone(),
+            drive: 0.5,
+        };
+        assert_eq!(decide(&home, &resource, &v, &p), Intent::Hold);
+    }
+
+    #[test]
+    fn next_crossing_is_closed_form_and_exact() {
+        let p = DriveParams {
+            rise: 0.1,
+            fall: 0.5,
+            act: 0.8,
+            sated: 0.2,
+            initial: 0.0,
+        };
+        // away, drive 0.0, rises at 0.1/day -> reaches act 0.8 at day 8.
+        assert!((next_crossing(0.0, 0.0, false, &p).unwrap() - 8.0).abs() < 1e-9);
+        // at resource, drive 0.8, falls at 0.5/day -> reaches sated 0.2 at day 1.2.
+        assert!((next_crossing(0.0, 0.8, true, &p).unwrap() - 1.2).abs() < 1e-9);
+        // already past the threshold in the direction of travel -> immediate (day = from_day)
+        assert_eq!(next_crossing(5.0, 0.9, false, &p), Some(5.0));
     }
 }
