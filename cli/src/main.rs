@@ -50,6 +50,7 @@ usage:
   hornvale scene system [--world <PATH>]              emit scene/system/v1 JSON to stdout
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
+  hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
   hornvale locale --world W --sample N [--depth D]
@@ -800,8 +801,10 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// elements for the orrery (scene/system/v1), `scene moons` renders each
 /// moon's per-surface descriptors (scene/moons/v1), and `scene neighbors`
 /// renders the night sky's two star populations, the notable neighbor
-/// stars and the background starfield (scene/neighbors/v1). Deterministic;
-/// CI drift-checks the committed example scene.
+/// stars and the background starfield (scene/neighbors/v1), and `scene
+/// eclipses` renders dated eclipse events over a `[from, until)` day window
+/// (scene/eclipses/v1). Deterministic; CI drift-checks the committed example
+/// scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -852,11 +855,25 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::region_json(&scene));
             Ok(())
         }
+        Some("eclipses") => {
+            let world = load_world(args)?;
+            let parse_f64 = |flag: &str| -> Result<f64, String> {
+                flag_value(args, flag)
+                    .ok_or_else(|| format!("scene eclipses requires {flag}"))?
+                    .parse::<f64>()
+                    .map_err(|e| format!("{flag} must be a number: {e}"))
+            };
+            let from = parse_f64("--from")?;
+            let until = parse_f64("--until")?;
+            let scene = hornvale_scene::eclipses_scene(&world, from, until).map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::eclipses_json(&scene));
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
         )),
         None => Err(
-            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors"
+            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
                 .to_string(),
         ),
     }
