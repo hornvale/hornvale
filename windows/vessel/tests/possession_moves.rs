@@ -234,8 +234,8 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
     // drive cycle. Fixing the drive to a constant (e.g. always returning
-    // `SUSTENANCE.initial`) would make `early == later` (both "seems
-    // content") and red this line.
+    // 0.0) would make `early == later` (both "seems content") and red this
+    // line.
     assert_ne!(
         early, later,
         "the felt state must differ across the drive cycle: {early} / {later}"

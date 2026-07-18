@@ -83,32 +83,39 @@ fn room_from_text(s: &str) -> RoomAddr {
 }
 
 /// The homeostatic-drive parameters (authored constants; §4.2/§4.3): the rise
-/// rate while away from the resource, the fall (satiety) rate while at it, and
-/// the hysteresis thresholds `act` (seek) and `sated` (leave), plus the
-/// pre-history initial value. Dimensionless; the drive lives in [0, 1].
-/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: fall), bare-ok(ratio: act), bare-ok(ratio: sated), bare-ok(ratio: initial)
+/// rate while away from the resource, the seek threshold `act`, and the
+/// `sated` narration threshold. Dimensionless; the drive lives in [0, 1].
+///
+/// The planned (drank-fold) model's `decide`/`drive_at` consult only `rise`
+/// and `act` — the plan's own goal state (`hydrated`) replaces the old
+/// hysteresis leave-condition, and a `Drink` action resets the drive to 0
+/// directly rather than falling gradually. `sated` survives as a SEPARATE
+/// consumer: `Session::needs`'s felt-state prose (`windows/vessel/src/
+/// session.rs`) still thresholds on it to say "seems content" vs "could do
+/// with a drink". The old physiological `fall` rate and pre-history
+/// `initial` value have no reader anywhere in the planned model and were
+/// removed (The Foresight T3 review) rather than left as dead fields with
+/// misleading docs.
+/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: act), bare-ok(ratio: sated)
 #[derive(Clone, Copy, Debug)]
 pub struct DriveParams {
     /// Drive gained per day while away from the resource.
     pub rise: f64,
-    /// Drive lost per day while at the resource (satiety).
-    pub fall: f64,
-    /// The seek threshold: drive >= act -> go to the resource.
+    /// The seek threshold: drive >= act -> plan to the resource and drink.
     pub act: f64,
-    /// The leave threshold: drive <= sated -> return home.
+    /// The felt-state narration threshold, read only by `Session::needs`:
+    /// drive <= sated -> "seems content" prose. NOT consulted by `decide`
+    /// or `DriveMovements::step` — the planner's return-home branch is
+    /// driven by `hydrated`/`position != home`, not by this value.
     pub sated: f64,
-    /// The drive before any committed move.
-    pub initial: f64,
 }
 
 /// The one authored sustenance drive (thirst/foraging). act > sated (the
-/// hysteresis dead-band); rates chosen so a cycle spans a few days.
+/// felt-state dead-band); rates chosen so a cycle spans a few days.
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
-    fall: 0.6,
     act: 0.85,
     sated: 0.15,
-    initial: 0.0,
 };
 
 /// The resource cell the drive seeks: the lowest-elevation of `home`'s three
@@ -914,6 +921,76 @@ mod tests {
         // proof it didn't hang).
         assert_eq!(next.find(AGENT_AT).filter(|f| f.subject == e).count(), 0);
         assert_eq!(next.find(DRANK).filter(|f| f.subject == e).count(), 0);
+    }
+
+    #[test]
+    fn a_degenerate_zero_rise_drive_terminates_via_the_max_steps_cap_not_a_hang() {
+        // THE DEGENERATE-DRIVEPARAMS REGRESSION (The Foresight T3 review):
+        // `rise: 0.0, act: 0.0` makes the `Hold`-idle jump compute
+        // `next_act = last_drank + act / rise = 0.0 / 0.0 = NaN`. Every NaN
+        // comparison (`<=`, `>`) is `false`, so BOTH strict-progress guards
+        // in the `Hold` arm (`next_act <= day` and `next_act > self.to.day`)
+        // fail to fire, and `day = next_act` sets `day` to NaN too (which
+        // then also never exceeds `self.to.day`, since any comparison with
+        // NaN is false). Only the unconditional `steps >= MAX_STEPS` cap
+        // (10_000) stops the loop — this test proves that cap is the real
+        // backstop, not the closed-form guard (which is a no-op here).
+        //
+        // The old regression test for this class
+        // (`a_misconfigured_drive_terminates_instead_of_hanging`, keyed on
+        // `sated >= act`) no longer applies: the planned model's `decide`
+        // never reads `sated`, so that degenerate class can't hang it. This
+        // is the new degenerate class the planned model is actually exposed
+        // to.
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        let ledger = Ledger::default();
+        let e = EntityId::new(1).unwrap();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water,
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        let degenerate = DriveParams {
+            rise: 0.0,
+            act: 0.0,
+            sated: 0.15,
+        };
+        // A long interval: if MAX_STEPS were not the backstop, this would
+        // spin forever (this test's own short harness timeout is additional
+        // proof it didn't hang; the assertion below is the load-bearing
+        // one).
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: WorldTime { day: 0.0 },
+            to: WorldTime { day: 1_000_000.0 },
+            params: degenerate,
+        };
+        let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+        // It terminates (the call above returned at all) with a BOUNDED
+        // number of facts — MAX_STEPS iterations, not an unbounded run: with
+        // drive == 0.0 >= act == 0.0, every step is "thirsty", so the first
+        // step plans to water (one MoveTo, since water is one hop from
+        // home), then every subsequent step is Drink (already at water,
+        // still "thirsty" since act stays 0.0) — MAX_STEPS-1 drinks plus one
+        // move, capped by the 10_000-iteration backstop.
+        let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
+        let drinks = next.find(DRANK).filter(|f| f.subject == e).count();
+        assert!(
+            moves + drinks <= MAX_STEPS,
+            "the MAX_STEPS cap must bound total committed facts even under a \
+             NaN-producing degenerate DriveParams; got {moves} moves + {drinks} drinks"
+        );
+        assert!(
+            moves + drinks > 0,
+            "the loop must actually run (not exit on the first iteration) \
+             for this to be a meaningful termination proof"
+        );
     }
 
     #[test]
