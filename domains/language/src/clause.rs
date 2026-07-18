@@ -195,8 +195,11 @@ pub struct ParseContext {
 }
 
 /// Why `parse_common` refused to invert a sentence — each variant is a
-/// recountable, specific reason rather than a bare "parse failed".
-/// type-audit: bare-ok(prose: UnknownComplement.after), bare-ok(prose: BadTail.tail)
+/// recountable, specific reason rather than a bare "parse failed". These
+/// are the parser's three (and only three) failure modes: text after a
+/// matched complement is empty or space-prefixed by the complement
+/// filter's construction, so no "bad tail" failure exists.
+/// type-audit: bare-ok(prose: UnknownComplement.after)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseError {
     /// Neither `" is "` nor `" are "` appears, so no subject/copula split
@@ -207,12 +210,6 @@ pub enum ParseError {
     UnknownComplement {
         /// The unrecognized text following the determiner.
         after: String,
-    },
-    /// Text follows the matched complement that is neither empty nor a
-    /// `' '`-prefixed modifier tail.
-    BadTail {
-        /// The offending trailing text.
-        tail: String,
     },
     /// The text has no terminal `.`, so the construction's final literal
     /// never matched.
@@ -226,9 +223,6 @@ impl std::fmt::Display for ParseError {
             ParseError::UnknownComplement { after } => {
                 write!(f, "no registered complement matches '{after}'")
             }
-            ParseError::BadTail { tail } => {
-                write!(f, "trailing text '{tail}' is not a valid modifier tail")
-            }
             ParseError::Unterminated => write!(f, "sentence has no terminal '.'"),
         }
     }
@@ -241,6 +235,10 @@ impl std::error::Error for ParseError {}
 /// entry backward — the boundaries come from the construction's shape, and
 /// the subject/copula split happens at the EARLIEST `" is "`/`" are "`
 /// occurrence (so a subject itself never contains the copula word).
+/// Complement lexemes in `ctx` must not begin with a determiner word
+/// (`"a "`/`"an "`/`"the "`) — the bare-plural path would misparse them;
+/// today's vocabulary (single words and hyphenated compounds) satisfies
+/// this.
 /// type-audit: bare-ok(prose)
 pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseError> {
     // Terminal literal first.
@@ -284,16 +282,14 @@ pub fn parse_common(text: &str, ctx: &ParseContext) -> Result<ClauseSpec, ParseE
         .ok_or_else(|| ParseError::UnknownComplement {
             after: after_det.to_string(),
         })?;
-    // Modifier tail: '' or ' m1' or ' m1, m2, …'.
+    // Modifier tail: '' or ' m1' or ' m1, m2, …'. The complement filter
+    // above only admits candidates whose remainder is empty or starts
+    // with ' ', so by construction `tail` is one of exactly those two
+    // shapes — no third case exists to report.
     let tail = &after_det[complement.len()..];
-    let modifiers: Vec<String> = if tail.is_empty() {
-        Vec::new()
-    } else if let Some(t) = tail.strip_prefix(' ') {
-        t.split(", ").map(str::to_string).collect()
-    } else {
-        return Err(ParseError::BadTail {
-            tail: tail.to_string(),
-        });
+    let modifiers: Vec<String> = match tail.strip_prefix(' ') {
+        Some(t) => t.split(", ").map(str::to_string).collect(),
+        None => Vec::new(),
     };
     Ok(ClauseSpec {
         frame: Frame::Classify,
@@ -432,6 +428,7 @@ mod tests {
 
     #[test]
     fn parse_reports_a_recountable_failure() {
+        // The parser's three failure modes, each directly exercised.
         assert!(matches!(
             parse_common("Vebe is a carriage.", &ctx(&["planet"])),
             Err(ParseError::UnknownComplement { .. })
