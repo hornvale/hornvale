@@ -328,9 +328,11 @@ pub fn generate(
         &downhill,
         &induration_map,
         &carbonate_pre,
-        &margins,
-        &boundary_map,
-        &plate_of,
+        crate::carve::MarginGeometry {
+            margins: &margins,
+            boundary: &boundary_map,
+            plate_of: &plate_of,
+        },
         &trail_seamounts_list,
         &carve_params,
     );

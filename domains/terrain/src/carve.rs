@@ -134,6 +134,22 @@ impl Default for CarveParams {
     }
 }
 
+/// The per-cell plate/margin geometry the carve stages share: each cell's
+/// margin polarity, its plate boundary (if any), and its owning plate.
+/// These three maps are derived together from the plate set and thread as a
+/// unit through `carve` → `deposit_wedge`/`raise_barriers`, so they ride as
+/// one context rather than three positional arguments. Purely a grouping of
+/// the same three references — byte-identical to passing them separately.
+#[derive(Clone, Copy)]
+pub struct MarginGeometry<'a> {
+    /// Passive/active margin polarity per cell.
+    pub margins: &'a CellMap<MarginPolarity>,
+    /// Plate boundary at each cell, if any.
+    pub boundary: &'a CellMap<Option<CellBoundary>>,
+    /// Owning plate id per cell.
+    pub plate_of: &'a CellMap<u32>,
+}
+
 /// The carve's output: an elevation delta plus the sediment bookkeeping.
 /// `CarveDelta::from_incision_and_repose` seeds `delta_m`,
 /// `sediment_thickness_m`, `eroded_total_m3`, and `deposited_total_m3` from
@@ -622,7 +638,6 @@ pub fn wave_erosion(
 /// descending (`CellId` ascending tiebreak); `ocean_loss` is the playa
 /// overflow only — the marine wedge (Task 9) adds to it separately.
 /// type-audit: pending(wave-2: incision), bare-ok(flag: endorheic), pending(wave-2: return)
-#[allow(clippy::too_many_arguments)]
 pub fn route_sediment(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
@@ -776,18 +791,20 @@ pub fn route_sediment(
 /// the ordinary wedge spread.
 ///
 /// type-audit: pending(wave-2: mouths), bare-ok(index: plate_of), pending(wave-2: return)
-#[allow(clippy::too_many_arguments)]
 pub fn deposit_wedge(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     mouths: &[(CellId, f64)],
-    margins: &CellMap<MarginPolarity>,
-    boundary: &CellMap<Option<CellBoundary>>,
-    plate_of: &CellMap<u32>,
+    geom: MarginGeometry,
     delta_eligible: &BTreeSet<CellId>,
     params: &CarveParams,
 ) -> (CellMap<f64>, Vec<CellId>, f64) {
+    let MarginGeometry {
+        margins,
+        boundary,
+        plate_of,
+    } = geom;
     let n = geo.cell_count();
     let is_ocean = |c: CellId| *elevation.get(c) < sea_level;
     // The trench is the SUBDUCTING side only: a CoastalRange contact's
@@ -1047,18 +1064,20 @@ pub fn deposit_wedge(
 /// ([`trim_to_sea`]) must exempt `barrier_cells` like `delta_cells` — a
 /// barrier is meant to stay subaerial past the final re-solve.
 /// type-audit: bare-ok(index: plate_of), pending(wave-2: mouths), pending(wave-2: return)
-#[allow(clippy::too_many_arguments)]
 pub fn raise_barriers(
     geo: &Geosphere,
     elevation_after_wedge: &CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
-    margins: &CellMap<MarginPolarity>,
-    boundary: &CellMap<Option<CellBoundary>>,
-    plate_of: &CellMap<u32>,
+    geom: MarginGeometry,
     delta_cells: &BTreeSet<CellId>,
     mouths: &[(CellId, f64)],
     params: &CarveParams,
 ) -> (CellMap<f64>, Vec<CellId>, f64) {
+    let MarginGeometry {
+        margins,
+        boundary,
+        plate_of,
+    } = geom;
     let is_ocean = |c: CellId| *elevation_after_wedge.get(c) < sea_level;
     // The trench is a wall to barrier building too — the same test
     // `deposit_wedge` uses (a CoastalRange contact's whole oceanic side,
@@ -1324,9 +1343,7 @@ pub fn carve(
     downhill: &[Option<CellId>],
     induration: &CellMap<f64>,
     carbonate: &CellMap<f64>,
-    margins: &CellMap<MarginPolarity>,
-    boundary: &CellMap<Option<CellBoundary>>,
-    plate_of: &CellMap<u32>,
+    geom: MarginGeometry,
     trail_seamounts: &[TrailSeamount],
     params: &CarveParams,
 ) -> CarveDelta {
@@ -1382,9 +1399,7 @@ pub fn carve(
         elevation,
         sea_level,
         &all_mouths,
-        margins,
-        boundary,
-        plate_of,
+        geom,
         &river_mouth_cells,
         params,
     );
@@ -1401,9 +1416,7 @@ pub fn carve(
         geo,
         &elevation_after_wedge,
         sea_level,
-        margins,
-        boundary,
-        plate_of,
+        geom,
         &delta_cell_set,
         &all_mouths,
         params,
@@ -1989,7 +2002,17 @@ mod tests {
         let mouths = vec![(wave, 10_000.0), (river, 1_000.0)];
         let eligible: BTreeSet<CellId> = [river].into_iter().collect();
         let (_, delta_cells, _) = deposit_wedge(
-            &geo, &elevation, sea, &mouths, &margins, &boundary, &plate_of, &eligible, &p,
+            &geo,
+            &elevation,
+            sea,
+            &mouths,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
+            &eligible,
+            &p,
         );
         assert!(
             !delta_cells.is_empty(),
@@ -2038,7 +2061,17 @@ mod tests {
         let mouths = vec![(mouth, 1000.0)];
         let no_deltas = BTreeSet::new();
         let (marine_deposit, delta_cells, ocean_loss) = deposit_wedge(
-            &geo, &elevation, sea, &mouths, &margins, &boundary, &plate_of, &no_deltas, &p,
+            &geo,
+            &elevation,
+            sea,
+            &mouths,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
+            &no_deltas,
+            &p,
         );
         assert!(delta_cells.is_empty());
         for &nb in geo.neighbors(mouth) {
@@ -2090,7 +2123,17 @@ mod tests {
         let mouths = vec![(mouth, 1000.0)];
         let no_deltas = BTreeSet::new();
         let (marine_deposit, _delta_cells, _ocean_loss) = deposit_wedge(
-            &geo, &elevation, sea, &mouths, &margins, &boundary, &plate_of, &no_deltas, &p,
+            &geo,
+            &elevation,
+            sea,
+            &mouths,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
+            &no_deltas,
+            &p,
         );
         let mut overriding_filled = 0usize;
         for &nb in geo.neighbors(mouth) {
@@ -2256,9 +2299,11 @@ mod tests {
             &s.geo,
             &s.elevation,
             s.sea,
-            &margins,
-            &boundary,
-            &plate_of,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
             &no_deltas,
             &mouths,
             &p,
@@ -2323,9 +2368,11 @@ mod tests {
             &s.geo,
             &s.elevation,
             s.sea,
-            &margins,
-            &boundary,
-            &plate_of,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
             &no_deltas,
             &[],
             &p,
@@ -2381,9 +2428,11 @@ mod tests {
             &s.geo,
             &s.elevation,
             s.sea,
-            &margins,
-            &boundary,
-            &plate_of,
+            MarginGeometry {
+                margins: &margins,
+                boundary: &boundary,
+                plate_of: &plate_of,
+            },
             &no_deltas,
             &mouths,
             &p,
