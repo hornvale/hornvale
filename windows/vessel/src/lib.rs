@@ -6,6 +6,7 @@
 mod agent;
 mod focalize;
 mod knowledge;
+pub mod liveness;
 mod session;
 pub mod streams;
 mod vantage;

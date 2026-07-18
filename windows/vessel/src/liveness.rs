@@ -1,0 +1,219 @@
+//! The Quickening: the world's first autonomous motion. NPCs derived like the
+//! possessed agent walk deterministic daily routes; their position over time is
+//! a pure schedule (derived, reversible — the routine). This module is the
+//! pure foundation only: deriving NPCs and their daily-route schedule. No
+//! ledger facts are committed here and no session/tick wiring exists yet
+//! (that is later Quickening work); domains are untouched (The Walk §11).
+
+use crate::agent::{settlement_position, walk_depth};
+use hornvale_kernel::{EntityId, Ledger, RoomAddr, Value, World, WorldTime};
+use hornvale_locale::LocaleContext;
+use hornvale_species::ActivityCycle;
+
+/// A derived non-player agent: a minted entity, a home and a destination room,
+/// and its species' activity-cycle. Derived from the genesis world, never
+/// stored (re-derivable).
+/// type-audit: bare-ok(identifier-text: label)
+#[derive(Clone, Debug)]
+pub struct Npc {
+    /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
+    pub entity: EntityId,
+    /// Where the NPC rests (its home settlement's room).
+    pub home: RoomAddr,
+    /// Where the NPC goes when active (a deterministic neighbor room).
+    pub destination: RoomAddr,
+    /// The species activity-cycle driving the routine.
+    pub activity: ActivityCycle,
+    /// A short human label for prose ("the herder").
+    pub label: String,
+}
+
+/// Is the species active at the day-fraction of `t`? Diurnal → active in the
+/// daylight half `[0.25, 0.75)`; nocturnal → the complement; crepuscular → the
+/// twilight bands. A pure, periodic function (Lorenz-safe: never seeds a
+/// forward-integrator, just reads a fraction of `t.day`).
+/// type-audit: bare-ok(flag: return)
+pub fn active_phase(activity: ActivityCycle, t: WorldTime) -> bool {
+    let frac = t.day - t.day.floor(); // day fraction in [0, 1); 0.5 == noon
+    match activity {
+        ActivityCycle::Diurnal => (0.25..0.75).contains(&frac),
+        ActivityCycle::Nocturnal => !(0.25..0.75).contains(&frac),
+        // Crepuscular: active at the dawn/dusk bands only (idle this
+        // campaign — no crepuscular species is placed yet, authored now so a
+        // future species is a data change, not a code change).
+        ActivityCycle::Crepuscular => (0.20..0.30).contains(&frac) || (0.70..0.80).contains(&frac),
+    }
+}
+
+/// The NPC's scheduled position at `t`: its destination when active, else
+/// home. Pure and deterministic — the derived routine (never committed).
+/// THE ANTI-INERT GUARD: this must actually differ between phases (see
+/// `scheduled_position_moves_between_home_and_destination` below) — the
+/// world's first liveness work was scrapped once for shipping an actor that
+/// never moved.
+pub fn scheduled_position(npc: &Npc, t: WorldTime) -> RoomAddr {
+    if active_phase(npc.activity, t) {
+        npc.destination.clone()
+    } else {
+        npc.home.clone()
+    }
+}
+
+/// Derive `k` NPCs from the `k` most-populous settlements. Each NPC is minted
+/// in `ledger` (a session-owned clone), homed at its settlement's cell room,
+/// with a deterministic destination neighbor and its species' activity-cycle.
+/// type-audit: bare-ok(count: k)
+pub fn derive_npcs(world: &World, ctx: &LocaleContext, ledger: &mut Ledger, k: usize) -> Vec<Npc> {
+    // Settlements by population, ties broken by EntityId for determinism.
+    let mut settlements = hornvale_settlement::all_settlements(world);
+    settlements.sort_by(|a, b| b.population.cmp(&a.population).then(a.id.cmp(&b.id)));
+    settlements.truncate(k);
+
+    settlements
+        .into_iter()
+        .map(|village| {
+            let home = settlement_room(world, ctx, village.id);
+            let destination = deterministic_destination(home.clone());
+            let species = hornvale_species::species_of(world, village.id)
+                .unwrap_or_else(|| "goblin".to_string());
+            let activity = species_activity(world, &species);
+            let entity = ledger.mint_entity();
+            Npc {
+                entity,
+                home,
+                destination,
+                activity,
+                label: format!("{species} of {}", village.name),
+            }
+        })
+        .collect()
+}
+
+/// The room containing a settlement's cell at walk depth (mirrors
+/// `mint_flagship`, via the shared `settlement_position` helper).
+fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> RoomAddr {
+    let pos = settlement_position(world, settlement);
+    RoomAddr::containing(pos, walk_depth(ctx))
+}
+
+/// A deterministic destination neighbor of `home` — the smallest of its three
+/// mesh neighbors by address (a fixed, seed-independent, total-order pick;
+/// `RoomAddr` is `Ord`, so this needs no extra tie-break key).
+fn deterministic_destination(home: RoomAddr) -> RoomAddr {
+    home.neighbors()
+        .into_iter()
+        .min()
+        .expect("a room has three neighbors")
+}
+
+/// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`
+/// fact on the species' own entity (resolved by name via `species_entity`).
+/// Defaults to `Diurnal` if the species or the fact is missing.
+fn species_activity(world: &World, species: &str) -> ActivityCycle {
+    hornvale_species::species_entity(world, species)
+        .and_then(|e| {
+            match world
+                .ledger
+                .value_of(e, hornvale_species::SPECIES_ACTIVITY_CYCLE)
+            {
+                Some(Value::Text(t)) => Some(parse_activity(t)),
+                _ => None,
+            }
+        })
+        .unwrap_or(ActivityCycle::Diurnal)
+}
+
+/// Parse the committed activity-cycle text (see
+/// `windows/worldgen/src/lib.rs`'s species genesis, which commits exactly
+/// these three strings). Unknown text defaults to `Diurnal`.
+fn parse_activity(t: &str) -> ActivityCycle {
+    match t {
+        "nocturnal" => ActivityCycle::Nocturnal,
+        "crepuscular" => ActivityCycle::Crepuscular,
+        _ => ActivityCycle::Diurnal,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_kernel::Seed;
+
+    fn diurnal_npc() -> Npc {
+        // A hand-built NPC for the pure-schedule tests (no world needed).
+        let home = hornvale_kernel::RoomAddr::containing([1.0, 0.0, 0.0], 6);
+        let destination = home.neighbors()[0].clone();
+        Npc {
+            entity: hornvale_kernel::EntityId::new(1).unwrap(),
+            home,
+            destination,
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".to_string(),
+        }
+    }
+
+    #[test]
+    fn active_phase_diurnal_is_day_not_night() {
+        // day fraction 0.5 = noon (active for diurnal); 0.0 = midnight (rest).
+        assert!(active_phase(
+            hornvale_species::ActivityCycle::Diurnal,
+            WorldTime { day: 3.5 }
+        ));
+        assert!(!active_phase(
+            hornvale_species::ActivityCycle::Diurnal,
+            WorldTime { day: 3.0 }
+        ));
+    }
+
+    #[test]
+    fn scheduled_position_moves_between_home_and_destination() {
+        // THE ANTI-INERT GUARD (ledger #8): the actor must actually move.
+        let npc = diurnal_npc();
+        let at_noon = scheduled_position(&npc, WorldTime { day: 3.5 });
+        let at_midnight = scheduled_position(&npc, WorldTime { day: 3.0 });
+        assert_eq!(at_noon, npc.destination);
+        assert_eq!(at_midnight, npc.home);
+        assert_ne!(at_noon, at_midnight, "the NPC must move between phases");
+    }
+
+    #[test]
+    fn scheduled_position_is_deterministic_and_total() {
+        let npc = diurnal_npc();
+        // splitmix over t: every t yields a defined position, equal on repeat.
+        let mut st = 1u64;
+        for _ in 0..200 {
+            st = st.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let t = WorldTime {
+                day: (st % 100_000) as f64 / 1000.0,
+            };
+            assert_eq!(scheduled_position(&npc, t), scheduled_position(&npc, t));
+        }
+    }
+
+    #[test]
+    fn derive_npcs_are_distinct_and_placed() {
+        // Use the real worldgen build for a populated world:
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut ledger = world.ledger.clone();
+        let npcs = derive_npcs(&world, &ctx, &mut ledger, 3);
+        assert_eq!(npcs.len(), 3);
+        // distinct entities, and each moves (home != destination)
+        let ids: std::collections::BTreeSet<_> = npcs.iter().map(|n| n.entity).collect();
+        assert_eq!(ids.len(), 3);
+        for n in &npcs {
+            assert_ne!(
+                n.home, n.destination,
+                "NPC {} must have a real route",
+                n.label
+            );
+        }
+    }
+}
