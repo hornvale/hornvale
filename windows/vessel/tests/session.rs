@@ -105,7 +105,12 @@ fn examine_honors_the_contract_and_release_ends() {
 }
 
 #[test]
-fn wait_advances_the_frozen_day_without_moving_anything() {
+fn wait_advances_the_day_and_moves_the_npc_layer_without_moving_you() {
+    // The-quickening (T3): `wait` now runs the NPC layer's tick, so its
+    // output narrates motion rather than re-describing the room. The
+    // observation day still advances (visible via a follow-up `look`), and
+    // the possessed agent itself still never moves — only the session's
+    // owned NPC ledger evolves.
     let world = seam_world();
     let (mut s, opening) = Session::start(&world, &opts()).unwrap();
     assert!(opening.contains("day 0"));
@@ -114,11 +119,15 @@ fn wait_advances_the_frozen_day_without_moving_anything() {
         Turn::Out(t) => t,
         _ => panic!("wait must not release"),
     };
-    assert!(out.contains("day 90"), "the observation day moved");
+    assert!(!out.is_empty(), "wait narrates what happened");
+    match s.handle("look") {
+        Turn::Out(t) => assert!(t.contains("day 90"), "the observation day moved"),
+        _ => panic!("look must not release"),
+    }
     assert_eq!(
         s.agent().position.pack().unwrap().0,
         home,
-        "waiting does not move the agent"
+        "waiting does not move the possessed agent"
     );
     match s.handle("wait sideways") {
         Turn::Out(t) => assert!(t.contains("no span of days")),

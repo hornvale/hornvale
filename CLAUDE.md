@@ -9,6 +9,26 @@ Constitution especially) and the project book (`book/`, published at
 hornvale.github.io/hornvale). When this file and the spec disagree, the spec
 governs.
 
+## Directory guides
+
+Several subtrees carry their own `CLAUDE.md` with directory-specific tribal
+knowledge that loads when you work there — consult the relevant one before
+editing:
+
+- `kernel/` — the determinism substrate: save-format contracts, quantize-at-
+  emit-only, `math.rs` (libm transcendentals; floor/sqrt stay intrinsic), the
+  `Fbm` derive-once pattern.
+- `domains/` — depend only on the kernel, never a sibling; trace-protocol-
+  only; stream consumption order is a contract. `domains/terrain/` adds the
+  byte-identity discipline for the sculpting pipeline.
+- `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
+- `windows/lab/` — studies are data, metrics are code; nextest is process-per-
+  test; censuses regen remotely only.
+- `tools/type-audit/` — the tag format and the stale-tag-on-signature-change
+  footgun.
+- `scripts/` — the gate ladder, `regenerate-artifacts.sh`, the AWS remote gate.
+- `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
+
 ## Commands
 
 ```bash

@@ -52,16 +52,10 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
         .find(|(k, _)| k.0 == species.as_str())
         .map(|(_, p)| p)
         .ok_or_else(|| VesselError::NoSpecies(species.clone()))?;
-    let lat = number_fact(world, village.id, LATITUDE)?;
-    let lon = number_fact(world, village.id, LONGITUDE)?;
-    let (la, lo) = (lat.to_radians(), lon.to_radians());
     // Same lat/lon → unit-sphere routing as `hornvale locale --at` (kernel
-    // math keeps it platform-exact).
-    let position = [
-        math::cos(la) * math::cos(lo),
-        math::cos(la) * math::sin(lo),
-        math::sin(la),
-    ];
+    // math keeps it platform-exact); shared with `settlement_position` so
+    // derived NPCs (the-quickening) place themselves the same way.
+    let position = settlement_position(world, village.id);
     let position = RoomAddr::containing(position, walk_depth(ctx));
     let id = AgentId(
         position
@@ -92,6 +86,30 @@ fn number_fact(
             id.0
         ))),
     }
+}
+
+/// A settlement's lat/lon → unit-sphere position — the same derivation
+/// `mint_flagship` uses for the possessed agent's room, shared so
+/// `liveness::derive_npcs` (the-quickening) homes its NPCs the same way.
+/// Panics if the settlement lacks committed `LATITUDE`/`LONGITUDE` facts:
+/// a settlement-genesis invariant (every `is-settlement` subject gets both
+/// unconditionally — `domains/settlement/src/genesis.rs`), never a runtime
+/// condition reachable from a real generated world.
+/// type-audit: bare-ok(coordinate: return)
+pub(crate) fn settlement_position(
+    world: &World,
+    settlement: hornvale_kernel::EntityId,
+) -> [f64; 3] {
+    let lat = number_fact(world, settlement, LATITUDE)
+        .unwrap_or_else(|e| panic!("settlement-genesis invariant violated: {e}"));
+    let lon = number_fact(world, settlement, LONGITUDE)
+        .unwrap_or_else(|e| panic!("settlement-genesis invariant violated: {e}"));
+    let (la, lo) = (lat.to_radians(), lon.to_radians());
+    [
+        math::cos(la) * math::cos(lo),
+        math::cos(la) * math::sin(lo),
+        math::sin(la),
+    ]
 }
 
 #[cfg(test)]

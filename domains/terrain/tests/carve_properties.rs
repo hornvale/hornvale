@@ -11,7 +11,7 @@
 use hornvale_kernel::{
     CellId, CellMap, Geosphere, NearestCellIndex, ReferenceElevation, Seed, math,
 };
-use hornvale_terrain::carve::{CarveDelta, CarveParams, carve, carve_incision};
+use hornvale_terrain::carve::{CarveDelta, CarveParams, MarginGeometry, carve, carve_incision};
 use hornvale_terrain::{
     GenesisOutcome, MarginPolarity, TerrainPins, crust, drainage, elevation, generate,
 };
@@ -103,9 +103,11 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
         &downhill,
         &g.induration,
         &carbonate,
-        &margins,
-        &g.boundary,
-        &g.plate_of,
+        MarginGeometry {
+            margins: &margins,
+            boundary: &g.boundary,
+            plate_of: &g.plate_of,
+        },
         &g.trail_seamounts,
         &CarveParams::default(),
     );

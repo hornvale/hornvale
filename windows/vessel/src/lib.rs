@@ -6,6 +6,7 @@
 mod agent;
 mod focalize;
 mod knowledge;
+pub mod liveness;
 mod session;
 pub mod streams;
 mod vantage;
@@ -53,6 +54,20 @@ pub struct PossessOpts {
     pub day: hornvale_kernel::WorldTime,
     /// Echo each command line (script/transcript mode).
     pub echo: bool,
+}
+
+impl Default for PossessOpts {
+    /// Noon, no echo — the plain possession a test drives. Noon (day
+    /// fraction 0.5) means a single default `wait 1` lands at the next
+    /// noon too (fraction 0.5, still inside the diurnal active band), so a
+    /// default script actually crosses an active phase rather than landing
+    /// on the midnight boundary every integer day would.
+    fn default() -> Self {
+        PossessOpts {
+            day: hornvale_kernel::WorldTime { day: 0.5 },
+            echo: false,
+        }
+    }
 }
 
 /// One verb's outcome.
