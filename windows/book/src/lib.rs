@@ -151,13 +151,6 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
-    // The planet's own committed name — reused as the subject of every
-    // tongue's planet-gap attempt below. `is-a` commits exactly one fact
-    // today (the planet's own classification), so this is captured on that
-    // single iteration; a future second `is-a` subject would leave this at
-    // whichever committed first, which is fine (the gap path's subject text
-    // is immaterial to the law being exercised — see the module doc).
-    let mut planet_name: Option<String> = None;
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         let Value::Text(kind) = &fact.object else {
             continue;
@@ -168,9 +161,6 @@ pub fn render_volume(world: &World) -> BookVolume {
             .text_of(subject_entity, hornvale_kernel::NAME)
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
-        if kind == "planet" {
-            planet_name = Some(name.clone());
-        }
 
         let mut modifiers = Vec::new();
         let mut trailing = Vec::new();
@@ -238,15 +228,16 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines.push(line);
     }
 
-    // C3 T3: each placed people states its own kind in its own tongue,
-    // then every tongue's attempt to state the PLANET's kind is recorded as
-    // a coverage gap (spec §5 — no culture holds `planet`). Iterated over
-    // `placed_peoples` (registry order, deterministic) rather than the
-    // ledger scan above so the section's order matches every other
-    // peoples-keyed section in the almanac/book.
+    // C3 T3: each placed people states its own kind in its own tongue, then
+    // every tongue's attempt to state each probe's kind is recorded — a
+    // rendered line on success, a coverage gap on failure (spec §5 — no
+    // culture holds `planet` today). Iterated over `placed_peoples`
+    // (registry order, deterministic) rather than the ledger scan above so
+    // the section's order matches every other peoples-keyed section in the
+    // almanac/book.
     let mut tongue_lines = Vec::new();
     let mut tongue_gaps = Vec::new();
-    let planet_subject = planet_name.unwrap_or_else(|| "the world".to_string());
+    let probes = tongue_probes(world);
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some((autonym, common_line)) = people_by_kind.get(kind) else {
             continue;
@@ -274,12 +265,16 @@ pub fn render_volume(world: &World) -> BookVolume {
             "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
         ));
 
-        let planet_statement = TongueClause {
-            subject: planet_subject.clone(),
-            complement_concept: "planet".to_string(),
-        };
-        if let Err(gap) = realize_tongue(&planet_statement, &grammar, &lexicon) {
-            tongue_gaps.push(format!("{kind}: gap — {} ({})", gap.concept, gap.reason));
+        for probe in &probes {
+            match probe_tongue(probe, kind, &grammar, &lexicon) {
+                Ok(line) => tongue_lines.push(format!(
+                    "{line} (in the {kind} tongue: \"{} is a {}.\")",
+                    probe.subject, probe.concept
+                )),
+                Err(gap) => {
+                    tongue_gaps.push(format!("{kind}: gap — {} ({})", gap.concept, gap.reason))
+                }
+            }
         }
     }
 
@@ -289,6 +284,60 @@ pub fn render_volume(world: &World) -> BookVolume {
         tongue_lines,
         tongue_gaps,
     }
+}
+
+/// One entry in the tongue render inventory: a concept some committed fact
+/// asks every tongue to state, about a named subject. The inventory is
+/// DERIVED from the ledger (C4 T1) — one probe per committed `is-a`
+/// complement — so a future renderable kind auto-enters the coverage
+/// report instead of waiting on a hand-list.
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(prose: subject)
+pub struct TongueProbe {
+    /// The concept the tongue is asked to state (an `is-a` complement).
+    pub concept: String,
+    /// The subject's surface name (the committed `name`, or the C3
+    /// fallback text).
+    pub subject: String,
+}
+
+/// The derived probe inventory: one probe per committed `is-a` fact,
+/// ledger order.
+pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
+    let mut probes = Vec::new();
+    for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
+        let Value::Text(kind) = &fact.object else {
+            continue;
+        };
+        let subject = world
+            .ledger
+            .text_of(fact.subject, hornvale_kernel::NAME)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("Entity {}", fact.subject.0));
+        probes.push(TongueProbe {
+            concept: kind.clone(),
+            subject,
+        });
+    }
+    probes
+}
+
+/// Run one probe against one tongue: realize `⟨subject⟩ ⟨copula?⟩
+/// ⟨concept⟩` — `Ok` is a rendered line (the success path C3 dropped),
+/// `Err` the recountable gap.
+fn probe_tongue(
+    probe: &TongueProbe,
+    _kind: &str,
+    grammar: &hornvale_language::TongueGrammar,
+    lexicon: &hornvale_language::Lexicon,
+) -> Result<String, hornvale_language::TongueGap> {
+    realize_tongue(
+        &TongueClause {
+            subject: probe.subject.clone(),
+            complement_concept: probe.concept.clone(),
+        },
+        grammar,
+        lexicon,
+    )
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -867,5 +916,58 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// C4 T1: the coverage report is DERIVED — the probe inventory contains
+    /// one entry per committed `is-a` complement concept (today: `planet`
+    /// only), so a future renderable `is-a` kind auto-enters the report.
+    #[test]
+    fn tongue_probes_derive_from_committed_is_a_facts() {
+        let world = generated(1);
+        let probes = tongue_probes(&world);
+        assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
+        assert_eq!(probes[0].concept, "planet");
+        assert_eq!(probes[0].subject, "Vebe");
+    }
+
+    /// C4 T1: the probe's SUCCESS path lands the realized line instead of
+    /// silently vanishing — driven with a synthetic lexicon that Steeps
+    /// `planet`, since no real culture holds it (mutation evidence: assert
+    /// the realized text, not just Ok-ness).
+    #[test]
+    fn probe_success_path_yields_a_line() {
+        use hornvale_language::{ExposureClass, build_lexicon};
+        let world = generated(1);
+        let ph = hornvale_worldgen::language_of(&world, "goblin");
+        let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
+        let mut exposures = BTreeMap::new();
+        exposures.insert("planet".to_string(), ExposureClass::Steeped);
+        let lexicon = build_lexicon(&world.seed, "goblin", "goblin", &ph, &ph, &exposures, &[]);
+        let probe = TongueProbe {
+            concept: "planet".to_string(),
+            subject: "Vebe".to_string(),
+        };
+        let line =
+            probe_tongue(&probe, "goblin", &grammar, &lexicon).expect("a Steeped concept realizes");
+        assert!(
+            !line.is_empty() && line.ends_with('.'),
+            "a realized sentence: {line}"
+        );
+        assert!(line.contains("Vebe"), "the probe subject appears: {line}");
+    }
+
+    /// C4 T1: the derived report reproduces C3's exact strings on seeds
+    /// 1–3 — no regression, no artifact drift from the derivation.
+    #[test]
+    fn derived_report_matches_the_shipped_strings() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        assert!(
+            vol.tongue_gaps
+                .iter()
+                .any(|g| g == "goblin: gap — planet (no entry in this lexicon)"),
+            "the derived gap line is byte-identical to C3's: {:?}",
+            vol.tongue_gaps
+        );
     }
 }
