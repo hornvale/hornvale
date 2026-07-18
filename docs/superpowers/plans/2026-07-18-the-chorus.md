@@ -828,7 +828,14 @@ ci.yml's artifact step and mirror if it enumerates studies), then run it:
 `cargo run --release -p hornvale -- lab run studies/the-chorus.study.json`
 and commit the generated `book/src/laboratory/generated/the-chorus/`
 artifacts. Report the summary tally line.
-- [ ] **Step 4: Full local gate** — `make gate 2>&1 | tail -15` → green.
+- [ ] **Step 4: Full local gate** — `make gate 2>&1 | tail -25` → green
+  EXCEPT the three census-schema files (`calibration.rs`,
+  `branches_family_calibration.rs`, `gathering_calibration.rs`), which are
+  red by design until the close-time authorized AWS regen refreshes the
+  census fixtures (ledger #14: T5's registry growth changes the census
+  schema; `load_rows`' exact-header check is deliberately strict). Verify
+  the failure list is EXACTLY those files' fixture-load errors — any other
+  red is a real defect.
 - [ ] **Step 5: Commit** — `feat(lab): the-chorus study + the preregistered known-groups gate (C4 T6)`
 
 ---
