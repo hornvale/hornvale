@@ -3,7 +3,9 @@
 //! history, metaplan §3.2). Fog, inference, false belief: The Vessel's.
 
 use crate::Vantage;
+use hornvale_book::{LineError, parse_line};
 use hornvale_kernel::{RoomId, Value, World, WorldTime};
+use hornvale_language::clause::ParseContext;
 use hornvale_locale::LocaleContext;
 use hornvale_species::PerceptionVector;
 use std::collections::BTreeMap;
@@ -19,6 +21,47 @@ impl Knowledge {
     pub fn absorb(&mut self, other: Knowledge) {
         self.0.extend(other.0);
     }
+}
+
+/// The knowledge-transfer seam (The Echo T4): absorb one Common sentence
+/// into `knowledge`, spoken-to-heard. Parses `line` against `ctx` via T3's
+/// `parse_line`, then records exactly what the sentence surfaced — the
+/// transfer law (spec §6): what transits is what the sentence says, no
+/// more, no less. Records `"{subject}::is-a"` → the recovered
+/// classification, then one `"{subject}::{predicate}"` → surface-value
+/// entry per aggregated fact the sentence carried (moons, star, day
+/// length, …). A number's surface text matches how the sentence carried
+/// it: a whole count prints bare (`"2"`), a fractional quantity keeps its
+/// digits (`"1.5"`) — this mirrors `domains/language`'s `quantity`
+/// rendering closely enough that a listener's belief reads naturally
+/// alongside the sentence it came from. Returns the number of entries
+/// absorbed (`1 + parsed.facts.len()`).
+/// type-audit: bare-ok(prose: line), bare-ok(count: return)
+pub fn absorb_common(
+    knowledge: &mut Knowledge,
+    line: &str,
+    ctx: &ParseContext,
+) -> Result<usize, LineError> {
+    let parsed = parse_line(line, ctx)?;
+    let subject = &parsed.subject;
+    knowledge
+        .0
+        .insert(format!("{subject}::is-a"), parsed.kind.clone());
+    let mut absorbed = 1;
+    for (predicate, value) in &parsed.facts {
+        let surface = match value {
+            Value::Text(t) => t.clone(),
+            Value::Number(n) if n.fract() == 0.0 => format!("{n:.0}"),
+            Value::Number(n) => format!("{n}"),
+            Value::Entity(id) => id.0.to_string(),
+            Value::Flag(b) => b.to_string(),
+        };
+        knowledge
+            .0
+            .insert(format!("{subject}::{predicate}"), surface);
+        absorbed += 1;
+    }
+    Ok(absorbed)
 }
 
 /// knowledge = project(ground_truth, vantage, perception).
@@ -165,5 +208,43 @@ mod tests {
         );
         k.0.insert("settlement/999999/name".into(), "Liesburg".into());
         assert!(knowledge_is_subset(&k, &world, &ctx, at).is_err());
+    }
+
+    fn generated(seed: u64) -> World {
+        build_world(
+            Seed(seed),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("generated world builds")
+    }
+
+    /// The Echo T4's transfer law: a Common sentence the Book renders
+    /// survives transit into a listener's `Knowledge` — the game seam
+    /// proving text is a lossless carrier, not just T3's round trip inside
+    /// the Book itself.
+    #[test]
+    fn a_spoken_fact_survives_transit_into_knowledge() {
+        let world = generated(1);
+        let ctx = hornvale_book::parse_context(&world);
+        let volume = hornvale_book::render_volume(&world);
+        let planet_line = volume
+            .lines
+            .iter()
+            .find(|l| l.contains(" is a planet"))
+            .expect("seed 1 renders a planet line");
+
+        let mut heard = Knowledge::default();
+        let n = absorb_common(&mut heard, planet_line, &ctx).expect("the listener parses Common");
+        assert!(n >= 3, "classification + at least two aggregated facts");
+        // What the listener now knows is what the sentence said:
+        let subject = planet_line.split(" is ").next().unwrap();
+        assert_eq!(
+            heard.0.get(&format!("{subject}::is-a")).map(String::as_str),
+            Some("planet")
+        );
+        assert!(heard.0.contains_key(&format!("{subject}::moon-count")));
     }
 }

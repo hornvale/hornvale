@@ -197,8 +197,10 @@ name = "hornvale-vessel"
 version = "0.1.0"
 dependencies = [
  "hornvale-astronomy",
+ "hornvale-book",
  "hornvale-historiography",
  "hornvale-kernel",
+ "hornvale-language",
  "hornvale-locale",
  "hornvale-settlement",
  "hornvale-species",

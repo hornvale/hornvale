@@ -10,6 +10,8 @@ hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../worldgen" }
 hornvale-locale = { path = "../locale" }
 hornvale-historiography = { path = "../historiography" }
+hornvale-book = { path = "../book" }
+hornvale-language = { path = "../../domains/language" }
 hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-species = { path = "../../domains/species" }
 serde = { workspace = true }
