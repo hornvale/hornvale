@@ -6,7 +6,7 @@ use crate::liveness::{
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
-    TemplateFocalizer, Turn, VesselError, mint_flagship, observable,
+    TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable,
 };
 use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, World, WorldTime, tick};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
@@ -27,6 +27,7 @@ verbs:
   npcs             the derived NPCs sharing this world (label, id)
   why <who>        recount an NPC's dated history (by label or id)
   needs            read the felt state of anyone sharing this room
+  tell <sentence>  speak a line of Common; you absorb what it says
   release          let go (quit works too)
 ";
 
@@ -173,6 +174,7 @@ impl<'w> Session<'w> {
             "npcs" => Turn::Out(self.list_npcs()),
             "why" => Turn::Out(self.why(rest)),
             "needs" => Turn::Out(self.needs()),
+            "tell" => Turn::Out(self.tell(rest)),
             "enter" | "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
                     .to_string(),
@@ -469,6 +471,22 @@ impl<'w> Session<'w> {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    /// Speak a Common sentence: the session absorbs its own spoken line
+    /// into its `Knowledge` via the transfer seam (The Echo T4). The
+    /// acceptable floor shape — no NPC addressing yet (a future `tell
+    /// <npc> <sentence>` is a UX decision this spec doesn't commit to,
+    /// G3 flag 2).
+    fn tell(&mut self, line: &str) -> String {
+        if line.is_empty() {
+            return "Tell what? Speak a line of Common.".to_string();
+        }
+        let ctx = hornvale_book::parse_context(self.world);
+        match absorb_common(&mut self.knowledge, line, &ctx) {
+            Ok(n) => format!("You take that in ({n} fact(s) learned)."),
+            Err(e) => format!("That doesn't parse as Common: {e}"),
+        }
     }
 
     fn knows(&self) -> String {

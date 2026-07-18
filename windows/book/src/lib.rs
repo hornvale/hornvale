@@ -14,7 +14,8 @@
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::clause::{
-    ClauseSpec, Definiteness, Frame, Number, Subject, cardinal, quantity, realize_common,
+    ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
+    parse_common, quantity, realize_common,
 };
 use std::collections::BTreeSet;
 
@@ -62,6 +63,25 @@ fn indefinite_article(word: &str) -> &'static str {
 /// type-audit: bare-ok(identifier-text: kind)
 fn species_label(kind: &str) -> String {
     format!("{kind}s")
+}
+
+/// Join a realized clause with its trailing independent clause(s) — the
+/// aggregation seam's shared assembly tail, used by both [`render_volume`]
+/// (forward) and [`rerender`] (the corpus law's re-realization check).
+/// `realize_common` always terminates `line` with `'.'`: strip it, join
+/// each trailing clause with `"; "`, then restore the final period. A
+/// no-op when `trailing` is empty (returns `line` unchanged).
+fn assemble_trailing(mut line: String, trailing: &[String]) -> String {
+    if trailing.is_empty() {
+        return line;
+    }
+    line.pop();
+    for t in trailing {
+        line.push_str("; ");
+        line.push_str(t);
+    }
+    line.push('.');
+    line
 }
 
 /// The construction table's authored predicate order: fragments join the
@@ -147,7 +167,7 @@ pub fn render_volume(world: &World) -> BookVolume {
         }
 
         let subject = subject_for(subject_entity, name, &mut named);
-        let mut line = realize_common(&ClauseSpec {
+        let line = realize_common(&ClauseSpec {
             frame: Frame::Classify,
             subject,
             complement: kind.clone(),
@@ -155,16 +175,7 @@ pub fn render_volume(world: &World) -> BookVolume {
             definiteness: Definiteness::Indef,
             modifiers,
         });
-        if !trailing.is_empty() {
-            // `realize_common` always terminates with '.': drop it, join the
-            // trailing clause(s) with "; ", then restore the final period.
-            line.pop();
-            for t in &trailing {
-                line.push_str("; ");
-                line.push_str(t);
-            }
-            line.push('.');
-        }
+        let line = assemble_trailing(line, &trailing);
         lines.push(line);
     }
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
@@ -217,6 +228,247 @@ pub fn uncovered_predicates(world: &World) -> Vec<String> {
         }
     }
     gaps.into_iter().collect()
+}
+
+/// The Book reads itself (The Echo, T3): invert a rendered line back into
+/// the classification and fragment facts that produced it. `subject` is
+/// the clause's surface text as written (a name, or the fixed re-mention
+/// pronoun `"it"`) — un-prefixing a collective's leading "The " is
+/// deliberately NOT this campaign's job. `kind` is the classification
+/// label: the `is-a` complement as-is for a singular line, or the
+/// singular species (the trailing `'s'` `species_label` appended,
+/// stripped back off) for a plural `instance-of` collective — see
+/// [`parse_line`]'s doc for how that distinction is recovered. `facts` are
+/// the modifier/trailing fragments' (predicate, surface value) pairs, in
+/// the construction table's authored order ([`CONSTRUCTION_ORDER`]).
+///
+/// `number` and `definiteness` are the original clause's grammatical
+/// features, needed by [`rerender`] to reconstruct the exact surface
+/// (copula, determiner, and whether `kind` re-pluralizes) — deliberately
+/// private: they are not part of this struct's three documented fields,
+/// only plumbing between [`parse_line`] and [`rerender`] inside this
+/// crate.
+/// type-audit: bare-ok(prose: subject), bare-ok(identifier-text: kind), bare-ok(identifier-text: facts)
+pub struct ParsedLine {
+    /// The clause's surface subject text (a name, or the pronoun `"it"`).
+    pub subject: String,
+    /// The classification label — singular, even for a plural
+    /// `instance-of` collective line.
+    pub kind: String,
+    /// The fragment-recovered (predicate, surface value) pairs, in
+    /// [`CONSTRUCTION_ORDER`].
+    pub facts: Vec<(String, Value)>,
+    number: Number,
+    definiteness: Definiteness,
+}
+
+/// Why [`parse_line`] could not invert a rendered line. Deliberately a
+/// book-local type rather than widening T2's `ParseError`: a book-level
+/// failure (an unrecognized trailing fragment) is not a construction the
+/// domain's clause grammar knows about — `fragment_for`/`fact_for` are
+/// windows/book's own construction table (see the module doc's
+/// aggregation seam), so their failure mode stays here too.
+/// type-audit: bare-ok(prose: UnknownFragment.0)
+#[derive(Clone, Debug, PartialEq)]
+pub enum LineError {
+    /// T2's clause-level parse (`parse_common`) failed.
+    Clause(ParseError),
+    /// The clause parsed, but a modifier or trailing fragment's text
+    /// matched no entry in [`fact_for`]'s inversion table.
+    UnknownFragment(String),
+}
+
+impl std::fmt::Display for LineError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LineError::Clause(e) => write!(f, "clause parse failed: {e}"),
+            LineError::UnknownFragment(frag) => write!(f, "unrecognized fragment: {frag:?}"),
+        }
+    }
+}
+
+impl std::error::Error for LineError {}
+
+/// `cardinal`'s inverse (a private table, not shared with
+/// `domains/language::clause`'s — see this module's `indefinite_article`
+/// for the established precedent of duplicating a small presentation-layer
+/// table across the aggregation seam rather than widening the domain's
+/// public surface for a book-only need): word (`"two"`) or digits
+/// (`"13"`) to the count.
+fn uncardinal(word: &str) -> Option<u64> {
+    const WORDS: [&str; 13] = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve",
+    ];
+    WORDS
+        .iter()
+        .position(|w| *w == word)
+        .map(|i| i as u64)
+        .or_else(|| word.parse().ok())
+}
+
+/// The construction table run backward: recover (predicate, surface
+/// value) from one fragment's text — the mirror of [`fragment_for`].
+/// Returns `None` for text this table's forward direction never produces,
+/// which [`parse_line`] treats as `LineError::UnknownFragment`.
+fn fact_for(fragment: &str) -> Option<(String, Value)> {
+    if let Some(rest) = fragment.strip_prefix("with ") {
+        let count_word = rest
+            .strip_suffix(" moons")
+            .or_else(|| rest.strip_suffix(" moon"))?;
+        return Some((
+            MOON_COUNT.to_string(),
+            Value::Number(uncardinal(count_word)? as f64),
+        ));
+    }
+    if let Some(rest) = fragment.strip_prefix("orbiting ") {
+        let class = rest
+            .strip_prefix("an ")
+            .or_else(|| rest.strip_prefix("a "))?;
+        return Some((STAR_CLASS.to_string(), Value::Text(class.to_string())));
+    }
+    if let Some(rest) = fragment.strip_prefix("its day lasts about ") {
+        let days = rest.strip_suffix(" standard days")?;
+        return Some((
+            DAY_LENGTH_STD.to_string(),
+            Value::Number(days.parse().ok()?),
+        ));
+    }
+    None
+}
+
+/// The closed complement set a `parse_line` call recognizes for `world`:
+/// every committed `is-a` object label, plus `species_label(kind)` for
+/// every committed `instance-of` object (the only source of a plural
+/// complement in this campaign's grammar — see [`parse_line`]'s doc for
+/// why that lets `Number::Pl` alone signal a collective on the way back).
+pub fn parse_context(world: &World) -> ParseContext {
+    let mut complements = BTreeSet::new();
+    for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
+        if let Value::Text(kind) = &fact.object {
+            complements.insert(kind.clone());
+        }
+    }
+    for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
+        if let Value::Text(kind) = &fact.object {
+            complements.insert(species_label(kind));
+        }
+    }
+    ParseContext { complements }
+}
+
+/// Invert one rendered [`render_volume`] line: split on the trailing-clause
+/// seam (`"; "`), clause-parse the head via T2's `parse_common`, then
+/// recover each modifier/trailing fragment's fact via [`fact_for`].
+///
+/// The split mirrors [`assemble_trailing`] exactly: the first segment lost
+/// its own terminal `'.'` to the strip in that join (append it back,
+/// unless there was no trailing clause at all — then the head is the
+/// whole, already-terminated line); the LAST segment carries the final
+/// `'.'` restored by that same join, which belongs to the sentence, not
+/// the fragment, so it is stripped before fragment inversion. Middle
+/// segments (more than one trailing clause) carry no punctuation at all.
+///
+/// `ParsedLine.kind` recovers the singular: this campaign's grammar (see
+/// [`render_volume`]) renders `Number::Pl` for exactly one construction —
+/// the `instance-of` collective, whose complement `species_label` built by
+/// appending `'s'` — so a plural clause's complement minus its trailing
+/// `'s'` is always the singular kind. An `is-a` line is always `Sg`, so its
+/// complement is used as-is. A future `Pl` `is-a` construction would need
+/// to revisit this closed-world assumption.
+/// type-audit: bare-ok(prose: line)
+pub fn parse_line(line: &str, ctx: &ParseContext) -> Result<ParsedLine, LineError> {
+    let segments: Vec<&str> = line.split("; ").collect();
+    let (head, trailing_raw) = segments
+        .split_first()
+        .expect("str::split always yields at least one segment");
+    let clause_text = if trailing_raw.is_empty() {
+        (*head).to_string()
+    } else {
+        format!("{head}.")
+    };
+    let clause = parse_common(&clause_text, ctx).map_err(LineError::Clause)?;
+
+    let mut facts = Vec::new();
+    for modifier in &clause.modifiers {
+        let (predicate, value) =
+            fact_for(modifier).ok_or_else(|| LineError::UnknownFragment(modifier.clone()))?;
+        facts.push((predicate, value));
+    }
+    let last = trailing_raw.len().saturating_sub(1);
+    for (i, segment) in trailing_raw.iter().enumerate() {
+        let text = if i == last {
+            segment.strip_suffix('.').unwrap_or(segment)
+        } else {
+            segment
+        };
+        let (predicate, value) =
+            fact_for(text).ok_or_else(|| LineError::UnknownFragment(text.to_string()))?;
+        facts.push((predicate, value));
+    }
+
+    let subject = match &clause.subject {
+        Subject::Name(name) => name.clone(),
+        Subject::Pronoun(p) => (*p).to_string(),
+    };
+    let kind = if clause.number == Number::Pl {
+        clause
+            .complement
+            .strip_suffix('s')
+            .map(str::to_string)
+            .unwrap_or_else(|| clause.complement.clone())
+    } else {
+        clause.complement.clone()
+    };
+
+    Ok(ParsedLine {
+        subject,
+        kind,
+        facts,
+        number: clause.number,
+        definiteness: clause.definiteness,
+    })
+}
+
+/// Re-realize a [`ParsedLine`] back to its exact surface text: the corpus
+/// law's other half. Regroups `parsed.facts` into modifiers/trailing via
+/// [`fragment_for`] (the same construction table, forward again),
+/// re-pluralizes `kind` through `species_label` for a `Pl` clause, and
+/// rebuilds the clause plus any trailing clause(s) through the same
+/// [`assemble_trailing`] helper `render_volume` uses — so the two never
+/// drift apart into separate join logic.
+/// type-audit: bare-ok(prose: return)
+pub fn rerender(parsed: &ParsedLine) -> String {
+    let mut modifiers = Vec::new();
+    let mut trailing = Vec::new();
+    for (predicate, value) in &parsed.facts {
+        match fragment_for(predicate, value) {
+            Some(Fragment::Modifier(m)) => modifiers.push(m),
+            Some(Fragment::Trailing(t)) => trailing.push(t),
+            // fact_for only ever recovers (predicate, value) pairs that
+            // fragment_for's forward direction produced, so this is
+            // unreachable for a ParsedLine built by parse_line.
+            None => {}
+        }
+    }
+    let complement = match parsed.number {
+        Number::Pl => species_label(&parsed.kind),
+        Number::Sg => parsed.kind.clone(),
+    };
+    let subject = match parsed.subject.as_str() {
+        "it" => Subject::Pronoun("it"),
+        "its" => Subject::Pronoun("its"),
+        other => Subject::Name(other.to_string()),
+    };
+    let line = realize_common(&ClauseSpec {
+        frame: Frame::Classify,
+        subject,
+        complement,
+        number: parsed.number,
+        definiteness: parsed.definiteness,
+        modifiers,
+    });
+    assemble_trailing(line, &trailing)
 }
 
 #[cfg(test)]
@@ -394,5 +646,98 @@ mod tests {
             subject_for(entity, "Vebe".to_string(), &mut named),
             Subject::Pronoun("it")
         );
+    }
+
+    /// The Echo T3's corpus law: for each seed volume, every rendered line
+    /// parses, and re-realizing the recovered `ParsedLine` reproduces the
+    /// identical line — the Book's construction table is a true bijection
+    /// over the lines it actually emits, not just a one-way renderer.
+    ///
+    /// The same pass also stands as the standing coverage gate: it collects
+    /// every predicate any parsed line's `facts` actually contributed
+    /// across seeds 1..=3, and asserts [`CONSTRUCTION_ORDER`] is a subset
+    /// of what the corpus exercised. A future predicate added to the
+    /// construction table but never surfaced by any of these three seeds
+    /// reddens this assertion, forcing a corpus extension rather than
+    /// letting an unexercised construction hide behind a green gate.
+    #[test]
+    fn every_book_line_round_trips() {
+        let mut predicates_exercised: BTreeSet<String> = BTreeSet::new();
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let ctx = parse_context(&world);
+            let volume = render_volume(&world);
+            for line in &volume.lines {
+                let parsed = parse_line(line, &ctx)
+                    .unwrap_or_else(|e| panic!("seed {seed} line failed: {line} ({e:?})"));
+                let again = rerender(&parsed);
+                assert_eq!(&again, line, "seed {seed}: re-realization drifted");
+                for (predicate, _) in &parsed.facts {
+                    predicates_exercised.insert(predicate.clone());
+                }
+            }
+        }
+        for predicate in CONSTRUCTION_ORDER {
+            assert!(
+                predicates_exercised.contains(*predicate),
+                "{predicate} is in CONSTRUCTION_ORDER but no line across seeds 1..=3 \
+                 exercised it: {:?}",
+                predicates_exercised
+            );
+        }
+    }
+
+    /// The exhaustive-fragment property: `fact_for` inverts `fragment_for`
+    /// over the closed fragment space this construction table can ever
+    /// produce — every moon count 0..=13, every star class and day length
+    /// actually committed across seeds 1..=3 (the real closed space, not a
+    /// hand-picked sample — see the Concordance campaign's generator-
+    /// coverage lesson).
+    #[test]
+    fn fact_for_inverts_fragment_for_over_the_closed_space() {
+        for count in 0..=13u64 {
+            let value = Value::Number(count as f64);
+            let text = match fragment_for(MOON_COUNT, &value) {
+                Some(Fragment::Modifier(m)) => m,
+                _ => panic!("expected a Modifier fragment for moon-count {count}"),
+            };
+            assert_eq!(
+                fact_for(&text),
+                Some((MOON_COUNT.to_string(), Value::Number(count as f64))),
+                "moon-count {count} did not round-trip through {text:?}"
+            );
+        }
+
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            for fact in world.ledger.find(STAR_CLASS) {
+                let value = fact.object.clone();
+                let text = match fragment_for(STAR_CLASS, &value) {
+                    Some(Fragment::Modifier(m)) => m,
+                    _ => panic!("expected a Modifier fragment for {value:?}"),
+                };
+                assert_eq!(
+                    fact_for(&text),
+                    Some((STAR_CLASS.to_string(), value.clone())),
+                    "star-class did not round-trip through {text:?}"
+                );
+            }
+            for fact in world.ledger.find(DAY_LENGTH_STD) {
+                let Value::Number(days) = fact.object else {
+                    continue;
+                };
+                let value = Value::Number(days);
+                let text = match fragment_for(DAY_LENGTH_STD, &value) {
+                    Some(Fragment::Trailing(t)) => t,
+                    _ => panic!("expected a Trailing fragment for {days}"),
+                };
+                let truncated = (days * 10.0).trunc() / 10.0;
+                assert_eq!(
+                    fact_for(&text),
+                    Some((DAY_LENGTH_STD.to_string(), Value::Number(truncated))),
+                    "day-length did not round-trip through {text:?}"
+                );
+            }
+        }
     }
 }

@@ -220,3 +220,14 @@ gates on the LANG-41 distinctiveness/recoverability metrics existing in the Lab.
 4. **Naming:** the command (`hornvale book`?) and the artifact's in-world title.
 5. **North-star boundary:** UNI-29 (the self-describing program) is confirmed as
    vision, not committed scope here.
+
+## Addendum (2026-07-18, G3-approved): The Echo
+
+Inserted between C2 and C3: **The Echo** — the Common grammar recast as one
+bidirectional construction inventory under the round-trip law
+`parse(realize(spec)) == spec`, with the Book as the parse corpus and the
+vessel knowledge-transfer seam as the game-facing proof
+(spec: [The Echo](2026-07-18-the-echo-design.md)). The §7 standing gate
+gains the round-trip law: every construction any later campaign adds must
+parse back, or the corpus test reddens. Only Common is bidirectional;
+tongues remain render-only (C3 unaffected).

@@ -171,6 +171,34 @@ fn knows_grows_as_you_walk() {
 }
 
 #[test]
+fn tell_absorbs_a_spoken_common_sentence_into_knowledge() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let volume = hornvale_book::render_volume(&world);
+    let line = volume
+        .lines
+        .first()
+        .expect("seed 42 renders at least one line");
+    let before = s.knowledge().0.len();
+    let out = match s.handle(&format!("tell {line}")) {
+        Turn::Out(t) => t,
+        _ => panic!("tell must not release"),
+    };
+    assert!(
+        out.contains("fact(s) learned"),
+        "tell reports what it heard"
+    );
+    assert!(
+        s.knowledge().0.len() > before,
+        "telling a fact grows knowledge"
+    );
+    match s.handle("tell") {
+        Turn::Out(t) => assert!(t.contains("Tell what?")),
+        _ => panic!("tell with no argument must not release"),
+    }
+}
+
+#[test]
 fn run_drives_a_script_deterministically() {
     let world = seam_world();
     let script = "look\nwhoami\nknows\nrelease\n";
