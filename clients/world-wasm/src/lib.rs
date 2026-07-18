@@ -286,6 +286,27 @@ pub extern "C" fn hw_scene_tiles_region(
     }
 }
 
+/// Emit the current world's `scene/eclipses/v1` JSON over `[from, until]`
+/// standard days. 0 ok; 2 scene error (envelope set); -3 when no world is live.
+#[unsafe(no_mangle)]
+pub extern "C" fn hw_scene_eclipses(from: f64, until: f64) -> i32 {
+    let world_ptr = &raw const WORLD;
+    let Some(world) = (unsafe { (*world_ptr).as_ref() }) else {
+        set_error("no world; call hw_new first");
+        return -3;
+    };
+    match hornvale_scene::eclipses_scene(world, from, until) {
+        Ok(s) => {
+            set_out(hornvale_scene::eclipses_json(&s));
+            0
+        }
+        Err(e) => {
+            set_error(&format!("{e}"));
+            2
+        }
+    }
+}
+
 /// Pointer to the 4096-byte input buffer JS writes pins JSON into.
 #[unsafe(no_mangle)]
 pub extern "C" fn hw_in_ptr() -> *mut u8 {
