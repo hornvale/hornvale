@@ -3,8 +3,9 @@
 //! substellar hot spot librates in latitude with the year phase (Task 3,
 //! The Wandering Sun). Emits full-precision `temperature_grid` values on a
 //! width-64 tiles lattice, sampled at one node per latitude row (node
-//! indices `0, 64, 128, …` — a single fixed longitude column, every
-//! latitude band) x days spanning the year. Mirrors the provenance recorded
+//! indices `32, 96, 160, …` — the substellar-meridian longitude column,
+//! where the libration signal is visible, every latitude band) x days
+//! spanning the year. Mirrors the provenance recorded
 //! in `region_temperature_golden.rs`. Run:
 //!   cargo run -p hornvale-scene --example locked_temperature_golden
 use hornvale_kernel::Seed;
