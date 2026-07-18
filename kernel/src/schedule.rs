@@ -127,6 +127,33 @@ impl CapabilitySchema {
             order.iter().enumerate().map(|(i, &l)| (l, i)).collect();
         self.edges().iter().all(|(from, to)| pos[from] < pos[to])
     }
+
+    /// Enforce metaplan §7: each *functional* predicate is written by at most
+    /// one system, making same-tick write conflicts unrepresentable. Reads the
+    /// registry for functionality; non-functional and unregistered predicates
+    /// are unconstrained. `Err(MultipleWriters)` names the first offending
+    /// predicate (ascending) and its writers (ascending label).
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn single_writer_check(
+        &self,
+        registry: &crate::registry::ConceptRegistry,
+    ) -> Result<(), ScheduleError> {
+        let mut writers: BTreeMap<&'static str, Vec<&'static str>> = BTreeMap::new();
+        for s in &self.systems {
+            for &p in &s.writes {
+                writers.entry(p).or_default().push(s.label);
+            }
+        }
+        for (&predicate, systems) in &writers {
+            let functional = registry.predicate(predicate).is_some_and(|d| d.functional);
+            if functional && systems.len() > 1 {
+                let mut systems = systems.clone();
+                systems.sort_unstable();
+                return Err(ScheduleError::MultipleWriters { predicate, systems });
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -190,5 +217,51 @@ mod tests {
         assert!(schema.is_valid_order(&["a", "b"])); // edge a->b respected
         assert!(!schema.is_valid_order(&["b", "a"])); // edge violated
         assert!(!schema.is_valid_order(&["a"])); // not a permutation
+    }
+
+    #[test]
+    fn single_writer_check_passes_when_each_functional_predicate_has_one_writer() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        r.register_predicate("here", false, "non-functional")
+            .unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            // two writers of a NON-functional predicate is allowed
+            sys("a", &[], &["here"]),
+            sys("b", &[], &["here"]),
+        ]);
+        assert!(schema.single_writer_check(&r).is_ok());
+    }
+
+    #[test]
+    fn single_writer_check_rejects_two_writers_of_a_functional_predicate() {
+        use crate::registry::ConceptRegistry;
+        let mut r = ConceptRegistry::default();
+        r.register_predicate("elev", true, "functional").unwrap();
+        let schema = CapabilitySchema::new(vec![
+            sys("terrain", &[], &["elev"]),
+            sys("rogue", &[], &["elev"]),
+        ]);
+        match schema.single_writer_check(&r) {
+            Err(ScheduleError::MultipleWriters { predicate, systems }) => {
+                assert_eq!(predicate, "elev");
+                assert_eq!(systems, vec!["rogue", "terrain"]); // ascending label
+            }
+            other => panic!("expected MultipleWriters, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn single_writer_check_ignores_unregistered_predicates() {
+        // A predicate not in the registry has unknown functionality; the check only
+        // constrains registered functional predicates (the load path registers all
+        // real predicates before checking).
+        use crate::registry::ConceptRegistry;
+        let r = ConceptRegistry::default();
+        let schema =
+            CapabilitySchema::new(vec![sys("a", &[], &["ghost"]), sys("b", &[], &["ghost"])]);
+        assert!(schema.single_writer_check(&r).is_ok());
     }
 }
