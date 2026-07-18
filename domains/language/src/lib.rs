@@ -5,6 +5,12 @@
 //! composition root populates and never imports another domain.
 #![warn(missing_docs)]
 
+/// The epistemic account (C4, The Chorus, LANG-36): the four-filter stack
+/// (lexicon → knowledge → ontology → valence) that turns a ground-truth
+/// fact list into one culture's `Account`, plus the dial's distance
+/// measures (distortion, distinctiveness, recoverability) that read it.
+/// Pure and surface-free — the caller supplies the observability table.
+pub mod account;
 /// The clause layer: a language-neutral `ClauseSpec` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
@@ -39,6 +45,11 @@ pub mod phonology;
 /// seam.
 pub mod register;
 
+pub use account::{
+    Account, AccountEntry, AccountParams, Disposition, GroundFact, LossReason, NeededConcept,
+    Observability, OrderPolicy, Requirement, Stance, account_of, distinctiveness, distortion,
+    domain_distortion, identity_params, recoverability,
+};
 pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
