@@ -125,14 +125,22 @@ pub fn temperature_at(
                 .expect("temperature is finite")
         }
         RotationRegime::Spinning { day_std } => {
-            if year_length_std <= 0.0 || obliquity_deg == 0.0 {
-                return base;
-            }
-            let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
-            let phase = (day / year_length_std + year_phase_offset).rem_euclid(1.0);
-            let hemi = geo.coord(cell).latitude.signum();
-            let seasonal = base
-                + TempAnomaly::from_offset_c(amp * hemi * math::sin(std::f64::consts::TAU * phase));
+            // Seasons need a year to organize a phase against; the diurnal
+            // swing needs only rotation, so it fires regardless (below).
+            let phase = if year_length_std > 0.0 {
+                (day / year_length_std + year_phase_offset).rem_euclid(1.0)
+            } else {
+                0.0
+            };
+            let seasonal = if year_length_std > 0.0 && obliquity_deg != 0.0 {
+                let amp = seasonal_amplitude(geo, elevation, sea_level, obliquity_deg, cell);
+                let hemi = geo.coord(cell).latitude.signum();
+                base + TempAnomaly::from_offset_c(
+                    amp * hemi * math::sin(std::f64::consts::TAU * phase),
+                )
+            } else {
+                base
+            };
             seasonal
                 + diurnal_anomaly(
                     *diurnal_amp.get(cell),
@@ -150,6 +158,7 @@ pub fn temperature_at(
 /// evaluated at each cell from its moisture, continentality, and elevation
 /// above sea level. Mirrors how [`mean_temperature`] is precomputed once per
 /// world; the provider stores this field and threads it into `temperature_at`.
+/// type-audit: bare-ok(ratio: moisture), bare-ok(diagnostic-value: return)
 pub fn diurnal_amplitude_field(
     geo: &Geosphere,
     elevation: &CellMap<ReferenceElevation>,
@@ -613,6 +622,55 @@ mod tests {
         assert!(
             afternoon > predawn + 5.0,
             "afternoon {afternoon} should tower over predawn {predawn} by a physical margin"
+        );
+    }
+
+    // The diurnal swing is driven by ROTATION, not tilt: a zero-obliquity
+    // spinning world still has a real day/night cycle and must show the same
+    // afternoon-over-predawn margin as a tilted one (T2 review regression —
+    // the diurnal term used to be gated behind the same `obliquity_deg ==
+    // 0.0` early-return that also (correctly) zeroes the seasonal term).
+    #[test]
+    fn spinning_diurnal_fires_at_zero_obliquity() {
+        let geo = Geosphere::new(4);
+        let sea = ReferenceElevation::new(0.0).unwrap();
+        // All land, well above sea level: every cell is fully continental.
+        let elevation = CellMap::from_fn(&geo, |_| ReferenceElevation::new(200.0).unwrap());
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let mean = mean_temperature(&geo, &elevation, sea, 1.0, &regime);
+        // A near-equatorial cell: the sun reliably rises there every day.
+        let cell = geo
+            .cells()
+            .find(|c| geo.coord(*c).latitude.abs() < 15.0)
+            .unwrap();
+        // A dry, fully-continental amplitude (desert-like swing) at that cell.
+        let dry_amplitude = diurnal_amplitude(0.05, 1.0, 0.0);
+        let diurnal_amp = CellMap::from_fn(&geo, |c| if c == cell { dry_amplitude } else { 0.0 });
+        let year = 360.0;
+        let day = 100.0;
+        let t = |day_fraction: f64| {
+            temperature_at(
+                &mean,
+                &diurnal_amp,
+                &geo,
+                &elevation,
+                sea,
+                0.0, // zero obliquity: no tilt, no seasons
+                1.0,
+                year,
+                0.0,
+                &regime,
+                cell,
+                day + day_fraction,
+            )
+            .get()
+        };
+        let afternoon = t(0.60);
+        let predawn = t(0.05);
+        assert!(
+            afternoon > predawn + 5.0,
+            "afternoon {afternoon} should tower over predawn {predawn} by a physical margin \
+             even at zero obliquity — the diurnal term is rotation-driven, not tilt-driven"
         );
     }
 
