@@ -170,6 +170,7 @@
 - [The Echo](./chronicle/the-echo.md)
 - [The Tongues](./chronicle/the-tongues.md)
 - [The Wanting](./chronicle/the-wanting.md)
+- [The Foresight](./chronicle/the-foresight.md)
 
 # Appendix: The Frontier
 
