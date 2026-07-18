@@ -220,7 +220,14 @@ parser binds the parts against a closed complement lexicon and
 reconstructs the `ClauseSpec` a sentence came from, under the standing
 round-trip law `parse(realize(spec)) == spec`. One committed grammar, two
 directions — production and comprehension cannot drift apart, because
-they are the same data read opposite ways.
+they are the same data read opposite ways. And since The Tongues, the
+clause layer speaks in more than Common: each tongue draws a surface
+grammar of its own (`grammar.rs` — constituent order and copula presence
+on permanent per-species streams, weighted by real cross-linguistic
+frequencies; the copula's form drawn from the tongue's own phonology),
+and a render-only parametric realizer says the same clause each
+language's way — or gaps honestly, with the lexicon's own recountable
+reason, when the speaker has no word for the thing.
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
