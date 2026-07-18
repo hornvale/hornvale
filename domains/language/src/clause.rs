@@ -25,21 +25,38 @@ pub enum Definiteness {
     Def,
 }
 
+/// A clause's subject: a resolved name/noun, or a fixed pronoun for
+/// re-mention (e.g. a second sentence about the same referent).
+/// type-audit: bare-ok(identifier-text: Name.0), bare-ok(prose: Pronoun.0)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Subject {
+    /// An already-resolved proper name or noun phrase.
+    Name(String),
+    /// A fixed pronoun lexeme (e.g. `"it"`, `"its"`).
+    Pronoun(&'static str),
+}
+
 /// A language-neutral clause: predicate-argument structure plus features.
 /// The per-language realizer decides how (and whether) each feature surfaces.
-/// type-audit: bare-ok(identifier-text: subject), bare-ok(identifier-text: complement)
+/// type-audit: bare-ok(identifier-text: complement), bare-ok(prose: modifiers)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClauseSpec {
     /// The construction.
     pub frame: Frame,
-    /// The subject's surface form (already a resolved name/noun).
-    pub subject: String,
+    /// The subject: a resolved name, or a pronoun for re-mention.
+    pub subject: Subject,
     /// The complement concept's Common lexeme.
     pub complement: String,
     /// Subject number.
     pub number: Number,
     /// Complement definiteness.
     pub definiteness: Definiteness,
+    /// Additional modifier phrases appended after the complement head, in
+    /// order (e.g. `"with two moons"`, `"orbiting a yellow-white dwarf"`).
+    /// The first attaches with a space, later ones join with `", "`; any
+    /// leading `with`/`orbiting` wording lives in the modifier string
+    /// itself — this layer only joins.
+    pub modifiers: Vec<String>,
 }
 
 fn indefinite_article(word: &str) -> &'static str {
@@ -54,6 +71,10 @@ fn indefinite_article(word: &str) -> &'static str {
 pub fn realize_common(spec: &ClauseSpec) -> String {
     match spec.frame {
         Frame::Classify => {
+            let subject = match &spec.subject {
+                Subject::Name(name) => name.as_str(),
+                Subject::Pronoun(pronoun) => pronoun,
+            };
             let copula = match spec.number {
                 Number::Sg => "is",
                 Number::Pl => "are",
@@ -65,9 +86,41 @@ pub fn realize_common(spec: &ClauseSpec) -> String {
                 }
                 (Definiteness::Indef, Number::Pl) => String::new(), // bare generic
             };
-            format!("{} {} {}{}.", spec.subject, copula, det, spec.complement)
+            let mut head = format!("{det}{}", spec.complement);
+            for (i, modifier) in spec.modifiers.iter().enumerate() {
+                if i == 0 {
+                    head.push(' ');
+                } else {
+                    head.push_str(", ");
+                }
+                head.push_str(modifier);
+            }
+            format!("{subject} {copula} {head}.")
         }
     }
+}
+
+/// Render a small cardinal number as an English word (`0` through `12`);
+/// larger numbers render as plain digits.
+/// type-audit: bare-ok(prose)
+pub fn cardinal(n: u64) -> String {
+    const WORDS: [&str; 13] = [
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve",
+    ];
+    match WORDS.get(n as usize) {
+        Some(word) => (*word).to_string(),
+        None => n.to_string(),
+    }
+}
+
+/// Render an approximate quantity to one decimal place, prefixed `"about "`
+/// (e.g. `1.5507 -> "about 1.5"`). Truncates rather than rounds, so the
+/// stated tenth is never an overstatement.
+/// type-audit: bare-ok(prose)
+pub fn quantity(x: f64) -> String {
+    let truncated = (x * 10.0).trunc() / 10.0;
+    format!("about {truncated:.1}")
 }
 
 #[cfg(test)]
@@ -78,10 +131,11 @@ mod tests {
     fn classify_singular_indefinite() {
         let s = ClauseSpec {
             frame: Frame::Classify,
-            subject: "Elthandil".into(),
+            subject: Subject::Name("Elthandil".into()),
             complement: "planet".into(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            modifiers: vec![],
         };
         assert_eq!(realize_common(&s), "Elthandil is a planet.");
     }
@@ -89,10 +143,11 @@ mod tests {
     fn a_becomes_an_before_vowel() {
         let s = ClauseSpec {
             frame: Frame::Classify,
-            subject: "Aoth".into(),
+            subject: Subject::Name("Aoth".into()),
             complement: "elemental".into(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            modifiers: vec![],
         };
         assert_eq!(realize_common(&s), "Aoth is an elemental.");
     }
@@ -100,11 +155,40 @@ mod tests {
     fn classify_generic_plural() {
         let s = ClauseSpec {
             frame: Frame::Classify,
-            subject: "Goblins".into(),
+            subject: Subject::Name("Goblins".into()),
             complement: "people".into(),
             number: Number::Pl,
             definiteness: Definiteness::Indef,
+            modifiers: vec![],
         };
         assert_eq!(realize_common(&s), "Goblins are people.");
+    }
+
+    #[test]
+    fn classify_with_modifier_tail() {
+        let s = ClauseSpec {
+            frame: Frame::Classify,
+            subject: Subject::Name("Vebe".into()),
+            complement: "planet".into(),
+            number: Number::Sg,
+            definiteness: Definiteness::Indef,
+            modifiers: vec![
+                "with two moons".into(),
+                "orbiting a yellow-white dwarf".into(),
+            ],
+        };
+        assert_eq!(
+            realize_common(&s),
+            "Vebe is a planet with two moons, orbiting a yellow-white dwarf."
+        );
+    }
+    #[test]
+    fn cardinal_words() {
+        assert_eq!(cardinal(2), "two");
+        assert_eq!(cardinal(13), "13");
+    }
+    #[test]
+    fn quantity_rounds() {
+        assert_eq!(quantity(1.5507), "about 1.5");
     }
 }

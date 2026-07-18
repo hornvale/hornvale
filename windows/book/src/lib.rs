@@ -3,7 +3,7 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{Value, World};
-use hornvale_language::clause::{ClauseSpec, Definiteness, Frame, Number, realize_common};
+use hornvale_language::clause::{ClauseSpec, Definiteness, Frame, Number, Subject, realize_common};
 
 /// One world's volume of The Book: the seed it was rendered from plus the
 /// sentences the ledger's `is-a` facts realize.
@@ -30,10 +30,11 @@ pub fn render_volume(world: &World) -> BookVolume {
             .unwrap_or_else(|| format!("Entity {}", fact.subject.0));
         lines.push(realize_common(&ClauseSpec {
             frame: Frame::Classify,
-            subject,
+            subject: Subject::Name(subject),
             complement: kind.clone(),
             number: Number::Sg,
             definiteness: Definiteness::Indef,
+            modifiers: vec![],
         }));
     }
     BookVolume {
