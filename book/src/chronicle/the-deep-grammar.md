@@ -33,8 +33,8 @@ One particle differs: *Be*, the witnessed evidential, against *Bo*, the
 taught one. The evidential's value is never a fresh judgment — it is the
 shipped epistemic machinery read out. A statement grounded in a
 culture's own steeped experience is *witnessed* (the lexicon's exposure
-class, LANG-40's knowledge-to-evidentiality mapping executed on state
-that has existed since the lexicon campaign); an institutionally
+class — the knowledge-to-evidentiality mapping the theory promised,
+executed on state that has existed since the lexicon campaign); an institutionally
 transmitted line is *taught* (the sixth campaign's doctrine speaking
 in-tongue — the reportative used in instruction, as Quechua uses it);
 an inference-grounded statement would be *inferred*, a value the enum
