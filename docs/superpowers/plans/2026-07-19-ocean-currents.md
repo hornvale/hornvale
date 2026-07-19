@@ -1,5 +1,7 @@
 # The Gyre (Ocean Currents) Implementation Plan
 
+> **Status: COMPLETE (2026-07-19).** All 6 tasks shipped + final-review fixes (animated advection per Nathan's G-call, re-seed opacity, legibility retune). See [chronicle](../../../book/src/chronicle/the-gyre.md) and [retro](../../retrospectives/the-gyre.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a derived ocean surface-current vector field (gyres from band winds × Coriolis × coastline) as an additive `scene/tiles/v1` layer, advected on the orrery's Living Globe.
