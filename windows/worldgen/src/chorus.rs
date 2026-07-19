@@ -293,23 +293,24 @@ fn domain_of<'a>(params: &'a AccountParams, predicate: &str) -> Option<&'a str> 
 }
 
 /// Whether `schema`'s surface frame (`windows/book`'s Task 4 closed frame
-/// table) needs a bound deity name at all (review carry-over, C5 T4):
-/// two of the three deity-bearing frames are `hornvale_language::
-/// schema_table`'s own agent slots — `SlotKind::Agent` for
-/// [`SchemaId::Agentive`], `SlotKind::Kin` for [`SchemaId::Kinship`] — but
-/// the third, [`SchemaId::LinkSympathy`], is `SlotKind::None` in that
-/// table (it has no lexeme table — its verb slot really is closed) even
-/// though its Task-4 frame ("…because it answers ⟨Deity⟩.") still names a
-/// deity at the surface. This function tracks the renderer's actual three
-/// deity-bearing frames rather than `SlotKind` alone, so it is the single
-/// place that decides WHETHER a fired schema binds an agent; [`bind_agent`]
-/// is the only caller.
+/// table) needs a bound deity name at all (review carry-over, C5 T4, closed
+/// out at C6 T1): all three deity-bearing frames are now
+/// `hornvale_language::schema_table`'s own agent slots — `SlotKind::Agent`
+/// for [`SchemaId::Agentive`] and [`SchemaId::LinkSympathy`], `SlotKind::Kin`
+/// for [`SchemaId::Kinship`]. `LinkSympathy` used to read `SlotKind::None`
+/// in that table even though its Task-4 frame ("…because it answers
+/// ⟨Deity⟩.") always named a deity, forcing this function to carry a
+/// `|| schema == SchemaId::LinkSympathy` special case; C6 T1 made the table
+/// honest (`LinkSympathy` now rows in as `SlotKind::Agent`), so the slot
+/// check alone now covers every deity-bearing frame and the special case is
+/// deleted. This function is still the single place that decides WHETHER a
+/// fired schema binds an agent; [`bind_agent`] is the only caller.
 fn agent_bearing(schema: SchemaId) -> bool {
     let slot = schema_table()
         .iter()
         .find(|row| row.id == schema)
         .map(|row| row.slot);
-    matches!(slot, Some(SlotKind::Agent) | Some(SlotKind::Kin)) || schema == SchemaId::LinkSympathy
+    matches!(slot, Some(SlotKind::Agent) | Some(SlotKind::Kin))
 }
 
 /// The agent bound into a fired schema's explanation, or `None` when its
@@ -572,6 +573,433 @@ fn explain(world: &World, species: &str, account: &mut Account, params: &Account
         subsistence,
         psych.sociality,
     );
+}
+
+// ---------------------------------------------------------------------
+// C6, The Doctrine: the institution's second stack.
+// ---------------------------------------------------------------------
+//
+// Doctrine params/account are DERIVED from folk's — never authored per
+// culture, never a second draw over the same furniture — by exactly the
+// four preregistered deltas (plan header, ledger #2):
+//   (a) capability UP:  sky_capability = min(folk + 0.25, 1.0)
+//   (b) prior reweight: doctrine prior = folk prior × schema.mediation
+//   (c) β UP:           doctrine β = folk β + 0.5
+//   (d) agent preference: bind the high-god belief where period-compatible,
+//       else fall back to folk's own binding rule.
+// Selection bias, never deception: nothing here models what the doctrine
+// "believes" about the folk voice, and the folk voice itself (params,
+// account, and every stream it draws) is untouched by this section.
+
+/// The four-delta capability transform (delta a, ledger #2): `folk`'s own
+/// sky-capability plus a flat `0.25`, capped at `1.0` — the records/
+/// calendar-priesthood mechanism (MAP-18) that lets doctrine KEEP a fact
+/// folk-alone loses. Every other [`AccountParams`] field is copied from
+/// `folk` verbatim (`..folk.clone()`): the selection-bias law (this
+/// campaign's dial-roster sibling) requires no hidden divergence beyond
+/// this one preregistered field.
+pub fn doctrine_params_of(folk: &AccountParams) -> AccountParams {
+    AccountParams {
+        sky_capability: (folk.sky_capability + 0.25).min(1.0),
+        ..folk.clone()
+    }
+}
+
+/// The four-delta β transform (delta c, ledger #2): folk's own β
+/// ([`beta_of`]) plus a flat `0.5` — orthodoxy is monomaniac. Not an
+/// [`AccountParams`] field (β lives outside that struct for both stacks);
+/// this is the doctrine analog of [`beta_of`], never folded into
+/// [`doctrine_params_of`].
+/// type-audit: bare-ok(ratio: return)
+pub fn doctrine_beta_of(psych: &PsychVector) -> f64 {
+    beta_of(psych) + 0.5
+}
+
+/// Per-fact folk-verifiability (delta-adjacent, ledger #3): whether the
+/// FOLK voice — never the doctrine voice — could in principle check a
+/// predicate's fact, translated from `folk`'s own observability row per the
+/// preregistered table: [`Requirement::Manifest`] is always verifiable;
+/// [`Requirement::SkyGraded`] is verifiable iff `folk.sky_capability` meets
+/// its threshold; [`Requirement::Instrumental`], [`Requirement::CrossReferential`],
+/// and [`Requirement::Taxonomic`] are never verifiable. A predicate absent
+/// from `folk`'s table is not verifiable (fail closed, mirroring
+/// `disposition_for`'s own posture for an unregistered predicate). This is
+/// the flag [`hornvale_language::schemas::conflict_of`]'s caller-derived
+/// `folk_verifiable` parameter is built from.
+/// type-audit: bare-ok(identifier-text: predicate), bare-ok(flag: return)
+pub fn folk_verifiable(folk: &AccountParams, predicate: &str) -> bool {
+    match folk.observability.get(predicate).map(|o| o.requirement) {
+        Some(Requirement::Manifest) => true,
+        Some(Requirement::SkyGraded { threshold }) => folk.sky_capability >= threshold,
+        Some(
+            Requirement::Instrumental | Requirement::CrossReferential | Requirement::Taxonomic,
+        ) => false,
+        None => false,
+    }
+}
+
+/// `schema`'s mediation weight (delta b's per-row multiplier), or `1.0` if
+/// `schema` somehow carries no row (never happens — [`schema_table`] is
+/// exhaustive over [`SchemaId`], the closure test pins this — but a stray
+/// future variant fails closed to a neutral weight rather than panicking).
+fn mediation_of(schema: SchemaId) -> f64 {
+    schema_table()
+        .iter()
+        .find(|row| row.id == schema)
+        .map(|row| row.mediation)
+        .unwrap_or(1.0)
+}
+
+/// The doctrine's schema prior (delta b, ledger #2): [`schema_prior`]'s
+/// SAME folk-derived weights, each multiplied by its schema's authored
+/// [`Schema::mediation`](hornvale_language::schemas::Schema::mediation)
+/// column value — applied BEFORE β-sharpening, per the plan header
+/// (`doctrine prior = folk prior × mediation`). The folk prior itself
+/// ([`schema_prior`]) is never mutated; this wraps it.
+fn doctrine_schema_prior(
+    subsistence: Subsistence,
+    sociality: Sociality,
+    admitted: &[SchemaId],
+) -> Vec<(SchemaId, f64)> {
+    schema_prior(subsistence, sociality, admitted)
+        .into_iter()
+        .map(|(id, weight)| (id, weight * mediation_of(id)))
+        .collect()
+}
+
+/// The day's doctrine binding (delta d, ledger #2): the culture's high-god
+/// belief (`high_god_id`) if it is itself a cyclic belief whose re-derived
+/// period matches `day` within the same 1% relative tolerance
+/// [`explain_day`] uses; otherwise folk's OWN binding rule (the first
+/// ascending-period cyclic belief whose period matches `day`) — the
+/// doctrine never invents a binding folk's rule wouldn't also find on its
+/// own. Returns the bound belief and its rank among `cyclic` (for
+/// [`manner_of`]); `None` when neither rule finds a match.
+fn doctrine_day_binding(
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    high_god_id: Option<hornvale_kernel::EntityId>,
+    day: f64,
+) -> Option<(usize, &hornvale_religion::Belief)> {
+    if let Some(hg_id) = high_god_id
+        && let Some((rank, (belief, period))) =
+            cyclic.iter().enumerate().find(|(_, (b, _))| b.id == hg_id)
+        && (*period - day).abs() < 0.01 * day
+    {
+        return Some((rank, belief));
+    }
+    cyclic
+        .iter()
+        .enumerate()
+        .find(|(_, (_, period))| (*period - day).abs() < 0.01 * day)
+        .map(|(rank, (belief, _))| (rank, belief))
+}
+
+/// The moons' doctrine binding (delta d, ledger #2): the culture's high-god
+/// belief if it is cyclic AND its period does NOT match `day` (the moons'
+/// own compatibility condition — any non-day-matched cyclic belief will
+/// do); otherwise folk's OWN binding rule (the slowest cyclic belief,
+/// unconditionally — see [`explain_moons`]'s doc comment for why that rule
+/// ignores which belief actually cleared the has-non-day-cycle guard).
+/// Returns the bound belief and its rank among `cyclic`.
+fn doctrine_moons_binding(
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    high_god_id: Option<hornvale_kernel::EntityId>,
+    day: f64,
+) -> Option<(usize, &hornvale_religion::Belief)> {
+    if let Some(hg_id) = high_god_id
+        && let Some((rank, (belief, period))) =
+            cyclic.iter().enumerate().find(|(_, (b, _))| b.id == hg_id)
+        && (*period - day).abs() >= 0.01 * day
+    {
+        return Some((rank, belief));
+    }
+    let slowest_rank = cyclic.len().checked_sub(1)?;
+    Some((slowest_rank, &cyclic[slowest_rank].0))
+}
+
+/// The doctrine's day explanation (mirrors [`explain_day`] structurally):
+/// same fire guard (a `Lost` `day-length-std` entry) and same manner rule,
+/// but the doctrine's own β ([`doctrine_beta_of`]), mediation-reweighted
+/// prior ([`doctrine_schema_prior`]), high-god-preferring binding
+/// ([`doctrine_day_binding`]), and a SEPARATE pair of streams
+/// (`doctrine-schema`/`doctrine-lexeme`) so the doctrine's selection draws
+/// never share or perturb a single draw the folk pass ([`explain_day`])
+/// takes.
+#[allow(clippy::too_many_arguments)]
+fn doctrine_explain_day(
+    world_seed: Seed,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    day: f64,
+    beta: f64,
+    subsistence: Subsistence,
+    sociality: Sociality,
+    high_god_id: Option<hornvale_kernel::EntityId>,
+) {
+    let predicate = hornvale_astronomy::facts::DAY_LENGTH_STD;
+    if domain_of(params, predicate) != Some("sky") {
+        return;
+    }
+    let Some(day_index) = account
+        .entries
+        .iter()
+        .position(|e| e.fact.predicate == predicate)
+    else {
+        return;
+    };
+    if !matches!(account.entries[day_index].disposition, Disposition::Lost(_)) {
+        return;
+    }
+    let Some((rank, belief)) = doctrine_day_binding(cyclic, high_god_id, day) else {
+        return;
+    };
+    let manner = manner_of(rank, cyclic.len());
+
+    let candidates = admitted(FactShape::CyclicEvent);
+    let prior = doctrine_schema_prior(subsistence, sociality, &candidates);
+    let mut schema_stream = world_seed
+        .derive("language")
+        .derive(species)
+        .derive("doctrine-schema")
+        .derive("sky")
+        .derive(fact_shape_key(FactShape::CyclicEvent))
+        .stream();
+    let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
+        return;
+    };
+
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
+        let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
+        let mut lexeme_stream = world_seed
+            .derive("language")
+            .derive(species)
+            .derive("doctrine-lexeme")
+            .derive(predicate)
+            .stream();
+        select_lexeme(lex_candidates, &mut lexeme_stream)
+    } else {
+        None
+    };
+
+    let underlying = account.entries[day_index].disposition.clone();
+    account.entries[day_index].disposition = Disposition::Explained {
+        underlying: Box::new(underlying),
+        schema,
+        agent,
+        lexeme,
+        manner,
+    };
+}
+
+/// The doctrine's moons explanation (mirrors [`explain_moons`]
+/// structurally): same fire guards (a `Kept` `moon-count` entry, and some
+/// non-day-matched cyclic belief must exist), but the doctrine's own β,
+/// mediation-reweighted prior, high-god-preferring binding
+/// ([`doctrine_moons_binding`]), and the `doctrine-schema`/`doctrine-lexeme`
+/// streams. Because doctrine's [`AccountParams::sky_capability`] is
+/// capability-boosted (delta a), a `moon-count` entry LOST in the folk
+/// account can be `Kept` here — the mechanism behind [`ConflictState::
+/// RevealedClaim`](hornvale_language::schemas::ConflictState::RevealedClaim)
+/// (Task 3 renders the surface; this function only ever asks "is it Kept
+/// in THIS account").
+#[allow(clippy::too_many_arguments)]
+fn doctrine_explain_moons(
+    world_seed: Seed,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    day: f64,
+    beta: f64,
+    subsistence: Subsistence,
+    sociality: Sociality,
+    high_god_id: Option<hornvale_kernel::EntityId>,
+) {
+    let predicate = hornvale_astronomy::facts::MOON_COUNT;
+    if domain_of(params, predicate) != Some("sky") {
+        return;
+    }
+    let Some(moon_index) = account
+        .entries
+        .iter()
+        .position(|e| e.fact.predicate == predicate)
+    else {
+        return;
+    };
+    if account.entries[moon_index].disposition != Disposition::Kept {
+        return;
+    }
+    let has_non_day_cycle = cyclic
+        .iter()
+        .any(|(_, period)| (*period - day).abs() >= 0.01 * day);
+    if !has_non_day_cycle {
+        return;
+    }
+
+    let Some((rank, belief)) = doctrine_moons_binding(cyclic, high_god_id, day) else {
+        return;
+    };
+    let manner = manner_of(rank, cyclic.len());
+
+    let candidates = admitted(FactShape::Count);
+    let prior = doctrine_schema_prior(subsistence, sociality, &candidates);
+    let mut schema_stream = world_seed
+        .derive("language")
+        .derive(species)
+        .derive("doctrine-schema")
+        .derive("sky")
+        .derive(fact_shape_key(FactShape::Count))
+        .stream();
+    let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
+        return;
+    };
+
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
+        let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
+        let mut lexeme_stream = world_seed
+            .derive("language")
+            .derive(species)
+            .derive("doctrine-lexeme")
+            .derive(predicate)
+            .stream();
+        select_lexeme(lex_candidates, &mut lexeme_stream)
+    } else {
+        None
+    };
+
+    let underlying = account.entries[moon_index].disposition.clone();
+    account.entries[moon_index].disposition = Disposition::Explained {
+        underlying: Box::new(underlying),
+        schema,
+        agent,
+        lexeme,
+        manner,
+    };
+}
+
+/// Doctrine explanation assembly: mirrors [`explain`] (same unbindable
+/// guard, same day/flagship/subsistence/psych derivation) but calls the
+/// doctrine's own day/moons passes with the doctrine β and the culture's
+/// high-god belief id (its presiding deity, per
+/// [`hornvale_religion::Belief::high_god`] — `None` for an unranked
+/// society, which simply leaves delta d's preference inert and falls
+/// through to folk's binding rule every time).
+fn doctrine_explain(world: &World, species: &str, account: &mut Account, params: &AccountParams) {
+    let cyclic = cyclic_beliefs_of(world, species);
+    if cyclic.is_empty() {
+        return;
+    }
+    let Some(day) = day_length_std_value(account) else {
+        return;
+    };
+    let Some(flagship) = crate::flagship_of(world, species) else {
+        return;
+    };
+    let Some(subsistence) = hornvale_culture::subsistence_of(world, flagship.id)
+        .as_deref()
+        .and_then(subsistence_from_name)
+    else {
+        return;
+    };
+    let Ok(wc) = WorldComponents::assemble() else {
+        return;
+    };
+    let Some(psych) = wc.psyche.get_by_label(species) else {
+        return;
+    };
+    let beta = doctrine_beta_of(psych);
+    let high_god_id = hornvale_religion::beliefs_held_by(world, flagship.id)
+        .into_iter()
+        .find(|b| b.high_god)
+        .map(|b| b.id);
+
+    doctrine_explain_day(
+        world.seed,
+        species,
+        account,
+        params,
+        &cyclic,
+        day,
+        beta,
+        subsistence,
+        psych.sociality,
+        high_god_id,
+    );
+    doctrine_explain_moons(
+        world.seed,
+        species,
+        account,
+        params,
+        &cyclic,
+        day,
+        beta,
+        subsistence,
+        psych.sociality,
+        high_god_id,
+    );
+}
+
+/// The institution's voice (C6): one organized culture's doctrine params
+/// and the doctrine account those params produce over the SAME ground
+/// truth folk's account reads ([`chorus_ground`]) — the folk ground through
+/// the doctrine stack (delta a-d), never a second draw over new furniture.
+/// A distinct type from [`ChorusVoice`] by construction: the dial-roster
+/// law (ledger #4) requires this type never appear in [`accounts_of`]'s
+/// return type, only in [`doctrines_of`]'s.
+/// type-audit: bare-ok(identifier-text: kind)
+#[derive(Debug)]
+pub struct DoctrineVoice {
+    /// The people's kind label (e.g. `"goblin"`).
+    pub kind: String,
+    /// The params [`doctrine_params_of`] derived for this kind.
+    pub params: AccountParams,
+    /// The account [`account_of`] produced from those params over
+    /// [`chorus_ground`], then wrapped by [`doctrine_explain`].
+    pub account: Account,
+}
+
+/// The SOC-1 gate (ledger #1): `species` gains a doctrine voice iff its
+/// flagship settlement's committed `cult-form` fact is `"organized"` (never
+/// `"folk"`, and never when `species` places no flagship at all). Cult-form
+/// is already committed state (`hornvale_religion::genesis`) — this gate
+/// spends zero new facts, concepts, or draws to ask the question.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn doctrine_of(world: &World, species: &str) -> Option<DoctrineVoice> {
+    let flagship = crate::flagship_of(world, species)?;
+    let cult_form = hornvale_religion::cult_form_held_by(world, flagship.id)?;
+    if cult_form != "organized" {
+        return None;
+    }
+
+    let folk_params = account_params_of(world, species).ok()?;
+    let params = doctrine_params_of(&folk_params);
+    let ground = chorus_ground(world);
+    let mut account = account_of(&ground, &params);
+    doctrine_explain(world, species, &mut account, &params);
+
+    Some(DoctrineVoice {
+        kind: species.to_string(),
+        params,
+        account,
+    })
+}
+
+/// Every organized placed people's doctrine voice, in
+/// [`crate::placed_peoples`] order — the SEPARATE collection the dial-
+/// roster law (ledger #4) requires: [`accounts_of`] never gains an entry
+/// from this pass, and this pass never feeds the dial's roster. A placed
+/// people whose flagship is `"folk"` (the SOC-1 gate's negative arm) is
+/// simply absent here, same posture as [`accounts_of`]'s own
+/// param-derivation-failure skip.
+pub fn doctrines_of(world: &World) -> Vec<DoctrineVoice> {
+    crate::placed_peoples(world)
+        .into_iter()
+        .filter_map(|(kind, _village)| doctrine_of(world, kind))
+        .collect()
 }
 
 /// Derive `species`'s [`AccountParams`] from existing authored/committed
@@ -878,16 +1306,15 @@ mod tests {
         assert_eq!(
             bind_agent(SchemaId::LinkSympathy, "Nggo"),
             Some("Nggo".to_string()),
-            "LinkSympathy is SlotKind::None in schema_table but still names a deity \
-             in its windows/book surface frame — the review-carryover gap this fixes"
+            "LinkSympathy is SlotKind::Agent in schema_table (C6 T1 made the table honest) \
+             and its windows/book surface frame always names a deity"
         );
     }
 
-    /// Every schema `schema_table()` marks agentless (`SlotKind::None`) and
-    /// that isn't the `LinkSympathy` special case must still bind no
-    /// agent — the fix must not overshoot into synthesizing agents for
-    /// schemas whose frame never names one (the "no synthetic agents,
-    /// ever" constraint).
+    /// Every schema `schema_table()` marks agentless (`SlotKind::None`) must
+    /// still bind no agent — the fix must not overshoot into synthesizing
+    /// agents for schemas whose frame never names one (the "no synthetic
+    /// agents, ever" constraint).
     #[test]
     fn bind_agent_stays_none_for_every_other_schema() {
         for schema in [
@@ -907,6 +1334,120 @@ mod tests {
                 "{schema:?} must stay agentless"
             );
         }
+    }
+
+    /// A synthetic [`hornvale_religion::Belief`] for the doctrine-binding
+    /// unit tests below: `id` must be distinct per belief in a single test
+    /// (it's the only field [`doctrine_day_binding`]/[`doctrine_moons_binding`]
+    /// match the high-god id against).
+    fn belief(id: u64, deity: &str, high_god: bool) -> hornvale_religion::Belief {
+        hornvale_religion::Belief {
+            id: hornvale_kernel::EntityId::new(id).expect("nonzero test id"),
+            deity: deity.to_string(),
+            epithet: String::new(),
+            source_kind: String::new(),
+            sentiment: hornvale_religion::Sentiment::Cyclic,
+            high_god,
+        }
+    }
+
+    /// Delta d's preference branch, driven directly (ledger #2): no live
+    /// seed measured for Task 2 happened to carry BOTH a high-god belief
+    /// AND a period-compatible day match (seed 1 goblin, the integration
+    /// test's measured case, has no high-god belief at all), so this
+    /// exercises the actual preference-over-fallback distinction with a
+    /// constructed pantheon where the two rules would pick DIFFERENT
+    /// beliefs if the preference weren't checked first.
+    #[test]
+    fn doctrine_day_binding_prefers_the_period_matched_high_god() {
+        let other = belief(1, "Nggo", false);
+        let hg = belief(2, "Vamu", true);
+        let day = 10.0;
+        // Ascending-period order (cyclic_beliefs_of's own contract): the
+        // fallback rule (first period match, ascending) would find `other`
+        // at rank 0 — but the high god (rank 1, also period-compatible)
+        // must be preferred instead.
+        let cyclic = vec![(other.clone(), 10.0), (hg.clone(), 10.05)];
+
+        let bound = doctrine_day_binding(&cyclic, Some(hg.id), day).expect("must bind");
+        assert_eq!(
+            bound.1.deity, "Vamu",
+            "the period-compatible high god must win"
+        );
+        assert_eq!(bound.0, 1, "the high god's own rank among cyclic beliefs");
+
+        // The SAME list, fallback rule only (no high-god id): finds the
+        // rank-0 match instead — proof the two rules really do disagree
+        // here, and the preference function chooses the high god.
+        let fallback = doctrine_day_binding(&cyclic, None, day).expect("must bind via fallback");
+        assert_eq!(fallback.1.deity, "Nggo");
+        assert_eq!(fallback.0, 0);
+    }
+
+    #[test]
+    fn doctrine_day_binding_falls_back_when_the_high_god_is_not_period_compatible() {
+        let matched = belief(1, "Nggo", false);
+        let hg = belief(2, "Vamu", true);
+        let day = 10.0;
+        let cyclic = vec![(matched.clone(), 10.0), (hg.clone(), 500.0)];
+
+        let bound =
+            doctrine_day_binding(&cyclic, Some(hg.id), day).expect("must bind via fallback");
+        assert_eq!(
+            bound.1.deity, "Nggo",
+            "the high god is far off-period; folk's rule governs"
+        );
+        assert_eq!(bound.0, 0);
+    }
+
+    #[test]
+    fn doctrine_day_binding_is_none_without_any_period_match() {
+        let hg = belief(1, "Vamu", true);
+        let cyclic = vec![(hg.clone(), 500.0)];
+        assert!(doctrine_day_binding(&cyclic, Some(hg.id), 10.0).is_none());
+        assert!(doctrine_day_binding(&cyclic, None, 10.0).is_none());
+    }
+
+    #[test]
+    fn doctrine_moons_binding_prefers_the_non_day_matched_high_god() {
+        let slowest = belief(1, "Nggo", false);
+        let hg = belief(2, "Vamu", true);
+        let day = 10.0;
+        // The high god (rank 0) is NOT the slowest belief (rank 1) and its
+        // own period doesn't match day — the moons' compatibility
+        // condition — so it must be preferred over folk's unconditional
+        // slowest-belief fallback.
+        let cyclic = vec![(hg.clone(), 50.0), (slowest.clone(), 900.0)];
+
+        let bound = doctrine_moons_binding(&cyclic, Some(hg.id), day).expect("must bind");
+        assert_eq!(
+            bound.1.deity, "Vamu",
+            "the non-day-matched high god must win"
+        );
+        assert_eq!(bound.0, 0);
+
+        let fallback = doctrine_moons_binding(&cyclic, None, day).expect("must bind via fallback");
+        assert_eq!(
+            fallback.1.deity, "Nggo",
+            "fallback rule only: the unconditional slowest belief"
+        );
+        assert_eq!(fallback.0, 1);
+    }
+
+    #[test]
+    fn doctrine_moons_binding_falls_back_when_the_high_god_is_day_matched() {
+        let hg = belief(1, "Vamu", true);
+        let slowest = belief(2, "Nggo", false);
+        let day = 10.0;
+        let cyclic = vec![(hg.clone(), 10.0), (slowest.clone(), 900.0)];
+
+        let bound =
+            doctrine_moons_binding(&cyclic, Some(hg.id), day).expect("must bind via fallback");
+        assert_eq!(
+            bound.1.deity, "Nggo",
+            "the high god is day-matched (not moons-compatible); folk's slowest-belief rule governs"
+        );
+        assert_eq!(bound.0, 1);
     }
 
     /// A minimal [`AccountParams`] built from the real [`observability_table`],
