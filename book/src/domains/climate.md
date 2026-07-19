@@ -115,7 +115,9 @@ by nothing but the sky above it.
 - **Derived:** band count and prevailing-wind direction from rotation
   period; the temperature field from insolation, latitude/substellar
   geometry, and elevation; the moisture field from circulation band, ocean
-  proximity, and the rain-shadow trace; the biome field from temperature,
+  proximity, and an upwind moisture-budget trace (an evaporation source over
+  the sea against orographic, convective, and distance-decay sinks) on
+  spinning worlds; the biome field from temperature,
   moisture, elevation, and seafloor feature; the habitability mask from
   biome-adjacent thresholds on temperature and moisture.
 - **Approximated (declared):** analytic circulation bands standing in for
@@ -123,10 +125,12 @@ by nothing but the sky above it.
   direction is fixed prograde** (astronomy draws no spin-direction bit;
   retrograde worlds are deferred, and this does not affect any exit
   criterion); no ocean currents (the ocean is a thermal buffer and
-  moisture source only, never a circulation); no cloud or albedo feedback;
-  seasons as a smooth sinusoid in obliquity and year phase, not a solved
-  radiative balance; a single-pass rain shadow (one upwind trace, not an
-  iterated moisture budget).
+  moisture source only, never a circulation); cloud fraction is diagnostic —
+  no cloud or albedo feedback into insolation; seasons as a smooth sinusoid
+  in obliquity and year phase, not a solved radiative balance; the moisture
+  budget is a single bounded upwind trace per cell, acyclic — not a
+  relaxation to a steady state (a locked world keeps the older substellar
+  moisture model, having no band winds to trace against).
 
 Chronicle: [3c, Climate & Biomes](../chronicle/campaign-3c.md). Laboratory:
 [Study 002, the Census of Lands](../laboratory/study-002.md).

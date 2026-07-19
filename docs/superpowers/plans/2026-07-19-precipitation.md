@@ -1,6 +1,6 @@
 # The Rains (Precipitation) Implementation Plan
 
-> **Status: DRAFT.** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> **Status: COMPLETE** (shipped 2026-07-19, The Rains). REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Replace the single-pass rain-shadow with an advected upwind moisture-budget trace (honest rain shadows + continental drying), add real mm/yr precipitation, a rain/snow split, a seasonal regime, and a diagnostic cloud field — the whole rendered on the Living Globe.
 
