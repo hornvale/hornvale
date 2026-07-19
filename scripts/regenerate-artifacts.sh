@@ -84,17 +84,23 @@ rm -f "$possess_tmp"
 # The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
 # separate recording — the day-0 transcript above never advances time, so it
 # cannot show the world moving. This one `wait`s across a full drive cycle,
-# so a derived NPC's homeostatic thirst rises, it departs for its resource
-# and returns (named on `look`/`wait`'s own narration and readable directly
-# via `needs`'s diegetic felt-state prose), and `why` recounts its dated
-# `agent-at` history with the drive's own provenance ("sought water
-# (thirst)"). Wiring it here (rather than editing the day-0 script) is what
+# so a derived NPC's homeostatic thirst rises and is satisfied (narrated by
+# `wait`, felt directly through `needs`, and recounted with its own reason
+# by `why`). Wiring it here (rather than editing the day-0 script) is what
 # keeps the day-0 transcript byte-identical.
+#
+# THE CONFLUENCE (settlement condensation re-pointed at the real river
+# network): this world's flagship settlement now sits directly on fresh
+# water, so the NPC drinks in place rather than walking to it — `why`
+# recounts a drink, not a journey. Not every settlement's fate (condensation
+# lands most, not all, towns on the river network — a real, measured
+# fraction, not every seed/settlement), but this world's own flagship
+# settlement's real, measured outcome.
 possess_ot_tmp="$(mktemp)"
 run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
 {
     head -n 1 "$possess_ot_tmp"
-    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and set out\nseeking fresh water — narrated by `wait`, felt directly through `needs`,\nand recounted with its own reason by `why`. Belief is a cache the NPC\npopulates by perception, not ground truth: this settlement never happens\nto find a river within the walk shown here, so it wanders rather than\nreturning — a real, honest outcome of "plan over belief, not truth" (The\nSurmise), not every settlement'"'"'s fate. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
+    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and\nsatisfy it — narrated by `wait`, felt directly through `needs`, and\nrecounted with its own reason by `why`. This settlement condenses\ndirectly onto fresh water (settlements-near-rivers): the NPC drinks in\nplace rather than walking to it, so `why` recounts a drink, not a\njourney — not every settlement'"'"'s fate (condensation lands most, not\nall, towns on the river network), but this world'"'"'s own flagship\nsettlement'"'"'s real, measured outcome. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
 } > book/src/gallery/possession-over-time-seed-42.md
 rm -f "$possess_ot_tmp"

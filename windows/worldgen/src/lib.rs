@@ -388,23 +388,56 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
-/// Drainage normalization reference for the carrying-capacity freshwater
-/// term (§2): drainage accumulation above this reads as "as good as any
-/// river gets", not an unbounded score.
-const DRAINAGE_REF: f64 = 200.0;
+/// Weight the ambient moisture floor carries in the carrying-capacity
+/// freshwater term (The Confluence), against the `river_proximity` term it
+/// is `max`-combined with. Keeps riverless-but-wet regions habitable
+/// (moisture alone can still contribute up to this fraction) while leaving
+/// headroom for river proximity (`1.0` on a river, decaying over
+/// `RIVER_REACH`) to dominate near actual rivers — the mechanism
+/// condensation is meant to ride. TUNED (the-confluence T2, from the
+/// brief's placeholder 0.5): the keystone measurement
+/// (`windows/worldgen/tests/confluence.rs`) found that `RIVER_REACH`'s hop
+/// radius is also the ruler the test uses for "near a river" — widening it
+/// to inflate the settlement fraction just inflates the ambient land
+/// coverage of "near" too (90% of seed-42's land sits within 7 hops of a
+/// river), which trivializes the emergence claim rather than strengthening
+/// it. `RIVER_REACH` therefore stays at its T1 value (3 hops; ~55% ambient
+/// land coverage); this constant alone was pulled down from 0.5 to sharpen
+/// the river-vs-moisture contrast without touching the ruler.
+const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 
 /// Condensation threshold: an attractor whose catchment population clears
 /// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
 /// against the carrying_capacity constants to a manageable seed-42
 /// settlement count. Before tuning, the placeholder 0.5 condensed 998
-/// settlements on the level-6 seed-42 world (avg catchment ~7 people); this
-/// value condenses 182 (avg catchment ~22, max 71) — low hundreds, an order
-/// of magnitude down from the placeholder and in the range of the retired
-/// spaced scatter's town count. A save-format constant from here on. Module
-/// scope (hoisted from the settlement-genesis stage closure, Task A16a) so
+/// settlements on the level-6 seed-42 world (avg catchment ~7 people); the
+/// then-value of 10.0 condensed 182 (avg catchment ~22, max 71) — low
+/// hundreds, an order of magnitude down from the placeholder and in the
+/// range of the retired spaced scatter's town count.
+///
+/// RE-CALIBRATED (the-confluence T3, 2026-07-19): the sharper freshwater
+/// term (T2's re-point at `river_proximity`, with `MOISTURE_FLOOR_WEIGHT`
+/// pulled to 0.2) concentrates catchments along river corridors rather than
+/// spreading them over broad riverless-but-moist land, and the old
+/// `THRESHOLD = 10.0` condensed only 79 seed-42 settlements — below the
+/// [100, 400] sane band (`windows/worldgen/tests/confluence.rs`,
+/// `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`).
+///
+/// A naive re-fit is not enough: lowering `THRESHOLD` alone trades settlement
+/// COUNT against T2's keystone (`settlements_condense_near_rivers_emergently`)
+/// — a sweep found both move together non-monotonically in a narrow band
+/// (e.g. 0.9–1.5 clears the [100, 400] count band comfortably but the
+/// near-river fraction hovers right AT the keystone's 0.7 floor, 0.6991–
+/// 0.7018, effectively zero margin; 2.5+ gives the keystone real headroom but
+/// drops the count below 100). `1.7` was chosen as the best point found in
+/// that sweep: seed 42 condenses 108 settlements (comfortably inside the
+/// band, well clear of its 100 floor) while the near-river fraction reads
+/// 0.7222 — a real, if modest, margin over the keystone floor rather than
+/// sitting on top of it. A save-format constant from here on. Module scope
+/// (hoisted from the settlement-genesis stage closure, Task A16a) so
 /// [`demography_report`]'s Lab accessor and the genesis path share the one
 /// definition — they must never diverge.
-const CONDENSATION_THRESHOLD: f64 = 10.0;
+const CONDENSATION_THRESHOLD: f64 = 1.7;
 
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
@@ -417,13 +450,21 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    // The Confluence: freshwater rides proximity to the real river network,
+    // not a smooth drainage/moisture proxy — so K spikes near rivers and
+    // settlements condense there (emergent). A moisture floor keeps
+    // riverless-but-wet regions habitable.
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     hornvale_kernel::CellMap::from_fn(geo, |cell| {
         let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
         let moisture = climate.moisture_at(cell);
-        let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
-        let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
+        let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
+            .max(*river_prox.get(cell))
+            .clamp(0.0, 1.0);
         let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
         let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
@@ -2923,6 +2964,23 @@ fn build_to(
         &mass_map,
         CONDENSATION_THRESHOLD,
     );
+    // the-confluence T3 (save-format surface, spec §6): re-pointing the
+    // freshwater term at `river_proximity` and re-fitting
+    // `CONDENSATION_THRESHOLD` changes WHICH cells clear condensation (and
+    // therefore WHICH cells this pass places settlements on) — but this is
+    // a **derived-formula change**, not a stream-label epoch. Everything
+    // upstream of `condense_stack` (`carrying_inputs_of`,
+    // `carrying_capacity`, `coexist::pack`) is a pure, seed-free function of
+    // terrain/climate — `hornvale_demography` never imports `Seed`/`Stream`
+    // at all — and every name drawn below is salted by the settlement's own
+    // cell id (see the comment above `phonologies`), not by settlement COUNT
+    // or ORDER, so a shifted settlement set perturbs no OTHER draw's inputs.
+    // `settlement::stream_labels()` already documents `settlement/placement`/
+    // `settlement/population` as drawing nothing from the seed (retired
+    // pre-the-gathering); that remains true unchanged here. No new stream
+    // label, no draw-order shift — same seed + pins still yields a
+    // byte-identical world (`windows/worldgen/tests/confluence.rs`,
+    // `seed_42_is_byte_identical_across_two_builds_after_the_confluence`).
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -4897,12 +4955,16 @@ mod tests {
         // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
         // season moved it again within the epoch: iteration 2's clip-taper
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
-        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
-        // here (with review) whenever a deliberate terrain change moves world
-        // identity.
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. The
+        // Confluence (T2) then re-pointed `carrying_inputs_of`'s freshwater
+        // term at `river_proximity` (deliberately, so settlements condense
+        // near rivers -- see `windows/worldgen/tests/confluence.rs`), which
+        // redistributes carrying capacity and hence catchments; re-pinning
+        // 8 -> 4 here. Re-pin here (with review) whenever a deliberate
+        // terrain/carrying-capacity change moves world identity.
         assert_eq!(
-            village.population, 8,
-            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
+            village.population, 4,
+            "the world's largest attractor headcount is pinned at this seed (the-confluence T2)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
