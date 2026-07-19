@@ -59,6 +59,7 @@ run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-4
 
 echo "regenerate-artifacts: reference dumps" >&2
 run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
+run -p hornvale -- concepts --manifest > book/src/reference/concept-manifest-generated.md
 run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
 run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md

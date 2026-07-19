@@ -243,3 +243,65 @@ fn the_layering_page_matches_the_enforced_graph() {
          is authored by the enforcer, never by hand",
     );
 }
+
+/// The correspondence mechanism must stay **open** (The Correspondence, Stage
+/// 4): registering a brand-new concept — and the brand-new phenomenon kind it
+/// perceives — must require no central enum and edit no existing domain. This
+/// test proves it by doing exactly that using **only** `hornvale_kernel` types
+/// (note the kernel-only import below: no domain crate is named), against a
+/// registry that has never seen these names.
+///
+/// The structural guarantee it exercises: phenomenon kinds are keyed by
+/// `&str`, not by a closed `enum` of every kind. A god-enum would force this
+/// novel string through a variant that does not exist; because
+/// `register_phenomenon_kind` accepts an arbitrary string at runtime, the kind
+/// space is provably open. Likewise a new concept is added by constructing a
+/// `Manifest` from data — there is no central concept enum to extend.
+#[test]
+fn a_new_concept_and_phenomenon_kind_need_no_god_enum_or_domain_edit() {
+    use hornvale_kernel::{
+        ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, PerceptKind, Void,
+    };
+
+    // A gibberish name no domain would ever register — its novelty is what
+    // makes the test non-vacuous.
+    const NOVEL_CONCEPT: &str = "flibbertigibbet";
+    const NOVEL_KIND: &str = "flibbertigibbet-shimmer";
+
+    let mut registry = ConceptRegistry::default();
+
+    // Precondition: the registry knows neither name. (Non-vacuity.)
+    assert!(registry.concept(NOVEL_CONCEPT).is_none());
+    assert!(registry.phenomenon_kind(NOVEL_KIND).is_none());
+
+    // A phenomenon kind is an arbitrary string key — no enum variant needed.
+    registry
+        .register_phenomenon_kind(NOVEL_KIND, "an invented shimmer, for the openness proof")
+        .expect("a novel phenomenon kind is just a string key");
+
+    // A new concept is added by constructing a Manifest from plain data —
+    // there is no central concept enum, and no existing domain was touched to
+    // make room for it.
+    registry
+        .register_manifest(Manifest {
+            concept: ConceptDef {
+                name: NOVEL_CONCEPT.to_string(),
+                domain: "fixture".to_string(),
+                kind: ConceptKind::Quality,
+                doc: "a concept invented entirely inside this test".to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Unnamed("no word — this is a fixture concept")),
+            percept: Correspondent::Present(PerceptKind(NOVEL_KIND.to_string())),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })
+        .expect("a brand-new concept needs no central enum and no domain edit");
+
+    // Postcondition: both names now exist, and the percept edge resolved to
+    // the novel kind — proof the string-keyed kind space accepted an entry no
+    // enum enumerates.
+    assert_eq!(registry.concept(NOVEL_CONCEPT).unwrap().domain, "fixture");
+    assert!(registry.phenomenon_kind(NOVEL_KIND).is_some());
+    assert!(registry.manifest(NOVEL_CONCEPT).is_some());
+}
