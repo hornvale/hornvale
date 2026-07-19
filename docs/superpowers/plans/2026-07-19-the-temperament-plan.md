@@ -61,7 +61,12 @@ toward a comfortable one and stops; reload-stable (recompute twice → identical
 a cold-niche species tolerates cold a warm-niche species flees.
 **Tests:** new thermal-drive unit tests (firing, gradient direction, niche
 respect, determinism); `cargo test -p hornvale-vessel`.
-**Status:** Not Started
+**Status:** Complete — `Terrain::temperature` (per-day via a new
+`LocaleContext::temperature_at`, `describe` untouched → render byte-identical);
+`Thermal` flow-drive (niche-relative urgency, comfort gradient-step, same
+tie-break); 5 unit tests incl. niche-respect (cold tolerates what warm flees).
+NOT wired to the live decide (Stage 2). Walk BYTE-IDENTICAL, independently
+verified.
 
 ## Stage 2: Arbitration + psychology (action-centric)
 **Goal:** two competing drives resolve; psychology visibly changes the resolution.

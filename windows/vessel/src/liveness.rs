@@ -7,8 +7,8 @@
 
 use crate::agent::{settlement_position, walk_depth};
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime,
-    astar,
+    ConditionResponse, EntityId, Fact, Ledger, RoomAddr, RoomId, SearchSpace, TickSystem, Value,
+    World, WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::ActivityCycle;
@@ -140,6 +140,18 @@ pub trait Terrain {
     /// specific rooms fresh directly.
     /// type-audit: bare-ok(flag: return)
     fn is_fresh_water(&self, room: &RoomAddr) -> bool;
+
+    /// The room's PER-DAY temperature on `day`, °C — the diurnal+seasonal
+    /// signal a thermal (flow) drive senses at its own cell, distinct from
+    /// the render path's annual-MEAN `temperature_c` (untouched, so the
+    /// possession walk and almanac stay byte-identical). `LocaleTerrain`
+    /// reads the locale's per-day `temperature_at`; planted test terrain
+    /// plants specific room temperatures directly. `INFINITY` for an
+    /// undescribable room — its deviation from any optimum is infinite, so it
+    /// is never chosen as a comfort target (mirroring `elevation`'s
+    /// never-chosen-downhill convention).
+    /// type-audit: waiver(temperature-convention: return)
+    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64;
 }
 
 /// Water-truth (L0): a room is water iff its terrain reports it as FRESH
@@ -234,6 +246,13 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
+    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+        // The PER-DAY field (`LocaleContext::temperature_at`), NOT `describe`'s
+        // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
+        // swing while the render path stays byte-identical. INFINITY for an
+        // undescribable room (never chosen as a comfort target).
+        self.ctx.temperature_at(room, day).unwrap_or(f64::INFINITY)
+    }
 }
 
 /// A game-layer predicate: the agent drank (satisfied its sustenance goal) on
@@ -324,9 +343,13 @@ pub enum Intent {
 /// seam. `urgency`/`act_threshold` are the "need" half (the drive's current
 /// pressure and the level at which it acts); `affordance` is the "how to
 /// reduce it" half (the next executable step, or `None` when the drive cannot
-/// currently be advanced). All three read only the precomputed `Perceived`
-/// view (self-knowledge + belief + immediate affordance) — never truth — so a
-/// drive is pure over the view a tick already assembled.
+/// currently be advanced). A STOCK drive (thirst) reads only the precomputed
+/// `Perceived` view (self-knowledge + belief + immediate affordance) — never
+/// truth — so it is pure over the view a tick already assembled. A FLOW drive
+/// (`Thermal`) additionally senses the ambient field at its OWN position
+/// directly (you feel the temperature of the cell you stand in), so it carries
+/// the terrain and the day it senses at; that self-perception of the current
+/// cell is still pure, keyed only on the drive's own held inputs.
 pub trait Drive {
     /// The drive's current urgency in [0, 1] — its felt pressure, read from
     /// the (already-folded) view. Thirst returns `view.drive` (the `drive_at`
@@ -376,6 +399,113 @@ impl Drive for Thirst {
             // Ignorant: the exploration step (None when nowhere new to look).
             None => view.explore_step.clone().map(Action::MoveTo),
         }
+    }
+}
+
+/// The urgency at which the thermal comfort drive is considered to act (its
+/// `act_threshold`). Comfort is a low-stakes flow drive, so the threshold sits
+/// modestly above the tolerance edge (where urgency is exactly `0.0`): a cell
+/// merely a touch outside the niche band is felt but not yet acted on, while a
+/// genuinely uncomfortable one (urgency past this) does. An authored Stage-1
+/// placeholder; Stage 2's arbitration contextualizes it against the other
+/// drives (soft-Maslow ceilings).
+const THERMAL_ACT: f64 = 0.5;
+
+/// Thermal comfort — a FLOW (reactive, state-satisfied) drive, a second
+/// [`Drive`] implementor beside [`Thirst`]. Where thirst is a STOCK drive
+/// (urgency accrues over time and is reset by a discrete `Drink`), thermal
+/// comfort reads the CURRENT cell's per-day temperature against the species'
+/// temperature niche every tick: discomfort is instantaneous, and stepping to
+/// a more comfortable neighbour reduces it directly (no belief cache, no A* —
+/// the comfort gradient step IS the affordance, like thirst's `explore_step`).
+///
+/// Holds the species' temperature [`ConditionResponse`] (its thermal setpoint
+/// `optimum` and tolerance `width`) plus the terrain and day it senses at — a
+/// flow drive perceives the ambient temperature of the cell it occupies
+/// directly (see the [`Drive`] trait's stock-vs-flow note). NOT wired into the
+/// live NPC `decide` this stage (Stage 1 unit-tests it in isolation);
+/// arbitration of thirst + thermal together is Stage 2.
+/// type-audit: bare-ok(return)
+pub struct Thermal<'a> {
+    /// The species' temperature niche: `optimum` is the preferred °C, `width`
+    /// the tolerance half-band. Discomfort is deviation past `width` from
+    /// `optimum`.
+    pub niche: ConditionResponse,
+    /// The temperature field this drive senses (the cell it stands in and the
+    /// three neighbours it may step to).
+    pub terrain: &'a dyn Terrain,
+    /// The day the temperature is sensed at (the diurnal+seasonal phase).
+    pub day: WorldTime,
+}
+
+impl<'a> Thermal<'a> {
+    /// The absolute temperature deviation from the niche optimum at `room`,
+    /// °C — the discomfort distance the drive minimizes. `INFINITY` for an
+    /// undescribable room (never chosen as a comfort target).
+    fn deviation(&self, room: &RoomAddr) -> f64 {
+        (self.terrain.temperature(room, self.day) - self.niche.optimum).abs()
+    }
+}
+
+impl<'a> Drive for Thermal<'a> {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        // Discomfort: how far the current cell's temperature deviates PAST the
+        // tolerance band, normalized by the band width so one further band-
+        // width of deviation reaches full urgency. Exactly 0.0 inside the band
+        // (`|temp − optimum| ≤ width`), rising outside, clamped to [0, 1].
+        let dev = self.deviation(&view.position);
+        ((dev - self.niche.width).max(0.0) / self.niche.width).clamp(0.0, 1.0)
+    }
+    fn act_threshold(&self) -> f64 {
+        THERMAL_ACT
+    }
+    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+        // Satisfied inside the tolerance band — nothing to do (a flow drive
+        // needs no plan; NO A*, so `budget` is unused).
+        if self.deviation(&view.position) <= self.niche.width {
+            return None;
+        }
+        // Otherwise, the comfort gradient step: the neighbour whose temperature
+        // is CLOSEST to the optimum (too-cold → warmer, too-hot → cooler, both
+        // toward the optimum), or `None` when no neighbour is strictly more
+        // comfortable than here (boxed in / a local comfort optimum).
+        comfort_step(&view.position, self.niche.optimum, self.terrain, self.day).map(Action::MoveTo)
+    }
+}
+
+/// The comfort gradient step: the neighbour whose per-day temperature is
+/// CLOSEST to `optimum` (minimizing `|temp − optimum|`), or `None` when no
+/// neighbour is strictly more comfortable than `from` itself. A near-copy of
+/// [`downhill_step`] — the same three-neighbour scan and the same
+/// `total_cmp`-then-ascending-`RoomAddr` tie-break — but the objective is the
+/// minimized absolute temperature deviation rather than elevation, so a
+/// too-cold cell steps toward a warmer neighbour and a too-hot one toward a
+/// cooler, both toward the optimum.
+fn comfort_step(
+    from: &RoomAddr,
+    optimum: f64,
+    terrain: &dyn Terrain,
+    day: WorldTime,
+) -> Option<RoomAddr> {
+    let deviation = |room: &RoomAddr| (terrain.temperature(room, day) - optimum).abs();
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in from.neighbors() {
+        let dev = deviation(&n);
+        let keep_existing = match &best {
+            Some((ba, bd)) => dev.total_cmp(bd).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((n, dev));
+        }
+    }
+    let (best_room, best_dev) = best.expect("a room has three neighbors");
+    // Only step when a neighbour is STRICTLY more comfortable than here (an
+    // equal-comfort or worse neighbour is no improvement — hold).
+    if best_dev.total_cmp(&deviation(from)).is_lt() {
+        Some(best_room)
+    } else {
+        None
     }
 }
 
@@ -1559,6 +1689,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
@@ -1644,6 +1775,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc],
@@ -1919,6 +2051,9 @@ mod tests {
     struct PlantedTerrain {
         elevations: std::collections::BTreeMap<RoomAddr, f64>,
         fresh: std::collections::BTreeSet<RoomAddr>,
+        /// Planted per-room temperatures (°C) for the thermal-drive tests;
+        /// INFINITY elsewhere (the thirst tests never read temperature).
+        temps: std::collections::BTreeMap<RoomAddr, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
@@ -1928,6 +2063,7 @@ mod tests {
             Self {
                 elevations: std::collections::BTreeMap::new(),
                 fresh: rooms.into_iter().collect(),
+                temps: std::collections::BTreeMap::new(),
             }
         }
         /// No fresh water anywhere — just planted elevations (the
@@ -1936,6 +2072,17 @@ mod tests {
             Self {
                 elevations,
                 fresh: std::collections::BTreeSet::new(),
+                temps: std::collections::BTreeMap::new(),
+            }
+        }
+        /// Just planted per-room temperatures (the thermal-drive tests, which
+        /// never exercise elevation/water). Rooms without a planted temperature
+        /// read `INFINITY` (never chosen as a comfort target).
+        fn thermal(temps: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: std::collections::BTreeSet::new(),
+                temps: temps.into_iter().collect(),
             }
         }
     }
@@ -1945,6 +2092,9 @@ mod tests {
         }
         fn is_fresh_water(&self, room: &RoomAddr) -> bool {
             self.fresh.contains(room)
+        }
+        fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+            self.temps.get(room).copied().unwrap_or(f64::INFINITY)
         }
     }
 
@@ -2101,6 +2251,7 @@ mod tests {
         let terrain = PlantedTerrain {
             elevations: m,
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
@@ -2131,5 +2282,214 @@ mod tests {
             Some(water)
         );
         let _ = ledger;
+    }
+
+    // --- The thermal comfort drive (Stage 1, a flow-drive in ISOLATION). ---
+
+    /// A warm-blooded niche (optimum ~18 °C) with a modest tolerance band —
+    /// authored with a narrow width so the discrimination against the cold
+    /// niche is clean (the real goblin niche's very wide width tolerates
+    /// nearly everything, which can't demonstrate flight vs. tolerance).
+    fn warm_niche() -> ConditionResponse {
+        ConditionResponse {
+            optimum: 18.0,
+            width: 8.0,
+            devotion: 0.45,
+        }
+    }
+    /// A cold-adapted niche (optimum ~6 °C), same tolerance band as
+    /// [`warm_niche`] so the two differ only in setpoint.
+    fn cold_niche() -> ConditionResponse {
+        ConditionResponse {
+            optimum: 6.0,
+            width: 8.0,
+            devotion: 0.85,
+        }
+    }
+    /// The zero-drive, ignorant view a flow-drive test reads (thirst state is
+    /// irrelevant to the thermal drive — it senses temperature at `position`).
+    fn at(position: RoomAddr) -> Perceived {
+        Perceived {
+            position,
+            drive: 0.0,
+            believed_water: None,
+            explore_step: None,
+        }
+    }
+
+    #[test]
+    fn thermal_affordance_steps_toward_the_comfortable_neighbor_both_directions() {
+        // TOO COLD → warmer neighbour; TOO HOT → cooler neighbour; both toward
+        // the optimum. The comfort step is the neighbour whose temperature is
+        // CLOSEST to the optimum, exactly as `downhill_step` picks the lowest.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+
+        // Too COLD: home at −10 (dev 28 past optimum 18), ns[0] warmest/closest.
+        let cold_here = PlantedTerrain::thermal([
+            (home.clone(), -10.0),
+            (ns[0].clone(), 10.0),  // dev 8  → closest to optimum
+            (ns[1].clone(), -30.0), // dev 48
+            (ns[2].clone(), -20.0), // dev 38
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &cold_here,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "too cold: steps toward the warmer neighbour"
+        );
+        assert!(
+            drive.urgency(&view) > drive.act_threshold(),
+            "a 28 °C deviation is well past the act threshold"
+        );
+
+        // Too HOT: home at 40 (dev 22), ns[0] coolest/closest to optimum 18.
+        let hot_here = PlantedTerrain::thermal([
+            (home.clone(), 40.0),
+            (ns[0].clone(), 20.0), // dev 2  → closest to optimum
+            (ns[1].clone(), 60.0), // dev 42
+            (ns[2].clone(), 50.0), // dev 32
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &hot_here,
+            day,
+        };
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "too hot: steps toward the cooler neighbour"
+        );
+    }
+
+    #[test]
+    fn thermal_within_tolerance_is_satisfied_no_urgency_no_step() {
+        // Inside the tolerance band: urgency is exactly 0 (< act) and there is
+        // no affordance (nothing to do), even though a strictly-more-optimal
+        // neighbour exists — comfort is a satisfied state, not a maximizer.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), 20.0),  // dev 2 ≤ width 8 → comfortable
+            (ns[0].clone(), 18.0), // exactly optimal, but we don't chase it
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(drive.urgency(&view), 0.0, "inside the band → zero urgency");
+        assert!(drive.urgency(&view) < drive.act_threshold());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            None,
+            "comfortable → no comfort step"
+        );
+    }
+
+    #[test]
+    fn thermal_respects_the_niche_cold_tolerates_what_warm_flees() {
+        // NICHE RESPECT: the SAME cell (a cold 2 °C room) is tolerated by a
+        // cold-adapted niche (optimum 6, dev 4 ≤ 8) but fled by a warm one
+        // (optimum 18, dev 16 > 8). Different setpoint → different verdict.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), 2.0),
+            (ns[0].clone(), 16.0), // warmer — the warm niche's comfort target
+            (ns[1].clone(), -10.0),
+            (ns[2].clone(), -20.0),
+        ]);
+        let view = at(home.clone());
+
+        let cold = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+        };
+        assert_eq!(cold.urgency(&view), 0.0, "the cold niche tolerates 2 °C");
+        assert_eq!(
+            cold.affordance(&view, PLAN_BUDGET),
+            None,
+            "tolerated → the cold niche stays put"
+        );
+
+        let warm = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        assert!(warm.urgency(&view) > 0.0, "the warm niche flees 2 °C");
+        assert_eq!(
+            warm.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "the warm niche steps toward the warmer neighbour"
+        );
+    }
+
+    #[test]
+    fn thermal_urgency_and_affordance_are_deterministic_and_recompute_identically() {
+        // Reload-stable by construction: the thermal drive reads only its held
+        // niche + terrain + day (no ledger, no stored state), so recomputing
+        // twice is byte-identical.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 3.5 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -12.0),
+            (ns[0].clone(), 4.0),
+            (ns[1].clone(), -25.0),
+            (ns[2].clone(), -18.0),
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(drive.urgency(&view), drive.urgency(&view));
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            drive.affordance(&view, PLAN_BUDGET)
+        );
+    }
+
+    #[test]
+    fn thermal_comfort_step_breaks_ties_by_ascending_room_addr() {
+        // DETERMINISM UNDER A GENUINE TIE: two neighbours EQUIDISTANT from the
+        // optimum (symmetric about it, 0 °C and 12 °C around optimum 6, both
+        // dev 6) must resolve to the smaller-`RoomAddr` one — the same
+        // `total_cmp` + ascending-`RoomAddr` tie-break `downhill_step` uses (cf.
+        // `downhill_step_picks_the_lowest_neighbor_deterministically`).
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let smaller = std::cmp::min(ns[0].clone(), ns[1].clone());
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -40.0),  // dev 46 → outside the band, worse than either
+            (ns[0].clone(), 0.0),   // dev 6
+            (ns[1].clone(), 12.0),  // dev 6 → ties ns[0]
+            (ns[2].clone(), -40.0), // dev 46 → not chosen
+        ]);
+        let drive = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(smaller)),
+            "an equal-deviation tie resolves to the smaller RoomAddr"
+        );
     }
 }
