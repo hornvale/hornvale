@@ -2,7 +2,8 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, DRANK, DriveMovements, Npc, SUSTENANCE, agent_position, derive_npcs, drive_at,
+    AGENT_AT, DRANK, DriveMovements, LocaleTerrain, Npc, SUSTENANCE, agent_position, derive_npcs,
+    drive_at,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -293,11 +294,13 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
+        let terrain = LocaleTerrain::new(self.world, &self.ctx);
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
             to: self.day,
             params: SUSTENANCE,
+            terrain: &terrain,
         };
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {

@@ -68,18 +68,31 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
     // actual transition through the room — not just count a generic
     // "stirred" tally.
     //
-    // The Foresight replaces The Wanting's gradual physiological fall with a
-    // PLANNED journey: every derived NPC starts away from its resource with
-    // drive 0 at world day 0, rising at SUSTENANCE's 0.15/day, so (from day
-    // 0.5, PossessOpts::default) the seek threshold (0.85) is crossed at
-    // world day `crossing` = act/rise ≈ 5.667 — and water is always exactly
-    // one mesh hop from home (`resource_room`), so the WHOLE seek-drink-
-    // return round trip (two MOVE_DURATION=0.1-day hops plus an instant
-    // drink) completes in ~0.2 days, not the old model's multi-day fall. A
-    // single coarse `wait` spanning the crossing would see the NPC leave AND
-    // return within the SAME tick (no observable transition at the tick
-    // boundary), so this test computes the exact arrival windows from the
-    // authored constants and lands one tick boundary inside each.
+    // Every derived NPC starts away from its resource with drive 0 at world
+    // day 0, rising at SUSTENANCE's 0.15/day, so (from day 0.5,
+    // PossessOpts::default) the seek threshold (0.85) is crossed at world
+    // day `crossing` = act/rise ≈ 5.667. Pre-Surmise (`resource_room`) water
+    // was ALWAYS exactly one mesh hop from home, so a full seek-drink-return
+    // round trip completed in ~0.2 days and this test could compute BOTH a
+    // departure and a return window from the authored constants alone.
+    // Under The Surmise's real, terrain-derived `nearest_water`, that
+    // guarantee is gone: on the real seed-42 world, the flagship's own home
+    // settlement has NO water within any budget this window actually uses
+    // (measured in `liveness.rs`'s
+    // `seed_42_home_settlement_water_reachability_is_a_measured_t5_gap` — a
+    // real T5 gap, not a regression this test should paper over). The
+    // co-located NPC therefore explores indefinitely and never returns, so
+    // only the DEPARTURE half is provable end-to-end here; the "return"
+    // narration branch (and the full round-trip's provenance, "walking to
+    // water (thirst)" / "drank (thirst sated)") is proven instead at the
+    // mechanism level, decoupled from real reachability, by
+    // `liveness.rs`'s `the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip`.
+    //
+    // The very FIRST exploration step still departs at exactly
+    // `crossing + MOVE_DURATION` regardless of whether it is a real
+    // "walking to water" step or an ignorant "seeking water" explore step
+    // (both cost one `MOVE_DURATION`), so the departure math below is
+    // unchanged from the pre-Surmise model.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
     let labels: Vec<String> = session
@@ -101,13 +114,13 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
     let p = hornvale_vessel::liveness::SUSTENANCE;
     let start_day = PossessOpts::default().day.day;
     let crossing = p.act / p.rise; // the world day the drive first reaches `act`
-    let arrival_at_water = crossing + MOVE_DURATION;
-    let arrival_at_home = arrival_at_water + MOVE_DURATION;
+    let first_step = crossing + MOVE_DURATION;
+    let second_step = first_step + MOVE_DURATION;
 
-    // First wait: land squarely inside [arrival_at_water, arrival_at_home) —
-    // the co-located NPC has reached water (and drunk) but not yet walked
-    // back, so it is observed as DEPARTED from the player's room.
-    let land_departed = (arrival_at_water + arrival_at_home) / 2.0;
+    // Land squarely inside [first_step, second_step) — the co-located NPC
+    // has taken its first exploration step away from home (and not yet a
+    // second), so it is observed as DEPARTED from the player's room.
+    let land_departed = (first_step + second_step) / 2.0;
     let departure = out_text(session.handle(&format!("wait {}", land_departed - start_day)));
     assert!(
         labels.iter().any(|l| departure.contains(l.as_str())),
@@ -118,17 +131,13 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
         "the specific colocation branch must fire, not the generic fallback: {departure}"
     );
 
-    // Second wait: land comfortably past arrival_at_home — the co-located
-    // NPC has walked back, so it is observed as RETURNED to the player's room.
-    let land_returned = arrival_at_home + MOVE_DURATION;
-    let return_text = out_text(session.handle(&format!("wait {}", land_returned - land_departed)));
+    // A subsequent wait must not spuriously re-report a departure/arrival —
+    // the NPC keeps exploring away, so the room stays quiet (no double-count,
+    // no "stirred" fallback firing from noise).
+    let still_away = out_text(session.handle("wait 1"));
     assert!(
-        labels.iter().any(|l| return_text.contains(l.as_str())),
-        "return must also name the co-located NPC, got: {return_text}"
-    );
-    assert!(
-        !return_text.contains("stirred"),
-        "the specific colocation branch must fire on return too, got: {return_text}"
+        !labels.iter().any(|l| still_away.contains(l.as_str())),
+        "an NPC that stays away must not be re-named as departing/arriving again: {still_away}"
     );
 }
 
@@ -178,32 +187,31 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
         !recount.contains("No one here answers"),
         "the label must resolve to the NPC that actually moved: {recount}"
     );
-    // THE FORESIGHT T3: the planned move's provenance ("walking to water
-    // (thirst)") must surface through the SAME recount, not just an
+    // THE FORESIGHT T3, UPDATED FOR THE SURMISE: the planned move's
+    // provenance must surface through the SAME recount, not just an
     // undifferentiated "it moved" — the drive is what gives the routine a
-    // WHY. Mutation-verify: blanking `DriveMovements::step`'s provenance
-    // string in `liveness.rs` reds this assertion while leaving every other
-    // assertion in this test green (the day/name/resolution checks above
-    // don't touch provenance text at all).
+    // WHY. Under the belief model, an agent that has never stood in water is
+    // IGNORANT and takes the EXPLORE branch ("seeking water (thirst)"), not
+    // the believer's beeline ("walking to water (thirst)") — and on the real
+    // seed-42 world, the flagship's own home settlement has no water within
+    // any budget this window uses (measured:
+    // `liveness.rs`'s `seed_42_home_settlement_water_reachability_is_a_measured_t5_gap`,
+    // a real T5 gap), so this NPC never stands in water and never leaves the
+    // explore branch. Mutation-verify: blanking `DriveMovements::step`'s
+    // "seeking water (thirst)" string in `liveness.rs` reds this assertion
+    // while leaving every other assertion in this test green (the
+    // day/name/resolution checks above don't touch provenance text at all).
     assert!(
-        recount.contains("walking to water (thirst)"),
+        recount.contains("seeking water (thirst)"),
         "the recount names the drive's own reason for the move: {recount}"
     );
-    // THE FORESIGHT T4: `why` is domain-agnostic (`historiography::recount`
-    // replays every fact `facts_about(entity)` yields, regardless of
-    // predicate), so the SAME recount that names the moves must also name
-    // the `drank` fact the journey was FOR — the precondition chain's
-    // payoff (`[move*, drink]`) is only legible as a story if the recount
-    // shows the goal being MET, not just the route to it. "wait 7" spans
-    // the full ~5.667-day crossing plus the two MOVE_DURATION hops, so by
-    // day 7 the NPC has walked to water AND drunk. Mutation-verify: blanking
-    // `drank_fact`'s provenance string ("drank (thirst sated)") in
-    // `liveness.rs` reds this assertion alone, leaving the move-provenance
-    // assertion above (a distinct string) green.
-    assert!(
-        recount.contains("drank (thirst sated)"),
-        "the recount also names the drink that satisfied the goal: {recount}"
-    );
+    // THE FORESIGHT T4's ORIGINAL CLAIM — that the SAME recount also names
+    // the `drank` fact the journey was FOR — no longer holds for THIS real
+    // settlement (it never reaches water, so it never drinks; see the T5 gap
+    // above): a full round trip's "walking to water (thirst)" /
+    // "drank (thirst sated)" provenance is instead proven, decoupled from
+    // real-world reachability, by `liveness.rs`'s
+    // `the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip`.
 }
 
 #[test]
