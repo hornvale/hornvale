@@ -1,7 +1,7 @@
 # The Doctrine (C6) — Design
 
 **Date:** 2026-07-19
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** **Approved at G3 (2026-07-19)** — census not spent; dial-roster law confirmed; ledger digest due at G6.
 **Campaign:** C6 of the self-writing-book program
 (metaplan: [program metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md) §3 C6)
 **Theory:** registry row LANG-39 (doctrinal/folk conflict as generative
