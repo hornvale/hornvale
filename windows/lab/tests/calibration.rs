@@ -1032,7 +1032,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // grammar streams (C3), The Echo) surfacing at the fixtures' first
         // refresh since; the chorus itself adds zero draws (genesis
         // byte-identical).
-        ("kobold", 163u32, 9.870_880_927_607_359),
+        ("kobold", 163u32, 9.870_880_927_607_36),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
