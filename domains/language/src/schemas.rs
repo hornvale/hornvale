@@ -487,12 +487,19 @@ pub fn conflict_of(
         return ConflictState::RevealedClaim;
     }
 
+    // Agreement requires equal effective dispositions AND explanatory
+    // parity: two Explained entries agree only on the same schema, and an
+    // ASYMMETRIC pair (one explained, one plain — the doctrine explaining
+    // what the folk leave unexplained) is a genuine difference of
+    // accounts (spec §3.2's "accounts differ"), not Harmony — the C6 T1
+    // review's precedence-edge test forced this refinement (ledger #9).
     let agrees = if folk_eff == doctrine_eff {
         match (folk, doctrine) {
             (
                 Disposition::Explained { schema: fs, .. },
                 Disposition::Explained { schema: ds, .. },
             ) => fs == ds,
+            (Disposition::Explained { .. }, _) | (_, Disposition::Explained { .. }) => false,
             _ => true,
         }
     } else {
@@ -750,6 +757,37 @@ mod tests {
 
     /// The preregistered conflict grid (C6 T1): every named case from the
     /// plan header, checked directly against [`conflict_of`].
+    /// The precedence edge the review demanded pinned (C6 T1 review):
+    /// folk Lost vs doctrine Explained{underlying: Lost} — the doctrine
+    /// EXPLAINS what it also failed to keep, so this is NOT a
+    /// RevealedClaim (whose guard requires the doctrine's effective
+    /// disposition to be Kept); it falls through to the differ branch and
+    /// splits on verifiability like any other disagreement.
+    #[test]
+    fn explained_lost_doctrine_is_never_a_revealed_claim() {
+        let folk =
+            Disposition::Lost(crate::account::LossReason::BeyondCapability { domain: "sky" });
+        let doctrine = Disposition::Explained {
+            underlying: Box::new(Disposition::Lost(
+                crate::account::LossReason::BeyondCapability { domain: "sky" },
+            )),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        assert_eq!(
+            conflict_of(&folk, &doctrine, false),
+            ConflictState::Mystery,
+            "a doctrine explaining its own loss is a mystery, not a revealed claim"
+        );
+        assert_eq!(
+            conflict_of(&folk, &doctrine, true),
+            ConflictState::Contested,
+            "and contested where the folk could check"
+        );
+    }
+
     #[test]
     fn conflict_states_cover_the_preregistered_grid() {
         // Harmony: identical Kept vs Kept.
@@ -838,14 +876,21 @@ mod tests {
             "a doctrine Explained-wrapping-Kept still reveals a claim the folk voice lacks"
         );
 
-        // Explained-wrapping transparency: Explained{Kept} vs bare Kept,
-        // same effective disposition -> Harmony, regardless of the wrapped
-        // schema (only fires the schema-comparison arm when BOTH sides are
-        // literally Explained).
+        // Explanatory parity (refined at the C6 T1 review, ledger #9):
+        // Explained{Kept} vs bare Kept share an effective disposition,
+        // but one account carries a story the other lacks — a genuine
+        // difference of accounts (spec §3.2), splitting on verifiability
+        // like any other disagreement. (The plan's compressed grid called
+        // this Harmony; the spec's "accounts differ" governs.)
         assert_eq!(
             conflict_of(&doctrine_explained_kept, &Disposition::Kept, true),
-            ConflictState::Harmony,
-            "one side bare Kept, the other Explained-wrapping-Kept: schema is irrelevant, compares effective"
+            ConflictState::Contested,
+            "asymmetric explanation over a shared Kept, folk-verifiable: contested"
+        );
+        assert_eq!(
+            conflict_of(&doctrine_explained_kept, &Disposition::Kept, false),
+            ConflictState::Mystery,
+            "asymmetric explanation over a shared Kept, unverifiable: mystery"
         );
     }
 }
