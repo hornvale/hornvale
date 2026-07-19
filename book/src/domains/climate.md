@@ -119,8 +119,19 @@ by nothing but the sky above it.
 Chronicle: [3c, Climate & Biomes](../chronicle/campaign-3c.md). Laboratory:
 [Study 002, the Census of Lands](../laboratory/study-002.md).
 
-**The tier ladder ahead:** weather as day-to-day variation on top of the
-mean fields, ocean currents and cloud feedback promoting the declared
-approximations above to derived quantities (each such promotion an epoch
-bump, never a silent change), and the local-refinement campaign that lets
-a habitable cell host a walk-around interior.
+**Tier 1 speaks, too ([The Elements](../chronicle/the-elements.md)).** The
+generated climate is no longer only a field provider: it emits *felt weather*
+into the phenomena stream — heat, cold, rain, and snow as `Venue::Ambient`
+standing conditions that vary with place and time (riding the seasonal and
+diurnal temperature terms). Salience tracks a cell's deviation from a temperate
+baseline, so mild country is felt but sub-floor while only a brutal clime
+crosses religion's threshold — weather-gods are earned by hardship, not
+sprinkled across every valley. It reaches the stream through the
+phenomena-source roster, the same `Domain`-trait seam concept registration uses.
+
+**The tier ladder ahead:** *stochastic* weather — day-to-day variation the
+world's pure `world(place, time)` cannot yet express (standing felt weather has
+shipped; the *changing* kind waits on an event model) — ocean currents and cloud
+feedback promoting the declared approximations above to derived quantities (each
+such promotion an epoch bump, never a silent change), and the local-refinement
+campaign that lets a habitable cell host a walk-around interior.

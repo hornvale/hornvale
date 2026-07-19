@@ -93,7 +93,12 @@ and instead took a cleaner road — the semantic query surface, where the sim
 emits quantities and the client renders them ([The Scene
 Window](./chronicle/21-the-scene-window.md)). The interface is more general
 than feared; it is also not the only interface, and that turned out to be the
-right shape. The scene seam has since crossed a repository boundary: an
+right shape. The bet has now been confirmed on the *producer* side as well:
+[The Elements](./chronicle/the-elements.md) added a wholly new source class —
+climate's felt weather — through a `Domain`-trait roster that lets any domain
+contribute observations without editing the composition root or a sibling, so
+the stream is no longer sky-bound and religion can grow weather-gods where the
+land is harsh. The scene seam has since crossed a repository boundary: an
 external client now consumes the same documents through a versioned wasm
 catalog, byte-identical across platforms
 ([Goldengrove](./chronicle/goldengrove.md), decision 0055). It has also
