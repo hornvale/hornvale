@@ -14,7 +14,7 @@ use hornvale_terrain::{
     CarveParams, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_of,
+    BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_from,
     build_world_from_components, build_world_to, climate_from, climate_of, flagship_of,
     language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from, rock_class_name,
     sky_of, soil_of, soil_order_name, terrain_of,
@@ -2847,7 +2847,7 @@ pub fn registry() -> Vec<Metric> {
 /// LANG-41): a thin passthrough so the six chorus metrics below share one
 /// call site rather than each re-deriving voices.
 fn chorus_voices(v: &FullView) -> Vec<ChorusVoice> {
-    accounts_of(v.world())
+    accounts_from(v.world(), v.terrain(), v.climate())
 }
 
 /// Mean `distortion()` over `voices` (C4 LANG-41). `Absent` if `voices` is
