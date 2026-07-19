@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(diagnostic-value: snow_fraction), bare-ok(index: precip_regime), bare-ok(diagnostic-value: cloud_fraction)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -167,6 +167,28 @@ pub struct TilesScene {
     /// the hemisphere-signed sinusoid. Appended per the schema stability
     /// contract.
     pub locked: bool,
+    /// Annual precipitation per tile, mm/yr (The Rains) — the moisture field
+    /// mapped into an Earth-ranged total; see
+    /// [`hornvale_climate::GeneratedClimate::precip_at`]. Appended per the
+    /// schema stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub precip_mm_yr: Vec<f64>,
+    /// The fraction of precipitation falling as snow per tile, `[0, 1]` (The
+    /// Rains); see [`hornvale_climate::GeneratedClimate::snow_fraction_at`].
+    /// Appended per the schema stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub snow_fraction: Vec<f64>,
+    /// The seasonal precipitation regime per tile, as an index into
+    /// `hornvale_climate::PrecipRegime`'s declaration order (The Rains); see
+    /// [`hornvale_climate::GeneratedClimate::regime_at`]. Appended per the
+    /// schema stability contract.
+    pub precip_regime: Vec<u8>,
+    /// Diagnostic cloud fraction per tile, `[0, 1]` (The Rains) — feeds
+    /// nothing else in the sim, a readable field only; see
+    /// [`hornvale_climate::GeneratedClimate::cloud_fraction_at`]. Appended
+    /// per the schema stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub cloud_fraction: Vec<f64>,
 }
 
 /// Dot product a · b.
@@ -229,6 +251,10 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut current_east = Vec::with_capacity(tiles);
     let mut current_north = Vec::with_capacity(tiles);
     let mut moisture = Vec::with_capacity(tiles);
+    let mut precip_mm_yr = Vec::with_capacity(tiles);
+    let mut snow_fraction = Vec::with_capacity(tiles);
+    let mut precip_regime = Vec::with_capacity(tiles);
+    let mut cloud_fraction = Vec::with_capacity(tiles);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
@@ -255,6 +281,10 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             current_east.push(dot3(current, east));
             current_north.push(dot3(current, north));
             moisture.push(climate.moisture_at(c_cell));
+            precip_mm_yr.push(climate.precip_at(c_cell).get());
+            snow_fraction.push(climate.snow_fraction_at(c_cell));
+            precip_regime.push(climate.regime_at(c_cell) as u8);
+            cloud_fraction.push(climate.cloud_fraction_at(c_cell));
         }
     }
     debug_assert!(
@@ -267,6 +297,9 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(current_east.iter())
             .chain(current_north.iter())
             .chain(moisture.iter())
+            .chain(precip_mm_yr.iter())
+            .chain(snow_fraction.iter())
+            .chain(cloud_fraction.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
     );
@@ -292,6 +325,10 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         circulation_bands: climate.band_count(),
         moisture,
         locked: climate.is_locked(),
+        precip_mm_yr,
+        snow_fraction,
+        precip_regime,
+        cloud_fraction,
     })
 }
 
@@ -1123,6 +1160,39 @@ mod tests {
                 assert_eq!(scene.current_north[i], 0.0);
             }
         }
+    }
+
+    #[test]
+    fn rains_layers_are_sized_finite_and_in_range() {
+        // The four fields Task 5 added: precip_mm_yr / snow_fraction /
+        // precip_regime / cloud_fraction (The Rains).
+        let scene = tiles_scene(&world(), 32).unwrap();
+        let tiles = (scene.width * scene.height) as usize;
+        assert_eq!(scene.precip_mm_yr.len(), tiles);
+        assert_eq!(scene.snow_fraction.len(), tiles);
+        assert_eq!(scene.precip_regime.len(), tiles);
+        assert_eq!(scene.cloud_fraction.len(), tiles);
+        assert!(
+            scene
+                .precip_mm_yr
+                .iter()
+                .all(|p| p.is_finite() && *p >= 0.0)
+        );
+        assert!(
+            scene
+                .snow_fraction
+                .iter()
+                .all(|f| f.is_finite() && (0.0..=1.0).contains(f))
+        );
+        assert!(
+            scene
+                .cloud_fraction
+                .iter()
+                .all(|f| f.is_finite() && (0.0..=1.0).contains(f))
+        );
+        // PrecipRegime has 4 declared variants (Uniform, SummerMax,
+        // WinterMax, Monsoon) — every index must land in 0..4.
+        assert!(scene.precip_regime.iter().all(|&r| r < 4));
     }
 
     #[test]

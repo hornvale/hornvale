@@ -62,23 +62,6 @@ The day returns because Bobako strides the sky, briskly.
 
 *In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-### The Reckoning of Years
-
-#### In the first days
-
-The sky keeps no dates to number.
-
-#### In the hundredth year
-
-The sky has darkened, now and again.
-The priesthood of the Vavako numbers the darkenings: 4010.
-The next darkening, it teaches, comes on day 36526.
-The sky has darkened, now and again.
-The priesthood of the Babako numbers the darkenings: 4010.
-The next darkening, it teaches, comes on day 36526.
-
-*In truth, the darkenings of the first hundred years number 6472.*
-
 ## Volume 2: Waobwoe
 
 Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.
@@ -152,46 +135,13 @@ The day returns to keep the balance.
 #### As the Ngkoshngta tell it
 
 Waobwoe is the earth with one moon.
-The moon crosses because Nggo strides the sky, slowly.
+The moon crosses because Nggo drives the sky, slowly.
 The day returns, as all things return.
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — rivals.
 The Ngkoshngta are kobolds — ourselves.
 
 *In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-##### As the priesthood of the Ngkoshngta teach it
-
-Waobwoe Ngdasngko. ("Waobwoe is the earth — as it is taught.")
-
-Waobwoe is the earth with one moon.
-The moon crosses because Nggo walks the sky, slowly.
-The day returns because Ngdosngka walks the sky, briskly.
-The Maetmea are goblins — rivals.
-The Waedwea are hobgoblins — rivals.
-The Ngkoshngta are kobolds — ourselves.
-
-*In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-### The Reckoning of Years
-
-#### In the first days
-
-The sky keeps no dates to number.
-
-#### In the hundredth year
-
-The sky has darkened, now and again.
-The priesthood of the Maetmea numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36611.
-The sky has darkened, now and again.
-The priesthood of the Waedwea numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36611.
-The sky has darkened, now and again.
-The priesthood of the Ngkoshngta numbers the darkenings: 81.
-The next darkening, it teaches, comes on day 36611.
-
-*In truth, the darkenings of the first hundred years number 81.*
 
 ## Volume 3: Zhqea
 
@@ -259,19 +209,3 @@ The Shteozqae are hobgoblins — rivals.
 The Jjajjjo are kobolds — ourselves.
 
 *In truth, Zhqea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
-
-### The Reckoning of Years
-
-#### In the first days
-
-The sky keeps no dates to number.
-
-#### In the hundredth year
-
-The sky has darkened, now and again.
-The priesthood of the Sdeozqae numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36953.
-The sky has darkened, now and again.
-The sky has darkened, now and again.
-
-*In truth, the darkenings of the first hundred years number 53.*
