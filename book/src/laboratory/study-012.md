@@ -47,7 +47,8 @@ seed that places two or more cultures:
   is pairwise indistinguishable from every other (distinctiveness exactly
   zero), confirming the pole actually *is* the failure it names.
 - **A minimum distinctiveness band** — the shipped voices' mean pairwise
-  distinctiveness clears a fixed floor on every measured world.
+  distinctiveness clears a fixed floor on at least one measured world (as
+  preregistered; in the event it cleared the floor on every one).
 - **Non-vacuity** — the shipped voices differ from one another, not just
   from the two synthetic poles, on every multi-people world measured.
 
