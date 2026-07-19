@@ -89,8 +89,10 @@ fn warmth(geo: &Geosphere, cell: CellId) -> f64 {
 
 /// The upwind neighbor of `cell`: the one whose displacement from `cell` is
 /// most opposite `wind` (i.e., the direction the wind blows *from*). Shared
-/// by every upwind trace over the globe.
-fn upwind_neighbor(geo: &Geosphere, cell: CellId, wind: [f64; 3]) -> Option<CellId> {
+/// by every upwind trace over the globe. `pub(crate)`: `provider.rs` reuses
+/// it to find the single upwind hop for the diagnostic cloud-fraction field's
+/// local uplift term, the same orographic signal `carried_water` sinks on.
+pub(crate) fn upwind_neighbor(geo: &Geosphere, cell: CellId, wind: [f64; 3]) -> Option<CellId> {
     let cp = geo.position(cell);
     geo.neighbors(cell).iter().copied().max_by(|a, b| {
         let da = geo.position(*a);

@@ -83,6 +83,38 @@ pub fn precip_regime(band: u32, continentality: f64, hemisphere_sign: f64) -> Pr
     }
 }
 
+/// Baseline cloud fraction contributed regardless of uplift or band (a
+/// diagnostic floor: even flat, sinking terrain shows some cloud when moist).
+const CLOUD_BASE: f64 = 0.3;
+/// Additional contribution when the cell sits in a rising circulation band
+/// (convective cloud from the same ascent that makes those bands wet).
+const CLOUD_RISING: f64 = 0.3;
+/// Orographic-uplift coefficient, scaled by `uplift_m / CLOUD_UPLIFT_SCALE_M`
+/// (mirrors the orographic sink `moisture::carried_water` applies to the
+/// moisture budget — the same terrain rise that rains moisture out also
+/// forces the cloud that does the raining).
+const CLOUD_UPLIFT_K: f64 = 0.6;
+/// Elevation scale (m) normalizing uplift for the cloud-fraction term.
+const CLOUD_UPLIFT_SCALE_M: f64 = 3000.0;
+
+/// Diagnostic cloud fraction at a cell, `[0, 1]`: **feeds nothing** (no
+/// insolation or temperature term reads it) — a readable field only, one
+/// data point short of a full cloud model (spec §5 declared approximation).
+/// Monotone increasing in `moisture` and in `uplift_m`; higher in a rising
+/// circulation band than a sinking one at the same moisture and uplift.
+/// `uplift_m` is the local along-wind terrain rise (the elevation gained
+/// over the immediate upwind hop; see `provider::local_uplift_m`), zero or
+/// negative (downhill / no upwind source) contributing nothing beyond the
+/// base and rising terms.
+///
+/// type-audit: bare-ok(ratio: moisture), bare-ok(diagnostic-value: uplift_m), bare-ok(flag: rising_band), bare-ok(ratio: return)
+pub fn cloud_fraction(moisture: f64, uplift_m: f64, rising_band: bool) -> f64 {
+    let m = moisture.clamp(0.0, 1.0);
+    let rising = if rising_band { 1.0 } else { 0.0 };
+    let uplift_term = CLOUD_UPLIFT_K * (uplift_m.max(0.0) / CLOUD_UPLIFT_SCALE_M);
+    (m * (CLOUD_BASE + CLOUD_RISING * rising + uplift_term)).clamp(0.0, 1.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,5 +199,70 @@ mod tests {
     #[test]
     fn precip_regime_sinking_low_continentality_band_is_winter_max() {
         assert_eq!(precip_regime(1, 0.2, 1.0), PrecipRegime::WinterMax);
+    }
+
+    #[test]
+    fn cloud_fraction_is_high_for_moist_rising_uplifted() {
+        assert!(cloud_fraction(0.9, 3000.0, true) > 0.8);
+    }
+
+    #[test]
+    fn cloud_fraction_is_low_for_dry_sinking_flat() {
+        assert!(cloud_fraction(0.05, 0.0, false) < 0.1);
+    }
+
+    #[test]
+    fn cloud_fraction_is_bounded() {
+        for &(m, u, r) in &[
+            (0.0, 0.0, false),
+            (1.0, 0.0, false),
+            (0.0, 100_000.0, true),
+            (1.0, 100_000.0, true),
+            (-5.0, -1000.0, false),
+            (2.0, 1_000_000.0, true),
+        ] {
+            let cf = cloud_fraction(m, u, r);
+            assert!(
+                (0.0..=1.0).contains(&cf),
+                "cloud_fraction out of [0,1]: {cf}"
+            );
+        }
+    }
+
+    #[test]
+    fn cloud_fraction_is_monotone_increasing_in_moisture() {
+        let samples = [0.0, 0.1, 0.25, 0.5, 0.75, 1.0];
+        for pair in samples.windows(2) {
+            let lo = cloud_fraction(pair[0], 0.0, false);
+            let hi = cloud_fraction(pair[1], 0.0, false);
+            assert!(
+                lo < hi,
+                "cloud_fraction must be monotone in moisture: {lo} at {} vs {hi} at {}",
+                pair[0],
+                pair[1]
+            );
+        }
+    }
+
+    #[test]
+    fn cloud_fraction_is_monotone_increasing_in_uplift() {
+        let samples = [0.0, 500.0, 1000.0, 1500.0, 2000.0];
+        for pair in samples.windows(2) {
+            let lo = cloud_fraction(0.5, pair[0], true);
+            let hi = cloud_fraction(0.5, pair[1], true);
+            assert!(
+                lo < hi,
+                "cloud_fraction must be monotone in uplift: {lo} at {} vs {hi} at {}",
+                pair[0],
+                pair[1]
+            );
+        }
+    }
+
+    #[test]
+    fn cloud_fraction_is_higher_in_rising_band_than_sinking() {
+        let rising = cloud_fraction(0.6, 500.0, true);
+        let sinking = cloud_fraction(0.6, 500.0, false);
+        assert!(rising > sinking);
     }
 }
