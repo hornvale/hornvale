@@ -577,7 +577,7 @@ pub fn mineral_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
 }
 
-/// The mineral supply field's amplitude (BIO-35 Stage 2: The Demesne, task
+/// The mineral supply field's amplitude (BIO-35 Stage 1: The Demesne, task
 /// T2) — the one calibration knob for [`mineral_supply_field`]'s `scale`
 /// argument as consumed by [`niche_per_species_k`]. Re-fit in a later task
 /// (T3) once the emergence keystone's measured diversification is read
@@ -587,7 +587,7 @@ pub fn mineral_supply_field(
 /// type-audit: bare-ok(ratio)
 const MINERAL_SUPPLY_SCALE: f64 = 1.0;
 
-/// The per-axis resource supply for one niche at one cell (BIO-35 Stage 2:
+/// The per-axis resource supply for one niche at one cell (BIO-35 Stage 1:
 /// The Demesne, task T2): the dot product of the species' uptake vector
 /// (`niche`) with the per-cell supply vector (`per_axis`) — the
 /// rank-restored replacement for the old `base_carrying(cell) × Σuptake`
@@ -627,7 +627,7 @@ pub fn axis_supply(
 /// file that mint a `(tag as u32, ..)` pair share this exact contract.
 ///
 /// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
-/// resource-supply term — BIO-35 Stage 2's rank-restored per-axis dot
+/// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
 /// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL` read their own T1
 /// supply fields, `DETRITUS` reads the ambient constant, and `ANIMAL_PREY`
