@@ -227,7 +227,18 @@ on permanent per-species streams, weighted by real cross-linguistic
 frequencies; the copula's form drawn from the tongue's own phonology),
 and a render-only parametric realizer says the same clause each
 language's way — or gaps honestly, with the lexicon's own recountable
-reason, when the speaker has no word for the thing.
+reason, when the speaker has no word for the thing. And since The Deep
+Grammar, the worldview reaches the morphology: a drawn
+grammaticalization-depth vector decides whether a tongue marks evidence
+and noun class not at all, with free particles, or with bound affixes;
+the morpheme forms draw once per family and evolve through the same
+sound-change cascade as the roots (cognate morphology with regular
+correspondences); the evidential's value is the epistemic machinery read
+out (steeped experience speaks witnessed, the priesthood's teaching
+speaks taught); and a culture whose drawn cosmology is agentive
+grammatically animates its sky — the noun class and the folk explanation
+are one worldview fact at two layers, held equal by a standing law. See
+[The Deep Grammar](../chronicle/the-deep-grammar.md).
 
 And since The Chorus, what a people *says* is filtered through what it
 *holds*: each placed culture's account of the world is ground truth

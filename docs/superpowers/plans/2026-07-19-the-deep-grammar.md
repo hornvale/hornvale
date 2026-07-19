@@ -1,5 +1,7 @@
 # The Deep Grammar (C7) Implementation Plan
 
+> **COMPLETE (2026-07-19).** 3 tasks + review fixes; blast radius matched the measured landscape exactly; post-absorption re-pins honest (the Confluence moved seed 3). Marker-collision fidelity question presented at G6.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Evidential and noun-class morphology in the tongues — depth
