@@ -925,10 +925,28 @@ fn doctrine_section(
                 emic.push(line);
             }
             for entry in group.iter() {
-                if revealed.contains(&entry.fact.predicate)
-                    && let Some(line) =
-                        revealed_claim_line(&entry.fact.predicate, &entry.fact.object)
-                {
+                if revealed.contains(&entry.fact.predicate) {
+                    // T3 review, mandated carry-over #1 (the
+                    // vanishing-realizable class): a `RevealedClaim` entry
+                    // must never silently disappear from the doctrine emic
+                    // just because `revealed_claim_line` carries no formula
+                    // arm for its predicate — it would otherwise vanish from
+                    // BOTH the emic paragraph (excluded via `filtered`
+                    // above) AND the margin (this loop is the only place
+                    // left that could still surface it), with no trace at
+                    // all. Fail loud instead: a future predicate reaching
+                    // `RevealedClaim` demands its own formula be authored
+                    // here first.
+                    let line = revealed_claim_line(&entry.fact.predicate, &entry.fact.object)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "a RevealedClaim entry for predicate {:?} has no exoteric \
+                                 formula authored in `revealed_claim_line` — the \
+                                 vanishing-realizable class: author a formula arm for this \
+                                 predicate before a doctrine section can gate it in",
+                                entry.fact.predicate
+                            )
+                        });
                     emic.push(line);
                 }
             }
@@ -951,6 +969,106 @@ fn doctrine_section(
         annotations,
         margin,
     }
+}
+
+/// Resolve a ground-fact subject's rendered name back to the entity that
+/// carries it — the same resolution `hornvale_worldgen::chorus_ground`'s
+/// private `subject_name` performs, run in reverse (that helper is not
+/// exported; `windows/book` cannot import it, layering runs the other way,
+/// same posture as `chorus_ground`'s own doc comment). Only [`IS_A`]
+/// subjects are searched — every predicate [`esoteric_lines`] can ever see
+/// a `RevealedClaim` for (moon-count, star-class, day-length-std today)
+/// is asserted on an `is-a`-classified subject, the same scope
+/// `render_volume`'s construction table reads.
+///
+/// [`IS_A`]: hornvale_kernel::world::IS_A
+fn entity_named(world: &World, name: &str) -> Option<EntityId> {
+    world
+        .ledger
+        .find(hornvale_kernel::world::IS_A)
+        .find_map(|fact| {
+            let resolved = world
+                .ledger
+                .text_of(fact.subject, hornvale_kernel::NAME)
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("Entity {}", fact.subject.0));
+            (resolved == name).then_some(fact.subject)
+        })
+}
+
+/// C6 T4 (the esoteric edition): the initiated lines a reader with access
+/// to `reader` — the `(subject, predicate)` keys of every fact they may be
+/// shown the doctrine's disclosed value for — is entitled to. For every
+/// organized culture's doctrine [`ConflictState::RevealedClaim`] entry
+/// whose key is in `reader`, emits `"— ⟨cardinal⟩, as the initiated
+/// count."`, with the cardinal read from the LEDGER's own committed value
+/// for that subject/predicate — never the account entry's cached copy —
+/// so the line's number can only ever trace back to the one committed
+/// truth (the mutation-verified law: `the_esoteric_law_mutation_verified`
+/// drives this directly). An empty `reader` yields an empty `Vec` — the
+/// committed exoteric edition discloses nothing.
+///
+/// More than one organized culture can independently reveal the SAME
+/// ground fact (the ground truth is world-global, `chorus_ground`, run
+/// through each culture's own doctrine params) — deduplicated by key, so
+/// the reader sees each revealed fact's initiated line exactly once
+/// regardless of how many priesthoods reveal it.
+///
+/// A key whose entity cannot be resolved back to an `is-a` subject, or
+/// whose ledger value is not [`Value::Number`], is silently skipped: no
+/// [`RevealedClaim`] predicate reaching this function today is anything
+/// but a moon-count-shaped cardinal (see [`revealed_claim_line`]'s doc),
+/// and this function's own reach is the reader's disclosure surface, not
+/// the doctrine emic's — the vanishing-realizable panic
+/// ([`doctrine_section`]) already guards the emic's own formula table.
+///
+/// [`RevealedClaim`]: ConflictState::RevealedClaim
+/// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
+pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut seen: BTreeSet<(String, String)> = BTreeSet::new();
+    for voice in hornvale_worldgen::accounts_of(world) {
+        let Some(doctrine) = hornvale_worldgen::doctrine_of(world, &voice.kind) else {
+            continue;
+        };
+        for entry in &doctrine.account.entries {
+            let predicate = &entry.fact.predicate;
+            if predicate == hornvale_kernel::world::IS_A
+                || predicate == hornvale_kernel::INSTANCE_OF
+            {
+                continue;
+            }
+            let key = (entry.fact.subject.clone(), predicate.clone());
+            if !reader.contains(&key) || seen.contains(&key) {
+                continue;
+            }
+            let Some(folk_entry) =
+                voice.account.entries.iter().find(|e| {
+                    e.fact.subject == entry.fact.subject && &e.fact.predicate == predicate
+                })
+            else {
+                continue;
+            };
+            let verifiable = hornvale_worldgen::folk_verifiable(&voice.params, predicate);
+            if conflict_of(&folk_entry.disposition, &entry.disposition, verifiable)
+                != ConflictState::RevealedClaim
+            {
+                continue;
+            }
+            let Some(entity) = entity_named(world, &entry.fact.subject) else {
+                continue;
+            };
+            let Some(Value::Number(n)) = world.ledger.value_of(entity, predicate) else {
+                continue;
+            };
+            lines.push(format!(
+                "— {}, as the initiated count.",
+                cardinal(*n as u64)
+            ));
+            seen.insert(key);
+        }
+    }
+    lines
 }
 
 /// One entry in the tongue render inventory: a concept some committed fact
@@ -2755,5 +2873,269 @@ mod tests {
             _ => panic!("expected a ChorusLine::Counter"),
         }
         assert_eq!(rerender_chorus_line(&parsed), annotation);
+    }
+
+    /// T3 review, mandated carry-over #2: pin doctrine-margin sparseness
+    /// with a real assertion (not just "the margin's law is reused
+    /// unmodified" — an exact-string check that it actually behaves that
+    /// way at seed 1). The moon-count fact is `Lost` on the folk side (so
+    /// the folk margin carries its truth, "with two moons") but
+    /// `RevealedClaim` on the doctrine side — kept, not lost, so the SAME
+    /// truth must never repeat in the doctrine's own margin.
+    #[test]
+    fn doctrine_margin_omits_what_the_folk_margin_reveals() {
+        let vol = render_volume(&generated(1));
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert!(
+            goblin.margin.iter().any(|m| m.contains("with two moons")),
+            "the folk margin must carry the lost moon-count truth: {:?}",
+            goblin.margin
+        );
+        let doctrine = goblin
+            .doctrine
+            .as_ref()
+            .expect("goblin's organized flagship gates in a doctrine section at seed 1");
+        assert!(
+            !doctrine.margin.iter().any(|m| m.contains("with two moons")),
+            "the doctrine margin must NOT repeat the moon count: moon-count is a \
+             RevealedClaim on the doctrine side (kept, not lost), so the margin's \
+             sparseness law (it carries only what's lost/substituted) must exclude it: \
+             {:?}",
+            doctrine.margin
+        );
+    }
+
+    /// T3 review, mandated carry-over #1 (the vanishing-realizable class):
+    /// a future non-`MOON_COUNT` `RevealedClaim` entry must panic, loudly
+    /// naming the predicate, rather than silently disappearing from both
+    /// the doctrine emic and margin. Synthetic pair (predicate
+    /// `STAR_CLASS`, not `MOON_COUNT`): folk `Lost` (capability 0.0, below
+    /// threshold), doctrine `Kept` (capability 1.0) — a genuine
+    /// `RevealedClaim`, built the same way `the_disclosure_law_both_directions`
+    /// builds its synthetic Contested pair (`account_of` first, so every
+    /// entry carries a real `original_index`, then mutate dispositions).
+    #[test]
+    #[should_panic(expected = "has no exoteric formula authored")]
+    fn a_non_moon_revealed_claim_panics_rather_than_vanishing() {
+        let subject = "Vebe".to_string();
+        let ground = vec![
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: hornvale_kernel::world::IS_A.to_string(),
+                object: Value::Text("planet".to_string()),
+            },
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: STAR_CLASS.to_string(),
+                object: Value::Text("yellow-white dwarf (F)".to_string()),
+            },
+        ];
+        let mut observability = BTreeMap::new();
+        observability.insert(
+            hornvale_kernel::world::IS_A.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::Manifest,
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Object,
+                shape: hornvale_language::FactShape::Taxonomy,
+            },
+        );
+        observability.insert(
+            STAR_CLASS.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::SkyGraded { threshold: 0.6 },
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Fixed("star"),
+                shape: hornvale_language::FactShape::Taxonomy,
+            },
+        );
+        let mut holdings = BTreeSet::new();
+        holdings.insert("planet".to_string());
+        holdings.insert("star".to_string());
+
+        let folk_params = AccountParams {
+            hold_all: false,
+            holdings,
+            observability,
+            sky_capability: 0.0,
+            order: hornvale_language::OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: None,
+        };
+
+        let base = hornvale_language::account_of(&ground, &folk_params);
+        assert_eq!(
+            base.entries[1].disposition,
+            Disposition::Lost(hornvale_language::LossReason::BeyondCapability { domain: "sky" }),
+            "the fixture's star-class must start Lost at capability 0.0"
+        );
+
+        let folk_account = Account {
+            entries: base.entries.clone(),
+        };
+
+        let mut doctrine_entries = base.entries.clone();
+        doctrine_entries[1].disposition = Disposition::Kept;
+        let doctrine_params = AccountParams {
+            sky_capability: 1.0,
+            ..folk_params.clone()
+        };
+        let doctrine_voice = hornvale_worldgen::DoctrineVoice {
+            kind: "synthetic".to_string(),
+            params: doctrine_params,
+            account: Account {
+                entries: doctrine_entries,
+            },
+        };
+
+        // Panics: STAR_CLASS carries no `revealed_claim_line` formula arm.
+        doctrine_section("Nggoshk", &doctrine_voice, &folk_params, &folk_account);
+    }
+
+    /// C6 T4, the esoteric law, mutation-verified: an empty reader
+    /// discloses nothing (the committed exoteric edition is unaffected —
+    /// its `RevealedClaim` formula still renders as usual), while a reader
+    /// holding exactly `("Vebe", "moon-count")` gets exactly one initiated
+    /// line, whose cardinal traces to the LEDGER's own committed value
+    /// (never any other source) — proven by checking the real ledger
+    /// value independently, then demonstrating that the WRONG cardinal
+    /// does not match what `esoteric_lines` produced.
+    #[test]
+    fn the_esoteric_law_mutation_verified() {
+        let world = generated(1);
+
+        // Empty reader -> no initiated lines.
+        let empty_reader: BTreeSet<(String, String)> = BTreeSet::new();
+        assert!(
+            esoteric_lines(&world, &empty_reader).is_empty(),
+            "an empty reader must be told nothing"
+        );
+
+        // The exoteric formula is still present, untouched by the reader.
+        let vol = render_volume(&world);
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        let doctrine = goblin
+            .doctrine
+            .as_ref()
+            .expect("goblin's organized flagship gates in a doctrine section at seed 1");
+        assert!(
+            doctrine
+                .emic
+                .contains(&"The moons are counted and known to the priesthood.".to_string()),
+            "the exoteric formula must render regardless of any reader: {:?}",
+            doctrine.emic
+        );
+
+        // The initiated reader: exactly one line, for exactly this key.
+        let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
+        reader.insert(("Vebe".to_string(), MOON_COUNT.to_string()));
+        let lines = esoteric_lines(&world, &reader);
+        assert_eq!(
+            lines,
+            vec!["— two, as the initiated count.".to_string()],
+            "exactly one initiated line for the one key in the reader"
+        );
+
+        // Mutation-verify: the "two" comes from the LEDGER's own value, not
+        // some other source — independently read the ledger's committed
+        // moon-count for Vebe and confirm it (not a different number)
+        // reproduces the line, then confirm a WRONG value's rendering
+        // would NOT match what `esoteric_lines` actually produced (the
+        // "verify the mechanism by asserting a WRONG expected value
+        // fails" arm this test's own doc calls out).
+        let vebe = entity_named(&world, "Vebe").expect("Vebe resolves to an entity");
+        let ledger_value = match world.ledger.value_of(vebe, MOON_COUNT) {
+            Some(Value::Number(n)) => *n as u64,
+            other => panic!("Vebe's ledger moon-count must be a Value::Number: {other:?}"),
+        };
+        assert_eq!(
+            ledger_value, 2,
+            "Vebe's committed moon-count is two at seed 1"
+        );
+        assert_eq!(
+            lines[0],
+            format!("— {}, as the initiated count.", cardinal(ledger_value)),
+            "the line's cardinal must equal the ledger's own value"
+        );
+        let wrong = format!("— {}, as the initiated count.", cardinal(ledger_value + 1));
+        assert_ne!(
+            lines[0], wrong,
+            "a wrong cardinal must not match what esoteric_lines produced — proving \
+             the assertion above is non-vacuous"
+        );
+    }
+
+    /// One `BookVolume`'s complete line inventory, every register
+    /// flattened: `lines`, `tongue_lines`, then each chorus section's
+    /// `emic`/`margin` and (when present) `doctrine.emic`/`annotations`/
+    /// `margin` — used only by
+    /// `initiate_edition_supersets_the_committed_artifact` to compare the
+    /// committed edition against the initiated one.
+    fn all_committed_lines(vol: &BookVolume) -> Vec<String> {
+        let mut all = Vec::new();
+        all.extend(vol.lines.iter().cloned());
+        all.extend(vol.tongue_lines.iter().cloned());
+        for section in &vol.chorus {
+            all.extend(section.emic.iter().cloned());
+            all.extend(section.margin.iter().cloned());
+            if let Some(doctrine) = &section.doctrine {
+                all.extend(doctrine.emic.iter().cloned());
+                all.extend(doctrine.annotations.iter().cloned());
+                all.extend(doctrine.margin.iter().cloned());
+            }
+        }
+        all
+    }
+
+    /// C6 T4: the omniscient-reader edition (`hornvale book --initiate`'s
+    /// library-level counterpart) is the committed edition PLUS the
+    /// esoteric lines, and nothing else differs — a set comparison against
+    /// `render_volume`'s own committed output, with the reader built from
+    /// `hornvale_worldgen::chorus_ground`'s full `(subject, predicate)` key
+    /// set (the "each world's full fact-set as the reader" the CLI's
+    /// `--initiate` uses).
+    #[test]
+    fn initiate_edition_supersets_the_committed_artifact() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        let committed = all_committed_lines(&vol);
+
+        let reader: BTreeSet<(String, String)> = hornvale_worldgen::chorus_ground(&world)
+            .into_iter()
+            .map(|f| (f.subject, f.predicate))
+            .collect();
+        let initiated_extra = esoteric_lines(&world, &reader);
+        assert!(
+            initiated_extra.contains(&"— two, as the initiated count.".to_string()),
+            "the moon-count RevealedClaim's initiated line should surface under the \
+             omniscient reader: {:?}",
+            initiated_extra
+        );
+
+        let mut initiated = committed.clone();
+        initiated.extend(initiated_extra.iter().cloned());
+
+        let committed_set: BTreeSet<&String> = committed.iter().collect();
+        let initiated_set: BTreeSet<&String> = initiated.iter().collect();
+        assert!(
+            committed_set.is_subset(&initiated_set),
+            "every committed line must survive in the initiated edition"
+        );
+
+        let extra_set: BTreeSet<&String> =
+            initiated_set.difference(&committed_set).copied().collect();
+        let esoteric_set: BTreeSet<&String> = initiated_extra.iter().collect();
+        assert_eq!(
+            extra_set, esoteric_set,
+            "nothing else differs beyond the esoteric lines"
+        );
     }
 }
