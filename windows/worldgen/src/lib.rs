@@ -1522,9 +1522,12 @@ fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::Cel
     }
 }
 
-/// The plain-prose sky phrase for a weather state (The Firmament).
+/// The plain-prose sky phrase for a weather state (The Firmament). `pub` so
+/// both the almanac's headline lines ([`weather_line_for`]) and possession's
+/// [`sky_report`] render the same weather vocabulary — one definition, no
+/// drift between the two surfaces.
 /// type-audit: bare-ok(prose: return)
-fn sky_phrase(
+pub fn sky_phrase(
     state: hornvale_climate::WeatherState,
     cloud: hornvale_climate::CloudType,
 ) -> &'static str {
@@ -4026,8 +4029,42 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
 /// The single construction site for the provider (Constitution §2.4 tiers).
+///
+/// Appends a weather clause (The Firmament, spec Weather Program C4): the
+/// felt sky at the world's representative cell — the first settlement's
+/// location, the same "first place" vantage `calendar_lines` and
+/// `night_sky_lines` already read via [`place_coord`] — rendered through
+/// [`sky_phrase`], the one weather vocabulary the almanac's headline lines
+/// share. A placeless world (no settlement has been placed, or has no
+/// committed coordinate) falls back to cell 0 — still informative, just not
+/// settlement-anchored, mirroring the fallback-free-but-defaulting posture
+/// `night_sky_lines`' heliacal latitude uses. `windows/vessel/src/vantage.rs`
+/// turns the rendered `description` into `Vantage.sky`, so a possessed
+/// agent's sky and the almanac's placed-observer lines describe the same
+/// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    Ok(sky_of(world)?.sky_at(time))
+    let mut report = sky_of(world)?.sky_at(time);
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    let cell = hornvale_terrain::places(world)
+        .into_iter()
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
+        .unwrap_or(hornvale_kernel::CellId(0));
+    let state = climate.weather_at(cell, time.day);
+    let cloud = climate.cloud_type_at(cell, time.day);
+    report.description = format!(
+        "{} The sky is {}.",
+        report.description,
+        sky_phrase(state, cloud)
+    );
+    Ok(report)
 }
 
 /// The local climate, from whichever climate provider this world uses.
@@ -5467,6 +5504,25 @@ mod tests {
         assert!(sky.description.contains("zenith"));
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
+    }
+
+    /// The Firmament: possession's sky report narrates the felt weather, not
+    /// just the astronomical scene — `sky_phrase` shared with the almanac's
+    /// headline lines (DRY). Deterministic for a fixed `(seed, day)`.
+    #[test]
+    fn the_sky_report_names_the_weather() {
+        let world = generated(42);
+        let report = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let text = &report.description;
+        assert!(
+            ["clear", "fair", "overcast", "rain", "storm"]
+                .iter()
+                .any(|w| text.contains(w)),
+            "the sky report must narrate the weather: {text}"
+        );
+
+        let again = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        assert_eq!(report, again, "the weather clause is deterministic");
     }
 
     #[test]

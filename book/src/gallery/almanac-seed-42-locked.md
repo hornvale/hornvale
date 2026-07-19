@@ -2,7 +2,7 @@
 
 ## The Sky
 
-A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars.
+A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is fair, with scattered cumulus.
 
 Visible bodies: the sun, moon 1, moon 2.
 

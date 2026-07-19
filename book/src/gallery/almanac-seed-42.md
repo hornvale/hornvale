@@ -2,7 +2,7 @@
 
 ## The Sky
 
-A golden sun hangs fixed at zenith. It has never been seen to move.
+A golden sun hangs fixed at zenith. It has never been seen to move. The sky is fair, with scattered cumulus.
 
 Visible bodies: the sun.
 
