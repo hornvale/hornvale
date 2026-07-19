@@ -36,6 +36,7 @@
 //! that keeps a schema pick from reading as a deduction.
 #![allow(clippy::module_name_repetitions)]
 
+use crate::account::{Disposition, effective};
 use hornvale_kernel::{Stream, math};
 
 /// One of the ten embodied source-domains the schema and (future) mapping
@@ -112,7 +113,10 @@ pub enum SchemaId {
     /// The equilibrium story: a cyclic event is the world righting a tipped scale.
     Balance,
     /// The sympathetic-connection story: a count is explained by a bond
-    /// linking the counted things.
+    /// linking the counted things — binds a [`SlotKind::Agent`] slot (C6
+    /// T1: its surface frame ("… answers ⟨deity⟩.") always named a deity,
+    /// so the table now says so directly, though it carries no lexeme
+    /// table of its own).
     LinkSympathy,
     /// The descent story: a count is explained by kin relation — binds a
     /// [`SlotKind::Kin`] slot.
@@ -135,14 +139,14 @@ pub enum SchemaId {
 }
 
 /// The slot a schema's binding step must fill from the culture's own
-/// furniture, or none. [`SchemaId::Agentive`] binds [`SlotKind::Agent`]
-/// (a deity name via `beliefs_held_by`); [`SchemaId::Kinship`] binds
-/// [`SlotKind::Kin`]. The other schemas carry `None` — with one
-/// documented exception: [`SchemaId::LinkSympathy`]'s surface frame
-/// ("… answers ⟨deity⟩") names a deity despite carrying no lexeme table,
-/// so the composition root binds its agent explicitly (worldgen's
-/// `agent_bearing`); every remaining `None` frame is furniture-free
-/// closed text.
+/// furniture, or none. [`SchemaId::Agentive`] and [`SchemaId::LinkSympathy`]
+/// both bind [`SlotKind::Agent`] (a deity name via `beliefs_held_by`) —
+/// [`SchemaId::LinkSympathy`] joined this set at C6 T1, honestly reflecting
+/// that its surface frame ("… answers ⟨deity⟩.") always named a deity even
+/// though it carries no lexeme table of its own (worldgen's `agent_bearing`
+/// used to special-case it explicitly; that special case is now redundant,
+/// deleted at Task 2). [`SchemaId::Kinship`] binds [`SlotKind::Kin`]. Every
+/// other schema carries `None`: furniture-free closed text.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SlotKind {
@@ -150,15 +154,27 @@ pub enum SlotKind {
     Agent,
     /// Binds a kin relation.
     Kin,
-    /// No slot (but see the enum doc's LinkSympathy exception).
+    /// No slot.
     None,
 }
 
 /// One row of the closed schema library: which source-domain it reads,
 /// which fact-shapes admit it, and what slot (if any) its binding step
 /// must fill. Constructed only inside [`schema_table`].
-/// type-audit: bare-ok(identifier-text: id), bare-ok(identifier-text: source), bare-ok(identifier-text: slot)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+///
+/// `id`, `source`, `slot`, and `shapes` are all closed enum/slice types, not
+/// tracked primitives — `mediation` (C6 T1) is the struct's only bare
+/// primitive field, hence the only one the type-audit tag below names (its
+/// predecessor tag over-tagged the enum fields; harmless while the struct
+/// had no tracked primitive at all, since an all-non-primitive struct is
+/// never even entered into the audit, but corrected now that `mediation`
+/// makes this struct a real audited item).
+/// type-audit: bare-ok(ratio: mediation)
+///
+/// `PartialEq` only (not `Eq`): the new `mediation: f64` field is not
+/// `Eq`-eligible, same as [`crate::account::Observability`]'s `PartialEq`-
+/// only derive for the same reason.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Schema {
     /// This row's schema id.
     pub id: SchemaId,
@@ -172,6 +188,15 @@ pub struct Schema {
     /// The slot this schema's binding step must fill, or `None` for an
     /// agentless, frame-only schema.
     pub slot: SlotKind,
+    /// C6 (The Doctrine): the authored, global, closed multiplier the
+    /// institution's account applies to this schema's folk prior weight
+    /// BEFORE β-sharpening (`doctrine prior = folk prior × mediation`) —
+    /// one preregistered value per row, frozen in the plan header, never
+    /// derived from a culture's own traits (the same anti-astrology
+    /// posture [`select_schema`]'s module doc argues for the schema draw
+    /// itself: the institution's thumb on the scale is authored doctrine,
+    /// not a measured cultural fact).
+    pub mediation: f64,
 }
 
 /// The closed 12-row schema library, in LANG-37's authored order
@@ -197,72 +222,95 @@ pub fn schema_table() -> &'static [Schema] {
             source: SourceDomain::Force,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.0,
         },
         Schema {
             id: SchemaId::Agentive,
             source: SourceDomain::Motion,
             shapes: &[FactShape::CyclicEvent, FactShape::Count],
             slot: SlotKind::Agent,
+            mediation: 1.5,
         },
         Schema {
             id: SchemaId::SubstanceFlow,
             source: SourceDomain::Flow,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.0,
         },
         Schema {
             id: SchemaId::Container,
             source: SourceDomain::Container,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.0,
         },
         Schema {
             id: SchemaId::PathJourney,
             source: SourceDomain::Path,
             shapes: &[FactShape::CyclicEvent],
             slot: SlotKind::None,
+            mediation: 0.6,
         },
         Schema {
             id: SchemaId::Balance,
             source: SourceDomain::Balance,
             shapes: &[FactShape::CyclicEvent],
             slot: SlotKind::None,
+            mediation: 0.8,
         },
         Schema {
             id: SchemaId::LinkSympathy,
             source: SourceDomain::Link,
             shapes: &[FactShape::Count],
-            slot: SlotKind::None,
+            // C6 T1 (The Doctrine): the C5 follow-up this campaign closes
+            // out — LinkSympathy's Task-4 surface frame ("… answers
+            // ⟨Deity⟩.") always named a deity even though this row read
+            // `SlotKind::None`, forcing worldgen's `agent_bearing` to carry
+            // a `|| schema == SchemaId::LinkSympathy` special case. Making
+            // the table honest here is additive for that caller: its check
+            // is `matches!(slot, Some(Agent) | Some(Kin)) ||
+            // schema == LinkSympathy`, so this row now satisfying the left
+            // disjunct on its own leaves the OR's result — and therefore
+            // every worldgen test — unchanged. Task 2 deletes the
+            // now-redundant disjunct.
+            slot: SlotKind::Agent,
+            mediation: 1.2,
         },
         Schema {
             id: SchemaId::Kinship,
             source: SourceDomain::Kinship,
             shapes: &[FactShape::Count],
             slot: SlotKind::Kin,
+            mediation: 1.0,
         },
         Schema {
             id: SchemaId::MoralAccounting,
             source: SourceDomain::Balance,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.5,
         },
         Schema {
             id: SchemaId::CycleReturn,
             source: SourceDomain::Cycle,
             shapes: &[FactShape::CyclicEvent],
             slot: SlotKind::None,
+            mediation: 0.6,
         },
         Schema {
             id: SchemaId::EssenceTelos,
             source: SourceDomain::Force,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.4,
         },
         Schema {
             id: SchemaId::Verticality,
             source: SourceDomain::Verticality,
             shapes: &[FactShape::HighScalarState],
             slot: SlotKind::None,
+            mediation: 1.0,
         },
     ]
 }
@@ -332,9 +380,10 @@ fn agentive_lexemes(sub: SubFrame) -> &'static [LexemeId] {
 /// The closed candidate verbs for `schema` under sub-frame `sub`. Only
 /// [`SchemaId::Agentive`] has a lexeme table at all — every other schema
 /// (including [`SchemaId::Kinship`] and [`SchemaId::LinkSympathy`], the two
-/// `Count` explainers) is agentless and frame-only at the floor: its
-/// surface is one of Task 4's closed frame strings, never a drawn verb, so
-/// this always returns an empty slice for them.
+/// other `Count` explainers, both of which bind a slot but still draw no
+/// verb) is frame-only at the floor: its surface is one of Task 4's closed
+/// frame strings, never a drawn verb, so this always returns an empty slice
+/// for them.
 pub fn lexemes_for(schema: SchemaId, sub: SubFrame) -> &'static [LexemeId] {
     match schema {
         SchemaId::Agentive => agentive_lexemes(sub),
@@ -379,9 +428,97 @@ pub fn select_lexeme(candidates: &'static [LexemeId], stream: &mut Stream) -> Op
     stream.pick(candidates).copied()
 }
 
+/// The four-way relationship between a culture's folk account and its
+/// institution's doctrine account, for one ground fact (C6, The Doctrine —
+/// spec's preregistered conflict map). [`conflict_of`] is the only
+/// constructor.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConflictState {
+    /// Folk and doctrine agree: their effective dispositions match, and —
+    /// when both accounts hold the fact `Explained` — the causal schema
+    /// each draws matches too.
+    Harmony,
+    /// Folk and doctrine disagree, and the folk voice could in principle
+    /// have checked: either the effective dispositions differ, or both are
+    /// `Explained` under different schemas.
+    Contested,
+    /// Folk and doctrine disagree, but the folk voice has no way to check
+    /// (the same differ-condition as [`Self::Contested`], gated by
+    /// `folk_verifiable: false` instead).
+    Mystery,
+    /// The institution holds a fact as true (`Kept`, however it got there)
+    /// that the folk voice never received at all (`Lost`) — the
+    /// disclosure asymmetry the exoteric/esoteric Book editions (Task 4)
+    /// exist to surface, checked before the generic differ/agree split so
+    /// it wins even when doctrine's `Kept` came wrapped in `Explained`.
+    RevealedClaim,
+}
+
+/// The preregistered conflict classifier (C6 T1, pure): compares one ground
+/// fact's folk and doctrine [`Disposition`]s through the SAME dial-blind
+/// seam every other measure in `crate::account` uses (`effective`) — this
+/// function itself never matches on `Disposition::Explained` to decide the
+/// effective-equality question,
+/// only to read out the wrapped `schema` for the harmony-breaking tie the
+/// plan header calls out ("if both Explained, schemas equal too").
+/// `folk_verifiable` is the caller-derived flag (worldgen's Task 3 owns
+/// translating an `Observability::requirement` into this bool via the
+/// preregistered per-`Requirement` table — `Manifest` verifiable,
+/// `SkyGraded{t}` verifiable iff the folk culture's own sky-capability
+/// meets `t`, `Instrumental`/`CrossReferential`/`Taxonomic` never
+/// verifiable); this function only ever consumes the bool, never derives
+/// it, keeping the classifier ignorant of any sibling domain's fact
+/// shape.
+/// type-audit: bare-ok(flag: folk_verifiable)
+pub fn conflict_of(
+    folk: &Disposition,
+    doctrine: &Disposition,
+    folk_verifiable: bool,
+) -> ConflictState {
+    let folk_eff = effective(folk);
+    let doctrine_eff = effective(doctrine);
+
+    // RevealedClaim first: it wins regardless of whether doctrine's `Kept`
+    // arrived bare or wrapped in `Explained` — either way `doctrine_eff`
+    // reduces to `Kept` (effective()'s recursive unwrap), and the folk
+    // voice never received the fact at all.
+    if matches!(doctrine_eff, Disposition::Kept) && matches!(folk_eff, Disposition::Lost(_)) {
+        return ConflictState::RevealedClaim;
+    }
+
+    // Agreement requires equal effective dispositions AND explanatory
+    // parity: two Explained entries agree only on the same schema, and an
+    // ASYMMETRIC pair (one explained, one plain — the doctrine explaining
+    // what the folk leave unexplained) is a genuine difference of
+    // accounts (spec §3.2's "accounts differ"), not Harmony — the C6 T1
+    // review's precedence-edge test forced this refinement (ledger #9).
+    let agrees = if folk_eff == doctrine_eff {
+        match (folk, doctrine) {
+            (
+                Disposition::Explained { schema: fs, .. },
+                Disposition::Explained { schema: ds, .. },
+            ) => fs == ds,
+            (Disposition::Explained { .. }, _) | (_, Disposition::Explained { .. }) => false,
+            _ => true,
+        }
+    } else {
+        false
+    };
+
+    if agrees {
+        ConflictState::Harmony
+    } else if folk_verifiable {
+        ConflictState::Contested
+    } else {
+        ConflictState::Mystery
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::account::LossReason;
     use hornvale_kernel::Seed;
 
     /// Every `SchemaId` variant, for the closure test's exhaustiveness
@@ -567,5 +704,193 @@ mod tests {
         assert!(a.is_some());
 
         assert_eq!(select_lexeme(&[], &mut Seed(3).stream()), None);
+    }
+
+    /// The mediation column (C6 T1) is authored, global, and closed — one
+    /// preregistered value per row, frozen in the plan header. Exact,
+    /// no-tolerance equality: this is an authored-table pin, not a
+    /// measurement.
+    #[test]
+    fn mediation_values_match_the_preregistered_column() {
+        fn mediation_of(id: SchemaId) -> f64 {
+            schema_table()
+                .iter()
+                .find(|row| row.id == id)
+                .expect("every SchemaId has exactly one row")
+                .mediation
+        }
+
+        assert_eq!(mediation_of(SchemaId::Agentive), 1.5);
+        assert_eq!(mediation_of(SchemaId::MoralAccounting), 1.5);
+        assert_eq!(mediation_of(SchemaId::EssenceTelos), 1.4);
+        assert_eq!(mediation_of(SchemaId::LinkSympathy), 1.2);
+        assert_eq!(mediation_of(SchemaId::Kinship), 1.0);
+        assert_eq!(mediation_of(SchemaId::Container), 1.0);
+        assert_eq!(mediation_of(SchemaId::ForceDynamics), 1.0);
+        assert_eq!(mediation_of(SchemaId::SubstanceFlow), 1.0);
+        assert_eq!(mediation_of(SchemaId::Verticality), 1.0);
+        assert_eq!(mediation_of(SchemaId::Balance), 0.8);
+        assert_eq!(mediation_of(SchemaId::PathJourney), 0.6);
+        assert_eq!(mediation_of(SchemaId::CycleReturn), 0.6);
+    }
+
+    /// The C5 follow-up this campaign closes (C6 T1): `LinkSympathy`'s row
+    /// now reads `SlotKind::Agent`, matching its always-deity-naming
+    /// surface frame; `Kinship` stays `Kin`; the agentless cyclic-event
+    /// schemas stay `None`.
+    #[test]
+    fn link_sympathy_is_agent_bearing_in_the_table() {
+        fn slot_of(id: SchemaId) -> SlotKind {
+            schema_table()
+                .iter()
+                .find(|row| row.id == id)
+                .expect("every SchemaId has exactly one row")
+                .slot
+        }
+
+        assert_eq!(slot_of(SchemaId::LinkSympathy), SlotKind::Agent);
+        assert_eq!(slot_of(SchemaId::Kinship), SlotKind::Kin);
+        assert_eq!(slot_of(SchemaId::CycleReturn), SlotKind::None);
+        assert_eq!(slot_of(SchemaId::PathJourney), SlotKind::None);
+        assert_eq!(slot_of(SchemaId::Balance), SlotKind::None);
+    }
+
+    /// The preregistered conflict grid (C6 T1): every named case from the
+    /// plan header, checked directly against [`conflict_of`].
+    /// The precedence edge the review demanded pinned (C6 T1 review):
+    /// folk Lost vs doctrine Explained{underlying: Lost} — the doctrine
+    /// EXPLAINS what it also failed to keep, so this is NOT a
+    /// RevealedClaim (whose guard requires the doctrine's effective
+    /// disposition to be Kept); it falls through to the differ branch and
+    /// splits on verifiability like any other disagreement.
+    #[test]
+    fn explained_lost_doctrine_is_never_a_revealed_claim() {
+        let folk =
+            Disposition::Lost(crate::account::LossReason::BeyondCapability { domain: "sky" });
+        let doctrine = Disposition::Explained {
+            underlying: Box::new(Disposition::Lost(
+                crate::account::LossReason::BeyondCapability { domain: "sky" },
+            )),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        assert_eq!(
+            conflict_of(&folk, &doctrine, false),
+            ConflictState::Mystery,
+            "a doctrine explaining its own loss is a mystery, not a revealed claim"
+        );
+        assert_eq!(
+            conflict_of(&folk, &doctrine, true),
+            ConflictState::Contested,
+            "and contested where the folk could check"
+        );
+    }
+
+    #[test]
+    fn conflict_states_cover_the_preregistered_grid() {
+        // Harmony: identical Kept vs Kept.
+        assert_eq!(
+            conflict_of(&Disposition::Kept, &Disposition::Kept, true),
+            ConflictState::Harmony,
+            "identical Kept dispositions agree regardless of verifiability"
+        );
+
+        // Harmony: identical Explained schemas (same underlying, same
+        // schema) — full agreement, not just effective equality.
+        let explained_agentive_a = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::Agentive,
+            agent: Some("Nggo".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        let explained_agentive_b = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("strides")),
+            manner: Manner::Brisk,
+        };
+        assert_eq!(
+            conflict_of(&explained_agentive_a, &explained_agentive_b, true),
+            ConflictState::Harmony,
+            "same underlying and same schema is Harmony even with different agent/lexeme/manner"
+        );
+
+        // Contested: same underlying (both wrap Kept, so effective is
+        // equal), but different schemas, and the folk voice is verifiable.
+        let explained_path = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::PathJourney,
+            agent: None,
+            lexeme: None,
+            manner: Manner::Neutral,
+        };
+        let explained_agentive = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::Agentive,
+            agent: Some("Nggo".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        assert_eq!(
+            conflict_of(&explained_path, &explained_agentive, true),
+            ConflictState::Contested,
+            "differing schemas over the same effective disposition, verifiable -> Contested"
+        );
+
+        // Mystery: the identical pair, but the folk voice cannot verify.
+        assert_eq!(
+            conflict_of(&explained_path, &explained_agentive, false),
+            ConflictState::Mystery,
+            "the same differing-schema pair, unverifiable -> Mystery"
+        );
+
+        // RevealedClaim: folk Lost vs doctrine bare Kept.
+        let folk_lost = Disposition::Lost(LossReason::NoConcept);
+        assert_eq!(
+            conflict_of(&folk_lost, &Disposition::Kept, true),
+            ConflictState::RevealedClaim,
+            "doctrine holds a fact the folk voice never received"
+        );
+        assert_eq!(
+            conflict_of(&folk_lost, &Disposition::Kept, false),
+            ConflictState::RevealedClaim,
+            "RevealedClaim does not depend on folk_verifiable"
+        );
+
+        // RevealedClaim: folk Lost vs doctrine Explained{underlying: Kept}
+        // — the wrapped form collapses to the same effective Kept.
+        let doctrine_explained_kept = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::MoralAccounting,
+            agent: None,
+            lexeme: None,
+            manner: Manner::Neutral,
+        };
+        assert_eq!(
+            conflict_of(&folk_lost, &doctrine_explained_kept, true),
+            ConflictState::RevealedClaim,
+            "a doctrine Explained-wrapping-Kept still reveals a claim the folk voice lacks"
+        );
+
+        // Explanatory parity (refined at the C6 T1 review, ledger #9):
+        // Explained{Kept} vs bare Kept share an effective disposition,
+        // but one account carries a story the other lacks — a genuine
+        // difference of accounts (spec §3.2), splitting on verifiability
+        // like any other disagreement. (The plan's compressed grid called
+        // this Harmony; the spec's "accounts differ" governs.)
+        assert_eq!(
+            conflict_of(&doctrine_explained_kept, &Disposition::Kept, true),
+            ConflictState::Contested,
+            "asymmetric explanation over a shared Kept, folk-verifiable: contested"
+        );
+        assert_eq!(
+            conflict_of(&doctrine_explained_kept, &Disposition::Kept, false),
+            ConflictState::Mystery,
+            "asymmetric explanation over a shared Kept, unverifiable: mystery"
+        );
     }
 }

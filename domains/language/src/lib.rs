@@ -89,8 +89,8 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 // `crate::schemas::Manner`, the same qualified-access precedent
 // `speech::Lexicon` sets below for its own `lexicon::Lexicon` collision.
 pub use schemas::{
-    FactShape, LexemeId, Schema, SchemaId, SlotKind, SourceDomain, SubFrame, admitted, lexemes_for,
-    schema_table, select_lexeme, select_schema,
+    ConflictState, FactShape, LexemeId, Schema, SchemaId, SlotKind, SourceDomain, SubFrame,
+    admitted, conflict_of, lexemes_for, schema_table, select_lexeme, select_schema,
 };
 
 /// The speech cluster (ECS c3): the phonology envelope type
@@ -423,6 +423,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/lexeme/<fact-key>",
             "C5's lexeme draw (render-time, `schemas::select_lexeme`): the uniform pick among a fired schema's gate-surviving verb candidates for one explained fact — `<fact-key>` salts by the ground fact's predicate (e.g. `day-length-std`)",
+        ),
+        (
+            "language/<species>/doctrine-schema/<domain>/<fact-shape>",
+            "C6's institutional causal-schema draw (The Doctrine, render-time, `schemas::select_schema` again): the β-sharpened pick among the fact-shape's admitted schemas for the SAME culture's doctrine account (folk prior × the authored mediation column, before β) — a sibling stream to `schema/<domain>/<fact-shape>` above, never a shared draw, so the folk and doctrine schema picks can diverge independently",
+        ),
+        (
+            "language/<species>/doctrine-lexeme/<fact-key>",
+            "C6's institutional lexeme draw (The Doctrine, render-time, `schemas::select_lexeme` again): the uniform pick among a fired doctrine schema's gate-surviving verb candidates for one explained fact — a sibling stream to `lexeme/<fact-key>` above, salted the same way (the ground fact's predicate)",
         ),
     ]
 }

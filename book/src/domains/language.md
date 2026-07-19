@@ -249,7 +249,17 @@ by rhythm rather than identity, and lexicalized through a seeded draw —
 so two peoples watching one sunrise give two reasons, every explanation
 sentence parses back byte-identically, and the dial measures none of it
 (an explained fact counts exactly as its underlying knowledge-state) —
-see [The Explanations](../chronicle/the-explanations.md).
+see [The Explanations](../chronicle/the-explanations.md). And since The
+Doctrine, cultures whose flagship holds an organized cult speak twice:
+the priesthood's account is the folk account through four global
+transformations (records-raised capability, mediation-reweighted schema
+priors, tightened orthodoxy, the high god preferred as agent) — a
+selection bias, never modeled deception — with a derived four-state
+conflict map governing disclosure, and the Book itself now
+reader-relative at the floor (the committed edition asserts the
+priesthood *knows*; the initiated line speaks the ledger's value only to
+a reader who already holds the fact) — see
+[The Doctrine](../chronicle/the-doctrine.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this

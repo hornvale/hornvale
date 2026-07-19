@@ -213,7 +213,14 @@ pub enum Disposition {
 /// seam — no other function in this module matches on
 /// `Disposition::Explained` directly (the G3 dial-blindness ruling, ledger
 /// #3).
-fn effective(d: &Disposition) -> &Disposition {
+///
+/// `pub(crate)` (C6 T1): [`crate::schemas::conflict_of`] reuses this same
+/// seam to compare a folk and a doctrine account's effective dispositions —
+/// the doctrine conflict classifier needs the identical dial-blindness
+/// discipline (it must never itself match on `Explained` to decide
+/// Harmony/Contested/Mystery/RevealedClaim), so this stays the one function
+/// either module calls rather than growing a second unwrap.
+pub(crate) fn effective(d: &Disposition) -> &Disposition {
     match d {
         Disposition::Explained { underlying, .. } => effective(underlying),
         other => other,

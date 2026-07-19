@@ -25,6 +25,17 @@ The day returns because the sky must be crossed.
 
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
+##### As the priesthood of the Vavako teach it
+
+The Vavako are goblins — ourselves.
+The Babako are hobgoblins — neighbors.
+Vebe is the earth.
+The moons are counted and known to the priesthood.
+The moons cross because Soevvae strides the sky, slowly.
+The day returns because Wowako strides the sky, briskly.
+
+*In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+
 #### As the Babako tell it
 
 The Vavako are goblins — rivals.
@@ -33,6 +44,17 @@ Vebe is the earth.
 The day returns, as all things return.
 
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
+
+##### As the priesthood of the Babako teach it
+
+The Vavako are goblins — rivals.
+The Babako are hobgoblins — ourselves.
+Vebe is the earth.
+The moons are counted and known to the priesthood.
+The moons cross because Kdonbem strides the sky, slowly.
+The day returns because Bobako strides the sky, briskly.
+
+*In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ## Volume 2: Waobwoe
 
@@ -63,6 +85,18 @@ The day returns, as all things return.
 
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
+##### As the priesthood of the Maetmea teach it
+
+The Maetmea are goblins — ourselves.
+The Waedwea are hobgoblins — neighbors.
+The Ngkoshngta are kobolds — neighbors.
+Waobwoe is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because Szhalssal strides the sky, slowly.
+The day returns because Pmoogmao walks the sky, briskly.
+
+*In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
 #### As the Waedwea tell it
 
 The Maetmea are goblins — rivals.
@@ -73,11 +107,34 @@ The day returns, as all things return.
 
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
+##### As the priesthood of the Waedwea teach it
+
+The Maetmea are goblins — rivals.
+The Waedwea are hobgoblins — ourselves.
+The Ngkoshngta are kobolds — rivals.
+Waobwoe is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because it is Ngaofzheef's kin.
+The day returns to keep the balance.
+
+*In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
 #### As the Ngkoshngta tell it
 
 Waobwoe is the earth with one moon.
 The moon crosses because Nggo strides the sky, slowly.
 The day returns, as all things return.
+The Maetmea are goblins — rivals.
+The Waedwea are hobgoblins — rivals.
+The Ngkoshngta are kobolds — ourselves.
+
+*In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
+
+##### As the priesthood of the Ngkoshngta teach it
+
+Waobwoe is the earth with one moon.
+The moon crosses because Nggo walks the sky, slowly.
+The day returns because Ngdosngka walks the sky, briskly.
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — rivals.
 The Ngkoshngta are kobolds — ourselves.
@@ -109,6 +166,17 @@ The day returns to keep the balance.
 
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
+##### As the priesthood of the Sdeozqae teach it
+
+The Sdeozqae are goblins — ourselves.
+The Shteozqae are hobgoblins — neighbors.
+Zhqea is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because Xaoxzaof walks the sky, slowly.
+The day returns to keep the balance.
+
+*In truth, Zhqea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
 #### As the Shteozqae tell it
 
 The Sdeozqae are goblins — rivals.
@@ -117,3 +185,14 @@ Zhqea is the earth.
 The day returns because the sky must be crossed.
 
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
+
+##### As the priesthood of the Shteozqae teach it
+
+The Sdeozqae are goblins — rivals.
+The Shteozqae are hobgoblins — ourselves.
+Zhqea is the earth.
+The moon is counted and known to the priesthood.
+The moon crosses because Tjejsha strides the sky, slowly.
+The day returns to keep the balance.
+
+*In truth, Zhqea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
