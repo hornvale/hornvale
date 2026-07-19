@@ -133,6 +133,61 @@ fn explanations_are_deterministic() {
 }
 
 #[test]
+fn no_deity_bearing_schema_ever_fires_agentless() {
+    // Review carry-over (C5 T4): explain_day/explain_moons used to bind
+    // agent/lexeme ONLY for SchemaId::Agentive, so a Kinship or
+    // LinkSympathy draw (both admitted for FactShape::Count, the moons'
+    // shape) would wrap the fact in Explained { agent: None, .. } — a
+    // frame windows/book's renderer correctly refuses to emit, silently
+    // vanishing two of the six closed frames. Sweep every placed
+    // culture's day and moons entries across seeds 1..=10 and assert NONE
+    // of the three deity-bearing schemas (Agentive, Kinship,
+    // LinkSympathy) ever surfaces with agent == None — the vanishing
+    // class is closed regardless of which schema the derived
+    // prior/beta competition actually draws.
+    let mut kinship_firings = 0usize;
+    let mut link_sympathy_firings = 0usize;
+    let mut agentive_firings = 0usize;
+
+    for seed in 1..=10u64 {
+        let w = generated(seed);
+        for voice in accounts_of(&w) {
+            for entry in &voice.account.entries {
+                let Disposition::Explained { schema, agent, .. } = &entry.disposition else {
+                    continue;
+                };
+                match schema {
+                    SchemaId::Agentive => agentive_firings += 1,
+                    SchemaId::Kinship => kinship_firings += 1,
+                    SchemaId::LinkSympathy => link_sympathy_firings += 1,
+                    _ => continue,
+                }
+                assert!(
+                    agent.is_some(),
+                    "seed {seed}, {}: {schema:?} fired with agent == None \
+                     (predicate {:?}) — the vanishing-frame bug this test closes",
+                    voice.kind,
+                    entry.fact.predicate
+                );
+            }
+        }
+    }
+
+    // The sweep's own finding, reported rather than assumed: at the floor
+    // (seeds 1..=10, the shipped four-people roster), the schema
+    // competition draws Agentive at least once, but Kinship/LinkSympathy
+    // may or may not surface — either is a valid finding. What matters is
+    // that IF they fire, they now carry an agent (asserted above); they
+    // are no longer unreachable-by-BUG, only possibly unreachable-by-draw
+    // at today's floor priors.
+    println!(
+        "no_deity_bearing_schema_ever_fires_agentless: seeds 1..=10 found \
+         {agentive_firings} Agentive, {kinship_firings} Kinship, \
+         {link_sympathy_firings} LinkSympathy firing(s)."
+    );
+}
+
+#[test]
 fn moons_explained_only_where_kept() {
     // Seed 2: kobold keeps the moons (moon-count Kept), goblin loses them
     // (BeyondCapability). Measured: kobold's moon-count fires Agentive,

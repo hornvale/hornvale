@@ -25,8 +25,8 @@ use hornvale_culture::Subsistence;
 use hornvale_kernel::{Seed, World, world::IS_A};
 use hornvale_language::{
     Account, AccountParams, Disposition, FactShape, GroundFact, NeededConcept, Observability,
-    OrderPolicy, Requirement, SchemaId, Stance, SubFrame, account_of, admitted, lexemes_for,
-    schemas::Manner, select_lexeme, select_schema,
+    OrderPolicy, Requirement, SchemaId, SlotKind, Stance, SubFrame, account_of, admitted,
+    lexemes_for, schema_table, schemas::Manner, select_lexeme, select_schema,
 };
 use hornvale_species::{ActivityCycle, PerceptionVector, PsychVector, Sociality, StatusBasis};
 use std::collections::{BTreeMap, BTreeSet};
@@ -292,6 +292,37 @@ fn domain_of<'a>(params: &'a AccountParams, predicate: &str) -> Option<&'a str> 
     params.observability.get(predicate).map(|o| o.domain)
 }
 
+/// Whether `schema`'s surface frame (`windows/book`'s Task 4 closed frame
+/// table) needs a bound deity name at all (review carry-over, C5 T4):
+/// two of the three deity-bearing frames are `hornvale_language::
+/// schema_table`'s own agent slots — `SlotKind::Agent` for
+/// [`SchemaId::Agentive`], `SlotKind::Kin` for [`SchemaId::Kinship`] — but
+/// the third, [`SchemaId::LinkSympathy`], is `SlotKind::None` in that
+/// table (it has no lexeme table — its verb slot really is closed) even
+/// though its Task-4 frame ("…because it answers ⟨Deity⟩.") still names a
+/// deity at the surface. This function tracks the renderer's actual three
+/// deity-bearing frames rather than `SlotKind` alone, so it is the single
+/// place that decides WHETHER a fired schema binds an agent; [`bind_agent`]
+/// is the only caller.
+fn agent_bearing(schema: SchemaId) -> bool {
+    let slot = schema_table()
+        .iter()
+        .find(|row| row.id == schema)
+        .map(|row| row.slot);
+    matches!(slot, Some(SlotKind::Agent) | Some(SlotKind::Kin)) || schema == SchemaId::LinkSympathy
+}
+
+/// The agent bound into a fired schema's explanation, or `None` when its
+/// surface frame is agentless — see [`agent_bearing`]. `deity` is the
+/// caller's already-selected binding belief's deity name (the day binds
+/// the period-matched belief; the moons bind the slowest cyclic belief) —
+/// this function only decides WHETHER to bind, never WHICH belief supplies
+/// the name (that selection is unchanged from T3, and identical for every
+/// agent-bearing schema at a given call site).
+fn bind_agent(schema: SchemaId, deity: &str) -> Option<String> {
+    agent_bearing(schema).then(|| deity.to_string())
+}
+
 /// The committed `day-length-std` value carried by `account`'s own ground
 /// facts — present regardless of disposition (`Lost`, in this
 /// predicate's case, always: `Requirement::CrossReferential` never
@@ -320,10 +351,11 @@ fn day_length_std_value(account: &Account) -> Option<f64> {
 /// against the source phenomenon's identity or a "sun" string — so this
 /// binding cannot leak which system produced the day-length-std fact.
 /// Ties bind to the first (shortest-period) match in ascending order.
-/// Agent binds only when the drawn schema is [`SchemaId::Agentive`];
-/// every other schema explains agentlessly (`agent: None`), per the plan
-/// header. Manner comes from the binding belief's own rank among
-/// `cyclic`, independent of which schema fires.
+/// Agent binds for every deity-bearing schema (see [`agent_bearing`]:
+/// [`SchemaId::Agentive`], [`SchemaId::Kinship`], [`SchemaId::LinkSympathy`]
+/// — [`bind_agent`] decides); every other schema explains agentlessly
+/// (`agent: None`), per the plan header. Manner comes from the binding
+/// belief's own rank among `cyclic`, independent of which schema fires.
 #[allow(clippy::too_many_arguments)]
 fn explain_day(
     world_seed: Seed,
@@ -372,7 +404,8 @@ fn explain_day(
         return;
     };
 
-    let (agent, lexeme) = if schema == SchemaId::Agentive {
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
             .derive("language")
@@ -380,12 +413,9 @@ fn explain_day(
             .derive("lexeme")
             .derive(predicate)
             .stream();
-        (
-            Some(belief.deity.clone()),
-            select_lexeme(lex_candidates, &mut lexeme_stream),
-        )
+        select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
-        (None, None)
+        None
     };
 
     let underlying = account.entries[day_index].disposition.clone();
@@ -404,7 +434,11 @@ fn explain_day(
 /// belief is always the SLOWEST cyclic belief (the last in `cyclic`'s
 /// ascending order) — the plan header's literal rule — regardless of
 /// whether that particular belief is the one whose period cleared the
-/// guard. Agent binds only for [`SchemaId::Agentive`]; manner comes from
+/// guard. Agent binds for every deity-bearing schema (see
+/// [`agent_bearing`]): [`SchemaId::Agentive`], [`SchemaId::Kinship`], and
+/// [`SchemaId::LinkSympathy`] — the two `Count`-shape schemas besides
+/// Agentive, both of which admit [`FactShape::Count`] and both of which
+/// name a deity in their `windows/book` surface frame. Manner comes from
 /// the slowest belief's own rank (`Slow`, unless it's also the sole cyclic
 /// belief, which reads `Neutral`).
 #[allow(clippy::too_many_arguments)]
@@ -457,7 +491,8 @@ fn explain_moons(
         return;
     };
 
-    let (agent, lexeme) = if schema == SchemaId::Agentive {
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
             .derive("language")
@@ -465,12 +500,9 @@ fn explain_moons(
             .derive("lexeme")
             .derive(predicate)
             .stream();
-        (
-            Some(belief.deity.clone()),
-            select_lexeme(lex_candidates, &mut lexeme_stream),
-        )
+        select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
-        (None, None)
+        None
     };
 
     let underlying = account.entries[moon_index].disposition.clone();
@@ -815,6 +847,66 @@ mod tests {
             Disposition::Lost(LossReason::BeyondCapability { domain: "sky" }),
             "no cyclic belief at all -> the guard must leave the day entry untouched"
         );
+    }
+
+    /// Review carry-over fix (C5 T4): `bind_agent` must bind a deity for
+    /// every schema `windows/book`'s Task 4 frame table actually names one
+    /// in — the two `Count`-shape agent-bearing schemas the day never
+    /// draws (`Kinship`, `LinkSympathy`) plus `Agentive` itself. Forced
+    /// directly (rather than through a live weighted draw) with both a
+    /// "moons" style deity (the slowest cyclic belief) and a "day" style
+    /// deity (the period-matched belief) to show `bind_agent` binds
+    /// correctly regardless of which caller supplies the name — it only
+    /// decides WHETHER to bind, never which belief does.
+    #[test]
+    fn bind_agent_covers_every_deity_bearing_schema() {
+        assert_eq!(
+            bind_agent(SchemaId::Agentive, "Nggo"),
+            Some("Nggo".to_string()),
+            "Agentive is SlotKind::Agent"
+        );
+        assert_eq!(
+            bind_agent(SchemaId::Kinship, "Nggo"),
+            Some("Nggo".to_string()),
+            "Kinship is SlotKind::Kin (moons: the slowest cyclic belief's deity)"
+        );
+        assert_eq!(
+            bind_agent(SchemaId::Kinship, "Vamu"),
+            Some("Vamu".to_string()),
+            "Kinship (day: the period-matched belief's deity)"
+        );
+        assert_eq!(
+            bind_agent(SchemaId::LinkSympathy, "Nggo"),
+            Some("Nggo".to_string()),
+            "LinkSympathy is SlotKind::None in schema_table but still names a deity \
+             in its windows/book surface frame — the review-carryover gap this fixes"
+        );
+    }
+
+    /// Every schema `schema_table()` marks agentless (`SlotKind::None`) and
+    /// that isn't the `LinkSympathy` special case must still bind no
+    /// agent — the fix must not overshoot into synthesizing agents for
+    /// schemas whose frame never names one (the "no synthetic agents,
+    /// ever" constraint).
+    #[test]
+    fn bind_agent_stays_none_for_every_other_schema() {
+        for schema in [
+            SchemaId::ForceDynamics,
+            SchemaId::SubstanceFlow,
+            SchemaId::Container,
+            SchemaId::PathJourney,
+            SchemaId::Balance,
+            SchemaId::MoralAccounting,
+            SchemaId::CycleReturn,
+            SchemaId::EssenceTelos,
+            SchemaId::Verticality,
+        ] {
+            assert_eq!(
+                bind_agent(schema, "Nggo"),
+                None,
+                "{schema:?} must stay agentless"
+            );
+        }
     }
 
     /// A minimal [`AccountParams`] built from the real [`observability_table`],
