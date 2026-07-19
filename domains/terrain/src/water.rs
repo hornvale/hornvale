@@ -30,10 +30,16 @@ impl WaterKind {
 
 /// Upstream drainage accumulation at or above which a cell carries fresh flowing
 /// water. Reference: `carve::WATERFALL_MIN_DRAINAGE` (80.0); rivers are more
-/// common than waterfalls, so this is lower. Tuned (The Freshet T2) so seed-42
-/// settlements have fresh water within a short walk.
+/// common than waterfalls, so this is lower. Tuned (The Freshet T2): a probe
+/// of seed-42's land-cell drainage distribution at the canonical globe level
+/// put the median land cell at drainage 2 and the 90th percentile at 11, so
+/// 20.0 (the initial guess) classified only the top ~4% of land as fresh
+/// water — sparse enough that a 400-point deterministic sweep of the sphere
+/// (`locale_water_field_varies_and_includes_fresh_water_on_seed_42`) missed
+/// every river. 15.0 keeps rivers the minority landform (~6.7% of seed-42's
+/// land) while giving that sweep a comfortable margin of hits.
 /// type-audit: bare-ok(count)
-pub const RIVER_MIN_DRAINAGE: f64 = 20.0;
+pub const RIVER_MIN_DRAINAGE: f64 = 15.0;
 
 /// Classify one cell from the bits the globe already derives. Pure and total;
 /// precedence Ocean > SaltBasin > River > DryLand. `is_terminal_sink` is
