@@ -178,6 +178,7 @@
 - [The Chorus](./chronicle/the-chorus.md)
 - [The Explanations](./chronicle/the-explanations.md)
 - [The Freshet](./chronicle/the-freshet.md)
+- [The Surmise](./chronicle/the-surmise.md)
 
 # Appendix: The Frontier
 
