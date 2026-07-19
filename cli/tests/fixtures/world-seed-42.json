@@ -651,6 +651,12 @@
         "kind": "Quality",
         "doc": "to consume food"
       },
+      "eclipse": {
+        "name": "eclipse",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the darkening when a moon crosses the sun, or the world's shadow crosses a moon"
+      },
       "epipelagic": {
         "name": "epipelagic",
         "domain": "climate",
@@ -932,6 +938,12 @@
         "domain": "climate",
         "kind": "Terrain",
         "doc": "a biome class"
+      },
+      "tide": {
+        "name": "tide",
+        "domain": "astronomy",
+        "kind": "Celestial",
+        "doc": "the rise and fall of the waters under the moons"
       },
       "tree": {
         "name": "tree",

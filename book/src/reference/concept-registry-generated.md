@@ -147,6 +147,7 @@
 | `die` | language | quality | to cease living |
 | `earth` | language | terrain | the ground underfoot |
 | `eat` | language | quality | to consume food |
+| `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
 | `epipelagic` | climate | terrain | a biome class |
 | `eye` | language | body | the organ of sight |
 | `fire` | language | substance | flame and heat |
@@ -194,6 +195,7 @@
 | `temperate-forest` | climate | terrain | a biome class |
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
+| `tide` | astronomy | celestial | the rise and fall of the waters under the moons |
 | `tree` | language | living | a woody plant |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |

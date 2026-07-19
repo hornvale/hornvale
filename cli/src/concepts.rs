@@ -369,17 +369,18 @@ mod tests {
             .lines()
             .find(|l| l.starts_with("Orphan phenomena"))
             .unwrap_or_else(|| panic!("no orphan-phenomena line in the manifest view"));
-        // Kinds the world emits that no concept names today (astronomy's sky
-        // events with no concept of their own) must be surfaced.
-        for orphan in ["eclipse", "tide", "seasonal-cycle"] {
+        // Kinds the world emits that still no concept names (astronomy's
+        // remaining sky events) must be surfaced.
+        for orphan in ["seasonal-cycle", "wandering-star", "heliacal-rising"] {
             assert!(
                 orphan_line.contains(orphan),
                 "orphan phenomenon '{orphan}' should be surfaced; line was: {orphan_line}"
             );
         }
-        // Kinds a concept DOES name (sun/moon -> celestial-body, star ->
-        // night-star, wind -> ambient) must NOT be listed as orphans.
-        for named in ["ambient", "celestial-body", "night-star"] {
+        // Kinds a concept DOES name must NOT be listed: eclipse/tide were given
+        // concepts (percept -> their kind); wind -> ambient, sun/moon ->
+        // celestial-body, star -> night-star.
+        for named in ["eclipse", "tide", "ambient", "celestial-body"] {
             assert!(
                 !orphan_line.contains(named),
                 "'{named}' is named by a concept and must not be an orphan; line: {orphan_line}"
