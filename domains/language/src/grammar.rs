@@ -67,9 +67,9 @@ pub struct TongueGrammar {
     /// draws `Affix`-depth evidential marking. Populated by
     /// [`tongue_grammar`] exactly when `copula` is populated; a hand-built
     /// grammar used only to test the C3 roman-level surface may leave this
-    /// `None` even with `copula: Some(..)` — [`realize_tongue_deep`] falls
-    /// back to a documented roman-level join in that case (see
-    /// `layer_affix`).
+    /// `None` even with `copula: Some(..)` — [`realize_tongue_deep`] then
+    /// PANICS if asked to Affix-mark it (`layer_affix`'s loud arm; the T1
+    /// review removed the silent roman-level fallback).
     pub copula_segments: Option<Vec<Segment>>,
     /// Whether the language has articles. The floor realizer renders no
     /// article surface (no article lexeme exists yet — C7's morphology
@@ -237,7 +237,8 @@ pub fn realize_tongue(
 /// form. `segments` is `None` only for a [`LexEntry::Compound`] complement —
 /// the lexicon does not retain a compound's joined segments today (a
 /// pre-existing gap in `lexicon.rs`, out of this task's scope) — in which
-/// case `layer_affix` falls back to a documented roman-level join.
+/// case `layer_affix` PANICS rather than silently degrading (the loud
+/// arm; close the lexicon gap before Affix-marking a Compound).
 struct Marked {
     /// The word's segments, when known.
     segments: Option<Vec<Segment>>,
@@ -246,9 +247,10 @@ struct Marked {
 }
 
 /// Join one more affix layer onto `current`: a genuine segment-level
-/// [`affix`] join when `current`'s segments are known, or — the documented
-/// fallback for a segment-less [`LexEntry::Compound`] word — a roman-level
-/// concatenation in the same prefix/suffix order.
+/// [`affix`] join when `current`'s segments are known. A segment-less word
+/// (a [`LexEntry::Compound`] complement) PANICS — the loud arm the T1
+/// review demanded; author the lexicon's compound-segment retention before
+/// Affix-marking a Compound.
 fn layer_affix(current: Marked, marker: &MorphForm, position: ClassPosition) -> Marked {
     match &current.segments {
         Some(segments) => {
@@ -955,6 +957,23 @@ mod tests {
             "zero-copula Affix evidential must enclitic onto the predicate nominal: \
              {zero_marked:?} (expected token {expected_enclitic:?})"
         );
+    }
+
+    /// Final-review fix 2 (C7): the layer_affix Compound arm is loud AND
+    /// tested — a segment-less Marked (the Compound-complement shape)
+    /// asked to take an affix panics rather than silently roman-concats.
+    #[test]
+    #[should_panic(expected = "layer_affix: cannot segment-affix")]
+    fn layer_affix_panics_on_a_segmentless_word() {
+        let marker = MorphForm {
+            segments: Vec::new(),
+            roman: "bo".to_string(),
+        };
+        let current = Marked {
+            segments: None,
+            roman: "Manywater".to_string(),
+        };
+        let _ = layer_affix(current, &marker, ClassPosition::Suffix);
     }
 
     #[test]
