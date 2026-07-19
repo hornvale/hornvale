@@ -78,13 +78,25 @@ metamorphic guard; measured **285 → 105 CPU-s/world (2.7×)**, wall 8:50 →
 ## Stage 3: Measure, and decide on the residual
 **Goal:** confirm the win; decide whether the per-call `phenomena_sources_from`
 residual (sky rebuild + climate clone × ~182, no sculpt) warrants a
-build-sources-once pass. Run the full census locally, diff vs the committed
-AWS goldens.
+build-sources-once pass. Run the full census locally to firm up the
+wall-clock.
 **Deliverable:** before/after per-world timing; a full local census (opt-in,
-local, no spend) byte-diffed against `book/src/laboratory/generated/*/rows.csv`;
-a G6 digest to Nathan with the numbers and the **AWS-drop recommendation**
-(carve-out: dropping the remote census pipeline is Nathan's call).
-**Status:** Not Started
+local, no spend); a G6 digest to Nathan with the numbers and the **AWS-drop
+recommendation** (carve-out: dropping the remote census pipeline is Nathan's
+call).
+**Status:** In Progress.
+- **Build-sources-once (2b) — TRIED AND REVERTED.** Introduced a
+  `WorldPhenomena` handle to build the phenomena sources once per world
+  (collapsing the residual ~182 per-settlement `sky_of` + climate-clone).
+  Measured: **no speedup** (user 838s → 870s, within noise) — killing the
+  sculpt in Stage 2 was the whole win; `sky_of`/clone are cheap. Reverted per
+  YAGNI: public API surface (a struct + two methods) for zero measured
+  benefit. The residual ~105 CPU-s/world is genuine metric math + the one
+  intrinsic world build, not redundant source-building; the Explore's ~55
+  CPU-s post-fix estimate was optimistic, the real floor is ~105.
+- Anti-regrowth is better served by the captured follow-up (a metric-purity
+  lint on direct `climate_of`/`terrain_of`) than by an unused abstraction.
+- Full local census wall-clock: measuring (background run).
 
 ## Definition of Done
 - `make gate` green; census-probe + depth_ladder byte-identical.
