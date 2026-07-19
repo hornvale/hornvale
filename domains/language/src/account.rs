@@ -28,6 +28,7 @@
 //! culture's account persisted across a session must re-derive it from the
 //! ledger and the params, never cache it as new committed state.
 
+use crate::schemas::{FactShape, LexemeId, Manner, SchemaId};
 use hornvale_kernel::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -106,6 +107,12 @@ pub struct Observability {
     /// Which concept the lexicon filter requires for this predicate's
     /// facts.
     pub concept: NeededConcept,
+    /// C5: which shape this predicate's facts take (the causal filter's
+    /// fact-shape classifier, LANG-37's "pass-1 hidden hub") — what
+    /// [`crate::schemas::admitted`] gates a schema draw on. Additive: this
+    /// field carries no meaning for C4's four filters, only for the causal
+    /// filter worldgen's `chorus.rs` assembles on top of them.
+    pub shape: FactShape,
 }
 
 /// An observing culture's felt relationship toward a fact's object, when
@@ -161,7 +168,7 @@ pub enum LossReason {
 
 /// What happened to one ground fact when passed through the four-filter
 /// account.
-/// type-audit: bare-ok(identifier-text: Substituted.truth), bare-ok(identifier-text: Substituted.theirs)
+/// type-audit: bare-ok(identifier-text: Substituted.truth), bare-ok(identifier-text: Substituted.theirs), bare-ok(identifier-text: Explained.agent)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Disposition {
     /// The fact survived every filter unchanged.
@@ -177,6 +184,40 @@ pub enum Disposition {
         /// The observing culture's substituted term.
         theirs: String,
     },
+    /// C5: held AS EXPLAINED — the causal filter fired. Wraps what the
+    /// knowledge filter said underneath; the DIAL READS THROUGH to
+    /// `underlying` (explanation-blindness keeps every census value
+    /// byte-identical — G3 ruling, ledger #3).
+    Explained {
+        /// What the account said before the causal filter wrapped it.
+        underlying: Box<Disposition>,
+        /// The causal schema drawn to explain this fact.
+        schema: SchemaId,
+        /// The deity/agent name bound into the explanation's surface, when
+        /// `schema` binds an agent slot.
+        agent: Option<String>,
+        /// The verb lexeme drawn for the explanation's surface, when
+        /// `schema` has a lexeme table.
+        lexeme: Option<LexemeId>,
+        /// This cyclic belief's told pace among the culture's own cyclic
+        /// beliefs.
+        manner: Manner,
+    },
+}
+
+/// The disposition the dial actually reads: unwraps [`Disposition::Explained`]
+/// down to its `underlying` disposition, recursively (nothing in this
+/// campaign constructs a doubly-wrapped `Explained`, but the unwrap is
+/// recursive rather than one-shot so a future nesting stays dial-blind
+/// without a second edit here). Every measure below routes through this one
+/// seam — no other function in this module matches on
+/// `Disposition::Explained` directly (the G3 dial-blindness ruling, ledger
+/// #3).
+fn effective(d: &Disposition) -> &Disposition {
+    match d {
+        Disposition::Explained { underlying, .. } => effective(underlying),
+        other => other,
+    }
 }
 
 /// One ground fact's outcome after the four-filter account, plus this
@@ -423,7 +464,7 @@ pub fn distortion(account: &Account) -> f64 {
     let loss = account
         .entries
         .iter()
-        .filter(|e| !matches!(e.disposition, Disposition::Kept))
+        .filter(|e| !matches!(effective(&e.disposition), Disposition::Kept))
         .count() as f64
         / n_f;
     let order = order_distance(&account.entries);
@@ -452,7 +493,7 @@ pub fn domain_distortion(account: &Account, params: &AccountParams, domain: &str
     }
     let lost = matching
         .iter()
-        .filter(|e| !matches!(e.disposition, Disposition::Kept))
+        .filter(|e| !matches!(effective(&e.disposition), Disposition::Kept))
         .count() as f64;
     lost / matching.len() as f64
 }
@@ -509,7 +550,7 @@ pub fn distinctiveness(a: &Account, b: &Account) -> f64 {
     for k in 0..n {
         let ea = by_orig_a[k].expect("account_of assigns every original index exactly once");
         let eb = by_orig_b[k].expect("account_of assigns every original index exactly once");
-        if !dispositions_agree(&ea.disposition, &eb.disposition) {
+        if !dispositions_agree(effective(&ea.disposition), effective(&eb.disposition)) {
             disposition_disagree += 1;
         }
         if ea.stance != eb.stance {
@@ -557,19 +598,22 @@ pub fn recoverability(account: &Account) -> f64 {
     }
     let mut theirs_counts: BTreeMap<&str, usize> = BTreeMap::new();
     for e in &account.entries {
-        if let Disposition::Substituted { theirs, .. } = &e.disposition {
+        if let Disposition::Substituted { theirs, .. } = effective(&e.disposition) {
             *theirs_counts.entry(theirs.as_str()).or_insert(0) += 1;
         }
     }
     let recovered = account
         .entries
         .iter()
-        .filter(|e| match &e.disposition {
+        .filter(|e| match effective(&e.disposition) {
             Disposition::Kept => true,
             Disposition::Substituted { theirs, .. } => {
                 theirs_counts.get(theirs.as_str()).copied().unwrap_or(0) == 1
             }
             Disposition::Lost(_) => false,
+            Disposition::Explained { .. } => {
+                unreachable!("effective() never returns Explained")
+            }
         })
         .count();
     recovered as f64 / n as f64
@@ -617,6 +661,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         table.insert(
@@ -625,6 +670,7 @@ mod tests {
                 requirement: Requirement::SkyGraded { threshold: 0.6 },
                 domain: "sky",
                 concept: NeededConcept::Fixed("moon"),
+                shape: FactShape::Count,
             },
         );
         table.insert(
@@ -633,6 +679,7 @@ mod tests {
                 requirement: Requirement::Instrumental,
                 domain: "sky",
                 concept: NeededConcept::Fixed("star"),
+                shape: FactShape::Taxonomy,
             },
         );
         table.insert(
@@ -641,6 +688,7 @@ mod tests {
                 requirement: Requirement::CrossReferential,
                 domain: "sky",
                 concept: NeededConcept::Fixed("sun"),
+                shape: FactShape::CyclicEvent,
             },
         );
         table.insert(
@@ -649,6 +697,7 @@ mod tests {
                 requirement: Requirement::Manifest,
                 domain: "peoples",
                 concept: NeededConcept::ObjectKind,
+                shape: FactShape::Roster,
             },
         );
         table
@@ -778,6 +827,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         collision_table.insert(
@@ -786,6 +836,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         let collision_params = AccountParams {
@@ -1040,6 +1091,180 @@ mod tests {
             d_ab,
             distinctiveness(&acc_b, &acc_a1),
             "distinctiveness is symmetric"
+        );
+    }
+
+    #[test]
+    fn explained_is_dial_blind() {
+        // A Lost entry (day-length-std, CrossReferential — always beyond
+        // capability at the floor): wrap it in Explained and assert every
+        // measure reads exactly as if it were still the unwrapped Lost.
+        let params = AccountParams {
+            hold_all: false,
+            holdings: holdings_of(&["star", "sun"]),
+            observability: fixture_table(),
+            sky_capability: 1.0,
+            order: OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: None,
+        };
+        let acc = account_of(&fixture_ground(), &params);
+        let day_position = acc
+            .entries
+            .iter()
+            .position(|e| e.fact.predicate == "day-length-std")
+            .unwrap();
+        assert_eq!(
+            acc.entries[day_position].disposition,
+            Disposition::Lost(LossReason::BeyondCapability { domain: "sky" })
+        );
+
+        let mut wrapped_entries = acc.entries.clone();
+        let underlying = wrapped_entries[day_position].disposition.clone();
+        wrapped_entries[day_position].disposition = Disposition::Explained {
+            underlying: Box::new(underlying),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Brisk,
+        };
+        let wrapped = Account {
+            entries: wrapped_entries,
+        };
+
+        assert_eq!(distortion(&wrapped), distortion(&acc));
+        assert_eq!(
+            domain_distortion(&wrapped, &params, "sky"),
+            domain_distortion(&acc, &params, "sky")
+        );
+        assert_eq!(recoverability(&wrapped), recoverability(&acc));
+        assert_eq!(
+            distinctiveness(&wrapped, &acc),
+            0.0,
+            "the dial cannot see explanations at all"
+        );
+    }
+
+    #[test]
+    fn explained_wrapping_substituted_preserves_recoverability() {
+        // The lone-substitution case (acc_carved from
+        // `taxonomic_substitutes_the_carving_or_loses`): wrap the fixture's
+        // `is-a` Substituted entry in Explained and assert recoverability
+        // is unchanged (1/5, same as the unwrapped account).
+        let params_carved = AccountParams {
+            hold_all: false,
+            holdings: holdings_of(&["planet"]),
+            observability: fixture_table(),
+            sky_capability: 1.0,
+            order: OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: Some("earth".to_string()),
+        };
+        let acc = account_of(&fixture_ground(), &params_carved);
+        let is_a_position = acc
+            .entries
+            .iter()
+            .position(|e| e.fact.predicate == "is-a")
+            .unwrap();
+        assert_eq!(
+            acc.entries[is_a_position].disposition,
+            Disposition::Substituted {
+                truth: "planet".to_string(),
+                theirs: "earth".to_string(),
+            }
+        );
+        assert_eq!(recoverability(&acc), 1.0 / 5.0);
+
+        let mut wrapped_entries = acc.entries.clone();
+        let underlying = wrapped_entries[is_a_position].disposition.clone();
+        wrapped_entries[is_a_position].disposition = Disposition::Explained {
+            underlying: Box::new(underlying),
+            schema: SchemaId::EssenceTelos,
+            agent: None,
+            lexeme: None,
+            manner: Manner::Neutral,
+        };
+        let wrapped = Account {
+            entries: wrapped_entries,
+        };
+        assert_eq!(recoverability(&wrapped), recoverability(&acc));
+    }
+
+    #[test]
+    fn explained_wrapping_substituted_participates_in_collision_count() {
+        // The collision case: two facts substitute to the SAME target, so
+        // neither recovers (recoverability 0.0). Wrap ONE of the two
+        // colliding Substituted entries in Explained — the injectivity
+        // check must see through the wrapper into the collision count, so
+        // recoverability stays 0.0 rather than silently letting the wrapped
+        // entry escape the collision it participates in.
+        let collision_ground = vec![
+            GroundFact {
+                subject: "Vebe".to_string(),
+                predicate: "is-a".to_string(),
+                object: Value::Text("planet".to_string()),
+            },
+            GroundFact {
+                subject: "Luma".to_string(),
+                predicate: "is-a-2".to_string(),
+                object: Value::Text("moon".to_string()),
+            },
+        ];
+        let mut collision_table = BTreeMap::new();
+        collision_table.insert(
+            "is-a".to_string(),
+            Observability {
+                requirement: Requirement::Taxonomic,
+                domain: "sky",
+                concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
+            },
+        );
+        collision_table.insert(
+            "is-a-2".to_string(),
+            Observability {
+                requirement: Requirement::Taxonomic,
+                domain: "sky",
+                concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
+            },
+        );
+        let collision_params = AccountParams {
+            hold_all: false,
+            holdings: BTreeSet::new(),
+            observability: collision_table,
+            sky_capability: 1.0,
+            order: OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: Some("earth".to_string()),
+        };
+        let acc = account_of(&collision_ground, &collision_params);
+        assert_eq!(recoverability(&acc), 0.0);
+
+        let mut wrapped_entries = acc.entries.clone();
+        let underlying = wrapped_entries[0].disposition.clone();
+        wrapped_entries[0].disposition = Disposition::Explained {
+            underlying: Box::new(underlying),
+            schema: SchemaId::EssenceTelos,
+            agent: None,
+            lexeme: None,
+            manner: Manner::Neutral,
+        };
+        let wrapped = Account {
+            entries: wrapped_entries,
+        };
+        assert_eq!(recoverability(&wrapped), recoverability(&acc));
+    }
+
+    #[test]
+    fn explained_survives_identity_never() {
+        // account_of never constructs Explained; only the worldgen
+        // assembly (a later task) does.
+        let acc = account_of(&fixture_ground(), &identity_params());
+        assert!(
+            acc.entries
+                .iter()
+                .all(|e| !matches!(e.disposition, Disposition::Explained { .. }))
         );
     }
 }
