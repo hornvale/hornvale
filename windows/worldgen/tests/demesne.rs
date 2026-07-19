@@ -11,8 +11,13 @@
 //! keystone below), and a genuinely mineral- or detritus-driven species can
 //! now track its own supply field spatially (the emergence keystone below).
 
-use hornvale_kernel::{KindId, Value, World};
-use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, axis_supply, build_world};
+use hornvale_astronomy::SkyPins;
+use hornvale_kernel::{KindId, Seed, Value, World};
+use hornvale_terrain::TerrainPins;
+use hornvale_worldgen::{
+    SettlementPins, SkyChoice, WorldComponents, axis_supply, build_world, carrying_inputs_of,
+    species_carrying_input, terrain_of,
+};
 
 #[test]
 fn mineral_supply_tracks_prospectivity_spatially() {
@@ -282,5 +287,127 @@ fn settlements_and_dominants_diversify_on_seed_42() {
         "xorn (pure-MINERAL niche) should newly clear the dominance ruler once mineral \
          supply is its own spatial field, not a rescale of base_carrying; dominant counts: \
          {dominant_counts:?}"
+    );
+}
+
+/// T3: THE K-GROUNDING CHECK (the-gathering discipline). The census-pinned
+/// `capacity-by-abs-latitude` calibration (`gathering_calibration.rs`,
+/// design spec §5) and its live seed-42 re-check
+/// (`confluence.rs`'s `k_biomass_gradient_grounding_holds_after_the_
+/// freshwater_repoint`) are both computed from `carrying_inputs_of` +
+/// `species_carrying_input` + `hornvale_demography::carrying_capacity` — a
+/// psychology-scaled, PEOPLED-ONLY carrying-capacity path that predates The
+/// Niche's per-species differentiation and has never been re-pointed onto
+/// it (settlement genesis moved onto `niche_per_species_k` at Task A15a,
+/// but this grounding metric stayed on the older, simpler path — the two
+/// coexist, per the `species_carrying_input` doc comment). The per-axis
+/// vector supply this campaign built (`mineral_supply_field`/
+/// `forage_supply_field`/`DETRITUS_AMBIENT`) is consumed ONLY by
+/// `niche_per_species_k` (via `axis_supply`), so it cannot touch this
+/// gradient's inputs at all — confirmed here, live, rather than assumed:
+/// the measured ratio matches `confluence.rs`'s pinned 31.2563 exactly (T3
+/// changed nothing upstream of it), so no `MINERAL_SUPPLY_SCALE`/
+/// `FORAGE_FRACTION`/`CONDENSATION_THRESHOLD` re-fit is needed for THIS
+/// metric. (T3's actual settlement-COUNT investigation — a different K,
+/// `niche_per_species_k`, the one settlement genesis and the menagerie
+/// strongholds test use — lives in `confluence.rs`'s settlement-count test
+/// and this file's `settlements_and_dominants_diversify_on_seed_42`.)
+#[test]
+fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let world = world_42();
+    let terrain = terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_of(&world).expect("climate reconstructs");
+    let geo = terrain.geosphere();
+    let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
+
+    let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) = (0.0_f64, 0u32, 0.0_f64, 0u32);
+    for (_kind, psych) in wc.psyche.iter() {
+        let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
+            species_carrying_input(*base_inputs.get(c), psych)
+        });
+        let k = hornvale_demography::carrying_capacity(geo, &inputs);
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                continue;
+            }
+            let lat = geo.coord(cell).latitude.abs();
+            let kv = *k.get(cell);
+            if lat < 30.0 {
+                trop_sum += kv;
+                trop_n += 1;
+            } else if lat > 60.0 {
+                pole_sum += kv;
+                pole_n += 1;
+            }
+        }
+    }
+    assert!(trop_n > 0, "seed 42 has no tropical land cells");
+    assert!(pole_n > 0, "seed 42 has no polar land cells");
+    const POLE_FLOOR: f64 = 0.01;
+    let trop_mean = trop_sum / f64::from(trop_n);
+    let pole_mean = (pole_sum / f64::from(pole_n)).max(POLE_FLOOR);
+    let ratio = trop_mean / pole_mean;
+    println!("seed 42 capacity-by-abs-latitude (live, post-the-demesne T1/T2): {ratio:.4}");
+    assert!(
+        ratio >= 3.0,
+        "capacity-by-abs-latitude on seed 42 fell to {ratio:.4} (below the preregistered floor \
+         of 3) — the K-grounding may have drifted despite the-demesne touching a different K"
+    );
+    // Pinned to `confluence.rs`'s exact live reading: proof of ZERO drift,
+    // not merely "still above the floor" — the vector supply's code path
+    // (`niche_per_species_k`/`axis_supply`) is disjoint from this one
+    // (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`).
+    assert!(
+        (ratio - 31.2563).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.2563, unchanged from \
+         confluence.rs's pre-demesne reading) — something outside the-demesne's per-axis \
+         supply fields moved this K"
+    );
+}
+
+// T3: THE EPOCH SURFACE. Settlement placement is deterministic OVER K —
+// `hornvale_demography` (condensation, the coexistence-stack packer) draws
+// no `Seed`/`Stream` (grep confirms it; see `confluence.rs`'s byte-identity
+// test doc, which established this same fact for The Confluence's
+// freshwater re-point), and neither does anything T1/T2/T3 added here
+// (`mineral_supply_field`/`forage_supply_field`/`axis_supply`/
+// `niche_per_species_k` are pure functions of terrain/climate/biosphere —
+// no `Seed`, no `Stream`, no RNG). The per-axis vector supply changes WHICH
+// cells a species' K peaks in (a derived-FORMULA change), never adds or
+// reorders a seed draw, so the settlement seed-derivation's
+// stream-consumption order is unchanged. Confirmed directly (not just
+// argued): the generated stream manifest (`cargo run -p hornvale --
+// streams`) is byte-identical to the committed
+// `book/src/reference/stream-manifest-generated.md` after this campaign's
+// changes. This is a save-format-relevant DERIVED-FORMULA change (spec §6)
+// — not a stream-label epoch; no `settlement/*` label gets an epoch
+// suffix. `seed_42_is_byte_identical_across_two_builds_after_the_demesne`
+// below is the direct determinism assertion.
+
+/// T3: THE BYTE-IDENTITY CHECK. Same seed + pins must still produce a
+/// byte-identical world under the-demesne's re-pointed resource-supply
+/// term — mirrors `confluence.rs`'s
+/// `seed_42_is_byte_identical_across_two_builds_after_the_confluence`,
+/// scoped to the crate this campaign actually touched.
+#[test]
+fn seed_42_is_byte_identical_across_two_builds_after_the_demesne() {
+    let build = || {
+        build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap()
+        .to_json()
+    };
+    let a = build();
+    let b = build();
+    assert_eq!(
+        a, b,
+        "same seed + pins must yield a byte-identical world under the-demesne's per-axis \
+         vector resource supply"
     );
 }

@@ -329,10 +329,34 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // old scalar's shared NPP field, so every peopled species' resource
     // magnitude drops (bugbear's hardest, at 85% of its old uptake). Lower
     // K means fewer catchments clear `CONDENSATION_THRESHOLD`; re-measured
-    // seed 42 settlement count: 81. Widening the band's floor to include it
-    // (not re-fitting `CONDENSATION_THRESHOLD`, a different task's constant)
-    // — re-pin/re-band here again once a later stage wires real `ANIMAL_PREY`
-    // supply.
+    // seed 42 settlement count: 81.
+    //
+    // The-demesne T3 made this a CONSCIOUS decision rather than accepting
+    // the widened floor by default: `FORAGE_FRACTION` is the one live lever
+    // over the peopled count (`PLANT_FORAGE` is peopled species' only
+    // nonzero-supply axis while `ANIMAL_PREY` stays Stage 2's placeholder
+    // zero). A sweep (`windows/worldgen/src/lib.rs`'s `FORAGE_FRACTION`,
+    // 0.5 -> 1.0 -> 1.5 -> 2.0 -> 3.0 -> 5.0) found the count climbs with
+    // it (81 -> 92 -> 101 -> 103 -> 108 -> 107), reaching the historical
+    // ~108 only at `FORAGE_FRACTION = 3.0` — but `FORAGE_FRACTION` is
+    // documented as a FRACTION of primary production (the doc comment:
+    // "not all NPP is grazable"), and `forage_supply_is_a_fraction_of_
+    // base_carrying_and_deterministic` (`demesne.rs`) holds the physical
+    // invariant `forage <= base_carrying` — anything above 1.0 breaks that
+    // invariant outright, and 1.0 itself ("all NPP is grazable") already
+    // contradicts the constant's own rationale. Even at that physical
+    // ceiling the count only reaches 92, short of the historical band. Since
+    // restoring the count to ~108 needs a value that either breaks a tested
+    // invariant or repudiates the constant's documented meaning, T3 chose
+    // NOT to move `FORAGE_FRACTION` — that would be fitting the constant to
+    // today's result, not a principled re-calibration. `FORAGE_FRACTION`
+    // stays 0.5, the settlement count stays 81, and the widened [75, 400]
+    // floor is kept as a deliberate, documented Stage-1 reading (not a
+    // fit-to-result widen): 81 honestly reflects peopled species competing
+    // on `PLANT_FORAGE` alone while `ANIMAL_PREY` supply is zero. The real
+    // fix is Stage 2's `ANIMAL_PREY` field wiring, which restores the axis
+    // peopled species actually depend on most (bugbear's niche is 85%
+    // `ANIMAL_PREY`) — re-pin/re-band here once that lands.
     assert!(
         (75..=400).contains(&count),
         "seed 42 settlement count {count} left the sane [75, 400] band after the-demesne's \

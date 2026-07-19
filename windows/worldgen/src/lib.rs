@@ -6947,6 +6947,17 @@ mod tests {
         );
     }
 
+    /// The three build-local reads
+    /// [`menagerie_full_roster_dominant_breakdown`] returns: every kind's
+    /// name (biosphere order, the `tag`-indexable slice), the per-kind
+    /// dominant-cell count, and that count re-keyed by name and sorted for
+    /// a readable failure message.
+    type DominantBreakdown = (
+        Vec<&'static str>,
+        std::collections::BTreeMap<u32, usize>,
+        Vec<(&'static str, usize)>,
+    );
+
     /// The Seam's behavioral exit criterion (Task 6, ledger #48): does the
     /// full 16-species HABITAT stack (fauna included — distinct from the
     /// peopled-only SETTLEMENT stack `species_pin_isolation` etc. probe)
@@ -7009,18 +7020,46 @@ mod tests {
     /// wiring is explicitly out of Stage 2's scope). This test's `>= 6`
     /// bar and its `treant`/dragon assertions are therefore still correctly
     /// unmet; it stays `#[ignore]`d for the same calibration reason.
-    #[test]
-    #[ignore = "CALIBRATION FINDING (task 6, 2026-07-16, ledger #48): seed-42 \
-                full-roster per-cell dominant-density count is 2, not richer \
-                than the peopled-only 2-way split; treant/xorn/all three \
-                chromatic dragons hold zero strongholds (Kleiber home-range \
-                scaling swamps their resource-share advantage in a per- \
-                individual density metric). Awaiting controller calibration \
-                (fauna mass / sovereignty-devotion retune) before re-\
-                asserting the campaign's exit criterion — see \
-                .superpowers/sdd/task-6-report.md."]
-    fn menagerie_fauna_hold_resource_partitioned_strongholds() {
-        let world = generated(42);
+    ///
+    /// UPDATE (BIO-35, the-demesne T3): re-measured after T3's settlement-
+    /// count investigation (`FORAGE_FRACTION` swept 0.5..3.0, kept at 0.5 —
+    /// see `windows/worldgen/tests/confluence.rs`'s settlement-count test
+    /// for the full writeup; the sweep left `niche_per_species_k`'s
+    /// per-cell dominance unchanged from T2's reading). The breakdown is
+    /// BYTE-IDENTICAL to T2's: `[xorn: 29136, rust-monster: 9551,
+    /// twig-blight: 1328, goblin: 947]`, 4 distinct dominants. Splitting
+    /// this test three ways rather than un-ignoring the whole thing, per
+    /// what is actually measured (not faked):
+    ///
+    /// - **Un-ignored**: distinct dominants materially exceed the pre-
+    ///   repoint baseline of 2 (the-demesne's own emergence claim, mirrored
+    ///   from `demesne.rs`'s `settlements_and_dominants_diversify_on_seed_42`),
+    ///   and `xorn` — the pure-`MINERAL` niche the per-axis supply was built
+    ///   to unlock — holds a real, large stronghold (29136 cells). Both are
+    ///   Stage-1-reachable and both clear.
+    /// - **Still `#[ignore]`d, mass/sovereignty calibration (NOT Stage 2)**:
+    ///   `treant` holds ZERO strongholds. Measured, not faked: the
+    ///   per-axis supply gave `treant` its OWN photosynthate-tracking
+    ///   field (unlike the old shared-scalar model), but `twig-blight`
+    ///   still wins every contested cell — the root cause traced above
+    ///   (Kleiber home-range scaling: `treant` at 1800 kg has a ~1568x
+    ///   larger home range than `twig-blight` at 5 kg, so `treant`'s
+    ///   resource-share advantage never survives the per-INDIVIDUAL
+    ///   density conversion) is orthogonal to the resource-AXIS fix T1/T2
+    ///   made and is untouched by it. This is task 6's original finding,
+    ///   confirmed still true after the-demesne; it awaits a body-mass /
+    ///   sovereignty-devotion retune, not a resource-supply change.
+    /// - **Still `#[ignore]`d, Stage 2 (`ANIMAL_PREY` field)**: no
+    ///   chromatic dragon (or `owlbear`) ever wins a cell — their pure-
+    ///   `ANIMAL_PREY` niche reads Stage 1's placeholder-zero supply, so
+    ///   they can never out-compete a species riding a real axis. Trophic
+    ///   wiring is explicitly Stage 2's job.
+    ///
+    /// Returns every kind's name (biosphere order, the `tag`-indexable
+    /// slice), the per-kind dominant-cell count, and that count re-keyed by
+    /// name and sorted for a readable failure message ([`DominantBreakdown`]).
+    fn menagerie_full_roster_dominant_breakdown(seed: u64) -> DominantBreakdown {
+        let world = generated(seed);
         let wc = WorldComponents::assemble().unwrap();
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
         // Reuse the exact pack params (BETA/FLOOR) genesis and
@@ -7061,15 +7100,30 @@ mod tests {
             .collect();
         breakdown.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
 
+        (names, dominant_counts, breakdown)
+    }
+
+    /// Pre-repoint baseline distinct full-roster dominant count (task 6,
+    /// 2026-07-16, ledger #48): the flat shared-`base_carrying` scalar gave
+    /// exactly 2 (`twig-blight`, `rust-monster`). Frozen before T1/T2's
+    /// per-axis repoint landed; see the module doc above this test group.
+    const PRE_DEMESNE_DISTINCT_DOMINANTS_42: usize = 2;
+
+    /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
+    /// vector supply materially diversifies the full-roster (fauna
+    /// included) per-cell dominance beyond [`PRE_DEMESNE_DISTINCT_DOMINANTS_42`],
+    /// and `xorn` — the pure-`MINERAL` specialist the mineral supply field
+    /// was built to unlock — holds a real stronghold. See the module doc
+    /// above for what stays `#[ignore]`d (treant: mass calibration; dragons:
+    /// Stage 2) and why.
+    #[test]
+    fn menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         let distinct_dominants = dominant_counts.len();
-        // Substantially richer than the peopled-only 2-way split — the
-        // campaign's stated target (spec's illustrative floor shape:
-        // observe, then pin well below it). NOT weakened to match today's
-        // observed 2.
         assert!(
-            distinct_dominants >= 6,
-            "expected a broad, resource-partitioned biogeography (>= 6 distinct \
-             dominants, well above the peopled-only 2-way split), got \
+            distinct_dominants > PRE_DEMESNE_DISTINCT_DOMINANTS_42,
+            "expected the per-axis vector supply to diversify full-roster dominance beyond \
+             the pre-repoint baseline of {PRE_DEMESNE_DISTINCT_DOMINANTS_42}, got \
              {distinct_dominants}: {breakdown:?}"
         );
 
@@ -7080,15 +7134,63 @@ mod tests {
                 .expect("species in registry") as u32;
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
-
-        assert!(
-            dominates_a_cell("treant"),
-            "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
-        );
         assert!(
             dominates_a_cell("xorn"),
             "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
         );
+    }
+
+    /// STILL `#[ignore]`d — mass/sovereignty calibration, NOT Stage 2
+    /// (BIO-35 the-demesne T3, measured not faked): `treant` (the
+    /// photosynthate specialist) holds ZERO strongholds at seed 42 even
+    /// under the per-axis vector supply. Root cause (task 6, unchanged by
+    /// the-demesne): Kleiber home-range scaling (treant 1800 kg vs
+    /// twig-blight 5 kg, ~1568x home-range ratio) swamps treant's
+    /// resource-share advantage once converted to a per-INDIVIDUAL
+    /// density. This is a body-mass/sovereignty-devotion retune, not a
+    /// resource-axis fix — out of the-demesne's scope.
+    #[test]
+    #[ignore = "mass/sovereignty calibration (task 6 CALIBRATION FINDING, confirmed unchanged \
+                by the-demesne T1/T2/T3): treant holds zero full-roster strongholds at seed 42 \
+                — Kleiber home-range scaling swamps its resource-share advantage in a \
+                per-individual density metric, a body-mass/sovereignty-devotion retune the \
+                per-axis vector supply does not touch. See \
+                .superpowers/sdd/task-6-report.md and this test group's module doc."]
+    fn menagerie_treant_stronghold_awaits_mass_calibration() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        let dominates_a_cell = |name: &str| {
+            let id = names
+                .iter()
+                .position(|n| *n == name)
+                .expect("species in registry") as u32;
+            dominant_counts.get(&id).copied().unwrap_or(0) > 0
+        };
+        assert!(
+            dominates_a_cell("treant"),
+            "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
+        );
+    }
+
+    /// STILL `#[ignore]`d — Stage 2 (`ANIMAL_PREY` field), BIO-35 the-demesne
+    /// T3: no chromatic dragon (a pure-`ANIMAL_PREY` niche) ever wins a
+    /// full-roster per-cell dominance comparison, because Stage 1's
+    /// `ANIMAL_PREY` supply is a placeholder zero — a species reading it
+    /// can never out-compete one riding a real (nonzero) axis. Awaits the
+    /// trophic/prey-field wiring a later stage adds.
+    #[test]
+    #[ignore = "Stage 2 (ANIMAL_PREY field): chromatic dragons' pure-ANIMAL_PREY niche reads \
+                Stage 1's placeholder-zero ANIMAL_PREY supply, so no dragon can ever win a \
+                per-cell density comparison against a species riding a real axis; awaiting the \
+                trophic/prey-field wiring (BIO-35 Stage 2)."]
+    fn menagerie_dragon_stronghold_awaits_animal_prey_stage_2() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        let dominates_a_cell = |name: &str| {
+            let id = names
+                .iter()
+                .position(|n| *n == name)
+                .expect("species in registry") as u32;
+            dominant_counts.get(&id).copied().unwrap_or(0) > 0
+        };
         assert!(
             dominates_a_cell("white-dragon")
                 || dominates_a_cell("red-dragon")
