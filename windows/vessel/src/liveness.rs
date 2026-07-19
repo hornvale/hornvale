@@ -118,50 +118,37 @@ pub const SUSTENANCE: DriveParams = DriveParams {
     sated: 0.15,
 };
 
-/// The elevation field the belief/exploration logic reads, abstracted so pure
-/// tests plant synthetic terrain without building a world. The session backs it
-/// with a `LocaleContext` (see `session.rs::LocaleTerrain`).
+/// The elevation field and fresh-water truth the belief/exploration logic
+/// reads, abstracted so pure tests plant synthetic terrain without building a
+/// world. The session backs it with a `LocaleContext` (see
+/// `session.rs::LocaleTerrain`).
 pub trait Terrain {
     /// The room's elevation in metres (INFINITY for an undescribable room —
-    /// never water, never chosen downhill).
+    /// never chosen downhill). Still the exploration prior ("water lies
+    /// low" — rivers ARE the downhill drainage channels), even though water
+    /// itself is no longer classified by elevation (the-surmise T5 re-wire;
+    /// see `is_fresh_water`).
     /// type-audit: waiver(elevation-convention: return)
     fn elevation(&self, room: &RoomAddr) -> f64;
 
-    /// The elevation at/below which a room counts as water. Defaults to the
-    /// authored `WATER_LEVEL` (the synthetic-terrain tests' convention, and
-    /// the only sane default when there is no world to derive one from).
-    /// `LocaleTerrain` overrides this with the WORLD'S OWN derived sea level:
-    /// a real generated world's absolute elevation datum varies wildly by
-    /// seed (the-surmise T4 review measured seed 42's own sea level at
-    /// ≈-2936m against a highest point of ≈+2669m), so a single fixed 0.0
-    /// threshold classified every one of that seed's settlements as already
-    /// "underwater" — belief formed instantly at home and no NPC ever
-    /// walked, silently defeating the whole observation payoff on any real
-    /// world.
-    /// type-audit: waiver(elevation-convention: return)
-    fn water_level(&self) -> f64 {
-        WATER_LEVEL
-    }
+    /// Whether the room's water is FRESH — drinkable — rather than salt.
+    /// Reads The Freshet's own classification (`WaterKind::is_fresh`), not
+    /// an elevation threshold: "below sea level" is the unreachable SALT
+    /// OCEAN, not water an agent can drink or ever reach (decision-ledger
+    /// #9, the T4 finding that parked this campaign). `LocaleTerrain` reads
+    /// this from the locale's own `water` field; planted test terrain marks
+    /// specific rooms fresh directly.
+    /// type-audit: bare-ok(flag: return)
+    fn is_fresh_water(&self, room: &RoomAddr) -> bool;
 }
 
-/// The elevation at or below which a room is water, for terrain that has no
-/// world-derived sea level of its own (spec §8; the synthetic-test default —
-/// see `Terrain::water_level`'s doc for why a real session never uses this
-/// value directly).
-/// type-audit: waiver(elevation-convention)
-pub const WATER_LEVEL: f64 = 0.0;
-
-/// Water-truth (L0): a room is water iff its elevation is at or below the
-/// terrain's own water level (`Terrain::water_level` — the world's derived
-/// sea level for a live session, `WATER_LEVEL` for synthetic tests). Pure
-/// over the terrain field; the low ground is water, so sources scatter
-/// naturally by terrain (many, not one).
+/// Water-truth (L0): a room is water iff its terrain reports it as FRESH
+/// water (The Freshet's `WaterKind::is_fresh` — rivers only, never the salt
+/// ocean or a salt basin). Pure over the terrain field; rivers scatter along
+/// drainage, so sources are naturally many, not one.
 /// type-audit: bare-ok(flag: return)
 pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
-    terrain
-        .elevation(room)
-        .total_cmp(&terrain.water_level())
-        .is_le()
+    terrain.is_fresh_water(room)
 }
 
 /// The single steepest-descent neighbour ("water lies low" — the prior an
@@ -215,39 +202,23 @@ pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> O
     None
 }
 
-/// A `Terrain` backed by a `LocaleContext` — the elevation field the belief/
-/// exploration logic reads in a live session (tests use a planted terrain
-/// instead). Elevation mirrors the undescribable-room fallback (INFINITY);
-/// its water threshold is the WORLD's own derived sea level (resolved once
-/// at construction — see `Terrain::water_level`'s doc for why a fixed
-/// constant cannot work here). **Cross-window save-format coupling:** this
-/// reads `domains/terrain`'s committed `"sea-level-m"` genesis fact BY NAME
-/// (`world_sea_level`, below) rather than through a compile-time dependency —
-/// that string is now a save-format contract this window relies on, exactly
-/// like the predicate constants in `windows/vessel/src/streams.rs`. If
-/// `hornvale_terrain::facts::SEA_LEVEL_M` is ever renamed, this window's
-/// belief model silently falls back to `WATER_LEVEL` (0.0) on every world,
-/// reintroducing the exact "every settlement reads as submerged" failure this
-/// fix exists to prevent — a terrain predicate rename must grep this file too
-/// (or move `SEA_LEVEL_M` behind a real dependency in a follow-up, flagged for
-/// G6 review).
-/// type-audit: waiver(elevation-convention: water_level)
+/// A `Terrain` backed by a `LocaleContext` — the elevation and fresh-water
+/// fields the belief/exploration logic reads in a live session (tests use a
+/// planted terrain instead). Elevation mirrors the undescribable-room
+/// fallback (INFINITY); fresh water reads The Freshet's own salt/fresh
+/// classification (`LocaleFields::water`, `WaterKind::is_fresh`) rather than
+/// deriving a sea-level threshold — the-surmise T5 re-wire: the prior
+/// elevation-threshold model classified the unreachable SALT OCEAN as
+/// "water" (decision-ledger #9), never the rivers an agent can actually
+/// drink from and reach.
 pub struct LocaleTerrain<'a> {
-    /// The locale context whose elevation field is read.
+    /// The locale context whose fields are read.
     pub ctx: &'a LocaleContext,
-    /// The world's own derived sea level, resolved once at construction.
-    pub water_level: f64,
 }
 impl<'a> LocaleTerrain<'a> {
-    /// Build the adapter for `world`, resolving its water threshold from the
-    /// world's own committed sea level (falls back to `WATER_LEVEL` if the
-    /// fact is absent — e.g. a hand-built stub world with no terrain
-    /// genesis).
-    pub fn new(world: &World, ctx: &'a LocaleContext) -> Self {
-        Self {
-            ctx,
-            water_level: world_sea_level(world),
-        }
+    /// Build the adapter over `ctx`.
+    pub fn new(ctx: &'a LocaleContext) -> Self {
+        Self { ctx }
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
@@ -257,31 +228,12 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .map(|l| l.fields.elevation_m)
             .unwrap_or(f64::INFINITY)
     }
-    fn water_level(&self) -> f64 {
-        self.water_level
+    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+        self.ctx
+            .describe(room, WorldTime { day: 0.0 })
+            .map(|l| l.fields.water.is_fresh())
+            .unwrap_or(false)
     }
-}
-
-/// The world's own derived sea level, read from its already-committed
-/// genesis fact (mirrors `hornvale_terrain::facts::SEA_LEVEL_M`'s predicate
-/// name — read by name rather than adding `hornvale-terrain` as a real
-/// dependency of this window purely for one already-committed value; no new
-/// predicate is registered). Falls back to the authored `WATER_LEVEL` if the
-/// fact is absent. NOTE: this is a cross-window save-format coupling on the
-/// LITERAL STRING below, not on the domain crate's type — see
-/// `LocaleTerrain`'s doc comment.
-/// type-audit: waiver(elevation-convention: return)
-fn world_sea_level(world: &World) -> f64 {
-    /// Mirrors `hornvale_terrain::facts::SEA_LEVEL_M` — a save-format-stable
-    /// genesis fact, never renamed without an epoch (CLAUDE.md determinism).
-    const SEA_LEVEL_M: &str = "sea-level-m";
-    hornvale_worldgen::planet_entity(world)
-        .and_then(|p| world.ledger.value_of(p, SEA_LEVEL_M))
-        .and_then(|v| match v {
-            Value::Number(n) => Some(*n),
-            _ => None,
-        })
-        .unwrap_or(WATER_LEVEL)
 }
 
 /// A game-layer predicate: the agent drank (satisfied its sustenance goal) on
@@ -509,10 +461,16 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         if day > self.to.day {
                             break;
                         }
+                        // Discovery prose (the-surmise T5): honest to what the
+                        // tick actually commits — BELIEVED (knows a source,
+                        // beelining) vs IGNORANT (never found one, exploring
+                        // downhill blind) are genuinely different situations,
+                        // and "water" is now specifically FRESH water (The
+                        // Freshet) — a river, never the sea.
                         let provenance = if seeking_water && believed.is_some() {
-                            "walking to water (thirst)"
+                            "went down to the river it knew (thirst)"
                         } else if seeking_water {
-                            "seeking water (thirst)" // exploring, ignorant
+                            "wandered, having found no water yet (thirst)" // ignorant, exploring
                         } else {
                             "walking home (sated)"
                         };
@@ -521,7 +479,11 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         pos = n;
                     }
                     Intent::Do(Action::Drink) => {
-                        out.push(drank_fact(npc.entity, day, "drank (thirst sated)"));
+                        out.push(drank_fact(
+                            npc.entity,
+                            day,
+                            "drank from the river (thirst sated)",
+                        ));
                         last_drank = day;
                     }
                     Intent::Hold => {
@@ -658,7 +620,7 @@ pub fn derive_npcs(
         .into_iter()
         .map(|village| {
             let home = settlement_room(world, ctx, village.id);
-            let resource = nearest_water(&home, &LocaleTerrain::new(world, ctx), PLAN_BUDGET)
+            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
                 .unwrap_or_else(|| home.clone());
             let species = hornvale_species::species_of(world, village.id)
                 .unwrap_or_else(|| "goblin".to_string());
@@ -878,7 +840,7 @@ mod tests {
         let e = ledger.mint_entity();
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -906,7 +868,7 @@ mod tests {
         let e = ledger.mint_entity();
         let home = raddr(1.0);
         let dry = home.neighbors()[0].clone();
-        let t = PlantedTerrain([(dry.clone(), WATER_LEVEL + 1.0)].into_iter().collect());
+        let t = PlantedTerrain::fresh_only(std::iter::empty()); // `dry` is never fresh
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -936,14 +898,7 @@ mod tests {
             .find(|n| **n != home)
             .unwrap()
             .clone(); // 2 hops
-        let t = PlantedTerrain(
-            [
-                (near.clone(), WATER_LEVEL - 1.0),
-                (far.clone(), WATER_LEVEL - 1.0),
-            ]
-            .into_iter()
-            .collect(),
-        );
+        let t = PlantedTerrain::fresh_only([near.clone(), far.clone()]);
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -971,7 +926,7 @@ mod tests {
         let e = ledger.mint_entity();
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -996,7 +951,7 @@ mod tests {
         let other = ledger.mint_entity();
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let t = PlantedTerrain::fresh_only([water.clone()]);
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -1037,14 +992,7 @@ mod tests {
         let (first, second) = (n[0].clone(), n[1].clone()); // both exactly 1 hop from home
         let smaller = std::cmp::min(first.clone(), second.clone());
         let larger = std::cmp::max(first.clone(), second.clone());
-        let t = PlantedTerrain(
-            [
-                (first.clone(), WATER_LEVEL - 1.0),
-                (second.clone(), WATER_LEVEL - 1.0),
-            ]
-            .into_iter()
-            .collect(),
-        );
+        let t = PlantedTerrain::fresh_only([first.clone(), second.clone()]);
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -1100,7 +1048,7 @@ mod tests {
         // failure). What must hold is the disjunction below.
         let ids: std::collections::BTreeSet<_> = npcs.iter().map(|n| n.entity).collect();
         assert_eq!(ids.len(), 3);
-        let terrain = LocaleTerrain::new(&world, &ctx);
+        let terrain = LocaleTerrain::new(&ctx);
         for n in &npcs {
             assert!(
                 is_water(&n.resource, &terrain) || n.resource == n.home,
@@ -1112,59 +1060,68 @@ mod tests {
     }
 
     #[test]
-    fn the_sea_level_fact_name_matches_terrains_own_constant() {
-        // TRIPWIRE (the-surmise T3+T4 review): `world_sea_level` reads the
-        // terrain genesis fact by the STRING "sea-level-m", duplicating
-        // `hornvale_terrain::facts::SEA_LEVEL_M`. On a silent mismatch the read
-        // misses and falls back to `WATER_LEVEL = 0.0`, re-submerging every
-        // settlement — the exact bug the sea-level derivation exists to prevent.
-        // This converts the cross-window save-format coupling into a checked
-        // contract: if terrain renames the fact, THIS reddens (not the demo,
-        // silently, months later). Class: the golden-pins rename footgun.
-        assert_eq!(
-            "sea-level-m",
-            hornvale_terrain::facts::SEA_LEVEL_M,
-            "world_sea_level's hardcoded fact name drifted from terrain's own \
-             constant — update it (or add an epoch) before this ships"
-        );
-    }
-
-    #[test]
-    fn seed_42_home_settlement_water_reachability_is_a_measured_t5_gap() {
-        // T5 INPUT, MEASURED NOT ASSUMED (the-surmise T4 review): does the
-        // possessed agent's own home settlement (the one the possess CLI
-        // demo actually walks) have water reachable within the budgets this
-        // window uses in practice, so the discovery keystone
-        // (`an_ignorant_agent_discovers_water_then_later_beelines`, proven
-        // above on PLANTED terrain) actually FIRES on the real seed-42 world?
+    fn seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding() {
+        // T5 RE-WIRE, MEASURED NOT ASSUMED: The Freshet shipped a real
+        // salt/fresh classification (`WaterKind::is_fresh`, rivers only).
+        // Decision-ledger #9 parked this campaign because the OLD resource
+        // (sea-level "water") put the salt ocean thousands of hops from any
+        // inland settlement — unreachable, and the wrong referent besides
+        // (nobody drinks the sea). This test measures, with the REAL
+        // mechanism a live session runs (`DriveMovements`'s greedy-downhill,
+        // never-revisit-within-a-call exploration — NOT `nearest_water`'s
+        // own address-ordered BFS, which is a different, unrepresentative
+        // traversal used only to set `Npc.resource`'s reference value),
+        // whether the possessed agent's OWN home settlement (the one
+        // `possess --seed 42` actually starts at) now discovers fresh water.
         //
-        // Measured: `nearest_water` from the home settlement's room finds
-        // NOTHING within a budget of even 500,000 BFS expansions (checked by
-        // hand while diagnosing this — far beyond `PLAN_BUDGET` (1,000), the
-        // budget every real call site actually uses). Also measured by hand
-        // (not left in this file — too slow to run every gate): a random
-        // GLOBAL sample of the same world's elevation field finds water
-        // EVERYWHERE (≈74% of 500 globally-scattered points, matching the
-        // drawn ocean fraction) — the field itself is fine. The real cause is
-        // scale: walking the BFS's own frontier outward from home and
-        // measuring each visited room's actual angular distance shows it
-        // covers only ≈6.6° of angular radius after 100,000 expansions
-        // (≈0.001 rad after 10, ≈0.12 rad after 100,000 — roughly
-        // logarithmic growth). `walk_depth` (12 here) makes each mesh room
-        // FAR smaller than the toy depth-6 meshes every synthetic test in
-        // this file uses, so a real settlement sitting even a modest true
-        // distance inland needs many tens of thousands of single-hop
-        // expansions to reach any coastline — reproducible at other
-        // ocean-fraction pins too (checked 0.5 through 0.95 across four
-        // seeds; none put water within 2,000 hops of that world's own home
-        // settlement). This is NOT a bug this task introduces or can fix in
-        // scope (walk_depth 12's mesh is far finer than the ~1-hop-away toy
-        // `resource_room` ever exercised, and either a coarser exploration
-        // LOD or a much larger budget is a real design decision, not a
-        // vessel-window drive-by fix) — it is reported here loudly, pinned as
-        // a real assertion, so a future change that silently makes this
-        // worse (or better) is visible, not lost. See task-4-report.md's T5
-        // handoff note.
+        // MEASURED (hand-verified at the larger budgets below while
+        // diagnosing — not re-run every gate, too slow):
+        //   - `nearest_water`'s own BFS finds fresh water from this
+        //     settlement at ~93,000 expansions — three orders of magnitude
+        //     closer than the old salt ocean (unreachable within 500,000),
+        //     but still two orders of magnitude past `PLAN_BUDGET` (1,000),
+        //     so `Npc.resource` still falls back to `home` for THIS
+        //     settlement specifically.
+        //   - The REAL exploration mechanism below walks 2,592 distinct
+        //     rooms over an enormous 100,000-day wait (far beyond anything a
+        //     player would ever `wait`) and STILL never reaches fresh water:
+        //     it gets "boxed in" (every neighbor of its current room already
+        //     visited this call) before finding one.
+        //   - Checked directly against `derive_npcs`'s real selection (this
+        //     settlement plus its two next-most-populous neighbors — the
+        //     actual three NPCs a `possess --seed 42` session derives): ALL
+        //     THREE walk (2,592 / 1,710 / 3,142 moves) and NONE drink.
+        //   - This is settlement-PLACEMENT-dependent, not universal: a
+        //     hand-swept sample of ten of this seed's settlements found the
+        //     mechanism DOES work elsewhere (two of ten drink — one starts
+        //     already adjacent to a river, one reaches one in 448 moves).
+        //
+        // WHY (not a regression this task introduces): a walker that never
+        // revisits a room within one call is not a global search — it can
+        // wall itself into a riverless drainage basin whose every boundary
+        // room's neighbors are already visited, even though unvisited
+        // (lower, river-bearing) ground exists elsewhere in the same
+        // connected mesh. This is exactly the risk spec decision #6 named
+        // and reserved when it chose the greedy prior over a frontier
+        // search ("more machinery than a greedy prior... a followup").
+        // Widening `PLAN_BUDGET`/`MAX_STEPS` does not help — the walk is
+        // topologically stuck, not budget-limited; the fix is smarter
+        // exploration (decision-ledger followup #6), out of this task's
+        // scope.
+        //
+        // REPORTED LOUDLY, NOT PAPERED OVER: the mechanism-level keystones
+        // above (`an_ignorant_agent_discovers_water_then_later_beelines`,
+        // `two_agents_believe_different_sources_...`) prove BELIEF itself
+        // is correct on planted terrain; this test pins that the real
+        // world's terrain/exploration-policy interaction is the remaining
+        // gap for THIS specific seed/settlement — visible here, not lost,
+        // so a future exploration-policy change that fixes (or worsens) it
+        // is caught, not silently assumed.
+        let mut world_reg = hornvale_kernel::ConceptRegistry::default();
+        world_reg
+            .register_predicate(AGENT_AT, false, "pos")
+            .unwrap();
+        world_reg.register_predicate(DRANK, false, "drank").unwrap();
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -1174,15 +1131,45 @@ mod tests {
         )
         .unwrap();
         let ctx = LocaleContext::build(&world).unwrap();
+        let terrain = LocaleTerrain::new(&ctx);
         let home_id = hornvale_settlement::village_info(&world).unwrap().id;
         let home = settlement_room(&world, &ctx, home_id);
-        let terrain = LocaleTerrain::new(&world, &ctx);
+        let npc = Npc {
+            entity: EntityId::new(1).unwrap(),
+            home: home.clone(),
+            resource: home.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "measure".into(),
+        };
+        let ledger = Ledger::default();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime { day: 0.0 },
+            // Deliberately enormous: rules out "it just needed a longer
+            // wait" — a real session's `wait` would never span this.
+            to: WorldTime { day: 100_000.0 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
+        let moves = next
+            .find(AGENT_AT)
+            .filter(|f| f.subject == npc.entity)
+            .count();
+        let drinks = next.find(DRANK).filter(|f| f.subject == npc.entity).count();
+        println!(
+            "seed 42 home settlement: {moves} exploration move(s) over an \
+             enormous wait, {drinks} drink(s)"
+        );
         assert_eq!(
-            nearest_water(&home, &terrain, PLAN_BUDGET),
-            None,
-            "if this now finds water, the discovery demo may newly fire on seed 42 \
-             at the session's real budget — update this test's expectation and the \
-             T5 handoff note, don't just delete the assertion"
+            drinks, 0,
+            "PINNED FINDING (update this assertion AND the doc comment above \
+             together if it now drinks — don't just delete it): the \
+             possessed agent's own home settlement's NPC does not currently \
+             discover fresh water via the greedy-downhill exploration policy \
+             on real seed 42 (see the doc comment above for why, and the \
+             followup this points at)"
         );
     }
 
@@ -1507,7 +1494,15 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        // Elevation still steers the exploration prior (downhill), separate
+        // from fresh-water truth: `water` must be the uniquely lowest
+        // neighbor for the comment above's "very first thirsty step"
+        // guarantee to hold deterministically (not by RoomAddr tie-break
+        // luck among equally-INFINITY neighbors).
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+        };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime { day: 0.0 },
@@ -1540,18 +1535,17 @@ mod tests {
         // (`hornvale_historiography::recount`) must surface the drive's own
         // reason for a move AND the drink that satisfied it — proven here
         // directly against `DriveMovements`'s committed facts on PLANTED
-        // (guaranteed-one-hop) terrain, because the REAL seed-42 flagship
-        // settlement's own home has NO water within any budget this window
-        // actually uses (measured:
-        // `seed_42_home_settlement_water_reachability_is_a_measured_t5_gap`),
-        // so a real `Session`-level full round trip is not obtainable there
-        // — `windows/vessel/tests/possession_moves.rs`'s
-        // `why_recounts_an_npcs_dated_agent_at_history_after_it_moves` had to
-        // drop its own "drank (thirst sated)" assertion for exactly this
-        // reason; this test restores that coverage at the mechanism level.
-        // Mutation-verify: blanking `agent_at_fact`'s "walking to water
-        // (thirst)" string, or `drank_fact`'s "drank (thirst sated)" string,
-        // reds ONE of the two assertions below without touching the other.
+        // (guaranteed-one-hop) terrain — a deterministic, seed-independent
+        // proof of the mechanism, orthogonal to
+        // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`'s
+        // measurement of the real seed-42 world's own exploration-policy gap.
+        // Mutation-verify: blanking `agent_at_fact`'s "went down to the
+        // river it knew (thirst)" string, or `drank_fact`'s "drank from the
+        // river (thirst sated)" string, reds ONE of the two assertions
+        // below without touching the other.
+        // (This test predates The Freshet re-wire; kept on planted terrain
+        // deliberately — the mechanism-level provenance read should not
+        // depend on any one real seed's fresh-water placement.)
         let mut world = World::new(Seed(0));
         world
             .registry
@@ -1585,7 +1579,15 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        let t = PlantedTerrain([(water.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        // Elevation still steers the exploration prior (downhill), separate
+        // from fresh-water truth: `water` must be the uniquely lowest
+        // neighbor so the first (ignorant) thirsty cycle explores directly
+        // onto it, letting a later cycle's believer beeline actually fire
+        // "went down to the river it knew (thirst)" below.
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+        };
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime { day: 0.0 },
@@ -1602,11 +1604,11 @@ mod tests {
         .unwrap();
         let recount = hornvale_historiography::recount(&world, entity).expect("facts exist");
         assert!(
-            recount.contains("walking to water (thirst)"),
+            recount.contains("went down to the river it knew (thirst)"),
             "the recount names the drive's own reason for the move: {recount}"
         );
         assert!(
-            recount.contains("drank (thirst sated)"),
+            recount.contains("drank from the river (thirst sated)"),
             "the recount also names the drink that satisfied the goal: {recount}"
         );
     }
@@ -1640,9 +1642,9 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        // All-INFINITY terrain: no water anywhere, so belief never forms and
-        // the agent explores for the whole run.
-        let t = PlantedTerrain(std::collections::BTreeMap::new());
+        // No fresh water anywhere, so belief never forms and the agent
+        // explores for the whole run.
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
         // A long wait: the MAX_STEPS cap (not the wait) must be what bounds
         // this — if it weren't a real backstop, work would scale with the
         // wait instead.
@@ -1711,8 +1713,8 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        // All-INFINITY terrain: no water anywhere, so belief never forms.
-        let t = PlantedTerrain(std::collections::BTreeMap::new());
+        // No fresh water anywhere, so belief never forms.
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
         let degenerate = DriveParams {
             rise: 0.0,
             act: 0.0,
@@ -1767,11 +1769,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        let t = PlantedTerrain(
-            [(resource.clone(), WATER_LEVEL - 1.0)]
-                .into_iter()
-                .collect(),
-        );
+        let t = PlantedTerrain::fresh_only([resource.clone()]);
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime { day: 0.0 },
@@ -1856,34 +1854,57 @@ mod tests {
         assert!(!plan.is_empty());
     }
 
-    /// A synthetic elevation field for pure tests: planted heights, INFINITY elsewhere
-    /// (INFINITY = "not water, never chosen downhill" — mirrors `LocaleTerrain`'s
-    /// undescribable-room fallback).
-    struct PlantedTerrain(std::collections::BTreeMap<RoomAddr, f64>);
+    /// A synthetic elevation + fresh-water field for pure tests: planted
+    /// heights, INFINITY elsewhere (INFINITY = "never chosen downhill" —
+    /// mirrors `LocaleTerrain`'s undescribable-room fallback), and a planted
+    /// SET of fresh-water rooms (the-surmise T5 re-wire: water is no longer
+    /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
+    struct PlantedTerrain {
+        elevations: std::collections::BTreeMap<RoomAddr, f64>,
+        fresh: std::collections::BTreeSet<RoomAddr>,
+    }
+    impl PlantedTerrain {
+        /// No elevation data — just a set of fresh-water rooms (the common
+        /// case for the belief-fold tests, which never exercise
+        /// `downhill_step`/`nearest_water`'s elevation reads).
+        fn fresh_only(rooms: impl IntoIterator<Item = RoomAddr>) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: rooms.into_iter().collect(),
+            }
+        }
+        /// No fresh water anywhere — just planted elevations (the
+        /// exploration/downhill tests, which never exercise belief).
+        fn dry(elevations: std::collections::BTreeMap<RoomAddr, f64>) -> Self {
+            Self {
+                elevations,
+                fresh: std::collections::BTreeSet::new(),
+            }
+        }
+    }
     impl Terrain for PlantedTerrain {
         fn elevation(&self, room: &RoomAddr) -> f64 {
-            self.0.get(room).copied().unwrap_or(f64::INFINITY)
+            self.elevations.get(room).copied().unwrap_or(f64::INFINITY)
+        }
+        fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+            self.fresh.contains(room)
         }
     }
 
     #[test]
-    fn is_water_is_the_elevation_threshold() {
+    fn is_water_delegates_to_terrain_is_fresh_water() {
         // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
         // normalizes its input direction first — so `raddr(1.0)` and `raddr(2.0)`
         // collapse to the SAME room (both are the direction [1,0,0]). Use a
         // genuine mesh neighbor for `high` instead, so the two planted rooms
         // are actually distinct (deviation from the brief's literal `raddr(2.0)`;
-        // see task-1-report.md).
+        // see task-1-report.md). Renamed from
+        // `is_water_is_the_elevation_threshold` (T5 re-wire): `is_water` no
+        // longer reads elevation at all — it delegates to
+        // `Terrain::is_fresh_water` (The Freshet's salt/fresh classification).
         let low = raddr(1.0);
         let high = low.neighbors()[0].clone();
-        let t = PlantedTerrain(
-            [
-                (low.clone(), WATER_LEVEL - 1.0),
-                (high.clone(), WATER_LEVEL + 1.0),
-            ]
-            .into_iter()
-            .collect(),
-        );
+        let t = PlantedTerrain::fresh_only([low.clone()]);
         assert!(is_water(&low, &t));
         assert!(!is_water(&high, &t));
     }
@@ -1897,34 +1918,30 @@ mod tests {
         for (i, n) in ns.iter().enumerate() {
             m.insert(n.clone(), if i == 1 { 0.0 } else { 100.0 });
         }
-        let t = PlantedTerrain(m);
+        let t = PlantedTerrain::dry(m);
         assert_eq!(downhill_step(&home, &t), ns[1]);
     }
 
     #[test]
     fn nearest_water_finds_the_closest_water_room_by_hops() {
-        // home (dry) -> a neighbor that is water: 1 hop.
+        // home (dry) -> a neighbor that is fresh water: 1 hop.
         let home = raddr(1.0);
         let near = home.neighbors()[0].clone();
-        let t = PlantedTerrain(
-            [(home.clone(), 100.0), (near.clone(), WATER_LEVEL - 1.0)]
-                .into_iter()
-                .collect(),
-        );
+        let t = PlantedTerrain::fresh_only([near.clone()]);
         assert_eq!(nearest_water(&home, &t, 10_000), Some(near));
     }
 
     #[test]
     fn nearest_water_returns_from_itself_when_already_on_water() {
         let here = raddr(1.0);
-        let t = PlantedTerrain([(here.clone(), WATER_LEVEL - 1.0)].into_iter().collect());
+        let t = PlantedTerrain::fresh_only([here.clone()]);
         assert_eq!(nearest_water(&here, &t, 10_000), Some(here));
     }
 
     #[test]
     fn nearest_water_gives_up_within_budget_when_no_water() {
-        let home = raddr(1.0); // all-INFINITY terrain: no water anywhere
-        let t = PlantedTerrain(std::collections::BTreeMap::new());
+        let home = raddr(1.0); // no fresh water anywhere
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
         assert_eq!(nearest_water(&home, &t, 50), None);
     }
 
@@ -1948,15 +1965,7 @@ mod tests {
             .find(|n| **n != home)
             .unwrap()
             .clone(); // far source
-        let terrain = PlantedTerrain(
-            [
-                (home.clone(), 100.0),
-                (w1.clone(), WATER_LEVEL - 1.0),
-                (w2.clone(), WATER_LEVEL - 1.0),
-            ]
-            .into_iter()
-            .collect(),
-        );
+        let terrain = PlantedTerrain::fresh_only([w1.clone(), w2.clone()]);
         let run = |seed_room: &RoomAddr| -> Vec<RoomAddr> {
             let mut ledger = Ledger::default();
             let e = ledger.mint_entity();
@@ -2022,15 +2031,20 @@ mod tests {
             r.register_predicate(DRANK, false, "drank").unwrap();
             r
         };
-        // A downhill chain home(100) -> a(50) -> water(below level); other neighbors high.
+        // A downhill chain home(100) -> a(50) -> water(fresh); other neighbors high
+        // (elevation still steers the exploration prior; fresh-water truth is
+        // now a separate planted set — the-surmise T5 re-wire).
         let home = raddr(1.0);
         let a = home.neighbors()[0].clone();
         let water = a.neighbors().iter().find(|n| **n != home).unwrap().clone();
         let mut m = std::collections::BTreeMap::new();
         m.insert(home.clone(), 100.0);
         m.insert(a.clone(), 50.0);
-        m.insert(water.clone(), WATER_LEVEL - 1.0);
-        let terrain = PlantedTerrain(m);
+        m.insert(water.clone(), 10.0); // still the lowest, so exploration steps onto it
+        let terrain = PlantedTerrain {
+            elevations: m,
+            fresh: [water.clone()].into_iter().collect(),
+        };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
         let npc = Npc {

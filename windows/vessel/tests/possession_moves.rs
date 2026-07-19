@@ -75,24 +75,29 @@ fn a_colocated_npc_is_perceived_by_name_on_departure_and_return() {
     // was ALWAYS exactly one mesh hop from home, so a full seek-drink-return
     // round trip completed in ~0.2 days and this test could compute BOTH a
     // departure and a return window from the authored constants alone.
-    // Under The Surmise's real, terrain-derived `nearest_water`, that
-    // guarantee is gone: on the real seed-42 world, the flagship's own home
-    // settlement has NO water within any budget this window actually uses
-    // (measured in `liveness.rs`'s
-    // `seed_42_home_settlement_water_reachability_is_a_measured_t5_gap` — a
-    // real T5 gap, not a regression this test should paper over). The
-    // co-located NPC therefore explores indefinitely and never returns, so
+    // Under The Surmise's real, terrain-derived exploration, that guarantee
+    // is gone: even after the T5 re-wire to FRESH water (The Freshet), the
+    // flagship's own home settlement's greedy-downhill walk never reaches a
+    // river within any wait a player would plausibly issue (measured in
+    // `liveness.rs`'s
+    // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
+    // — a real, settlement-placement-dependent gap in the exploration
+    // POLICY, not in the belief mechanism, and not a regression this test
+    // should paper over). The co-located NPC therefore explores
+    // indefinitely and never returns, so
     // only the DEPARTURE half is provable end-to-end here; the "return"
-    // narration branch (and the full round-trip's provenance, "walking to
-    // water (thirst)" / "drank (thirst sated)") is proven instead at the
-    // mechanism level, decoupled from real reachability, by
+    // narration branch (and the full round-trip's provenance, "went down to
+    // the river it knew (thirst)" / "drank from the river (thirst sated)")
+    // is proven instead at the mechanism level, decoupled from real
+    // reachability, by
     // `liveness.rs`'s `the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip`.
     //
     // The very FIRST exploration step still departs at exactly
     // `crossing + MOVE_DURATION` regardless of whether it is a real
-    // "walking to water" step or an ignorant "seeking water" explore step
-    // (both cost one `MOVE_DURATION`), so the departure math below is
-    // unchanged from the pre-Surmise model.
+    // "went down to the river it knew" step or an ignorant "wandered,
+    // having found no water yet" explore step (both cost one
+    // `MOVE_DURATION`), so the departure math below is unchanged from the
+    // pre-Surmise model.
     let w = world();
     let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
     let labels: Vec<String> = session
@@ -191,26 +196,32 @@ fn why_recounts_an_npcs_dated_agent_at_history_after_it_moves() {
     // provenance must surface through the SAME recount, not just an
     // undifferentiated "it moved" — the drive is what gives the routine a
     // WHY. Under the belief model, an agent that has never stood in water is
-    // IGNORANT and takes the EXPLORE branch ("seeking water (thirst)"), not
-    // the believer's beeline ("walking to water (thirst)") — and on the real
-    // seed-42 world, the flagship's own home settlement has no water within
-    // any budget this window uses (measured:
-    // `liveness.rs`'s `seed_42_home_settlement_water_reachability_is_a_measured_t5_gap`,
-    // a real T5 gap), so this NPC never stands in water and never leaves the
+    // IGNORANT and takes the EXPLORE branch ("wandered, having found no
+    // water yet (thirst)"), not the believer's beeline ("went down to the
+    // river it knew (thirst)") — and on the real seed-42 world, the
+    // flagship's own home settlement's greedy-downhill exploration never
+    // reaches fresh water within any wait a player would plausibly issue,
+    // even after the T5 re-wire to FRESH water (measured:
+    // `liveness.rs`'s
+    // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
+    // — a real, settlement-placement-dependent gap in the exploration
+    // POLICY), so this NPC never stands in water and never leaves the
     // explore branch. Mutation-verify: blanking `DriveMovements::step`'s
-    // "seeking water (thirst)" string in `liveness.rs` reds this assertion
-    // while leaving every other assertion in this test green (the
-    // day/name/resolution checks above don't touch provenance text at all).
+    // "wandered, having found no water yet (thirst)" string in `liveness.rs`
+    // reds this assertion while leaving every other assertion in this test
+    // green (the day/name/resolution checks above don't touch provenance
+    // text at all).
     assert!(
-        recount.contains("seeking water (thirst)"),
+        recount.contains("wandered, having found no water yet (thirst)"),
         "the recount names the drive's own reason for the move: {recount}"
     );
     // THE FORESIGHT T4's ORIGINAL CLAIM — that the SAME recount also names
     // the `drank` fact the journey was FOR — no longer holds for THIS real
-    // settlement (it never reaches water, so it never drinks; see the T5 gap
-    // above): a full round trip's "walking to water (thirst)" /
-    // "drank (thirst sated)" provenance is instead proven, decoupled from
-    // real-world reachability, by `liveness.rs`'s
+    // settlement (it never reaches water, so it never drinks; see the
+    // finding above): a full round trip's "went down to the river it knew
+    // (thirst)" / "drank from the river (thirst sated)" provenance is
+    // instead proven, decoupled from real-world reachability, by
+    // `liveness.rs`'s
     // `the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip`.
 }
 

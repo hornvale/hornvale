@@ -294,7 +294,7 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::new(self.world, &self.ctx);
+        let terrain = LocaleTerrain::new(&self.ctx);
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
