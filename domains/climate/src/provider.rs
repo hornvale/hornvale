@@ -17,10 +17,11 @@ use crate::precipitation::{
 use crate::temperature::{
     continentality, diurnal_amplitude_field, mean_temperature, temperature_at,
 };
+use crate::weather::{CloudType, WeatherState};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
     CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    Precipitation, ReferenceElevation, Temperature, Venue,
+    Precipitation, ReferenceElevation, Seed, Temperature, Venue,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -47,6 +48,10 @@ pub struct ClimateInputs<'a> {
     /// value `Calendar::year_phase` reads off the astronomy forcing.
     /// type-audit: bare-ok(ratio)
     pub year_phase_offset: f64,
+    /// The world seed — derives the weather-phase noise (The Firmament). Climate
+    /// is otherwise seed-free; this perturbs no existing draw.
+    /// type-audit: bare-ok(constructor-edge: seed)
+    pub seed: Seed,
 }
 
 /// The tier-1 climate: derived temperature/moisture/biome/habitability over
@@ -67,6 +72,8 @@ pub struct GeneratedClimate {
     snow_fraction: CellMap<f64>,
     precip_regime: CellMap<PrecipRegime>,
     cloud_fraction: CellMap<f64>,
+    weather_propensity: CellMap<f64>,
+    weather_seed: Seed,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
@@ -170,6 +177,16 @@ impl GeneratedClimate {
         });
         let sea_level = inputs.sea_level;
         let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
+        let weather_propensity = CellMap::from_fn(geo, |cell| {
+            let band = band_count
+                .map(|bands| band_index(geo.coord(cell).latitude, bands))
+                .unwrap_or(0);
+            let rising = is_rising_band(band);
+            let mean_c = mean_temp.get(cell).get();
+            let ocean_adjacent = geo.neighbors(cell).iter().any(|&n| is_ocean(n)) || is_ocean(cell);
+            crate::weather::storm_propensity(*moisture.get(cell), rising, mean_c, ocean_adjacent)
+        });
+        let weather_seed = crate::weather::weather_seed(inputs.seed);
         let current = ocean_current_field(geo, &is_ocean, band_count);
         let biome = CellMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
@@ -204,6 +221,8 @@ impl GeneratedClimate {
             snow_fraction: snow_frac,
             precip_regime: precip_regime_field,
             cloud_fraction: cloud_frac,
+            weather_propensity,
+            weather_seed,
             current,
             biome,
             habitability,
@@ -347,6 +366,32 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(ratio)
     pub fn cloud_fraction_at(&self, cell: CellId) -> f64 {
         *self.cloud_fraction.get(cell)
+    }
+    /// The synoptic weather state at a cell on a day (The Firmament) — sampled,
+    /// never integrated (the Lorenz guard-rail). Level 0: an observation read.
+    /// type-audit: pending(wave-2: day)
+    pub fn weather_at(&self, cell: CellId, day: f64) -> WeatherState {
+        let coord = self.geosphere.coord(cell);
+        let phase =
+            crate::weather::weather_phase(self.weather_seed, coord.longitude, coord.latitude, day);
+        crate::weather::weather_state(*self.weather_propensity.get(cell), phase)
+    }
+    /// The cloud type worn at a cell on a day — the projection of
+    /// [`Self::weather_at`].
+    /// type-audit: pending(wave-2: day)
+    pub fn cloud_type_at(&self, cell: CellId, day: f64) -> CloudType {
+        let coord = self.geosphere.coord(cell);
+        let prop = *self.weather_propensity.get(cell);
+        let phase =
+            crate::weather::weather_phase(self.weather_seed, coord.longitude, coord.latitude, day);
+        let state = crate::weather::weather_state(prop, phase);
+        let cirrus = crate::weather::cirrus_present(prop, phase);
+        crate::weather::cloud_type(state, cirrus)
+    }
+    /// The climatological storm propensity at a cell, `[0,1]` (the slow prior).
+    /// type-audit: bare-ok(ratio: return)
+    pub fn storm_propensity_at(&self, cell: CellId) -> f64 {
+        *self.weather_propensity.get(cell)
     }
     /// The precomputed diurnal half-range amplitude at a cell, °C: the
     /// coefficient `temperature_at` scales its diurnal waveform by. Zero has
@@ -567,6 +612,7 @@ mod tests {
             regime,
             year_length_std: 365.25,
             year_phase_offset: 0.0,
+            seed: Seed(1),
         }
     }
 
@@ -704,6 +750,7 @@ mod tests {
             regime: RotationRegime::Spinning { day_std: 1.0 },
             year_length_std: 360.0,
             year_phase_offset: 0.2,
+            seed: Seed(2),
         });
         assert_eq!(climate.year_phase_offset(), 0.2);
     }
@@ -955,5 +1002,24 @@ mod tests {
             checked,
             "expected at least one ocean cell with a land neighbor"
         );
+    }
+
+    // --- Drawn weather (The Firmament, Task 2 wiring). ---
+
+    #[test]
+    fn weather_is_defined_and_deterministic_over_the_globe() {
+        let climate = varied_climate();
+        for cell in climate.geosphere().cells().take(64) {
+            let w1 = climate.weather_at(cell, 100.0);
+            let w2 = climate.weather_at(cell, 100.0);
+            assert_eq!(w1, w2);
+            let c = climate.cloud_type_at(cell, 100.0);
+            // Storm cells wear cumulonimbus; clear cells wear none-or-cirrus.
+            match w1 {
+                WeatherState::Storm => assert_eq!(c, CloudType::Cumulonimbus),
+                WeatherState::Clear => assert!(matches!(c, CloudType::None | CloudType::Cirrus)),
+                _ => {}
+            }
+        }
     }
 }

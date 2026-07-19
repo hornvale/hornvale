@@ -777,6 +777,7 @@ pub fn climate_from(
         regime,
         year_length_std,
         year_phase_offset,
+        seed: world.seed,
     }))
 }
 
@@ -929,6 +930,10 @@ struct EraContext<'a> {
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Temperature,
+    /// The world seed — threaded through so `glacial_maximum_habitable`'s
+    /// full climate rebuild derives the same weather seed `climate_of` would
+    /// (climate is otherwise seed-free; this perturbs no existing draw).
+    seed: hornvale_kernel::Seed,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -1048,6 +1053,7 @@ fn glacial_maximum_habitable(
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
         year_phase_offset: ctx.year_phase_offset,
+        seed: ctx.seed,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -1151,6 +1157,7 @@ pub fn paleoclimate_from(
         year_phase_offset,
         present_ice: &present_ice,
         freeze,
+        seed: world.seed,
     };
 
     // Fine ice integration: sample the caloric index back through the window.
