@@ -46,11 +46,29 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     .unwrap()
 }
 
+/// Read through a C5 `Explained` wrapper to what the account said before
+/// the causal filter fired — mirrors `hornvale_language::account`'s own
+/// private `effective()` (this file lives outside that crate, so it
+/// can't reuse it directly; `windows/worldgen/tests/chorus_params.rs`'s
+/// `underlying` duplicates the same seam for the same reason). Every
+/// disposition read in this file goes through this, so the dial stays
+/// dial-blind to whether the causal filter later wrapped an entry in an
+/// explanation (the G3 ruling, ledger #3; C5 T4's mandated carry-over fix —
+/// this file's `loss_fraction` previously matched `e.disposition !=
+/// Disposition::Kept` directly, so an `Explained { underlying: Kept, .. }`
+/// entry counted as lost when it should read through as kept).
+fn effective(d: &Disposition) -> &Disposition {
+    match d {
+        Disposition::Explained { underlying, .. } => effective(underlying),
+        other => other,
+    }
+}
+
 /// The fraction of `account`'s entries that did NOT survive unchanged
-/// (`Lost` or `Substituted`), over `n = entries.len()`. Deliberately not a
-/// shipped helper (the brief) — derived here from the account's own
-/// entries, the same computation `distortion`'s loss component performs
-/// internally.
+/// (`Lost` or `Substituted`, read THROUGH any `Explained` wrapper via
+/// [`effective`]), over `n = entries.len()`. Deliberately not a shipped
+/// helper (the brief) — derived here from the account's own entries, the
+/// same computation `distortion`'s loss component performs internally.
 fn loss_fraction(account: &Account) -> f64 {
     let n = account.entries.len();
     if n == 0 {
@@ -59,7 +77,7 @@ fn loss_fraction(account: &Account) -> f64 {
     let lost = account
         .entries
         .iter()
-        .filter(|e| e.disposition != Disposition::Kept)
+        .filter(|e| *effective(&e.disposition) != Disposition::Kept)
         .count();
     lost as f64 / n as f64
 }
@@ -157,6 +175,25 @@ fn the_dial_separates_the_poles() {
                  loss_fraction(pathological)={loss_pathological}",
                 voice.kind
             );
+
+            // C5 T4's mandated carry-over fix, pinned so the dial-blindness
+            // gap can't reopen: seed 2's kobold carries 7 account entries,
+            // of which 3 are lost/substituted under `effective()` read-
+            // through (`is-a` Substituted, `star-class` Lost, and
+            // `day-length-std` Lost UNDER an `Explained` wrapper) — its
+            // `moon-count` entry is ALSO `Explained`, but wraps `Kept`, so
+            // it must NOT count as lost. Measured live (verified against
+            // the real committed world): loss_fraction == 3.0 / 7.0
+            // exactly, not the pre-fix (naive `!= Kept`) value of 4.0 / 7.0
+            // that miscounted the Kept-underlying moon-count entry as lost.
+            if seed == 2 && voice.kind == "kobold" {
+                assert_eq!(
+                    loss_shipped,
+                    3.0 / 7.0,
+                    "seed 2 kobold's loss_fraction must read THROUGH its Explained \
+                     moon-count entry (underlying: Kept) rather than counting it lost"
+                );
+            }
         }
 
         // C1c: the null pole is uncanny — every placed culture's account
