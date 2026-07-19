@@ -318,26 +318,83 @@ pub enum Intent {
     Hold,
 }
 
+/// A DRIVE: a felt need plus how to reduce it — the two halves the decision
+/// policy consults. Thirst (`Thirst`) is the single implementor this stage;
+/// later temperament work adds siblings (thermal comfort, …) behind the SAME
+/// seam. `urgency`/`act_threshold` are the "need" half (the drive's current
+/// pressure and the level at which it acts); `affordance` is the "how to
+/// reduce it" half (the next executable step, or `None` when the drive cannot
+/// currently be advanced). All three read only the precomputed `Perceived`
+/// view (self-knowledge + belief + immediate affordance) — never truth — so a
+/// drive is pure over the view a tick already assembled.
+pub trait Drive {
+    /// The drive's current urgency in [0, 1] — its felt pressure, read from
+    /// the (already-folded) view. Thirst returns `view.drive` (the `drive_at`
+    /// fold over `DRANK`), computed upstream by the caller.
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency(&self, view: &Perceived) -> f64;
+
+    /// The seek threshold: at urgency ≥ this, the drive acts (plans toward its
+    /// affordance); below it, the drive yields.
+    /// type-audit: bare-ok(ratio: return)
+    fn act_threshold(&self) -> f64;
+
+    /// The next executable step that reduces this drive from the view's
+    /// position, or `None` when it cannot currently be advanced (its target is
+    /// unreachable within `budget`, or there is nowhere new to look). For
+    /// thirst: the first step of the A* plan to believed water, else the
+    /// exploration step when ignorant.
+    /// type-audit: bare-ok(count: budget)
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action>;
+}
+
+/// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
+/// `drive_at` fold surfaced on the view; `affordance` is the existing
+/// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
+/// the same `DriveParams`/`SUSTENANCE` the fold uses.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug)]
+pub struct Thirst {
+    /// The homeostatic parameters (rise/act/sated) governing this drive.
+    pub params: DriveParams,
+}
+
+impl Drive for Thirst {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        view.drive
+    }
+    fn act_threshold(&self) -> f64 {
+        self.params.act
+    }
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
+        match &view.believed_water {
+            // Knows water: the first step of the A* plan toward it (None when
+            // that known water is unreachable within budget).
+            Some(w) => {
+                plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
+            }
+            // Ignorant: the exploration step (None when nowhere new to look).
+            None => view.explore_step.clone().map(Action::MoveTo),
+        }
+    }
+}
+
 /// The planner (The Foresight), now planning over BELIEF (The Surmise): thirsty
 /// and knows water -> A* to it and drink; thirsty and ignorant -> take the
 /// explore step (or Hold if nowhere new); not thirsty and away -> plan home; else
 /// Hold. Preserves the seam: `decide` reads `view` (now carrying belief), the tick
-/// depends only on `Intent`.
+/// depends only on `Intent`. The thirst logic is consulted through the `Drive`
+/// trait (the single-element drive set of Stage 0) — the control flow and the
+/// resulting `Intent` for every state are unchanged.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
-    if view.drive >= p.act {
-        match &view.believed_water {
-            Some(w) => {
-                match plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
-                {
-                    Some(a) => Intent::Do(a),
-                    None => Intent::Hold, // known water unreachable within budget
-                }
-            }
-            None => match &view.explore_step {
-                Some(step) => Intent::Do(Action::MoveTo(step.clone())),
-                None => Intent::Hold, // ignorant and nowhere new to explore
-            },
+    let drive = Thirst { params: *p };
+    if drive.urgency(view) >= drive.act_threshold() {
+        match drive.affordance(view, budget) {
+            Some(a) => Intent::Do(a),
+            // Known water unreachable within budget, OR ignorant with nowhere
+            // new to explore — either way, Hold.
+            None => Intent::Hold,
         }
     } else if &view.position != home {
         match plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next()) {
