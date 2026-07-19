@@ -28,6 +28,11 @@ pub mod grammar;
 /// `KnowsOf` concepts become recipe compounds joined under a drawn
 /// `Headedness`, and everything else is a reasoned `Gap`.
 pub mod lexicon;
+/// C7 (The Deep Grammar) morphology substrate: the depth vector, family-
+/// cognate evidential/noun-class marker proto-forms evolved per daughter,
+/// and segment-level affixation — the primitives `grammar`'s
+/// `realize_tongue_deep` assembles.
+pub mod morphology;
 /// The naming grammars: stems and kind-keyed morphology, a single
 /// deterministic draw per `(seed, species, kind, salt)` (no re-draw), built
 /// from a drawn phonology.
@@ -63,11 +68,16 @@ pub use etymology::{
     draw_cascade, evolve, proto_root,
 };
 pub use grammar::{
-    ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, tongue_grammar,
+    ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
+    tongue_grammar,
 };
 pub use lexicon::{
     ExposureClass, GapReason, Headedness, LexEntry, Lexicon, WordViews, build_lexicon,
     draw_headedness,
+};
+pub use morphology::{
+    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
+    morph_depths, morph_forms,
 };
 pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
 pub use packs::{
@@ -415,6 +425,26 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/grammar/articles",
             "whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign)",
+        ),
+        (
+            "language/<species>/grammar/depth/evidential",
+            "C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15])",
+        ),
+        (
+            "language/<species>/grammar/depth/noun-class",
+            "C7's depth vector: how deeply noun class grammaticalizes (None/Particle/Affix, weighted [55,15,30])",
+        ),
+        (
+            "language/<species>/grammar/class-position",
+            "C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60)",
+        ),
+        (
+            "language/family/<family>/morph/evidential/<value>",
+            "C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law",
+        ),
+        (
+            "language/family/<family>/morph/class/<value>",
+            "C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),
         (
             "language/<species>/schema/<domain>/<fact-shape>",

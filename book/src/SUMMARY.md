@@ -184,6 +184,7 @@
 - [The Elements](./chronicle/the-elements.md)
 - [The Single Sculpt](./chronicle/the-single-sculpt.md)
 - [The Confluence](./chronicle/the-confluence.md)
+- [The Deep Grammar](./chronicle/the-deep-grammar.md)
 
 # Appendix: The Frontier
 

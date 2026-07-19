@@ -22,11 +22,11 @@
 
 use crate::{BuildError, WorldComponents};
 use hornvale_culture::Subsistence;
-use hornvale_kernel::{Seed, World, world::IS_A};
+use hornvale_kernel::{KindId, Seed, World, world::IS_A};
 use hornvale_language::{
-    Account, AccountParams, Disposition, FactShape, GroundFact, NeededConcept, Observability,
-    OrderPolicy, Requirement, SchemaId, SlotKind, Stance, SubFrame, account_of, admitted,
-    lexemes_for, schema_table, schemas::Manner, select_lexeme, select_schema,
+    Account, AccountParams, Disposition, FactShape, GroundFact, NeededConcept, NounClass,
+    Observability, OrderPolicy, Requirement, SchemaId, SlotKind, Stance, SubFrame, account_of,
+    admitted, lexemes_for, schema_table, schemas::Manner, select_lexeme, select_schema,
 };
 use hornvale_species::{ActivityCycle, PerceptionVector, PsychVector, Sociality, StatusBasis};
 use std::collections::{BTreeMap, BTreeSet};
@@ -343,8 +343,8 @@ fn day_length_std_value(account: &Account) -> Option<f64> {
     })
 }
 
-/// The day's causal-filter binding (spec §3.2): fires on the
-/// `day-length-std` entry (always `Lost` — verified by [`domain_of`]
+/// The pure core of the day's causal-filter binding (spec §3.2): fires on
+/// the `day-length-std` entry (always `Lost` — verified by [`domain_of`]
 /// staying gated `"sky"`, a defensive re-check, not an assumption) iff a
 /// cyclic belief's re-derived period matches `day` within 1% relative
 /// tolerance (`(p - day).abs() < 0.01 * day`). **Anonymity is
@@ -352,11 +352,55 @@ fn day_length_std_value(account: &Account) -> Option<f64> {
 /// against the source phenomenon's identity or a "sun" string — so this
 /// binding cannot leak which system produced the day-length-std fact.
 /// Ties bind to the first (shortest-period) match in ascending order.
-/// Agent binds for every deity-bearing schema (see [`agent_bearing`]:
-/// [`SchemaId::Agentive`], [`SchemaId::Kinship`], [`SchemaId::LinkSympathy`]
-/// — [`bind_agent`] decides); every other schema explains agentlessly
-/// (`agent: None`), per the plan header. Manner comes from the binding
-/// belief's own rank among `cyclic`, independent of which schema fires.
+/// Returns the drawn schema and the matched belief's rank (for
+/// [`manner_of`]) so [`explain_day`] can still compute agent/lexeme/manner
+/// exactly as before. Factored out (C7) so [`day_schema_of`] — the
+/// readout — resolves the exact SAME stream rather than re-deriving it a
+/// second way; the two readers of this stream can never drift apart.
+#[allow(clippy::too_many_arguments)]
+fn day_schema_draw(
+    world_seed: Seed,
+    species: &str,
+    params: &AccountParams,
+    disposition: &Disposition,
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    day: f64,
+    beta: f64,
+    subsistence: Subsistence,
+    sociality: Sociality,
+) -> Option<(SchemaId, usize)> {
+    let predicate = hornvale_astronomy::facts::DAY_LENGTH_STD;
+    if domain_of(params, predicate) != Some("sky") {
+        return None;
+    }
+    if !matches!(disposition, Disposition::Lost(_)) {
+        return None;
+    }
+    let (rank, _) = cyclic
+        .iter()
+        .enumerate()
+        .find(|(_, (_, period))| (*period - day).abs() < 0.01 * day)?;
+
+    let candidates = admitted(FactShape::CyclicEvent);
+    let prior = schema_prior(subsistence, sociality, &candidates);
+    let mut schema_stream = world_seed
+        .derive("language")
+        .derive(species)
+        .derive("schema")
+        .derive("sky")
+        .derive(fact_shape_key(FactShape::CyclicEvent))
+        .stream();
+    let schema = select_schema(&prior, beta, &mut schema_stream)?;
+    Some((schema, rank))
+}
+
+/// Wraps the day-length-std entry in [`Disposition::Explained`] where
+/// [`day_schema_draw`] fires and binds. Agent binds for every deity-bearing
+/// schema (see [`agent_bearing`]: [`SchemaId::Agentive`],
+/// [`SchemaId::Kinship`], [`SchemaId::LinkSympathy`] — [`bind_agent`]
+/// decides); every other schema explains agentlessly (`agent: None`), per
+/// the plan header. Manner comes from the binding belief's own rank among
+/// `cyclic` ([`manner_of`]), independent of which schema fires.
 #[allow(clippy::too_many_arguments)]
 fn explain_day(
     world_seed: Seed,
@@ -370,9 +414,6 @@ fn explain_day(
     sociality: Sociality,
 ) {
     let predicate = hornvale_astronomy::facts::DAY_LENGTH_STD;
-    if domain_of(params, predicate) != Some("sky") {
-        return;
-    }
     let Some(day_index) = account
         .entries
         .iter()
@@ -380,30 +421,21 @@ fn explain_day(
     else {
         return;
     };
-    if !matches!(account.entries[day_index].disposition, Disposition::Lost(_)) {
-        return;
-    }
-    let Some((rank, (belief, _period))) = cyclic
-        .iter()
-        .enumerate()
-        .find(|(_, (_, period))| (*period - day).abs() < 0.01 * day)
-    else {
+    let Some((schema, rank)) = day_schema_draw(
+        world_seed,
+        species,
+        params,
+        &account.entries[day_index].disposition,
+        cyclic,
+        day,
+        beta,
+        subsistence,
+        sociality,
+    ) else {
         return;
     };
     let manner = manner_of(rank, cyclic.len());
-
-    let candidates = admitted(FactShape::CyclicEvent);
-    let prior = schema_prior(subsistence, sociality, &candidates);
-    let mut schema_stream = world_seed
-        .derive("language")
-        .derive(species)
-        .derive("schema")
-        .derive("sky")
-        .derive(fact_shape_key(FactShape::CyclicEvent))
-        .stream();
-    let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
-        return;
-    };
+    let (belief, _period) = &cyclic[rank];
 
     let agent = bind_agent(schema, &belief.deity);
     let lexeme = if schema == SchemaId::Agentive {
@@ -1227,6 +1259,126 @@ pub fn accounts_of(world: &World) -> Vec<ChorusVoice> {
             })
         })
         .collect()
+}
+
+// ---------------------------------------------------------------------
+// C7, The Deep Grammar: morphology readouts.
+// ---------------------------------------------------------------------
+//
+// tongue_morphology_of derives a species' TongueMorphology exactly the way
+// lexicon_of derives its Lexicon (draw the phonology, resolve the family's
+// proto phonology and this species' own cascade, then hand the whole
+// bundle to domains/language) — nothing here is a new draw beyond what
+// morph_depths/morph_forms themselves perform, and nothing is persisted.
+//
+// day_schema_of resolves the identical stream explain_day resolves (via the
+// shared day_schema_draw core above), and noun_class_of is fully derived
+// from shipped state — the anti-astrology line: depth/position are drawn
+// once (morph_depths); evidential values and animacy are always DERIVED,
+// never judged or drawn fresh a second time.
+
+/// The species' full C7 morphology bundle: the drawn depth vector
+/// (evidential/noun-class/position) plus the family's evidential/class
+/// marker forms, evolved into this species' own phonology via its own
+/// cascade — derived the same way [`crate::lexicon_of`] derives its lexicon
+/// (resolve the family's shared proto phonology, or fall back to this
+/// species' own phonology for a singleton family), nothing persisted.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn tongue_morphology_of(
+    world: &World,
+    species: &str,
+) -> Result<hornvale_language::TongueMorphology, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let ph = crate::language_of_in(world, &wc, species);
+    let name = crate::resolve_kind(&wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, crate::proto_phonology_of_in(world, &wc, family)),
+        None => (name, ph.clone()),
+    };
+    let cascade = hornvale_language::draw_cascade(&world.seed, name);
+    let (evidential_depth, noun_class_depth, class_position) =
+        hornvale_language::morph_depths(&world.seed, species);
+    let (evidential, class) =
+        hornvale_language::morph_forms(&world.seed, fam_label, &proto_ph, &cascade, &ph);
+    Ok(hornvale_language::TongueMorphology {
+        evidential_depth,
+        noun_class_depth,
+        class_position,
+        evidential,
+        class,
+    })
+}
+
+/// C7's day-schema readout: the SAME draw [`explain_day`] resolves
+/// (factored through [`day_schema_draw`]), rebuilt fresh from
+/// `world`+`species` alone — nothing persisted, nothing cached, the
+/// re-derivation idiom every readout in this module follows. `None` when
+/// the culture is unbindable (ledger #2's guard: no flagship, no pantheon,
+/// no day-matched cyclic belief) or the causal filter simply doesn't fire
+/// (`select_schema` itself draws nothing).
+/// type-audit: bare-ok(identifier-text: species)
+pub fn day_schema_of(world: &World, species: &str) -> Option<SchemaId> {
+    let params = account_params_of(world, species).ok()?;
+    let cyclic = cyclic_beliefs_of(world, species);
+    if cyclic.is_empty() {
+        return None;
+    }
+    let ground = chorus_ground(world);
+    let account = account_of(&ground, &params);
+    let day = day_length_std_value(&account)?;
+    let day_index = account
+        .entries
+        .iter()
+        .position(|e| e.fact.predicate == hornvale_astronomy::facts::DAY_LENGTH_STD)?;
+    let flagship = crate::flagship_of(world, species)?;
+    let subsistence = hornvale_culture::subsistence_of(world, flagship.id)
+        .as_deref()
+        .and_then(subsistence_from_name)?;
+    let wc = WorldComponents::assemble().ok()?;
+    let psych = wc.psyche.get_by_label(species)?;
+    let beta = beta_of(psych);
+
+    day_schema_draw(
+        world.seed,
+        species,
+        &params,
+        &account.entries[day_index].disposition,
+        &cyclic,
+        day,
+        beta,
+        subsistence,
+        psych.sociality,
+    )
+    .map(|(schema, _rank)| schema)
+}
+
+/// C7's derived noun-class assignment (the animacy coherence law, plan
+/// header): every `*-kind` concept (e.g. `"goblin-kind"`) and `"person"` are
+/// [`NounClass::Animate`]; every other concept is [`NounClass::Inanimate`] —
+/// EXCEPT `"sun"`/`"moon"`/`"star"`/`"earth"`, which are `Animate` iff
+/// `species`' C5 day-schema draw ([`day_schema_of`]) is
+/// [`SchemaId::Agentive`]. Zero draws (the anti-astrology line): the sky
+/// override reads a draw `day_schema_of` already made, never rolls a fresh
+/// die.
+/// type-audit: bare-ok(identifier-text: species), bare-ok(identifier-text: concept)
+pub fn noun_class_of(world: &World, species: &str, concept: &str) -> NounClass {
+    const SKY_OVERRIDE: [&str; 4] = ["sun", "moon", "star", "earth"];
+    if SKY_OVERRIDE.contains(&concept) {
+        return if day_schema_of(world, species) == Some(SchemaId::Agentive) {
+            NounClass::Animate
+        } else {
+            NounClass::Inanimate
+        };
+    }
+    if concept == "person" || concept.ends_with("-kind") {
+        NounClass::Animate
+    } else {
+        NounClass::Inanimate
+    }
 }
 
 #[cfg(test)]

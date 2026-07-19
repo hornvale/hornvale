@@ -20,7 +20,11 @@
 //! thesis).
 
 use crate::lexicon::{LexEntry, Lexicon};
+use crate::morphology::{
+    ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
+};
 use crate::naming::{Namer, render_views, segments_of};
+use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use hornvale_kernel::{Seed, Stream};
 
@@ -57,6 +61,16 @@ pub struct TongueGrammar {
     /// from the tongue's own phonology, never authored — or `None` for a
     /// zero-copula tongue.
     pub copula: Option<String>,
+    /// The overt copula's own segments, retained alongside its roman form
+    /// (C7) so [`realize_tongue_deep`] can affix the evidential marker onto
+    /// it at the SEGMENT level (never string concatenation) when the tongue
+    /// draws `Affix`-depth evidential marking. Populated by
+    /// [`tongue_grammar`] exactly when `copula` is populated; a hand-built
+    /// grammar used only to test the C3 roman-level surface may leave this
+    /// `None` even with `copula: Some(..)` — [`realize_tongue_deep`] then
+    /// PANICS if asked to Affix-mark it (`layer_affix`'s loud arm; the T1
+    /// review removed the silent roman-level fallback).
+    pub copula_segments: Option<Vec<Segment>>,
     /// Whether the language has articles. The floor realizer renders no
     /// article surface (no article lexeme exists yet — C7's morphology
     /// campaign gives this parameter its surface); it is drawn now because
@@ -89,9 +103,11 @@ fn order_from_roll(roll: u32) -> ConstituentOrder {
 /// and rendered via [`render_views`] — the same reduction every lexicon
 /// word and generated name goes through, so a drawn copula is
 /// indistinguishable in kind from any other word in the tongue.
-fn draw_copula_form(stream: &mut Stream, namer: &Namer) -> String {
+fn draw_copula_form(stream: &mut Stream, namer: &Namer) -> (Vec<Segment>, String) {
     let syllables = namer.draw_syllables(stream, 1, 1, false);
-    render_views(&segments_of(&syllables)).roman
+    let segments = segments_of(&syllables);
+    let roman = render_views(&segments).roman;
+    (segments, roman)
 }
 
 /// Draw `species`' tongue grammar from the three permanent grammar streams
@@ -115,10 +131,11 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
         .derive("grammar")
         .derive("copula")
         .stream();
-    let copula = if copula_stream.range_u32(1, 100) <= 60 {
-        Some(draw_copula_form(&mut copula_stream, &namer))
+    let (copula_segments, copula) = if copula_stream.range_u32(1, 100) <= 60 {
+        let (segments, roman) = draw_copula_form(&mut copula_stream, &namer);
+        (Some(segments), Some(roman))
     } else {
-        None
+        (None, None)
     };
 
     let mut articles_stream = seed
@@ -132,6 +149,7 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     TongueGrammar {
         order,
         copula,
+        copula_segments,
         articles,
     }
 }
@@ -147,6 +165,11 @@ pub struct TongueClause {
     /// The complement concept id (e.g. `"goblin-kind"`), lexicalized via
     /// the speaker's lexicon.
     pub complement_concept: String,
+    /// How this clause's content was epistemically grounded (C7).
+    /// `realize_tongue` (the C3 floor realizer) ignores this field
+    /// entirely — only [`realize_tongue_deep`] reads it, and only when
+    /// `morph`'s evidential depth is not [`MorphDepth::None`].
+    pub evidential: Evidential,
 }
 
 /// A whole-sentence gap: the tongue could not say this clause because its
@@ -207,6 +230,227 @@ pub fn realize_tongue(
     .flatten()
     .collect();
     Ok(format!("{}.", ordered.join(" ")))
+}
+
+/// A word mid-assembly: its segments when known (so a further affix layer
+/// can join at the segment level via [`layer_affix`]) and its current roman
+/// form. `segments` is `None` only for a [`LexEntry::Compound`] complement —
+/// the lexicon does not retain a compound's joined segments today (a
+/// pre-existing gap in `lexicon.rs`, out of this task's scope) — in which
+/// case `layer_affix` PANICS rather than silently degrading (the loud
+/// arm; close the lexicon gap before Affix-marking a Compound).
+struct Marked {
+    /// The word's segments, when known.
+    segments: Option<Vec<Segment>>,
+    /// The word's current roman form.
+    roman: String,
+}
+
+/// Join one more affix layer onto `current`: a genuine segment-level
+/// [`affix`] join when `current`'s segments are known. A segment-less word
+/// (a [`LexEntry::Compound`] complement) PANICS — the loud arm the T1
+/// review demanded; author the lexicon's compound-segment retention before
+/// Affix-marking a Compound.
+fn layer_affix(current: Marked, marker: &MorphForm, position: ClassPosition) -> Marked {
+    match &current.segments {
+        Some(segments) => {
+            let joined = affix(segments, &marker.segments, position);
+            Marked {
+                segments: Some(joined.segments),
+                roman: joined.roman,
+            }
+        }
+        None => panic!(
+            "layer_affix: cannot segment-affix onto a word with unknown segments \
+             (a LexEntry::Compound complement — lexicon.rs does not retain a \
+             compound's joined segments today; T1 review made this arm loud). \
+             Close that gap before Affix-marking a Compound complement."
+        ),
+    }
+}
+
+/// A token's grammatical role, tracked through assembly so a `Particle`
+/// insertion can find "the complement" or "the predicate" (the copula, or
+/// the complement itself for a zero-copula tongue) regardless of the
+/// tongue's drawn constituent order. `Marker` tags a spliced-in particle so
+/// it is never mistaken for one of the three base roles by a later splice.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Role {
+    /// The clause's subject.
+    Subject,
+    /// The overt copula, when present.
+    Copula,
+    /// The lexicalized complement.
+    Complement,
+    /// A spliced-in particle marker (evidential or noun-class).
+    Marker,
+}
+
+/// Realize a nominal-predication clause with C7's full morphology bundle:
+/// evidential and noun-class marking, at whatever depth `morph` draws
+/// (`None`/`Particle`/`Affix`), layered on top of [`realize_tongue`]'s floor
+/// assembly (constituent order, copula). `None` depth on both axes
+/// reproduces [`realize_tongue`]'s C3 surface exactly (the shallow-identity
+/// guarantee) — `realize_tongue` itself is untouched by this function's
+/// addition, so every existing caller keeps compiling and behaving
+/// identically.
+///
+/// Evidential marking is predicate-final: `Affix` suffixes the marker onto
+/// the overt copula (segment-level, via [`layer_affix`]), or — for a
+/// zero-copula tongue — encliticizes it onto the predicate nominal (the
+/// complement, possibly already noun-class-marked); `Particle` places the
+/// marker as a free word immediately after whichever of those served as
+/// "the predicate". Noun-class marking always targets the complement noun:
+/// `Affix` joins the marker onto it per `morph.class_position`; `Particle`
+/// places the marker as a free word on that same side of the noun.
+/// type-audit: bare-ok(prose)
+pub fn realize_tongue_deep(
+    clause: &TongueClause,
+    grammar: &TongueGrammar,
+    morph: &TongueMorphology,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
+    lexicon: &Lexicon,
+) -> Result<String, TongueGap> {
+    let mut complement = match lexicon.entry(&clause.complement_concept) {
+        Some(LexEntry::Root { derivation, views }) => Marked {
+            segments: Some(derivation.modern.clone()),
+            roman: views.roman.clone(),
+        },
+        Some(LexEntry::Compound { views, .. }) => Marked {
+            segments: None,
+            roman: views.roman.clone(),
+        },
+        Some(LexEntry::Gap { reason }) => {
+            return Err(TongueGap {
+                concept: clause.complement_concept.clone(),
+                reason: reason.to_string(),
+            });
+        }
+        None => {
+            return Err(TongueGap {
+                concept: clause.complement_concept.clone(),
+                reason: "no entry in this lexicon".to_string(),
+            });
+        }
+    };
+
+    // Noun-class marking: always on the complement noun.
+    let class_value = match noun_class_of(&clause.complement_concept) {
+        NounClass::Animate => "animate",
+        NounClass::Inanimate => "inanimate",
+    };
+    let mut class_particle: Option<String> = None;
+    if let Some(marker) = morph.class.get(class_value) {
+        match morph.noun_class_depth {
+            MorphDepth::None => {}
+            MorphDepth::Affix => {
+                complement = layer_affix(complement, marker, morph.class_position);
+            }
+            MorphDepth::Particle => class_particle = Some(marker.roman.clone()),
+        }
+    }
+
+    // Evidential marking: predicate-final — the overt copula, or (zero
+    // copula) the predicate nominal, i.e. the (possibly already
+    // class-marked) complement.
+    let evidential_value = match clause.evidential {
+        Evidential::Witnessed => "witnessed",
+        Evidential::Taught => "taught",
+        Evidential::Inferred => "inferred",
+    };
+    let mut copula_roman = grammar.copula.clone();
+    let mut evidential_particle: Option<String> = None;
+    if let Some(marker) = morph.evidential.get(evidential_value) {
+        match morph.evidential_depth {
+            MorphDepth::None => {}
+            MorphDepth::Affix => {
+                if let Some(copula) = &grammar.copula {
+                    let cop = Marked {
+                        segments: grammar.copula_segments.clone(),
+                        roman: copula.clone(),
+                    };
+                    copula_roman = Some(layer_affix(cop, marker, ClassPosition::Suffix).roman);
+                } else {
+                    complement = layer_affix(complement, marker, ClassPosition::Suffix);
+                }
+            }
+            MorphDepth::Particle => evidential_particle = Some(marker.roman.clone()),
+        }
+    }
+
+    let s = clause.subject.as_str();
+    let v = copula_roman.as_deref();
+    let o = complement.roman.as_str();
+    let mut ordered: Vec<(Role, String)> = match grammar.order {
+        ConstituentOrder::Sov => [
+            Some((Role::Subject, s.to_string())),
+            Some((Role::Complement, o.to_string())),
+            v.map(|v| (Role::Copula, v.to_string())),
+        ],
+        ConstituentOrder::Svo => [
+            Some((Role::Subject, s.to_string())),
+            v.map(|v| (Role::Copula, v.to_string())),
+            Some((Role::Complement, o.to_string())),
+        ],
+        ConstituentOrder::Vso => [
+            v.map(|v| (Role::Copula, v.to_string())),
+            Some((Role::Subject, s.to_string())),
+            Some((Role::Complement, o.to_string())),
+        ],
+        ConstituentOrder::Vos => [
+            v.map(|v| (Role::Copula, v.to_string())),
+            Some((Role::Complement, o.to_string())),
+            Some((Role::Subject, s.to_string())),
+        ],
+        ConstituentOrder::Ovs => [
+            Some((Role::Complement, o.to_string())),
+            v.map(|v| (Role::Copula, v.to_string())),
+            Some((Role::Subject, s.to_string())),
+        ],
+        ConstituentOrder::Osv => [
+            Some((Role::Complement, o.to_string())),
+            Some((Role::Subject, s.to_string())),
+            v.map(|v| (Role::Copula, v.to_string())),
+        ],
+    }
+    .into_iter()
+    .flatten()
+    .collect();
+
+    // Splice in the noun-class particle, adjacent to the complement per the
+    // drawn class position (before it for Prefix, after for Suffix).
+    if let Some(particle) = class_particle
+        && let Some(idx) = ordered.iter().position(|(r, _)| *r == Role::Complement)
+    {
+        let insert_at = match morph.class_position {
+            ClassPosition::Prefix => idx,
+            ClassPosition::Suffix => idx + 1,
+        };
+        ordered.insert(insert_at, (Role::Marker, particle));
+    }
+
+    // Splice in the evidential particle immediately after "the predicate":
+    // the copula token if the tongue is copula-bearing, else the complement
+    // (the predicate nominal in a zero-copula clause). Tagging spliced
+    // tokens `Role::Marker` above means this search still finds the right
+    // anchor even after the class-particle splice shifted later indices.
+    if let Some(particle) = evidential_particle {
+        let predicate_role = if grammar.copula.is_some() {
+            Role::Copula
+        } else {
+            Role::Complement
+        };
+        if let Some(idx) = ordered.iter().position(|(r, _)| *r == predicate_role) {
+            ordered.insert(idx + 1, (Role::Marker, particle));
+        }
+    }
+
+    let sentence = ordered
+        .into_iter()
+        .map(|(_, token)| token)
+        .collect::<Vec<_>>()
+        .join(" ");
+    Ok(format!("{sentence}."))
 }
 
 #[cfg(test)]
@@ -369,10 +613,12 @@ mod tests {
         let clause = TongueClause {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
+            evidential: Evidential::Witnessed,
         };
         let svo = TongueGrammar {
             order: ConstituentOrder::Svo,
             copula: Some("gha".into()),
+            copula_segments: None,
             articles: false,
         };
         assert_eq!(
@@ -382,6 +628,7 @@ mod tests {
         let sov = TongueGrammar {
             order: ConstituentOrder::Sov,
             copula: Some("gha".into()),
+            copula_segments: None,
             articles: false,
         };
         assert_eq!(
@@ -391,6 +638,7 @@ mod tests {
         let zero_copula = TongueGrammar {
             order: ConstituentOrder::Svo,
             copula: None,
+            copula_segments: None,
             articles: false,
         };
         assert_eq!(
@@ -405,10 +653,12 @@ mod tests {
         let clause = TongueClause {
             subject: "Vavako".into(),
             complement_concept: "planet".into(),
+            evidential: Evidential::Witnessed,
         };
         let g = TongueGrammar {
             order: ConstituentOrder::Svo,
             copula: Some("gha".into()),
+            copula_segments: None,
             articles: false,
         };
         let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
@@ -443,10 +693,12 @@ mod tests {
         let clause = TongueClause {
             subject: "Vavako".into(),
             complement_concept: "blue".into(),
+            evidential: Evidential::Witnessed,
         };
         let g = TongueGrammar {
             order: ConstituentOrder::Svo,
             copula: Some("gha".into()),
+            copula_segments: None,
             articles: false,
         };
         let gap = realize_tongue(&clause, &g, &lex).unwrap_err();
@@ -476,6 +728,7 @@ mod tests {
         let clause = TongueClause {
             subject: "Vavako".into(),
             complement_concept: "goblin-kind".into(),
+            evidential: Evidential::Witnessed,
         };
         let cases: [(ConstituentOrder, Option<&str>, String); 12] = [
             (
@@ -519,6 +772,7 @@ mod tests {
             let grammar = TongueGrammar {
                 order,
                 copula: copula.map(String::from),
+                copula_segments: None,
                 articles: false,
             };
             assert_eq!(
@@ -527,5 +781,242 @@ mod tests {
                 "order {order:?} copula {copula:?}"
             );
         }
+    }
+
+    /// A grammar drawn with a real overt copula (segments AND roman
+    /// together, per `tongue_grammar`'s own draw) — the fixture the C7
+    /// realizer tests below share, so the Affix/Particle evidential arms
+    /// exercise the SAME segment-level copula plumbing production code
+    /// uses, not a hand-typed roman-only stand-in.
+    fn overt_copula_grammar(ph: &Phonology) -> TongueGrammar {
+        (1..=50u64)
+            .find_map(|s| {
+                let g = tongue_grammar(&Seed(s), "goblin", ph);
+                g.copula.is_some().then_some(g)
+            })
+            .expect("at least one seed in 1..=50 draws an overt copula at a 60% rate")
+    }
+
+    #[test]
+    fn realize_tongue_marks_by_depth() {
+        use crate::etymology::proto_root;
+
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let complement_segments = match lex.entry("goblin-kind").unwrap() {
+            LexEntry::Root { derivation, .. } => derivation.modern.clone(),
+            other => panic!("goblin-kind should be a root, got {other:?}"),
+        };
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "goblin-kind".into(),
+            evidential: Evidential::Witnessed,
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        // Synthetic marker forms (real drawn words, just not family-cognate
+        // here — `morph_forms`' own cognate law has its own test in
+        // `morphology.rs`; this test is about the REALIZER's placement
+        // logic).
+        let witnessed_segments = proto_root(&Seed(99), "goblin", "witness-marker", &ph);
+        let witnessed_roman = render_views(&witnessed_segments).roman;
+        let mut evidential_map = BTreeMap::new();
+        evidential_map.insert(
+            "witnessed",
+            MorphForm {
+                segments: witnessed_segments.clone(),
+                roman: witnessed_roman.clone(),
+            },
+        );
+        let class_segments = proto_root(&Seed(98), "goblin", "class-marker", &ph);
+        let mut class_map = BTreeMap::new();
+        class_map.insert(
+            "inanimate",
+            MorphForm {
+                segments: class_segments.clone(),
+                roman: render_views(&class_segments).roman,
+            },
+        );
+
+        let grammar = overt_copula_grammar(&ph);
+
+        // 1. `MorphDepth::None` on both axes reproduces the C3 floor
+        // surface exactly (the shallow-identity guarantee), even with real
+        // marker forms sitting unused in the bundle.
+        let shallow = TongueMorphology {
+            evidential_depth: MorphDepth::None,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: evidential_map.clone(),
+            class: class_map.clone(),
+        };
+        assert_eq!(
+            realize_tongue_deep(&clause, &grammar, &shallow, &noun_class_of, &lex).unwrap(),
+            realize_tongue(&clause, &grammar, &lex).unwrap(),
+            "MorphDepth::None on both axes must reproduce the C3 floor surface exactly"
+        );
+
+        // 2. Affix evidential (overt copula) -> the witnessed marker
+        // appears predicate-finally, suffixed onto the copula at the
+        // SEGMENT level.
+        let affix_evidential = TongueMorphology {
+            evidential_depth: MorphDepth::Affix,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: evidential_map.clone(),
+            class: class_map.clone(),
+        };
+        let copula_segments = grammar
+            .copula_segments
+            .clone()
+            .expect("overt_copula_grammar draws copula_segments alongside copula");
+        let expected_copula =
+            affix(&copula_segments, &witnessed_segments, ClassPosition::Suffix).roman;
+        let marked =
+            realize_tongue_deep(&clause, &grammar, &affix_evidential, &noun_class_of, &lex)
+                .unwrap();
+        assert!(
+            marked.contains(&expected_copula),
+            "Affix evidential must suffix the marker onto the copula: {marked:?} \
+             (expected token {expected_copula:?})"
+        );
+
+        // 3. Particle evidential -> a free word immediately after the
+        // predicate (the copula, here).
+        let particle_evidential = TongueMorphology {
+            evidential_depth: MorphDepth::Particle,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: evidential_map.clone(),
+            class: class_map.clone(),
+        };
+        let particled = realize_tongue_deep(
+            &clause,
+            &grammar,
+            &particle_evidential,
+            &noun_class_of,
+            &lex,
+        )
+        .unwrap();
+        let tokens: Vec<&str> = particled.trim_end_matches('.').split(' ').collect();
+        let copula_roman = grammar.copula.as_deref().unwrap();
+        let copula_idx = tokens
+            .iter()
+            .position(|t| *t == copula_roman)
+            .expect("the bare copula token must still be present, unmodified");
+        assert_eq!(
+            tokens.get(copula_idx + 1),
+            Some(&witnessed_roman.as_str()),
+            "the evidential particle must sit immediately after the predicate: {tokens:?}"
+        );
+
+        // 4. class Affix + Prefix -> the marker precedes the complement
+        // noun (joined at the segment level).
+        let class_affix_prefix = TongueMorphology {
+            evidential_depth: MorphDepth::None,
+            noun_class_depth: MorphDepth::Affix,
+            class_position: ClassPosition::Prefix,
+            evidential: evidential_map.clone(),
+            class: class_map.clone(),
+        };
+        let expected_noun =
+            affix(&complement_segments, &class_segments, ClassPosition::Prefix).roman;
+        let class_marked =
+            realize_tongue_deep(&clause, &grammar, &class_affix_prefix, &noun_class_of, &lex)
+                .unwrap();
+        assert!(
+            class_marked.contains(&expected_noun),
+            "class Affix + Prefix must precede the complement noun with the marker: \
+             {class_marked:?} (expected token {expected_noun:?})"
+        );
+
+        // 5. Zero-copula + Affix evidential -> enclitic on the predicate
+        // nominal (the fixed-position rule's zero-copula arm).
+        let zero_copula_grammar = TongueGrammar {
+            order: grammar.order,
+            copula: None,
+            copula_segments: None,
+            articles: grammar.articles,
+        };
+        let expected_enclitic = affix(
+            &complement_segments,
+            &witnessed_segments,
+            ClassPosition::Suffix,
+        )
+        .roman;
+        let zero_marked = realize_tongue_deep(
+            &clause,
+            &zero_copula_grammar,
+            &affix_evidential,
+            &noun_class_of,
+            &lex,
+        )
+        .unwrap();
+        assert!(
+            zero_marked.contains(&expected_enclitic),
+            "zero-copula Affix evidential must enclitic onto the predicate nominal: \
+             {zero_marked:?} (expected token {expected_enclitic:?})"
+        );
+    }
+
+    /// Final-review fix 2 (C7): the layer_affix Compound arm is loud AND
+    /// tested — a segment-less Marked (the Compound-complement shape)
+    /// asked to take an affix panics rather than silently roman-concats.
+    #[test]
+    #[should_panic(expected = "layer_affix: cannot segment-affix")]
+    fn layer_affix_panics_on_a_segmentless_word() {
+        let marker = MorphForm {
+            segments: Vec::new(),
+            roman: "bo".to_string(),
+        };
+        let current = Marked {
+            segments: None,
+            roman: "Manywater".to_string(),
+        };
+        let _ = layer_affix(current, &marker, ClassPosition::Suffix);
+    }
+
+    #[test]
+    fn inferred_is_defined_and_loud() {
+        use crate::etymology::proto_root;
+
+        // Inferred is floor-unreachable today (no T1/T2 readout path
+        // constructs it — the readout fns beyond this task own that
+        // guard), but it must already render correctly when passed
+        // explicitly: exhaustive-match future-proofing, not a live path.
+        let ph = test_phonology();
+        let lex = tiny_lexicon_with(&[("goblin-kind", ExposureClass::Steeped)]);
+        let clause = TongueClause {
+            subject: "Vavako".into(),
+            complement_concept: "goblin-kind".into(),
+            evidential: Evidential::Inferred,
+        };
+        let noun_class_of = |_: &str| NounClass::Inanimate;
+
+        let inferred_segments = proto_root(&Seed(77), "goblin", "inferred-marker", &ph);
+        let inferred_roman = render_views(&inferred_segments).roman;
+        let mut evidential_map = BTreeMap::new();
+        evidential_map.insert(
+            "inferred",
+            MorphForm {
+                segments: inferred_segments,
+                roman: inferred_roman.clone(),
+            },
+        );
+        let morph = TongueMorphology {
+            evidential_depth: MorphDepth::Particle,
+            noun_class_depth: MorphDepth::None,
+            class_position: ClassPosition::Suffix,
+            evidential: evidential_map,
+            class: BTreeMap::new(),
+        };
+        let grammar = overt_copula_grammar(&ph);
+
+        let rendered = realize_tongue_deep(&clause, &grammar, &morph, &noun_class_of, &lex)
+            .expect("a Steeped complement must realize");
+        assert!(
+            rendered.contains(&inferred_roman),
+            "Inferred must render with its drawn form when passed explicitly: {rendered:?}"
+        );
     }
 }

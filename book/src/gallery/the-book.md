@@ -8,8 +8,10 @@ The Babako are hobgoblins.
 
 ### Tongues
 
-Saa We Vavako. (in the goblin tongue: "The Vavako are goblins.")
-Babako Babo. (in the hobgoblin tongue: "The Babako are hobgoblins.")
+Saa Wowe Vavako. (in the goblin tongue: "The Vavako are goblins.")
+Saa Wovewe Vebe. (in the goblin tongue: "Vebe is the earth.")
+Babako Babo Be Bo. (in the hobgoblin tongue: "The Babako are hobgoblins.")
+Vebe Vebe Be Bo. (in the hobgoblin tongue: "Vebe is the earth.")
 
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
@@ -26,6 +28,8 @@ The day returns because the sky must be crossed.
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
 ##### As the priesthood of the Vavako teach it
+
+Saa Wovewe Vebe. ("Vebe is the earth — as it is taught.")
 
 The Vavako are goblins — ourselves.
 The Babako are hobgoblins — neighbors.
@@ -47,6 +51,8 @@ The day returns, as all things return.
 
 ##### As the priesthood of the Babako teach it
 
+Vebe Vebe Bo Bo. ("Vebe is the earth — as it is taught.")
+
 The Vavako are goblins — rivals.
 The Babako are hobgoblins — ourselves.
 Vebe is the earth.
@@ -66,8 +72,11 @@ The Ngkoshngta are kobolds.
 ### Tongues
 
 Maetmea Gmaapmae. (in the goblin tongue: "The Maetmea are goblins.")
-Waedwea Wao. (in the hobgoblin tongue: "The Waedwea are hobgoblins.")
+Waobwoe Maopmoe. (in the goblin tongue: "Waobwoe is the earth.")
+Waedwea Woowao Weo. (in the hobgoblin tongue: "The Waedwea are hobgoblins.")
+Waobwoe Waowaobwoe Weo. (in the hobgoblin tongue: "Waobwoe is the earth.")
 Ngkoshngta Nggasdsha. (in the kobold tongue: "The Ngkoshngta are kobolds.")
+Waobwoe Ngdasngko. (in the kobold tongue: "Waobwoe is the earth.")
 
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
@@ -86,6 +95,8 @@ The day returns, as all things return.
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Maetmea teach it
+
+Waobwoe Maopmoe. ("Waobwoe is the earth — as it is taught.")
 
 The Maetmea are goblins — ourselves.
 The Waedwea are hobgoblins — neighbors.
@@ -108,6 +119,8 @@ The day returns, as all things return.
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 ##### As the priesthood of the Waedwea teach it
+
+Waobwoe Waowaobwoe Waa. ("Waobwoe is the earth — as it is taught.")
 
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — ourselves.
@@ -139,9 +152,12 @@ The Jjajjjo are kobolds.
 
 ### Tongues
 
-Sdeozqae Sgaa. (in the goblin tongue: "The Sdeozqae are goblins.")
-Shteozqae Qje Shaoz. (in the hobgoblin tongue: "The Shteozqae are hobgoblins.")
-Jjajjjo Zda. (in the kobold tongue: "The Jjajjjo are kobolds.")
+Sdeozqae Sgaa Zhteo. (in the goblin tongue: "The Sdeozqae are goblins.")
+Zhqea Zhqea Zhteo. (in the goblin tongue: "Zhqea is the earth.")
+Shteozqae Qje Zqeozhshaoz. (in the hobgoblin tongue: "The Shteozqae are hobgoblins.")
+Zhqea Qje Zqeozhzhqea. (in the hobgoblin tongue: "Zhqea is the earth.")
+Jjajjjo Jjozda. (in the kobold tongue: "The Jjajjjo are kobolds.")
+Zhqea Xozdozzdo. (in the kobold tongue: "Zhqea is the earth.")
 
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
@@ -160,6 +176,8 @@ The day returns to keep the balance.
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
 ##### As the priesthood of the Sdeozqae teach it
+
+Zhqea Zhqea Zqoo. ("Zhqea is the earth — as it is taught.")
 
 The Sdeozqae are goblins — ourselves.
 The Shteozqae are hobgoblins — neighbors.
