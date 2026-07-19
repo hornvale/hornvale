@@ -25,12 +25,32 @@ pub use temperature::locked_temperature_at_position;
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, ObserverContext,
-    PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void,
+    PerceptKind, PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void, World,
+    WorldContext,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
 /// type-audit: bare-ok(identifier-text)
 pub const AMBIENT: &str = "ambient";
+
+/// Phenomenon kind for a felt, oppressive warmth (a cell far above the
+/// temperate baseline).
+/// type-audit: bare-ok(identifier-text)
+pub const HEAT: &str = "heat";
+
+/// Phenomenon kind for a felt, biting chill (a cell far below the temperate
+/// baseline).
+/// type-audit: bare-ok(identifier-text)
+pub const COLD: &str = "cold";
+
+/// Phenomenon kind for liquid precipitation falling on a clearly-wet cell.
+/// type-audit: bare-ok(identifier-text)
+pub const RAIN: &str = "rain";
+
+/// Phenomenon kind for frozen precipitation falling on a clearly-wet, cold
+/// cell.
+/// type-audit: bare-ok(identifier-text)
+pub const SNOW: &str = "snow";
 
 /// Every seed-derivation label this crate uses (none yet).
 /// type-audit: bare-ok(identifier-text)
@@ -54,6 +74,38 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")?;
 
+    // The felt-weather phenomenon kinds the tier-1 provider emits (The
+    // Elements, Stage 2): a temperate-deviation pair (heat/cold) and the
+    // precipitation pair (rain/snow). Registered before the heat/cold concept
+    // manifests below, whose percept edges name these kinds.
+    registry.register_phenomenon_kind(HEAT, "oppressive heat")?;
+    registry.register_phenomenon_kind(COLD, "biting cold")?;
+    registry.register_phenomenon_kind(RAIN, "falling rain")?;
+    registry.register_phenomenon_kind(SNOW, "falling snow")?;
+
+    // Heat and cold as felt qualities. Unlike snow/rain/ice below, the
+    // tier-1 provider DOES emit these as phenomena (Stage 2), so the percept
+    // edge is `Present` at once — no language pack names them yet (lexeme
+    // Gap), and cognition waits for its wave.
+    for (name, doc) in [
+        ("heat", "felt, oppressive warmth"),
+        ("cold", "felt, biting chill"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Quality,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no pack names it yet")),
+            percept: Correspondent::Present(PerceptKind(name.to_string())),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+
     // The everyday precipitation/frozen-water substances. No language pack
     // names them yet, so the lexeme edge is an honest Gap (not `Expected`).
     for (name, doc) in [
@@ -61,6 +113,15 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         ("rain", "liquid precipitation"),
         ("ice", "frozen water"),
     ] {
+        // snow and rain are now emitted as felt phenomena (the weather emitter),
+        // so their percept edge references that kind. `ice` is not emitted as a
+        // phenomenon of its own (a cold, wet cell reads as snow), so it stays an
+        // honest Gap.
+        let percept = if name == "ice" {
+            Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet"))
+        } else {
+            Correspondent::Present(PerceptKind(name.to_string()))
+        };
         registry.register_manifest(Manifest {
             concept: ConceptDef {
                 name: name.to_string(),
@@ -69,7 +130,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 doc: doc.to_string(),
             },
             lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
-            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            percept,
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),
@@ -118,6 +179,18 @@ impl hornvale_kernel::Domain for Climate {
     }
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         crate::stream_labels()
+    }
+    fn phenomena_source(
+        &self,
+        _world: &World,
+        ctx: &mut WorldContext,
+    ) -> Option<Box<dyn PhenomenaSource>> {
+        // Reclaim the composition-root-built tier-1 `GeneratedClimate` when the
+        // root supplied one (generated worlds); otherwise fall back to the
+        // tier-0 stub (the same mild air everywhere). Both emit the AMBIENT
+        // claim — the generated provider only refines it (decision 0039).
+        ctx.claim(env!("CARGO_PKG_NAME"))
+            .or_else(|| Some(Box::new(UniformClimate)))
     }
 }
 

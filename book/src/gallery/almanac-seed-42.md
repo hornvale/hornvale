@@ -10,6 +10,8 @@ Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a golden sun fixed at zenith
 - [0.15] *ambient* — warm, still, unchanging air
+- [0.05] *rain* — falling rain
+- [0.02] *heat* — oppressive heat
 
 ## The Land
 
