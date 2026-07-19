@@ -42,6 +42,18 @@ entirely: no bands, no latitude organization — climate reorganizes around
 the substellar/antistellar axis instead, a single day–night overturning
 cell.
 
+**The wind drives the sea.** The band winds also drive a surface **ocean
+current** field ([The Gyre](../chronicle/the-gyre.md)): each ocean cell's
+current is the prevailing wind turned by the Coriolis-signed Ekman angle
+(right in the north, left in the south) and projected along any coast it
+meets, so the belts resolve into subtropical **gyres** — clockwise north,
+counter-clockwise south — with along-shore boundary currents. Zero on land,
+empty on a locked world. It is a kinematic sketch, one-pass over the
+geosphere like drainage, and — being level-0 — it advects no temperature, so
+it moves not one byte of the census; the orrery advects it as particle flow
+over the ocean. The current *warming* coasts (the feedback that would move the
+mean) is a later campaign.
+
 **Temperature and moisture as real fields.** The temperature field's
 boundary speaks the kernel's `Temperature` type (promoted in
 [Temperature](../chronicle/temperature.md)), so an absolute reading can

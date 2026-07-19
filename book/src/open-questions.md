@@ -197,6 +197,21 @@ that checks the model against reality rather than against the plan — which mak
 it, for physical fields, not a courtesy at the end but the gate that closes the
 loop.
 
+[The Gyre](./chronicle/the-gyre.md) carried the seam across a boundary it had
+not yet crossed: the first **vector** field (an ocean current, two tangent
+components per tile, where every prior layer was a scalar) and the first the
+client does not merely colour but **advects** — particles swept along the field
+as motion, the living globe's first real animation over a
+deterministic keyframe. The interface held: the client's tangent frame is the
+exact inverse of the producer's, so the flow points where the sim says. And the
+*seen* check earned its keep a second time, in a gentler register — not a
+physics error this time but a legibility one: the field shipped correct and
+nearly invisible (faint one-pixel specks), and only the screenshot showed that
+"transported and parsed" is still not "read." The bet's honest statement now
+carries three failure modes on one axis — the data can go undrawn (The Lens),
+ungrounded (The Reckoning), or drawn-but-illegible (The Gyre) — none a seam
+failure, all invisible to everything but a human looking at the picture.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

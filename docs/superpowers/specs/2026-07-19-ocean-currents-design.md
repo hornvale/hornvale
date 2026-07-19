@@ -1,6 +1,6 @@
 # Ocean Currents + Wind Vector Fields (The Gyre) — design
 
-**Date:** 2026-07-19 · **Status:** awaiting G3 review
+**Date:** 2026-07-19 · **Status:** SHIPPED (2026-07-19) — ocean-current vector field + Living-Globe advection; see [chronicle](../../../book/src/chronicle/the-gyre.md).
 **Program:** Weather Program campaign 2 (after The Turning's diurnal temperature).
 **Sibling:** The Turning (an additive, byte-identical `scene/tiles/v1` layer +
 Living-Globe payoff); this follows the same shape for a vector field.

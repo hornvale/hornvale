@@ -3,6 +3,7 @@
 
 pub mod biome;
 pub mod circulation;
+pub mod currents;
 pub mod diurnal;
 pub mod habitability;
 pub mod moisture;
@@ -12,7 +13,8 @@ pub mod substellar;
 pub mod temperature;
 
 pub use biome::{Biome, SeafloorFeature};
-pub use circulation::{RotationRegime, band_count_for};
+pub use circulation::{RotationRegime, band_count_for, prevailing_wind};
+pub use currents::{ocean_current, ocean_current_field};
 pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use habitability::{habitable_fraction, is_habitable};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
