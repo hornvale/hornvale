@@ -1,7 +1,7 @@
 # The Chorus (C4) — Design
 
 **Date:** 2026-07-18
-**Status:** **Approved at G3 (2026-07-18)** — census regen for the dial
+**Status:** **COMPLETE — shipped (see [the chronicle](../../../book/src/chronicle/the-chorus.md)); the §6 bet PASSED under the amended criteria.** Was: Approved at G3 (2026-07-18) — census regen for the dial
 metrics authorized at the same stop; ledger digest of post-G3 entries due at
 G6.
 **Campaign:** C4 of the self-writing-book program

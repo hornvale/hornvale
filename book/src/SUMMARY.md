@@ -174,6 +174,7 @@
 - [The Wanting](./chronicle/the-wanting.md)
 - [The Foresight](./chronicle/the-foresight.md)
 - [The Correspondence](./chronicle/the-correspondence.md)
+- [The Chorus](./chronicle/the-chorus.md)
 
 # Appendix: The Frontier
 

@@ -1,5 +1,7 @@
 # The Chorus (C4) Implementation Plan
 
+> **COMPLETE (2026-07-18).** All 7 tasks executed and reviewed; the known-groups gate PASSED (amended criteria, ledger #13); census regen at close per ledger #14.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Per-culture emic accounts + sparse etic margins in The Book, derived

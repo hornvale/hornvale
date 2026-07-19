@@ -229,6 +229,20 @@ and a render-only parametric realizer says the same clause each
 language's way — or gaps honestly, with the lexicon's own recountable
 reason, when the speaker has no word for the thing.
 
+And since The Chorus, what a people *says* is filtered through what it
+*holds*: each placed culture's account of the world is ground truth
+composed through four derived filters — lexicon (has the concept?),
+knowledge (could its vantage and capability reach the fact?), ontology
+(how does it carve what it cannot classify as we do?), and valence (how
+does it value what it names?) — every parameter a pure function of
+already-authored state, nothing drawn, nothing stored per fact. The Book
+prints each account as an emic paragraph beside a sparse etic margin
+(exactly the facts the filters lost or corrupted), and the
+distinctiveness/recoverability of the whole chorus is a measured
+Laboratory quantity, not a taste call — see
+[Study 012](../laboratory/study-012.md) and
+[The Chorus](../chronicle/the-chorus.md).
+
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
 domain builds *from* that envelope sorts into the same four kinds
