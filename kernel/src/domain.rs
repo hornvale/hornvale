@@ -6,7 +6,51 @@
 //! either; future per-domain behaviors get their own traits, never new
 //! `Domain` members.
 
+use crate::phenomena::PhenomenaSource;
 use crate::registry::{ConceptRegistry, RegistryError};
+use crate::world::World;
+use std::collections::BTreeMap;
+
+/// The composition root's context for a single phenomena observation, handed
+/// to each domain's [`Domain::phenomena_source`]. It carries any live sources
+/// the root pre-assembled from cross-domain inputs, keyed by the owning
+/// crate's name.
+///
+/// A domain whose phenomena source needs data its own crate cannot see (a
+/// sibling domain's output — e.g. climate's provider is built from terrain
+/// and sky) does not construct that source itself: the composition root
+/// builds it (the only layer where domains legally meet) and hands it over
+/// here for the domain to reclaim by [`claim`](WorldContext::claim). This
+/// keeps a domain crate free of sibling dependencies while still letting its
+/// `phenomena_source` return a rich, composed provider. A domain whose source
+/// needs no cross-domain inputs ignores this and constructs its own.
+#[derive(Default)]
+pub struct WorldContext {
+    provisions: BTreeMap<&'static str, Box<dyn PhenomenaSource>>,
+}
+
+impl WorldContext {
+    /// A fresh context with no pre-assembled sources.
+    pub fn new() -> Self {
+        WorldContext {
+            provisions: BTreeMap::new(),
+        }
+    }
+
+    /// Supply a composition-root-built source under its owning crate's name,
+    /// for a domain whose provider is composed from cross-domain inputs.
+    /// type-audit: bare-ok(identifier-text: crate_name)
+    pub fn provide(&mut self, crate_name: &'static str, source: Box<dyn PhenomenaSource>) {
+        self.provisions.insert(crate_name, source);
+    }
+
+    /// Reclaim (removing) the source the composition root supplied for
+    /// `crate_name`, if any.
+    /// type-audit: bare-ok(identifier-text: crate_name)
+    pub fn claim(&mut self, crate_name: &str) -> Option<Box<dyn PhenomenaSource>> {
+        self.provisions.remove(crate_name)
+    }
+}
 
 /// A generative domain's declarative registration surface.
 pub trait Domain {
@@ -24,6 +68,22 @@ pub trait Domain {
     /// type-audit: bare-ok(identifier-text)
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         Vec::new()
+    }
+
+    /// This domain's live phenomena source for the given world, or `None` if
+    /// it contributes none (the default — most domains observe nothing). The
+    /// composition root folds every domain's source into the roster that
+    /// [`crate::phenomena::observe`] aggregates. `ctx` carries any source the
+    /// root pre-built from cross-domain inputs (see [`WorldContext`]); a
+    /// domain whose provider is composed elsewhere reclaims it from there,
+    /// while a self-contained one builds and returns its own.
+    fn phenomena_source(
+        &self,
+        world: &World,
+        ctx: &mut WorldContext,
+    ) -> Option<Box<dyn PhenomenaSource>> {
+        let _ = (world, ctx);
+        None
     }
 }
 

@@ -19,7 +19,7 @@ use hornvale_kernel::math;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
     ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, World, WorldTime, observe,
+    RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
@@ -1464,6 +1464,23 @@ fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
     })
 }
 
+/// The world's live phenomena sources: the sky (kept special/first — astronomy
+/// is not yet migrated to the roster) followed by every domain's roster
+/// contribution ([`Domain::phenomena_source`]). Today this yields exactly
+/// `[sky, UniformClimate]` — the same set the old hardcoded fan-outs built.
+/// [`observe`] re-sorts by salience with a kind→description tie-break, so the
+/// order within the returned list never affects output bytes.
+fn phenomena_sources(world: &World) -> Result<Vec<Box<dyn PhenomenaSource>>, BuildError> {
+    let mut sources: Vec<Box<dyn PhenomenaSource>> = vec![Box::new(sky_of(world)?)];
+    let mut ctx = WorldContext::new();
+    for domain in DOMAINS {
+        if let Some(source) = domain.phenomena_source(world, &mut ctx) {
+            sources.push(source);
+        }
+    }
+    Ok(sources)
+}
+
 /// The tier-0/1/2 phenomena sources, observed from the world's first place —
 /// the flagship (SEQ-4). The vantage's hemisphere culls the sky (SEQ-5).
 /// type-audit: pending(wave-3: day)
@@ -1472,9 +1489,8 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
         return Ok(Vec::new());
     };
     let position = place_coord(world, place);
-    let sky = sky_of(world)?;
-    let climate = UniformClimate;
-    let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
+    let boxed = phenomena_sources(world)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
     Ok(observe(
         &sources,
         &ObserverContext {
@@ -1636,9 +1652,8 @@ fn observed_phenomena_from(
         .get(&KindId(name))
         .expect("peopled pass over a fauna kind");
     let day = observation_time(world, perception.activity)?;
-    let sky = sky_of(world)?;
-    let climate = UniformClimate;
-    let sources: [&dyn PhenomenaSource; 2] = [&sky, &climate];
+    let boxed = phenomena_sources(world)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
     Ok(observe(
         &sources,
         &ObserverContext {

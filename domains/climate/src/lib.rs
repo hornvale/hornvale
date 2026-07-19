@@ -23,7 +23,7 @@ pub use temperature::locked_temperature_at_position;
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, ObserverContext,
-    PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void,
+    PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void, World, WorldContext,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -116,6 +116,16 @@ impl hornvale_kernel::Domain for Climate {
     }
     fn stream_labels(&self) -> Vec<(&'static str, &'static str)> {
         crate::stream_labels()
+    }
+    fn phenomena_source(
+        &self,
+        _world: &World,
+        _ctx: &mut WorldContext,
+    ) -> Option<Box<dyn PhenomenaSource>> {
+        // Tier-0 stub: the same mild air everywhere. Stage 2 will reclaim the
+        // composition-root-built `GeneratedClimate` from `_ctx` when present,
+        // falling back to this stub otherwise.
+        Some(Box::new(UniformClimate))
     }
 }
 
