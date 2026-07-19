@@ -2076,6 +2076,20 @@ pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenome
     observed_phenomena_as_in(world, &wc, species)
 }
 
+/// [`observed_phenomena_as`], reusing an ALREADY-BUILT climate (via
+/// [`observed_phenomena_as_in_from`]) instead of re-deriving one — threaded
+/// down the chorus `cyclic_beliefs_from` path so the census stops re-sculpting.
+/// Byte-identical to `observed_phenomena_as`.
+/// type-audit: bare-ok(identifier-text: species)
+fn observed_phenomena_as_from(
+    world: &World,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    observed_phenomena_as_in_from(world, &wc, species, climate)
+}
+
 /// Map a kind's (language-owned) articulation vector onto language's own
 /// `Envelope` (spec §7): every scalar dimension is a direct 1:1 carry — both
 /// share the same 0–1 scale and semantics — and `ExoticManner` maps onto

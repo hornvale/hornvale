@@ -205,6 +205,23 @@ pub fn beta_of(psych: &PsychVector) -> f64 {
 /// emptiness as "no sky religion to bind to" (ledger #2).
 /// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
 pub fn cyclic_beliefs_of(world: &World, species: &str) -> Vec<(hornvale_religion::Belief, f64)> {
+    let Ok(climate) = crate::climate_of(world) else {
+        return Vec::new();
+    };
+    cyclic_beliefs_from(world, species, &climate)
+}
+
+/// [`cyclic_beliefs_of`], reusing an ALREADY-BUILT climate (down
+/// [`crate::observed_phenomena_as_from`]) instead of re-deriving one. Threaded
+/// through [`explain`] so the census's chorus metric sculpts once per world,
+/// not once per placed people. Byte-identical to `cyclic_beliefs_of` (the
+/// passed climate equals `climate_of(world)`, and this readout draws nothing).
+/// type-audit: bare-ok(identifier-text: species)
+pub(crate) fn cyclic_beliefs_from(
+    world: &World,
+    species: &str,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<(hornvale_religion::Belief, f64)> {
     let Some(flagship) = crate::flagship_of(world, species) else {
         return Vec::new();
     };
@@ -212,7 +229,7 @@ pub fn cyclic_beliefs_of(world: &World, species: &str) -> Vec<(hornvale_religion
     if beliefs.is_empty() {
         return Vec::new();
     }
-    let Ok(phenomena) = crate::observed_phenomena_as(world, species) else {
+    let Ok(phenomena) = crate::observed_phenomena_as_from(world, species, climate) else {
         return Vec::new();
     };
 
@@ -558,8 +575,14 @@ fn explain_moons(
 /// **Unbindable guard (ledger #2):** a culture with no cyclic belief in
 /// [`cyclic_beliefs_of`] explains nothing at all — no synthetic agents,
 /// ever.
-fn explain(world: &World, species: &str, account: &mut Account, params: &AccountParams) {
-    let cyclic = cyclic_beliefs_of(world, species);
+fn explain(
+    world: &World,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    climate: &hornvale_climate::GeneratedClimate,
+) {
+    let cyclic = cyclic_beliefs_from(world, species, climate);
     if cyclic.is_empty() {
         return;
     }
@@ -1284,7 +1307,7 @@ pub fn accounts_from(
         .filter_map(|(kind, _village)| {
             let params = account_params_from(world, kind, terrain, climate).ok()?;
             let mut account = account_of(&ground, &params);
-            explain(world, kind, &mut account, &params);
+            explain(world, kind, &mut account, &params, climate);
             Some(ChorusVoice {
                 kind: kind.to_string(),
                 params,
@@ -1453,7 +1476,8 @@ mod tests {
             "day-length-std is CrossReferential — always Lost before explain runs"
         );
 
-        explain(&world, "goblin", &mut account, &params);
+        let climate = crate::climate_of(&world).unwrap();
+        explain(&world, "goblin", &mut account, &params, &climate);
 
         assert_eq!(
             account.entries[0].disposition,
