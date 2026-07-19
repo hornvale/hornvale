@@ -191,31 +191,59 @@ mod tests {
         }
     }
 
-    // Temporal smoothness: sampling one cell across consecutive days, the state
-    // rarely jumps between NON-ADJACENT rungs (a sky builds and clears; it does
-    // not teleport Clear->Storm). The forbidden-transition structure emerges
-    // from the drifting noise, it is not enforced by a rule. A discontinuous
-    // phase would fail this.
+    // Temporal smoothness, measured on the MECHANISM and self-calibrating (no
+    // magic threshold): consecutive days are far more alike than distant days.
+    // If the phase were discontinuous in time (e.g. a huge drift decorrelating
+    // adjacent days), adjacent-day deltas would be as large as far-apart-day
+    // deltas and the ratio would approach 1 — this asserts it stays well below.
+    // A naive "non-adjacent state jumps are rare" test is VACUOUS here: at a
+    // mid propensity the intensity never swings far enough in a day to skip two
+    // rungs regardless of smoothness, so it passes even for a decorrelated
+    // phase. The delta-ratio measures the actual smoothness the design claims.
     #[test]
     fn weather_is_temporally_smooth() {
         let seed = Seed(42).derive(WEATHER_PHASE_TEST);
+        for &(lon, lat) in &[(12.0_f64, 34.0_f64), (100.0, -20.0), (-50.0, 5.0)] {
+            let mut adjacent = 0.0_f64;
+            let mut far = 0.0_f64;
+            let n = 600;
+            for d in 0..n {
+                let day = f64::from(d);
+                let a = weather_phase(seed, lon, lat, day);
+                let a_next = weather_phase(seed, lon, lat, day + 1.0);
+                // 300 days apart ~ fully decorrelated (weeks-scale systems).
+                let a_far = weather_phase(seed, lon, lat, day + 300.0);
+                adjacent += (a_next - a).abs();
+                far += (a_far - a).abs();
+            }
+            let ratio = adjacent / far;
+            assert!(
+                ratio < 0.5,
+                "phase not smooth in time at ({lon},{lat}): adjacent-day delta \
+                 {adjacent:.3} vs far-day delta {far:.3}, ratio {ratio:.3} \
+                 (a discontinuous phase gives ~1.0)"
+            );
+        }
+    }
+
+    // Temporal VARIETY: over a season a cell must actually experience DIFFERENT
+    // weather, not sit frozen in one state. Guards the opposite failure of
+    // smoothness — a phase amplitude too small (or a dead noise) would leave the
+    // sky static, which is smooth but wrong. A mid-propensity cell visits at
+    // least three distinct states across a year.
+    #[test]
+    fn weather_varies_over_a_season() {
+        let seed = Seed(42).derive(WEATHER_PHASE_TEST);
         let (lon, lat) = (12.0, 34.0);
         let p = 0.55;
-        let mut big_jumps = 0;
-        let mut prev = weather_state(p, weather_phase(seed, lon, lat, 0.0));
-        for d in 1..=400 {
-            let day = f64::from(d);
-            let s = weather_state(p, weather_phase(seed, lon, lat, day));
-            let rise = (s as i32 - prev as i32).abs();
-            if rise >= 3 {
-                big_jumps += 1;
-            }
-            prev = s;
+        let mut states = std::collections::BTreeSet::new();
+        for d in 0..400 {
+            states.insert(weather_state(p, weather_phase(seed, lon, lat, f64::from(d))) as u8);
         }
-        // Adjacent-rung motion dominates; non-adjacent jumps are rare (< 5% of days).
         assert!(
-            big_jumps < 20,
-            "too many non-adjacent day-to-day jumps: {big_jumps}/400"
+            states.len() >= 3,
+            "weather is too static — only {} distinct states over 400 days: {states:?}",
+            states.len()
         );
     }
 
