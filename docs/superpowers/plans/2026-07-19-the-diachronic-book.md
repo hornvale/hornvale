@@ -1,5 +1,7 @@
 # The Diachronic Book (C8) Implementation Plan
 
+> **COMPLETE (2026-07-19).** 2 tasks + post-epoch re-pins (the Rains absorbed mid-close); the program's committed sequence C1–C8 is done.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The Book's time axis — the observation ledger at T, MAP-18's

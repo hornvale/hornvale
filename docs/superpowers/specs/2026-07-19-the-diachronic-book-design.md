@@ -1,7 +1,7 @@
 # The Diachronic Book (C8) — Design
 
 **Date:** 2026-07-19
-**Status:** **Approved at G3 (2026-07-19)** — floor/ceiling split confirmed; zero-blast-radius posture confirmed; ledger digest due at G6.
+**Status:** **COMPLETE — shipped (see [the chronicle](../../../book/src/chronicle/the-diachronic-book.md)); the program's committed sequence C1–C8 closes with this campaign.** Was: Approved at G3 (2026-07-19) — floor/ceiling split confirmed; zero-blast-radius posture confirmed; ledger digest due at G6.
 **Campaign:** C8 of the self-writing-book program — the final committed
 campaign (metaplan: [program metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md) §3 C8)
 **Theory:** registry row LANG-42 (the diachronic Book), floor slice: the

@@ -221,6 +221,21 @@ gates on the LANG-41 distinctiveness/recoverability metrics existing in the Lab.
 5. **North-star boundary:** UNI-29 (the self-describing program) is confirmed as
    vision, not committed scope here.
 
+## Completion (2026-07-19)
+
+**The committed sequence is done.** C1 The First Sentence, C2 The
+Predicates & the Grammar, The Echo (inserted), C3 The Tongues, C4 The
+Chorus, C5 The Explanations, C6 The Doctrine, C7 The Deep Grammar, and
+C8 The Diachronic Book have all shipped and merged (chronicles under
+`book/src/chronicle/`). The standing gate held throughout: byte-identity,
+the drift-checked Book, the corpus law, PROC-15 coverage, and the
+LANG-41 dial (C4's gate) all stand as permanent tests. §8's flagged bets
+resolved: the dial PASSED its known-groups falsification (flag 3 — the
+program's biggest bet); the build-state determinism framing (flag 1)
+survived three parallel epochs without a Book-caused world epoch.
+What remains above the sequence: LANG-42's ceiling (decay, Kuhn, schism)
+and the north star UNI-29 — named, not promised, exactly as §3 closed.
+
 ## Addendum (2026-07-18, G3-approved): The Echo
 
 Inserted between C2 and C3: **The Echo** — the Common grammar recast as one
