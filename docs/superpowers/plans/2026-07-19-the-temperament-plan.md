@@ -88,7 +88,13 @@ best relieving total discomfort; changing `deliberation_latency` changes the
 resolution (grab vs weigh); no dithering/flip-flop; reload-stable.
 **Tests:** arbitration unit tests (max-utility pick, grab-vs-weigh divergence,
 hysteresis no-flip-flop, urgency-ceiling ordering, determinism).
-**Status:** Not Started
+**Status:** Complete — action-centric `arbitrate` (utility = Σ capped-urgency ×
+serviceability; grab↔weigh via `deliberation_latency`; soft-Maslow ceilings
+thirst 1.0/thermal 0.6; commitment `Mode{Idle,Homing,Pursuing}` + hysteresis δ);
+niche + latency threaded onto the NPC. Thirst-only PRESERVED (`decide` delegates
+to `arbitrate({Thirst})`; regression test byte-identical); walk delta ZERO
+(seed-42 hobgoblins temperate → thermal never fires), genesis byte-identical,
+independently verified; `make gate` green.
 
 ## Stage 3: Affect + the health metric
 **Goal:** the decision's character is legible, and the population self-scores.
