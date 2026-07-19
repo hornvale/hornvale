@@ -7,6 +7,19 @@ use hornvale_worldgen::{
     sky_capability,
 };
 
+/// Read through a C5 `Explained` wrapper to what the four-filter account
+/// said underneath — this file's assertions are about C4's knowledge
+/// filter (does a culture keep/lose a fact), which stays dial-blind to
+/// whether the causal filter later wrapped that entry in an explanation
+/// (see `hornvale_language::account`'s own `effective()` seam, which this
+/// mirrors for tests outside that crate).
+fn underlying(d: &Disposition) -> &Disposition {
+    match d {
+        Disposition::Explained { underlying, .. } => underlying,
+        other => other,
+    }
+}
+
 /// Build a world with the shipped four-people component set, generated sky,
 /// default terrain/settlement pins — the shared pattern every neighboring
 /// worldgen integration test (`exposure.rs`, `species_worlds.rs`) uses.
@@ -106,7 +119,7 @@ fn kobold_keeps_the_moons_goblin_loses() {
         .iter()
         .find(|e| e.fact.predicate == "moon-count")
         .expect("a moon-count ground fact must exist");
-    assert_eq!(kobold_moon.disposition, Disposition::Kept);
+    assert_eq!(*underlying(&kobold_moon.disposition), Disposition::Kept);
 
     if let Some(goblin_voice) = goblin_voice {
         let goblin_moon = goblin_voice
@@ -116,7 +129,7 @@ fn kobold_keeps_the_moons_goblin_loses() {
             .find(|e| e.fact.predicate == "moon-count")
             .expect("a moon-count ground fact must exist");
         assert_eq!(
-            goblin_moon.disposition,
+            *underlying(&goblin_moon.disposition),
             Disposition::Lost(LossReason::BeyondCapability { domain: "sky" })
         );
     }
@@ -129,7 +142,7 @@ fn kobold_keeps_the_moons_goblin_loses() {
             .find(|e| e.fact.predicate == "star-class");
         if let Some(star) = star {
             assert_eq!(
-                star.disposition,
+                *underlying(&star.disposition),
                 Disposition::Lost(LossReason::BeyondCapability { domain: "sky" }),
                 "{}'s star-class must be lost (Instrumental)",
                 voice.kind
@@ -142,7 +155,7 @@ fn kobold_keeps_the_moons_goblin_loses() {
             .find(|e| e.fact.predicate == "day-length-std");
         if let Some(day) = day {
             assert_eq!(
-                day.disposition,
+                *underlying(&day.disposition),
                 Disposition::Lost(LossReason::BeyondCapability { domain: "sky" }),
                 "{}'s day-length-std must be lost (CrossReferential)",
                 voice.kind
@@ -154,7 +167,7 @@ fn kobold_keeps_the_moons_goblin_loses() {
             .iter()
             .find(|e| e.fact.predicate == "is-a");
         if let Some(is_a) = is_a {
-            match &is_a.disposition {
+            match underlying(&is_a.disposition) {
                 Disposition::Substituted { truth, theirs } => {
                     assert_eq!(truth, "planet");
                     assert_eq!(theirs, "earth");

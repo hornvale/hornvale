@@ -146,6 +146,10 @@ The seas: a current runs east along the coast.
 The land is mostly shale, its soils mostly leptosol.
 Notable: karst country, salt flats.
 
+## The Waters
+
+Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 6% of the land.
+
 ## The People
 
 The land holds 113 settlement(s).

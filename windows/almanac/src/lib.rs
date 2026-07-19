@@ -102,7 +102,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -122,6 +122,11 @@ pub struct AlmanacContext {
     /// notable formations (The Ground, spec §3/§4/§6); empty for a landless
     /// world.
     pub ground_lines: Vec<String>,
+    /// The Waters' headline line: the fresh-water (river) share of a world's
+    /// land (The Freshet, DOM-5 first slice) — the salt/fresh distinction
+    /// the drainage substrate always computed but never reported; empty for
+    /// a landless world.
+    pub water_lines: Vec<String>,
     /// Per-sample-site diurnal-range readouts (The Turning, spec §2): the
     /// peak-to-peak day/night swing at the driest interior land and at the
     /// open ocean, so the reader sees both ends of the range. Empty for
@@ -329,6 +334,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
         doc.push('\n');
     }
 
+    if !ctx.water_lines.is_empty() {
+        doc.push_str("## The Waters\n\n");
+        for line in &ctx.water_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
+    }
+
     if !ctx.deep_time_lines.is_empty() {
         doc.push_str("## Deep Time\n\n");
         for line in &ctx.deep_time_lines {
@@ -452,6 +465,10 @@ mod tests {
             biome_lines: vec![],
             ground_lines: vec![
                 "The land is mostly granite, its soils mostly loam.".to_string(),
+            ],
+            water_lines: vec![
+                "Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 7% of the land."
+                    .to_string(),
             ],
             diurnal_lines: vec![],
             seas_lines: vec![],
@@ -631,6 +648,40 @@ mod tests {
         assert!(
             ground_pos < deep_time_pos,
             "Ground must come before Deep Time"
+        );
+    }
+
+    #[test]
+    fn waters_section_names_the_fresh_water_share_and_is_skipped_when_empty() {
+        let mut ctx = sample_context();
+        ctx.water_lines = vec![
+            "Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 7% of the land."
+                .to_string(),
+        ];
+        let doc = render(&ctx);
+        assert!(doc.contains("## The Waters"));
+        assert!(doc.contains("Fresh water"));
+
+        ctx.water_lines = vec![];
+        assert!(!render(&ctx).contains("## The Waters"));
+    }
+
+    #[test]
+    fn waters_section_renders_between_ground_and_deep_time() {
+        let ctx = AlmanacContext {
+            ground_lines: vec!["The land is mostly basalt, its soils mostly andosol.".to_string()],
+            water_lines: vec!["Fresh water reaches 7% of the land.".to_string()],
+            deep_time_lines: vec!["The frost retreated.".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let ground_pos = doc.find("## The Ground").unwrap();
+        let waters_pos = doc.find("## The Waters").unwrap();
+        let deep_time_pos = doc.find("## Deep Time").unwrap();
+        assert!(ground_pos < waters_pos, "Waters must come after Ground");
+        assert!(
+            waters_pos < deep_time_pos,
+            "Waters must come before Deep Time"
         );
     }
 

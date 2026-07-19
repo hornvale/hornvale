@@ -7,6 +7,7 @@ use crate::elevation::TrailSeamount;
 use crate::pins::{self, GenesisError, TerrainPins};
 use crate::plates::Plate;
 use crate::streams;
+use crate::water::WaterKind;
 use crate::{crust, elevation, plates};
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Seed, math};
 
@@ -45,6 +46,9 @@ pub struct TectonicGlobe {
     pub drainage: CellMap<f64>,
     /// Endorheic mask: land cells whose downhill path never reaches the sea.
     pub endorheic: CellMap<bool>,
+    /// Salt/fresh water classification per cell (The Freshet). Recomputed at
+    /// genesis, never serialized; a pure projection over drainage/endorheic.
+    pub water_kind: CellMap<WaterKind>,
     /// The drawn craton set this globe's crust field was built from
     /// (Crust epoch, Task 8). Majors only — microcontinents live in
     /// `microcontinents` instead, so `continental_supply`, `--continents`
@@ -408,6 +412,17 @@ pub fn generate(
     // surface is simpler than plumbing the internal downhill vector out of
     // `drainage_field` itself.
     let post_downhill = crate::drainage::downhill_targets(geosphere, &elevation_map, sea_level);
+    // Salt/fresh classification (The Freshet, T1): a pure projection over the
+    // final drainage/endorheic/downhill this globe retains — no seed draws,
+    // no new committed fact.
+    let water_kind = crate::water::water_field(
+        geosphere,
+        &elevation_map,
+        sea_level,
+        &drainage,
+        &endorheic,
+        &post_downhill,
+    );
     let carve_reroute_fraction = crate::carve::rerouted_flow_fraction(
         geosphere,
         &drainage_pre,
@@ -461,6 +476,7 @@ pub fn generate(
         boundary: boundary_map,
         drainage,
         endorheic,
+        water_kind,
         cratons,
         terranes,
         microcontinents: micro,

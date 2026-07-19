@@ -21,6 +21,7 @@ hobgoblin: gap — planet (no entry in this lexicon)
 The Vavako are goblins — ourselves.
 The Babako are hobgoblins — neighbors.
 Vebe is the earth.
+The day returns because the sky must be crossed.
 
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -29,6 +30,7 @@ Vebe is the earth.
 The Vavako are goblins — rivals.
 The Babako are hobgoblins — ourselves.
 Vebe is the earth.
+The day returns, as all things return.
 
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
@@ -57,6 +59,7 @@ The Maetmea are goblins — ourselves.
 The Waedwea are hobgoblins — neighbors.
 The Ngkoshngta are kobolds — neighbors.
 Waobwoe is the earth.
+The day returns, as all things return.
 
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -66,12 +69,15 @@ The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — ourselves.
 The Ngkoshngta are kobolds — rivals.
 Waobwoe is the earth.
+The day returns, as all things return.
 
 *In truth, Waobwoe is a planet with one moon, orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
 #### As the Ngkoshngta tell it
 
 Waobwoe is the earth with one moon.
+The moon crosses because Nggo strides the sky, slowly.
+The day returns, as all things return.
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — rivals.
 The Ngkoshngta are kobolds — ourselves.
@@ -99,6 +105,7 @@ hobgoblin: gap — planet (no entry in this lexicon)
 The Sdeozqae are goblins — ourselves.
 The Shteozqae are hobgoblins — neighbors.
 Zhqea is the earth.
+The day returns to keep the balance.
 
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
@@ -107,5 +114,6 @@ Zhqea is the earth.
 The Sdeozqae are goblins — rivals.
 The Shteozqae are hobgoblins — ourselves.
 Zhqea is the earth.
+The day returns because the sky must be crossed.
 
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
