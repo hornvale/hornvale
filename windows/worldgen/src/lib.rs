@@ -387,10 +387,23 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
-/// Drainage normalization reference for the carrying-capacity freshwater
-/// term (§2): drainage accumulation above this reads as "as good as any
-/// river gets", not an unbounded score.
-const DRAINAGE_REF: f64 = 200.0;
+/// Weight the ambient moisture floor carries in the carrying-capacity
+/// freshwater term (The Confluence), against the `river_proximity` term it
+/// is `max`-combined with. Keeps riverless-but-wet regions habitable
+/// (moisture alone can still contribute up to this fraction) while leaving
+/// headroom for river proximity (`1.0` on a river, decaying over
+/// `RIVER_REACH`) to dominate near actual rivers — the mechanism
+/// condensation is meant to ride. TUNED (the-confluence T2, from the
+/// brief's placeholder 0.5): the keystone measurement
+/// (`windows/worldgen/tests/confluence.rs`) found that `RIVER_REACH`'s hop
+/// radius is also the ruler the test uses for "near a river" — widening it
+/// to inflate the settlement fraction just inflates the ambient land
+/// coverage of "near" too (90% of seed-42's land sits within 7 hops of a
+/// river), which trivializes the emergence claim rather than strengthening
+/// it. `RIVER_REACH` therefore stays at its T1 value (3 hops; ~55% ambient
+/// land coverage); this constant alone was pulled down from 0.5 to sharpen
+/// the river-vs-moisture contrast without touching the ruler.
+const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 
 /// Condensation threshold: an attractor whose catchment population clears
 /// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
@@ -416,13 +429,21 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    // The Confluence: freshwater rides proximity to the real river network,
+    // not a smooth drainage/moisture proxy — so K spikes near rivers and
+    // settlements condense there (emergent). A moisture floor keeps
+    // riverless-but-wet regions habitable.
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     hornvale_kernel::CellMap::from_fn(geo, |cell| {
         let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
         let moisture = climate.moisture_at(cell);
-        let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
-        let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
+        let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
+            .max(*river_prox.get(cell))
+            .clamp(0.0, 1.0);
         let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
         let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
@@ -4690,12 +4711,16 @@ mod tests {
         // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
         // season moved it again within the epoch: iteration 2's clip-taper
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
-        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
-        // here (with review) whenever a deliberate terrain change moves world
-        // identity.
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. The
+        // Confluence (T2) then re-pointed `carrying_inputs_of`'s freshwater
+        // term at `river_proximity` (deliberately, so settlements condense
+        // near rivers -- see `windows/worldgen/tests/confluence.rs`), which
+        // redistributes carrying capacity and hence catchments; re-pinning
+        // 8 -> 4 here. Re-pin here (with review) whenever a deliberate
+        // terrain/carrying-capacity change moves world identity.
         assert_eq!(
-            village.population, 8,
-            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
+            village.population, 4,
+            "the world's largest attractor headcount is pinned at this seed (the-confluence T2)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
