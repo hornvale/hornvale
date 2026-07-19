@@ -911,8 +911,13 @@ fn name_collision_rate_is_measured_and_pinned() {
     // the-terminator SKY-24, commit 945f62b): the epoch reshuffles every
     // settlement roster (fewer settlements per world on average), further
     // reducing per-culture lexicon reuse (272 -> 309 zero-collision worlds).
-    assert_eq!(zero, 309, "zero-collision world count drifted");
-    assert_eq!(nonzero, 691, "nonzero-collision world count drifted");
+    // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
+    // re-measured (was 309) — accumulated lexeme-space drift (the person
+    // concept (C2), the grammar streams (C3), The Echo) surfacing at the
+    // fixtures' first refresh since; the chorus itself adds zero draws
+    // (genesis byte-identical).
+    assert_eq!(zero, 310, "zero-collision world count drifted");
+    assert_eq!(nonzero, 690, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -929,7 +934,12 @@ fn name_collision_rate_is_measured_and_pinned() {
         // epoch): the ages/origins facts perturb the deity-name draws that
         // feed each culture's lexicon; the zero/nonzero split is unmoved
         // (309/691), only the mean shifts -> 0.075_980_437_211_100.
-        (mean - 0.075_980_437_211_100).abs() < 1e-6,
+        // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
+        // re-measured (was 0.075_980_437_211_100) — accumulated
+        // lexeme-space drift (the person concept (C2), the grammar streams
+        // (C3), The Echo) surfacing at the fixtures' first refresh since;
+        // the chorus itself adds zero draws (genesis byte-identical).
+        (mean - 0.075_947_118_593_100).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1008,8 +1018,21 @@ fn name_length_distributions_are_measured_and_pinned() {
         // goblin mean re-pinned on the 2026-07-17 Reckoning-epoch regen
         // (The Presiding): ages/origins facts perturb the deity-name draws;
         // kobold's mean is unmoved.
-        ("goblin", 999u32, 13.519_483_012_612_616),
-        ("kobold", 163u32, 9.857_451_023_312_882),
+        //
+        // Census regen (2026-07-18, the-chorus close, regen commit
+        // fe2332c): goblin re-measured (was 13.519_483_012_612_616) —
+        // accumulated lexeme-space drift (the person concept (C2), the
+        // grammar streams (C3), The Echo) surfacing at the fixtures' first
+        // refresh since; the chorus itself adds zero draws (genesis
+        // byte-identical).
+        ("goblin", 999u32, 13.537_611_771_571_575),
+        // Census regen (2026-07-18, the-chorus close, regen commit
+        // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
+        // accumulated lexeme-space drift (the person concept (C2), the
+        // grammar streams (C3), The Echo) surfacing at the fixtures' first
+        // refresh since; the chorus itself adds zero draws (genesis
+        // byte-identical).
+        ("kobold", 163u32, 9.870_880_927_607_359),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1230,7 +1253,13 @@ fn null_control_name_length_smd_is_pinned() {
         // commit 945f62b): -> -0.057_246_623_530_308_95.
         // Census regen (2026-07-17, The Presiding on the merged Reckoning
         // epoch): -> -0.056_923_687_297_304_355.
-        (namelen - -0.056_923_687_297_304_355).abs() < 1e-9,
+        // Census regen (2026-07-18, the-chorus close, regen commit
+        // fe2332c): re-measured (was -0.056_923_687_297_304_355) —
+        // accumulated lexeme-space drift (the person concept (C2), the
+        // grammar streams (C3), The Echo) surfacing at the fixtures' first
+        // refresh since; the chorus itself adds zero draws (genesis
+        // byte-identical).
+        (namelen - -0.053_161_626_758_620_96).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
