@@ -20,7 +20,8 @@ use hornvale_language::clause::{
 };
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, LexemeId, SchemaId, TongueClause, conflict_of, realize_tongue, tongue_grammar,
+    ConflictState, Evidential, LexemeId, SchemaId, TongueClause, conflict_of, realize_tongue,
+    tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -317,6 +318,11 @@ pub fn render_volume(world: &World) -> BookVolume {
         let self_statement = TongueClause {
             subject: autonym.clone(),
             complement_concept: own_kind,
+            // The self-statement is a folk (self-)statement, grounded in
+            // lived experience — C7's eventual readout will derive this
+            // from exposure class; C7 T1 only needs the field populated so
+            // the (untouched) C3 realizer keeps compiling.
+            evidential: Evidential::Witnessed,
         };
         let tongue_line =
             realize_tongue(&self_statement, &grammar, &lexicon).unwrap_or_else(|gap| {
@@ -1134,6 +1140,10 @@ fn probe_tongue(
         &TongueClause {
             subject: probe.subject.clone(),
             complement_concept: probe.concept.clone(),
+            // Every probe states an emic world-statement, grounded in the
+            // same lived-experience footing as the self-statement above;
+            // `realize_tongue` (unmodified by C7) ignores this field.
+            evidential: Evidential::Witnessed,
         },
         grammar,
         lexicon,
