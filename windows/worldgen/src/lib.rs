@@ -536,6 +536,47 @@ pub fn species_carrying_input(
     }
 }
 
+/// Ambient detritus supply (BIO-35 Stage 1: The Demesne). Dead-matter
+/// resource is treated as broadly available this stage — a small constant
+/// floor, not a spatial field. A real spatial detritus field (litterfall /
+/// carcass turnover) is a later refinement once T2 wires the per-axis dot
+/// product this stage is building toward.
+/// type-audit: bare-ok(ratio)
+pub const DETRITUS_AMBIENT: f64 = 0.2;
+
+/// Fraction of primary production that is grazable plant forage. Plant-
+/// forage supply tracks photosynthate spatially, at a reduced amplitude
+/// (not all NPP is grazable — wood, roots, and unpalatable growth are not).
+/// type-audit: bare-ok(ratio)
+const FORAGE_FRACTION: f64 = 0.5;
+
+/// The `PLANT_FORAGE` supply field (BIO-35 Stage 1: The Demesne, task T1): a
+/// fraction of the NPP-based `base_carrying` (grazable matter tracks primary
+/// production spatially). Pure, deterministic, no RNG — a direct scale of an
+/// already-computed field.
+/// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
+pub fn forage_supply_field(
+    geo: &Geosphere,
+    base_carrying: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
+}
+
+/// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
+/// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
+/// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
+/// in the weighted sum T2 builds (`scale` is the mineral supply amplitude —
+/// the one calibration knob, re-fit in T3). Pure, deterministic — a direct
+/// read, no float ordering involved (`total_cmp`-free).
+/// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
+pub fn mineral_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    scale: f64,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
