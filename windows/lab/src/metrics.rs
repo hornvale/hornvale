@@ -384,6 +384,13 @@ impl FullView {
     pub fn climate(&self) -> &GeneratedClimate {
         self.settlement.climate()
     }
+
+    /// The sculpted terrain globe, reached through the settlement/climate/
+    /// terrain rungs this view extends — so lexicon metrics can thread the
+    /// already-built globe into `lexicon_from` instead of re-sculpting it.
+    pub fn terrain(&self) -> &hornvale_terrain::GeneratedTerrain {
+        self.settlement.terrain()
+    }
 }
 
 impl AsRef<SettlementView> for FullView {
@@ -3327,7 +3334,7 @@ fn phonotactic_validity(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
-    let attested = hornvale_worldgen::lexicon_of(v.world(), species)
+    let attested = lex(v, species)
         .map(|lex| attested_roman_forms(&lex))
         .unwrap_or_default();
     MetricValue::Flag(
@@ -3381,7 +3388,7 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     else {
         return MetricValue::Absent;
     };
-    let Ok(lexicon) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lexicon) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let ph = language_of_in(v.world(), v.components(), species);
@@ -3468,6 +3475,16 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
         hornvale_climate::AMBIENT => Some("wind"),
         _ => None,
     }
+}
+
+/// This world's `species` lexicon, reusing the view's already-built terrain
+/// and climate instead of re-sculpting the globe inside `exposure_of` — the
+/// census's dominant cost once the name-gloss sculpts were removed (the
+/// terrain pipeline ran twice per `lexicon_of` call, ~14 metrics deep). The
+/// Single Sculpt, applied to the lexicon path; byte-identical to
+/// `lex(v, species)`.
+fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildError> {
+    hornvale_worldgen::lexicon_from(v.world(), species, v.terrain(), v.climate())
 }
 
 /// A settlement's own re-derived site concepts (mirrors
@@ -3561,7 +3578,7 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
     }
     let ph = language_of_in(v.world(), v.components(), species);
     let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -3676,7 +3693,7 @@ fn exposure_sound(v: &FullView, species: &str) -> MetricValue {
     let Some(steeped) = independently_steeped_concepts(v, species) else {
         return MetricValue::Absent;
     };
-    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -3819,7 +3836,7 @@ fn monophyly_goblinoid(v: &FullView) -> MetricValue {
         if !in_roster(v, species) {
             continue;
         }
-        let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+        let Ok(lex) = lex(v, species) else {
             continue;
         };
         for (concept, entry) in lex.entries() {
@@ -3846,7 +3863,7 @@ fn clean_outgroup_kobold(v: &FullView) -> MetricValue {
     if !in_roster(v, "kobold") {
         return MetricValue::Absent;
     }
-    let Ok(kobold_lex) = hornvale_worldgen::lexicon_of(v.world(), "kobold") else {
+    let Ok(kobold_lex) = lex(v, "kobold") else {
         return MetricValue::Absent;
     };
     let assignment = goblinoid_proto_assignment(v);
@@ -3876,7 +3893,7 @@ fn inventory_closure(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -3917,7 +3934,7 @@ fn divergence_magnitude(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
-    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let mut any = false;
@@ -3954,7 +3971,7 @@ fn divergence_real(v: &FullView) -> MetricValue {
     }
     let lexes: Vec<hornvale_language::Lexicon> = GOBLINOID_DAUGHTERS
         .iter()
-        .filter_map(|s| hornvale_worldgen::lexicon_of(v.world(), s).ok())
+        .filter_map(|s| lex(v, s).ok())
         .collect();
     if lexes.len() < GOBLINOID_DAUGHTERS.len() {
         return MetricValue::Absent;
@@ -3992,7 +4009,7 @@ fn homophony_count(v: &FullView, species: &str) -> MetricValue {
     if !in_roster(v, species) {
         return MetricValue::Absent;
     }
-    let Ok(lex) = hornvale_worldgen::lexicon_of(v.world(), species) else {
+    let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
     };
     let mut by_form: std::collections::BTreeMap<Vec<Segment>, usize> =
@@ -4138,7 +4155,7 @@ fn homophony_stats(v: &FullView, species: &str) -> Option<HomophonyStats> {
     if !in_roster(v, species) {
         return None;
     }
-    let lex = hornvale_worldgen::lexicon_of(v.world(), species).ok()?;
+    let lex = lex(v, species).ok()?;
     let mut triples: Vec<(Vec<Segment>, Vec<Segment>, Option<&'static str>)> = Vec::new();
     for (concept, entry) in lex.entries() {
         if let LexEntry::Root { derivation, .. } = entry {

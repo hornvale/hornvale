@@ -2356,6 +2356,29 @@ pub fn exposure_of(
     exposure_of_impl(world, &wc, name, &settled, &coexisting, &terrain, &climate)
 }
 
+/// [`exposure_of`], reusing ALREADY-BUILT terrain and climate instead of
+/// re-sculpting them (`exposure_of` runs the terrain pipeline twice — once
+/// directly, once inside its `climate_of`). Byte-identical: the sole
+/// difference is that the passed terrain/climate replace `terrain_of(world)`/
+/// `climate_of(world)`, which a Lab view's `terrain()`/`climate()` equal by
+/// construction; every other input (the assembled roster, the settled/
+/// coexisting cells) is derived exactly as `exposure_of` derives it. Threaded
+/// down the `lexicon_from` chain so the census's ~14 lexicon metrics stop
+/// re-sculpting per call.
+/// type-audit: bare-ok(identifier-text)
+fn exposure_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
+    let settled = settled_cells(world, species);
+    let coexisting = placed_species(world);
+    exposure_of_impl(world, &wc, name, &settled, &coexisting, terrain, climate)
+}
+
 /// [`exposure_of`]'s classification rules (spec §7), factored out so
 /// glossed naming (Task 9) can classify a species' exposure from the
 /// scatter *this build pass is about to place* rather than from committed
@@ -2557,6 +2580,59 @@ pub fn lexicon_of_in(
         &exposures,
         &daughters,
     ))
+}
+
+/// [`lexicon_of_in`], reusing ALREADY-BUILT terrain and climate down the
+/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. Only
+/// the `exposure_*` line differs from `lexicon_of_in`; the draw order (`ph`
+/// before exposure, exactly as `lexicon_of_in`) is preserved so the seed
+/// stream is consumed identically. Byte-identity pinned by the census A/B and
+/// the `lexicon_from_matches_lexicon_of` test.
+/// type-audit: bare-ok(identifier-text: species)
+fn lexicon_of_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of_in(world, wc, species);
+    let exposures = exposure_from(world, species, terrain, climate)?;
+    let name = resolve_kind(wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
+        None => (name, ph.clone()),
+    };
+    let daughters = family_daughters(world, wc, family);
+    Ok(hornvale_language::build_lexicon(
+        &world.seed,
+        name,
+        fam_label,
+        &ph,
+        &proto_ph,
+        &exposures,
+        &daughters,
+    ))
+}
+
+/// [`lexicon_of`], reusing ALREADY-BUILT terrain and climate (a Lab view's
+/// `terrain()`/`climate()`) so the census's many lexicon metrics stop
+/// re-sculpting the globe per call — the terrain sculpt was ~80% of the
+/// post-name-gloss census cost, almost all of it here. Byte-identical to
+/// `lexicon_of` (same assembled roster, same draw order).
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    lexicon_of_in_from(world, &wc, species, terrain, climate)
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
