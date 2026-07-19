@@ -20,8 +20,8 @@ use hornvale_language::clause::{
 };
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, Evidential, LexemeId, SchemaId, TongueClause, conflict_of, realize_tongue,
-    tongue_grammar,
+    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueClause, TongueMorphology,
+    conflict_of, realize_tongue_deep, tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -35,12 +35,17 @@ pub struct BookVolume {
     /// then one per rendered `instance-of` fact (C2 T5: a placed peopled
     /// species' collective, "The ⟨Autonym⟩ are ⟨species⟩.").
     pub lines: Vec<String>,
-    /// C3 T3: one self-statement per placed people, realized in its own
-    /// tongue (`realize_tongue` over that people's `TongueGrammar` and
-    /// lexicon) — "⟨autonym⟩ ⟨copula?⟩ ⟨own-kind⟩." glossed with the
-    /// matching Common line. The self-statement law (spec §5): autonym and
-    /// own-kind are Steeped by construction, so this never gaps — see
-    /// `every_placed_people_self_states_in_its_own_tongue`.
+    /// C3 T3, deepened by C7: one self-statement per placed people, plus
+    /// (C7) one emic world-statement per placed people, both realized in
+    /// its own tongue (`realize_tongue_deep` over that people's
+    /// `TongueGrammar`/`TongueMorphology` and lexicon, `Evidential::Witnessed`)
+    /// — "⟨autonym⟩ ⟨copula?⟩ ⟨own-kind⟩." and "⟨planet⟩ ⟨copula?⟩ ⟨their
+    /// carving of "earth"⟩.", each glossed with its matching Common
+    /// sentence. The self-statement law (spec §5) and the world-statement
+    /// law (C7 §3.5/§4.5): autonym/own-kind and the planet/"earth" concept
+    /// are all Steeped by construction, so neither ever gaps — see
+    /// `every_placed_people_self_states_in_its_own_tongue` and
+    /// `every_people_states_the_world_in_its_tongue`.
     pub tongue_lines: Vec<String>,
     /// C3 T3: the per-tongue coverage report — one gap line per placed
     /// people recording that its tongue cannot yet state the planet's own
@@ -84,17 +89,26 @@ pub struct ChorusSection {
 /// C6 (The Doctrine): one organized culture's doctrine section — the
 /// institution's second account (the priesthood's own composition of the
 /// SAME ground truth, run through `hornvale_worldgen::doctrine_of`'s four
-/// preregistered deltas), split into three registers rather than the folk
-/// section's two: `emic` (the doctrine's own paragraph, with the
-/// `RevealedClaim` substitution), `annotations` (the disclosure law's
-/// `Contested` counter-lines — a separate register, never interleaved into
-/// `emic`), and `margin` (the doctrine account's own etic margin, the same
-/// law as any other voice). See [`doctrine_section`] for the construction.
-/// type-audit: bare-ok(prose: heading), bare-ok(prose: emic), bare-ok(prose: annotations), bare-ok(prose: margin)
+/// preregistered deltas), split into four registers rather than the folk
+/// section's two: `tongue_taught_line` (C7: the in-tongue taught contrast),
+/// `emic` (the doctrine's own paragraph, with the `RevealedClaim`
+/// substitution), `annotations` (the disclosure law's `Contested`
+/// counter-lines — a separate register, never interleaved into `emic`), and
+/// `margin` (the doctrine account's own etic margin, the same law as any
+/// other voice). See [`doctrine_section`] for the construction.
+/// type-audit: bare-ok(prose: heading), bare-ok(prose: tongue_taught_line), bare-ok(prose: emic), bare-ok(prose: annotations), bare-ok(prose: margin)
 pub struct DoctrineSection {
     /// `"As the priesthood of the ⟨Autonym⟩ teach it"` — scaffolding, not
     /// a Book corpus line.
     pub heading: String,
+    /// C7 T3: the doctrine's ONE in-tongue taught line — the SAME emic
+    /// world-statement the Tongues section renders (same subject, same
+    /// `"earth"` complement), but with `Evidential::Taught` rather than
+    /// `Witnessed` — the visible morphological folk/doctrine contrast on one
+    /// proposition (spec §3.5, the taught-contrast law). Glossed the same
+    /// way the Tongues section glosses its lines, plus the doctrine's own
+    /// "— as it is taught" marker.
+    pub tongue_taught_line: String,
     /// The doctrine's own emic paragraph, in the doctrine account's own
     /// order — a `RevealedClaim` entry's construction fragment is replaced
     /// by the closed exoteric formula ([`revealed_claim_line`]) rather than
@@ -294,16 +308,26 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines.push(line);
     }
 
-    // C3 T3: each placed people states its own kind in its own tongue, then
-    // every tongue's attempt to state each probe's kind is recorded — a
-    // rendered line on success, a coverage gap on failure (spec §5 — no
-    // culture holds `planet` today). Iterated over `placed_peoples`
-    // (registry order, deterministic) rather than the ledger scan above so
-    // the section's order matches every other peoples-keyed section in the
-    // almanac/book.
+    // C3 T3, deepened by C7: each placed people states its own kind AND
+    // (C7) an emic world-statement in its own tongue — both through the
+    // deep realizer (`realize_tongue_deep`, C7 T1) with that people's own
+    // drawn `TongueMorphology` (C7 T2's `tongue_morphology_of`) and derived
+    // noun-class readout (`noun_class_of`) — then every tongue's attempt to
+    // state each probe's kind is recorded — a rendered line on success, a
+    // coverage gap on failure (spec §5 — no culture holds `planet` today).
+    // Iterated over `placed_peoples` (registry order, deterministic) rather
+    // than the ledger scan above so the section's order matches every other
+    // peoples-keyed section in the almanac/book.
     let mut tongue_lines = Vec::new();
     let mut tongue_gaps = Vec::new();
     let probes = tongue_probes(world);
+    // C7 T3: the world-statement's shared subject — the planet's own
+    // committed name (`hornvale_kernel::NAME` on the entity classified
+    // `is-a` `"planet"`), the SAME fact the C3 planet probe's own subject
+    // already reads (never re-derived via `hornvale_worldgen::world_name`,
+    // which would redundantly reconstruct the whole lexicon/component
+    // pipeline just to recover a fact already sitting in the ledger).
+    let planet_name = planet_name_of(world);
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some((autonym, common_line)) = people_by_kind.get(kind) else {
             continue;
@@ -313,31 +337,62 @@ pub fn render_volume(world: &World) -> BookVolume {
         let Ok(lexicon) = hornvale_worldgen::lexicon_of(world, kind) else {
             continue;
         };
+        let Ok(morph) = hornvale_worldgen::tongue_morphology_of(world, kind) else {
+            continue;
+        };
+        let noun_class_of = |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
 
         let own_kind = format!("{kind}-kind");
         let self_statement = TongueClause {
             subject: autonym.clone(),
             complement_concept: own_kind,
             // The self-statement is a folk (self-)statement, grounded in
-            // lived experience — C7's eventual readout will derive this
-            // from exposure class; C7 T1 only needs the field populated so
-            // the (untouched) C3 realizer keeps compiling.
+            // lived experience (its autonym and own-kind concept are
+            // Steeped by construction) — Witnessed (C7's readout law).
             evidential: Evidential::Witnessed,
         };
         let tongue_line =
-            realize_tongue(&self_statement, &grammar, &lexicon).unwrap_or_else(|gap| {
-                panic!(
-                    "the self-statement law (spec §5) is violated for {kind}: \
-                     gap on {} ({})",
-                    gap.concept, gap.reason
-                )
-            });
+            realize_tongue_deep(&self_statement, &grammar, &morph, &noun_class_of, &lexicon)
+                .unwrap_or_else(|gap| {
+                    panic!(
+                        "the self-statement law (spec §5) is violated for {kind}: \
+                 gap on {} ({})",
+                        gap.concept, gap.reason
+                    )
+                });
         tongue_lines.push(format!(
             "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
         ));
 
+        // C7 T3: the emic world-statement — "⟨planet⟩ [cop] ⟨their word for
+        // "earth"⟩", Witnessed — the world-statement law (spec §3.5/§4.5):
+        // `earth` is universal-stratum Steeped (packs.rs, ladder_rank 0,
+        // never a `LexEntry::Gap`), so this never gaps for a placed people —
+        // panic loudly rather than record a coverage gap, since a gap here
+        // would be a violated invariant, not the C3 planet-concept probe's
+        // ordinary (etic-concept) coverage gap.
+        let name = planet_name.as_deref().unwrap_or_else(|| {
+            panic!(
+                "the world-statement law is violated: {kind} is placed but the planet has no \
+                 committed name — the dominant race's \"earth\" entry is universal-stratum \
+                 Steeped and the planet stage must have named the world"
+            )
+        });
+        let world_line = world_statement(
+            kind,
+            name,
+            Evidential::Witnessed,
+            &grammar,
+            &morph,
+            &noun_class_of,
+            &lexicon,
+        );
+        tongue_lines.push(format!(
+            "{world_line} (in the {kind} tongue: \"{name} is the earth.\")"
+        ));
+
         for probe in &probes {
-            match probe_tongue(probe, kind, &grammar, &lexicon) {
+            match probe_tongue(probe, kind, &grammar, &morph, &noun_class_of, &lexicon) {
                 Ok(line) => tongue_lines.push(format!(
                     "{line} (in the {kind} tongue: \"{} is a {}.\")",
                     probe.subject, probe.concept
@@ -383,16 +438,65 @@ fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
 /// C4 T4: every placed people's chorus section, in
 /// `hornvale_worldgen::accounts_of` order — a people with no committed
 /// collective is skipped (mirrors C3's `continue` in the tongue-lines
-/// loop above).
+/// loop above). C7 T3: each organized culture's doctrine section also gets
+/// its in-tongue taught line here — [`planet_name_of`] and the tongue's own
+/// grammar/morphology/lexicon are (re-)derived once per doctrine-bearing
+/// culture, independently of `render_volume`'s own tongue-lines loop (the
+/// same "each section derives its own inputs" idiom `autonym_by_kind`
+/// already follows here, rather than threading state between the two
+/// unrelated `BookVolume` fields).
 fn chorus_sections(world: &World) -> Vec<ChorusSection> {
     let autonyms = autonym_by_kind(world);
+    let planet_name = planet_name_of(world);
     hornvale_worldgen::accounts_of(world)
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
             let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
-            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind)
-                .map(|dv| doctrine_section(autonym, &dv, &voice.params, &voice.account));
+            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind).map(|dv| {
+                let kind = voice.kind.as_str();
+                let ph = hornvale_worldgen::language_of(world, kind);
+                let grammar = tongue_grammar(&world.seed, kind, &ph);
+                let lexicon = hornvale_worldgen::lexicon_of(world, kind).unwrap_or_else(|e| {
+                    panic!(
+                        "the taught-contrast law is violated for {kind}: lexicon derivation \
+                         failed: {e:?}"
+                    )
+                });
+                let morph =
+                    hornvale_worldgen::tongue_morphology_of(world, kind).unwrap_or_else(|e| {
+                        panic!(
+                            "the taught-contrast law is violated for {kind}: morphology \
+                             derivation failed: {e:?}"
+                        )
+                    });
+                let noun_class_of =
+                    |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
+                let name = planet_name.as_deref().unwrap_or_else(|| {
+                    panic!(
+                        "the world-statement law is violated: {kind}'s doctrine is organized \
+                         but the planet has no committed name"
+                    )
+                });
+                let taught_line = world_statement(
+                    kind,
+                    name,
+                    Evidential::Taught,
+                    &grammar,
+                    &morph,
+                    &noun_class_of,
+                    &lexicon,
+                );
+                let tongue_taught_line =
+                    format!("{taught_line} (\"{name} is the earth — as it is taught.\")");
+                doctrine_section(
+                    autonym,
+                    &dv,
+                    &voice.params,
+                    &voice.account,
+                    tongue_taught_line,
+                )
+            });
             Some(section)
         })
         .collect()
@@ -868,6 +972,7 @@ fn doctrine_section(
     doctrine: &hornvale_worldgen::DoctrineVoice,
     folk_params: &AccountParams,
     folk_account: &Account,
+    tongue_taught_line: String,
 ) -> DoctrineSection {
     let mut folk_by_key: BTreeMap<(String, String), &AccountEntry> = BTreeMap::new();
     for entry in &folk_account.entries {
@@ -986,6 +1091,7 @@ fn doctrine_section(
 
     DoctrineSection {
         heading: format!("As the priesthood of the {autonym} teach it"),
+        tongue_taught_line,
         emic,
         annotations,
         margin,
@@ -1128,26 +1234,79 @@ pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
 }
 
 /// Run one probe against one tongue: realize `⟨subject⟩ ⟨copula?⟩
-/// ⟨concept⟩` — `Ok` is a rendered line (the success path C3 dropped),
-/// `Err` the recountable gap.
+/// ⟨concept⟩` through the deep realizer (C7) — `Ok` is a rendered line
+/// (the success path C3 dropped), `Err` the recountable gap (today, always
+/// the `planet` probe: no culture holds that etic concept).
 fn probe_tongue(
     probe: &TongueProbe,
     _kind: &str,
     grammar: &hornvale_language::TongueGrammar,
+    morph: &TongueMorphology,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
 ) -> Result<String, hornvale_language::TongueGap> {
-    realize_tongue(
+    realize_tongue_deep(
         &TongueClause {
             subject: probe.subject.clone(),
             complement_concept: probe.concept.clone(),
-            // Every probe states an emic world-statement, grounded in the
-            // same lived-experience footing as the self-statement above;
-            // `realize_tongue` (unmodified by C7) ignores this field.
+            // Every probe states a claim grounded in the same
+            // lived-experience footing as the self-statement above.
             evidential: Evidential::Witnessed,
         },
         grammar,
+        morph,
+        noun_class_of,
         lexicon,
     )
+}
+
+/// C7 T3: the planet's own committed name (the entity classified `is-a`
+/// `"planet"`; its `NAME`, committed once at genesis from the dominant
+/// people's "earth" endonym — `hornvale_worldgen`'s planet stage) — the
+/// SAME subject the C3 planet probe already carries as `TongueProbe::subject`
+/// (this reads the identical ledger fact, not a re-derivation). `None` only
+/// when the world has not reached the planet stage (no placed people at
+/// all) — every call site here guards on at least one placed people first,
+/// so a `None` at that point is the world-statement law's own violation,
+/// not an ordinary coverage gap.
+fn planet_name_of(world: &World) -> Option<String> {
+    hornvale_worldgen::planet_entity(world)
+        .and_then(|planet| world.ledger.text_of(planet, hornvale_kernel::NAME))
+        .map(str::to_string)
+}
+
+/// C7 T3: build one tongue's emic world-statement — `TongueClause { subject:
+/// planet_name, complement_concept: "earth", evidential }` — through the
+/// deep realizer, using that tongue's own already-derived grammar/morphology/
+/// lexicon (never re-derived here; callers pass what they already hold, the
+/// same "measure once" discipline `render_volume`'s loop and
+/// `chorus_sections` both follow). `earth` is universal-stratum Steeped
+/// (`packs.rs`, `ladder_rank: 0` — always in the lexicon), so this must never
+/// gap for a placed people; panics loudly naming the culprit rather than
+/// returning a `Result`, since a gap here is an invariant violation, not a
+/// coverage fact to record (contrast the C3 planet-concept probe, which
+/// gaps by design).
+fn world_statement(
+    kind: &str,
+    planet_name: &str,
+    evidential: Evidential,
+    grammar: &hornvale_language::TongueGrammar,
+    morph: &TongueMorphology,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
+    lexicon: &hornvale_language::Lexicon,
+) -> String {
+    let clause = TongueClause {
+        subject: planet_name.to_string(),
+        complement_concept: "earth".to_string(),
+        evidential,
+    };
+    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon).unwrap_or_else(|gap| {
+        panic!(
+            "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
+             universal-stratum Steeped and must never gap",
+            gap.concept, gap.reason
+        )
+    })
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -1901,7 +2060,10 @@ mod tests {
     /// C3 T3's self-statement law (spec §5): every placed people's autonym
     /// and own-kind concept are Steeped by construction (worldgen's
     /// `exposure_of`), so every placed people's tongue self-statement
-    /// renders — no gaps.
+    /// renders — no gaps. C7 T3 adds a second line per placed people (the
+    /// emic world-statement — `every_people_states_the_world_in_its_tongue`
+    /// pins that law directly), so `tongue_lines` now carries TWO lines per
+    /// placed people, not one.
     #[test]
     fn every_placed_people_self_states_in_its_own_tongue() {
         for seed in [1u64, 2, 3] {
@@ -1910,13 +2072,221 @@ mod tests {
             let peoples = hornvale_worldgen::placed_peoples(&world);
             assert_eq!(
                 vol.tongue_lines.len(),
-                peoples.len(),
-                "seed {seed}: one tongue line per placed people"
+                2 * peoples.len(),
+                "seed {seed}: two tongue lines per placed people (self-statement + \
+                 C7's world-statement)"
             );
             for line in &vol.tongue_lines {
                 assert!(line.contains(" ("), "line carries a gloss: {line}");
             }
         }
+    }
+
+    /// C7 T3's world-statement law (spec §3.5/§4.5): every placed people
+    /// renders the emic world-statement — `earth` is universal-stratum
+    /// Steeped (`packs.rs`, `ladder_rank: 0`), so this never gaps, joining
+    /// the self-statement law above. One world-statement tongue line per
+    /// placed people, seeds 1..=3, glossed `"⟨planet⟩ is the earth."`.
+    #[test]
+    fn every_people_states_the_world_in_its_tongue() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            let name = planet_name_of(&world).expect(
+                "the planet is named once any people is placed (seeds 1..=3 all place one)",
+            );
+            let peoples = hornvale_worldgen::placed_peoples(&world);
+            let gloss = format!("\"{name} is the earth.\")");
+            let world_lines: Vec<&String> = vol
+                .tongue_lines
+                .iter()
+                .filter(|l| l.ends_with(&gloss))
+                .collect();
+            assert_eq!(
+                world_lines.len(),
+                peoples.len(),
+                "seed {seed}: one world-statement line per placed people: {:?}",
+                vol.tongue_lines
+            );
+        }
+    }
+
+    /// T2's measured depth landscape (frozen; `depth_landscape_measured` in
+    /// `windows/worldgen/tests/deep_grammar.rs` pins the SAME numbers at the
+    /// derivation layer), reduced to the one bit
+    /// `the_taught_contrast_is_visible_where_deep` needs: whether
+    /// `evidential_depth` is non-`None` for this (seed, species).
+    const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
+        (1, "goblin", false),    // None
+        (1, "hobgoblin", true),  // Particle
+        (2, "goblin", false),    // None
+        (2, "hobgoblin", true),  // Particle
+        (2, "kobold", false),    // None
+        (3, "goblin", true),     // Particle
+        (3, "hobgoblin", false), // None
+    ];
+
+    /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for
+    /// every organized culture whose evidential depth is non-`None`, the
+    /// doctrine's taught line's realized SURFACE (excluding each line's own
+    /// gloss, which always differs in text) differs from the folk
+    /// world-statement's surface — the morpheme contrast; for depth `None`
+    /// the two surfaces are byte-identical (no marking to contrast).
+    /// Per-species arms pinned against T2's frozen landscape (both arms are
+    /// exercised within seeds 1..=3, per the measured table).
+    #[test]
+    fn the_taught_contrast_is_visible_where_deep() {
+        for &(seed, kind, evidential_marks) in EVIDENTIAL_DEPTH_LANDSCAPE {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            let name = planet_name_of(&world).expect("the planet is named at every measured seed");
+            let section = vol
+                .chorus
+                .iter()
+                .find(|s| s.kind == kind)
+                .unwrap_or_else(|| panic!("seed {seed}: {kind} has a chorus section"));
+            let doctrine = section.doctrine.as_ref().unwrap_or_else(|| {
+                panic!("seed {seed}: {kind} is organized (T2's measured landscape)")
+            });
+            let folk_world_line = vol
+                .tongue_lines
+                .iter()
+                .find(|l| l.ends_with(&format!("(in the {kind} tongue: \"{name} is the earth.\")")))
+                .unwrap_or_else(|| {
+                    panic!("seed {seed}: {kind}'s folk world-statement line exists")
+                });
+            let folk_surface = folk_world_line
+                .split(" (")
+                .next()
+                .expect("split always yields at least one piece");
+            let taught_surface = doctrine
+                .tongue_taught_line
+                .split(" (")
+                .next()
+                .expect("split always yields at least one piece");
+            if evidential_marks {
+                assert_ne!(
+                    taught_surface, folk_surface,
+                    "seed {seed} {kind}: non-None evidential depth must show the taught \
+                     contrast — folk {folk_surface:?} vs taught {taught_surface:?}"
+                );
+            } else {
+                assert_eq!(
+                    taught_surface, folk_surface,
+                    "seed {seed} {kind}: evidential depth None must show no marking — folk \
+                     and taught surfaces must be identical"
+                );
+            }
+        }
+    }
+
+    /// C7 T3's readout law (spec §4.1): every rendered evidential equals the
+    /// shipped epistemic state — this module's PRODUCTION tongue-construction
+    /// sites (everything above the `mod tests` boundary) pass only
+    /// `Evidential::Witnessed` (self-statement/world-statement/probes, all
+    /// Steeped-grounded) or `Evidential::Taught` (the doctrine's taught
+    /// line), never `Evidential::Inferred` — checked against the LITERAL
+    /// construction sites (not rendered text, which cannot distinguish
+    /// evidential values that happen to share a drawn marker form; see the
+    /// seed-1 hobgoblin doctrine line measured during this task, where the
+    /// Taught marker coincidentally renders identically to the Inanimate
+    /// class marker). The loud guard: [`tests::readout_of`], the grounding
+    /// function a future because-clause tongue surface would need, panics
+    /// rather than silently minting `Evidential::Inferred` for an
+    /// `Explained`-grounded (inference-only) disposition — driven
+    /// synthetically, since no real account entry reaches this arm at the
+    /// Classify-only floor (spec §6: the because-clause stays Common-only).
+    #[test]
+    fn the_readout_law() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]\nmod tests {\n")
+            .next()
+            .expect("this module's own `mod tests` boundary must exist");
+        assert!(
+            !production.contains("Evidential::Inferred"),
+            "no production construction site in this module may ever pass \
+             Evidential::Inferred — it is floor-unreachable (the readout law)"
+        );
+        assert!(
+            production.contains("evidential: Evidential::Witnessed"),
+            "the self-statement/world-statement/probe construction sites must exist"
+        );
+        assert!(
+            production.contains("Evidential::Taught"),
+            "the doctrine's taught-line construction site must exist"
+        );
+
+        /// The readout law's grounding function, driven synthetically: map
+        /// an account entry's disposition to the `Evidential` a tongue
+        /// clause about it would need. `Kept`/`Substituted`/`Lost` are all
+        /// directly perceived classifications → `Witnessed`; `Explained` (an
+        /// inference/story overlay — C5's causal filter) has no authored
+        /// in-tongue surface at the Classify-only floor (spec §6: "the
+        /// because-clause stays Common-only") — panics naming the gap
+        /// rather than silently returning `Inferred`, so a future verbal-
+        /// tongue campaign must author that surface deliberately before this
+        /// function may return it.
+        fn readout_of(disposition: &Disposition) -> Evidential {
+            match disposition {
+                Disposition::Kept | Disposition::Substituted { .. } | Disposition::Lost(_) => {
+                    Evidential::Witnessed
+                }
+                Disposition::Explained { .. } => panic!(
+                    "no in-tongue surface is authored for an Explained-grounded (inferred) \
+                     tongue line yet — the Classify-only floor only ever renders Witnessed/ \
+                     Taught; author a tongue surface for the because-clause (or extend the \
+                     tongue grammar past Classify) before this disposition may ground \
+                     Evidential::Inferred"
+                ),
+            }
+        }
+
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            readout_of(&Disposition::Explained {
+                underlying: Box::new(Disposition::Lost(
+                    hornvale_language::LossReason::BeyondCapability { domain: "sky" },
+                )),
+                schema: SchemaId::PathJourney,
+                agent: None,
+                lexeme: None,
+                manner: Manner::Neutral,
+            })
+        }))
+        .is_err();
+        assert!(
+            panicked,
+            "readout_of must panic loudly on an Explained-grounded disposition rather than \
+             silently return Evidential::Inferred"
+        );
+    }
+
+    /// C7 T3's shallow-identity guarantee (plan G4): for every species T2
+    /// measured at depth `(None, None, _)` on both axes — seed 2's goblin
+    /// and kobold are the only such (seed, species) pairs within 1..=3 (T2's
+    /// frozen landscape) — that people's self-statement line is
+    /// BYTE-IDENTICAL to the pre-C7 committed string (the literal from
+    /// `book/src/gallery/the-book.md` before this task's regeneration).
+    #[test]
+    fn shallow_species_lines_are_byte_identical_to_c3() {
+        let world = generated(2);
+        let vol = render_volume(&world);
+        assert!(
+            vol.tongue_lines.contains(
+                &"Maetmea Gmaapmae. (in the goblin tongue: \"The Maetmea are goblins.\")"
+                    .to_string()
+            ),
+            "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
+            vol.tongue_lines
+        );
+        assert!(
+            vol.tongue_lines.contains(
+                &"Ngkoshngta Nggasdsha. (in the kobold tongue: \"The Ngkoshngta are kobolds.\")"
+                    .to_string()
+            ),
+            "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
+            vol.tongue_lines
+        );
     }
 
     /// C3 T3's gap law (spec §5): no culture holds `planet` — every
@@ -2061,6 +2431,10 @@ mod tests {
         let world = generated(1);
         let ph = hornvale_worldgen::language_of(&world, "goblin");
         let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
+        let morph = hornvale_worldgen::tongue_morphology_of(&world, "goblin")
+            .expect("goblin morphology derives at seed 1");
+        let noun_class_of =
+            |concept: &str| hornvale_worldgen::noun_class_of(&world, "goblin", concept);
         let mut exposures = BTreeMap::new();
         exposures.insert("planet".to_string(), ExposureClass::Steeped);
         let lexicon = build_lexicon(&world.seed, "goblin", "goblin", &ph, &ph, &exposures, &[]);
@@ -2068,8 +2442,8 @@ mod tests {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
         };
-        let line =
-            probe_tongue(&probe, "goblin", &grammar, &lexicon).expect("a Steeped concept realizes");
+        let line = probe_tongue(&probe, "goblin", &grammar, &morph, &noun_class_of, &lexicon)
+            .expect("a Steeped concept realizes");
         assert!(
             !line.is_empty() && line.ends_with('.'),
             "a realized sentence: {line}"
@@ -2755,7 +3129,16 @@ mod tests {
             },
         };
 
-        let section = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
+        // The taught line is not under test in this fixture (a synthetic
+        // Contested pair over a hand-built account, not a real world) — any
+        // non-empty placeholder satisfies `doctrine_section`'s signature.
+        let section = doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
         assert_eq!(
             section.annotations,
             vec![
@@ -2848,7 +3231,13 @@ mod tests {
                 entries: doctrine_entries,
             },
         };
-        let _ = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
+        let _ = doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
     }
 
     /// C6 T3, the null-effect law: this campaign adds a NEW field
@@ -3094,7 +3483,13 @@ mod tests {
         };
 
         // Panics: STAR_CLASS carries no `revealed_claim_line` formula arm.
-        doctrine_section("Nggoshk", &doctrine_voice, &folk_params, &folk_account);
+        doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &folk_params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
     }
 
     /// C6 T4, the esoteric law, mutation-verified: an empty reader
@@ -3176,8 +3571,8 @@ mod tests {
 
     /// One `BookVolume`'s complete line inventory, every register
     /// flattened: `lines`, `tongue_lines`, then each chorus section's
-    /// `emic`/`margin` and (when present) `doctrine.emic`/`annotations`/
-    /// `margin` — used only by
+    /// `emic`/`margin` and (when present) `doctrine.tongue_taught_line`/
+    /// `emic`/`annotations`/`margin` — used only by
     /// `initiate_edition_supersets_the_committed_artifact` to compare the
     /// committed edition against the initiated one.
     fn all_committed_lines(vol: &BookVolume) -> Vec<String> {
@@ -3188,6 +3583,7 @@ mod tests {
             all.extend(section.emic.iter().cloned());
             all.extend(section.margin.iter().cloned());
             if let Some(doctrine) = &section.doctrine {
+                all.push(doctrine.tongue_taught_line.clone());
                 all.extend(doctrine.emic.iter().cloned());
                 all.extend(doctrine.annotations.iter().cloned());
                 all.extend(doctrine.margin.iter().cloned());

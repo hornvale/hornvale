@@ -736,6 +736,8 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                 }
                 if let Some(doctrine) = &section.doctrine {
                     out.push_str(&format!("\n##### {}\n\n", doctrine.heading));
+                    out.push_str(&doctrine.tongue_taught_line);
+                    out.push_str("\n\n");
                     for line in &doctrine.emic {
                         out.push_str(line);
                         out.push('\n');
