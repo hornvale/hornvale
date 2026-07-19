@@ -79,8 +79,8 @@ pub mod components;
 pub mod schedule;
 pub mod settlement_pins;
 pub use chorus::{
-    ChorusVoice, account_params_of, accounts_of, chorus_ground, observability_table,
-    pathological_params, sky_capability,
+    ChorusVoice, account_params_of, accounts_of, beta_of, chorus_ground, cyclic_beliefs_of,
+    observability_table, pathological_params, schema_prior, sky_capability,
 };
 pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;

@@ -28,7 +28,7 @@
 //! culture's account persisted across a session must re-derive it from the
 //! ledger and the params, never cache it as new committed state.
 
-use crate::schemas::{LexemeId, Manner, SchemaId};
+use crate::schemas::{FactShape, LexemeId, Manner, SchemaId};
 use hornvale_kernel::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -107,6 +107,12 @@ pub struct Observability {
     /// Which concept the lexicon filter requires for this predicate's
     /// facts.
     pub concept: NeededConcept,
+    /// C5: which shape this predicate's facts take (the causal filter's
+    /// fact-shape classifier, LANG-37's "pass-1 hidden hub") — what
+    /// [`crate::schemas::admitted`] gates a schema draw on. Additive: this
+    /// field carries no meaning for C4's four filters, only for the causal
+    /// filter worldgen's `chorus.rs` assembles on top of them.
+    pub shape: FactShape,
 }
 
 /// An observing culture's felt relationship toward a fact's object, when
@@ -655,6 +661,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         table.insert(
@@ -663,6 +670,7 @@ mod tests {
                 requirement: Requirement::SkyGraded { threshold: 0.6 },
                 domain: "sky",
                 concept: NeededConcept::Fixed("moon"),
+                shape: FactShape::Count,
             },
         );
         table.insert(
@@ -671,6 +679,7 @@ mod tests {
                 requirement: Requirement::Instrumental,
                 domain: "sky",
                 concept: NeededConcept::Fixed("star"),
+                shape: FactShape::Taxonomy,
             },
         );
         table.insert(
@@ -679,6 +688,7 @@ mod tests {
                 requirement: Requirement::CrossReferential,
                 domain: "sky",
                 concept: NeededConcept::Fixed("sun"),
+                shape: FactShape::CyclicEvent,
             },
         );
         table.insert(
@@ -687,6 +697,7 @@ mod tests {
                 requirement: Requirement::Manifest,
                 domain: "peoples",
                 concept: NeededConcept::ObjectKind,
+                shape: FactShape::Roster,
             },
         );
         table
@@ -816,6 +827,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         collision_table.insert(
@@ -824,6 +836,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         let collision_params = AccountParams {
@@ -1204,6 +1217,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         collision_table.insert(
@@ -1212,6 +1226,7 @@ mod tests {
                 requirement: Requirement::Taxonomic,
                 domain: "sky",
                 concept: NeededConcept::Object,
+                shape: FactShape::Taxonomy,
             },
         );
         let collision_params = AccountParams {

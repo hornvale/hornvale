@@ -352,6 +352,20 @@ fn chorus_sections(world: &World) -> Vec<ChorusSection> {
         .collect()
 }
 
+/// Read through a C5 `Explained` wrapper to what the four-filter account
+/// said underneath. This module's C4 renderer doesn't know the
+/// `Explained` variant yet — giving it a surface is Task 4's job — so
+/// every disposition read in this file goes through this seam, keeping
+/// every rendered line exactly as it was before C5 started wrapping
+/// entries. Mirrors `hornvale_language::account`'s own private
+/// `effective()` (recursive for the same future-proofing reason).
+fn effective(d: &Disposition) -> &Disposition {
+    match d {
+        Disposition::Explained { underlying, .. } => effective(underlying),
+        other => other,
+    }
+}
+
 /// `"ourselves"`/`"neighbors"`/`"rivals"`/`"strangers"` — the stance
 /// appositive's closed text table (spec §3.3); `Neutral` never reaches
 /// this function (callers guard on it, since it appends nothing).
@@ -393,7 +407,7 @@ fn render_world_clause(
     is_a_entry: &AccountEntry,
     seen: &mut BTreeSet<String>,
 ) -> Option<String> {
-    let (complement, definiteness) = match &is_a_entry.disposition {
+    let (complement, definiteness) = match effective(&is_a_entry.disposition) {
         Disposition::Kept => {
             let Value::Text(kind) = &is_a_entry.fact.object else {
                 return None;
@@ -402,6 +416,7 @@ fn render_world_clause(
         }
         Disposition::Substituted { theirs, .. } => (theirs.clone(), Definiteness::Def),
         Disposition::Lost(_) => return None,
+        Disposition::Explained { .. } => unreachable!("effective() never returns Explained"),
     };
 
     let mut modifiers = Vec::new();
@@ -410,7 +425,7 @@ fn render_world_clause(
         if entry.fact.predicate == hornvale_kernel::world::IS_A {
             continue;
         }
-        if !matches!(entry.disposition, Disposition::Kept) {
+        if !matches!(effective(&entry.disposition), Disposition::Kept) {
             continue;
         }
         match fragment_for(&entry.fact.predicate, &entry.fact.object) {
@@ -453,14 +468,14 @@ fn render_world_clause(
 /// people-margin arm added here.
 fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Option<String> {
     let world_lost = matches!(
-        is_a_entry.disposition,
+        effective(&is_a_entry.disposition),
         Disposition::Substituted { .. } | Disposition::Lost(_)
     );
     let lost_fragments: Vec<&&AccountEntry> = group
         .iter()
         .filter(|entry| {
             entry.fact.predicate != hornvale_kernel::world::IS_A
-                && matches!(entry.disposition, Disposition::Lost(_))
+                && matches!(effective(&entry.disposition), Disposition::Lost(_))
         })
         .collect();
     if !world_lost && lost_fragments.is_empty() {
@@ -498,7 +513,7 @@ fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Op
 /// [`render_world_margin`]'s carrier-clause note: never exercised at the
 /// floor).
 fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) -> Option<String> {
-    if !matches!(io_entry.disposition, Disposition::Kept) {
+    if !matches!(effective(&io_entry.disposition), Disposition::Kept) {
         return None;
     }
     let Value::Text(kind_text) = &io_entry.fact.object else {
@@ -780,7 +795,7 @@ pub fn parse_context(world: &World) -> ParseContext {
     }
     for voice in hornvale_worldgen::accounts_of(world) {
         for entry in &voice.account.entries {
-            if let Disposition::Substituted { theirs, .. } = &entry.disposition {
+            if let Disposition::Substituted { theirs, .. } = effective(&entry.disposition) {
                 complements.insert(theirs.clone());
             }
         }
