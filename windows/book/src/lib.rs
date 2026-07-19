@@ -13,13 +13,15 @@
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
-use hornvale_language::account::{Account, AccountEntry, Disposition, Stance};
+use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
     parse_common, quantity, realize_common,
 };
 use hornvale_language::schemas::Manner;
-use hornvale_language::{LexemeId, SchemaId, TongueClause, realize_tongue, tongue_grammar};
+use hornvale_language::{
+    ConflictState, LexemeId, SchemaId, TongueClause, conflict_of, realize_tongue, tongue_grammar,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One world's volume of The Book: the seed it was rendered from plus the
@@ -69,6 +71,40 @@ pub struct ChorusSection {
     /// `Lost`/`Substituted` entry, carrying only that lost/corrupted
     /// content (sparseness — never repeats what the emic paragraph already
     /// states).
+    pub margin: Vec<String>,
+    /// C6 (The Doctrine): this culture's doctrine section, when its
+    /// flagship's committed `cult-form` fact gates it in (the SOC-1 gate,
+    /// `hornvale_worldgen::doctrine_of`) — `None` for a folk-cult-form
+    /// culture. The folk registers above (`emic`/`margin`) are
+    /// byte-unchanged by this campaign regardless of this field.
+    pub doctrine: Option<DoctrineSection>,
+}
+
+/// C6 (The Doctrine): one organized culture's doctrine section — the
+/// institution's second account (the priesthood's own composition of the
+/// SAME ground truth, run through `hornvale_worldgen::doctrine_of`'s four
+/// preregistered deltas), split into three registers rather than the folk
+/// section's two: `emic` (the doctrine's own paragraph, with the
+/// `RevealedClaim` substitution), `annotations` (the disclosure law's
+/// `Contested` counter-lines — a separate register, never interleaved into
+/// `emic`), and `margin` (the doctrine account's own etic margin, the same
+/// law as any other voice). See [`doctrine_section`] for the construction.
+/// type-audit: bare-ok(prose: heading), bare-ok(prose: emic), bare-ok(prose: annotations), bare-ok(prose: margin)
+pub struct DoctrineSection {
+    /// `"As the priesthood of the ⟨Autonym⟩ teach it"` — scaffolding, not
+    /// a Book corpus line.
+    pub heading: String,
+    /// The doctrine's own emic paragraph, in the doctrine account's own
+    /// order — a `RevealedClaim` entry's construction fragment is replaced
+    /// by the closed exoteric formula ([`revealed_claim_line`]) rather than
+    /// rendered as an ordinary modifier.
+    pub emic: Vec<String>,
+    /// The disclosure law's counter-annotations (the "Galileo cell"): one
+    /// line per `Contested` entry ([`counter_annotation_line`]), quoting
+    /// the folk voice's own rendered explanation for that same fact.
+    pub annotations: Vec<String>,
+    /// The doctrine account's own etic margin — [`render_world_margin`],
+    /// unmodified.
     pub margin: Vec<String>,
 }
 
@@ -348,7 +384,10 @@ fn chorus_sections(world: &World) -> Vec<ChorusSection> {
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
-            Some(voice_section(&voice.kind, autonym, &voice.account, world))
+            let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
+            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind)
+                .map(|dv| doctrine_section(autonym, &dv, &voice.params, &voice.account));
+            Some(section)
         })
         .collect()
 }
@@ -541,12 +580,14 @@ fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
 /// (`Agentive`/`Kinship`/`LinkSympathy`). Returns `None` when one of those
 /// frames needs a bound agent that isn't there — the "no synthetic agents,
 /// ever" guard (plan Global Constraints, ledger #2) extended to rendering:
-/// an unbound schema explains nothing rather than fabricating a name. Never
-/// observed at the floor (only `Agentive`/`CycleReturn`/`PathJourney`/
-/// `Balance` fire across seeds 1..=3 — `Kinship`/`LinkSympathy` need a
-/// `SlotKind::Kin`/agent binding `windows/worldgen::chorus::explain_moons`
-/// does not yet wire up), but a closed table stays exhaustive regardless of
-/// what today's weights happen to draw.
+/// an unbound schema explains nothing rather than fabricating a name. Not
+/// pinned by a literal example across seeds 1..=3 (only
+/// `Agentive`/`CycleReturn`/`PathJourney`/`Balance` are measured to fire
+/// there — `Kinship`/`LinkSympathy` simply never win the weighted schema
+/// draw at the floor), even though their agent binding is fully wired
+/// (`windows/worldgen::chorus::bind_agent` covers every deity-bearing
+/// schema, C5 T4's review fix) — a closed table stays exhaustive regardless
+/// of what today's weights happen to draw.
 fn explanation_line(
     head: &str,
     plural: bool,
@@ -713,6 +754,201 @@ fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -
         kind: kind.to_string(),
         heading: format!("As the {autonym} tell it"),
         emic,
+        margin,
+        doctrine: None,
+    }
+}
+
+/// C6 (The Doctrine), the exoteric formula (the plan's Surfaces table):
+/// what a `RevealedClaim` entry's doctrine emic line asserts INSTEAD of the
+/// ordinary construction fragment — the priesthood professes counted
+/// knowledge of the moons without disclosing the count itself (the
+/// esoteric/exoteric split, ledger #5 — the actual value is a followup
+/// scope, not this artifact's). Only [`MOON_COUNT`] carries a defined
+/// formula: at the floor, `sky_capability` is the only
+/// [`AccountParams`] field the four deltas ever touch, and `moon-count` is
+/// the only [`hornvale_language::account::Requirement::SkyGraded`]
+/// predicate in the observability table (`day-length-std` is
+/// `CrossReferential`, always lost regardless of capability, so it can
+/// never become a doctrine-only `Kept`) — `None` for any other predicate.
+fn revealed_claim_line(predicate: &str, object: &Value) -> Option<String> {
+    if predicate != MOON_COUNT {
+        return None;
+    }
+    let Value::Number(n) = object else {
+        return None;
+    };
+    Some(if (*n as u64) == 1 {
+        "The moon is counted and known to the priesthood.".to_string()
+    } else {
+        "The moons are counted and known to the priesthood.".to_string()
+    })
+}
+
+/// [`revealed_claim_line`]'s closed inverse table — the only two strings
+/// that construction direction ever emits, paired with the plurality each
+/// carries.
+const REVEALED_CLAIM_LINES: &[(&str, bool)] = &[
+    ("The moon is counted and known to the priesthood.", false),
+    ("The moons are counted and known to the priesthood.", true),
+];
+
+/// Recover a `RevealedClaim` line's plurality from its exact closed text,
+/// or `None` if `line` matches neither row.
+fn parse_revealed_claim(line: &str) -> Option<bool> {
+    REVEALED_CLAIM_LINES
+        .iter()
+        .find(|(text, _)| *text == line)
+        .map(|(_, plural)| *plural)
+}
+
+/// [`parse_revealed_claim`]'s inverse: the closed text for `plural`. Total
+/// over `bool` (the table carries exactly one row per plurality).
+fn rerender_revealed_claim(plural: bool) -> String {
+    REVEALED_CLAIM_LINES
+        .iter()
+        .find(|(_, p)| *p == plural)
+        .map(|(text, _)| (*text).to_string())
+        .expect("REVEALED_CLAIM_LINES carries a row for both plurality values")
+}
+
+/// The disclosure law's counter-annotation prefix (the plan's Surfaces
+/// table): `"— though the folk say ⟨folk sentence minus its terminal
+/// period⟩."` — [`counter_annotation_line`] builds it,
+/// [`parse_chorus_line`] strips it back off.
+const COUNTER_PREFIX: &str = "— though the folk say ";
+
+/// Build one `Contested` counter-annotation line: `folk_line` is the folk
+/// voice's own rendered sentence for the same fact (always a full,
+/// terminally-punctuated line — an [`explanation_line`] result in
+/// practice, since a moon-count `Contested` state only ever arises when
+/// BOTH accounts explain the fact under different schemas — see
+/// [`doctrine_section`]'s doc). Strips `folk_line`'s own terminal period so
+/// the counter-annotation's own restores exactly one, never two.
+fn counter_annotation_line(folk_line: &str) -> String {
+    let stripped = folk_line.strip_suffix('.').unwrap_or(folk_line);
+    format!("{COUNTER_PREFIX}{stripped}.")
+}
+
+/// C6 (The Doctrine): one organized culture's doctrine section — the SAME
+/// `voice_section` machinery (a fresh referring scope, [`render_world_clause`]
+/// / [`render_explanations`] / [`render_world_margin`] / [`render_people_clause`]
+/// all reused unmodified) run over the doctrine account instead of the folk
+/// one, with two overrides driven by [`conflict_of`] on each non-`is-a`
+/// entry (matched against the FOLK account's own entry for the same
+/// subject/predicate, via `hornvale_worldgen::folk_verifiable` for the
+/// caller-derived verifiability flag the classifier needs):
+///
+/// - [`ConflictState::RevealedClaim`]: this entry's ordinary construction
+///   fragment is EXCLUDED from the world clause and replaced by the closed
+///   exoteric formula ([`revealed_claim_line`]) as its own emic line — the
+///   priesthood professes counted knowledge without disclosing the value.
+///   Its because-clause explanation (if any) still renders normally: that
+///   is a causal story, not the value itself, so it is not suppressed.
+/// - [`ConflictState::Contested`]: rendered exactly as `voice_section`
+///   would (nothing suppressed), plus a disclosure-law counter-annotation
+///   ([`counter_annotation_line`]) quoting the FOLK voice's own rendered
+///   explanation for that same fact — the annotations live in their own
+///   register (`annotations`), never mixed into `emic` (the disclosure
+///   rule is mandatory, never silent, but also never confused with the
+///   doctrine's own voice).
+/// - [`ConflictState::Mystery`] and [`ConflictState::Harmony`]: rendered
+///   exactly as `voice_section` would, no addition at all.
+///
+/// The margin reuses [`render_world_margin`] UNMODIFIED — the doctrine
+/// account's own etic register, the same law as any other voice.
+fn doctrine_section(
+    autonym: &str,
+    doctrine: &hornvale_worldgen::DoctrineVoice,
+    folk_params: &AccountParams,
+    folk_account: &Account,
+) -> DoctrineSection {
+    let mut folk_by_key: BTreeMap<(String, String), &AccountEntry> = BTreeMap::new();
+    for entry in &folk_account.entries {
+        folk_by_key.insert(
+            (entry.fact.subject.clone(), entry.fact.predicate.clone()),
+            entry,
+        );
+    }
+
+    let mut order: Vec<String> = Vec::new();
+    let mut groups: BTreeMap<String, Vec<&AccountEntry>> = BTreeMap::new();
+    for entry in &doctrine.account.entries {
+        let subject = entry.fact.subject.clone();
+        if !groups.contains_key(&subject) {
+            order.push(subject.clone());
+        }
+        groups.entry(subject).or_default().push(entry);
+    }
+
+    let mut emic = Vec::new();
+    let mut annotations = Vec::new();
+    let mut margin = Vec::new();
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    for subject in &order {
+        let group = &groups[subject];
+        if let Some(is_a_entry) = group
+            .iter()
+            .find(|e| e.fact.predicate == hornvale_kernel::world::IS_A)
+        {
+            let mut revealed: BTreeSet<String> = BTreeSet::new();
+            for entry in group.iter() {
+                if entry.fact.predicate == hornvale_kernel::world::IS_A {
+                    continue;
+                }
+                let Some(&folk_entry) =
+                    folk_by_key.get(&(subject.clone(), entry.fact.predicate.clone()))
+                else {
+                    continue;
+                };
+                let verifiable =
+                    hornvale_worldgen::folk_verifiable(folk_params, &entry.fact.predicate);
+                match conflict_of(&folk_entry.disposition, &entry.disposition, verifiable) {
+                    ConflictState::RevealedClaim => {
+                        revealed.insert(entry.fact.predicate.clone());
+                    }
+                    ConflictState::Contested => {
+                        for line in render_explanations(std::slice::from_ref(&folk_entry)) {
+                            annotations.push(counter_annotation_line(&line));
+                        }
+                    }
+                    ConflictState::Harmony | ConflictState::Mystery => {}
+                }
+            }
+
+            let filtered: Vec<&AccountEntry> = group
+                .iter()
+                .filter(|e| !revealed.contains(&e.fact.predicate))
+                .copied()
+                .collect();
+            if let Some(line) = render_world_clause(&filtered, is_a_entry, &mut seen) {
+                emic.push(line);
+            }
+            for entry in group.iter() {
+                if revealed.contains(&entry.fact.predicate)
+                    && let Some(line) =
+                        revealed_claim_line(&entry.fact.predicate, &entry.fact.object)
+                {
+                    emic.push(line);
+                }
+            }
+            emic.extend(render_explanations(group));
+            if let Some(line) = render_world_margin(group, is_a_entry) {
+                margin.push(line);
+            }
+        } else if let Some(io_entry) = group
+            .iter()
+            .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
+            && let Some(line) = render_people_clause(io_entry, &mut seen)
+        {
+            emic.push(line);
+        }
+    }
+
+    DoctrineSection {
+        heading: format!("As the priesthood of the {autonym} teach it"),
+        emic,
+        annotations,
         margin,
     }
 }
@@ -1106,11 +1342,24 @@ pub struct ParsedExplanation {
 /// support — `ParsedLine` itself derives neither `Clone` nor `Debug` nor
 /// `PartialEq` (T3's original design), and no caller in this module needs
 /// this enum to carry any of them either.
+/// type-audit: bare-ok(flag: RevealedClaim.plural)
 pub enum ChorusLine {
     /// An ordinary classification clause plus its chorus-surface dress.
     Clause(ParsedLine, ChorusDress),
     /// A because-clause explanation line (Task 4's closed frame table).
     Explanation(ParsedExplanation),
+    /// C6 (The Doctrine): the `RevealedClaim` exoteric formula.
+    RevealedClaim {
+        /// Whether this line used the plural ("moons") surface form.
+        plural: bool,
+    },
+    /// C6 (The Doctrine): the disclosure law's counter-annotation — wraps
+    /// the recovered folk sentence it quotes, re-parsed recursively (in
+    /// practice always an [`Self::Explanation`], since a moon-count
+    /// `Contested` state only ever arises when both accounts explain the
+    /// fact — see [`doctrine_section`]'s doc — but the recursion makes no
+    /// such assumption itself).
+    Counter(Box<ChorusLine>),
 }
 
 /// The closed verb-literal table [`parse_explanation_body`] matches a
@@ -1260,17 +1509,28 @@ fn rerender_explanation(explanation: &ParsedExplanation) -> String {
     )
 }
 
-/// Invert one rendered chorus line (emic or margin): try Task 4's
-/// explanation frames first ([`parse_explanation`] — a wholly different
-/// surface with no classification clause underneath it, so it must be tried
-/// before the clause path below could mis-fail on it), then fall through to
-/// the ordinary clause path: strip the margin's `"In truth, "` prefix, then
-/// the stance appositive suffix (restoring the clause's terminal `'.'` in
-/// its place), then delegate to [`parse_line`]. Returns the recovered
+/// Invert one rendered chorus line (emic, annotation, or margin): try C6's
+/// two closed surfaces first — the exact `RevealedClaim` formula
+/// ([`parse_revealed_claim`]) and the counter-annotation prefix (stripped,
+/// then the embedded folk sentence re-parsed RECURSIVELY through this same
+/// function — it can be any other `ChorusLine` variant) — then Task 4's
+/// explanation frames ([`parse_explanation`] — a wholly different surface
+/// with no classification clause underneath it, so all three must be tried
+/// before the clause path below could mis-fail on them), then fall through
+/// to the ordinary clause path: strip the margin's `"In truth, "` prefix,
+/// then the stance appositive suffix (restoring the clause's terminal `'.'`
+/// in its place), then delegate to [`parse_line`]. Returns the recovered
 /// [`ChorusLine`] — the design-freedom variant the brief allows over a bare
 /// `ParsedLine`.
 /// type-audit: bare-ok(prose: line)
 pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, LineError> {
+    if let Some(plural) = parse_revealed_claim(line) {
+        return Ok(ChorusLine::RevealedClaim { plural });
+    }
+    if let Some(rest) = line.strip_prefix(COUNTER_PREFIX) {
+        let inner = parse_chorus_line(rest, ctx)?;
+        return Ok(ChorusLine::Counter(Box::new(inner)));
+    }
     if let Some(explanation) = parse_explanation(line) {
         return Ok(ChorusLine::Explanation(explanation));
     }
@@ -1294,7 +1554,10 @@ pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, L
 /// [`ChorusLine::Clause`], [`rerender`] then re-append the stance
 /// appositive (replacing the terminal `.`) then re-prepend `"In truth, "` —
 /// the exact inverse of [`parse_chorus_line`]'s strip order; for a
-/// [`ChorusLine::Explanation`], [`rerender_explanation`].
+/// [`ChorusLine::Explanation`], [`rerender_explanation`]; for a
+/// [`ChorusLine::RevealedClaim`], [`rerender_revealed_claim`]; for a
+/// [`ChorusLine::Counter`], this SAME function recursively on the wrapped
+/// line, then [`counter_annotation_line`] re-wraps it.
 /// type-audit: bare-ok(prose: return)
 pub fn rerender_chorus_line(line: &ChorusLine) -> String {
     match line {
@@ -1310,6 +1573,8 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
             line
         }
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
+        ChorusLine::RevealedClaim { plural } => rerender_revealed_claim(*plural),
+        ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
     }
 }
 
@@ -2127,5 +2392,368 @@ mod tests {
              the truth: {:?}",
             goblin.margin
         );
+    }
+
+    /// C6 T3: every seed-1 placed culture is organized (Task 2's ledger
+    /// #1 measurement), so every chorus section gains a doctrine section.
+    /// Goblin's exact measured surface (verified against the committed
+    /// world): heading names the priesthood; the emic carries the
+    /// `RevealedClaim` exoteric formula for the moons (folk capability 0.5
+    /// loses `moon-count`, doctrine's boosted 0.75 clears the 0.6
+    /// threshold and keeps it) and a day explanation whose bound agent is
+    /// the doctrine's own measured deity, Wowako (folk's own day
+    /// explanation is agentless `PathJourney`, so this is genuinely a
+    /// doctrine-only causal story, not an echo of folk's).
+    #[test]
+    fn seed_1_doctrine_sections_render() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        let peoples = hornvale_worldgen::placed_peoples(&world);
+        assert_eq!(
+            vol.chorus.iter().filter(|s| s.doctrine.is_some()).count(),
+            peoples.len(),
+            "every seed-1 placed culture is organized: every chorus section \
+             should gain a doctrine section"
+        );
+
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        let doctrine = goblin
+            .doctrine
+            .as_ref()
+            .expect("goblin's organized flagship gates in a doctrine section at seed 1");
+        assert_eq!(doctrine.heading, "As the priesthood of the Vavako teach it");
+        assert!(
+            doctrine
+                .emic
+                .contains(&"The moons are counted and known to the priesthood.".to_string()),
+            "the RevealedClaim exoteric formula for the moons: {:?}",
+            doctrine.emic
+        );
+        assert!(
+            doctrine
+                .emic
+                .contains(&"The day returns because Wowako strides the sky, briskly.".to_string()),
+            "the measured doctrine day explanation, agent Wowako: {:?}",
+            doctrine.emic
+        );
+    }
+
+    /// C6 T3, the disclosure law (both directions). Measured (a full sweep
+    /// over seeds 1..=5, then widened to 1..=40 to double-check, via a
+    /// throwaway probe before writing this test, then deleted): every
+    /// organized culture's `moon-count` entry is either `RevealedClaim`
+    /// (folk capability under the 0.6 threshold, doctrine's +0.25-boosted
+    /// capability over it) or `Harmony` (the one measured case where folk
+    /// ALSO keeps it, seed 2's kobold — same schema both sides, differing
+    /// only in lexeme, which `conflict_of` ignores); every `day-length-std`
+    /// entry is either `Harmony` or `Mystery` (`day-length-std` is
+    /// `CrossReferential`, never folk-verifiable, so a differing schema
+    /// there can only ever be `Mystery`, never `Contested`). **NO real
+    /// `Contested` entry exists across seeds 1..=40** — the C5 F2 lesson's
+    /// negative-result case: rather than a live sweep assertion that would
+    /// vacuously and permanently pass, the disclosure law's `Contested`
+    /// half is driven directly below with a synthetic folk/doctrine pair
+    /// (kobold-style: folk KEEPS the moon count, but the two accounts
+    /// explain it under differing schemas — Task 1's own Contested grid
+    /// case, wired through the real renderer).
+    #[test]
+    fn the_disclosure_law_both_directions() {
+        let mut mystery_seen = false;
+        for seed in 1u64..=5 {
+            let world = generated(seed);
+            for voice in hornvale_worldgen::accounts_of(&world) {
+                let Some(doctrine) = hornvale_worldgen::doctrine_of(&world, &voice.kind) else {
+                    continue;
+                };
+                for d_entry in &doctrine.account.entries {
+                    if d_entry.fact.predicate == hornvale_kernel::world::IS_A
+                        || d_entry.fact.predicate == hornvale_kernel::INSTANCE_OF
+                    {
+                        continue;
+                    }
+                    let Some(f_entry) = voice.account.entries.iter().find(|e| {
+                        e.fact.subject == d_entry.fact.subject
+                            && e.fact.predicate == d_entry.fact.predicate
+                    }) else {
+                        continue;
+                    };
+                    let verifiable =
+                        hornvale_worldgen::folk_verifiable(&voice.params, &d_entry.fact.predicate);
+                    let conflict =
+                        conflict_of(&f_entry.disposition, &d_entry.disposition, verifiable);
+                    assert_ne!(
+                        conflict,
+                        ConflictState::Contested,
+                        "seed {seed} {} {}: no real Contested entry exists across seeds \
+                         1..=5 (measured) — a future worldgen change that introduces one \
+                         should redden this assertion rather than going silently uncovered",
+                        voice.kind,
+                        d_entry.fact.predicate
+                    );
+                    if conflict == ConflictState::Mystery {
+                        mystery_seen = true;
+                    }
+                }
+            }
+        }
+        assert!(
+            mystery_seen,
+            "the sweep should find at least one real Mystery entry (day-length-std)"
+        );
+
+        // The Mystery-carries-none half, non-vacuously: since no Contested
+        // entry exists (asserted above), every doctrine section's
+        // annotations are empty — including every section that DOES carry
+        // a Mystery entry (mystery_seen, just asserted).
+        for seed in 1u64..=5 {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            for section in &vol.chorus {
+                if let Some(doctrine) = &section.doctrine {
+                    assert!(
+                        doctrine.annotations.is_empty(),
+                        "seed {seed} {}: a Mystery entry's section must carry no \
+                         annotation: {:?}",
+                        section.kind,
+                        doctrine.annotations
+                    );
+                }
+            }
+        }
+
+        // The Contested half: a synthetic folk/doctrine pair over one
+        // subject ("Vebe", is-a "planet" plus a moon-count of two), built
+        // by running the real `account_of` (so every entry gets a real
+        // `original_index`, never hand-constructed) and then mutating the
+        // moon-count entry's disposition on each side — the same pattern
+        // `domains/language::account`'s own `explained_is_dial_blind` test
+        // uses.
+        let subject = "Vebe".to_string();
+        let ground = vec![
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: hornvale_kernel::world::IS_A.to_string(),
+                object: Value::Text("planet".to_string()),
+            },
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: MOON_COUNT.to_string(),
+                object: Value::Number(2.0),
+            },
+        ];
+        let mut observability = BTreeMap::new();
+        observability.insert(
+            hornvale_kernel::world::IS_A.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::Manifest,
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Object,
+                shape: hornvale_language::FactShape::Taxonomy,
+            },
+        );
+        observability.insert(
+            MOON_COUNT.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::SkyGraded { threshold: 0.6 },
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Fixed("moon"),
+                shape: hornvale_language::FactShape::Count,
+            },
+        );
+        let mut holdings = BTreeSet::new();
+        holdings.insert("planet".to_string());
+        holdings.insert("moon".to_string());
+        let params = AccountParams {
+            hold_all: false,
+            holdings,
+            observability,
+            sky_capability: 1.0,
+            order: hornvale_language::OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: None,
+        };
+
+        let base = hornvale_language::account_of(&ground, &params);
+        assert_eq!(
+            base.entries[1].disposition,
+            Disposition::Kept,
+            "the fixture's moon-count must start Kept (capability clears the 0.6 threshold)"
+        );
+
+        let mut folk_entries = base.entries.clone();
+        folk_entries[1].disposition = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::PathJourney,
+            agent: None,
+            lexeme: None,
+            manner: Manner::Neutral,
+        };
+        let folk_account = Account {
+            entries: folk_entries,
+        };
+
+        let mut doctrine_entries = base.entries.clone();
+        doctrine_entries[1].disposition = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        let doctrine_voice = hornvale_worldgen::DoctrineVoice {
+            kind: "kobold".to_string(),
+            params: params.clone(),
+            account: Account {
+                entries: doctrine_entries,
+            },
+        };
+
+        let section = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
+        assert_eq!(
+            section.annotations,
+            vec![
+                "— though the folk say The moons cross because the sky must be crossed."
+                    .to_string()
+            ],
+            "the disclosure law's Contested counter-annotation, synthetic pair: {:?}",
+            section.annotations
+        );
+        assert!(
+            section
+                .emic
+                .contains(&"Vebe is a planet with two moons.".to_string()),
+            "a Contested entry renders its ordinary fragment (unlike RevealedClaim, which \
+             would suppress it): {:?}",
+            section.emic
+        );
+    }
+
+    /// C6 T3, the null-effect law: this campaign adds a NEW field
+    /// (`doctrine`) to `ChorusSection` but must not perturb one byte of the
+    /// pre-existing folk registers — seed 1's goblin and hobgoblin `emic`
+    /// and `margin` vectors, pinned exactly (not just `contains`) against
+    /// their pre-C6 committed strings.
+    #[test]
+    fn folk_sections_are_byte_unchanged() {
+        let vol = render_volume(&generated(1));
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert_eq!(
+            goblin.emic,
+            vec![
+                "The Vavako are goblins — ourselves.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The day returns because the sky must be crossed.".to_string(),
+            ]
+        );
+        assert_eq!(
+            goblin.margin,
+            vec![
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                 (F); its day lasts about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+
+        let hobgoblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "hobgoblin")
+            .expect("hobgoblin voice");
+        assert_eq!(
+            hobgoblin.emic,
+            vec![
+                "The Vavako are goblins — rivals.".to_string(),
+                "The Babako are hobgoblins — ourselves.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The day returns, as all things return.".to_string(),
+            ]
+        );
+        assert_eq!(
+            hobgoblin.margin,
+            vec![
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                 (F); its day lasts about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+    }
+
+    /// C6 T3, the corpus law extended once more (mirrors
+    /// `every_chorus_line_round_trips`): every doctrine `emic` +
+    /// `annotations` + `margin` line, across seeds 1..=5, round-trips
+    /// byte-identically through `parse_chorus_line` + `rerender_chorus_line`
+    /// — the `RevealedClaim` formula inverts to (its plurality), and a
+    /// counter-annotation inverts by stripping the fixed prefix and
+    /// re-parsing the embedded folk sentence recursively (exercised
+    /// directly here too, since no real seed carries one — see
+    /// `the_disclosure_law_both_directions`). `revealed_claim_seen` guards
+    /// against a vacuously-true walk that stopped firing `RevealedClaim`
+    /// lines entirely.
+    #[test]
+    fn every_doctrine_line_round_trips() {
+        let mut revealed_claim_seen = 0usize;
+        for seed in 1u64..=5 {
+            let world = generated(seed);
+            let ctx = parse_context(&world);
+            let vol = render_volume(&world);
+            for section in &vol.chorus {
+                let Some(doctrine) = &section.doctrine else {
+                    continue;
+                };
+                for line in doctrine
+                    .emic
+                    .iter()
+                    .chain(doctrine.annotations.iter())
+                    .chain(doctrine.margin.iter())
+                {
+                    let chorus_line = parse_chorus_line(line, &ctx).unwrap_or_else(|e| {
+                        panic!(
+                            "seed {seed} {} (doctrine): line failed to parse: {line} ({e:?})",
+                            section.kind
+                        )
+                    });
+                    if matches!(chorus_line, ChorusLine::RevealedClaim { .. }) {
+                        revealed_claim_seen += 1;
+                    }
+                    let again = rerender_chorus_line(&chorus_line);
+                    assert_eq!(
+                        &again, line,
+                        "seed {seed} {} (doctrine): re-realization drifted",
+                        section.kind
+                    );
+                }
+            }
+        }
+        assert!(
+            revealed_claim_seen > 0,
+            "the walk over seeds 1..=5 should encounter at least one RevealedClaim line"
+        );
+
+        // The counter-annotation's own round trip, driven directly (no
+        // real seed carries one — see `the_disclosure_law_both_directions`
+        // for the measured absence): stripping the prefix and re-parsing
+        // the embedded folk sentence recursively must invert exactly.
+        let ctx = parse_context(&generated(1));
+        let annotation = "— though the folk say The moons cross because the sky must be crossed.";
+        let parsed = parse_chorus_line(annotation, &ctx).expect("a counter-annotation line parses");
+        match &parsed {
+            ChorusLine::Counter(inner) => {
+                assert!(
+                    matches!(**inner, ChorusLine::Explanation(_)),
+                    "the embedded folk sentence should recover as an Explanation"
+                );
+            }
+            _ => panic!("expected a ChorusLine::Counter"),
+        }
+        assert_eq!(rerender_chorus_line(&parsed), annotation);
     }
 }

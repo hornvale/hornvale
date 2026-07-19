@@ -89,8 +89,8 @@ pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
 // `crate::schemas::Manner`, the same qualified-access precedent
 // `speech::Lexicon` sets below for its own `lexicon::Lexicon` collision.
 pub use schemas::{
-    FactShape, LexemeId, Schema, SchemaId, SlotKind, SourceDomain, SubFrame, admitted, lexemes_for,
-    schema_table, select_lexeme, select_schema,
+    ConflictState, FactShape, LexemeId, Schema, SchemaId, SlotKind, SourceDomain, SubFrame,
+    admitted, conflict_of, lexemes_for, schema_table, select_lexeme, select_schema,
 };
 
 /// The speech cluster (ECS c3): the phonology envelope type

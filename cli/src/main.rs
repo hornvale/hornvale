@@ -731,6 +731,26 @@ fn cmd_book(_args: &[String]) -> Result<(), String> {
                         out.push_str(&format!("*{line}*\n"));
                     }
                 }
+                if let Some(doctrine) = &section.doctrine {
+                    out.push_str(&format!("\n##### {}\n\n", doctrine.heading));
+                    for line in &doctrine.emic {
+                        out.push_str(line);
+                        out.push('\n');
+                    }
+                    if !doctrine.annotations.is_empty() {
+                        out.push('\n');
+                        for line in &doctrine.annotations {
+                            out.push_str(line);
+                            out.push('\n');
+                        }
+                    }
+                    if !doctrine.margin.is_empty() {
+                        out.push('\n');
+                        for line in &doctrine.margin {
+                            out.push_str(&format!("*{line}*\n"));
+                        }
+                    }
+                }
             }
         }
         coverage.push((seed, hornvale_book::uncovered_predicates(&world)));
