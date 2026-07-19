@@ -4692,10 +4692,12 @@ mod tests {
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
         // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
         // here (with review) whenever a deliberate terrain change moves world
-        // identity.
+        // identity. The Rains (precipitation epoch) then rewrote the moisture
+        // field (advected budget trace), shifting the biomes and so the
+        // settlement layout — re-pinning 8 -> 9.
         assert_eq!(
-            village.population, 8,
-            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
+            village.population, 9,
+            "the world's largest attractor headcount is pinned at this seed (the-rains moisture epoch)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
