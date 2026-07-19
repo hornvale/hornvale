@@ -2,6 +2,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-18-the-correspondence-design.md`
 **Branch/worktree:** `the-correspondence`
+**Status:** COMPLETE — all four stages shipped, merged to main. See the
+chronicle (`book/src/chronicle/the-correspondence.md`) and retrospective
+(`docs/retrospectives/the-correspondence.md`).
 **Scope:** Wave 0 only — the mechanism + behavior-preserving migration. Wind
 reconnection (Wave 1) and temperature/direction naming (Wave 2) are separate
 follow-on campaigns (spec §6); Wave 2 waits on the parallel diurnal-temperature

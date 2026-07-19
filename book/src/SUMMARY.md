@@ -172,6 +172,7 @@
 - [The Tongues](./chronicle/the-tongues.md)
 - [The Wanting](./chronicle/the-wanting.md)
 - [The Foresight](./chronicle/the-foresight.md)
+- [The Correspondence](./chronicle/the-correspondence.md)
 
 # Appendix: The Frontier
 
