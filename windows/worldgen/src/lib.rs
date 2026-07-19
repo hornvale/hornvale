@@ -3579,7 +3579,7 @@ fn build_to(
                 &world.registry,
             )
             .expect("world_entity has no prior is-a fact, so this cannot conflict");
-        if let Some(name) = world_name_in(&world, wc) {
+        if let Some(name) = world_name_in_from(&world, wc, &terrain, &climate) {
             world
                 .ledger
                 .commit(
@@ -3617,7 +3617,7 @@ fn build_to(
         for kind in placed_peoples(&world) {
             let collective =
                 mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
-            let autonym = lexicon_of_in(&world, wc, kind.0)?
+            let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
                 .entry("person")
                 .and_then(|entry| match entry {
                     hornvale_language::LexEntry::Root { views, .. }
@@ -3954,8 +3954,24 @@ pub fn world_name(world: &World) -> Option<String> {
 /// injected `wc` it already built rather than re-assembling components.
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
+    let terrain = terrain_of(world).ok()?;
+    let climate = climate_of(world).ok()?;
+    world_name_in_from(world, wc, &terrain, &climate)
+}
+
+/// [`world_name_in`], reusing ALREADY-BUILT terrain/climate down
+/// [`lexicon_of_in_from`] instead of re-sculpting the globe. The planet genesis
+/// stage — which already holds the sculpted terrain/climate — calls this so
+/// naming the world costs no extra sculpt. Byte-identical to `world_name_in`.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Option<String> {
     let kind = dominant_people_in(world, wc)?;
-    let lex = lexicon_of_in(world, wc, kind.0).ok()?;
+    let lex = lexicon_of_in_from(world, wc, kind.0, terrain, climate).ok()?;
     match lex.entry("earth")? {
         hornvale_language::LexEntry::Root { views, .. }
         | hornvale_language::LexEntry::Compound { views, .. } => Some(views.roman.clone()),
