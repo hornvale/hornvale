@@ -97,72 +97,117 @@ abstraction before anything new is added.
   by too-cold-vs-too-hot toward the optimum; the same `total_cmp` +
   ascending-`RoomAddr` tie-break. A flow-drive needs no belief cache (it follows
   the directly-felt neighbour temperatures).
-- **Per-day vs annual mean:** `describe` currently returns the annual mean;
-  the per-day field (`temperature_at(cell, day)`, seasonal/diurnal) is available
-  if the drive wants seasonal/diurnal cold — a sub-choice for Stage 2.
+- **Per-day, not annual mean.** The drive reads the *per-day* field
+  (`temperature_at(cell, day)`, seasonal + diurnal) rather than `describe`'s
+  annual mean, so a creature seeks warmth at dawn and shade at noon: arbitration
+  over the temporal field yields a lived **diurnal rhythm** (§5, cyclicity). A
+  small `describe`/`Terrain` extension threads `day` through.
 
-## 5. Arbitration — the composition (deterministic)
+## 5. Arbitration — action-centric, deterministic
 
-At `decide` (the single seam that turns state into `Intent`):
-- Each drive computes urgency; select the **max-urgency active drive**
-  (urgency ≥ its `act` threshold).
-- **Hysteresis** (commitment, realized statelessly): a drive engaged at `act`
-  disengages only below `act − h`; a challenger switches the served drive only
-  if it exceeds the incumbent by a margin δ (incumbent inferred from the recent
-  trail; a session-sandboxed errand marker is the fallback if trail-inference is
-  fiddly — still not save-format).
-- **Aging / no starvation:** the max-urgency rule already prevents starvation
-  (a chronically-unmet drive keeps rising until it wins); confirm no pathology.
-- Fall to return-home when no drive is active. All comparisons via `total_cmp`
-  with ascending-`RoomAddr` ties — **reload-stable**.
+At `decide` (the single seam that turns state into `Intent`), arbitration is
+**action-centric, not drive-centric**: it does not pick a drive and follow its
+gradient — it picks the candidate action (the ≤3 neighbour `MoveTo`s plus any
+consume/bask) that best reduces the *weighted drive-set*, so one move can serve
+two needs at once (a cell both warmer and nearer water):
+
+- **Utility of an action** = `Σ_drives urgency_d × reduction_d(action)`; pick the
+  max-utility action. (Max-urgency-single-drive is the degenerate special case.)
+- **`deliberation_latency` slides the rule** (§6): *grab* counts only the loudest
+  drive's own reduction (myopic); *weigh* counts the full weighted sum.
+- **Soft Maslow via urgency ceilings, not a priority table.** Survival drives
+  (thirst → death) can reach urgency 1.0; comfort drives (thermal discomfort) cap
+  lower — so severe cold beats mild thirst while nothing beats dying of thirst.
+  The hierarchy *emerges* from the urgency ranges.
+- **Commitment is an explicit behavioural mode** — `Pursuing(drive)` / `Homing` /
+  `Idle`, session-sandboxed (a tick-local mode, never save-format). Transitions
+  are hysteretic: engage a drive at its `act`, release below `act − h`, switch the
+  pursued drive only when a challenger's utility exceeds the incumbent's by a
+  margin δ. The mode *is* the errand — no trail-inference needed; it prevents both
+  boundary-dithering and mid-errand flip-flop, buying **purposeful, alive**
+  behaviour over twitchy reflexes.
+- **No starvation:** an unmet drive's urgency keeps rising until it wins; confirm
+  no pathology. Fall to `Homing` when none is active. All comparisons via
+  `total_cmp` with ascending-`RoomAddr` ties — **reload-stable**.
 
 ## 6. Psychology parameterizes arbitration
 
-`PsychVector.deliberation_latency` slides the selection rule:
-- **grab** (low latency, impulsive): argmax *urgency* — seize the loudest need.
-- **weigh** (high latency, deliberate): argmax *utility* = urgency × how well the
-  chosen action serves it (e.g. distance-discounted).
+`PsychVector.deliberation_latency` slides the action-selection rule (§5):
+- **grab** (low latency, impulsive): the action best serving the *single loudest*
+  active drive — the nearest relief for the biggest need.
+- **weigh** (high latency, deliberate): the action maximizing the *weighted sum*
+  over all active drives — the move that best relieves total discomfort.
 
-This is `PsychVector`'s first runtime job. **`time_horizon` anticipation** ("act
-on what *will* be urgent") is **deferred** (a clean extension of the same rule).
+This is `PsychVector`'s first runtime job, and the seat of temperament: same
+conflict, same mechanism, a different creature. **`time_horizon` anticipation**
+("act on what *will* be urgent") is **deferred** (a clean extension of the same
+rule).
 The tuning must stay deterministic (the psych vector is authored data; the
 policy is a pure function of it + the drive urgencies).
 
-## 7. Affect — the derived, legible read
+## 7. Affect — the valence × arousal read
 
-A pure function of the arbitration state (derived, immaterial — matching
-"drive == fold"), rendered as narration and sampled by the Lab:
+Affect is a pure function of the arbitration state (derived, immaterial —
+matching "drive == fold"), grounded in the psychological **circumplex**: a point
+in **valence × arousal**, both already derived —
+- **arousal = max urgency** over active drives (how activated the mind is);
+- **valence = making-progress − blocked** (are the pursued drives *reducing*, or
+  is the affordance failing?).
 
-| situation | affect | |
+The labels are *regions* of that plane, and affect additionally carries its
+**intentional object + reason** (frustrated *about* water, *because* every path
+is blocked) — the object/reason is what makes it debuggable and *is* the "message"
+a creature emits:
+
+| region (valence, arousal) | label | |
 |---|---|---|
-| no active drive / plan in progress | **content** | the normal state |
-| active drive, exploring (has a gradient) | **searching** | normal — *not* confusion |
-| drive + belief, no path | **frustrated** | "I want water but every path is blocked" |
-| drive, no belief and no gradient | **lost** | "I don't know what to do" |
-| urgent drive + no plan | **panicked** | frustration × urgency |
-| sustained futility (aged) | **helpless** | gives up despite an active drive |
+| positive, low | **content** | needs met; puttering — the normal state |
+| positive, high | **eager / relieved** | chasing a satisfiable need; a drive just met ("drinks deep") |
+| neutral, mid | **searching** | seeking with a gradient — normal, *not* confusion |
+| negative, high | **frustrated / panicked** | blocked × urgency: "want it, can't reach it" |
+| negative, low | **lost** | no basis to move: "don't know what to do" |
+| negative, low, *persistent* | **helpless** | given up despite an active drive |
 
 - **Searching ≠ confusion** is load-bearing: a creature seeking not-yet-found
   water is puttering normally; counting it would make the health metric
-  meaningless. The metric measures frustrated + lost + panicked + helpless.
-- **Learned helplessness** is the temporal collapse (persistent negative-affect
-  → apathy). Deliberate creatures (long horizon) give up faster on truly futile
-  tasks; impulsive ones keep flailing — psychology shapes even how a mind breaks.
+  meaningless. The metric measures the negative-valence regions, not searching.
+- **Positive affect is first-class** (relief on satisfying a drive, eager
+  pursuit) — the read is not negative-only.
+- **Learned helplessness is a *sticky* scar** — most affect flips with the drive,
+  but giving-up reverses slowly (the trust-breaks-fast asymmetry), so a helpless
+  creature does not instantly re-engage on a new opportunity. Deliberate creatures
+  (long horizon) give up faster on truly futile tasks; impulsive ones flail —
+  psychology shapes even how a mind breaks.
 
-## 8. The health metric — the creatures debug the sim
+## 8. The health metric — a self-scoring family, anchored to a control
 
-Aggregate **persistent** negative-affect across the population is a self-scoring
-proxy for "does cognition work" — the cognition-layer analog of the
-correspondence completeness audit. Background is near-zero (creatures ascend
-their hierarchy). A spike is disambiguated by its **temporal signature**:
-- **decays** → a novel/extreme *world* event (a frost, a drought) the creatures
-  adapt to — legitimate.
-- **persists** → a *sim* bug — an unsatisfiable need, an unreachable-but-should-
-  be-reachable resource (the pinned "real-walk reachability" class).
+Population affect is a self-scoring health signal for the cognition layer — the
+analog of the correspondence completeness audit, a View over the population's
+affect with a temporal axis. It is a **family**, not one number (the
+epidemiology/SRE decomposition):
 
-Delivered as a Lab metric (`windows/lab`) over a seed sweep, and re-scored into
-the Confidence Gradient as a self-scorable bet ("creatures satisfy the needs
-they should be able to").
+- **prevalence** — fraction in negative affect *now* (instantaneous distress).
+- **chronicity** — fraction *persistently* stuck (helpless/frustrated ≥ N ticks).
+  **The bug alarm.**
+- **recovery-rate** — the half-life of a distress spike (fast = resilient; none =
+  stuck). The decay-vs-persist, quantified.
+- **by-cause / by-species** — distress attributed per drive and per species
+  (a cold-niche species in a warm world reads high, and *should*) — diagnostic.
+
+**The temporal signature disambiguates a hard world from a broken sim:** a spike
+that *recovers* (short half-life) is a novel/extreme world event (a frost, a
+drought) the creatures adapt to — legitimate; a spike that *persists* (no
+recovery, elevated chronicity) is a bug — an unsatisfiable need or an
+unreachable-but-should-be-reachable resource (the pinned "real-walk reachability"
+class).
+
+**The metric is anchored, not thresholded arbitrarily** (the "The Named" lesson —
+the anchor is the checkable part, not the drift-check). The baseline is a **null
+control**: in a resource-abundant, niche-matched world, persistent distress ≈ 0;
+the metric is *deviation from that floor*, preregistered and drift-checked,
+exactly as the divergence method works. Delivered as a Lab metric
+(`windows/lab`) over a seed sweep, re-scored into the Confidence Gradient as a
+self-scorable bet.
 
 ## 9. The correspondence payoff
 
@@ -211,9 +256,11 @@ they hold a cognitive handle **in the game's own terms**. Byte-free to worlds
   `PsychVector`, one thirst-vs-cold conflict, produce **visibly different walks**
   and **different affect signatures** — measured via the Lab (the project's own
   instrument), pinned honest.
-- **The health metric works both ways:** a normal world shows near-zero
-  persistent negative-affect; an injected novel event spikes-then-decays; an
-  injected unsatisfiable need spikes-and-persists (the bug signal).
+- **The health metric works both ways, against the anchor:** the null control
+  (resource-abundant, niche-matched) reads ≈0 persistent distress — the floor;
+  an injected novel event spikes then *recovers* (short half-life); an injected
+  unsatisfiable need spikes and *persists* (elevated chronicity, no recovery —
+  the bug signal). Measured as deviation from the control, preregistered.
 - **`ConditionNiche` is honoured:** a cold-niche species (kobold) tolerates cold
   a warm-niche species (goblin) flees — the niche drives divergent behaviour.
 
