@@ -409,14 +409,34 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
 /// against the carrying_capacity constants to a manageable seed-42
 /// settlement count. Before tuning, the placeholder 0.5 condensed 998
-/// settlements on the level-6 seed-42 world (avg catchment ~7 people); this
-/// value condenses 182 (avg catchment ~22, max 71) — low hundreds, an order
-/// of magnitude down from the placeholder and in the range of the retired
-/// spaced scatter's town count. A save-format constant from here on. Module
-/// scope (hoisted from the settlement-genesis stage closure, Task A16a) so
+/// settlements on the level-6 seed-42 world (avg catchment ~7 people); the
+/// then-value of 10.0 condensed 182 (avg catchment ~22, max 71) — low
+/// hundreds, an order of magnitude down from the placeholder and in the
+/// range of the retired spaced scatter's town count.
+///
+/// RE-CALIBRATED (the-confluence T3, 2026-07-19): the sharper freshwater
+/// term (T2's re-point at `river_proximity`, with `MOISTURE_FLOOR_WEIGHT`
+/// pulled to 0.2) concentrates catchments along river corridors rather than
+/// spreading them over broad riverless-but-moist land, and the old
+/// `THRESHOLD = 10.0` condensed only 79 seed-42 settlements — below the
+/// [100, 400] sane band (`windows/worldgen/tests/confluence.rs`,
+/// `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`).
+///
+/// A naive re-fit is not enough: lowering `THRESHOLD` alone trades settlement
+/// COUNT against T2's keystone (`settlements_condense_near_rivers_emergently`)
+/// — a sweep found both move together non-monotonically in a narrow band
+/// (e.g. 0.9–1.5 clears the [100, 400] count band comfortably but the
+/// near-river fraction hovers right AT the keystone's 0.7 floor, 0.6991–
+/// 0.7018, effectively zero margin; 2.5+ gives the keystone real headroom but
+/// drops the count below 100). `1.7` was chosen as the best point found in
+/// that sweep: seed 42 condenses 108 settlements (comfortably inside the
+/// band, well clear of its 100 floor) while the near-river fraction reads
+/// 0.7222 — a real, if modest, margin over the keystone floor rather than
+/// sitting on top of it. A save-format constant from here on. Module scope
+/// (hoisted from the settlement-genesis stage closure, Task A16a) so
 /// [`demography_report`]'s Lab accessor and the genesis path share the one
 /// definition — they must never diverge.
-const CONDENSATION_THRESHOLD: f64 = 10.0;
+const CONDENSATION_THRESHOLD: f64 = 1.7;
 
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
@@ -2772,6 +2792,23 @@ fn build_to(
         &mass_map,
         CONDENSATION_THRESHOLD,
     );
+    // the-confluence T3 (save-format surface, spec §6): re-pointing the
+    // freshwater term at `river_proximity` and re-fitting
+    // `CONDENSATION_THRESHOLD` changes WHICH cells clear condensation (and
+    // therefore WHICH cells this pass places settlements on) — but this is
+    // a **derived-formula change**, not a stream-label epoch. Everything
+    // upstream of `condense_stack` (`carrying_inputs_of`,
+    // `carrying_capacity`, `coexist::pack`) is a pure, seed-free function of
+    // terrain/climate — `hornvale_demography` never imports `Seed`/`Stream`
+    // at all — and every name drawn below is salted by the settlement's own
+    // cell id (see the comment above `phonologies`), not by settlement COUNT
+    // or ORDER, so a shifted settlement set perturbs no OTHER draw's inputs.
+    // `settlement::stream_labels()` already documents `settlement/placement`/
+    // `settlement/population` as drawing nothing from the seed (retired
+    // pre-the-gathering); that remains true unchanged here. No new stream
+    // label, no draw-order shift — same seed + pins still yields a
+    // byte-identical world (`windows/worldgen/tests/confluence.rs`,
+    // `seed_42_is_byte_identical_across_two_builds_after_the_confluence`).
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
