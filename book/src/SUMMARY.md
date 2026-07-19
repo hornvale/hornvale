@@ -177,6 +177,7 @@
 - [The Turning](./chronicle/the-turning.md)
 - [The Chorus](./chronicle/the-chorus.md)
 - [The Explanations](./chronicle/the-explanations.md)
+- [The Freshet](./chronicle/the-freshet.md)
 
 # Appendix: The Frontier
 

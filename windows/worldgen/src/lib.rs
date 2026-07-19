@@ -1445,6 +1445,35 @@ pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
     Ok(lines)
 }
 
+/// The Waters' headline line for the almanac (The Freshet, DOM-5 first
+/// slice): the fresh-water (river) share of a world's land — the salt/fresh
+/// distinction the ground substrate always computed but never reported. A
+/// pure projection over `TectonicGlobe.water_kind`: no new draws. Empty for
+/// a landless world.
+/// type-audit: bare-ok(prose: return)
+pub fn water_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let geo = terrain.geosphere();
+    let globe = terrain.globe();
+    let (mut land, mut fresh) = (0usize, 0usize);
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        if *globe.water_kind.get(cell) == hornvale_terrain::WaterKind::River {
+            fresh += 1;
+        }
+    }
+    if land == 0 {
+        return Ok(Vec::new());
+    }
+    Ok(vec![format!(
+        "Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches {:.0}% of the land.",
+        fresh as f64 / land as f64 * 100.0
+    )])
+}
+
 /// The geographic position of a place, from its committed latitude/longitude
 /// facts (each set from `Geosphere::coord` at genesis — `domains/settlement`).
 /// `None` for a place carrying no such facts (a legacy or non-settlement
@@ -4046,6 +4075,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
         ground_lines: ground_lines(world)?,
+        water_lines: water_lines(world)?,
         diurnal_lines: diurnal_lines(world)?,
         deep_time_lines,
         peoples,
@@ -5363,6 +5393,24 @@ mod tests {
         assert_eq!(ctx.ground_lines, ground_lines(&world).unwrap());
         let doc = hornvale_almanac::render(&ctx);
         assert!(doc.contains("## The Ground"));
+    }
+
+    #[test]
+    fn water_lines_report_a_nonzero_fresh_water_share() {
+        let world = constant(42);
+        let lines = water_lines(&world).unwrap();
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("Fresh water"));
+        assert!(lines[0].contains('%'));
+    }
+
+    #[test]
+    fn water_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.water_lines, water_lines(&world).unwrap());
+        let doc = hornvale_almanac::render(&ctx);
+        assert!(doc.contains("## The Waters"));
     }
 
     #[test]
