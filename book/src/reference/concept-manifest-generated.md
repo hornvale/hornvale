@@ -8,12 +8,12 @@ Every registered concept is carried across three correspondence ledgers — **le
 
 ```text
 Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, bugbear-kind, coral-reef, desert, epipelagic, goblin-kind, god, hadal-trench, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, rain, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tropical-rainforest, tropical-seasonal-forest, tundra, upwelling
-Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, rain, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, snow, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, wind, yellow
+Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, rain, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, snow, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, yellow
 Uncognized (cognition, all pending): 72 concepts [wave-cognition]
 
 Trial balance (per ledger: covered + voids = 72 concepts):
   lexeme:    covered 40  gap 32
-  percept:   covered 3  gap 69
+  percept:   covered 4  gap 68
   cognition: covered 0  uncognized 72
 ```
 
@@ -91,5 +91,5 @@ Trial balance (per ledger: covered + voids = 72 concepts):
 | `two` | Expected | Gap | pending(wave-cognition) |
 | `upwelling` | Gap | Gap | pending(wave-cognition) |
 | `water` | Expected | Gap | pending(wave-cognition) |
-| `wind` | Expected | Gap | pending(wave-cognition) |
+| `wind` | Expected | `ambient` | pending(wave-cognition) |
 | `yellow` | Expected | Gap | pending(wave-cognition) |
