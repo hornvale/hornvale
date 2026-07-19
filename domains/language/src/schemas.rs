@@ -437,6 +437,21 @@ mod tests {
                 SchemaId::Kinship
             ]
         );
+        // The dead-metaphor double-dip guard (LANG-38's live/dead split,
+        // C5 T5): a lexicon compound like `sea` (`packs::compound_recipe`
+        // — "many water") is a DEAD, lexicalized-but-inert mapping, never
+        // a live productive schema. `Taxonomy` (`is-a`) and `Roster`
+        // (`instance-of`) facts are concept-classification facts, not
+        // day/moon phenomena; if either shape ever admitted a schema, the
+        // causal-filter engine (`windows/worldgen::chorus::explain`) could
+        // fire an "explanation" on a lexicon compound, collapsing the
+        // live/dead split LANG-38 deliberately keeps un-collapsed. No
+        // `Explained` entry may ever target a concept-classify fact — this
+        // is structurally true today (no admission row in `schema_table()`
+        // lists either shape), so this test pins the closure rather than
+        // asserting behavior: it reddens the instant a future schema
+        // addition admits `Taxonomy`/`Roster`, forcing that change to be
+        // deliberate rather than an oversight.
         assert!(admitted(FactShape::Taxonomy).is_empty());
         assert!(admitted(FactShape::Roster).is_empty());
     }
