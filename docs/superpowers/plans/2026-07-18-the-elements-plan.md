@@ -103,7 +103,11 @@ NearestCellIndex cached. `make gate` green.
 + trial-balance tests pass; the flipped percepts reference registered kinds.
 **Tests:** `cli/tests/correspondence.rs` (foots + reconciliation); the manifest
 drift-check; `make gate`.
-**Status:** Not Started
+**Status:** Complete — climate's `rain`/`snow` percept edges flipped to
+Present (they leave BOTH the Unperceived AND the Orphan lists — the two-sided
+closure); `ice` honestly stays Gap (cold+wet reads as snow). World byte-identical
+(edges serde-skip); percept covered 8->10; orphans back to the 4 astronomy
+events. `make gate` green.
 
 ---
 

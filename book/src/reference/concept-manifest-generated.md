@@ -8,13 +8,13 @@ Every registered concept is carried across three correspondence ledgers — **le
 
 ```text
 Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, bugbear-kind, cold, coral-reef, desert, eclipse, epipelagic, goblin-kind, god, hadal-trench, hearth, heat, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, rain, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tide, tropical-rainforest, tropical-seasonal-forest, tundra, upwelling
-Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, rain, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, snow, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, yellow
-Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, rain, seasonal-cycle, snow, wandering-star
+Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, yellow
+Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, seasonal-cycle, wandering-star
 Uncognized (cognition, all pending): 76 concepts [wave-cognition]
 
 Trial balance (per ledger: covered + voids = 76 concepts):
   lexeme:    covered 40  gap 36
-  percept:   covered 8  gap 68
+  percept:   covered 10  gap 66
   cognition: covered 0  uncognized 76
 ```
 
@@ -69,7 +69,7 @@ Trial balance (per ledger: covered + voids = 76 concepts):
 | `one` | Expected | Gap | pending(wave-cognition) |
 | `parent` | Expected | Gap | pending(wave-cognition) |
 | `person` | Expected | Gap | pending(wave-cognition) |
-| `rain` | Gap | Gap | pending(wave-cognition) |
+| `rain` | Gap | `rain` | pending(wave-cognition) |
 | `red` | Expected | Gap | pending(wave-cognition) |
 | `savanna` | Gap | Gap | pending(wave-cognition) |
 | `sea` | Expected | Gap | pending(wave-cognition) |
@@ -78,7 +78,7 @@ Trial balance (per ledger: covered + voids = 76 concepts):
 | `shrubland` | Gap | Gap | pending(wave-cognition) |
 | `sibling` | Expected | Gap | pending(wave-cognition) |
 | `sleep` | Expected | Gap | pending(wave-cognition) |
-| `snow` | Gap | Gap | pending(wave-cognition) |
+| `snow` | Gap | `snow` | pending(wave-cognition) |
 | `spirit` | Gap | Gap | pending(wave-cognition) |
 | `star` | Expected | `night-star` | pending(wave-cognition) |
 | `starlit` | Expected | Gap | pending(wave-cognition) |

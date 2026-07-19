@@ -111,6 +111,15 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         ("rain", "liquid precipitation"),
         ("ice", "frozen water"),
     ] {
+        // snow and rain are now emitted as felt phenomena (the weather emitter),
+        // so their percept edge references that kind. `ice` is not emitted as a
+        // phenomenon of its own (a cold, wet cell reads as snow), so it stays an
+        // honest Gap.
+        let percept = if name == "ice" {
+            Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet"))
+        } else {
+            Correspondent::Present(PerceptKind(name.to_string()))
+        };
         registry.register_manifest(Manifest {
             concept: ConceptDef {
                 name: name.to_string(),
@@ -119,7 +128,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 doc: doc.to_string(),
             },
             lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
-            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            percept,
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),
