@@ -2115,15 +2115,31 @@ mod tests {
     /// `windows/worldgen/tests/deep_grammar.rs` pins the SAME numbers at the
     /// derivation layer), reduced to the one bit
     /// `the_taught_contrast_is_visible_where_deep` needs: whether
-    /// `evidential_depth` is non-`None` for this (seed, species).
+    /// `evidential_depth` is non-`None` for this (seed, species). Every row
+    /// here must also be an ORGANIZED culture (a doctrine section exists) —
+    /// this is a separate, settlement-demography-driven fact from
+    /// `evidential_depth` (a morphology draw), so the two can move
+    /// independently across an absorb.
+    ///
+    /// Re-pinned post-absorption (the Confluence settlement re-baseline,
+    /// merge a46749f): seed 3's hobgoblin (`Shteozqae`) is no longer
+    /// organized at this seed (its doctrine/priesthood section is gone from
+    /// the regenerated `the-book.md` — a settlement-demography fact, not a
+    /// morphology change; its `evidential_depth` measured in
+    /// `deep_grammar.rs` is unchanged at `None`), so its row is dropped
+    /// rather than re-measured as `false`: this test requires
+    /// `section.doctrine` to be `Some` for every listed (seed, kind), and it
+    /// no longer is. Seed 3's new kobold (`Jjajjjo`) is ALSO not organized
+    /// at this seed (no priesthood section renders for it either), so it is
+    /// not added. Both arms (`true`/`false`) remain exercised by the
+    /// surviving rows.
     const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
-        (1, "goblin", false),    // None
-        (1, "hobgoblin", true),  // Particle
-        (2, "goblin", false),    // None
-        (2, "hobgoblin", true),  // Particle
-        (2, "kobold", false),    // None
-        (3, "goblin", true),     // Particle
-        (3, "hobgoblin", false), // None
+        (1, "goblin", false),   // None
+        (1, "hobgoblin", true), // Particle
+        (2, "goblin", false),   // None
+        (2, "hobgoblin", true), // Particle
+        (2, "kobold", false),   // None
+        (3, "goblin", true),    // Particle
     ];
 
     /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for

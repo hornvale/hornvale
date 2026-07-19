@@ -160,7 +160,12 @@ fn depth_landscape_measured() {
     // Bugbear never places within this range (a pre-existing measured
     // finding, unrelated to this campaign — see
     // `registry-scan-before-generating`/the bugbear placement rate); kobold
-    // places only at seed 2.
+    // places at seed 2 and, since the Confluence's settlement re-baseline
+    // (merge a46749f), also at seed 3.
+    // Re-pinned post-absorption (the Confluence settlement re-baseline +
+    // the Elements percepts, merge a46749f): seed 3 now places a kobold
+    // (row appended below); the other 7 rows are unchanged (re-measured and
+    // verified byte-for-byte identical to the pre-absorption pins).
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
@@ -169,6 +174,7 @@ fn depth_landscape_measured() {
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
+        (3, "kobold", MorphDepth::None, MorphDepth::Affix),
     ];
     assert_eq!(
         measured, expect,
