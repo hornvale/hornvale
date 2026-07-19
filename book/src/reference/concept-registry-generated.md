@@ -119,11 +119,15 @@
 |---|---|
 | `ambient` | a pervasive atmospheric condition |
 | `celestial-body` | a body visible in the sky |
+| `cold` | biting cold |
 | `eclipse` | a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon |
+| `heat` | oppressive heat |
 | `heliacal-rising` | a star's first dawn return from behind the sun |
 | `heliacal-setting` | a star's last evening before the sun swallows it |
 | `night-star` | a fixed star notable in the night sky |
+| `rain` | falling rain |
 | `seasonal-cycle` | the annual daylight cycle |
+| `snow` | falling snow |
 | `tide` | the rise and fall of the waters under the moons |
 | `wandering-star` | a bright star that will not keep its station |
 
@@ -140,6 +144,7 @@
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
 | `child` | language | kin | one's son or daughter |
+| `cold` | climate | quality | felt, biting chill |
 | `coral-reef` | climate | terrain | a biome class |
 | `dark` | language | quality | the color term for black/dark hues |
 | `day` | language | celestial | the light half of the day-night cycle |
@@ -159,6 +164,7 @@
 | `hadal-trench` | climate | terrain | a biome class |
 | `hand` | language | body | the manipulating limb-end |
 | `hearth` | settlement | social | the fire at the center of a home |
+| `heat` | climate | quality | felt, oppressive warmth |
 | `hobgoblin-kind` | species | living | a hobgoblin |
 | `home` | settlement | social | one's dwelling |
 | `hydrothermal-vent` | climate | terrain | a biome class |

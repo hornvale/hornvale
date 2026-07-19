@@ -82,7 +82,13 @@ green; `make gate` green.
 **Tests:** purity (same (world, ctx) → same phenomena); tier-refinement (ambient
 still present); the bounded-delta review; a probe that pantheon growth tracks
 climatic extremity.
-**Status:** Not Started
+**Status:** Complete — GeneratedClimate emits felt heat/cold/rain/snow (Venue
+Ambient) at deviation-from-14°C-baseline salience; **felt broadly (±2°C emit
+band), gods rare (floor at ~±15°C)** per Nathan's calibration. Seed 42 gains 2
+sub-floor lines (rain 0.05, cold 0.02), NO new deity, NO name churn — delta is
+purely additive registry (verified). Tier-0 byte-identical. Perf: genesis
+sources built once (was rebuilt per-observation → 52s; now 9.7s, byte-identical);
+NearestCellIndex cached. `make gate` green.
 
 ## Stage 3: The correspondence payoff
 **Goal:** climate's now-emitted concepts leave the audit's gap lists.

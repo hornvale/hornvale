@@ -1471,8 +1471,30 @@ fn place_coord(world: &World, place: EntityId) -> Option<GeoCoord> {
 /// [`observe`] re-sorts by salience with a kind→description tie-break, so the
 /// order within the returned list never affects output bytes.
 fn phenomena_sources(world: &World) -> Result<Vec<Box<dyn PhenomenaSource>>, BuildError> {
+    phenomena_sources_from(world, &climate_of(world)?)
+}
+
+/// [`phenomena_sources`], but reusing an ALREADY-BUILT tier-1 climate rather
+/// than re-deriving one. Deriving a `GeneratedClimate` runs the full terrain
+/// sculpting pipeline plus the temperature/moisture/biome fields over the
+/// whole globe (~O(cells), hundreds of ms) — so a genesis stage that already
+/// holds the world's climate (the peopling stage builds it once) passes it
+/// here instead of paying that cost per observation. Byte-identical to the
+/// plain path: the reused climate is the same `climate_of(world)` value the
+/// plain path derives (the peopling stage builds it with `climate_of`), and
+/// the emitter reads only its fields.
+fn phenomena_sources_from(
+    world: &World,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Box<dyn PhenomenaSource>>, BuildError> {
     let mut sources: Vec<Box<dyn PhenomenaSource>> = vec![Box::new(sky_of(world)?)];
     let mut ctx = WorldContext::new();
+    // The tier-1 climate is composed from cross-domain inputs (terrain + sky),
+    // so the composition root — the only layer where domains legally meet —
+    // builds it and hands it to climate's domain to reclaim via `claim`
+    // (layering-clean; see `WorldContext`). Climate refines, never contradicts,
+    // the tier-0 stub (decision 0039): the AMBIENT claim still holds.
+    ctx.provide("hornvale-climate", Box::new(climate.clone()));
     for domain in DOMAINS {
         if let Some(source) = domain.phenomena_source(world, &mut ctx) {
             sources.push(source);
@@ -1645,6 +1667,30 @@ fn observed_phenomena_from(
     place: EntityId,
     position: Option<GeoCoord>,
 ) -> Result<Vec<Phenomenon>, BuildError> {
+    // Build the sources for this single observation, then observe. A genesis
+    // loop observing MANY times (per settlement, per deity) builds the
+    // expensive sources ONCE and calls `observe_with_sources` directly —
+    // byte-identical, since `phenomena_sources` is a pure function of a world
+    // the loop does not mutate between observations.
+    let boxed = phenomena_sources(world)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    observe_with_sources(world, wc, name, place, position, &sources)
+}
+
+/// Observe from ALREADY-BUILT sources: the per-observation core, factored out
+/// so a caller can construct the (expensive — a full `GeneratedClimate` over
+/// the whole globe) phenomena sources once and reuse them across many
+/// observations. Everything here is cheap: the kind's perception lens and its
+/// characteristic hour. Byte-identical to building fresh sources per call,
+/// because [`phenomena_sources`] is pure over the observed world.
+fn observe_with_sources(
+    world: &World,
+    wc: &WorldComponents,
+    name: &'static str,
+    place: EntityId,
+    position: Option<GeoCoord>,
+    sources: &[&dyn PhenomenaSource],
+) -> Result<Vec<Phenomenon>, BuildError> {
     // Source the kind's perception from the world's component set (ECS c3),
     // keyed by its `KindId` label.
     let perception = wc
@@ -1652,10 +1698,8 @@ fn observed_phenomena_from(
         .get(&KindId(name))
         .expect("peopled pass over a fauna kind");
     let day = observation_time(world, perception.activity)?;
-    let boxed = phenomena_sources(world)?;
-    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
     Ok(observe(
-        &sources,
+        sources,
         &ObserverContext {
             place,
             time: WorldTime { day },
@@ -2757,6 +2801,15 @@ fn build_to(
     let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
         Vec::with_capacity(placements.len());
     let mut glosses: Vec<String> = Vec::with_capacity(placements.len());
+    // Build the phenomena sources ONCE for the whole settlement pass, reusing
+    // the climate this stage already derived (`climate`) rather than
+    // re-deriving it per settlement. `world` is not mutated until
+    // `settlement::genesis` below, so every per-settlement observation sees
+    // identical sources: byte-identical to a per-settlement rebuild, but with
+    // ZERO extra climate derivations (the Stage-2 perf regression was one full
+    // climate+terrain rebuild per settlement — ~60 at seed 42).
+    let boxed_sources = phenomena_sources_from(&world, &climate)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed_sources.iter().map(|s| s.as_ref()).collect();
     for s in &placements {
         let tag = s.dominant;
         let name = species_set[tag as usize];
@@ -2783,7 +2836,8 @@ fn build_to(
         // settlement entity doesn't exist yet, so `world_entity` stands in
         // as the (unread) `place` id while the real coordinate does the
         // culling — see `observed_phenomena_from`.
-        let seen = observed_phenomena_from(&world, wc, name, world_entity, Some(coord))?;
+        let seen =
+            observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
         let mut site_concepts: Vec<&str> = vec![biome_concept];
         site_concepts.extend(presiding);
@@ -2908,6 +2962,18 @@ fn build_to(
         .collect();
 
     stage("culture+religion+species", || -> Result<(), BuildError> {
+        // Build the phenomena sources ONCE for the whole per-species pass (as
+        // the settlement loop does), reusing the already-derived `climate`:
+        // every species observes the SAME flagship vantage, and the sky+climate
+        // are invariant to the culture/religion facts committed inside this
+        // loop — so this is byte-identical to the old per-species rebuild while
+        // deriving no climate at all here. The flagship place and its
+        // coordinate are likewise stable (settlements are already committed).
+        let sp_place = hornvale_terrain::places(&world).first().map(|p| p.id);
+        let sp_position = sp_place.and_then(|p| place_coord(&world, p));
+        let boxed_sp_sources = phenomena_sources_from(&world, &climate)?;
+        let sp_sources: Vec<&dyn PhenomenaSource> =
+            boxed_sp_sources.iter().map(|s| s.as_ref()).collect();
         // Per-species flagship culture and religion.
         for (tag, &name) in species_set.iter().enumerate() {
             let Some(pos) = placements.iter().position(|s| s.dominant as usize == tag) else {
@@ -2969,7 +3035,12 @@ fn build_to(
             // name-gloss is truthful to the phenomenon its belief was actually
             // derived from. Settlements exist by now, so the placed-observer
             // path is live.
-            let seen = observed_phenomena_as_in(&world, wc, name)?;
+            let seen = match sp_place {
+                Some(place) => {
+                    observe_with_sources(&world, wc, name, place, sp_position, &sp_sources)?
+                }
+                None => Vec::new(),
+            };
             let namer = namers
                 .get(name)
                 .expect("a Namer was built for every placed species");
