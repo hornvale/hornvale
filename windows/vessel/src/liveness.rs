@@ -563,8 +563,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
     }
 }
 
-/// The nearer-to-home of an existing belief and a newly-perceived water room
-/// (ties keep the existing). Small helper for the tick's incremental fold.
+/// The nearer-to-home of an existing belief and a newly-perceived water room.
+/// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
+/// (smaller `RoomAddr` wins on an equal hop-distance), or a mid-walk incremental
+/// belief could disagree with the same belief re-derived from the committed
+/// history, making the chosen source faintly sensitive to `wait` granularity
+/// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
 fn nearer_to_home(
     home: &RoomAddr,
     current: Option<RoomAddr>,
@@ -575,7 +579,13 @@ fn nearer_to_home(
     match current {
         None => Some(found),
         Some(c) => match (d(&c), d(&found)) {
-            (Some(dc), Some(df)) => Some(if df < dc { found } else { c }),
+            (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
+                std::cmp::Ordering::Less => found,
+                std::cmp::Ordering::Greater => c,
+                // Tie on hop-distance: smaller RoomAddr wins (matches
+                // `believed_water`'s `min_by((hop, RoomAddr))`).
+                std::cmp::Ordering::Equal => std::cmp::min(c, found),
+            }),
             (None, Some(_)) => Some(found),
             _ => Some(c),
         },
@@ -1099,6 +1109,24 @@ mod tests {
                 n.resource
             );
         }
+    }
+
+    #[test]
+    fn the_sea_level_fact_name_matches_terrains_own_constant() {
+        // TRIPWIRE (the-surmise T3+T4 review): `world_sea_level` reads the
+        // terrain genesis fact by the STRING "sea-level-m", duplicating
+        // `hornvale_terrain::facts::SEA_LEVEL_M`. On a silent mismatch the read
+        // misses and falls back to `WATER_LEVEL = 0.0`, re-submerging every
+        // settlement — the exact bug the sea-level derivation exists to prevent.
+        // This converts the cross-window save-format coupling into a checked
+        // contract: if terrain renames the fact, THIS reddens (not the demo,
+        // silently, months later). Class: the golden-pins rename footgun.
+        assert_eq!(
+            "sea-level-m",
+            hornvale_terrain::facts::SEA_LEVEL_M,
+            "world_sea_level's hardcoded fact name drifted from terrain's own \
+             constant — update it (or add an epoch) before this ships"
+        );
     }
 
     #[test]
