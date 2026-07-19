@@ -1,5 +1,7 @@
 # The Doctrine (C6) Implementation Plan
 
+> **COMPLETE (2026-07-19).** 4 tasks + review fixes; census untouched (roster law proven 3x); ledger #9's explanatory-parity refinement supersedes this plan's compressed Harmony grid (the spec's letter governs).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The institution's second account — derived from the folk account
