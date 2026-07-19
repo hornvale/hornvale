@@ -42,16 +42,19 @@ incidental):
 | `snow_fraction` | array of number, one per tile | Fraction of the year's precipitation falling as snow, in [0, 1] — a smooth logistic of the mean temperature across freezing (cold → 1, warm → 0). |
 | `precip_regime` | array of integer, one per tile | The seasonal precipitation regime as a small integer: `0` uniform, `1` summer-max, `2` winter-max, `3` monsoon. A categorical label from circulation band, continentality, and hemisphere — **not** a time series (a name, not a curve), so it is independent of the mm total. |
 | `cloud_fraction` | array of number, one per tile | Diagnostic cloud fraction in [0, 1] — moisture × uplift, cloudy where moist air rises. Strictly diagnostic (no insolation or albedo feedback); the client shades and may advect it. |
+| `weather_propensity` | array of number, one per tile | Climatological storm propensity in [0, 1] (The Firmament) — the slow prior a client animates typed clouds from; see [`hornvale_climate::GeneratedClimate::storm_propensity_at`]. |
+| `cloud_type` | array of integer, one per tile | The cloud type at the scene's day, as a small integer: `0` none, `1` cumulus, `2` stratus, `3` nimbostratus, `4` cumulonimbus, `5` cirrus — the weather state's face; see [`hornvale_climate::GeneratedClimate::cloud_type_at`]. |
 | `locked` | boolean | Whether the world is tidally locked. On a locked world the seasonal temperature is **not** `t_mean_c + t_swing_c·sin(…)` — `t_swing_c` is `0` there — but a *librating substellar* field the client reconstructs from the world's obliquity and the year phase (see below), so a consumer reads this flag to choose its evaluator. |
 
 `elevation_m`, `ocean`, `biome`, `plate`, and `unrest` are the five per-tile
 layers: each is an array of exactly `width × height` entries, in the grid
 order described below, so tile `i`'s elevation, ocean flag, biome, plate,
 and unrest all sit at the same index `i` across their respective arrays.
-`t_mean_c`, `t_swing_c`, `moisture`, and the precipitation layers
-(`precip_mm_yr`, `snow_fraction`, `precip_regime`, `cloud_fraction`) are
-further per-tile layers of the same shape, appended after `features` (see
-Stability, below, on the append-at-end convention); `season_period_days` and
+`t_mean_c`, `t_swing_c`, `moisture`, the precipitation layers
+(`precip_mm_yr`, `snow_fraction`, `precip_regime`, `cloud_fraction`), and
+the weather layers (`weather_propensity`, `cloud_type`) are further per-tile
+layers of the same shape, appended after `features` (see Stability, below,
+on the append-at-end convention); `season_period_days` and
 `circulation_bands` are document-level, not per-tile.
 `biome_legend` currently holds twenty-two entries, from `ice` and `tundra`
 through the deep-ocean biomes (`hadal-trench`, `abyssal`, and the rest);
@@ -103,6 +106,8 @@ An excerpt of the committed seed-42 example (arrays elided; see
   "snow_fraction": [ ... 32768 entries ... ],
   "precip_regime": [ ... 32768 entries ... ],
   "cloud_fraction": [ ... 32768 entries ... ],
+  "weather_propensity": [ ... 32768 entries ... ],
+  "cloud_type": [ ... 32768 entries ... ],
   "locked": false
 }
 ```
