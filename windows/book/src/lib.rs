@@ -2133,12 +2133,23 @@ mod tests {
     /// at this seed (no priesthood section renders for it either), so it is
     /// not added. Both arms (`true`/`false`) remain exercised by the
     /// surviving rows.
+    ///
+    /// Re-pinned again post-absorption (The Rains moisture epoch, this
+    /// merge): seed 2's kobold is no longer organized under the epoch's
+    /// re-derived settlement layout (its chorus section still renders — it
+    /// still places, and `depth_landscape_measured` still pins its
+    /// morphology at `None`/`None`, unchanged, since morphology is a draw
+    /// the epoch does not touch — but its doctrine/priesthood section is
+    /// gone from the regenerated `the-book.md`, a settlement-demography
+    /// fact). Its row is dropped rather than re-measured as `false`, for the
+    /// same reason as seed 3's hobgoblin above. Both arms remain exercised
+    /// by the surviving rows (`true`: seeds 1/2 hobgoblin, seed 3 goblin;
+    /// `false`: seeds 1/2 goblin).
     const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
         (1, "goblin", false),   // None
         (1, "hobgoblin", true), // Particle
         (2, "goblin", false),   // None
         (2, "hobgoblin", true), // Particle
-        (2, "kobold", false),   // None
         (3, "goblin", true),    // Particle
     ];
 
