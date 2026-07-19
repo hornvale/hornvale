@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -142,6 +142,17 @@ pub struct TilesScene {
     /// `hornvale_climate::diurnal_waveform`).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub t_diurnal_amp_c: Vec<f64>,
+    /// The ocean-current tangent vector's eastward component per tile
+    /// (`dot(current, east)`), dimensionless (unit-sphere tangent-frame
+    /// units, not m/s). Zero on land and on every tile when the world is
+    /// tidally locked (The Gyre; see [`hornvale_climate::GeneratedClimate::current_at`]).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub current_east: Vec<f64>,
+    /// The ocean-current tangent vector's northward component per tile
+    /// (`dot(current, north)`), same units and zero-cases as
+    /// [`Self::current_east`].
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub current_north: Vec<f64>,
     /// The seasonal sinusoid's period, standard days (the world's year).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub season_period_days: f64,
@@ -156,6 +167,29 @@ pub struct TilesScene {
     /// the hemisphere-signed sinusoid. Appended per the schema stability
     /// contract.
     pub locked: bool,
+}
+
+/// Dot product a · b.
+fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// The unit northward tangent at a cell, given its unit-sphere `position`
+/// and eastward tangent: `normalize(cross(position, east))`, completing the
+/// local (east, north) tangent frame the current components project onto.
+/// Zero wherever `east` is zero (the poles, where east is undefined).
+fn tangent_north(position: [f64; 3], east: [f64; 3]) -> [f64; 3] {
+    let n = [
+        position[1] * east[2] - position[2] * east[1],
+        position[2] * east[0] - position[0] * east[2],
+        position[0] * east[1] - position[1] * east[0],
+    ];
+    let len = dot3(n, n).sqrt();
+    if len < 1e-9 {
+        [0.0, 0.0, 0.0]
+    } else {
+        [n[0] / len, n[1] / len, n[2] / len]
+    }
 }
 
 /// Build the `scene/tiles/v1` scene for `world` at `width` tiles across
@@ -192,6 +226,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut t_mean_c = Vec::with_capacity(tiles);
     let mut t_swing_c = Vec::with_capacity(tiles);
     let mut t_diurnal_amp_c = Vec::with_capacity(tiles);
+    let mut current_east = Vec::with_capacity(tiles);
+    let mut current_north = Vec::with_capacity(tiles);
     let mut moisture = Vec::with_capacity(tiles);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -212,6 +248,12 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             t_mean_c.push(climate.mean_temperature_at(c_cell).get());
             t_swing_c.push(climate.seasonal_swing_at(c_cell));
             t_diurnal_amp_c.push(climate.diurnal_amp_at(c_cell));
+            let current = climate.current_at(c_cell);
+            let east =
+                hornvale_climate::circulation::wind_east_tangent(climate.geosphere(), c_cell);
+            let north = tangent_north(climate.geosphere().position(c_cell), east);
+            current_east.push(dot3(current, east));
+            current_north.push(dot3(current, north));
             moisture.push(climate.moisture_at(c_cell));
         }
     }
@@ -222,6 +264,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(t_mean_c.iter())
             .chain(t_swing_c.iter())
             .chain(t_diurnal_amp_c.iter())
+            .chain(current_east.iter())
+            .chain(current_north.iter())
             .chain(moisture.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
@@ -242,6 +286,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         t_mean_c,
         t_swing_c,
         t_diurnal_amp_c,
+        current_east,
+        current_north,
         season_period_days: climate.year_length_std(),
         circulation_bands: climate.band_count(),
         moisture,
@@ -1067,6 +1113,16 @@ mod tests {
         // Signed: some tile north-positive, some south-negative.
         assert!(scene.t_swing_c.iter().any(|&s| s > 0.0));
         assert!(scene.t_swing_c.iter().any(|&s| s < 0.0));
+        assert_eq!(scene.current_east.len(), tiles);
+        assert_eq!(scene.current_north.len(), tiles);
+        // finite everywhere; exactly zero on land tiles
+        for i in 0..tiles {
+            assert!(scene.current_east[i].is_finite() && scene.current_north[i].is_finite());
+            if !scene.ocean[i] {
+                assert_eq!(scene.current_east[i], 0.0);
+                assert_eq!(scene.current_north[i], 0.0);
+            }
+        }
     }
 
     #[test]

@@ -6,6 +6,7 @@
 
 use crate::biome::{self, Biome, SeafloorFeature};
 use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
+use crate::currents::ocean_current_field;
 use crate::habitability;
 use crate::moisture::moisture_field;
 use crate::temperature::{diurnal_amplitude_field, mean_temperature, temperature_at};
@@ -48,6 +49,7 @@ pub struct GeneratedClimate {
     mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     diurnal_amp: CellMap<f64>,
+    current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
     band_count: Option<u32>,
@@ -110,6 +112,9 @@ impl GeneratedClimate {
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
             diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
+        let sea_level = inputs.sea_level;
+        let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
+        let current = ocean_current_field(geo, &is_ocean, band_count);
         let biome = CellMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
             let upwell = is_upwelling(geo, inputs.elevation, inputs.sea_level, cell, band_count);
@@ -138,6 +143,7 @@ impl GeneratedClimate {
             mean_temp,
             moisture,
             diurnal_amp,
+            current,
             biome,
             habitability,
             band_count,
@@ -264,6 +270,13 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(diagnostic-value: return)
     pub fn diurnal_amp_at(&self, cell: CellId) -> f64 {
         *self.diurnal_amp.get(cell)
+    }
+    /// The precomputed ocean surface-current vector at a cell (a unit-sphere
+    /// tangent vector, zero over land and zero everywhere when locked — see
+    /// [`crate::currents::ocean_current`]).
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn current_at(&self, cell: CellId) -> [f64; 3] {
+        *self.current.get(cell)
     }
     /// The biome at a cell.
     pub fn biome_at(&self, cell: CellId) -> Biome {
@@ -481,5 +494,90 @@ mod tests {
             year_phase_offset: 0.2,
         });
         assert_eq!(climate.year_phase_offset(), 0.2);
+    }
+
+    // Coast tangency: an ocean cell adjacent to land has its into-land
+    // component suppressed — the current runs ALONG the coast, not into it.
+    // Build a real world with a coastline (the same land/ocean split
+    // `ocean_cells_map_to_marine_biomes` uses), find an ocean cell with a
+    // land neighbor, and assert the current's component toward the mean
+    // land-neighbor direction is at most a small tolerance. The toward-land
+    // direction is computed independently here (tangent-projected, normalized
+    // mean of neighbor-minus-self over land neighbors) so this is a genuine
+    // check on `current_at`'s output, not a restatement of the production
+    // formula.
+    #[test]
+    fn coastal_current_does_not_flow_into_land() {
+        let geo = Geosphere::new(5);
+        let sea_level = ReferenceElevation::new(0.0).unwrap();
+        let elev = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[2] > 0.0 {
+                300.0
+            } else {
+                -1000.0
+            };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
+        let is_ocean = |c: CellId| *elev.get(c) < sea_level;
+
+        let mut checked = false;
+        for cell in geo.cells() {
+            if !is_ocean(cell) {
+                continue;
+            }
+            let pos = geo.position(cell);
+            let len = (pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]).sqrt();
+            let up = [pos[0] / len, pos[1] / len, pos[2] / len];
+
+            let mut toward_land_sum = [0.0, 0.0, 0.0];
+            for &n in geo.neighbors(cell) {
+                if is_ocean(n) {
+                    continue;
+                }
+                let npos = geo.position(n);
+                let dir = [npos[0] - pos[0], npos[1] - pos[1], npos[2] - pos[2]];
+                let radial = dir[0] * up[0] + dir[1] * up[1] + dir[2] * up[2];
+                let tangent = [
+                    dir[0] - radial * up[0],
+                    dir[1] - radial * up[1],
+                    dir[2] - radial * up[2],
+                ];
+                toward_land_sum = [
+                    toward_land_sum[0] + tangent[0],
+                    toward_land_sum[1] + tangent[1],
+                    toward_land_sum[2] + tangent[2],
+                ];
+            }
+            let tl_len = (toward_land_sum[0] * toward_land_sum[0]
+                + toward_land_sum[1] * toward_land_sum[1]
+                + toward_land_sum[2] * toward_land_sum[2])
+                .sqrt();
+            if tl_len < 1e-9 {
+                // No land neighbor (or a degenerate cancellation) — skip.
+                continue;
+            }
+            let toward_land = [
+                toward_land_sum[0] / tl_len,
+                toward_land_sum[1] / tl_len,
+                toward_land_sum[2] / tl_len,
+            ];
+            let current = climate.current_at(cell);
+            let into_land = current[0] * toward_land[0]
+                + current[1] * toward_land[1]
+                + current[2] * toward_land[2];
+            assert!(
+                into_land <= 1e-6,
+                "cell {} current flows into land: into_land={into_land}",
+                cell.0
+            );
+            checked = true;
+        }
+        assert!(
+            checked,
+            "expected at least one ocean cell with a land neighbor"
+        );
     }
 }

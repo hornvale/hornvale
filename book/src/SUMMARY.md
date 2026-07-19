@@ -179,6 +179,7 @@
 - [The Explanations](./chronicle/the-explanations.md)
 - [The Freshet](./chronicle/the-freshet.md)
 - [The Doctrine](./chronicle/the-doctrine.md)
+- [The Gyre](./chronicle/the-gyre.md)
 - [The Surmise](./chronicle/the-surmise.md)
 
 # Appendix: The Frontier
