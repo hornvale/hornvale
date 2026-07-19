@@ -1485,14 +1485,34 @@ fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> V
     lines
 }
 
+/// Below this annual total (mm/yr) a cell is effectively rainless, and its
+/// seasonal-regime label — a categorical circulation classification computed
+/// independently of the amount (spec §2) — carries no meaning: a "monsoon"
+/// with no rain reads as a contradiction. The regime parenthetical is dropped
+/// below this floor. 50 mm/yr is the conventional hyperarid boundary.
+/// type-audit: bare-ok(threshold: mm/yr)
+const REGIME_FLOOR_MM: f64 = 50.0;
+
 /// Render one sample site's precipitation readout: annual mm, phase
-/// (rain/snow), and the seasonal regime word (see [`rains_lines`]).
+/// (rain/snow), and — above the arid floor, where it means something — the
+/// seasonal regime word (see [`rains_lines`] and [`REGIME_FLOOR_MM`]).
 /// type-audit: bare-ok(prose: site), bare-ok(prose: return)
 fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::CellId) -> String {
     let mm = climate.precip_at(cell).get();
     let phase = precip_phase_word(climate.snow_fraction_at(cell));
-    let regime = regime_word(climate.regime_at(cell));
-    format!("{site} receives about {mm:.0} mm of {phase} a year ({regime}).")
+    // "about 0 mm" reads oddly for a cell that rounds to nothing; name the
+    // bound instead.
+    let amount = if mm < 1.0 {
+        "under 1 mm".to_string()
+    } else {
+        format!("about {mm:.0} mm")
+    };
+    if mm < REGIME_FLOOR_MM {
+        format!("{site} receives {amount} of {phase} a year.")
+    } else {
+        let regime = regime_word(climate.regime_at(cell));
+        format!("{site} receives {amount} of {phase} a year ({regime}).")
+    }
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
@@ -6017,6 +6037,26 @@ mod tests {
             lines[0].contains("mm of"),
             "expected an mm readout: {}",
             lines[0]
+        );
+        // The regime-floor guard (both arms exercised on seed 42): the driest
+        // interior is effectively rainless, so it carries no seasonal-regime
+        // parenthetical (a "monsoon" with no rain is a contradiction) and never
+        // reads "about 0 mm"; the open ocean is well above the floor and keeps
+        // its regime label.
+        assert!(
+            !lines[0].contains('('),
+            "a near-rainless cell must not claim a seasonal regime: {}",
+            lines[0]
+        );
+        assert!(
+            !lines[0].contains("about 0 mm"),
+            "a cell that rounds to zero should read 'under 1 mm', not 'about 0 mm': {}",
+            lines[0]
+        );
+        assert!(
+            lines[1].contains('('),
+            "a wet cell above the arid floor still names its regime: {}",
+            lines[1]
         );
 
         let locked = build_world(
