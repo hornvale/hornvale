@@ -1180,11 +1180,12 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// The diurnal-range headline lines for the almanac's Land section (The
 /// Turning, spec §2): the peak-to-peak day/night swing at two sample
 /// sites — the driest interior land cell (the globe's largest diurnal
-/// amplitude) and an ocean cell (small: a coastal-or-open-water cell's
-/// reduced continentality and higher moisture both damp `diurnal_amp_at`
-/// well below the interior's) — so the reader sees both ends of the range.
-/// Empty for tidally locked worlds and worlds with no land at all: locked
-/// worlds have no rotation-scale day/night cycle (`temperature_at`'s
+/// amplitude) and the genuinely open-ocean cell (the globe's SMALLEST
+/// diurnal amplitude among ocean cells — a coastal cell's nontrivial
+/// continentality still gives it a small-but-nonzero swing, understating
+/// the "small" claim the line makes) — so the reader sees both ends of the
+/// range. Empty for tidally locked worlds and worlds with no land at all:
+/// locked worlds have no rotation-scale day/night cycle (`temperature_at`'s
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
@@ -1215,15 +1216,20 @@ pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
     };
 
     let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
-    let mut ocean: Option<hornvale_kernel::CellId> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
     for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
         if terrain.is_ocean(cell) {
-            if ocean.is_none() {
-                ocean = Some(cell);
+            // Genuinely open ocean is the MINIMUM-amplitude ocean cell — a
+            // coastal cell's nontrivial continentality still gives it a
+            // small-but-nonzero swing, understating the "small" claim.
+            // `geo.cells()` is in CellId order, so `amp < best` (strict)
+            // keeps the first-seen cell on ties, a deterministic tie-break.
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
             }
             continue;
         }
-        let amp = climate.diurnal_amp_at(cell);
         if driest.is_none_or(|(_, best)| amp > best) {
             driest = Some((cell, amp));
         }
@@ -1238,9 +1244,8 @@ pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
             geo_peak_at(lat),
         ));
     }
-    if let Some(cell) = ocean {
+    if let Some((cell, amp)) = ocean {
         let lat = geo.coord(cell).latitude;
-        let amp = climate.diurnal_amp_at(cell);
         lines.push(hornvale_almanac::render_diurnal_range_line(
             "The open ocean",
             amp,
