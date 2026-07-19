@@ -1260,6 +1260,77 @@ pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
     Ok(lines)
 }
 
+/// Dot product a · b.
+fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// The unit northward tangent at a cell, given its unit-sphere `position`
+/// and eastward tangent: `normalize(cross(position, east))` — the same
+/// (east, north) frame [`hornvale_scene`]'s `current_east`/`current_north`
+/// project onto (The Gyre). Zero wherever `east` is zero (the poles).
+fn tangent_north(position: [f64; 3], east: [f64; 3]) -> [f64; 3] {
+    let n = [
+        position[1] * east[2] - position[2] * east[1],
+        position[2] * east[0] - position[0] * east[2],
+        position[0] * east[1] - position[1] * east[0],
+    ];
+    let len = dot3(n, n).sqrt();
+    if len < 1e-9 {
+        [0.0, 0.0, 0.0]
+    } else {
+        [n[0] / len, n[1] / len, n[2] / len]
+    }
+}
+
+/// The cardinal name for a current's dominant tangent-frame component:
+/// whichever of `east`/`north` has the larger magnitude names the
+/// direction, signed by its sign.
+/// type-audit: bare-ok(ratio: east), bare-ok(ratio: north), bare-ok(identifier-text: return)
+fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
+    if east.abs() >= north.abs() {
+        if east >= 0.0 { "east" } else { "west" }
+    } else if north >= 0.0 {
+        "north"
+    } else {
+        "south"
+    }
+}
+
+/// The seas' headline line for the almanac's Land section (The Gyre, spec
+/// companion to The Turning): the dominant offshore current direction at a
+/// coastal ocean sample site — the first ordinary coastal-fringe ocean cell
+/// (>= 1 land neighbor, `CellId` order, the same coastal-walk convention
+/// `domains/terrain`'s carve stage uses) carrying a nonzero current. Empty
+/// for tidally locked worlds (no circulation bands to drive a current) and
+/// for worlds with no such site (landless, or a coast whose current
+/// happens to cancel to zero).
+/// type-audit: bare-ok(prose: return)
+pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    for cell in geo.cells() {
+        if !terrain.is_ocean(cell) {
+            continue;
+        }
+        if !geo.neighbors(cell).iter().any(|&n| !terrain.is_ocean(n)) {
+            continue;
+        }
+        let current = climate.current_at(cell);
+        if dot3(current, current) < 1e-12 {
+            continue;
+        }
+        let east = hornvale_climate::circulation::wind_east_tangent(geo, cell);
+        let north = tangent_north(geo.position(cell), east);
+        let direction = cardinal_current_direction(dot3(current, east), dot3(current, north));
+        return Ok(vec![format!(
+            "The seas: a current runs {direction} along the coast."
+        )]);
+    }
+    Ok(Vec::new())
+}
+
 /// The deep-time headline lines for the almanac; empty when the world has no
 /// glacial past.
 /// type-audit: bare-ok(prose: return)
@@ -4046,6 +4117,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         biome_lines: biome_lines(world)?,
         ground_lines: ground_lines(world)?,
         diurnal_lines: diurnal_lines(world)?,
+        seas_lines: seas_lines(world)?,
         deep_time_lines,
         peoples,
         pantheons: {
@@ -5462,6 +5534,52 @@ mod tests {
         let world = constant(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.diurnal_lines, diurnal_lines(&world).unwrap());
+    }
+
+    // A spinning world with ocean names a coastal current direction; a
+    // locked world drives no current at all (`ocean_current_field` is
+    // all-zero when there are no circulation bands), so its seas line is
+    // honestly empty.
+    #[test]
+    fn seas_lines_report_a_coastal_current_and_are_empty_when_locked() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Normal),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = seas_lines(&spinning).unwrap();
+        assert_eq!(lines.len(), 1, "expected one seas line: {lines:?}");
+        assert!(lines[0].contains("The seas:"));
+
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        assert!(
+            seas_lines(&locked).unwrap().is_empty(),
+            "locked worlds drive no current to report"
+        );
+    }
+
+    #[test]
+    fn seas_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.seas_lines, seas_lines(&world).unwrap());
     }
 
     #[test]

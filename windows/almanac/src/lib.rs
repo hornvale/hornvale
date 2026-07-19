@@ -102,7 +102,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -127,6 +127,10 @@ pub struct AlmanacContext {
     /// open ocean, so the reader sees both ends of the range. Empty for
     /// tidally locked worlds, which have no rotation-scale day/night cycle.
     pub diurnal_lines: Vec<String>,
+    /// The seas' headline line (The Gyre): the dominant offshore current
+    /// direction at a coastal ocean sample site. Empty for tidally locked
+    /// worlds (no current field) and worlds with no qualifying coastal site.
+    pub seas_lines: Vec<String>,
     /// Deep-time headline lines (the glacial history); empty for worlds with
     /// no glacial past (constant sky, or zero forcing).
     pub deep_time_lines: Vec<String>,
@@ -310,6 +314,13 @@ pub fn render(ctx: &AlmanacContext) -> String {
         doc.push('\n');
     }
 
+    if !ctx.seas_lines.is_empty() {
+        for line in &ctx.seas_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
+    }
+
     if !ctx.ground_lines.is_empty() {
         doc.push_str("## The Ground\n\n");
         for line in &ctx.ground_lines {
@@ -443,6 +454,7 @@ mod tests {
                 "The land is mostly granite, its soils mostly loam.".to_string(),
             ],
             diurnal_lines: vec![],
+            seas_lines: vec![],
             deep_time_lines: vec![
                 "The frost retreated; ice advanced over 30% of the land at its greatest."
                     .to_string(),
@@ -514,6 +526,16 @@ mod tests {
             land_pos < diurnal_pos,
             "diurnal line belongs under The Land"
         );
+    }
+
+    #[test]
+    fn seas_lines_render_in_the_land_section() {
+        let mut ctx = sample_context();
+        ctx.seas_lines = vec!["The seas: a current runs north along the coast.".to_string()];
+        let doc = render(&ctx);
+        let land_pos = doc.find("## The Land").unwrap();
+        let seas_pos = doc.find("The seas:").unwrap();
+        assert!(land_pos < seas_pos, "seas line belongs under The Land");
     }
 
     #[test]
