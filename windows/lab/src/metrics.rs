@@ -1299,8 +1299,12 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
-                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.components())
-                else {
+                let Ok(report) = hornvale_worldgen::demography_report_from(
+                    v.world(),
+                    v.components(),
+                    v.terrain(),
+                    v.climate(),
+                ) else {
                     return MetricValue::Absent;
                 };
                 let geo = v.terrain().geosphere();
@@ -1334,8 +1338,12 @@ pub fn registry() -> Vec<Metric> {
                 bucket_edges: &[0.0, 0.005, 0.01, 0.02, 0.05, 0.1],
             },
             extract: Extractor::Settlement(|v: &SettlementView| {
-                let Ok(report) = hornvale_worldgen::demography_report(v.world(), v.components())
-                else {
+                let Ok(report) = hornvale_worldgen::demography_report_from(
+                    v.world(),
+                    v.components(),
+                    v.terrain(),
+                    v.climate(),
+                ) else {
                     return MetricValue::Absent;
                 };
                 let settlements = &report.stack_settlements;

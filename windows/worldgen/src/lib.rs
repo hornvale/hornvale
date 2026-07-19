@@ -639,6 +639,23 @@ pub fn demography_report_with_beta(
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
+    demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
+}
+
+/// [`demography_report_with_beta`], reusing ALREADY-BUILT terrain/climate
+/// (a Lab view's `terrain()`/`climate()`) instead of re-sculpting the globe —
+/// the census's demography metrics call this. Byte-identical: the passed
+/// terrain/climate equal `terrain_of`/`climate_of`, and the report is pure
+/// over the committed world (no seed draws).
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub(crate) fn demography_report_with_beta_from(
+    world: &World,
+    wc: &WorldComponents,
+    beta: f64,
+    floor: f64,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
@@ -653,8 +670,8 @@ pub fn demography_report_with_beta(
 
     let per_species_k = niche_per_species_k(
         geo,
-        &terrain,
-        &climate,
+        terrain,
+        climate,
         obliquity_deg,
         insolation_scalar,
         &regime,
@@ -708,6 +725,25 @@ pub fn demography_report(
         wc,
         hornvale_demography::BETA,
         hornvale_demography::FLOOR,
+    )
+}
+
+/// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
+/// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
+/// demography metrics call this. Byte-identical to `demography_report`.
+pub fn demography_report_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta_from(
+        world,
+        wc,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        terrain,
+        climate,
     )
 }
 
