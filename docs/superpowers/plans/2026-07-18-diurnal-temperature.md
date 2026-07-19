@@ -1,5 +1,7 @@
 # Diurnal Temperature Implementation Plan
 
+> **Status: COMPLETE (2026-07-18).** All 7 tasks shipped + final-review fixes (per-longitude model correction, obliquity gate, 2 minors). See [chronicle](../../../book/src/chronicle/the-turning.md) and [retrospective](../../retrospectives/the-turning.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a zero-mean diurnal (day/night) term to the climate temperature field on spinning worlds, carried on `scene/tiles/v1` and pulsed on the orrery's temperature lens.

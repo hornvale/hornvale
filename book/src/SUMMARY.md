@@ -173,6 +173,7 @@
 - [The Wanting](./chronicle/the-wanting.md)
 - [The Foresight](./chronicle/the-foresight.md)
 - [The Correspondence](./chronicle/the-correspondence.md)
+- [The Turning](./chronicle/the-turning.md)
 
 # Appendix: The Frontier
 
