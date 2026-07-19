@@ -1,5 +1,7 @@
 # The Explanations (C5) Implementation Plan
 
+> **COMPLETE (2026-07-19).** 5 tasks + 2 review fixes executed; census-neutrality held (zero AWS spend); final review F1/F2 landed. Note: `beta_of`'s Generosity→1.5 midpoint is an implementation-invented value (dead at today's floor) — test it when a species first uses it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The causal filter — per-culture folk explanations of the day and

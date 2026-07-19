@@ -1,7 +1,7 @@
 # The Explanations (C5) — Design
 
 **Date:** 2026-07-18
-**Status:** **Approved at G3 (2026-07-18)** — all flagged items confirmed; census explicitly not spent; ledger digest due at G6.
+**Status:** **COMPLETE — shipped (see [the chronicle](../../../book/src/chronicle/the-explanations.md)).** Was: Approved at G3 (2026-07-18) — all flagged items confirmed; census explicitly not spent; ledger digest due at G6.
 **Campaign:** C5 of the self-writing-book program
 (metaplan: [program metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md) §3 C5)
 **Theory:** registry rows LANG-37 (the causal-schema library) and LANG-38

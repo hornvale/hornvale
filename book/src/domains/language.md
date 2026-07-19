@@ -241,7 +241,15 @@ prints each account as an emic paragraph beside a sparse etic margin
 distinctiveness/recoverability of the whole chorus is a measured
 Laboratory quantity, not a taste call — see
 [Study 012](../laboratory/study-012.md) and
-[The Chorus](../chronicle/the-chorus.md).
+[The Chorus](../chronicle/the-chorus.md). And since The Explanations, a
+fifth filter says *why*: a closed library of twelve embodied causal
+schemas (authored once, globally — never per culture), weighted by how a
+people lives and governs, bound to the culture's own generated pantheon
+by rhythm rather than identity, and lexicalized through a seeded draw —
+so two peoples watching one sunrise give two reasons, every explanation
+sentence parses back byte-identically, and the dial measures none of it
+(an explained fact counts exactly as its underlying knowledge-state) —
+see [The Explanations](../chronicle/the-explanations.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
