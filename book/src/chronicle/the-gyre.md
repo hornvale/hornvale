@@ -58,8 +58,8 @@ where the loop finally demands it.
 The client is where the field stops being data. The orrery reads the two
 tangent components off each ocean tile and seeds particles over the water,
 sweeping them along the current, fading them as they age and re-seeding them
-where they run aground or slow to nothing — the Living Globe pattern (MAP-23),
-in its first real motion. Its correctness is a producer contract: the
+where they run aground or slow to nothing — the living-globe pattern, in its
+first real motion. Its correctness is a producer contract: the
 client's tangent frame is the exact inverse of the one the sim emitted in, so
 the arrows point where the sim says, and the gyres wheel the way the physics
 turns them. The rest is honest eyecandy — client-side particle motion that

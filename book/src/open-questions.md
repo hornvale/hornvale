@@ -196,7 +196,7 @@ loop.
 not yet crossed: the first **vector** field (an ocean current, two tangent
 components per tile, where every prior layer was a scalar) and the first the
 client does not merely colour but **advects** — particles swept along the field
-as motion, the Living Globe's (MAP-23) first real animation over a
+as motion, the living globe's first real animation over a
 deterministic keyframe. The interface held: the client's tangent frame is the
 exact inverse of the producer's, so the flow points where the sim says. And the
 *seen* check earned its keep a second time, in a gentler register — not a
