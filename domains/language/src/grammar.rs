@@ -258,16 +258,12 @@ fn layer_affix(current: Marked, marker: &MorphForm, position: ClassPosition) -> 
                 roman: joined.roman,
             }
         }
-        None => {
-            let roman = match position {
-                ClassPosition::Prefix => format!("{}{}", marker.roman, current.roman),
-                ClassPosition::Suffix => format!("{}{}", current.roman, marker.roman),
-            };
-            Marked {
-                segments: None,
-                roman,
-            }
-        }
+        None => panic!(
+            "layer_affix: cannot segment-affix onto a word with unknown segments \
+             (a LexEntry::Compound complement — lexicon.rs does not retain a \
+             compound's joined segments today; T1 review made this arm loud). \
+             Close that gap before Affix-marking a Compound complement."
+        ),
     }
 }
 
