@@ -296,6 +296,7 @@ fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
 /// bands of 6° (built in ascending cell order, so lookups are
 /// deterministic). Searching the query's band ± 1 always contains the
 /// nearest cell center at level ≥ 4 (which lies within ~2.5°).
+#[derive(Debug, Clone)]
 pub struct NearestCellIndex {
     /// One bucket of cells per latitude band, north to south.
     bands: Vec<Vec<CellId>>,

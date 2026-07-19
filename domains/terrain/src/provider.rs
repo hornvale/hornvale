@@ -119,6 +119,11 @@ impl GeneratedTerrain {
         *self.globe.endorheic.get(id)
     }
 
+    /// The water classification (Ocean/SaltBasin/River/DryLand) at a cell.
+    pub fn water_kind_at(&self, id: CellId) -> crate::water::WaterKind {
+        *self.globe.water_kind.get(id)
+    }
+
     /// Crust thickness at a cell, km.
     /// type-audit: bare-ok(ratio)
     pub fn crust_thickness_at(&self, id: CellId) -> f64 {

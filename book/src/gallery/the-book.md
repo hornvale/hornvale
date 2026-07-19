@@ -122,7 +122,7 @@ The day returns to keep the balance.
 #### As the Ngkoshngta tell it
 
 Waobwoe is the earth with one moon.
-The moon crosses because Nggo strides the sky, slowly.
+The moon crosses because Nggo drives the sky, slowly.
 The day returns, as all things return.
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — rivals.
@@ -135,14 +135,17 @@ The Ngkoshngta are kobolds — ourselves.
 Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.
 The Sdeozqae are goblins.
 The Shteozqae are hobgoblins.
+The Jjajjjo are kobolds.
 
 ### Tongues
 
 Sdeozqae Sgaa. (in the goblin tongue: "The Sdeozqae are goblins.")
 Shteozqae Qje Shaoz. (in the hobgoblin tongue: "The Shteozqae are hobgoblins.")
+Jjajjjo Zda. (in the kobold tongue: "The Jjajjjo are kobolds.")
 
 goblin: gap — planet (no entry in this lexicon)
 hobgoblin: gap — planet (no entry in this lexicon)
+kobold: gap — planet (no entry in this lexicon)
 
 ### The Chorus
 
@@ -150,6 +153,7 @@ hobgoblin: gap — planet (no entry in this lexicon)
 
 The Sdeozqae are goblins — ourselves.
 The Shteozqae are hobgoblins — neighbors.
+The Jjajjjo are kobolds — neighbors.
 Zhqea is the earth.
 The day returns to keep the balance.
 
@@ -159,6 +163,7 @@ The day returns to keep the balance.
 
 The Sdeozqae are goblins — ourselves.
 The Shteozqae are hobgoblins — neighbors.
+The Jjajjjo are kobolds — neighbors.
 Zhqea is the earth.
 The moon is counted and known to the priesthood.
 The moon crosses because Xaoxzaof walks the sky, slowly.
@@ -170,18 +175,19 @@ The day returns to keep the balance.
 
 The Sdeozqae are goblins — rivals.
 The Shteozqae are hobgoblins — ourselves.
+The Jjajjjo are kobolds — rivals.
 Zhqea is the earth.
-The day returns because the sky must be crossed.
+The day returns because Zhoozh stalks the sky, briskly.
 
 *In truth, Zhqea is a planet with one moon, orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*
 
-##### As the priesthood of the Shteozqae teach it
+#### As the Jjajjjo tell it
 
-The Sdeozqae are goblins — rivals.
-The Shteozqae are hobgoblins — ourselves.
-Zhqea is the earth.
-The moon is counted and known to the priesthood.
-The moon crosses because Tjejsha strides the sky, slowly.
+Zhqea is the earth with one moon.
+The moon crosses because Zhqo stalks the sky, slowly.
 The day returns to keep the balance.
+The Sdeozqae are goblins — rivals.
+The Shteozqae are hobgoblins — rivals.
+The Jjajjjo are kobolds — ourselves.
 
 *In truth, Zhqea is a planet orbiting an orange dwarf (K); its day lasts about 0.7 standard days.*

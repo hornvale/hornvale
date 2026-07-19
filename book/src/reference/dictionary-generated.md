@@ -17,6 +17,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Koa | /koa/ | Kea | Kea → no change → Koa |
 | `child` | one's son or daughter | Daokoa | /daokoa/ | Daekoa | Daekoa → no change → Daokoa |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): bugbear has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Taadoo | /taadoo/ | Taanoo | Taanoo → no change → Taadoo |
 | `day` | the light half of the day-night cycle | Goadao | /goadao/ | Goanae | Goanae → no change → Goadao |
@@ -36,6 +37,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Daa | /daa/ | Naa | Naa → no change → Daa |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): bugbear has no exposure to 'hearth' |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): bugbear has no exposure to 'heat' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): bugbear has no exposure to 'hobgoblin-kind' |
 | `home` | one's dwelling | — | — | — | gap (experiential): bugbear has no exposure to 'home' |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
@@ -96,6 +98,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): goblin has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Daekoa | /daekoa/ | Daekoa | Daekoa → no change → Daekoa |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): goblin has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Taanoo | /taanoo/ | Taanoo | Taanoo → no change → Taanoo |
 | `day` | the light half of the day-night cycle | Boanae | /boanae/ | Goanae | Goanae → no change → Boanae |
@@ -115,15 +118,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Naa | /naa/ | Naa | Naa → no change → Naa |
 | `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → no change → Noobee |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): goblin has no exposure to 'heat' |
 | `hobgoblin-kind` | a hobgoblin | Taaboe | /taaboe/ | Qaagoe | Qaagoe → no change → Taaboe |
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): goblin has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Toetea | /toetea/ | Toeqea | Toeqea → no change → Toetea |
 | `many` | an indefinitely large count | Neodoa | /neodoa/ | Neodoa | Neodoa → no change → Neodoa |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Teabae | /teabae/ | Teapae | Teapae → no change → Teabae |
 | `mountain` | high ground | — | — | — | gap (experiential): goblin has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Doenoe | /doenoe/ | Doenoe | Doenoe → no change → Doenoe |
@@ -149,13 +153,13 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sun` | the sun | Noaboo | /noaboo/ | Noagoo | Noagoo → no change → Noaboo |
 | `taiga` | a biome class | Kaa | /kaa/ | Kaa | Kaa → no change → Kaa |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
-| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-grassland' |
+| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): goblin has no exposure to 'tide' |
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
-| `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
+| `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
-| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |
@@ -175,6 +179,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): hobgoblin has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Baegoa | /baegoa/ | Daekoa | Daekoa → lenition → Baegoa |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): hobgoblin has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Taanoo | /taanoo/ | Taanoo | Taanoo → no change → Taanoo |
 | `day` | the light half of the day-night cycle | Goanae | /goanae/ | Goanae | Goanae → no change → Goanae |
@@ -194,6 +199,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Naa | /naa/ | Naa | Naa → no change → Naa |
 | `hearth` | the fire at the center of a home | Noobee | /noobee/ | Noopee | Noopee → lenition → Noobee |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): hobgoblin has no exposure to 'heat' |
 | `hobgoblin-kind` | a hobgoblin | Qaagoe | /qaagoe/ | Qaagoe | Qaagoe → no change → Qaagoe |
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
@@ -229,12 +235,12 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `taiga` | a biome class | Gaa | /gaa/ | Kaa | Kaa → lenition → Gaa |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
+| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hobgoblin has no exposure to 'tide' |
 | `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
-| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `tundra` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tundra' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Baogaa | /baogaa/ | Daokaa | Daokaa → lenition → Baogaa |
@@ -254,6 +260,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): kobold has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Rakxa | /rakxa/ | Rrakxak | Rrakxak → finalloss → clustersimplify → Rakxa |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): kobold has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
 | `dark` | the color term for black/dark hues | Xa | /xa/ | Xa | Xa → no change → Xa |
 | `day` | the light half of the day-night cycle | Ro | /ro/ | Rot | Rot → finalloss → Ro |
@@ -273,6 +280,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Rorro | /rorro/ | Rorroq | Rorroq → finalloss → Rorro |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): kobold has no exposure to 'hearth' |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): kobold has no exposure to 'heat' |
 | `hobgoblin-kind` | a hobgoblin | — | — | — | gap (experiential): kobold has no exposure to 'hobgoblin-kind' |
 | `home` | one's dwelling | — | — | — | gap (experiential): kobold has no exposure to 'home' |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |

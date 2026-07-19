@@ -7,6 +7,7 @@ bone: Qeegoo /qeegoo/
 brown: Noo /noo/
 bugbear-kind: Noanae /noanae/
 child: Goe /goe/
+cold: Doepoa /doepoa/
 coral-reef: Nea /nea/
 dark: Naadoo /naadoo/
 day: Neo /neo/
@@ -26,6 +27,7 @@ green: Deanaa /deanaa/
 hadal-trench: Nee /nee/
 hand: Noa /noa/
 hearth: Neoqeo /neoqeo/
+heat: Qoo /qoo/
 hobgoblin-kind: Daonoo /daonoo/
 home: Tao /tao/
 hydrothermal-vent: Pao /pao/

@@ -44,6 +44,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `brown` | the color term for brown | *Poa | /poa/ |
 | `bugbear-kind` | a bugbear | *Kea | /kea/ |
 | `child` | one's son or daughter | *Daekoa | /daekoa/ |
+| `cold` | felt, biting chill | *Geonoa | /geonoa/ |
 | `coral-reef` | a biome class | *Doakae | /doakae/ |
 | `dark` | the color term for black/dark hues | *Taanoo | /taanoo/ |
 | `day` | the light half of the day-night cycle | *Goanae | /goanae/ |
@@ -63,6 +64,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `hadal-trench` | a biome class | *Pae | /pae/ |
 | `hand` | the manipulating limb-end | *Naa | /naa/ |
 | `hearth` | the fire at the center of a home | *Noopee | /noopee/ |
+| `heat` | felt, oppressive warmth | *Koe | /koe/ |
 | `hobgoblin-kind` | a hobgoblin | *Qaagoe | /qaagoe/ |
 | `home` | one's dwelling | *Nee | /nee/ |
 | `hydrothermal-vent` | a biome class | *Tee | /tee/ |
