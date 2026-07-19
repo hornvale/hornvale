@@ -1899,6 +1899,63 @@ pub fn observed_phenomena_as_at(
     observed_phenomena_at(world, wc, name, place)
 }
 
+/// [`observed_phenomena_as_at`], reusing an ALREADY-BUILT climate instead of
+/// re-deriving one (which runs the full terrain-sculpting pipeline over the
+/// globe). For a caller observing MANY places of one world — the lab's
+/// `name-gloss-true` metric, one observation per settlement — this pays the
+/// sculpt once (the caller's pre-built `climate`, e.g. a Lab view's
+/// `climate()`) instead of once per place. Byte-identical to
+/// [`observed_phenomena_as_at`]: the reused climate is the same
+/// `climate_of(world)` value that path derives, threaded through
+/// [`phenomena_sources_from`], and observation reads only its fields.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_at_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    place: EntityId,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// [`observed_phenomena_as_in`], reusing an ALREADY-BUILT climate — the
+/// world's-first-place counterpart of [`observed_phenomena_as_at_from`], for
+/// the lab's per-species religion metrics (`pantheon-sig`, `epithet-honorific`).
+/// Byte-identical to [`observed_phenomena_as_in`] for the same world's climate.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
+        return Ok(Vec::new());
+    };
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// The shared core of the `_from` observers: [`observed_phenomena_from`] with
+/// the phenomena sources built off an ALREADY-BUILT climate
+/// ([`phenomena_sources_from`]) rather than re-derived per call. Byte-identical
+/// to the per-call path — `phenomena_sources` is pure over the observed world,
+/// and the reused climate equals the one that path would derive.
+fn observed_phenomena_from_with_climate(
+    world: &World,
+    wc: &WorldComponents,
+    name: &'static str,
+    place: EntityId,
+    position: Option<GeoCoord>,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let boxed = phenomena_sources_from(world, climate)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    observe_with_sources(world, wc, name, place, position, &sources)
+}
+
 /// The observation itself, factored out with an explicit `position` so
 /// glossed settlement naming (Task 9) can observe from the settlement's own
 /// cell coordinate BEFORE the settlement entity exists — names are drawn

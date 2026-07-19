@@ -15,8 +15,9 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_of,
-    build_world_from_components, build_world_to, climate_of, flagship_of, language_of_in,
-    observed_phenomena_as_in, rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
+    build_world_from_components, build_world_to, climate_from, climate_of, flagship_of,
+    language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from, rock_class_name,
+    sky_of, soil_of, soil_order_name, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -246,7 +247,9 @@ impl ClimateView {
         depth: BuildDepth,
     ) -> Result<ClimateView, BuildError> {
         let terrain = TerrainView::build_to(seed, pins, wc, depth)?;
-        let climate = climate_of(&terrain.astronomy.world)?;
+        // Reuse the terrain rung just built rather than re-sculpting it inside
+        // `climate_of` (The Single Sculpt, applied to the Lab view chain).
+        let climate = climate_from(&terrain.astronomy.world, &terrain.terrain)?;
         Ok(ClimateView { terrain, climate })
     }
 
@@ -3164,7 +3167,8 @@ fn pantheon_sig(v: &FullView, species: &str) -> Option<PantheonSig> {
     }
     // Pantheons derive from the same first-place, hemisphere-culled vantage
     // religion's genesis observes (SEQ-4/SEQ-5).
-    let seen = observed_phenomena_as_in(v.world(), v.components(), species).ok()?;
+    let seen =
+        observed_phenomena_as_in_from(v.world(), v.components(), species, v.climate()).ok()?;
     let top = seen.first()?;
     let domain = match top.venue {
         hornvale_kernel::Venue::DaySky => "solar",
@@ -3373,7 +3377,8 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     // Religion (and the deity glosses drawn inside it) observes from the
     // world's first place, hemisphere-culled (SEQ-4/SEQ-5) — re-derive from
     // exactly that vantage so the check tracks the pipeline's real sky.
-    let Ok(seen) = observed_phenomena_as_in(v.world(), v.components(), species) else {
+    let Ok(seen) = observed_phenomena_as_in_from(v.world(), v.components(), species, v.climate())
+    else {
         return MetricValue::Absent;
     };
     let Ok(lexicon) = hornvale_worldgen::lexicon_of(v.world(), species) else {
@@ -3473,7 +3478,11 @@ fn phenomenon_concept(phenomenon: &Phenomenon) -> Option<&'static str> {
 /// entity's own facts), if any. `None` if the settlement is missing a
 /// biome/species fact, which `name_gloss_true` below treats as an
 /// unverifiable (failing) row rather than skipping it silently.
-fn settlement_site_concepts(v: &FullView, id: EntityId) -> Option<Vec<String>> {
+fn settlement_site_concepts(
+    v: &FullView,
+    id: EntityId,
+    climate: &GeneratedClimate,
+) -> Option<Vec<String>> {
     let biome = v
         .world()
         .ledger
@@ -3481,8 +3490,7 @@ fn settlement_site_concepts(v: &FullView, id: EntityId) -> Option<Vec<String>> {
         .to_string();
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
-        hornvale_worldgen::observed_phenomena_as_at(v.world(), v.components(), &species, id)
-            .ok()?;
+        observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
     let mut concepts = vec![biome];
     if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
         concepts.push(concept.to_string());
@@ -3521,13 +3529,17 @@ fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> 
 fn name_gloss_true(v: &FullView) -> MetricValue {
     let mut checked = false;
     let mut all_true = true;
+    // Build the climate ONCE (the view already holds it) and thread it through
+    // every settlement's observation, rather than re-sculpting terrain per
+    // settlement (The Single Sculpt, applied to the Lab metric path).
+    let climate = v.climate();
     for f in v.world().ledger.find(hornvale_settlement::IS_SETTLEMENT) {
         let id = f.subject;
         let Some(gloss) = v.world().ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
             continue;
         };
         checked = true;
-        match settlement_site_concepts(v, id) {
+        match settlement_site_concepts(v, id, climate) {
             Some(concepts) if candidate_glosses(&concepts).contains(gloss) => {}
             _ => all_true = false,
         }
