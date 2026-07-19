@@ -908,7 +908,22 @@ fn doctrine_section(
                         revealed.insert(entry.fact.predicate.clone());
                     }
                     ConflictState::Contested => {
-                        for line in render_explanations(std::slice::from_ref(&folk_entry)) {
+                        let lines = render_explanations(std::slice::from_ref(&folk_entry));
+                        // The disclosure law is unconditional: a Contested
+                        // entry that yields NO folk counter-line would let
+                        // the mandatory annotation vanish silently (the
+                        // same class as the non-moon RevealedClaim guard
+                        // below; final-review F1). Ledger #9's parity
+                        // widening makes this reachable in principle (a
+                        // bare-Kept folk side has no explanation line to
+                        // quote) — fail loudly so the counter-surface for
+                        // that shape is authored deliberately.
+                        assert!(
+                            !lines.is_empty(),
+                            "disclosure law: Contested entry on predicate {:?}                              produced no folk counter-annotation — author a                              counter-surface for this entry shape",
+                            folk_entry.fact.predicate
+                        );
+                        for line in lines {
                             annotations.push(counter_annotation_line(&line));
                         }
                     }
@@ -2748,6 +2763,82 @@ mod tests {
              would suppress it): {:?}",
             section.emic
         );
+    }
+
+    /// Final-review F1 (C6): the disclosure law fails LOUDLY when a
+    /// Contested entry cannot produce its folk counter-annotation — the
+    /// asymmetric shape ledger #9 made reachable in principle (a bare-Kept
+    /// folk side has no explanation line to quote). Same fixture as the
+    /// synthetic Contested pair above, minus the folk-side explanation:
+    /// folk keeps the moons PLAINLY, doctrine explains them — Contested by
+    /// explanatory parity, zero quotable folk lines, so the renderer must
+    /// panic rather than silently drop the mandatory annotation.
+    #[test]
+    #[should_panic(expected = "disclosure law: Contested entry")]
+    fn a_contested_entry_with_no_folk_line_panics_rather_than_vanishing() {
+        let subject = "Vebe".to_string();
+        let ground = vec![
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: hornvale_kernel::world::IS_A.to_string(),
+                object: Value::Text("planet".to_string()),
+            },
+            hornvale_language::GroundFact {
+                subject: subject.clone(),
+                predicate: MOON_COUNT.to_string(),
+                object: Value::Number(2.0),
+            },
+        ];
+        let mut observability = BTreeMap::new();
+        observability.insert(
+            hornvale_kernel::world::IS_A.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::Manifest,
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Object,
+                shape: hornvale_language::FactShape::Taxonomy,
+            },
+        );
+        observability.insert(
+            MOON_COUNT.to_string(),
+            hornvale_language::Observability {
+                requirement: hornvale_language::Requirement::SkyGraded { threshold: 0.6 },
+                domain: "sky",
+                concept: hornvale_language::NeededConcept::Fixed("moon"),
+                shape: hornvale_language::FactShape::Count,
+            },
+        );
+        let mut holdings = BTreeSet::new();
+        holdings.insert("planet".to_string());
+        holdings.insert("moon".to_string());
+        let params = AccountParams {
+            hold_all: false,
+            holdings,
+            observability,
+            sky_capability: 1.0,
+            order: hornvale_language::OrderPolicy::Ground,
+            stances: BTreeMap::new(),
+            world_carving: None,
+        };
+        let base = hornvale_language::account_of(&ground, &params);
+        // Folk side: bare Kept (NO explanation) — the asymmetric Contested shape.
+        let folk_account = base.clone();
+        let mut doctrine_entries = base.entries.clone();
+        doctrine_entries[1].disposition = Disposition::Explained {
+            underlying: Box::new(Disposition::Kept),
+            schema: SchemaId::Agentive,
+            agent: Some("Vamu".to_string()),
+            lexeme: Some(LexemeId("walks")),
+            manner: Manner::Neutral,
+        };
+        let doctrine_voice = hornvale_worldgen::DoctrineVoice {
+            kind: "kobold".to_string(),
+            params: params.clone(),
+            account: Account {
+                entries: doctrine_entries,
+            },
+        };
+        let _ = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
     }
 
     /// C6 T3, the null-effect law: this campaign adds a NEW field
