@@ -49,5 +49,7 @@ pub use room::{MAX_DEPTH, RoomAddr, RoomAddrError, RoomId, RoomIdError};
 pub use schedule::{CapabilitySchema, ScheduleError, System, TickSystem, tick};
 pub use seed::{Seed, Stream};
 pub use streams::stream_labels;
-pub use units::{Mass, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years};
+pub use units::{
+    Mass, Precipitation, ReferenceElevation, TempAnomaly, Temperature, UnitError, Years,
+};
 pub use world::{INSTANCE_OF, KERNEL_CORE_PREDICATES, NAME, NAME_GLOSS, World};
