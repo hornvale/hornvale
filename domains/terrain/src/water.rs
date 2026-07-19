@@ -289,4 +289,31 @@ mod tests {
             assert_eq!(a.get(c), b.get(c));
         }
     }
+
+    #[test]
+    fn river_proximity_seeds_every_river_not_just_the_first() {
+        // MULTI-SOURCE (the T1-review coverage catch): two distinct River cells
+        // must BOTH read proximity 1.0. A single-source BFS that seeds only the
+        // first river leaves the second at < 1.0 (it is >= 1 hop from the only
+        // source), so this distinguishes the correct multi-source BFS from a
+        // single-source one — which every other test passes.
+        let geo = hornvale_kernel::Geosphere::new(4);
+        let r1 = hornvale_kernel::CellId(0);
+        let r2 = hornvale_kernel::CellId(geo.cell_count() as u32 / 2);
+        assert_ne!(r1, r2);
+        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+            if c == r1 || c == r2 {
+                WaterKind::River
+            } else {
+                WaterKind::DryLand
+            }
+        });
+        let prox = river_proximity(&geo, &wk, RIVER_REACH);
+        assert_eq!(*prox.get(r1), 1.0);
+        assert_eq!(
+            *prox.get(r2),
+            1.0,
+            "every river cell is a BFS source, not just the first"
+        );
+    }
 }
