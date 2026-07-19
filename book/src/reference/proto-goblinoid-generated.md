@@ -51,6 +51,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `die` | to cease living | *Taopaa | /taopaa/ |
 | `earth` | the ground underfoot | *Pee | /pee/ |
 | `eat` | to consume food | *Koo | /koo/ |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Noe | /noe/ |
 | `epipelagic` | a biome class | *Naapea | /naapea/ |
 | `eye` | the organ of sight | *Qao | /qao/ |
 | `fire` | flame and heat | *Qea | /qea/ |
@@ -80,7 +81,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `parent` | one's father or mother | *Goatee | /goatee/ |
 | `person` | a person; a member of a people (the autonym root) | *Neekoa | /neekoa/ |
 | `rain` | liquid precipitation | *Doe | /doe/ |
-| `red` | the color term for red | *Noe | /noe/ |
+| `red` | the color term for red | *Neanao | /neanao/ |
 | `savanna` | a biome class | *Naadae | /naadae/ |
 | `sea` | a body of salt water | *Goadeo | /goadeo/ |
 | `sea-ice` | a biome class | *Naanea | /naanea/ |
@@ -98,6 +99,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `temperate-forest` | a biome class | *Noenoa | /noenoa/ |
 | `temperate-grassland` | a biome class | *Doanoo | /doanoo/ |
 | `temperate-rainforest` | a biome class | *Toaneo | /toaneo/ |
+| `tide` | the rise and fall of the waters under the moons | *Neoneo | /neoneo/ |
 | `tree` | a woody plant | *Koonee | /koonee/ |
 | `tropical-rainforest` | a biome class | *Qoa | /qoa/ |
 | `tropical-seasonal-forest` | a biome class | *Geetao | /geetao/ |

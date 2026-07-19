@@ -62,8 +62,9 @@ pub use units::{
 pub use wanderers::{Wanderer, WandererClass, generate_wanderers};
 
 use hornvale_kernel::{
-    ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, RegistryError,
-    Venue, WorldTime,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, RegistryError, Venue, Void,
+    WorldTime,
 };
 
 /// Phenomenon kind for bodies visible in the sky.
@@ -131,6 +132,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register astronomy's contribution to the concept registry.
+///
+/// Each concept is registered through its correspondence [`Manifest`]:
+/// - **lexeme**: sun/moon/star/night are everyday nameable sky things, so each
+///   declares `Expected` (a language pack is expected to realize the word).
+/// - **percept**: sun and moon correspond to the `CELESTIAL_BODY` phenomenon
+///   kind and star to `NIGHT_STAR` (both registered above); `night` is not
+///   emitted as a phenomenon, so its percept edge is a `Gap`.
+/// - **cognition**: the whole column voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(CELESTIAL_BODY, "a body visible in the sky")?;
     registry.register_phenomenon_kind(SEASONAL_CYCLE, "the annual daylight cycle")?;
@@ -392,20 +401,76 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a moon's bulk density in grams per cubic centimeter",
     )?;
 
-    registry.register_concept("sun", "astronomy", ConceptKind::Celestial, "the sun")?;
-    registry.register_concept("moon", "astronomy", ConceptKind::Celestial, "a moon")?;
-    registry.register_concept(
-        "star",
-        "astronomy",
-        ConceptKind::Celestial,
-        "a fixed point of light in the night sky",
-    )?;
-    registry.register_concept(
-        "night",
-        "astronomy",
-        ConceptKind::Celestial,
-        "the dark half of the day-night cycle",
-    )
+    // sun and moon are bodies visible in the sky; star is a fixed night-sky
+    // point — each corresponds to a phenomenon kind registered above.
+    for (name, doc, percept) in [
+        ("sun", "the sun", CELESTIAL_BODY),
+        ("moon", "a moon", CELESTIAL_BODY),
+        (
+            "star",
+            "a fixed point of light in the night sky",
+            NIGHT_STAR,
+        ),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Present(PerceptKind(percept.to_string())),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    // eclipse and tide are astronomy's sky *events*: each has a registered
+    // phenomenon kind but no culture-word yet, so the lexeme is an honest Gap
+    // while the percept references the event. This lifts them out of the
+    // manifest audit's orphan list — a phenomenon a concept now names. (`tide`
+    // is filed Celestial as a moon-driven event; it is arguably Terrain, a
+    // one-field change if that reading is preferred.)
+    for (name, doc, percept) in [
+        (
+            "eclipse",
+            "the darkening when a moon crosses the sun, or the world's shadow crosses a moon",
+            ECLIPSE,
+        ),
+        (
+            "tide",
+            "the rise and fall of the waters under the moons",
+            TIDE,
+        ),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no pack names this sky event yet")),
+            percept: Correspondent::Present(PerceptKind(percept.to_string())),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    registry.register_manifest(Manifest {
+        concept: ConceptDef {
+            name: "night".to_string(),
+            domain: "astronomy".to_string(),
+            kind: ConceptKind::Celestial,
+            doc: "the dark half of the day-night cycle".to_string(),
+        },
+        lexeme: Correspondent::Present(Lexicalization::Expected),
+        percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+        cognition: Correspondent::Absent(Void::Uncognized {
+            pending_wave: "wave-cognition",
+        }),
+    })
 }
 
 /// Astronomy as a registrable unit for the composition-root roster.

@@ -2,6 +2,7 @@
 //! domains (spec §3.1.6). The envelope stays dumb; meaning lives here,
 //! reviewed at every campaign close.
 
+use crate::manifest::{Correspondent, Manifest, PerceptKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -65,6 +66,13 @@ pub enum RegistryError {
         /// Name of the concept whose redefinition conflicted.
         name: String,
     },
+    /// A manifest's percept edge named a phenomenon kind that is not registered.
+    UnregisteredPerceptKind {
+        /// Name of the concept whose manifest carried the dangling percept.
+        concept: String,
+        /// The phenomenon-kind key that was not found in the registry.
+        kind: String,
+    },
 }
 
 impl std::fmt::Display for RegistryError {
@@ -72,6 +80,12 @@ impl std::fmt::Display for RegistryError {
         match self {
             RegistryError::ConflictingDefinition { name } => {
                 write!(f, "conflicting redefinition of concept '{name}'")
+            }
+            RegistryError::UnregisteredPerceptKind { concept, kind } => {
+                write!(
+                    f,
+                    "manifest for concept '{concept}' names unregistered phenomenon kind '{kind}'"
+                )
             }
         }
     }
@@ -88,6 +102,13 @@ pub struct ConceptRegistry {
     /// Pre-Words saves have no `concepts` key; default to empty on load.
     #[serde(default)]
     concepts: BTreeMap<String, ConceptDef>,
+    /// Correspondence manifests keyed by concept name. Never serialized: the
+    /// concept itself already lives in `concepts`, and the manifest's
+    /// lexeme/percept/cognition edges are compile-time coverage records the
+    /// in-memory registry carries for the manifestation view, not save-format
+    /// state. `#[serde(skip)]` keeps every saved `World` JSON byte-identical.
+    #[serde(skip)]
+    manifests: BTreeMap<String, Manifest>,
 }
 
 impl ConceptRegistry {
@@ -156,31 +177,60 @@ impl ConceptRegistry {
             .map(|(k, v)| (k.as_str(), v.as_str()))
     }
 
-    /// Idempotent for identical definitions; errors on conflict.
-    /// type-audit: bare-ok(identifier-text: name), bare-ok(identifier-text: domain), bare-ok(prose: doc)
-    pub fn register_concept(
-        &mut self,
-        name: &str,
-        domain: &str,
-        kind: ConceptKind,
-        doc: &str,
-    ) -> Result<(), RegistryError> {
-        let def = ConceptDef {
-            name: name.to_string(),
-            domain: domain.to_string(),
-            kind,
-            doc: doc.to_string(),
-        };
-        match self.concepts.get(name) {
+    /// Insert a concept anchor with decision-0025 conflict/idempotency
+    /// semantics: idempotent on a byte-identical redefinition,
+    /// [`RegistryError::ConflictingDefinition`] on a differing one. The single
+    /// concept-insert path shared by every registration, so serialized
+    /// `concepts` stays byte-identical however a concept was registered.
+    fn insert_concept(&mut self, def: ConceptDef) -> Result<(), RegistryError> {
+        match self.concepts.get(&def.name) {
             Some(existing) if *existing == def => Ok(()),
             Some(_) => Err(RegistryError::ConflictingDefinition {
-                name: name.to_string(),
+                name: def.name.clone(),
             }),
             None => {
-                self.concepts.insert(name.to_string(), def);
+                self.concepts.insert(def.name.clone(), def);
                 Ok(())
             }
         }
+    }
+
+    /// Register a concept together with its correspondence [`Manifest`] — the
+    /// only public path to add a concept to the registry.
+    ///
+    /// The concept anchor is inserted through [`insert_concept`](Self::
+    /// insert_concept) (decision 0025): idempotent on a byte-identical
+    /// redefinition, [`RegistryError::ConflictingDefinition`] on a differing
+    /// one. If the manifest's percept edge names a phenomenon kind, that kind
+    /// must already be registered (else
+    /// [`RegistryError::UnregisteredPerceptKind`]). The manifest is retained in
+    /// memory — never serialized — for the manifestation view.
+    pub fn register_manifest(&mut self, manifest: Manifest) -> Result<(), RegistryError> {
+        // Validate the percept edge before mutating anything, so an error
+        // leaves the registry untouched (fail fast, no partial state).
+        if let Correspondent::Present(PerceptKind(kind)) = &manifest.percept
+            && self.phenomenon_kind(kind).is_none()
+        {
+            return Err(RegistryError::UnregisteredPerceptKind {
+                concept: manifest.concept.name.clone(),
+                kind: kind.clone(),
+            });
+        }
+        self.insert_concept(manifest.concept.clone())?;
+        self.manifests
+            .insert(manifest.concept.name.clone(), manifest);
+        Ok(())
+    }
+
+    /// Look up a concept's correspondence manifest by name.
+    /// type-audit: bare-ok(identifier-text)
+    pub fn manifest(&self, name: &str) -> Option<&Manifest> {
+        self.manifests.get(name)
+    }
+
+    /// Iterate over registered manifests, in concept-name order.
+    pub fn manifests(&self) -> impl Iterator<Item = &Manifest> {
+        self.manifests.values()
     }
 
     /// Look up a concept definition by name.
@@ -198,6 +248,30 @@ impl ConceptRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::manifest::{Lexicalization, Void};
+
+    /// Build a minimal manifest carrying an arbitrary [`ConceptDef`] — the
+    /// register_manifest tests only care about the concept anchor, so the
+    /// edges void honestly and uniformly.
+    fn manifest_of(def: ConceptDef) -> Manifest {
+        Manifest {
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+            concept: def,
+        }
+    }
+
+    fn a_concept_def(name: &str, kind: ConceptKind, doc: &str) -> ConceptDef {
+        ConceptDef {
+            name: name.to_string(),
+            domain: "language".to_string(),
+            kind,
+            doc: doc.to_string(),
+        }
+    }
 
     #[test]
     fn registered_predicate_is_retrievable() {
@@ -286,12 +360,11 @@ mod tests {
     #[test]
     fn registered_concept_is_retrievable() {
         let mut r = ConceptRegistry::default();
-        r.register_concept(
+        r.register_manifest(manifest_of(a_concept_def(
             "water",
-            "language",
             ConceptKind::Substance,
             "the drinkable liquid",
-        )
+        )))
         .unwrap();
         assert_eq!(r.concept("water").unwrap().kind, ConceptKind::Substance);
     }
@@ -313,20 +386,18 @@ mod tests {
     #[test]
     fn identical_concept_reregistration_is_idempotent() {
         let mut r = ConceptRegistry::default();
-        r.register_concept(
+        r.register_manifest(manifest_of(a_concept_def(
             "water",
-            "language",
             ConceptKind::Substance,
             "the drinkable liquid",
-        )
+        )))
         .unwrap();
         assert!(
-            r.register_concept(
+            r.register_manifest(manifest_of(a_concept_def(
                 "water",
-                "language",
                 ConceptKind::Substance,
-                "the drinkable liquid"
-            )
+                "the drinkable liquid",
+            )))
             .is_ok()
         );
     }
@@ -334,19 +405,17 @@ mod tests {
     #[test]
     fn conflicting_concept_reregistration_is_an_error() {
         let mut r = ConceptRegistry::default();
-        r.register_concept(
+        r.register_manifest(manifest_of(a_concept_def(
             "water",
-            "language",
             ConceptKind::Substance,
             "the drinkable liquid",
-        )
+        )))
         .unwrap();
-        let err = r.register_concept(
+        let err = r.register_manifest(manifest_of(a_concept_def(
             "water",
-            "language",
             ConceptKind::Living,
             "the drinkable liquid",
-        );
+        )));
         assert!(matches!(
             err,
             Err(RegistryError::ConflictingDefinition { .. })
@@ -356,23 +425,123 @@ mod tests {
     #[test]
     fn concepts_iterate_in_name_order() {
         let mut r = ConceptRegistry::default();
-        r.register_concept("zeta", "language", ConceptKind::Quality, "z")
-            .unwrap();
-        r.register_concept("alpha", "language", ConceptKind::Quality, "a")
-            .unwrap();
+        r.register_manifest(manifest_of(a_concept_def(
+            "zeta",
+            ConceptKind::Quality,
+            "z",
+        )))
+        .unwrap();
+        r.register_manifest(manifest_of(a_concept_def(
+            "alpha",
+            ConceptKind::Quality,
+            "a",
+        )))
+        .unwrap();
         let names: Vec<&str> = r.concepts().map(|c| c.name.as_str()).collect();
+        assert_eq!(names, vec!["alpha", "zeta"]);
+    }
+
+    fn a_manifest(name: &str) -> Manifest {
+        Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "language".to_string(),
+                kind: ConceptKind::Substance,
+                doc: "the drinkable liquid".to_string(),
+            },
+            lexeme: Correspondent::Present(crate::manifest::Lexicalization::Expected),
+            percept: Correspondent::Absent(crate::manifest::Void::Gap("not emitted yet")),
+            cognition: Correspondent::Absent(crate::manifest::Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        }
+    }
+
+    #[test]
+    fn register_manifest_inserts_the_concept_and_retains_the_manifest() {
+        let mut r = ConceptRegistry::default();
+        r.register_manifest(a_manifest("water")).unwrap();
+        assert_eq!(r.concept("water").unwrap().kind, ConceptKind::Substance);
+        assert!(r.manifest("water").is_some());
+    }
+
+    #[test]
+    fn register_manifest_inserts_the_manifests_conceptdef_verbatim() {
+        let expected = ConceptDef {
+            name: "water".to_string(),
+            domain: "language".to_string(),
+            kind: ConceptKind::Substance,
+            doc: "the drinkable liquid".to_string(),
+        };
+        let mut r = ConceptRegistry::default();
+        r.register_manifest(a_manifest("water")).unwrap();
+        assert_eq!(
+            r.concept("water"),
+            Some(&expected),
+            "register_manifest must insert the manifest's ConceptDef verbatim"
+        );
+    }
+
+    #[test]
+    fn register_manifest_is_idempotent_on_identical_reregistration() {
+        let mut r = ConceptRegistry::default();
+        r.register_manifest(a_manifest("water")).unwrap();
+        assert!(r.register_manifest(a_manifest("water")).is_ok());
+    }
+
+    #[test]
+    fn register_manifest_conflicts_on_differing_concept() {
+        let mut r = ConceptRegistry::default();
+        r.register_manifest(a_manifest("water")).unwrap();
+        let mut differing = a_manifest("water");
+        differing.concept.kind = ConceptKind::Living;
+        assert!(matches!(
+            r.register_manifest(differing),
+            Err(RegistryError::ConflictingDefinition { .. })
+        ));
+    }
+
+    #[test]
+    fn register_manifest_rejects_unregistered_percept_kind() {
+        let mut r = ConceptRegistry::default();
+        let mut m = a_manifest("water");
+        m.percept = Correspondent::Present(PerceptKind("no-such-kind".to_string()));
+        let err = r.register_manifest(m);
+        assert!(matches!(
+            err,
+            Err(RegistryError::UnregisteredPerceptKind { .. })
+        ));
+        // The failed registration left the registry untouched.
+        assert!(r.concept("water").is_none());
+    }
+
+    #[test]
+    fn register_manifest_accepts_registered_percept_kind() {
+        let mut r = ConceptRegistry::default();
+        r.register_phenomenon_kind("wetness", "the quality of being wet")
+            .unwrap();
+        let mut m = a_manifest("water");
+        m.percept = Correspondent::Present(PerceptKind("wetness".to_string()));
+        assert!(r.register_manifest(m).is_ok());
+    }
+
+    #[test]
+    fn manifests_iterate_in_name_order() {
+        let mut r = ConceptRegistry::default();
+        r.register_manifest(a_manifest("zeta")).unwrap();
+        r.register_manifest(a_manifest("alpha")).unwrap();
+        let names: Vec<&str> = r.manifests().map(|m| m.concept.name.as_str()).collect();
         assert_eq!(names, vec!["alpha", "zeta"]);
     }
 
     #[test]
     fn concept_registry_serializes_roundtrip() {
         let mut r = ConceptRegistry::default();
-        r.register_concept(
+        r.register_manifest(manifest_of(a_concept_def(
             "water",
-            "language",
             ConceptKind::Substance,
             "the drinkable liquid",
-        )
+        )))
         .unwrap();
         let json = serde_json::to_string(&r).unwrap();
         let r2: ConceptRegistry = serde_json::from_str(&json).unwrap();

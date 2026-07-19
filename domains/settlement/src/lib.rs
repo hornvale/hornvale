@@ -7,7 +7,10 @@ pub mod render;
 
 pub use genesis::{PlacedSettlement, genesis};
 
-use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, Value, World};
+use hornvale_kernel::{
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Manifest, RegistryError,
+    Value, Void, World,
+};
 
 /// Predicate marking an entity as a settlement.
 /// type-audit: bare-ok(identifier-text)
@@ -92,6 +95,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register settlement's contribution to the concept registry.
+///
+/// The home/hearth concepts register through their correspondence [`Manifest`]:
+/// each is an everyday nameable social thing, so its lexeme edge declares
+/// `Expected`; settlement emits no phenomenon kind for them, so the percept
+/// edge is a `Gap`; and cognition voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_SETTLEMENT, true, "subject is a settlement")?;
     registry.register_predicate(POPULATION, true, "population of a settlement")?;
@@ -104,13 +112,28 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "a settlement scenario pin, round-trippable",
     )?;
 
-    registry.register_concept("home", "settlement", ConceptKind::Social, "one's dwelling")?;
-    registry.register_concept(
-        "hearth",
-        "settlement",
-        ConceptKind::Social,
-        "the fire at the center of a home",
-    )
+    // No language pack names home/hearth yet, so the lexeme edge is an honest
+    // Gap rather than an over-optimistic `Expected` (The Correspondence
+    // reconciliation).
+    for (name, doc) in [
+        ("home", "one's dwelling"),
+        ("hearth", "the fire at the center of a home"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "settlement".to_string(),
+                kind: ConceptKind::Social,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    Ok(())
 }
 
 /// Settlement as a registrable unit for the composition-root roster.

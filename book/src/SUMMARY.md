@@ -66,6 +66,7 @@
 - [Study 009: The Census of the Meeting](./laboratory/study-009.md)
 - [Study 010: The Census of Coasts](./laboratory/study-010.md)
 - [Study 011: The Census of Words](./laboratory/study-011.md)
+- [Study 012: The Chorus's Dial](./laboratory/study-012.md)
 - [The Census of Coasts II](./laboratory/census-of-coasts-ii.md)
 - [The Census of Coasts III](./laboratory/census-of-coasts-iii.md)
 - [The Census of Coasts IV](./laboratory/census-of-coasts-iv.md)
@@ -74,6 +75,7 @@
 # Reference
 
 - [The Concept Registry](./reference/concept-registry.md)
+- [The Concept Manifest](./reference/concept-manifest-generated.md)
 - [The Stream Manifest](./reference/stream-manifest.md)
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
@@ -171,6 +173,11 @@
 - [The Tongues](./chronicle/the-tongues.md)
 - [The Wanting](./chronicle/the-wanting.md)
 - [The Foresight](./chronicle/the-foresight.md)
+- [The Correspondence](./chronicle/the-correspondence.md)
+- [The Turning](./chronicle/the-turning.md)
+- [The Chorus](./chronicle/the-chorus.md)
+- [The Explanations](./chronicle/the-explanations.md)
+- [The Freshet](./chronicle/the-freshet.md)
 
 # Appendix: The Frontier
 

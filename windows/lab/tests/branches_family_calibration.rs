@@ -232,7 +232,12 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (goblin 3.058 -> 3.057).
     assert!((mg - 3.057).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 2.485).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
+    // re-measured (was 2.485) — accumulated lexeme-space drift (the person
+    // concept (C2), the grammar streams (C3), The Echo) surfacing at the
+    // fixtures' first refresh since; the chorus itself adds zero draws
+    // (genesis byte-identical).
+    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     assert!((mb - 4.481).abs() < 1e-9, "bugbear mean drifted: {mb}");
@@ -318,10 +323,15 @@ fn homophony_count_is_measured_and_pinned() {
     // settlements and shifts each people's naming draws; re-measured
     // (goblin 1.852 -> 1.811, hobgoblin 1.755 -> 1.649, kobold 1.006 ->
     // 0.920; bugbear unchanged at 3.007).
-    assert!((mg - 1.811).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.649).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 3.007).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 0.920).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
+    // re-measured (was 1.811) — accumulated lexeme-space drift (the person
+    // concept (C2), the grammar streams (C3), The Echo) surfacing at the
+    // fixtures' first refresh since; the chorus itself adds zero draws
+    // (genesis byte-identical).
+    assert!((mg - 1.843).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.674).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 3.05).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 0.938).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

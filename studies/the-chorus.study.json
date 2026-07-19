@@ -1,0 +1,5 @@
+{ "name": "the-chorus",
+  "description": "The chorus dial: distinctiveness × recoverability × calibration over 50 unselected worlds — the calibration readout behind the known-groups gate.",
+  "seeds": { "from": 0, "count": 50 },
+  "pin_sets": [ { "label": "default", "pins": [] } ],
+  "metrics": ["chorus-distortion", "chorus-distinctiveness", "chorus-recoverability", "chorus-variance", "chorus-param-spread", "chorus-sky-calibration"] }

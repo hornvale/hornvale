@@ -14,6 +14,7 @@ pub mod field;
 pub mod geosphere;
 pub mod golden;
 pub mod ledger;
+pub mod manifest;
 pub mod math;
 pub mod noise;
 pub mod phenomena;
@@ -38,6 +39,7 @@ pub use ecology::{
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};
 pub use ledger::{EntityId, Fact, KindId, Ledger, LedgerError, Value};
+pub use manifest::{CognitiveHandle, Correspondent, Lexicalization, Manifest, PerceptKind, Void};
 pub use noise::{Fbm, fbm_2d, value_noise_2d};
 pub use phenomena::{ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, Venue, observe};
 pub use quantize::{QUANTIZE_SIG_DIGITS, quantize};

@@ -13,11 +13,13 @@
 
 use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
+use hornvale_language::account::{Account, AccountEntry, Disposition, Stance};
 use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
     parse_common, quantity, realize_common,
 };
-use hornvale_language::{TongueClause, realize_tongue, tongue_grammar};
+use hornvale_language::schemas::Manner;
+use hornvale_language::{LexemeId, SchemaId, TongueClause, realize_tongue, tongue_grammar};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// One world's volume of The Book: the seed it was rendered from plus the
@@ -41,6 +43,33 @@ pub struct BookVolume {
     /// people recording that its tongue cannot yet state the planet's own
     /// kind (no culture holds the `planet` concept; spec §5's gap law).
     pub tongue_gaps: Vec<String>,
+    /// C4 T4: one chorus section per placed people with a committed
+    /// collective — the same ground truth composed through that culture's
+    /// epistemic account (`hornvale_worldgen::accounts_of`). The
+    /// null-filter law (spec §4.1): an identity account's section
+    /// reproduces `lines` byte-identically — see
+    /// `identity_chorus_reproduces_the_gods_eye_lines`.
+    pub chorus: Vec<ChorusSection>,
+}
+
+/// One placed people's chorus section (C4 T4): its epistemic account,
+/// composed into an emic paragraph (Common, in the culture's own salience
+/// order) plus a sparse etic margin carrying exactly what the account's
+/// filters lost or corrupted (the margin law, spec §4.3).
+/// type-audit: bare-ok(identifier-text: kind), bare-ok(prose: heading), bare-ok(prose: emic), bare-ok(prose: margin)
+pub struct ChorusSection {
+    /// The people's kind label (e.g. `"goblin"`).
+    pub kind: String,
+    /// `"As the ⟨autonym⟩ tell it"` — scaffolding, not a Book corpus line.
+    pub heading: String,
+    /// The emic paragraph: one sentence per classification subject this
+    /// culture's account keeps or substitutes, in the account's own order.
+    pub emic: Vec<String>,
+    /// The etic margin: one sentence per subject owning at least one
+    /// `Lost`/`Substituted` entry, carrying only that lost/corrupted
+    /// content (sparseness — never repeats what the emic paragraph already
+    /// states).
+    pub margin: Vec<String>,
 }
 
 /// One fact's rendering, tagged by how it joins the sentence: a noun
@@ -151,13 +180,6 @@ fn subject_for(entity: EntityId, name: String, seen: &mut BTreeSet<EntityId>) ->
 pub fn render_volume(world: &World) -> BookVolume {
     let mut lines = Vec::new();
     let mut named: BTreeSet<EntityId> = BTreeSet::new();
-    // The planet's own committed name — reused as the subject of every
-    // tongue's planet-gap attempt below. `is-a` commits exactly one fact
-    // today (the planet's own classification), so this is captured on that
-    // single iteration; a future second `is-a` subject would leave this at
-    // whichever committed first, which is fine (the gap path's subject text
-    // is immaterial to the law being exercised — see the module doc).
-    let mut planet_name: Option<String> = None;
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
         let Value::Text(kind) = &fact.object else {
             continue;
@@ -168,9 +190,6 @@ pub fn render_volume(world: &World) -> BookVolume {
             .text_of(subject_entity, hornvale_kernel::NAME)
             .map(str::to_string)
             .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
-        if kind == "planet" {
-            planet_name = Some(name.clone());
-        }
 
         let mut modifiers = Vec::new();
         let mut trailing = Vec::new();
@@ -238,15 +257,16 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines.push(line);
     }
 
-    // C3 T3: each placed people states its own kind in its own tongue,
-    // then every tongue's attempt to state the PLANET's kind is recorded as
-    // a coverage gap (spec §5 — no culture holds `planet`). Iterated over
-    // `placed_peoples` (registry order, deterministic) rather than the
-    // ledger scan above so the section's order matches every other
-    // peoples-keyed section in the almanac/book.
+    // C3 T3: each placed people states its own kind in its own tongue, then
+    // every tongue's attempt to state each probe's kind is recorded — a
+    // rendered line on success, a coverage gap on failure (spec §5 — no
+    // culture holds `planet` today). Iterated over `placed_peoples`
+    // (registry order, deterministic) rather than the ledger scan above so
+    // the section's order matches every other peoples-keyed section in the
+    // almanac/book.
     let mut tongue_lines = Vec::new();
     let mut tongue_gaps = Vec::new();
-    let planet_subject = planet_name.unwrap_or_else(|| "the world".to_string());
+    let probes = tongue_probes(world);
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some((autonym, common_line)) = people_by_kind.get(kind) else {
             continue;
@@ -274,12 +294,16 @@ pub fn render_volume(world: &World) -> BookVolume {
             "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
         ));
 
-        let planet_statement = TongueClause {
-            subject: planet_subject.clone(),
-            complement_concept: "planet".to_string(),
-        };
-        if let Err(gap) = realize_tongue(&planet_statement, &grammar, &lexicon) {
-            tongue_gaps.push(format!("{kind}: gap — {} ({})", gap.concept, gap.reason));
+        for probe in &probes {
+            match probe_tongue(probe, kind, &grammar, &lexicon) {
+                Ok(line) => tongue_lines.push(format!(
+                    "{line} (in the {kind} tongue: \"{} is a {}.\")",
+                    probe.subject, probe.concept
+                )),
+                Err(gap) => {
+                    tongue_gaps.push(format!("{kind}: gap — {} ({})", gap.concept, gap.reason))
+                }
+            }
         }
     }
 
@@ -288,7 +312,463 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines,
         tongue_lines,
         tongue_gaps,
+        chorus: chorus_sections(world),
     }
+}
+
+/// The autonym (committed collective `NAME`) for each placed people that
+/// has one, keyed by kind label — the small ledger scan
+/// [`render_volume`]'s `people_by_kind` already performs, repeated here so
+/// [`chorus_sections`] stays a self-contained `fn(&World) -> _` per its
+/// documented signature.
+fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
+    let mut autonyms = BTreeMap::new();
+    for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
+        let Value::Text(kind) = &fact.object else {
+            continue;
+        };
+        let subject_entity = fact.subject;
+        let name = world
+            .ledger
+            .text_of(subject_entity, hornvale_kernel::NAME)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("Entity {}", subject_entity.0));
+        autonyms.insert(kind.clone(), name);
+    }
+    autonyms
+}
+
+/// C4 T4: every placed people's chorus section, in
+/// `hornvale_worldgen::accounts_of` order — a people with no committed
+/// collective is skipped (mirrors C3's `continue` in the tongue-lines
+/// loop above).
+fn chorus_sections(world: &World) -> Vec<ChorusSection> {
+    let autonyms = autonym_by_kind(world);
+    hornvale_worldgen::accounts_of(world)
+        .into_iter()
+        .filter_map(|voice| {
+            let autonym = autonyms.get(&voice.kind)?;
+            Some(voice_section(&voice.kind, autonym, &voice.account, world))
+        })
+        .collect()
+}
+
+/// Read through a C5 `Explained` wrapper to what the four-filter account
+/// said underneath. This module's C4 renderer doesn't know the
+/// `Explained` variant yet — giving it a surface is Task 4's job — so
+/// every disposition read in this file goes through this seam, keeping
+/// every rendered line exactly as it was before C5 started wrapping
+/// entries. Mirrors `hornvale_language::account`'s own private
+/// `effective()` (recursive for the same future-proofing reason).
+fn effective(d: &Disposition) -> &Disposition {
+    match d {
+        Disposition::Explained { underlying, .. } => effective(underlying),
+        other => other,
+    }
+}
+
+/// `"ourselves"`/`"neighbors"`/`"rivals"`/`"strangers"` — the stance
+/// appositive's closed text table (spec §3.3); `Neutral` never reaches
+/// this function (callers guard on it, since it appends nothing).
+fn stance_text(stance: Stance) -> &'static str {
+    match stance {
+        Stance::Ourselves => "ourselves",
+        Stance::Neighbors => "neighbors",
+        Stance::Rivals => "rivals",
+        Stance::Strangers => "strangers",
+        Stance::Neutral => "",
+    }
+}
+
+/// [`subject_for`]'s text-keyed analog: an [`Account`]'s entries carry only
+/// resolved name text (no `EntityId` — see `GroundFact`'s doc), so a
+/// chorus section's referring-expression scope tracks `seen` by that text
+/// instead. `key` is the raw ground-truth name (e.g. `"Vavako"`, never
+/// "The Vavako"), so a people subject's `"The "` prefix never leaks into
+/// the re-mention check; `display` is the surface text used on first
+/// mention.
+fn subject_for_text(key: &str, display: String, seen: &mut BTreeSet<String>) -> Subject {
+    if seen.insert(key.to_string()) {
+        Subject::Name(display)
+    } else {
+        Subject::Pronoun("it")
+    }
+}
+
+/// The world subject's emic clause, folding in this culture's `Kept`
+/// fragment entries only: `Substituted` classification renders `theirs`
+/// definite ("Vebe is the earth"); `Kept` (the identity case) renders the
+/// ground truth kind indefinite, byte-matching the god's-eye line.
+/// `Lost` classification never occurs at the floor (every placed culture
+/// holds the universal `earth` carving — `world_carving` is always
+/// `Some`), so it renders nothing; a future culture without that holding
+/// would need this arm revisited.
+fn render_world_clause(
+    group: &[&AccountEntry],
+    is_a_entry: &AccountEntry,
+    seen: &mut BTreeSet<String>,
+) -> Option<String> {
+    let (complement, definiteness) = match effective(&is_a_entry.disposition) {
+        Disposition::Kept => {
+            let Value::Text(kind) = &is_a_entry.fact.object else {
+                return None;
+            };
+            (kind.clone(), Definiteness::Indef)
+        }
+        Disposition::Substituted { theirs, .. } => (theirs.clone(), Definiteness::Def),
+        Disposition::Lost(_) => return None,
+        Disposition::Explained { .. } => unreachable!("effective() never returns Explained"),
+    };
+
+    let mut modifiers = Vec::new();
+    let mut trailing = Vec::new();
+    for entry in group {
+        if entry.fact.predicate == hornvale_kernel::world::IS_A {
+            continue;
+        }
+        if !matches!(effective(&entry.disposition), Disposition::Kept) {
+            continue;
+        }
+        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            Some(Fragment::Modifier(m)) => modifiers.push(m),
+            Some(Fragment::Trailing(t)) => trailing.push(t),
+            None => {}
+        }
+    }
+
+    let name = is_a_entry.fact.subject.clone();
+    let subject = subject_for_text(&name, name.clone(), seen);
+    let line = realize_common(&ClauseSpec {
+        frame: Frame::Classify,
+        subject,
+        complement,
+        number: Number::Sg,
+        definiteness,
+        modifiers,
+    });
+    Some(assemble_trailing(line, &trailing))
+}
+
+/// The world subject's etic margin (spec §4.3, the margin law): fires only
+/// when this subject owns at least one `Lost`/`Substituted` entry — a
+/// `Substituted` classification, or a `Lost` fragment (a fragment
+/// predicate is never `Substituted`: `moon-count`/`star-class`/
+/// `day-length-std` are all non-`Taxonomic` requirements). The truth-kind
+/// complement reads straight off the ground fact's own object text (always
+/// the ground truth, independent of disposition), so this stays correct
+/// even in the never-exercised `Lost` classification case. Carries ONLY
+/// the lost fragments (sparseness — a `Kept` fragment is never repeated
+/// here, since the emic paragraph already states it).
+///
+/// **Carrier-clause assumption**: at the floor, `instance-of` is always
+/// `Kept` (its `Manifest` requirement never fails once a culture holds any
+/// other kind's `"{kind}-kind"` concept, which every placed culture does),
+/// so no people subject ever needs a margin — every margin sentence's
+/// carrier clause is this, the world subject's own classification. A
+/// future culture that could lose an `instance-of` fact would need a
+/// people-margin arm added here.
+fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Option<String> {
+    let world_lost = matches!(
+        effective(&is_a_entry.disposition),
+        Disposition::Substituted { .. } | Disposition::Lost(_)
+    );
+    let lost_fragments: Vec<&&AccountEntry> = group
+        .iter()
+        .filter(|entry| {
+            entry.fact.predicate != hornvale_kernel::world::IS_A
+                && matches!(effective(&entry.disposition), Disposition::Lost(_))
+        })
+        .collect();
+    if !world_lost && lost_fragments.is_empty() {
+        return None;
+    }
+
+    let Value::Text(truth_kind) = &is_a_entry.fact.object else {
+        return None;
+    };
+    let mut modifiers = Vec::new();
+    let mut trailing = Vec::new();
+    for entry in lost_fragments {
+        match fragment_for(&entry.fact.predicate, &entry.fact.object) {
+            Some(Fragment::Modifier(m)) => modifiers.push(m),
+            Some(Fragment::Trailing(t)) => trailing.push(t),
+            None => {}
+        }
+    }
+    let line = realize_common(&ClauseSpec {
+        frame: Frame::Classify,
+        subject: Subject::Name(is_a_entry.fact.subject.clone()),
+        complement: truth_kind.clone(),
+        number: Number::Sg,
+        definiteness: Definiteness::Indef,
+        modifiers,
+    });
+    Some(format!("In truth, {}", assemble_trailing(line, &trailing)))
+}
+
+/// Task 4 (C5): the count-aware head clause an explanation line opens
+/// with — `"The day returns"` for the day; `"The moon crosses"` /
+/// `"The moons cross"` for the moons, singular/plural read off the
+/// `moon-count` fact's own ground value (always numeric; the moons entry is
+/// only ever wrapped in [`Disposition::Explained`] while `Kept`, so this is
+/// the true committed count, never a substitution). `None` for any other
+/// predicate — `explain` in `windows/worldgen::chorus` only ever wraps
+/// `day-length-std` and `moon-count`.
+fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
+    if predicate == DAY_LENGTH_STD {
+        return Some(("The day returns".to_string(), false));
+    }
+    if predicate == MOON_COUNT {
+        let Value::Number(n) = object else {
+            return None;
+        };
+        let plural = (*n as u64) != 1;
+        let head = if plural {
+            "The moons cross"
+        } else {
+            "The moon crosses"
+        };
+        return Some((head.to_string(), plural));
+    }
+    None
+}
+
+/// Task 4's closed 6-frame surface table (the spec plan's frame table,
+/// EXACT strings) — the inverse this module's `parse_explanation_body`
+/// mirrors. `plural` selects the Kinship/LinkSympathy pronoun (`"they
+/// are"`/`"it is"`, `"they answer"`/`"it answers"`); `agent`/`lexeme` are
+/// consulted only by the three frames that carry them
+/// (`Agentive`/`Kinship`/`LinkSympathy`). Returns `None` when one of those
+/// frames needs a bound agent that isn't there — the "no synthetic agents,
+/// ever" guard (plan Global Constraints, ledger #2) extended to rendering:
+/// an unbound schema explains nothing rather than fabricating a name. Never
+/// observed at the floor (only `Agentive`/`CycleReturn`/`PathJourney`/
+/// `Balance` fire across seeds 1..=3 — `Kinship`/`LinkSympathy` need a
+/// `SlotKind::Kin`/agent binding `windows/worldgen::chorus::explain_moons`
+/// does not yet wire up), but a closed table stays exhaustive regardless of
+/// what today's weights happen to draw.
+fn explanation_line(
+    head: &str,
+    plural: bool,
+    schema: SchemaId,
+    agent: Option<&str>,
+    lexeme: Option<LexemeId>,
+    manner: Manner,
+) -> Option<String> {
+    match schema {
+        SchemaId::Agentive => {
+            let deity = agent?;
+            let verb = lexeme?.0;
+            let manner_text = match manner {
+                Manner::Brisk => ", briskly",
+                Manner::Slow => ", slowly",
+                Manner::Neutral => "",
+            };
+            Some(format!(
+                "{head} because {deity} {verb} the sky{manner_text}."
+            ))
+        }
+        SchemaId::CycleReturn => Some(format!("{head}, as all things return.")),
+        SchemaId::PathJourney => Some(format!("{head} because the sky must be crossed.")),
+        SchemaId::Balance => Some(format!("{head} to keep the balance.")),
+        SchemaId::Kinship => {
+            let deity = agent?;
+            let pronoun = if plural { "they are" } else { "it is" };
+            Some(format!("{head} because {pronoun} {deity}'s kin."))
+        }
+        SchemaId::LinkSympathy => {
+            let deity = agent?;
+            let pronoun = if plural { "they answer" } else { "it answers" };
+            Some(format!("{head} because {pronoun} {deity}."))
+        }
+        // The other six schemas (ForceDynamics, SubstanceFlow, Container,
+        // MoralAccounting, EssenceTelos, Verticality) admit only
+        // `HighScalarState` (schemas.rs), a shape neither `explain_day` nor
+        // `explain_moons` ever produces — unreachable at the floor, kept as
+        // a safe exhaustive fallback rather than a panic.
+        SchemaId::ForceDynamics
+        | SchemaId::SubstanceFlow
+        | SchemaId::Container
+        | SchemaId::MoralAccounting
+        | SchemaId::EssenceTelos
+        | SchemaId::Verticality => None,
+    }
+}
+
+/// Task 4: this subject's because-clause explanation lines — one per
+/// [`Disposition::Explained`] entry in `group` (the day and/or moons),
+/// in `group`'s own ground order (mirrors [`CONSTRUCTION_ORDER`]: moons
+/// before day-length, since `chorus_ground`'s construction order matches
+/// it). Reads `entry.disposition` directly, not through [`effective`] — the
+/// explanation fields live only on the un-unwrapped `Explained` variant.
+fn render_explanations(group: &[&AccountEntry]) -> Vec<String> {
+    let mut lines = Vec::new();
+    for entry in group {
+        let Disposition::Explained {
+            schema,
+            agent,
+            lexeme,
+            manner,
+            ..
+        } = &entry.disposition
+        else {
+            continue;
+        };
+        let Some((head, plural)) = explanation_head(&entry.fact.predicate, &entry.fact.object)
+        else {
+            continue;
+        };
+        if let Some(line) =
+            explanation_line(&head, plural, *schema, agent.as_deref(), *lexeme, *manner)
+        {
+            lines.push(line);
+        }
+    }
+    lines
+}
+
+/// A people subject's emic clause: the god's-eye collective construction
+/// (`species_label`, plural, indefinite), plus the stance appositive at
+/// the book layer (`" — {stance}."`, replacing the terminal `.`) — absent
+/// for `Neutral` (the identity case, byte-matching the god's-eye line).
+/// Returns `None` if this subject's `instance-of` entry is not `Kept` (see
+/// [`render_world_margin`]'s carrier-clause note: never exercised at the
+/// floor).
+fn render_people_clause(io_entry: &AccountEntry, seen: &mut BTreeSet<String>) -> Option<String> {
+    if !matches!(effective(&io_entry.disposition), Disposition::Kept) {
+        return None;
+    }
+    let Value::Text(kind_text) = &io_entry.fact.object else {
+        return None;
+    };
+    let raw_name = io_entry.fact.subject.clone();
+    let display = format!("The {raw_name}");
+    let subject = subject_for_text(&raw_name, display, seen);
+    let mut line = realize_common(&ClauseSpec {
+        frame: Frame::Classify,
+        subject,
+        complement: species_label(kind_text),
+        number: Number::Pl,
+        definiteness: Definiteness::Indef,
+        modifiers: Vec::new(),
+    });
+    if !matches!(io_entry.stance, Stance::Neutral) {
+        line.pop();
+        line.push_str(&format!(" — {}.", stance_text(io_entry.stance)));
+    }
+    Some(line)
+}
+
+/// One placed people's rendered chorus section: group `account.entries` by
+/// ground-fact subject (preserving each subject's first-encountered
+/// position — stable under `OrderPolicy::Salience`'s partition, since every
+/// world-subject fact shares the `"sky"` domain and every people-subject
+/// fact shares `"peoples"`, so each stays a contiguous block), then render
+/// the world subject via [`render_world_clause`]/[`render_world_margin`]
+/// and each people subject via [`render_people_clause`]. `seen` is a fresh
+/// per-section scope (every account names its subjects itself — the
+/// module doc's fresh-scope rule); the margin register always names its
+/// (single, world) subject fresh, independent of the emic paragraph's
+/// scope — it is a separate typographic register, not a continuation.
+fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -> ChorusSection {
+    let mut order: Vec<String> = Vec::new();
+    let mut groups: BTreeMap<String, Vec<&AccountEntry>> = BTreeMap::new();
+    for entry in &account.entries {
+        let subject = entry.fact.subject.clone();
+        if !groups.contains_key(&subject) {
+            order.push(subject.clone());
+        }
+        groups.entry(subject).or_default().push(entry);
+    }
+
+    let mut emic = Vec::new();
+    let mut margin = Vec::new();
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    for subject in &order {
+        let group = &groups[subject];
+        if let Some(is_a_entry) = group
+            .iter()
+            .find(|e| e.fact.predicate == hornvale_kernel::world::IS_A)
+        {
+            if let Some(line) = render_world_clause(group, is_a_entry, &mut seen) {
+                emic.push(line);
+            }
+            // Task 4 (C5): the because-clause explanations for this
+            // subject's day/moons entries, as additional emic lines —
+            // appended right after the world clause, before the margin.
+            emic.extend(render_explanations(group));
+            if let Some(line) = render_world_margin(group, is_a_entry) {
+                margin.push(line);
+            }
+        } else if let Some(io_entry) = group
+            .iter()
+            .find(|e| e.fact.predicate == hornvale_kernel::INSTANCE_OF)
+            && let Some(line) = render_people_clause(io_entry, &mut seen)
+        {
+            emic.push(line);
+        }
+    }
+
+    ChorusSection {
+        kind: kind.to_string(),
+        heading: format!("As the {autonym} tell it"),
+        emic,
+        margin,
+    }
+}
+
+/// One entry in the tongue render inventory: a concept some committed fact
+/// asks every tongue to state, about a named subject. The inventory is
+/// DERIVED from the ledger (C4 T1) — one probe per committed `is-a`
+/// complement — so a future renderable kind auto-enters the coverage
+/// report instead of waiting on a hand-list.
+/// type-audit: bare-ok(identifier-text: concept), bare-ok(prose: subject)
+pub struct TongueProbe {
+    /// The concept the tongue is asked to state (an `is-a` complement).
+    pub concept: String,
+    /// The subject's surface name (the committed `name`, or the C3
+    /// fallback text).
+    pub subject: String,
+}
+
+/// The derived probe inventory: one probe per committed `is-a` fact,
+/// ledger order.
+pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
+    let mut probes = Vec::new();
+    for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
+        let Value::Text(kind) = &fact.object else {
+            continue;
+        };
+        let subject = world
+            .ledger
+            .text_of(fact.subject, hornvale_kernel::NAME)
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("Entity {}", fact.subject.0));
+        probes.push(TongueProbe {
+            concept: kind.clone(),
+            subject,
+        });
+    }
+    probes
+}
+
+/// Run one probe against one tongue: realize `⟨subject⟩ ⟨copula?⟩
+/// ⟨concept⟩` — `Ok` is a rendered line (the success path C3 dropped),
+/// `Err` the recountable gap.
+fn probe_tongue(
+    probe: &TongueProbe,
+    _kind: &str,
+    grammar: &hornvale_language::TongueGrammar,
+    lexicon: &hornvale_language::Lexicon,
+) -> Result<String, hornvale_language::TongueGap> {
+    realize_tongue(
+        &TongueClause {
+            subject: probe.subject.clone(),
+            complement_concept: probe.concept.clone(),
+        },
+        grammar,
+        lexicon,
+    )
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -421,7 +901,12 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
 /// every committed `is-a` object label, plus `species_label(kind)` for
 /// every committed `instance-of` object (the only source of a plural
 /// complement in this campaign's grammar — see [`parse_line`]'s doc for
-/// why that lets `Number::Pl` alone signal a collective on the way back).
+/// why that lets `Number::Pl` alone signal a collective on the way back),
+/// plus (C4 T4) every chorus account's `Substituted` target (e.g.
+/// `"earth"`) — a book-layer carving that never appears as a committed
+/// `is-a` object, so a chorus emic line naming it would otherwise parse as
+/// `UnknownComplement`. The closed set stays derived from the world:
+/// walking `accounts_of(world)` rather than hardcoding the carving text.
 pub fn parse_context(world: &World) -> ParseContext {
     let mut complements = BTreeSet::new();
     for fact in world.ledger.find(hornvale_kernel::world::IS_A) {
@@ -432,6 +917,13 @@ pub fn parse_context(world: &World) -> ParseContext {
     for fact in world.ledger.find(hornvale_kernel::INSTANCE_OF) {
         if let Value::Text(kind) = &fact.object {
             complements.insert(species_label(kind));
+        }
+    }
+    for voice in hornvale_worldgen::accounts_of(world) {
+        for entry in &voice.account.entries {
+            if let Disposition::Substituted { theirs, .. } = effective(&entry.disposition) {
+                complements.insert(theirs.clone());
+            }
         }
     }
     ParseContext { complements }
@@ -549,6 +1041,276 @@ pub fn rerender(parsed: &ParsedLine) -> String {
         modifiers,
     });
     assemble_trailing(line, &trailing)
+}
+
+/// The book-layer dress [`parse_chorus_line`] strips before delegating to
+/// [`parse_line`], and [`rerender_chorus_line`] restores after
+/// [`rerender`] — the stance appositive and the margin's `"In truth, "`
+/// prefix are chorus-surface presentation, never a `domains/language`
+/// construction (the module doc's aggregation seam extended one layer
+/// out).
+/// type-audit: bare-ok(flag: in_truth), bare-ok(identifier-text: stance)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChorusDress {
+    /// The stance appositive's closed text (`"ourselves"`, `"neighbors"`,
+    /// `"rivals"`, or `"strangers"`), if this line carried one.
+    pub stance: Option<&'static str>,
+    /// Whether this line carried the margin register's `"In truth, "`
+    /// prefix.
+    pub in_truth: bool,
+}
+
+/// The four stance appositive suffixes [`parse_chorus_line`] tries, in a
+/// fixed order — the exact inverse of [`render_people_clause`]'s
+/// `" — {stance}."` construction.
+const STANCE_SUFFIXES: &[(&str, &str)] = &[
+    (" — ourselves.", "ourselves"),
+    (" — neighbors.", "neighbors"),
+    (" — rivals.", "rivals"),
+    (" — strangers.", "strangers"),
+];
+
+/// Task 4 (C5): one rendered because-clause explanation line's recovered
+/// fields — the closed-table inversion of [`explanation_line`]. `head` is
+/// carried verbatim (it already encodes which predicate and plurality this
+/// explanation was about, so [`rerender_explanation`] never re-derives it
+/// from a ground fact it doesn't have); deity names are free tokens,
+/// recovered purely by their fixed position in the closed frame — never
+/// checked against a roster (mirrors [`fact_for`]'s established precedent
+/// for fragment text).
+/// type-audit: bare-ok(prose: head), bare-ok(prose: agent), bare-ok(flag: plural)
+#[derive(Clone, Debug, PartialEq)]
+pub struct ParsedExplanation {
+    /// The count-aware head clause this explanation opened with (e.g.
+    /// `"The day returns"`).
+    pub head: String,
+    /// Whether `head` was the plural (moons) form — governs the
+    /// Kinship/LinkSympathy pronoun on re-realization.
+    pub plural: bool,
+    /// The causal schema this line's frame matched.
+    pub schema: SchemaId,
+    /// The bound deity/agent name, for the frames that carry one.
+    pub agent: Option<String>,
+    /// The bound verb lexeme, for the agentive frame.
+    pub lexeme: Option<LexemeId>,
+    /// The manner adverb this line's agentive frame carried, if any.
+    pub manner: Manner,
+}
+
+/// One rendered chorus line's recovered shape: an ordinary classification
+/// clause ([`ParsedLine`] dressed by [`ChorusDress`]), or a Task 4
+/// because-clause explanation ([`ParsedExplanation`]) — a wholly different
+/// frame with no clause underneath it at all, so a `ParsedLine` would have
+/// nothing to hold. Deliberately no derived traits beyond what its two
+/// variants (`ParsedLine`/`ChorusDress`/[`ParsedExplanation`]) already
+/// support — `ParsedLine` itself derives neither `Clone` nor `Debug` nor
+/// `PartialEq` (T3's original design), and no caller in this module needs
+/// this enum to carry any of them either.
+pub enum ChorusLine {
+    /// An ordinary classification clause plus its chorus-surface dress.
+    Clause(ParsedLine, ChorusDress),
+    /// A because-clause explanation line (Task 4's closed frame table).
+    Explanation(ParsedExplanation),
+}
+
+/// The closed verb-literal table [`parse_explanation_body`] matches a
+/// recovered word against, to hand back the same `'static` [`LexemeId`]
+/// these were minted from (a `LexemeId` wraps a `&'static str`, so a
+/// runtime-parsed word can never be boxed into one directly) — duplicated
+/// from `domains/language::schemas`'s own closed table, the same
+/// aggregation-seam precedent [`indefinite_article`]/[`uncardinal`] set for
+/// small closed tables a book-only need doesn't warrant widening the
+/// domain's public surface for.
+const AGENTIVE_LEXEMES: &[LexemeId] = &[
+    LexemeId("walks"),
+    LexemeId("strides"),
+    LexemeId("rides"),
+    LexemeId("drives"),
+    LexemeId("rows"),
+    LexemeId("steers"),
+    LexemeId("stalks"),
+];
+
+/// The count-aware head clauses [`parse_explanation`] tries, paired with
+/// the plurality each carries — the exact inverse of [`explanation_head`].
+/// None of the three is a prefix of another (`"The day returns"`, `"The
+/// moon crosses"`, `"The moons cross"` all diverge by the 9th character),
+/// so trying them in any order is safe.
+const EXPLANATION_HEADS: &[(&str, bool)] = &[
+    ("The day returns", false),
+    ("The moon crosses", false),
+    ("The moons cross", true),
+];
+
+/// Invert one explanation line's body (the text after its head clause) into
+/// the closed table's schema/agent/lexeme/manner — the exact inverse of
+/// [`explanation_line`]'s six frames, tried in an order chosen so no two
+/// frames' fixed text can be mistaken for one another (`PathJourney`'s
+/// fixed string is checked before `Agentive`'s open one, since both start
+/// with `" because "`).
+fn parse_explanation_body(
+    rest: &str,
+    plural: bool,
+) -> Option<(SchemaId, Option<String>, Option<LexemeId>, Manner)> {
+    if rest == ", as all things return." {
+        return Some((SchemaId::CycleReturn, None, None, Manner::Neutral));
+    }
+    if rest == " because the sky must be crossed." {
+        return Some((SchemaId::PathJourney, None, None, Manner::Neutral));
+    }
+    if rest == " to keep the balance." {
+        return Some((SchemaId::Balance, None, None, Manner::Neutral));
+    }
+    let kin_prefix = if plural {
+        " because they are "
+    } else {
+        " because it is "
+    };
+    if let Some(mid) = rest.strip_prefix(kin_prefix) {
+        let deity = mid.strip_suffix("'s kin.")?;
+        if deity.is_empty() || deity.contains(' ') {
+            return None;
+        }
+        return Some((
+            SchemaId::Kinship,
+            Some(deity.to_string()),
+            None,
+            Manner::Neutral,
+        ));
+    }
+    let link_prefix = if plural {
+        " because they answer "
+    } else {
+        " because it answers "
+    };
+    if let Some(mid) = rest.strip_prefix(link_prefix) {
+        let deity = mid.strip_suffix('.')?;
+        if deity.is_empty() || deity.contains(' ') {
+            return None;
+        }
+        return Some((
+            SchemaId::LinkSympathy,
+            Some(deity.to_string()),
+            None,
+            Manner::Neutral,
+        ));
+    }
+    let mid = rest.strip_prefix(" because ")?;
+    let (core, manner) = if let Some(base) = mid.strip_suffix(", briskly.") {
+        (base, Manner::Brisk)
+    } else if let Some(base) = mid.strip_suffix(", slowly.") {
+        (base, Manner::Slow)
+    } else {
+        (mid.strip_suffix('.')?, Manner::Neutral)
+    };
+    let core = core.strip_suffix(" the sky")?;
+    let (deity, verb) = core.split_once(' ')?;
+    if deity.is_empty() || verb.is_empty() || verb.contains(' ') {
+        return None;
+    }
+    let lexeme = AGENTIVE_LEXEMES.iter().find(|l| l.0 == verb).copied()?;
+    Some((
+        SchemaId::Agentive,
+        Some(deity.to_string()),
+        Some(lexeme),
+        manner,
+    ))
+}
+
+/// Try to invert `line` as a Task 4 explanation line: strip one of the
+/// closed heads ([`EXPLANATION_HEADS`]), then invert the remainder via
+/// [`parse_explanation_body`]. `None` when `line` doesn't start with any of
+/// the closed heads, or the remainder matches none of the six frames — the
+/// caller ([`parse_chorus_line`]) falls through to the ordinary clause path
+/// in either case.
+fn parse_explanation(line: &str) -> Option<ParsedExplanation> {
+    for (head, plural) in EXPLANATION_HEADS {
+        if let Some(rest) = line.strip_prefix(head)
+            && let Some((schema, agent, lexeme, manner)) = parse_explanation_body(rest, *plural)
+        {
+            return Some(ParsedExplanation {
+                head: (*head).to_string(),
+                plural: *plural,
+                schema,
+                agent,
+                lexeme,
+                manner,
+            });
+        }
+    }
+    None
+}
+
+/// Re-realize a [`ParsedExplanation`] back to its exact surface text: the
+/// closed-table forward direction ([`explanation_line`]), which always
+/// succeeds for a `ParsedExplanation` [`parse_explanation`] actually
+/// produced (every frame [`parse_explanation_body`] recovers already
+/// carries whatever agent/lexeme that frame requires).
+fn rerender_explanation(explanation: &ParsedExplanation) -> String {
+    explanation_line(
+        &explanation.head,
+        explanation.plural,
+        explanation.schema,
+        explanation.agent.as_deref(),
+        explanation.lexeme,
+        explanation.manner,
+    )
+    .expect(
+        "a ParsedExplanation was only ever constructed from a line explanation_line once produced",
+    )
+}
+
+/// Invert one rendered chorus line (emic or margin): try Task 4's
+/// explanation frames first ([`parse_explanation`] — a wholly different
+/// surface with no classification clause underneath it, so it must be tried
+/// before the clause path below could mis-fail on it), then fall through to
+/// the ordinary clause path: strip the margin's `"In truth, "` prefix, then
+/// the stance appositive suffix (restoring the clause's terminal `'.'` in
+/// its place), then delegate to [`parse_line`]. Returns the recovered
+/// [`ChorusLine`] — the design-freedom variant the brief allows over a bare
+/// `ParsedLine`.
+/// type-audit: bare-ok(prose: line)
+pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, LineError> {
+    if let Some(explanation) = parse_explanation(line) {
+        return Ok(ChorusLine::Explanation(explanation));
+    }
+
+    let (body, in_truth) = match line.strip_prefix("In truth, ") {
+        Some(rest) => (rest, true),
+        None => (line, false),
+    };
+    let (clause_text, stance) = match STANCE_SUFFIXES
+        .iter()
+        .find_map(|(suffix, name)| body.strip_suffix(suffix).map(|head| (head, *name)))
+    {
+        Some((head, name)) => (format!("{head}."), Some(name)),
+        None => (body.to_string(), None),
+    };
+    let parsed = parse_line(&clause_text, ctx)?;
+    Ok(ChorusLine::Clause(parsed, ChorusDress { stance, in_truth }))
+}
+
+/// Re-realize a [`ChorusLine`] back to the exact chorus surface text: for a
+/// [`ChorusLine::Clause`], [`rerender`] then re-append the stance
+/// appositive (replacing the terminal `.`) then re-prepend `"In truth, "` —
+/// the exact inverse of [`parse_chorus_line`]'s strip order; for a
+/// [`ChorusLine::Explanation`], [`rerender_explanation`].
+/// type-audit: bare-ok(prose: return)
+pub fn rerender_chorus_line(line: &ChorusLine) -> String {
+    match line {
+        ChorusLine::Clause(parsed, dress) => {
+            let mut line = rerender(parsed);
+            if let Some(stance) = dress.stance {
+                line.pop();
+                line.push_str(&format!(" — {stance}."));
+            }
+            if dress.in_truth {
+                line = format!("In truth, {line}");
+            }
+            line
+        }
+        ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
+    }
 }
 
 #[cfg(test)]
@@ -867,5 +1629,503 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// C4 T1: the coverage report is DERIVED — the probe inventory contains
+    /// one entry per committed `is-a` complement concept (today: `planet`
+    /// only), so a future renderable `is-a` kind auto-enters the report.
+    #[test]
+    fn tongue_probes_derive_from_committed_is_a_facts() {
+        let world = generated(1);
+        let probes = tongue_probes(&world);
+        assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
+        assert_eq!(probes[0].concept, "planet");
+        assert_eq!(probes[0].subject, "Vebe");
+    }
+
+    /// C4 T1: the probe's SUCCESS path lands the realized line instead of
+    /// silently vanishing — driven with a synthetic lexicon that Steeps
+    /// `planet`, since no real culture holds it (mutation evidence: assert
+    /// the realized text, not just Ok-ness).
+    #[test]
+    fn probe_success_path_yields_a_line() {
+        use hornvale_language::{ExposureClass, build_lexicon};
+        let world = generated(1);
+        let ph = hornvale_worldgen::language_of(&world, "goblin");
+        let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
+        let mut exposures = BTreeMap::new();
+        exposures.insert("planet".to_string(), ExposureClass::Steeped);
+        let lexicon = build_lexicon(&world.seed, "goblin", "goblin", &ph, &ph, &exposures, &[]);
+        let probe = TongueProbe {
+            concept: "planet".to_string(),
+            subject: "Vebe".to_string(),
+        };
+        let line =
+            probe_tongue(&probe, "goblin", &grammar, &lexicon).expect("a Steeped concept realizes");
+        assert!(
+            !line.is_empty() && line.ends_with('.'),
+            "a realized sentence: {line}"
+        );
+        assert!(line.contains("Vebe"), "the probe subject appears: {line}");
+    }
+
+    /// C4 T1: the derived report reproduces C3's exact strings on seeds
+    /// 1–3 — no regression, no artifact drift from the derivation.
+    #[test]
+    fn derived_report_matches_the_shipped_strings() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        assert!(
+            vol.tongue_gaps
+                .iter()
+                .any(|g| g == "goblin: gap — planet (no entry in this lexicon)"),
+            "the derived gap line is byte-identical to C3's: {:?}",
+            vol.tongue_gaps
+        );
+    }
+
+    /// C4 T4, the null-filter law (spec §4.1): the identity params
+    /// reproduce the god's-eye volume byte-identically — the gazetteer IS
+    /// the chorus's degenerate case.
+    #[test]
+    fn identity_chorus_reproduces_the_gods_eye_lines() {
+        let world = generated(1);
+        let vol = render_volume(&world);
+        let ground = hornvale_worldgen::chorus_ground(&world);
+        let account = hornvale_language::account::account_of(
+            &ground,
+            &hornvale_language::account::identity_params(),
+        );
+        let section = voice_section("goblin", "Vavako", &account, &world);
+        assert_eq!(
+            section.emic, vol.lines,
+            "identity filters == the god's-eye volume"
+        );
+        assert!(
+            section.margin.is_empty(),
+            "the null filter loses nothing — no margin"
+        );
+    }
+
+    /// C4 T4: seed 1's goblin section — exact derived strings (real
+    /// committed values, the C2 exact-string discipline).
+    #[test]
+    fn goblin_section_speaks_and_margins_seed_1() {
+        let vol = render_volume(&generated(1));
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert_eq!(goblin.heading, "As the Vavako tell it");
+        assert!(
+            goblin.emic.contains(&"Vebe is the earth.".to_string()),
+            "planet substituted to the carving: {:?}",
+            goblin.emic
+        );
+        assert!(
+            goblin
+                .emic
+                .contains(&"The Babako are hobgoblins — neighbors.".to_string()),
+            "goblin stance: {:?}",
+            goblin.emic
+        );
+        assert!(
+            goblin
+                .margin
+                .iter()
+                .any(|m| m.starts_with("In truth, Vebe is a planet")
+                    && m.contains("two moons")
+                    && m.contains("yellow-white dwarf")),
+            "the margin carries what the stack lost: {:?}",
+            goblin.margin
+        );
+    }
+
+    /// C4 T4: hobgoblin reads rivals where goblin reads neighbors (seed
+    /// 1) — the chorus DIFFERS beyond vocabulary within one world.
+    #[test]
+    fn seed_1_voices_disagree_on_stance() {
+        let vol = render_volume(&generated(1));
+        let hobgoblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "hobgoblin")
+            .expect("hobgoblin voice");
+        assert!(
+            hobgoblin
+                .emic
+                .contains(&"The Vavako are goblins — rivals.".to_string()),
+            "hobgoblin reads goblins as rivals: {:?}",
+            hobgoblin.emic
+        );
+    }
+
+    /// C4 T4: kobold keeps the moons goblin loses (seed 2) — knowledge
+    /// divergence surfaces: kobold's emic world line contains "with one
+    /// moon", goblin's does not; goblin's margin does.
+    #[test]
+    fn seed_2_kobold_sees_moons_goblin_margins_them() {
+        let vol = render_volume(&generated(2));
+        let kobold = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "kobold")
+            .expect("seed 2 places a kobold voice");
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert!(
+            kobold.emic.iter().any(|l| l.contains("with one moon")),
+            "kobold sees the moon count: {:?}",
+            kobold.emic
+        );
+        assert!(
+            goblin.emic.iter().all(|l| !l.contains("moon")),
+            "goblin's emic world line never mentions moons: {:?}",
+            goblin.emic
+        );
+        assert!(
+            goblin.margin.iter().any(|m| m.contains("moon")),
+            "goblin's margin carries the moons it lost: {:?}",
+            goblin.margin
+        );
+    }
+
+    /// C4 T4, the margin law (spec §4.3): per culture, `emic ∪ margin ⊇
+    /// chorus_ground` — measured by actually parsing every emic + margin
+    /// line and checking each ground-truth fact against what the parser
+    /// recovered, not by a subject-name tally that never touches
+    /// `chorus_ground` or `ParsedLine.facts` (a fact silently vanishing
+    /// from both registers must redden this test).
+    ///
+    /// Recovery, per parsed line: the fragment facts in `parsed.facts`
+    /// (moon-count/star-class/day-length-std, verbatim), plus the
+    /// classification itself — `parsed.kind`, already recovered singular
+    /// by `parse_line` regardless of the clause's number. A parsed line's
+    /// facts are filed under its own subject, canonicalized by stripping a
+    /// collective's leading `"The "` (the only surface dressing between a
+    /// `chorus_ground` subject and its emic display name); a pronoun
+    /// re-mention (`"it"`) files under the section's most recently named
+    /// subject, matching how the surface actually reads.
+    ///
+    /// Coverage, per `GroundFact`: a fragment fact must appear verbatim in
+    /// its subject's recovered `(predicate, value)` pairs, with the one
+    /// documented exception that `day-length-std`'s surface value is the
+    /// `quantity`-truncated number (mirrors
+    /// `fact_for_inverts_fragment_for_over_the_closed_space`'s `(days *
+    /// 10.0).trunc() / 10.0`); an `is-a` or `instance-of` fact must appear
+    /// as a recovered kind equal to its own ground-truth text for that
+    /// subject — the margin law's whole point is that the TRUTH stays
+    /// recoverable even when the emic paragraph substitutes ("Vebe is the
+    /// earth"), so the truth text itself (not the substitution target) is
+    /// what this test requires to surface, via the margin's "In truth, ⟨
+    /// name⟩ is a planet" when the emic line alone lost it.
+    #[test]
+    fn emic_union_margin_covers_ground_truth() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let ctx = parse_context(&world);
+            let ground = hornvale_worldgen::chorus_ground(&world);
+            let vol = render_volume(&world);
+            for section in &vol.chorus {
+                let mut recovered_facts: BTreeMap<String, Vec<(String, Value)>> = BTreeMap::new();
+                let mut recovered_kinds: BTreeMap<String, Vec<String>> = BTreeMap::new();
+                let mut current_subject: Option<String> = None;
+                for line in section.emic.iter().chain(section.margin.iter()) {
+                    let chorus_line = parse_chorus_line(line, &ctx).unwrap_or_else(|e| {
+                        panic!(
+                            "seed {seed} {}: line failed to parse: {line} ({e:?})",
+                            section.kind
+                        )
+                    });
+                    // Task 4: an explanation line carries no NEW ground
+                    // fact — it comments on a fact the clause/margin above
+                    // it already surfaced (spec §4.6, "explanation is not
+                    // recovery" — see `the_margin_still_carries_the_truth`).
+                    // It still had to parse (the panic above already
+                    // guards that); just skip fact/kind accumulation.
+                    let ChorusLine::Clause(parsed, _dress) = chorus_line else {
+                        continue;
+                    };
+                    let subject = if parsed.subject == "it" {
+                        current_subject.clone().unwrap_or_else(|| {
+                            panic!(
+                                "seed {seed} {}: pronoun re-mention with no prior \
+                                 subject: {line}",
+                                section.kind
+                            )
+                        })
+                    } else {
+                        let canonical = parsed
+                            .subject
+                            .strip_prefix("The ")
+                            .unwrap_or(&parsed.subject)
+                            .to_string();
+                        current_subject = Some(canonical.clone());
+                        canonical
+                    };
+                    recovered_facts
+                        .entry(subject.clone())
+                        .or_default()
+                        .extend(parsed.facts.iter().cloned());
+                    recovered_kinds
+                        .entry(subject)
+                        .or_default()
+                        .push(parsed.kind.clone());
+                }
+
+                for gf in &ground {
+                    let facts = recovered_facts.get(&gf.subject);
+                    let kinds = recovered_kinds.get(&gf.subject);
+                    if gf.predicate == MOON_COUNT || gf.predicate == STAR_CLASS {
+                        let ok = facts.is_some_and(|fs| {
+                            fs.iter()
+                                .any(|(p, v)| p == &gf.predicate && v == &gf.object)
+                        });
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground fact {}={:?} on {:?} vanished from \
+                             emic+margin — recovered facts for that subject: {:?}",
+                            section.kind, gf.predicate, gf.object, gf.subject, facts
+                        );
+                    } else if gf.predicate == DAY_LENGTH_STD {
+                        let Value::Number(days) = &gf.object else {
+                            panic!(
+                                "seed {seed} {}: day-length-std ground fact is non-numeric: \
+                                 {:?}",
+                                section.kind, gf.object
+                            );
+                        };
+                        let truncated = (days * 10.0).trunc() / 10.0;
+                        let ok = facts.is_some_and(|fs| {
+                            fs.iter().any(|(p, v)| {
+                                p == DAY_LENGTH_STD
+                                    && matches!(v, Value::Number(n) if *n == truncated)
+                            })
+                        });
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground fact day-length-std={days} (surfaces as \
+                             {truncated}) on {:?} vanished from emic+margin — recovered \
+                             facts for that subject: {:?}",
+                            section.kind, gf.subject, facts
+                        );
+                    } else if gf.predicate == hornvale_kernel::world::IS_A
+                        || gf.predicate == hornvale_kernel::INSTANCE_OF
+                    {
+                        let Value::Text(truth) = &gf.object else {
+                            panic!(
+                                "seed {seed} {}: classification ground fact is non-text: {:?}",
+                                section.kind, gf.object
+                            );
+                        };
+                        let ok = kinds.is_some_and(|ks| ks.iter().any(|k| k == truth));
+                        assert!(
+                            ok,
+                            "seed {seed} {}: ground truth kind {truth:?} for {:?} vanished \
+                             from emic+margin — recovered kinds for that subject: {:?}",
+                            section.kind, gf.subject, kinds
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// C4 T4, the corpus law extended: every chorus emic + margin line
+    /// round-trips byte-identically through `parse_chorus_line` +
+    /// `rerender_chorus_line` (mirrors `every_book_line_round_trips`).
+    ///
+    /// Task 4 extends this SAME walk (rather than a duplicate
+    /// `every_explanation_line_round_trips`, per the plan's Key Context) to
+    /// also cover the new because-clause explanation lines: `parse_chorus_line`
+    /// now returns a [`ChorusLine`], so a line that inverts to
+    /// `ChorusLine::Explanation` round-trips through this identical
+    /// assertion. `explanation_seen` additionally asserts the walk actually
+    /// encountered at least one — a future regression that stopped firing
+    /// explanations could otherwise hide behind a vacuously-true round-trip.
+    #[test]
+    fn every_chorus_line_round_trips() {
+        let mut explanation_seen = 0usize;
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let ctx = parse_context(&world);
+            let vol = render_volume(&world);
+            for section in &vol.chorus {
+                for line in section.emic.iter().chain(section.margin.iter()) {
+                    let chorus_line = parse_chorus_line(line, &ctx).unwrap_or_else(|e| {
+                        panic!(
+                            "seed {seed} {}: line failed to parse: {line} ({e:?})",
+                            section.kind
+                        )
+                    });
+                    if matches!(chorus_line, ChorusLine::Explanation(_)) {
+                        explanation_seen += 1;
+                    }
+                    let again = rerender_chorus_line(&chorus_line);
+                    assert_eq!(
+                        &again, line,
+                        "seed {seed} {}: re-realization drifted",
+                        section.kind
+                    );
+                }
+            }
+        }
+        assert!(
+            explanation_seen > 0,
+            "the walk over seeds 1..=3 should encounter at least one Task 4 explanation line"
+        );
+    }
+
+    /// Task 4 (C5): every placed culture's causal-filter explanation
+    /// (`Disposition::Explained` on the day and/or moons entries) renders
+    /// as an additional emic line, self-consistently matching what
+    /// [`explanation_line`] builds from that entry's OWN bound fields —
+    /// then the seed-1 goblin line is ALSO pinned as a literal string
+    /// (measured against the real committed world), the C2 exact-string
+    /// discipline.
+    #[test]
+    fn explanation_lines_render_for_the_measured_seeds() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            for voice in hornvale_worldgen::accounts_of(&world) {
+                for entry in &voice.account.entries {
+                    let Disposition::Explained {
+                        schema,
+                        agent,
+                        lexeme,
+                        manner,
+                        ..
+                    } = &entry.disposition
+                    else {
+                        continue;
+                    };
+                    let Some((head, plural)) =
+                        explanation_head(&entry.fact.predicate, &entry.fact.object)
+                    else {
+                        continue;
+                    };
+                    let Some(expected) = explanation_line(
+                        &head,
+                        plural,
+                        *schema,
+                        agent.as_deref(),
+                        *lexeme,
+                        *manner,
+                    ) else {
+                        continue;
+                    };
+                    let section = vol
+                        .chorus
+                        .iter()
+                        .find(|s| s.kind == voice.kind)
+                        .unwrap_or_else(|| {
+                            panic!("seed {seed}: {} has no chorus section", voice.kind)
+                        });
+                    assert!(
+                        section.emic.contains(&expected),
+                        "seed {seed} {}: expected explanation line missing: {expected:?} \
+                         not in {:?}",
+                        voice.kind,
+                        section.emic
+                    );
+                }
+            }
+        }
+
+        // Seed 1's real, measured goblin day explanation (verified against
+        // the committed world): schema PathJourney, agentless, no manner —
+        // the frame table's fixed string.
+        let vol = render_volume(&generated(1));
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert!(
+            goblin
+                .emic
+                .contains(&"The day returns because the sky must be crossed.".to_string()),
+            "seed 1 goblin's pinned explanation line: {:?}",
+            goblin.emic
+        );
+    }
+
+    /// Task 4, the null-filter law extended: the identity account (used by
+    /// `identity_chorus_reproduces_the_gods_eye_lines`) never runs through
+    /// `explain` (only `accounts_of` calls it), so its chorus section must
+    /// carry none of the six frames' distinguishing text — and
+    /// `render_volume`'s god's-eye `lines` (never touched by C5's causal
+    /// filter at all — `explain` only ever runs inside `voice_section` via
+    /// `accounts_of`) stay exactly as C4 shipped them.
+    #[test]
+    fn the_null_volume_is_untouched() {
+        let world = generated(1);
+        let ground = hornvale_worldgen::chorus_ground(&world);
+        let account = hornvale_language::account::account_of(
+            &ground,
+            &hornvale_language::account::identity_params(),
+        );
+        let section = voice_section("goblin", "Vavako", &account, &world);
+        for line in section.emic.iter().chain(section.margin.iter()) {
+            assert!(
+                !line.contains("because"),
+                "identity chorus must carry no explanation: {line}"
+            );
+            assert!(
+                !line.contains("as all things"),
+                "identity chorus must carry no explanation: {line}"
+            );
+            assert!(
+                !line.contains("to keep the balance"),
+                "identity chorus must carry no explanation: {line}"
+            );
+        }
+
+        let vol = render_volume(&world);
+        assert!(
+            vol.lines.iter().any(|l| l
+                == "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                    its day lasts about 1.5 standard days."),
+            "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
+            vol.lines
+        );
+        assert!(
+            vol.lines.iter().any(|l| l == "The Vavako are goblins."),
+            "the god's-eye collective line stays exactly as C4 shipped it: {:?}",
+            vol.lines
+        );
+    }
+
+    /// Task 4, spec §4.6 ("explanation is not recovery"): seed 1's goblin
+    /// day entry is BOTH explained (an additional emic line) AND still
+    /// margined (the causal filter never suppresses the etic margin's own
+    /// lost-fragment carrier — that's C4's job, untouched by C5).
+    #[test]
+    fn the_margin_still_carries_the_truth() {
+        let vol = render_volume(&generated(1));
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert!(
+            goblin.emic.iter().any(|l| l.starts_with("The day returns")),
+            "seed 1 goblin's day explanation renders: {:?}",
+            goblin.emic
+        );
+        assert!(
+            goblin
+                .margin
+                .iter()
+                .any(|m| m.contains("its day lasts about 1.5 standard days")),
+            "explanation is not recovery (spec §4.6) — the margin still carries \
+             the truth: {:?}",
+            goblin.margin
+        );
     }
 }

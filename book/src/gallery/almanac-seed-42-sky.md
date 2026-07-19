@@ -138,10 +138,17 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
+The driest interior's day swings about 21°C, warmest in the afternoon and coolest before dawn.
+The open ocean's day swings about 1°C, warmest in the afternoon and coolest before dawn.
+
 ## The Ground
 
 The land is mostly shale, its soils mostly leptosol.
 Notable: karst country, salt flats.
+
+## The Waters
+
+Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 6% of the land.
 
 ## Deep Time
 

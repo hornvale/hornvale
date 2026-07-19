@@ -54,11 +54,15 @@ run -p hornvale -- almanac --world "$wlocked" > book/src/gallery/almanac-seed-42
 echo "regenerate-artifacts: the book" >&2
 run -p hornvale -- book > book/src/gallery/the-book.md
 
+echo "regenerate-artifacts: the chorus study (C4/LANG-41, 50 seeds; live, not a census)" >&2
+run_release -p hornvale -- lab run studies/the-chorus.study.json
+
 echo "regenerate-artifacts: explain" >&2
 run -p hornvale -- explain --world "$wsky" sky > book/src/gallery/explain-seed-42-sky.md
 
 echo "regenerate-artifacts: reference dumps" >&2
 run -p hornvale -- concepts > book/src/reference/concept-registry-generated.md
+run -p hornvale -- concepts --manifest > book/src/reference/concept-manifest-generated.md
 run -p hornvale -- streams > book/src/reference/stream-manifest-generated.md
 run -p hornvale -- phonology > book/src/reference/phonology.md
 run -p hornvale -- dictionary --world "$wsky" > book/src/reference/dictionary-generated.md

@@ -24,6 +24,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
 | `earth` | the ground underfoot | Boo | /boo/ | Pee | Pee → no change → Boo |
 | `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): bugbear has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
 | `fire` | flame and heat | Qoa | /qoa/ | Qea | Qea → no change → Qoa |
@@ -53,7 +54,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Goatoo | /goatoo/ | Goatee | Goatee → no change → Goatoo |
 | `person` | a person; a member of a people (the autonym root) | Dookoa | /dookoa/ | Neekoa | Neekoa → no change → Dookoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
-| `red` | the color term for red | Doo | /doo/ | Noe | Noe → no change → Doo |
+| `red` | the color term for red | Doadao | /doadao/ | Neanao | Neanao → no change → Doadao |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
@@ -71,6 +72,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): bugbear has no exposure to 'tide' |
 | `tree` | a woody plant | Koodoo | /koodoo/ | Koonee | Koonee → no change → Koodoo |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
@@ -101,6 +103,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
 | `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → no change → Bee |
 | `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): goblin has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `eye` | the organ of sight | Tao | /tao/ | Qao | Qao → no change → Tao |
 | `fire` | flame and heat | Tea | /tea/ | Qea | Qea → no change → Tea |
@@ -130,7 +133,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Boatee | /boatee/ | Goatee | Goatee → no change → Boatee |
 | `person` | a person; a member of a people (the autonym root) | Neekoa | /neekoa/ | Neekoa | Neekoa → no change → Neekoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
-| `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
+| `red` | the color term for red | Neanao | /neanao/ | Neanao | Neanao → no change → Neanao |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
@@ -148,6 +151,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): goblin has no exposure to 'tide' |
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
@@ -178,6 +182,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → lenition → Taobaa |
 | `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → lenition → Bee |
 | `eat` | to consume food | Goo | /goo/ | Koo | Koo → lenition → Goo |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): hobgoblin has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
 | `fire` | flame and heat | Qea | /qea/ | Qea | Qea → no change → Qea |
@@ -207,7 +212,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `parent` | one's father or mother | Goatee | /goatee/ | Goatee | Goatee → no change → Goatee |
 | `person` | a person; a member of a people (the autonym root) | Neegoa | /neegoa/ | Neekoa | Neekoa → lenition → Neegoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
-| `red` | the color term for red | Noe | /noe/ | Noe | Noe → no change → Noe |
+| `red` | the color term for red | Neanao | /neanao/ | Neanao | Neanao → no change → Neanao |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
@@ -225,6 +230,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hobgoblin has no exposure to 'tide' |
 | `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
@@ -255,6 +261,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `die` | to cease living | Rogro | /rogro/ | Rogro | Rogro → no change → Rogro |
 | `earth` | the ground underfoot | Rorra | /rorra/ | Rorra | Rorra → no change → Rorra |
 | `eat` | to consume food | Rokxo | /rokxo/ | Rokxot | Rokxot → finalloss → Rokxo |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): kobold has no exposure to 'eclipse' |
 | `epipelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside epipelagic |
 | `eye` | the organ of sight | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
 | `fire` | flame and heat | Roro | /roro/ | Rorok | Rorok → finalloss → Roro |
@@ -302,6 +309,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `temperate-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-forest |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `tree` | a woody plant | Rakrra | /rakrra/ | Rrakrra | Rrakrra → clustersimplify → Rakrra |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-rainforest |
 | `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside tropical-seasonal-forest |
@@ -343,7 +351,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `one` | the cardinal number 1 | *Kaokao /kaokao/ | Kaokao /kaokao/ | Kaokao /kaokao/ | Gaogao /gaogao/ | *Kaokao → Kaokao / Kaokao / Gaogao |
 | `parent` | one's father or mother | *Goatee /goatee/ | Goatoo /goatoo/ | Boatee /boatee/ | Goatee /goatee/ | *Goatee → Goatoo / Boatee / Goatee |
 | `person` | a person; a member of a people (the autonym root) | *Neekoa /neekoa/ | Dookoa /dookoa/ | Neekoa /neekoa/ | Neegoa /neegoa/ | *Neekoa → Dookoa / Neekoa / Neegoa |
-| `red` | the color term for red | *Noe /noe/ | Doo /doo/ | Noe /noe/ | Noe /noe/ | *Noe → Doo / Noe / Noe |
+| `red` | the color term for red | *Neanao /neanao/ | Doadao /doadao/ | Neanao /neanao/ | Neanao /neanao/ | *Neanao → Doadao / Neanao / Neanao |
 | `sibling` | one's brother or sister | *Peonae /peonae/ | Boodao /boodao/ | Beonae /beonae/ | Beonae /beonae/ | *Peonae → Boodao / Beonae / Beonae |
 | `sleep` | to rest unconscious | *Neepeo /neepeo/ | Dooboo /dooboo/ | Neebeo /neebeo/ | Neebeo /neebeo/ | *Neepeo → Dooboo / Neebeo / Neebeo |
 | `star` | a fixed point of light in the night sky | *Naetoa /naetoa/ | Daotoa /daotoa/ | Naetoa /naetoa/ | Naetoa /naetoa/ | *Naetoa → Daotoa / Naetoa / Naetoa |

@@ -1,7 +1,9 @@
 # The Correspondence — Design
 
 **Date:** 2026-07-18
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** Shipped (Wave 0) — G3 approved; all four stages merged. Chronicle:
+`book/src/chronicle/the-correspondence.md`. Waves 1 (wind) & 2 (temperature) are
+the deferred follow-on campaigns (§6).
 **Campaign:** (confirm numbering at merge)
 **Provenance:** Nathan's question — "we have (or are adding) concepts of wind,
 ice, hot and cold, compass directions; are these also captured as concepts in

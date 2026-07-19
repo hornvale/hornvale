@@ -48,9 +48,15 @@ boundary speaks the kernel's `Temperature` type (promoted in
 never be mistaken for a difference. Temperature falls with
 latitude (spinning worlds) or with distance from the substellar point
 (locked worlds), cooled further by a lapse rate above sea level, and
-carries a seasonal term set by obliquity and damped near oceans (the
-biome field itself uses the *annual mean*; the seasonal swing exists for
-the REPL and almanac's day-level queries). Moisture starts from the
+carries a seasonal term set by obliquity and damped near oceans. On
+spinning worlds it also carries a **diurnal** term ([The
+Turning](../chronicle/the-turning.md)): a day/night swing phased on each
+cell's *local* solar time, wide where the air is dry and the ground
+continental, near zero over the ocean, and — crucially — **zero-mean over a
+rotation**, so it moves every instantaneous reading while leaving the annual
+mean (and therefore the biome field and the census) untouched. Both the
+seasonal and diurnal swings exist for the REPL, the almanac's day-level
+queries, and the orrery's "watch a day". Moisture starts from the
 circulation band, rises near oceans, and falls in a mountain's lee: a
 single upwind trace along the prevailing wind finds the highest barrier a
 parcel crossed and dries the leeward cell in proportion. From temperature,

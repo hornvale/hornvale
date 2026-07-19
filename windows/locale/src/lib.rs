@@ -20,6 +20,7 @@ use budget::StrangenessBudget;
 use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
 use hornvale_terrain::GeneratedTerrain;
+pub use hornvale_terrain::WaterKind;
 use hornvale_worldgen::{climate_of, terrain_of};
 use serde::Serialize;
 
@@ -80,6 +81,33 @@ pub struct LocaleFields {
     pub moisture: f64,
     /// Elevation, meters.
     pub elevation_m: f64,
+    /// Salt/fresh water at the room (max-weight cell — categorical, inherited,
+    /// never blended). `water.is_fresh()` is the drinkable query. `WaterKind`
+    /// lives in the terrain domain crate, which (decision 0002) depends on
+    /// nothing but the kernel, so it cannot derive `Serialize` itself; this
+    /// field serializes by its stable name instead (see `serialize_water_kind`).
+    #[serde(serialize_with = "serialize_water_kind")]
+    pub water: WaterKind,
+}
+
+/// Serialize a `WaterKind` by its stable lowercase-hyphenated name (the
+/// `locale/room/v2` schema's water field), the same convention `biome_name`
+/// uses for `Biome`.
+fn serialize_water_kind<S>(kind: &WaterKind, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(water_kind_name(*kind))
+}
+
+/// Stable name for a `WaterKind` (owned here, not Debug — mirrors `biome_name`).
+fn water_kind_name(k: WaterKind) -> &'static str {
+    match k {
+        WaterKind::Ocean => "ocean",
+        WaterKind::SaltBasin => "salt-basin",
+        WaterKind::River => "river",
+        WaterKind::DryLand => "dry-land",
+    }
 }
 
 /// Why a locale could not be described.
@@ -191,6 +219,7 @@ impl LocaleContext {
             temperature_c: blend(&|c| self.climate.mean_temperature_at(c).get()),
             moisture: blend(&|c| self.climate.moisture_at(c)),
             elevation_m: blend(&|c| self.terrain.globe().elevation.get(c).get()),
+            water: *self.terrain.globe().water_kind.get(best.0),
         };
 
         let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
@@ -420,6 +449,40 @@ mod tests {
         assert!(loc.fields.elevation_m.is_finite());
         assert!(loc.fields.temperature_c.is_finite());
         assert_eq!(loc.schema, ROOM_SCHEMA);
+    }
+
+    #[test]
+    fn locale_water_field_varies_and_includes_fresh_water_on_seed_42() {
+        // Wired to real geography (not a stuck constant) AND fresh water
+        // exists — the sanity that unblocks The Surmise.
+        let world = land_world();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut kinds: std::collections::BTreeSet<WaterKind> = Default::default();
+        let mut saw_fresh = false;
+        for i in 0..400u32 {
+            let t = i as f64;
+            // a deterministic spread of directions over the sphere
+            let dir = [
+                hornvale_kernel::math::cos(t * 0.017),
+                hornvale_kernel::math::sin(t * 0.023) * 0.5,
+                hornvale_kernel::math::cos(t * 0.031),
+            ];
+            let addr = RoomAddr::containing(dir, 6);
+            if let Ok(loc) = ctx.describe(&addr, WorldTime { day: 0.0 }) {
+                kinds.insert(loc.fields.water);
+                if loc.fields.water == WaterKind::River {
+                    saw_fresh = true;
+                }
+            }
+        }
+        assert!(
+            kinds.len() >= 2,
+            "water must vary across the globe (wired to real geography), got {kinds:?}"
+        );
+        assert!(
+            saw_fresh,
+            "seed 42 must have fresh water (River) reachable on land — else lower RIVER_MIN_DRAINAGE"
+        );
     }
 
     #[test]

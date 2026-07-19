@@ -65,6 +65,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/constituent-order` | the tongue's drawn constituent order for predication (SOV/SVO dominant, per authored typological weights) |
 | `language/<species>/grammar/copula` | whether nominal predication carries an overt copula, and (when it does) the copula's one-syllable drawn form from the tongue's own phonology |
 | `language/<species>/grammar/articles` | whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign) |
+| `language/<species>/schema/<domain>/<fact-shape>` | C5's causal-schema draw (render-time, `schemas::select_schema`): the β-sharpened pick among the fact-shape's admitted schemas for one culture's account of one (source-domain, fact-shape) pair — `<domain>` and `<fact-shape>` are the salt legs (e.g. `sky`/`cyclic-event` for the day) |
+| `language/<species>/lexeme/<fact-key>` | C5's lexeme draw (render-time, `schemas::select_lexeme`): the uniform pick among a fired schema's gate-surviving verb candidates for one explained fact — `<fact-key>` salts by the ground fact's predicate (e.g. `day-length-std`) |
 
 ### hornvale-locale
 

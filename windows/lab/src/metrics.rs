@@ -6,16 +6,17 @@ use hornvale_astronomy::{
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
-    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, romanize,
+    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment,
+    distinctiveness, distortion, domain_distortion, recoverability, romanize,
 };
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::{
     CarveParams, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, Sky, SkyChoice, WorldComponents, build_world_from_components,
-    build_world_to, climate_of, flagship_of, language_of_in, observed_phenomena_as_in,
-    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
+    BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_of,
+    build_world_from_components, build_world_to, climate_of, flagship_of, language_of_in,
+    observed_phenomena_as_in, rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -2761,7 +2762,239 @@ pub fn registry() -> Vec<Metric> {
             },
             extract: Extractor::Full(|v: &FullView| species_pace_of_life_metric(v, "kobold")),
         },
+        // --- The Chorus (C4, LANG-41): the six census-visible dial metrics
+        // over `accounts_of` — how far each placed culture's epistemic
+        // account of the ground truth strays from the truth (distortion),
+        // from each other (distinctiveness), and how much of a substituted
+        // fact a listener could still recover (recoverability); plus the
+        // dial's calibration checks (variance vs param-spread, and whether
+        // sky capability actually predicts sky distortion). ---
+        Metric {
+            name: "chorus-distortion",
+            doc: "Mean distortion() over every placed culture's account (C4 LANG-41); \
+                   Absent if no culture placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            extract: Extractor::Full(chorus_distortion_metric),
+        },
+        Metric {
+            name: "chorus-distinctiveness",
+            doc: "Mean pairwise distinctiveness() across every placed culture's account \
+                   (C4 LANG-41); Absent if fewer than 2 cultures placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            extract: Extractor::Full(chorus_distinctiveness_metric),
+        },
+        Metric {
+            name: "chorus-recoverability",
+            doc: "Mean recoverability() over every placed culture's account (C4 LANG-41); \
+                   Absent if no culture placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.1, 0.25, 0.5, 0.75, 0.9],
+            },
+            extract: Extractor::Full(chorus_recoverability_metric),
+        },
+        Metric {
+            name: "chorus-variance",
+            doc: "Population variance of per-culture distortion() (C4 LANG-41) — the \
+                   vacuity number, read against chorus-param-spread: a low variance can mean \
+                   either every voice is genuinely alike or every voice hit the same floor; \
+                   Absent if fewer than 2 cultures placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.001, 0.01, 0.05, 0.1],
+            },
+            extract: Extractor::Full(chorus_variance_metric),
+        },
+        Metric {
+            name: "chorus-param-spread",
+            doc: "Mean pairwise absolute difference in sky_capability across every placed \
+                   culture (C4 LANG-41) — the input-side companion to chorus-variance's \
+                   output-side number; Absent if fewer than 2 cultures placed",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.05, 0.1, 0.2, 0.4],
+            },
+            extract: Extractor::Full(chorus_param_spread_metric),
+        },
+        Metric {
+            name: "chorus-sky-calibration",
+            doc: "Kendall tau between per-culture sky_capability and per-culture \
+                   domain_distortion(..., \"sky\") over strictly-comparable pairs (both the \
+                   capability and the distortion differ) (C4 LANG-41); expected sign \u{2264} 0 \
+                   (distortion falls as capability rises); Absent if fewer than 2 cultures \
+                   placed or no strictly-comparable pair exists (e.g. every pair ties on \
+                   sky distortion)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[-0.5, 0.0, 0.5],
+            },
+            extract: Extractor::Full(chorus_sky_calibration_metric),
+        },
     ]
+}
+
+/// Every placed culture's account, read straight off the world (C4
+/// LANG-41): a thin passthrough so the six chorus metrics below share one
+/// call site rather than each re-deriving voices.
+fn chorus_voices(v: &FullView) -> Vec<ChorusVoice> {
+    accounts_of(v.world())
+}
+
+/// Mean `distortion()` over `voices` (C4 LANG-41). `Absent` if `voices` is
+/// empty — there is no culture to average over. Pure over an explicit
+/// voice list (rather than a `&FullView`) so the empty/singleton edge
+/// cases can be driven directly, without hunting for a 0-people seed.
+fn chorus_distortion_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.is_empty() {
+        return MetricValue::Absent;
+    }
+    let mean = voices
+        .iter()
+        .map(|voice| distortion(&voice.account))
+        .sum::<f64>()
+        / voices.len() as f64;
+    MetricValue::Number(mean)
+}
+
+fn chorus_distortion_metric(v: &FullView) -> MetricValue {
+    chorus_distortion_metric_over(&chorus_voices(v))
+}
+
+/// Mean `recoverability()` over `voices` (C4 LANG-41). `Absent` if `voices`
+/// is empty.
+fn chorus_recoverability_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.is_empty() {
+        return MetricValue::Absent;
+    }
+    let mean = voices
+        .iter()
+        .map(|voice| recoverability(&voice.account))
+        .sum::<f64>()
+        / voices.len() as f64;
+    MetricValue::Number(mean)
+}
+
+fn chorus_recoverability_metric(v: &FullView) -> MetricValue {
+    chorus_recoverability_metric_over(&chorus_voices(v))
+}
+
+/// Population variance of `distortion()` over `voices` (C4 LANG-41): the
+/// vacuity number — a low reading here is ambiguous between "every voice is
+/// genuinely alike" and "every voice hit the same floor," which is why it's
+/// read against [`chorus_param_spread_metric_over`]. `Absent` if fewer than
+/// 2 voices (a single value has no variance worth reporting).
+fn chorus_variance_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let distortions: Vec<f64> = voices
+        .iter()
+        .map(|voice| distortion(&voice.account))
+        .collect();
+    let n = distortions.len() as f64;
+    let mean = distortions.iter().sum::<f64>() / n;
+    let variance = distortions.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n;
+    MetricValue::Number(variance)
+}
+
+fn chorus_variance_metric(v: &FullView) -> MetricValue {
+    chorus_variance_metric_over(&chorus_voices(v))
+}
+
+/// Mean pairwise `distinctiveness()` across every unordered pair of `voices`
+/// (C4 LANG-41). `Absent` if fewer than 2 voices — a pair requires two.
+fn chorus_distinctiveness_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let mut total = 0.0;
+    let mut pairs = 0usize;
+    for i in 0..voices.len() {
+        for j in (i + 1)..voices.len() {
+            total += distinctiveness(&voices[i].account, &voices[j].account);
+            pairs += 1;
+        }
+    }
+    MetricValue::Number(total / pairs as f64)
+}
+
+fn chorus_distinctiveness_metric(v: &FullView) -> MetricValue {
+    chorus_distinctiveness_metric_over(&chorus_voices(v))
+}
+
+/// Mean pairwise absolute difference in `sky_capability` across every
+/// unordered pair of `voices` (C4 LANG-41) — the input-side spread that
+/// [`chorus_variance_metric_over`]'s output-side number is read against.
+/// `Absent` if fewer than 2 voices.
+fn chorus_param_spread_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let mut total = 0.0;
+    let mut pairs = 0usize;
+    for i in 0..voices.len() {
+        for j in (i + 1)..voices.len() {
+            total += (voices[i].params.sky_capability - voices[j].params.sky_capability).abs();
+            pairs += 1;
+        }
+    }
+    MetricValue::Number(total / pairs as f64)
+}
+
+fn chorus_param_spread_metric(v: &FullView) -> MetricValue {
+    chorus_param_spread_metric_over(&chorus_voices(v))
+}
+
+/// Kendall tau between per-voice `sky_capability` and per-voice
+/// `domain_distortion(..., "sky")`, restricted to strictly-comparable pairs
+/// (C4 LANG-41): a pair where either coordinate ties contributes nothing —
+/// neither concordant nor discordant, and is excluded from the denominator
+/// entirely (this is not the tau-b tie correction; it is a stricter
+/// same-plane-only tau). Expected sign \u{2264} 0 (distortion should fall as
+/// capability rises). `Absent` if fewer than 2 voices, or if every pair
+/// ties on at least one coordinate (no strictly-comparable pair survives —
+/// e.g. every voice's sky distortion is pinned to the same value).
+fn chorus_sky_calibration_metric_over(voices: &[ChorusVoice]) -> MetricValue {
+    if voices.len() < 2 {
+        return MetricValue::Absent;
+    }
+    let points: Vec<(f64, f64)> = voices
+        .iter()
+        .map(|voice| {
+            let cap = voice.params.sky_capability;
+            let sky_dist = domain_distortion(&voice.account, &voice.params, "sky");
+            (cap, sky_dist)
+        })
+        .collect();
+
+    let mut concordant = 0i64;
+    let mut discordant = 0i64;
+    let mut strict_pairs = 0i64;
+    for i in 0..points.len() {
+        for j in (i + 1)..points.len() {
+            let (x1, y1) = points[i];
+            let (x2, y2) = points[j];
+            if x1 == x2 || y1 == y2 {
+                continue;
+            }
+            strict_pairs += 1;
+            let same_sign = (x1 - x2).signum() == (y1 - y2).signum();
+            if same_sign {
+                concordant += 1;
+            } else {
+                discordant += 1;
+            }
+        }
+    }
+
+    if strict_pairs == 0 {
+        return MetricValue::Absent;
+    }
+    MetricValue::Number((concordant - discordant) as f64 / strict_pairs as f64)
+}
+
+fn chorus_sky_calibration_metric(v: &FullView) -> MetricValue {
+    chorus_sky_calibration_metric_over(&chorus_voices(v))
 }
 
 /// The median of `values` (sorted in place by `total_cmp`); `None` when
@@ -4512,8 +4745,11 @@ mod tests {
         // rerouted-flow-fraction), +1 for rift-and-fit (Task 9:
         // coast-roughness-slope), +3 for The Presiding (SKY-25: the
         // world-level belief-kind is retired, replaced by
-        // belief-kind-{bugbear,goblin,hobgoblin,kobold} — net -1 +4).
-        assert_eq!(registry().len(), 152);
+        // belief-kind-{bugbear,goblin,hobgoblin,kobold} — net -1 +4),
+        // +6 for The Chorus (C4 Task 5, LANG-41: chorus-distortion,
+        // chorus-distinctiveness, chorus-recoverability, chorus-variance,
+        // chorus-param-spread, chorus-sky-calibration).
+        assert_eq!(registry().len(), 158);
     }
 
     #[test]
@@ -5435,6 +5671,147 @@ mod tests {
         assert!(
             any_nonzero,
             "at least one goblinoid daughter must show nonzero divergence magnitude at seed 42"
+        );
+    }
+
+    // --- The Chorus (C4, LANG-41): the six dial metrics over
+    // `accounts_of`. Seed 1 places goblin (sky_capability 0.5) and
+    // hobgoblin (0.55) only — both below the moon-count SkyGraded
+    // threshold (0.6), so both lose every sky fact and their sky
+    // distortions tie at 1.0. Seed 2 additionally places kobold
+    // (sky_capability 1.0), which keeps the moon-count fact — see
+    // `windows/worldgen/tests/chorus_params.rs`'s
+    // `kobold_keeps_the_moons_goblin_loses` for the disposition ground
+    // truth these expectations are read off of. ---
+
+    #[test]
+    fn chorus_metrics_are_registered() {
+        let reg = registry();
+        for name in [
+            "chorus-distortion",
+            "chorus-distinctiveness",
+            "chorus-recoverability",
+            "chorus-variance",
+            "chorus-param-spread",
+            "chorus-sky-calibration",
+        ] {
+            assert!(reg.iter().any(|m| m.name == name), "{name} registered");
+        }
+    }
+
+    #[test]
+    fn seed_1_sky_calibration_is_absent_on_the_tied_pair() {
+        // Goblin and hobgoblin both lose every sky fact (both below the
+        // 0.6 SkyGraded threshold): their sky distortions tie at 1.0, so
+        // no strictly-comparable pair exists — this Absent IS the tie
+        // rule's test.
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "chorus-sky-calibration"),
+            MetricValue::Absent,
+            "seed 1's only pair (goblin/hobgoblin) ties on sky distortion at 1.0"
+        );
+        for name in [
+            "chorus-distortion",
+            "chorus-distinctiveness",
+            "chorus-recoverability",
+            "chorus-variance",
+            "chorus-param-spread",
+        ] {
+            assert!(
+                matches!(extract(&view, name), MetricValue::Number(_)),
+                "{name} should be present at seed 1 (2 cultures placed)"
+            );
+        }
+    }
+
+    #[test]
+    fn seed_1_distinctiveness_is_positive_from_stance_alone() {
+        // Even where dispositions tie in magnitude, goblin and hobgoblin's
+        // accounts differ in VALUE: goblin reads hobgoblin as Neighbors,
+        // hobgoblin reads goblin as Rivals (the stance asymmetry —
+        // `hobgoblin_reads_rivals_where_goblin_reads_neighbors` in
+        // `chorus_params.rs`). distinctiveness must catch this.
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        match extract(&view, "chorus-distinctiveness") {
+            MetricValue::Number(n) => assert!(n > 0.0, "expected > 0.0, got {n}"),
+            other => panic!("expected Number, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn seed_2_sky_calibration_is_exactly_negative_one() {
+        // Kobold (cap 1.0, sky distortion lower) forms a strictly-comparable
+        // pair with each of goblin and hobgoblin (cap 0.5/0.55, sky
+        // distortion 1.0): higher capability, lower distortion in both
+        // pairs — both discordant under the metric's sign convention
+        // (concordant means capability and distortion move the SAME way).
+        // Goblin/hobgoblin still ties (excluded). Two strict pairs, both
+        // discordant: tau = (0 - 2) / 2 = -1.0 exactly.
+        let view = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        assert_eq!(
+            extract(&view, "chorus-sky-calibration"),
+            MetricValue::Number(-1.0),
+            "expected exact -1.0: both strict pairs (g-k, h-k) discordant"
+        );
+    }
+
+    #[test]
+    fn seed_2_distinctiveness_exceeds_seed_1() {
+        // Kobold's knowledge divergence on the moons (it keeps what goblin
+        // and hobgoblin lose) stacks on top of the stance asymmetry already
+        // present at seed 1, so the mean pairwise distinctiveness must
+        // strictly increase.
+        let seed1 = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        let seed2 = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        let d1 = match extract(&seed1, "chorus-distinctiveness") {
+            MetricValue::Number(n) => n,
+            other => panic!("seed 1: expected Number, got {other:?}"),
+        };
+        let d2 = match extract(&seed2, "chorus-distinctiveness") {
+            MetricValue::Number(n) => n,
+            other => panic!("seed 2: expected Number, got {other:?}"),
+        };
+        assert!(
+            d2 > d1,
+            "seed 2 distinctiveness ({d2}) should exceed seed 1's ({d1})"
+        );
+    }
+
+    #[test]
+    fn chorus_metrics_are_absent_on_empty_and_singleton_voice_lists() {
+        // Drive the metric helpers directly with an empty/singleton voice
+        // list, rather than hunting for a 0-people seed.
+        assert_eq!(chorus_distortion_metric_over(&[]), MetricValue::Absent);
+        assert_eq!(chorus_recoverability_metric_over(&[]), MetricValue::Absent);
+        assert_eq!(chorus_distinctiveness_metric_over(&[]), MetricValue::Absent);
+        assert_eq!(chorus_variance_metric_over(&[]), MetricValue::Absent);
+        assert_eq!(chorus_param_spread_metric_over(&[]), MetricValue::Absent);
+        assert_eq!(chorus_sky_calibration_metric_over(&[]), MetricValue::Absent);
+
+        let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
+        let one_voice: Vec<ChorusVoice> = chorus_voices(&view).into_iter().take(1).collect();
+        assert_eq!(one_voice.len(), 1, "seed 1 must place at least one voice");
+        assert!(matches!(
+            chorus_distortion_metric_over(&one_voice),
+            MetricValue::Number(_)
+        ));
+        assert!(matches!(
+            chorus_recoverability_metric_over(&one_voice),
+            MetricValue::Number(_)
+        ));
+        assert_eq!(
+            chorus_distinctiveness_metric_over(&one_voice),
+            MetricValue::Absent
+        );
+        assert_eq!(chorus_variance_metric_over(&one_voice), MetricValue::Absent);
+        assert_eq!(
+            chorus_param_spread_metric_over(&one_voice),
+            MetricValue::Absent
+        );
+        assert_eq!(
+            chorus_sky_calibration_metric_over(&one_voice),
+            MetricValue::Absent
         );
     }
 }

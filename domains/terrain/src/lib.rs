@@ -18,6 +18,7 @@ pub mod render;
 pub mod rift;
 pub mod shape;
 pub mod streams;
+pub mod water;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use carve::{
@@ -32,8 +33,12 @@ pub use lithology::{
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
+pub use water::{RIVER_MIN_DRAINAGE, WaterKind};
 
-use hornvale_kernel::{ConceptKind, ConceptRegistry, EntityId, RegistryError, World};
+use hornvale_kernel::{
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Lexicalization, Manifest,
+    RegistryError, Void, World,
+};
 
 /// The *default* subdivision level of the shared Geosphere (10 × 4^6 + 2 =
 /// 40,962 cells, ~110 km resolution) — used when `TerrainPins.globe_level`
@@ -123,6 +128,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 
 /// Register terrain's contribution to the concept registry: the tier-0
 /// place predicates plus the tectonic summary predicates. Idempotent.
+///
+/// The stone/mountain/sea concepts register through their correspondence
+/// [`Manifest`]: each is an everyday nameable landscape thing, so its lexeme
+/// edge declares `Expected`; terrain emits no phenomenon kind for them, so the
+/// percept edge is a `Gap`; and cognition voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_predicate(IS_PLACE, true, "subject is a traversable place")?;
     registry.register_predicate(BIOME, true, "biome of a place")?;
@@ -168,14 +178,26 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "the globe's one drawn global spreading rate",
     )?;
 
-    registry.register_concept("stone", "terrain", ConceptKind::Substance, "rock")?;
-    registry.register_concept("mountain", "terrain", ConceptKind::Terrain, "high ground")?;
-    registry.register_concept(
-        "sea",
-        "terrain",
-        ConceptKind::Terrain,
-        "a body of salt water",
-    )
+    for (name, kind, doc) in [
+        ("stone", ConceptKind::Substance, "rock"),
+        ("mountain", ConceptKind::Terrain, "high ground"),
+        ("sea", ConceptKind::Terrain, "a body of salt water"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "terrain".to_string(),
+                kind,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Present(Lexicalization::Expected),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
+    Ok(())
 }
 
 /// Terrain as a registrable unit for the composition-root roster.

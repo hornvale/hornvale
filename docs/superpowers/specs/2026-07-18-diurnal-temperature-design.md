@@ -1,6 +1,6 @@
 # Diurnal Temperature — design
 
-**Date:** 2026-07-18 · **Status:** awaiting G3 review
+**Date:** 2026-07-18 · **Status:** SHIPPED (2026-07-18) — diurnal term + orrery "watch a day"; see [chronicle](../../../book/src/chronicle/the-turning.md).
 **Program:** the first campaign of the **Weather Program** (below).
 **Sibling:** The Wandering Sun (seasonal/locked libration on `temperature_at`);
 this is its intra-day twin.
