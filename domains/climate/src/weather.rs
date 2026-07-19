@@ -116,15 +116,19 @@ pub fn weather_state(propensity: f64, phase: f64) -> WeatherState {
     }
 }
 
-/// Whether high, thin cirrus is present — the leading edge of an approaching
-/// system: a moderately storm-prone cell whose phase is *rising toward* activity
-/// but has not yet built a low deck. A diagnostic overlay, independent of the
-/// low-cloud rung.
+/// Whether high, thin cirrus is present — the leading edge of a nearby system
+/// over an otherwise clear sky. Cirrus is a **subset of the `Clear` state**: it
+/// only shows when [`weather_state`] returns `Clear` (so [`cloud_type`] actually
+/// consults it), specifically in the *upper* clear band — an intensity just
+/// short of Fair, with enough propensity that a system is plausibly near. Its
+/// window must sit inside `weather_state`'s `Clear` cutoff (`intensity < 0.15`)
+/// or the overlay is unreachable (the low deck wins).
 /// type-audit: bare-ok(ratio: propensity), bare-ok(diagnostic-value: phase), bare-ok(flag: return)
 pub fn cirrus_present(propensity: f64, phase: f64) -> bool {
-    // Precursor band: some propensity, phase in the "building" range where the
-    // state is still Clear/Fair (see weather_state thresholds).
-    propensity > 0.25 && (0.0..0.3).contains(&phase)
+    let intensity = propensity.clamp(0.0, 1.0) + PHASE_AMPLITUDE * phase;
+    // Some propensity (a system to precede) AND a still-clear sky in the top
+    // slice of the Clear band (intensity approaching, but below, Fair's 0.15).
+    propensity > 0.1 && (0.05..0.15).contains(&intensity)
 }
 
 /// The cloud a sky wears — a total projection of its state, with cirrus filling
@@ -159,18 +163,56 @@ mod tests {
     use super::*;
     use hornvale_kernel::Seed;
 
-    // Propensity tracks the fields: a wet, rising, warm, ocean-adjacent cell is
-    // more storm-prone than a dry, subsiding, cool, interior one. This isolates
-    // the mechanism — flip any driver and the ordering breaks.
+    // Propensity tracks the fields — EACH driver in isolation. Holding the other
+    // three fixed, raising any one driver must raise propensity; so dropping any
+    // one driver from the formula breaks exactly its assert (a per-driver
+    // mutation guard, unlike an all-four-differ comparison which a single-driver
+    // formula still passes).
     #[test]
-    fn propensity_tracks_the_fields() {
-        let stormy = storm_propensity(0.9, true, 28.0, true);
-        let calm = storm_propensity(0.1, false, 2.0, false);
+    fn propensity_tracks_each_field() {
+        let base = storm_propensity(0.5, false, 15.0, false);
         assert!(
-            stormy > calm,
-            "wet/rising/warm/coastal must out-propensity dry/subsiding/cool/interior: {stormy} vs {calm}"
+            storm_propensity(0.9, false, 15.0, false) > base,
+            "more moisture raises propensity"
         );
-        assert!((0.0..=1.0).contains(&stormy) && (0.0..=1.0).contains(&calm));
+        assert!(
+            storm_propensity(0.5, true, 15.0, false) > base,
+            "uplift (rising band) raises propensity"
+        );
+        assert!(
+            storm_propensity(0.5, false, 28.0, false) > base,
+            "warmth raises propensity"
+        );
+        assert!(
+            storm_propensity(0.5, false, 15.0, true) > base,
+            "ocean adjacency raises propensity"
+        );
+        // Bounded.
+        assert!((0.0..=1.0).contains(&storm_propensity(0.9, true, 28.0, true)));
+        assert!((0.0..=1.0).contains(&storm_propensity(0.0, false, -10.0, false)));
+    }
+
+    // The Cirrus overlay is REACHABLE through the real composition — not just by
+    // hand-constructing (Clear, true). There exists a (propensity, phase) where
+    // weather_state is Clear AND cirrus_present is true, so cloud_type yields
+    // Cirrus. Guards the defect where cirrus_present's window sat outside Clear's
+    // intensity cutoff and the overlay was dead code.
+    #[test]
+    fn cirrus_is_reachable_through_the_real_composition() {
+        let mut reached = false;
+        for pi in 0..=100 {
+            for phi in -100..=100 {
+                let p = f64::from(pi) / 100.0;
+                let ph = f64::from(phi) / 100.0;
+                if cloud_type(weather_state(p, ph), cirrus_present(p, ph)) == CloudType::Cirrus {
+                    reached = true;
+                }
+            }
+        }
+        assert!(
+            reached,
+            "CloudType::Cirrus is unreachable via weather_state x cirrus_present"
+        );
     }
 
     // The state ladder is monotone in the combined intensity: raising the phase
