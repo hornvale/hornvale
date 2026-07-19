@@ -115,6 +115,10 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
     let mut unnamed: Vec<&str> = Vec::new();
     let mut unperceived: Vec<&str> = Vec::new();
     let mut cognition_waves: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    // The phenomenon kinds some concept's percept edge actually names. Any
+    // registered kind NOT in here is an orphan — a phenomenon the world can
+    // emit that no concept accounts for (the inverse correspondence gap).
+    let mut named_kinds: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
 
     for m in &manifests {
         match &m.lexeme {
@@ -125,7 +129,10 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
             }
         }
         match &m.percept {
-            Correspondent::Present(_) => per.covered += 1,
+            Correspondent::Present(pk) => {
+                per.covered += 1;
+                named_kinds.insert(pk.0.as_str());
+            }
             Correspondent::Absent(v) => {
                 per.add_void(v);
                 unperceived.push(m.concept.name.as_str());
@@ -141,6 +148,16 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
             }
         }
     }
+
+    // Orphan phenomena: registered kinds no concept's percept names. The
+    // inverse of `unperceived` — there, a concept has no phenomenon; here, a
+    // phenomenon has no concept, so the world can emit an observation nothing
+    // can name, speak, or reason about.
+    let orphan_phenomena: Vec<&str> = registry
+        .phenomenon_kinds()
+        .map(|(k, _doc)| k)
+        .filter(|k| !named_kinds.contains(k))
+        .collect();
 
     let list = |names: &[&str]| {
         if names.is_empty() {
@@ -174,7 +191,9 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
          must name why. The *concept* anchor and the *compute* ledger are implicit and \
          omitted below: every registered concept IS modeled, so those columns are always \
          covered. This page is the negative space made honest — the gaps are typed, not \
-         silent.\n\n",
+         silent. The audit also runs in reverse: **orphan phenomena** are kinds the world \
+         can emit that no concept names, so an observation exists with nothing to attach \
+         it to.\n\n",
     );
 
     doc.push_str("## Backlog (the negative space)\n\n");
@@ -183,6 +202,10 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
     doc.push_str(&format!(
         "Unperceived (percept gap): {}\n",
         list(&unperceived)
+    ));
+    doc.push_str(&format!(
+        "Orphan phenomena (emitted, no concept names): {}\n",
+        list(&orphan_phenomena)
     ));
     doc.push_str(&format!(
         "Uncognized (cognition, all pending): {} concepts{}\n",
@@ -322,6 +345,7 @@ mod tests {
             "## Backlog (the negative space)",
             "Unnamed (lexeme gap):",
             "Unperceived (percept gap):",
+            "Orphan phenomena (emitted, no concept names):",
             "Uncognized (cognition, all pending):",
             "Trial balance (per ledger: covered + voids =",
             "[wave-cognition]",
@@ -333,6 +357,34 @@ mod tests {
             "| `ice` | Gap |",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
+        }
+    }
+
+    #[test]
+    fn manifest_render_lists_orphan_phenomena() {
+        let mut registry = ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let doc = render_manifest(&registry);
+        let orphan_line = doc
+            .lines()
+            .find(|l| l.starts_with("Orphan phenomena"))
+            .unwrap_or_else(|| panic!("no orphan-phenomena line in the manifest view"));
+        // Kinds the world emits that still no concept names (astronomy's
+        // remaining sky events) must be surfaced.
+        for orphan in ["seasonal-cycle", "wandering-star", "heliacal-rising"] {
+            assert!(
+                orphan_line.contains(orphan),
+                "orphan phenomenon '{orphan}' should be surfaced; line was: {orphan_line}"
+            );
+        }
+        // Kinds a concept DOES name must NOT be listed: eclipse/tide were given
+        // concepts (percept -> their kind); wind -> ambient, sun/moon ->
+        // celestial-body, star -> night-star.
+        for named in ["eclipse", "tide", "ambient", "celestial-body"] {
+            assert!(
+                !orphan_line.contains(named),
+                "'{named}' is named by a concept and must not be an orphan; line: {orphan_line}"
+            );
         }
     }
 

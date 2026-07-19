@@ -16,7 +16,7 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Lexicalization, Manifest, PerceptKind,
     RegistryError, Void,
 };
 
@@ -415,8 +415,9 @@ pub fn in_ladder(entry: &PackEntry, depths: &PackDepths) -> bool {
 /// Each language-owned concept registers through its correspondence
 /// [`Manifest`]. These are the lexeme owner, so every one declares `Expected`
 /// (the concrete word is realized per-species later, per the hybrid model);
-/// language emits no phenomenon kind for them, so the percept edge is a `Gap`;
-/// and cognition voids to the future cognition wave.
+/// language emits no phenomenon of its own, so the percept edge is a `Gap` —
+/// except `wind`, perceived through climate's `ambient` phenomenon (referenced
+/// by key); and cognition voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     let packs = universal_stratum()
         .iter()
@@ -427,6 +428,18 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         if registry.concept(entry.concept).is_some() {
             continue;
         }
+        // `wind` is perceived through climate's `ambient` phenomenon — the
+        // composition root glosses that phenomenon back to this concept. Its
+        // percept edge references that kind by key (a cross-domain reference,
+        // not a crate dependency); `register_manifest` validates the key is
+        // registered, so a climate rename would fail loudly here. In the roster
+        // climate registers `ambient` before language runs. Every other
+        // language concept has no phenomenon of its own, so its percept is a Gap.
+        let percept = if entry.concept == "wind" {
+            Correspondent::Present(PerceptKind("ambient".to_string()))
+        } else {
+            Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet"))
+        };
         registry.register_manifest(Manifest {
             concept: ConceptDef {
                 name: entry.concept.to_string(),
@@ -435,7 +448,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
                 doc: entry.doc.to_string(),
             },
             lexeme: Correspondent::Present(Lexicalization::Expected),
-            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            percept,
             cognition: Correspondent::Absent(Void::Uncognized {
                 pending_wave: "wave-cognition",
             }),
@@ -448,9 +461,20 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 mod tests {
     use super::*;
 
+    /// A registry with climate's `ambient` phenomenon kind pre-registered, so
+    /// language's `wind` manifest — whose percept references that kind — can be
+    /// registered standalone. In the real roster climate registers it first;
+    /// these unit tests register language in isolation, so they supply it.
+    fn registry_with_ambient() -> ConceptRegistry {
+        let mut r = ConceptRegistry::default();
+        r.register_phenomenon_kind("ambient", "a pervasive atmospheric condition")
+            .unwrap();
+        r
+    }
+
     #[test]
     fn water_is_registered_with_domain_language() {
-        let mut r = ConceptRegistry::default();
+        let mut r = registry_with_ambient();
         register_concepts(&mut r).unwrap();
         let def = r
             .concept("water")
@@ -489,7 +513,7 @@ mod tests {
 
     #[test]
     fn every_recipe_ingredient_is_a_registered_concept() {
-        let mut r = ConceptRegistry::default();
+        let mut r = registry_with_ambient();
         register_concepts(&mut r).unwrap();
         for (concept, _, _) in RECIPES {
             let (modifier, head) = compound_recipe(concept)
@@ -515,7 +539,7 @@ mod tests {
 
     #[test]
     fn registering_after_astronomy_does_not_conflict_on_sun() {
-        let mut r = ConceptRegistry::default();
+        let mut r = registry_with_ambient();
         r.register_manifest(Manifest {
             concept: ConceptDef {
                 name: "sun".to_string(),

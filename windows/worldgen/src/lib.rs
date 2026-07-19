@@ -13,7 +13,7 @@ use hornvale_astronomy::{
 };
 use hornvale_climate::{
     AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
-    UniformClimate,
+    UniformClimate, diurnal_waveform,
 };
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -1174,6 +1174,90 @@ pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
             summary.habitable_fraction * 100.0
         ),
     ])
+}
+
+/// The number of `day_fraction` samples used to find `diurnal_waveform`'s
+/// peak for [`diurnal_lines`] — a one-time-per-render search, not the hot
+/// generation path (mirrors the sampling `domains/climate`'s own tests use
+/// to locate the same peak).
+const DIURNAL_PEAK_SAMPLES: u32 = 200;
+
+/// The diurnal-range headline lines for the almanac's Land section (The
+/// Turning, spec §2): the peak-to-peak day/night swing at two sample
+/// sites — the driest interior land cell (the globe's largest diurnal
+/// amplitude) and the genuinely open-ocean cell (the globe's SMALLEST
+/// diurnal amplitude among ocean cells — a coastal cell's nontrivial
+/// continentality still gives it a small-but-nonzero swing, understating
+/// the "small" claim the line makes) — so the reader sees both ends of the
+/// range. Empty for tidally locked worlds and worlds with no land at all:
+/// locked worlds have no rotation-scale day/night cycle (`temperature_at`'s
+/// `Locked` branch never applies `diurnal_amp_at`).
+/// type-audit: bare-ok(prose: return)
+pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    let climate = climate_of(world)?;
+    let RotationRegime::Spinning { day_std } = climate.regime() else {
+        return Ok(Vec::new());
+    };
+    let terrain = terrain_of(world)?;
+    let geo = terrain.geosphere();
+    let obliquity = climate.obliquity_deg();
+
+    // Longitude 0.0: sweeping `day_fraction` over a full rotation sweeps all
+    // local solar times regardless of longitude (a pure phase shift), so the
+    // peak found here is longitude-invariant.
+    let geo_peak_at = |latitude_deg: f64| -> f64 {
+        (0..DIURNAL_PEAK_SAMPLES)
+            .map(|i| {
+                diurnal_waveform(
+                    latitude_deg,
+                    0.0,
+                    obliquity,
+                    0.0,
+                    f64::from(i) / f64::from(DIURNAL_PEAK_SAMPLES),
+                    day_std,
+                )
+            })
+            .fold(f64::MIN, f64::max)
+    };
+
+    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
+    for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
+        if terrain.is_ocean(cell) {
+            // Genuinely open ocean is the MINIMUM-amplitude ocean cell — a
+            // coastal cell's nontrivial continentality still gives it a
+            // small-but-nonzero swing, understating the "small" claim.
+            // `geo.cells()` is in CellId order, so `amp < best` (strict)
+            // keeps the first-seen cell on ties, a deterministic tie-break.
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
+            }
+            continue;
+        }
+        if driest.is_none_or(|(_, best)| amp > best) {
+            driest = Some((cell, amp));
+        }
+    }
+
+    let mut lines = Vec::new();
+    if let Some((cell, amp)) = driest {
+        let lat = geo.coord(cell).latitude;
+        lines.push(hornvale_almanac::render_diurnal_range_line(
+            "The driest interior",
+            amp,
+            geo_peak_at(lat),
+        ));
+    }
+    if let Some((cell, amp)) = ocean {
+        let lat = geo.coord(cell).latitude;
+        lines.push(hornvale_almanac::render_diurnal_range_line(
+            "The open ocean",
+            amp,
+            geo_peak_at(lat),
+        ));
+    }
+    Ok(lines)
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
@@ -3961,6 +4045,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         land_lines: land_lines(world)?,
         biome_lines: biome_lines(world)?,
         ground_lines: ground_lines(world)?,
+        diurnal_lines: diurnal_lines(world)?,
         deep_time_lines,
         peoples,
         pantheons: {
@@ -5327,6 +5412,56 @@ mod tests {
         let lines = biome_lines(&generated(42)).unwrap();
         assert!(!lines.is_empty());
         assert!(lines.iter().any(|l| l.contains("habitable")));
+    }
+
+    // A spinning world names both sample sites and reads a real range for
+    // the driest interior; a locked world has no rotation-scale day/night
+    // cycle at all, so its diurnal lines are honestly empty.
+    #[test]
+    fn diurnal_lines_show_dry_interior_and_ocean_and_are_empty_when_locked() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Normal),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = diurnal_lines(&spinning).unwrap();
+        assert_eq!(
+            lines.len(),
+            2,
+            "expected one line per sample site: {lines:?}"
+        );
+        assert!(lines[0].contains("The driest interior"));
+        assert!(lines[1].contains("The open ocean"));
+
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        assert!(
+            diurnal_lines(&locked).unwrap().is_empty(),
+            "locked worlds have no diurnal cycle to report"
+        );
+    }
+
+    #[test]
+    fn diurnal_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.diurnal_lines, diurnal_lines(&world).unwrap());
     }
 
     #[test]

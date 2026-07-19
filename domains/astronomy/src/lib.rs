@@ -426,6 +426,38 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             }),
         })?;
     }
+    // eclipse and tide are astronomy's sky *events*: each has a registered
+    // phenomenon kind but no culture-word yet, so the lexeme is an honest Gap
+    // while the percept references the event. This lifts them out of the
+    // manifest audit's orphan list — a phenomenon a concept now names. (`tide`
+    // is filed Celestial as a moon-driven event; it is arguably Terrain, a
+    // one-field change if that reading is preferred.)
+    for (name, doc, percept) in [
+        (
+            "eclipse",
+            "the darkening when a moon crosses the sun, or the world's shadow crosses a moon",
+            ECLIPSE,
+        ),
+        (
+            "tide",
+            "the rise and fall of the waters under the moons",
+            TIDE,
+        ),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "astronomy".to_string(),
+                kind: ConceptKind::Celestial,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no pack names this sky event yet")),
+            percept: Correspondent::Present(PerceptKind(percept.to_string())),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
     registry.register_manifest(Manifest {
         concept: ConceptDef {
             name: "night".to_string(),

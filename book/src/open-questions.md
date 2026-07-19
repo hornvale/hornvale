@@ -171,6 +171,27 @@ second committed copy only adds a thing to drift. The seam generalizes; the
 check that it is *seen* is now practiced at the source; and the golden is
 calibrated to the one case that needs it.
 
+[The Turning](./chronicle/the-turning.md) sharpened the *seen* check one turn
+further, and in the harder direction. Its diurnal temperature crosses the seam
+as another recomputed closed-form function (the client reads a per-cell
+amplitude and re-derives the waveform, golden-pinned at the tile centre it
+evaluates) — but the finding was about review, not transport. The waveform
+shipped physically wrong: it keyed the day/night phase to the *global* fraction
+of the day, so the whole planet pulsed in unison instead of a warm band
+sweeping per longitude. It passed the Task-1 implementer, its per-task reviewer
+(who verified the formula matched the brief *line by line* — and it did), and
+three further reviews, because **every one of them checked the code against the
+spec, and the spec's formula was itself the error.** Only the producer
+campaign's own visual pass — the globe run forward, the lens pulsing the entire
+hemisphere at once — caught it. So the check the bet still lacks is larger than
+"does some consumer draw this?": it is *does the drawn thing look like the
+phenomenon?* A formula can be internally consistent, faithfully transported,
+correctly parsed, and **physically wrong**, and no review that treats the
+specification as ground truth will see it. The visual pass is the only reviewer
+that checks the model against reality rather than against the plan — which makes
+it, for physical fields, not a courtesy at the end but the gate that closes the
+loop.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

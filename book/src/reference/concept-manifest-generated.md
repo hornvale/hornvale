@@ -2,19 +2,20 @@
 
 # Concept Manifest — the correspondence ledger
 
-Every registered concept is carried across three correspondence ledgers — **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a handle) — or is explicitly, reason-bearingly *absent* from one, an absence that must name why. The *concept* anchor and the *compute* ledger are implicit and omitted below: every registered concept IS modeled, so those columns are always covered. This page is the negative space made honest — the gaps are typed, not silent.
+Every registered concept is carried across three correspondence ledgers — **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a handle) — or is explicitly, reason-bearingly *absent* from one, an absence that must name why. The *concept* anchor and the *compute* ledger are implicit and omitted below: every registered concept IS modeled, so those columns are always covered. This page is the negative space made honest — the gaps are typed, not silent. The audit also runs in reverse: **orphan phenomena** are kinds the world can emit that no concept names, so an observation exists with nothing to attach it to.
 
 ## Backlog (the negative space)
 
 ```text
-Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, bugbear-kind, coral-reef, desert, epipelagic, goblin-kind, god, hadal-trench, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, rain, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tropical-rainforest, tropical-seasonal-forest, tundra, upwelling
-Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, rain, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, snow, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, wind, yellow
-Uncognized (cognition, all pending): 72 concepts [wave-cognition]
+Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, bugbear-kind, coral-reef, desert, eclipse, epipelagic, goblin-kind, god, hadal-trench, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, rain, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tide, tropical-rainforest, tropical-seasonal-forest, tundra, upwelling
+Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, rain, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, snow, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, yellow
+Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, seasonal-cycle, wandering-star
+Uncognized (cognition, all pending): 74 concepts [wave-cognition]
 
-Trial balance (per ledger: covered + voids = 72 concepts):
-  lexeme:    covered 40  gap 32
-  percept:   covered 3  gap 69
-  cognition: covered 0  uncognized 72
+Trial balance (per ledger: covered + voids = 74 concepts):
+  lexeme:    covered 40  gap 34
+  percept:   covered 6  gap 68
+  cognition: covered 0  uncognized 74
 ```
 
 ## Matrix
@@ -37,6 +38,7 @@ Trial balance (per ledger: covered + voids = 72 concepts):
 | `die` | Expected | Gap | pending(wave-cognition) |
 | `earth` | Expected | Gap | pending(wave-cognition) |
 | `eat` | Expected | Gap | pending(wave-cognition) |
+| `eclipse` | Gap | `eclipse` | pending(wave-cognition) |
 | `epipelagic` | Gap | Gap | pending(wave-cognition) |
 | `eye` | Expected | Gap | pending(wave-cognition) |
 | `fire` | Expected | Gap | pending(wave-cognition) |
@@ -84,6 +86,7 @@ Trial balance (per ledger: covered + voids = 72 concepts):
 | `temperate-forest` | Gap | Gap | pending(wave-cognition) |
 | `temperate-grassland` | Gap | Gap | pending(wave-cognition) |
 | `temperate-rainforest` | Gap | Gap | pending(wave-cognition) |
+| `tide` | Gap | `tide` | pending(wave-cognition) |
 | `tree` | Expected | Gap | pending(wave-cognition) |
 | `tropical-rainforest` | Gap | Gap | pending(wave-cognition) |
 | `tropical-seasonal-forest` | Gap | Gap | pending(wave-cognition) |
@@ -91,5 +94,5 @@ Trial balance (per ledger: covered + voids = 72 concepts):
 | `two` | Expected | Gap | pending(wave-cognition) |
 | `upwelling` | Gap | Gap | pending(wave-cognition) |
 | `water` | Expected | Gap | pending(wave-cognition) |
-| `wind` | Expected | Gap | pending(wave-cognition) |
+| `wind` | Expected | `ambient` | pending(wave-cognition) |
 | `yellow` | Expected | Gap | pending(wave-cognition) |

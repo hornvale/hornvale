@@ -332,10 +332,12 @@ pub fn region_json(scene: &RegionScene) -> String {
 
 /// Per-node actual temperature at `day`, °C, on the same node grid as
 /// [`tiles_region_scene`] — the barycentric interpolation of `temperature_at`.
-/// This equals `t_mean_c[i] + t_swing_c[i]·sin(τ·frac(day/period))` because the
-/// seasonal period is global, so interpolation commutes with the evaluator
-/// (The Region §3.4). Full precision (not quantized); the cross-repo contract
-/// test pins the client's reconstruction against these values.
+/// This equals `t_mean_c[i] + t_swing_c[i]·sin(τ·frac(day/period))` plus the
+/// interpolated diurnal term (spinning worlds only), because interpolation is
+/// linear and so distributes over every additive term `temperature_at` sums
+/// per cell — interpolation commutes with the evaluator (The Region §3.4).
+/// Full precision (not quantized); the cross-repo contract test pins the
+/// client's reconstruction against these values.
 /// type-audit: bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), bare-ok(diagnostic-value: day), bare-ok(diagnostic-value: return)
 pub fn temperature_grid_region(
     world: &World,
@@ -368,6 +370,7 @@ pub fn temperature_grid_region(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hornvale_climate::RotationRegime;
 
     fn addr(face: u32, level: u32, ix: u32, iy: u32, samples: u32) -> RegionAddr {
         RegionAddr {
@@ -596,6 +599,41 @@ mod tests {
         );
     }
 
+    /// The per-node diurnal contribution, reconstructed exactly the way
+    /// `temperature_at` computes it per-cell (own latitude, own precomputed
+    /// amplitude) and then barycentrically interpolated — the same order of
+    /// operations `interp(temperature_at)` performs internally, so this is an
+    /// exact algebraic identity (interpolation distributes over the sum),
+    /// not an approximation. Exactly `0.0` when the world is locked (the
+    /// diurnal term never applies there, however nonzero the precomputed
+    /// amplitude field happens to be).
+    fn interp_diurnal(
+        climate: &hornvale_climate::GeneratedClimate,
+        c_index: &NearestCellIndex,
+        s: [f64; 3],
+        obliquity_deg: f64,
+        year_phase: f64,
+        day_fraction: f64,
+    ) -> f64 {
+        let RotationRegime::Spinning { day_std } = climate.regime() else {
+            return 0.0;
+        };
+        interp(climate.geosphere(), c_index, s, |c| {
+            let coord = climate.geosphere().coord(c);
+            let amp = climate.diurnal_amp_at(c);
+            hornvale_climate::diurnal_anomaly(
+                amp,
+                coord.latitude,
+                coord.longitude,
+                obliquity_deg,
+                year_phase,
+                day_fraction,
+                day_std,
+            )
+            .get()
+        })
+    }
+
     #[test]
     fn temperature_grid_region_commutes_with_the_evaluator() {
         let w = gen42();
@@ -613,23 +651,30 @@ mod tests {
         };
         let period = climate.year_length_std();
         let offset = climate.year_phase_offset();
+        let obliquity_deg = climate.obliquity_deg();
         let tau = std::f64::consts::TAU;
         for day in [0.0_f64, 91.3, 200.0, 366.5] {
             let grid = temperature_grid_region(&w, face, level, ix, iy, samples, day).unwrap();
-            let theta = hornvale_kernel::math::sin(tau * (day / period + offset).rem_euclid(1.0));
+            let phase = (day / period + offset).rem_euclid(1.0);
+            let theta = hornvale_kernel::math::sin(tau * phase);
+            let day_fraction = day.rem_euclid(1.0);
             for (i, s) in addr.node_units().iter().enumerate() {
                 // `grid[i]` is interp(temperature_at) (form A); `rhs` is
-                // interp(mean) + interp(swing)·θ (form B). Commutation is exact
-                // in real arithmetic but only to float rounding here (weighted
-                // sums reduce in a different order), so assert tight-approximate
-                // — NOT assert_eq!.
+                // interp(mean) + interp(swing)·θ + interp(diurnal) (form B).
+                // Commutation is exact in real arithmetic — interpolation is
+                // linear and distributes over the sum of the three additive
+                // terms `temperature_at` computes per-cell — but only to
+                // float rounding here (weighted sums reduce in a different
+                // order), so assert tight-approximate — NOT assert_eq!.
                 let mean = interp(climate.geosphere(), &c_index, *s, |c| {
                     climate.mean_temperature_at(c).get()
                 });
                 let swing = interp(climate.geosphere(), &c_index, *s, |c| {
                     climate.seasonal_swing_at(c)
                 });
-                let rhs = mean + swing * theta;
+                let diurnal =
+                    interp_diurnal(&climate, &c_index, *s, obliquity_deg, phase, day_fraction);
+                let rhs = mean + swing * theta + diurnal;
                 assert!(
                     (grid[i] - rhs).abs() <= 1e-9 * grid[i].abs().max(1.0),
                     "commutation node {i} day {day}: {} vs {}",
@@ -641,22 +686,38 @@ mod tests {
     }
 
     #[test]
-    fn temperature_grid_region_at_zero_phase_equals_t_mean() {
+    fn temperature_grid_region_at_zero_phase_equals_t_mean_plus_diurnal() {
         let w = gen42();
         let climate = climate_of(&w).unwrap();
         // The seasonal term vanishes at `frac(day/year + offset) = 0`, which is
         // day zero only when `year_phase_offset` is zero — so shift the probed
-        // day by the true offset rather than assuming day zero.
+        // day by the true offset rather than assuming day zero. The diurnal
+        // term does NOT vanish here (it depends on the day's fractional part,
+        // not the year phase), so the expected value is `t_mean_c` plus the
+        // interpolated diurnal contribution — not `t_mean_c` alone.
         let period = climate.year_length_std();
         let offset = climate.year_phase_offset();
+        let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
+        let c_index = NearestCellIndex::new(climate.geosphere());
+        let addr = RegionAddr {
+            face: 0,
+            level: 3,
+            ix: 4,
+            iy: 4,
+            samples: 16,
+        };
         let grid = temperature_grid_region(&w, 0, 3, 4, 4, 16, zero_phase_day).unwrap();
         let scene = tiles_region_scene(&w, 0, 3, 4, 4, 16).unwrap();
-        for (g, m) in grid.iter().zip(scene.t_mean_c.iter()) {
+        let day_fraction = zero_phase_day.rem_euclid(1.0);
+        for (i, (g, m)) in grid.iter().zip(scene.t_mean_c.iter()).enumerate() {
+            let s = addr.node_units()[i];
+            let diurnal = interp_diurnal(&climate, &c_index, s, obliquity_deg, 0.0, day_fraction);
+            let expected = m + diurnal;
             // grid is full precision; t_mean_c is quantized — agree to ~8 sig digits.
             assert!(
-                (g - m).abs() <= 1e-6 * g.abs().max(1.0),
-                "zero-phase grid vs t_mean: {g} vs {m}"
+                (g - expected).abs() <= 1e-6 * g.abs().max(1.0),
+                "zero-phase grid vs t_mean+diurnal: {g} vs {expected}"
             );
         }
     }

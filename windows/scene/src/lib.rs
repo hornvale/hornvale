@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -137,6 +137,11 @@ pub struct TilesScene {
     /// Hemisphere-signed seasonal half-swing per tile, °C (0 when locked/zero-obliquity).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub t_swing_c: Vec<f64>,
+    /// Per-tile diurnal half-range amplitude, °C (always `>= 0`; the
+    /// coefficient a client scales the diurnal waveform by — see
+    /// `hornvale_climate::diurnal_waveform`).
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub t_diurnal_amp_c: Vec<f64>,
     /// The seasonal sinusoid's period, standard days (the world's year).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
     pub season_period_days: f64,
@@ -186,6 +191,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut unrest = Vec::with_capacity(tiles);
     let mut t_mean_c = Vec::with_capacity(tiles);
     let mut t_swing_c = Vec::with_capacity(tiles);
+    let mut t_diurnal_amp_c = Vec::with_capacity(tiles);
     let mut moisture = Vec::with_capacity(tiles);
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
@@ -205,6 +211,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             unrest.push(terrain.unrest_at(t_cell));
             t_mean_c.push(climate.mean_temperature_at(c_cell).get());
             t_swing_c.push(climate.seasonal_swing_at(c_cell));
+            t_diurnal_amp_c.push(climate.diurnal_amp_at(c_cell));
             moisture.push(climate.moisture_at(c_cell));
         }
     }
@@ -214,6 +221,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(unrest.iter())
             .chain(t_mean_c.iter())
             .chain(t_swing_c.iter())
+            .chain(t_diurnal_amp_c.iter())
             .chain(moisture.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
@@ -233,6 +241,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         features: features_of(world),
         t_mean_c,
         t_swing_c,
+        t_diurnal_amp_c,
         season_period_days: climate.year_length_std(),
         circulation_bands: climate.band_count(),
         moisture,
@@ -1042,6 +1051,13 @@ mod tests {
         let tiles = (scene.width * scene.height) as usize;
         assert_eq!(scene.t_mean_c.len(), tiles);
         assert_eq!(scene.t_swing_c.len(), tiles);
+        assert_eq!(scene.t_diurnal_amp_c.len(), tiles);
+        assert!(
+            scene
+                .t_diurnal_amp_c
+                .iter()
+                .all(|a| a.is_finite() && *a >= 0.0)
+        );
         assert_eq!(scene.moisture.len(), tiles);
         assert!(scene.moisture.iter().all(|&m| (0.0..=1.0).contains(&m)));
         assert_eq!(scene.season_period_days, 365.25); // constant-sun default year
@@ -1220,17 +1236,46 @@ mod tests {
             }
         }
 
-        // At the true zero-phase day the seasonal sine term is exactly zero, so
-        // temperature_grid must agree with tiles_scene's t_mean_c (mean at zero
-        // phase). Day zero only coincides with zero phase when
-        // `year_phase_offset` is zero, so shift the probed day by the offset.
+        // At the true zero-phase day the seasonal sine term is exactly zero,
+        // so temperature_grid must agree with tiles_scene's t_mean_c (mean at
+        // zero phase) plus the diurnal term — which does NOT vanish here (it
+        // depends on the day's fractional part, not the year phase). Day zero
+        // only coincides with zero phase when `year_phase_offset` is zero, so
+        // shift the probed day by the offset.
+        use hornvale_climate::RotationRegime;
         let period = climate.year_length_std();
         let offset = climate.year_phase_offset();
+        let obliquity_deg = climate.obliquity_deg();
         let zero_phase_day = (-offset).rem_euclid(1.0) * period;
+        let day_fraction = zero_phase_day.rem_euclid(1.0);
         let zero_grid = temperature_grid(&world, width, zero_phase_day).expect("grid builds");
         let scene = tiles_scene(&world, width).expect("scene builds");
-        for (g, m) in zero_grid.iter().zip(scene.t_mean_c.iter()) {
-            assert_eq!(*g, *m, "zero-phase temperature_grid must equal t_mean_c");
+        let mut i = 0;
+        for py in 0..height {
+            let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
+            for px in 0..width {
+                let longitude = (f64::from(px) + 0.5) / f64::from(width) * 360.0 - 180.0;
+                let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
+                let diurnal = match climate.regime() {
+                    RotationRegime::Locked => 0.0,
+                    RotationRegime::Spinning { day_std } => hornvale_climate::diurnal_anomaly(
+                        climate.diurnal_amp_at(c_cell),
+                        climate.geosphere().coord(c_cell).latitude,
+                        climate.geosphere().coord(c_cell).longitude,
+                        obliquity_deg,
+                        0.0, // year phase is exactly zero at zero_phase_day, by construction
+                        day_fraction,
+                        day_std,
+                    )
+                    .get(),
+                };
+                let expected = scene.t_mean_c[i] + diurnal;
+                assert_eq!(
+                    zero_grid[i], expected,
+                    "zero-phase temperature_grid must equal t_mean_c + diurnal at tile {i}"
+                );
+                i += 1;
+            }
         }
     }
 

@@ -102,7 +102,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -122,6 +122,11 @@ pub struct AlmanacContext {
     /// notable formations (The Ground, spec §3/§4/§6); empty for a landless
     /// world.
     pub ground_lines: Vec<String>,
+    /// Per-sample-site diurnal-range readouts (The Turning, spec §2): the
+    /// peak-to-peak day/night swing at the driest interior land and at the
+    /// open ocean, so the reader sees both ends of the range. Empty for
+    /// tidally locked worlds, which have no rotation-scale day/night cycle.
+    pub diurnal_lines: Vec<String>,
     /// Deep-time headline lines (the glacial history); empty for worlds with
     /// no glacial past (constant sky, or zero forcing).
     pub deep_time_lines: Vec<String>,
@@ -177,6 +182,31 @@ pub fn render_life_history_line(
     }
     line.push('.');
     line
+}
+
+/// The peak-to-peak diurnal swing in °C: `2 * amplitude_c * geo_peak`,
+/// where `amplitude_c` is a site's `diurnal_amp_at` and `geo_peak` is the
+/// maximum of `hornvale_climate::diurnal_waveform` over one rotation at
+/// that site's latitude. Pulled out of [`render_diurnal_range_line`] so the
+/// render step and its test share the same arithmetic (content→render
+/// seam, spec §6). A near-zero `amplitude_c` (an ocean site, whose
+/// continentality is zero) reads a near-zero range.
+fn diurnal_range_c(amplitude_c: f64, geo_peak: f64) -> f64 {
+    2.0 * amplitude_c * geo_peak
+}
+
+/// Render a diurnal-range readout for one sample site (The Turning, spec
+/// §2): the peak-to-peak swing between the warmest afternoon and the
+/// coolest early morning (the waveform's thermal-lag phase — see
+/// `hornvale_climate::diurnal_waveform`'s afternoon peak). Callers supply
+/// `geo_peak` (the waveform's maximum at the site's latitude) so this stays
+/// a pure render step, no world access.
+/// type-audit: bare-ok(prose: site), bare-ok(diagnostic-value: amplitude_c), bare-ok(ratio: geo_peak), bare-ok(prose: return)
+pub fn render_diurnal_range_line(site: &str, amplitude_c: f64, geo_peak: f64) -> String {
+    let range_c = diurnal_range_c(amplitude_c, geo_peak);
+    format!(
+        "{site}'s day swings about {range_c:.0}°C, warmest in the afternoon and coolest before dawn."
+    )
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -271,6 +301,13 @@ pub fn render(ctx: &AlmanacContext) -> String {
             "\n{} ({:.0}°C)\n\n",
             ctx.climate.description, ctx.climate.temperature_c
         ));
+    }
+
+    if !ctx.diurnal_lines.is_empty() {
+        for line in &ctx.diurnal_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
     }
 
     if !ctx.ground_lines.is_empty() {
@@ -405,6 +442,7 @@ mod tests {
             ground_lines: vec![
                 "The land is mostly granite, its soils mostly loam.".to_string(),
             ],
+            diurnal_lines: vec![],
             deep_time_lines: vec![
                 "The frost retreated; ice advanced over 30% of the land at its greatest."
                     .to_string(),
@@ -438,6 +476,44 @@ mod tests {
             genesis_notes: vec![],
             settlement_lines: vec![],
         }
+    }
+
+    // A dry-interior site (a real diurnal amplitude, per `diurnal_amp_at`)
+    // shows a positive peak-to-peak range; an ocean site (continentality
+    // zero, so `diurnal_amp_at` is ~0) shows ~0 — the almanac line must not
+    // manufacture a swing water never has.
+    #[test]
+    fn diurnal_range_is_positive_for_dry_land_and_near_zero_for_ocean() {
+        let dry_interior = diurnal_range_c(12.0, 0.8);
+        let ocean = diurnal_range_c(0.0, 0.8);
+        assert!(
+            dry_interior > 5.0,
+            "dry interior should show a real range: {dry_interior}"
+        );
+        assert!(ocean.abs() < 1e-9, "ocean should show ~0 range: {ocean}");
+    }
+
+    #[test]
+    fn render_diurnal_range_line_names_the_site_and_the_range() {
+        let line = render_diurnal_range_line("The driest interior", 12.0, 0.8);
+        assert!(line.contains("The driest interior"));
+        assert!(line.contains("19°C"), "expected ~19°C range: {line}");
+
+        let ocean_line = render_diurnal_range_line("The open ocean", 0.0, 0.8);
+        assert!(ocean_line.contains("0°C"), "expected ~0°C: {ocean_line}");
+    }
+
+    #[test]
+    fn diurnal_lines_render_in_the_land_section() {
+        let mut ctx = sample_context();
+        ctx.diurnal_lines = vec![render_diurnal_range_line("The driest interior", 12.0, 0.8)];
+        let doc = render(&ctx);
+        let land_pos = doc.find("## The Land").unwrap();
+        let diurnal_pos = doc.find("The driest interior").unwrap();
+        assert!(
+            land_pos < diurnal_pos,
+            "diurnal line belongs under The Land"
+        );
     }
 
     #[test]
