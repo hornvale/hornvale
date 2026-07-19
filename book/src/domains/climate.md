@@ -68,10 +68,14 @@ continental, near zero over the ocean, and — crucially — **zero-mean over a
 rotation**, so it moves every instantaneous reading while leaving the annual
 mean (and therefore the biome field and the census) untouched. Both the
 seasonal and diurnal swings exist for the REPL, the almanac's day-level
-queries, and the orrery's "watch a day". Moisture starts from the
-circulation band, rises near oceans, and falls in a mountain's lee: a
-single upwind trace along the prevailing wind finds the highest barrier a
-parcel crossed and dries the leeward cell in proportion. From temperature,
+queries, and the orrery's "watch a day". Moisture starts from a base floor —
+circulation band plus an ocean-proximity bonus — which a **moisture-budget
+trace** then dries: on a spinning world, walking upwind against the
+prevailing wind, a parcel gathers water evaporating over the sea and loses
+it to the slopes it must climb, the belts where it rises, and the distance
+it travels, so continental interiors dry with distance from the coast and
+successive ranges compound their rain shadows (a locked world, lacking band
+winds, keeps the older substellar model). From temperature,
 moisture, elevation, and (for the sea) depth, surface temperature, and
 seafloor feature, a **biome** field falls out — a Whittaker lookup on land
 (tundra, taiga, temperate and tropical forests, savanna, desert,

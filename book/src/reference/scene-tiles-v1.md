@@ -37,17 +37,22 @@ incidental):
 | `t_swing_c` | array of number, one per tile | **Hemisphere-signed** seasonal half-swing, °C: the coefficient of the seasonal sinusoid, `amplitude × sign(source-cell latitude)`. Positive in the north, negative in the south, exactly `0` on tidally locked and zero-obliquity worlds. Signed at the source so clients never apply a hemisphere sign themselves — a tile near the equator may sample a cell on the other side of it, and the sign travels with the data. |
 | `season_period_days` | number | The period, in standard days, of the seasonal sinusoid the temperature layers parameterize. On generated-sky worlds this equals `scene/system/v1`'s `year_days`; on constant-sun worlds (which have no system document) it is the tier-0 default year, and this field is the only honest way a client can know it. The evaluator reads one scalar from `scene/system/v1` besides this — `year_phase_offset` — to phase the season on the true orbit (see *Reading temperature over the year*); everything else it needs is here. |
 | `circulation_bands` | integer, **absent when tidally locked** | The number of atmospheric circulation cells per hemisphere (Earth-like day → 3). Document-level, not per-tile: the wind model is a pure function of latitude and this count, and the contract does not pretend otherwise. Absence follows the `day_length_days` precedent in [`scene/system/v1`](./scene-system-v1.md). |
-| `moisture` | array of number, one per tile | Dimensionless moisture index in [0, 1] — the climate model's own quantity (band base, ocean proximity, single-pass rain shadow). Deliberately **not** mm/yr: a physical precipitation calibration would be invented precision; that promotion would arrive as a *new* additive field, never a re-meaning of this one. |
+| `moisture` | array of number, one per tile | Dimensionless moisture index in [0, 1] — the climate model's own quantity (band base and ocean-proximity floor, dried by an upwind moisture-budget trace on spinning worlds; the substellar model on locked ones). Deliberately **not** mm/yr, and it stays that way: the physical precipitation total arrived as the *separate* `precip_mm_yr` field below (The Rains), never a re-meaning of this one — biomes still classify on this dimensionless index. |
+| `precip_mm_yr` | array of number, one per tile | Annual precipitation, mm/yr — an Earth-ranged total mapped from `moisture` (desert `<250`, temperate `~500–1500`, rainforest `>2000`). A documented approximation for legibility (the precipitation lens), not a measured climatology. |
+| `snow_fraction` | array of number, one per tile | Fraction of the year's precipitation falling as snow, in [0, 1] — a smooth logistic of the mean temperature across freezing (cold → 1, warm → 0). |
+| `precip_regime` | array of integer, one per tile | The seasonal precipitation regime as a small integer: `0` uniform, `1` summer-max, `2` winter-max, `3` monsoon. A categorical label from circulation band, continentality, and hemisphere — **not** a time series (a name, not a curve), so it is independent of the mm total. |
+| `cloud_fraction` | array of number, one per tile | Diagnostic cloud fraction in [0, 1] — moisture × uplift, cloudy where moist air rises. Strictly diagnostic (no insolation or albedo feedback); the client shades and may advect it. |
 | `locked` | boolean | Whether the world is tidally locked. On a locked world the seasonal temperature is **not** `t_mean_c + t_swing_c·sin(…)` — `t_swing_c` is `0` there — but a *librating substellar* field the client reconstructs from the world's obliquity and the year phase (see below), so a consumer reads this flag to choose its evaluator. |
 
 `elevation_m`, `ocean`, `biome`, `plate`, and `unrest` are the five per-tile
 layers: each is an array of exactly `width × height` entries, in the grid
 order described below, so tile `i`'s elevation, ocean flag, biome, plate,
 and unrest all sit at the same index `i` across their respective arrays.
-`t_mean_c`, `t_swing_c`, and `moisture` are three more per-tile layers of
-the same shape, appended after `features` (see Stability, below, on the
-append-at-end convention); `season_period_days` and `circulation_bands` are
-document-level, not per-tile.
+`t_mean_c`, `t_swing_c`, `moisture`, and the precipitation layers
+(`precip_mm_yr`, `snow_fraction`, `precip_regime`, `cloud_fraction`) are
+further per-tile layers of the same shape, appended after `features` (see
+Stability, below, on the append-at-end convention); `season_period_days` and
+`circulation_bands` are document-level, not per-tile.
 `biome_legend` currently holds twenty-two entries, from `ice` and `tundra`
 through the deep-ocean biomes (`hadal-trench`, `abyssal`, and the rest);
 its order is append-only and stable across worlds, so a biome index means
@@ -94,6 +99,10 @@ An excerpt of the committed seed-42 example (arrays elided; see
   "season_period_days": 368.05357,
   "circulation_bands": 3,
   "moisture": [ ... 32768 entries ... ],
+  "precip_mm_yr": [ ... 32768 entries ... ],
+  "snow_fraction": [ ... 32768 entries ... ],
+  "precip_regime": [ ... 32768 entries ... ],
+  "cloud_fraction": [ ... 32768 entries ... ],
   "locked": false
 }
 ```
