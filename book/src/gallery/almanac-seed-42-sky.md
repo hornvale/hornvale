@@ -77,64 +77,76 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 
 - **Feefaenoagoo** — temperate-forest
 - **Qgeonjeeqbeonoagoo** — temperate-forest
-- **Foemjeexaanoagoo** — temperate-forest
-- **Xeexoenoenoa** — temperate-forest
-- **Ggaexoengjeanoagoo** — temperate-forest
-- **Njaafeavoanoagoonoenoa** — temperate-forest
-- **Njeoxaeveanoagoo** — temperate-forest
 - **Njootkaenoenoa** — temperate-forest
+- **Xeexoenoenoa** — temperate-forest
+- **Njeoxaeveanoagoo** — temperate-forest
+- **Xaatbeonoenoa** — temperate-forest
+- **Ngjoamjaenoenoanoagoo** — temperate-forest
 - **Xaemjaotgaonoenoa** — temperate-forest
-- **Xoemjaanoenoanoagoo** — temperate-forest
+- **Mjaonjoanaagoa** — shrubland
+- **Xoafoanaagoa** — shrubland
+- **Xoamjoonaagoa** — shrubland
+- **Mjaafoenoenoa** — temperate-forest
+- **Njooqgoamjeonaagoa** — shrubland
 - **Njeoqbeanoenoa** — temperate-forest
-- **Ngjaanjaekkaonoenoanoagoo** — temperate-forest
-- **Xaatbeonaagoa** — shrubland
-- **Ngjeefeongjeenoenoanoagoo** — temperate-forest
+- **Xaengjeanaagoa** — shrubland
 - **Ngekzhfetnoaboo** — temperate-forest
-- **Xoanjaanoagoonoenoa** — temperate-forest
-- **Mjoangjaonoenoa** — temperate-forest
+- **Bgeoqqeongjaenoagoonaagoa** — shrubland
+- **Kqaengjaanoagoo** — temperate-forest
+- **Xaemjaeqbaanoenoa** — temperate-forest
+- **Njeangjaongjaonoagoo** — shrubland
+- **Bteafeenoagoo** — temperate-forest
 - **Bkeexeoxaanoagoonoenoa** — temperate-forest
-- **Kkeafeexeenoenoa** — temperate-forest
 - **Mjeofaovaenoenoa** — temperate-forest
-- **Qkaoqboobgeonoagoo** — temperate-forest
-- **Njaonjoomjeanoagoonoenoa** — temperate-forest
+- **Bkaomjeenoagoo** — temperate-forest
+- **Ngjeefeongjeenoenoanoagoo** — temperate-forest
+- **Vaofaefaonoenoa** — temperate-forest
+- **Ggeenjaonoagoo** — shrubland
+- **Mjaengjeenoagoonoenoa** — temperate-forest
 - **Njoomjaaxaonoagoo** — temperate-forest
-- **Ggeenjaonoagoo** — temperate-forest
 - **Foettaanoenoanoagoo** — temperate-forest
 - **Zvokfnednoenoanoaboo** — temperate-forest
 - **Netneknoaboo** — temperate-forest
-- **Vnokxngeknoaboonoenoa** — temperate-forest
-- **Xaemjaeqbaanoenoa** — temperate-forest
-- **Tqoamjeonoagoonoenoa** — temperate-forest
-- **Xnobngatnoaboo** — temperate-forest
+- **Ngjaonjaofaanoagoonoenoa** — temperate-forest
+- **Mjaenjeamjeonoagoonaagoa** — shrubland
 - **Vaaxeaqgoonoagoo** — temperate-forest
-- **Fngabvnadngodnoenoa** — temperate-forest
-- **Qkaomjaefaanoagoonoenoa** — temperate-forest
-- **Njeetgoanoagoo** — temperate-forest
+- **Vnokxngeknoaboonoenoa** — temperate-forest
+- **Xnobngatnoaboo** — temperate-forest
+- **Tqoamjeonoagoonoenoa** — temperate-forest
+- **Kkoeggeomjaanoagoo** — temperate-forest
 - **Sfadsvobsxadnoaboonoenoa** — temperate-forest
+- **Qteaggaenoenoanoagoo** — temperate-forest
+- **Qteefeangjoanoagoonoenoa** — temperate-forest
 - **Veogbaonoagoo** — temperate-forest
-- **Ngjeogtaanoagoonaagoa** — shrubland
-- **Zhvabvnetsfebnoenoanoaboo** — temperate-forest
-- **Bgaofaonoenoa** — temperate-forest
-- **Ktoaxaanjeanoenoa** — temperate-forest
-- **Ngodvnoksxabnoaboonoenoa** — temperate-forest
-- **Ktoenjeanoenoanoagoo** — temperate-forest
+- **Njeetgoanoagoo** — temperate-forest
 - **Vaoxaanoagoo** — temperate-forest
-- **Xeofaanoenoanoagoo** — temperate-forest
+- **Feebkaonaagoa** — shrubland
+- **Zhvabvnetsfebnoenoanoaboo** — temperate-forest
+- **Ktoaxaanjeanoenoa** — temperate-forest
+- **Bgaofaonoenoa** — temperate-forest
+- **Qtoogboafoonoenoa** — temperate-forest
+- **Kkaakgeekteanoenoa** — temperate-forest
+- **Mjoottoegtaanoenoanoagoo** — temperate-forest
+- **Ktoenjeanoenoanoagoo** — temperate-forest
+- **Xnodnebngebnoenoanoaboo** — temperate-forest
 - **Tkoekkoonoagoo** — taiga
+- **Zhfedvngednoaboo** — temperate-forest
 - **Xngebnebnoenoanoaboo** — temperate-forest
 - **Zhfetzhxabnoaboo** — temperate-forest
-- **Xnodnebngebnoenoanoaboo** — temperate-forest
-- **Zhxabzfaknoenoanoaboo** — temperate-forest
-- **Ngodxnebnoaboo** — temperate-forest
-- **Feebkaonoenoa** — temperate-forest
+- **Xoanjaanoagoonoenoa** — temperate-forest
+- **Nobzxekngatnoenoa** — temperate-forest
+- **Fnetnobnoenoanoaboo** — temperate-forest
+- **Naksxetnoabookaa** — taiga
 - **Vaogkoangjeanoagoo** — temperate-forest
 - **Xaafaenoagoo** — temperate-forest
+- **Nekzhxaknotnoaboo** — temperate-forest
+- **Nadsxabzxotnoaboonoenoa** — temperate-forest
 - **Fngatfngotsvotnoenoa** — temperate-forest
 - **Nekxngodnednoaboo** — temperate-forest
-- **Naksxetnoabookaa** — taiga
-- **Ktoeqbaonoenoanoagoo** — temperate-forest
-- **Nadsxabzxotnoaboonoenoa** — temperate-forest
+- **Ngodxnebnoaboo** — temperate-forest
+- **Tgoabtaotkeonoenoa** — temperate-forest
 - **Fnetzhvaknoenoa** — temperate-forest
+- **Zhxabzfaknoenoanoaboo** — temperate-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -159,9 +171,9 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 60 settlement(s).
+The land holds 72 settlement(s).
 The chief goblin settlement, Ngekzhfetnoaboo, holds 1 souls amid temperate-forest.
-The chief hobgoblin settlement, Feefaenoagoo, holds 8 souls amid temperate-forest.
+The chief hobgoblin settlement, Feefaenoagoo, holds 9 souls amid temperate-forest.
 
 The goblin village of **Ngekzhfetnoaboo**, population 1.
 
@@ -169,7 +181,7 @@ Ngekzhfetnoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Feefaenoagoo**, population 8.
+The hobgoblin legion of **Feefaenoagoo**, population 9.
 
 Feefaenoagoo lives by farming.
 Its roles, lowest to highest: laborer, augur, warlord.

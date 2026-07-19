@@ -21,9 +21,9 @@ You stand in temperate forest — a mossy hollow damp in a hollow — in the lan
 Ways on: NW, S, NE.
 > npcs
 3 NPC(s) derived this session:
-  [105] hobgoblin of Feefaenoagoo
-  [106] hobgoblin of Qgeonjeeqbeonoagoo
-  [107] hobgoblin of Foemjeexaanoagoo
+  [117] hobgoblin of Feefaenoagoo
+  [118] hobgoblin of Qgeonjeeqbeonoagoo
+  [119] hobgoblin of Njootkaenoenoa
 > needs
 The hobgoblin of Feefaenoagoo seems content.
 > wait 5
