@@ -201,6 +201,9 @@ The seas: a current runs east along the coast.
 The driest interior receives under 1 mm of snow a year.
 The open ocean receives about 1708 mm of rain a year (uniform).
 
+The driest interior: the sky is clear.
+The open ocean: the sky is a flat overcast.
+
 ## The Ground
 
 The land is mostly shale, its soils mostly leptosol.
