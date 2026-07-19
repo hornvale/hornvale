@@ -135,11 +135,14 @@ pub enum SchemaId {
 }
 
 /// The slot a schema's binding step must fill from the culture's own
-/// furniture, or none. Only [`SchemaId::Agentive`] binds
-/// [`SlotKind::Agent`] (a deity name via `beliefs_held_by`); only
-/// [`SchemaId::Kinship`] binds [`SlotKind::Kin`]. Every other schema is
-/// agentless (`None`) — its surface frame is a closed string with no
-/// furniture reference at all.
+/// furniture, or none. [`SchemaId::Agentive`] binds [`SlotKind::Agent`]
+/// (a deity name via `beliefs_held_by`); [`SchemaId::Kinship`] binds
+/// [`SlotKind::Kin`]. The other schemas carry `None` — with one
+/// documented exception: [`SchemaId::LinkSympathy`]'s surface frame
+/// ("… answers ⟨deity⟩") names a deity despite carrying no lexeme table,
+/// so the composition root binds its agent explicitly (worldgen's
+/// `agent_bearing`); every remaining `None` frame is furniture-free
+/// closed text.
 /// type-audit: bare-ok(identifier-text)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SlotKind {
@@ -147,7 +150,7 @@ pub enum SlotKind {
     Agent,
     /// Binds a kin relation.
     Kin,
-    /// No slot: the schema's frame is closed, furniture-free text.
+    /// No slot (but see the enum doc's LinkSympathy exception).
     None,
 }
 

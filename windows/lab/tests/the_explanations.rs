@@ -191,26 +191,17 @@ fn day_schema_competition_clears_the_floor() {
              seeds 1..=5, got {schemas:?}"
         );
     } else {
-        // The floor-convergence arm: not reached at today's measured
-        // floor (see the header — seeds 1..=3 alone already measure 3
-        // distinct schemas), but kept live in case a future prior change
-        // ever collapses competition to a single winning schema. That is
-        // a legitimate, passing floor state IF the single winner is
-        // pinned exactly (never a bare `>= 1`) — so a *different*
-        // collapse (a different winning schema, or zero explained day
-        // facts at all) still reddens this assertion.
-        assert_eq!(
-            schemas.len(),
-            1,
-            "expected either >= 2 distinct day-schemas or exactly one \
-             floor-converged winner, got {schemas:?}"
-        );
-        eprintln!(
-            "L2 floor-convergence note: day-schema competition has converged \
-             to a single winning schema {schemas:?} across seeds 1..=5 — this \
-             is a documented floor-limit finding (a future prior change \
-             collapsed competition), not the measured C5 Task 3 result of 3 \
-             distinct schemas; report at close per the brief."
+        // The collapse arm (final-review F2): competition collapsing to a
+        // single schema — or to none — is exactly the silent failure this
+        // law exists to catch (the measure-don't-narrate class). It FAILS
+        // outright: a future prior/beta change that collapses the chorus's
+        // explanatory diversity must come back here and re-derive the law
+        // deliberately (pin the winner and the mechanism), never inherit a
+        // green light from an arm that cannot redden.
+        panic!(
+            "day-schema competition COLLAPSED to {schemas:?} across seeds \
+             1..=5 (preregistered floor: >= 2 distinct). A prior/beta change \
+             did this — re-derive L2 deliberately; do not weaken this panic."
         );
     }
 }
