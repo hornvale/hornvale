@@ -5,12 +5,15 @@
 //! serialized.
 
 use crate::biome::{self, Biome, SeafloorFeature};
-use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
+use crate::circulation::{RotationRegime, band_count_for, band_index, prevailing_wind};
 use crate::currents::ocean_current_field;
 use crate::habitability;
 use crate::moisture::moisture_field;
-use crate::temperature::{diurnal_amplitude_field, mean_temperature, temperature_at};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Temperature};
+use crate::precipitation::{PrecipRegime, precip_mm_yr, precip_regime, snow_fraction};
+use crate::temperature::{
+    continentality, diurnal_amplitude_field, mean_temperature, temperature_at,
+};
+use hornvale_kernel::{CellId, CellMap, Geosphere, Precipitation, ReferenceElevation, Temperature};
 
 /// The inputs the composition root supplies to build a climate (all bare
 /// kernel types or climate-owned types — no terrain/astronomy imports).
@@ -49,6 +52,9 @@ pub struct GeneratedClimate {
     mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     diurnal_amp: CellMap<f64>,
+    precip: CellMap<Precipitation>,
+    snow_fraction: CellMap<f64>,
+    precip_regime: CellMap<PrecipRegime>,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
@@ -112,6 +118,16 @@ impl GeneratedClimate {
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
             diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
+        let precip = CellMap::from_fn(geo, |cell| precip_mm_yr(*moisture.get(cell)));
+        let snow_frac = CellMap::from_fn(geo, |cell| snow_fraction(mean_temp.get(cell).get()));
+        let precip_regime_field = CellMap::from_fn(geo, |cell| {
+            let band = band_count
+                .map(|bands| band_index(geo.coord(cell).latitude, bands))
+                .unwrap_or(0);
+            let cont = continentality(geo, inputs.elevation, inputs.sea_level, cell);
+            let hemisphere_sign = geo.coord(cell).latitude.signum();
+            precip_regime(band, cont, hemisphere_sign)
+        });
         let sea_level = inputs.sea_level;
         let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
         let current = ocean_current_field(geo, &is_ocean, band_count);
@@ -143,6 +159,9 @@ impl GeneratedClimate {
             mean_temp,
             moisture,
             diurnal_amp,
+            precip,
+            snow_fraction: snow_frac,
+            precip_regime: precip_regime_field,
             current,
             biome,
             habitability,
@@ -261,6 +280,23 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(ratio)
     pub fn moisture_at(&self, cell: CellId) -> f64 {
         *self.moisture.get(cell)
+    }
+    /// Annual precipitation at a cell, mm/yr — the moisture field mapped
+    /// into an Earth-ranged total (see [`crate::precipitation::precip_mm_yr`]).
+    pub fn precip_at(&self, cell: CellId) -> Precipitation {
+        *self.precip.get(cell)
+    }
+    /// The fraction of precipitation falling as snow at a cell, `[0, 1]`,
+    /// derived from annual-mean temperature (see
+    /// [`crate::precipitation::snow_fraction`]).
+    /// type-audit: bare-ok(ratio)
+    pub fn snow_fraction_at(&self, cell: CellId) -> f64 {
+        *self.snow_fraction.get(cell)
+    }
+    /// The seasonal precipitation regime at a cell (see
+    /// [`crate::precipitation::precip_regime`]).
+    pub fn regime_at(&self, cell: CellId) -> PrecipRegime {
+        *self.precip_regime.get(cell)
     }
     /// The precomputed diurnal half-range amplitude at a cell, °C: the
     /// coefficient `temperature_at` scales its diurnal waveform by. Zero has
