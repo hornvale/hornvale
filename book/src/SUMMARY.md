@@ -185,6 +185,7 @@
 - [The Single Sculpt](./chronicle/the-single-sculpt.md)
 - [The Confluence](./chronicle/the-confluence.md)
 - [The Deep Grammar](./chronicle/the-deep-grammar.md)
+- [The Local Census](./chronicle/the-local-census.md)
 
 # Appendix: The Frontier
 
