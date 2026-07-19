@@ -84,30 +84,46 @@ wall-clock.
 local, no spend); a G6 digest to Nathan with the numbers and the **AWS-drop
 recommendation** (carve-out: dropping the remote census pipeline is Nathan's
 call).
-**Status:** In Progress.
-- **Build-sources-once (2b) — TRIED AND REVERTED.** Introduced a
-  `WorldPhenomena` handle to build the phenomena sources once per world
-  (collapsing the residual ~182 per-settlement `sky_of` + climate-clone).
-  Measured: **no speedup** (user 838s → 870s, within noise) — killing the
-  sculpt in Stage 2 was the whole win; `sky_of`/clone are cheap. Reverted per
-  YAGNI: public API surface (a struct + two methods) for zero measured
-  benefit. The residual ~105 CPU-s/world is genuine metric math + the one
-  intrinsic world build, not redundant source-building; the Explore's ~55
-  CPU-s post-fix estimate was optimistic, the real floor is ~105.
-- Anti-regrowth is better served by the captured follow-up (a metric-purity
-  lint on direct `climate_of`/`terrain_of`) than by an unused abstraction.
-- Full local census wall-clock: measuring (background run).
+**Status:** Complete.
+- **Build-sources-once (2b) — TRIED AND REVERTED.** A `WorldPhenomena` handle
+  to build the phenomena sources once per world. Measured **no speedup** (838s
+  → 870s, noise): the sculpt was the whole cost, `sky_of`/clone cheap.
+  Reverted per YAGNI. **The inference that "the ~105 CPU-s residual is genuine
+  metric math" was WRONG** — a flamegraph (Stage 4) showed it was still ~91%
+  terrain sculpting. This null result is why the campaign switched to
+  profiling.
+
+## Stage 4: The flamegraph campaign (profile, don't infer)
+**Goal:** Nathan asked to keep hunting after 2.7×. Replace inference with
+measurement — `cargo flamegraph` the count=8 census each round, thread the
+pre-built terrain/climate into whatever worldgen readout the profile shows
+sculpting, verify byte-identical (clean-main A/B), commit, re-profile.
+**Deliverable / Status:** Complete — six byte-identical rounds:
+1. `name_gloss_true` per-settlement re-observe → view climate (285→105).
+2. ~14 lexicon metrics via `exposure_of` → `lexicon_from` (105→47) — the
+   sculpt was buried inside `lexicon_of`, invisible to a source grep.
+3. chorus `accounts_of` per-people → `accounts_from` (47→27.7).
+4. chorus `cyclic_beliefs_of` sky re-observe → `cyclic_beliefs_from` (27.7→18).
+5. demography → `demography_report_from` (18→15.1).
+6. **genesis** re-sculpted 6–8× to *name* the world → `world_name_in_from`/
+   `lexicon_of_in_from` (15.1→5.8) — byte-identical incl. the seed-42 fixture,
+   almanac, gallery; sped up `new`/almanac too.
+**Result: 284 → 5.8 CPU-s/world (~49×)**, full ~2000-world census ~4h → **~5
+min** (clean-main baseline re-measured at low load: 2272s vs 46s, count=8).
 
 ## Definition of Done
-- `make gate` green; census-probe + depth_ladder byte-identical.
-- Chronicle (`book/src/chronicle/the-local-census.md`) + freshness sweep;
-  retro; idea-registry `PERF-lab-metric-rebuilds` → shipped, repointed.
-- Confidence-Gradient: the census-cost / AWS-dependence bet re-scored if one
-  exists in `open-questions.md`.
+- `make gate` green (final); census-probe byte-identical (against a fresh
+  local golden — the committed goldens lag main by design).
+- Chronicle (`book/src/chronicle/the-local-census.md`) rewritten for the
+  6-fix arc + freshness sweep; retro (profile-don't-infer); idea-registry
+  `PERF-lab-metric-rebuilds` → shipped, ~49×.
+- Confidence-Gradient: no census-cost/AWS bet in `open-questions.md` (checked).
 - G6 digest leading with the AWS-drop decision + the byte-identity proof.
 
 ## Deferred / follow-up
-- Truly build-sources-once (opaque handle) if Stage 3 shows the sky/clone
-  residual still dominates.
-- View-chain Sculpt 2 (`build_world_to` discards its internal terrain) —
-  low marginal value next to Stage 2; only if measurement demands it.
+- **Metric-purity lint** — fail on a metric/readout reaching `climate_of`/
+  `terrain_of`/`exposure_of` instead of a `_from`. Makes the tenth instance of
+  this bug impossible.
+- **Genesis-perf campaign** — "Fix D" (view chain re-sculpts terrain genesis
+  built and discarded; changes `build_world_to`'s signature) + further
+  genesis-internal sculpts a `new` profile surfaces. Its own scoping + G3.
