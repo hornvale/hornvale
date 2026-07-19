@@ -181,6 +181,7 @@
 - [The Doctrine](./chronicle/the-doctrine.md)
 - [The Gyre](./chronicle/the-gyre.md)
 - [The Surmise](./chronicle/the-surmise.md)
+- [The Confluence](./chronicle/the-confluence.md)
 
 # Appendix: The Frontier
 
