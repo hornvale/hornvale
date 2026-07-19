@@ -138,6 +138,9 @@ The open ocean's day swings about 1°C, warmest in the afternoon and coolest bef
 
 The seas: a current runs east along the coast.
 
+The driest interior receives about 0 mm of rain a year (monsoon).
+The open ocean receives about 1708 mm of rain a year (uniform).
+
 ## The Ground
 
 The land is mostly shale, its soils mostly leptosol.

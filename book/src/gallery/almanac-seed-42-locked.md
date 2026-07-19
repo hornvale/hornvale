@@ -123,6 +123,9 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
+The driest interior receives about 24 mm of rain a year (uniform).
+The open ocean receives about 2000 mm of snow a year (uniform).
+
 ## The Ground
 
 The land is mostly shale, its soils mostly leptosol.
