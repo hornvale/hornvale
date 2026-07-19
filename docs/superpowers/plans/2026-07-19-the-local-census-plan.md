@@ -108,8 +108,10 @@ sculpting, verify byte-identical (clean-main A/B), commit, re-profile.
 6. **genesis** re-sculpted 6–8× to *name* the world → `world_name_in_from`/
    `lexicon_of_in_from` (15.1→5.8) — byte-identical incl. the seed-42 fixture,
    almanac, gallery; sped up `new`/almanac too.
-**Result: 284 → 5.8 CPU-s/world (~49×)**, full ~2000-world census ~4h → **~5
-min** (clean-main baseline re-measured at low load: 2272s vs 46s, count=8).
+**Result: 284 → 5.8 CPU-s/world (~49× on the count=8 A/B)**, full ~2000-world
+census ~4h → **~7 min measured** (the-census 3:39 + census-of-the-meeting
+3:29; ~8 CPU-s/world at full scale, where cheap refusal seeds no longer flatter
+the average). Clean-main baseline re-measured at low load: 2272s vs 46s (count=8).
 
 ## Definition of Done
 - `make gate` green (final); census-probe byte-identical (against a fresh

@@ -61,9 +61,11 @@ committed gallery came out identical to the byte — and made not only the
 census but every `new` command and every almanac render measurably faster.
 
 The arithmetic at the end: two hundred and eighty-five processor-seconds a
-world fell to under six, a little under fifty times faster, and the full
-census — the thing that had needed a rented machine and hours — came home to
-run on the authoring hardware in roughly five minutes. The discipline that got
+world fell to under six on the controlled eight-seed comparison — a little
+under fifty times — and to about eight at full census scale, where the cheap
+genesis-refusal seeds no longer flatter the average. The full census, the
+thing that had needed a rented machine and hours, came home to run on the
+authoring hardware in about seven minutes. The discipline that got
 there is worth naming, because the campaign nearly stopped at the first fix and
 would have left nine-tenths of the cost in place. A performance number is a
 claim about where the time goes, and the only honest way to make that claim is
