@@ -705,6 +705,19 @@ fn stellar_inputs(sky: &Sky) -> (f64, f64, RotationRegime, f64, f64) {
 /// site for `GeneratedClimate` (the `terrain_of`/`sky_of` pattern).
 pub fn climate_of(world: &World) -> Result<GeneratedClimate, BuildError> {
     let terrain = terrain_of(world)?;
+    climate_from(world, &terrain)
+}
+
+/// Reconstruct the tier-1 climate from a PRE-BUILT terrain — the body of
+/// `climate_of` after its `terrain_of` line, taking the terrain the caller
+/// already sculpted instead of re-deriving it. Byte-identical to `climate_of`
+/// whenever `terrain` equals `terrain_of(world)` (the "pass the pre-built
+/// value" idiom; the sole extra construction site for callers that already
+/// hold the terrain).
+pub fn climate_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<GeneratedClimate, BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let elevation = &terrain.globe().elevation;
@@ -1012,10 +1025,21 @@ fn glacial_maximum_habitable(
 /// single construction site for `PaleoRecord` and the sole definer of the
 /// era-tick order (a save-format contract).
 pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
+    let terrain = terrain_of(world)?;
+    paleoclimate_from(world, &terrain)
+}
+
+/// The deep-time era loop from a PRE-BUILT terrain — the body of
+/// `paleoclimate_of` after its `terrain_of` line, taking the terrain the
+/// caller already sculpted instead of re-deriving it. Byte-identical to
+/// `paleoclimate_of` whenever `terrain` equals `terrain_of(world)`.
+pub fn paleoclimate_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<PaleoRecord, BuildError> {
     // Build the era-loop invariants exactly once (terrain, sky, and every
     // scalar/field derived from them) — see `EraContext`.
     let sky = sky_of(world)?;
-    let terrain = terrain_of(world)?;
     let geo = terrain.geosphere();
     let elevation = terrain.globe().elevation.clone();
     let present_sea_level = terrain.sea_level();
@@ -1159,13 +1183,20 @@ pub fn paleoclimate_of(world: &World) -> Result<PaleoRecord, BuildError> {
 /// Headline biome/habitability lines for the almanac's Land section.
 /// type-audit: bare-ok(prose: return)
 pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let climate = climate_of(world)?;
-    let summary = hornvale_climate::summarize(&climate);
+    Ok(biome_lines_from(&climate_of(world)?))
+}
+
+/// [`biome_lines`] from a PRE-BUILT climate — the body of `biome_lines`
+/// without the internal `climate_of` re-derivation, so the almanac render
+/// can share one climate across every Land-section accessor (The Single
+/// Sculpt). Byte-identical to `biome_lines` for the same world's climate.
+fn biome_lines_from(climate: &GeneratedClimate) -> Vec<String> {
+    let summary = hornvale_climate::summarize(climate);
     let bands = match summary.band_count {
         Some(n) => format!("{n} circulation band(s) per hemisphere"),
         None => "a single day–night overturning (tidally locked)".to_string(),
     };
-    Ok(vec![
+    vec![
         format!(
             "The air organizes into {bands}; {} land biomes and {} marine biomes cover the globe.",
             summary.land_biome_count, summary.marine_biome_count
@@ -1174,7 +1205,7 @@ pub fn biome_lines(world: &World) -> Result<Vec<String>, BuildError> {
             "Some {:.0}% of the surface is habitable — land with water and a tolerable season.",
             summary.habitable_fraction * 100.0
         ),
-    ])
+    ]
 }
 
 /// The number of `day_fraction` samples used to find `diurnal_waveform`'s
@@ -1195,11 +1226,16 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let climate = climate_of(world)?;
+    Ok(diurnal_lines_from(&terrain_of(world)?, &climate_of(world)?))
+}
+
+/// [`diurnal_lines`] from a PRE-BUILT terrain and climate — the body without
+/// the internal re-derivations, so the almanac render shares one terrain and
+/// one climate (The Single Sculpt). Byte-identical to `diurnal_lines`.
+fn diurnal_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let RotationRegime::Spinning { day_std } = climate.regime() else {
-        return Ok(Vec::new());
+        return Vec::new();
     };
-    let terrain = terrain_of(world)?;
     let geo = terrain.geosphere();
     let obliquity = climate.obliquity_deg();
 
@@ -1258,7 +1294,7 @@ pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
             geo_peak_at(lat),
         ));
     }
-    Ok(lines)
+    lines
 }
 
 /// Dot product a · b.
@@ -1308,8 +1344,13 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    Ok(seas_lines_from(&terrain_of(world)?, &climate_of(world)?))
+}
+
+/// [`seas_lines`] from a PRE-BUILT terrain and climate — the body without the
+/// internal re-derivations, so the almanac render shares one terrain and one
+/// climate (The Single Sculpt). Byte-identical to `seas_lines`.
+fn seas_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
     for cell in geo.cells() {
         if !terrain.is_ocean(cell) {
@@ -1325,18 +1366,29 @@ pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
         let east = hornvale_climate::circulation::wind_east_tangent(geo, cell);
         let north = tangent_north(geo.position(cell), east);
         let direction = cardinal_current_direction(dot3(current, east), dot3(current, north));
-        return Ok(vec![format!(
+        return vec![format!(
             "The seas: a current runs {direction} along the coast."
-        )]);
+        )];
     }
-    Ok(Vec::new())
+    Vec::new()
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
 /// glacial past.
 /// type-audit: bare-ok(prose: return)
 pub fn deep_time_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let record = paleoclimate_of(world)?;
+    deep_time_lines_from(world, &terrain_of(world)?)
+}
+
+/// [`deep_time_lines`] from a PRE-BUILT terrain — the body driving the
+/// deep-time record off `paleoclimate_from` (one shared terrain) instead of
+/// `paleoclimate_of`'s own re-sculpt (The Single Sculpt). Byte-identical to
+/// `deep_time_lines`.
+fn deep_time_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let record = paleoclimate_from(world, terrain)?;
     if record.max_ice_fraction <= 0.0 {
         return Ok(Vec::new());
     }
@@ -1355,7 +1407,13 @@ pub fn deep_time_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// (mirrors The Ground's `ground_lines` notable-emission pattern).
 /// type-audit: bare-ok(prose: return)
 pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let terrain = terrain_of(world)?;
+    Ok(land_lines_from(&terrain_of(world)?))
+}
+
+/// [`land_lines`] from a PRE-BUILT terrain — the body without the internal
+/// `terrain_of` re-sculpt, so the almanac render shares one terrain (The
+/// Single Sculpt). Byte-identical to `land_lines`.
+fn land_lines_from(terrain: &GeneratedTerrain) -> Vec<String> {
     let summary = hornvale_terrain::summarize(terrain.globe());
     let mut lines = vec![
         format!(
@@ -1382,7 +1440,7 @@ pub fn land_lines(world: &World) -> Result<Vec<String>, BuildError> {
     if !notables.is_empty() {
         lines.push(format!("Notable: {}.", notables.join(", ")));
     }
-    Ok(lines)
+    lines
 }
 
 /// Human-readable rock-class name (The Ground, spec §4): lowercase, for
@@ -1447,10 +1505,15 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// world.
 /// type-audit: bare-ok(prose: return)
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    Ok(ground_lines_from(&terrain_of(world)?, &climate_of(world)?))
+}
+
+/// [`ground_lines`] from a PRE-BUILT terrain and climate — the body without
+/// the internal re-derivations, so the almanac render shares one terrain and
+/// one climate (The Single Sculpt). Byte-identical to `ground_lines`.
+fn ground_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
     let geo = terrain.geosphere();
-    let soils = soil_of(&terrain, &climate, geo);
+    let soils = soil_of(terrain, climate, geo);
 
     let mut rocks: std::collections::BTreeMap<hornvale_terrain::RockClass, usize> =
         std::collections::BTreeMap::new();
@@ -1478,7 +1541,7 @@ pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
         }
     }
     if land == 0 {
-        return Ok(Vec::new());
+        return Vec::new();
     }
 
     // Ties break to the lower-declared variant: RockClass/SoilOrder's `Ord`
@@ -1513,7 +1576,7 @@ pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
     if !notables.is_empty() {
         lines.push(format!("Notable: {}.", notables.join(", ")));
     }
-    Ok(lines)
+    lines
 }
 
 /// The Waters' headline line for the almanac (The Freshet, DOM-5 first
@@ -1523,7 +1586,13 @@ pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
 /// a landless world.
 /// type-audit: bare-ok(prose: return)
 pub fn water_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    let terrain = terrain_of(world)?;
+    Ok(water_lines_from(&terrain_of(world)?))
+}
+
+/// [`water_lines`] from a PRE-BUILT terrain — the body without the internal
+/// `terrain_of` re-sculpt, so the almanac render shares one terrain (The
+/// Single Sculpt). Byte-identical to `water_lines`.
+fn water_lines_from(terrain: &GeneratedTerrain) -> Vec<String> {
     let geo = terrain.geosphere();
     let globe = terrain.globe();
     let (mut land, mut fresh) = (0usize, 0usize);
@@ -1537,12 +1606,12 @@ pub fn water_lines(world: &World) -> Result<Vec<String>, BuildError> {
         }
     }
     if land == 0 {
-        return Ok(Vec::new());
+        return Vec::new();
     }
-    Ok(vec![format!(
+    vec![format!(
         "Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches {:.0}% of the land.",
         fresh as f64 / land as f64 * 100.0
-    )])
+    )]
 }
 
 /// The geographic position of a place, from its committed latitude/longitude
@@ -1613,11 +1682,44 @@ fn phenomena_sources_from(
 /// the flagship (SEQ-4). The vantage's hemisphere culls the sky (SEQ-5).
 /// type-audit: pending(wave-3: day)
 pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, BuildError> {
+    // The place-check short-circuits BEFORE any provider is built: a placeless
+    // world (even one with a corrupt sky pin) returns Ok(empty) without ever
+    // deriving climate/sky — the "no place, no phenomena" contract. So this
+    // standalone accessor keeps its own body rather than eagerly building a
+    // climate to delegate through `observed_phenomena_from_climate` (which the
+    // almanac render, where a climate already exists, uses instead).
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
     let position = place_coord(world, place);
     let boxed = phenomena_sources(world)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    Ok(observe(
+        &sources,
+        &ObserverContext {
+            place,
+            time: WorldTime { day },
+            lens: PerceptionLens::identity(),
+            position,
+        },
+    ))
+}
+
+/// [`observed_phenomena`] from a PRE-BUILT climate — builds the phenomena
+/// sources off the shared climate via [`phenomena_sources_from`] instead of
+/// re-deriving one, so the almanac render shares a single climate (The Single
+/// Sculpt). Byte-identical to `observed_phenomena` for the same world's
+/// climate.
+fn observed_phenomena_from_climate(
+    world: &World,
+    day: f64,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
+        return Ok(Vec::new());
+    };
+    let position = place_coord(world, place);
+    let boxed = phenomena_sources_from(world, climate)?;
     let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
     Ok(observe(
         &sources,
@@ -2652,7 +2754,13 @@ fn build_to(
         return Ok(world);
     }
 
-    stage("terrain", || -> Result<(), BuildError> {
+    // Sculpt the terrain ONCE here and KEEP it: the same `GeneratedTerrain`
+    // construction `terrain_of` performs (same geosphere level from the same
+    // pins, same `generate` call, same `GeneratedTerrain::new`), so the value
+    // kept is byte-identical to what `terrain_of(&world)` would return — but
+    // built a single time and threaded through the climate/settlement and
+    // deep-time stages below instead of re-derived (The Single Sculpt).
+    let terrain = stage("terrain", || -> Result<GeneratedTerrain, BuildError> {
         for pin_string in hornvale_terrain::pin_strings(terrain_pins) {
             world.ledger.commit(
                 scenario_fact(
@@ -2664,10 +2772,11 @@ fn build_to(
             )?;
         }
         let level = terrain_pins.globe_level.unwrap_or(GLOBE_LEVEL);
-        let terrain_outcome = hornvale_terrain::generate(seed, &geosphere_for(level), terrain_pins)
+        let geo = geosphere_for(level);
+        let terrain_outcome = hornvale_terrain::generate(seed, &geo, terrain_pins)
             .map_err(BuildError::TerrainGenesis)?;
         hornvale_terrain::facts::genesis(&mut world, world_entity, &terrain_outcome)?;
-        Ok(())
+        Ok(GeneratedTerrain::new(geo, terrain_outcome))
     })?;
 
     if depth <= BuildDepth::Terrain {
@@ -2716,8 +2825,11 @@ fn build_to(
             ),
             BuildError,
         > {
-    let terrain = terrain_of(&world)?;
-    let climate = climate_of(&world)?;
+    // `terrain` here is the pre-built value hoisted from the `"terrain"` stage
+    // (moved into this closure), not a fresh `terrain_of(&world)` re-sculpt;
+    // climate is built once off it. Both are byte-identical to the prior
+    // `terrain_of`/`climate_of` re-derivations (The Single Sculpt).
+    let climate = climate_from(&world, &terrain)?;
     let geo = terrain.geosphere();
 
     // Which species this world places: the whole roster, or the pinned one.
@@ -3191,7 +3303,7 @@ fn build_to(
     stage("deep-time", || -> Result<(), BuildError> {
         // Deep time: extract the glacial strata and commit their summary facts on
         // the world entity, so `recount`/`why` can speak the world's past.
-        let paleo = paleoclimate_of(&world)?;
+        let paleo = paleoclimate_from(&world, &terrain)?;
         hornvale_paleoclimate::genesis(&mut world, world_entity, terrain.geosphere(), &paleo)?;
         Ok(())
     })?;
@@ -4212,10 +4324,18 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
             })
         })
         .collect();
+    // The Single Sculpt: build the terrain ONCE and the climate ONCE for the
+    // whole render, then thread them into every Land/Seas/deep-time accessor
+    // and the phenomena observation below instead of each re-deriving its own
+    // (each `terrain_of`/`climate_of` runs the full sculpt + climate fields).
+    // Byte-identical: every `_from` accessor equals its `_of` wrapper for this
+    // world's terrain/climate.
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     // The deep-time lines, plus the secular-brightening sentence (The Long
     // Count) for a generated sky only — constant-sky worlds have no star to
     // brighten.
-    let mut deep_time_lines = deep_time_lines(world)?;
+    let mut deep_time_lines = deep_time_lines_from(world, &terrain)?;
     if let Sky::Generated(sky) = sky_of(world)? {
         let system = sky.system();
         deep_time_lines.push(format!(
@@ -4227,14 +4347,14 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         seed: world.seed.0,
         sky: sky_report(world, WorldTime { day: 0.0 })?,
         climate: climate_report(world),
-        phenomena: observed_phenomena(world, 0.0)?,
+        phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
-        land_lines: land_lines(world)?,
-        biome_lines: biome_lines(world)?,
-        ground_lines: ground_lines(world)?,
-        water_lines: water_lines(world)?,
-        diurnal_lines: diurnal_lines(world)?,
-        seas_lines: seas_lines(world)?,
+        land_lines: land_lines_from(&terrain),
+        biome_lines: biome_lines_from(&climate),
+        ground_lines: ground_lines_from(&terrain, &climate),
+        water_lines: water_lines_from(&terrain),
+        diurnal_lines: diurnal_lines_from(&terrain, &climate),
+        seas_lines: seas_lines_from(&terrain, &climate),
         deep_time_lines,
         peoples,
         pantheons: {
