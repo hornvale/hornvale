@@ -18,6 +18,7 @@ pub mod render;
 pub mod rift;
 pub mod shape;
 pub mod streams;
+pub mod water;
 
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use carve::{
@@ -32,6 +33,7 @@ pub use lithology::{
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
+pub use water::{RIVER_MIN_DRAINAGE, WaterKind};
 
 use hornvale_kernel::{
     ConceptDef, ConceptKind, ConceptRegistry, Correspondent, EntityId, Lexicalization, Manifest,

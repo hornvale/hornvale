@@ -5,6 +5,12 @@
 //! composition root populates and never imports another domain.
 #![warn(missing_docs)]
 
+/// The epistemic account (C4, The Chorus, LANG-36): the four-filter stack
+/// (lexicon → knowledge → ontology → valence) that turns a ground-truth
+/// fact list into one culture's `Account`, plus the dial's distance
+/// measures (distortion, distinctiveness, recoverability) that read it.
+/// Pure and surface-free — the caller supplies the observability table.
+pub mod account;
 /// The clause layer: a language-neutral `ClauseSpec` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
 /// seam from a bespoke tenet spec to any clause.
@@ -38,7 +44,17 @@ pub mod phonology;
 /// The register renderer: `render_line`, the permanent content→render
 /// seam.
 pub mod register;
+/// The causal-schema library and lexicalization substrate (C5, LANG-37 /
+/// LANG-38): the closed 12-row schema table, the fact-shape admission
+/// gate, the β-sharpened schema draw, and the closed agentive lexeme
+/// tables.
+pub mod schemas;
 
+pub use account::{
+    Account, AccountEntry, AccountParams, Disposition, GroundFact, LossReason, NeededConcept,
+    Observability, OrderPolicy, Requirement, Stance, account_of, distinctiveness, distortion,
+    domain_distortion, identity_params, recoverability,
+};
 pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
@@ -67,6 +83,15 @@ pub use phonology::{
     tone_inventory,
 };
 pub use register::{LineContent, LineSentiment, VoiceParams, render_line};
+// `schemas::Manner` (a cyclic deity's told pace) is deliberately NOT
+// re-exported unqualified here — it would collide with `phoneme::Manner`
+// (articulatory manner) above; reach it as `schemas::Manner` or
+// `crate::schemas::Manner`, the same qualified-access precedent
+// `speech::Lexicon` sets below for its own `lexicon::Lexicon` collision.
+pub use schemas::{
+    ConflictState, FactShape, LexemeId, Schema, SchemaId, SlotKind, SourceDomain, SubFrame,
+    admitted, conflict_of, lexemes_for, schema_table, select_lexeme, select_schema,
+};
 
 /// The speech cluster (ECS c3): the phonology envelope type
 /// ([`speech::ArticulationVector`]) and the stopgap social vocabulary
@@ -390,6 +415,22 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/grammar/articles",
             "whether the tongue has articles (floor: drawn but surfaces no article lexeme until the morphology campaign)",
+        ),
+        (
+            "language/<species>/schema/<domain>/<fact-shape>",
+            "C5's causal-schema draw (render-time, `schemas::select_schema`): the β-sharpened pick among the fact-shape's admitted schemas for one culture's account of one (source-domain, fact-shape) pair — `<domain>` and `<fact-shape>` are the salt legs (e.g. `sky`/`cyclic-event` for the day)",
+        ),
+        (
+            "language/<species>/lexeme/<fact-key>",
+            "C5's lexeme draw (render-time, `schemas::select_lexeme`): the uniform pick among a fired schema's gate-surviving verb candidates for one explained fact — `<fact-key>` salts by the ground fact's predicate (e.g. `day-length-std`)",
+        ),
+        (
+            "language/<species>/doctrine-schema/<domain>/<fact-shape>",
+            "C6's institutional causal-schema draw (The Doctrine, render-time, `schemas::select_schema` again): the β-sharpened pick among the fact-shape's admitted schemas for the SAME culture's doctrine account (folk prior × the authored mediation column, before β) — a sibling stream to `schema/<domain>/<fact-shape>` above, never a shared draw, so the folk and doctrine schema picks can diverge independently",
+        ),
+        (
+            "language/<species>/doctrine-lexeme/<fact-key>",
+            "C6's institutional lexeme draw (The Doctrine, render-time, `schemas::select_lexeme` again): the uniform pick among a fired doctrine schema's gate-surviving verb candidates for one explained fact — a sibling stream to `lexeme/<fact-key>` above, salted the same way (the ground fact's predicate)",
         ),
     ]
 }

@@ -292,6 +292,19 @@ The remaining low-confidence bets do not sit at one altitude. Each has a
 **taste-gated half** that waits on a human read. Naming the seam is most of the
 progress.
 
+The split is no longer hypothetical: The Chorus drove one bet of exactly
+this shape to a verdict. Whether a derived cultural account differs from
+ground truth *as a worldview* (not merely in vocabulary) looked
+taste-gated until it was decomposed into distinctiveness ×
+recoverability; the preregistered known-groups gate then separated the
+uncanny pole from the gibberish pole from the shipped voices on every
+measured world ([Study 012](./laboratory/study-012.md)). The residue that
+stayed taste-shaped is exactly what the decomposition predicted:
+*is it pleasant to read* — a far smaller surface than *is the worldview
+right*. That is the template the bets below should expect: the
+self-scorable half closes by instrument, and the taste half shrinks to
+its honest size.
+
 1. **Refinement at scale.** Generating detail consistent with fields *and* a
    large committed ledger, with aesthetic requirements on top, is constraint
    satisfaction plus taste — and the two halves have very different horizons.

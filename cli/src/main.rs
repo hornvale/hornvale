@@ -62,7 +62,9 @@ usage:
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
-  hornvale book                            render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
+  hornvale book [--initiate]                render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
+                                            (--initiate: the omniscient-reader edition — every organized culture's
+                                            RevealedClaim entries disclosed too; compare-only, never committed)
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
@@ -683,7 +685,8 @@ fn cmd_proto() -> Result<(), String> {
 /// carries — spec §5). After the Book is printed to stdout, a PROC-15
 /// coverage report (unrendered predicates per volume) is printed to
 /// stderr. Markdown to stdout; deterministic.
-fn cmd_book(_args: &[String]) -> Result<(), String> {
+fn cmd_book(args: &[String]) -> Result<(), String> {
+    let initiate = args.iter().any(|a| a == "--initiate");
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
@@ -715,6 +718,63 @@ fn cmd_book(_args: &[String]) -> Result<(), String> {
             for gap in vol.tongue_gaps {
                 out.push_str(&gap);
                 out.push('\n');
+            }
+        }
+        if !vol.chorus.is_empty() {
+            out.push_str("\n### The Chorus\n");
+            for section in vol.chorus {
+                out.push_str(&format!("\n#### {}\n\n", section.heading));
+                for line in &section.emic {
+                    out.push_str(line);
+                    out.push('\n');
+                }
+                if !section.margin.is_empty() {
+                    out.push('\n');
+                    for line in &section.margin {
+                        out.push_str(&format!("*{line}*\n"));
+                    }
+                }
+                if let Some(doctrine) = &section.doctrine {
+                    out.push_str(&format!("\n##### {}\n\n", doctrine.heading));
+                    for line in &doctrine.emic {
+                        out.push_str(line);
+                        out.push('\n');
+                    }
+                    if !doctrine.annotations.is_empty() {
+                        out.push('\n');
+                        for line in &doctrine.annotations {
+                            out.push_str(line);
+                            out.push('\n');
+                        }
+                    }
+                    if !doctrine.margin.is_empty() {
+                        out.push('\n');
+                        for line in &doctrine.margin {
+                            out.push_str(&format!("*{line}*\n"));
+                        }
+                    }
+                }
+            }
+        }
+        // The omniscient-reader edition (`--initiate`): the reader is
+        // this world's FULL fact-set (`chorus_ground`'s own `(subject,
+        // predicate)` keys), so every organized culture's RevealedClaim
+        // entry discloses. Compare-only: never written to a file, never
+        // part of the committed artifact — `scripts/regenerate-artifacts.sh`
+        // never passes this flag.
+        if initiate {
+            let reader: std::collections::BTreeSet<(String, String)> =
+                world_builder::chorus_ground(&world)
+                    .into_iter()
+                    .map(|f| (f.subject, f.predicate))
+                    .collect();
+            let initiated = hornvale_book::esoteric_lines(&world, &reader);
+            if !initiated.is_empty() {
+                out.push_str("\n### To the initiated\n\n");
+                for line in &initiated {
+                    out.push_str(line);
+                    out.push('\n');
+                }
             }
         }
         coverage.push((seed, hornvale_book::uncovered_predicates(&world)));

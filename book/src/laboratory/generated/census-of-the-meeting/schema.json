@@ -1762,6 +1762,80 @@
       "rung": "full"
     },
     {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean distortion() over every placed culture's account (C4 LANG-41); Absent if no culture placed",
+      "kind": "numeric",
+      "name": "chorus-distortion",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean pairwise distinctiveness() across every placed culture's account (C4 LANG-41); Absent if fewer than 2 cultures placed",
+      "kind": "numeric",
+      "name": "chorus-distinctiveness",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        0.9
+      ],
+      "doc": "Mean recoverability() over every placed culture's account (C4 LANG-41); Absent if no culture placed",
+      "kind": "numeric",
+      "name": "chorus-recoverability",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.001,
+        0.01,
+        0.05,
+        0.1
+      ],
+      "doc": "Population variance of per-culture distortion() (C4 LANG-41) — the vacuity number, read against chorus-param-spread: a low variance can mean either every voice is genuinely alike or every voice hit the same floor; Absent if fewer than 2 cultures placed",
+      "kind": "numeric",
+      "name": "chorus-variance",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.05,
+        0.1,
+        0.2,
+        0.4
+      ],
+      "doc": "Mean pairwise absolute difference in sky_capability across every placed culture (C4 LANG-41) — the input-side companion to chorus-variance's output-side number; Absent if fewer than 2 cultures placed",
+      "kind": "numeric",
+      "name": "chorus-param-spread",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        -0.5,
+        0.0,
+        0.5
+      ],
+      "doc": "Kendall tau between per-culture sky_capability and per-culture domain_distortion(..., \"sky\") over strictly-comparable pairs (both the capability and the distortion differ) (C4 LANG-41); expected sign ≤ 0 (distortion falls as capability rises); Absent if fewer than 2 cultures placed or no strictly-comparable pair exists (e.g. every pair ties on sky distortion)",
+      "kind": "numeric",
+      "name": "chorus-sky-calibration",
+      "rung": "full"
+    },
+    {
       "kind": "categorical",
       "name": "refusal"
     }
@@ -1771,7 +1845,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0xe9b33adb24c3e051"
+    "fnv1a64": "0x711f8d5f7441eb7b"
   },
   "schema_version": 1,
   "study": {

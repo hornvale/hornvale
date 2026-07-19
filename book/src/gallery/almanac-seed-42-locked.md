@@ -129,6 +129,10 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 The land is mostly shale, its soils mostly leptosol.
 Notable: karst country, salt flats.
 
+## The Waters
+
+Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 6% of the land.
+
 ## Deep Time
 
 The frost retreated: at the glacial maximum (day -243500000), ice advanced over 18% of the land.
