@@ -31,7 +31,7 @@ pub mod world;
 
 pub use astar::{SearchSpace, astar};
 pub use component::{Component, ComponentStore};
-pub use domain::Domain;
+pub use domain::{Domain, WorldContext};
 pub use ecology::{
     ANIMAL_PREY, ConditionResponse, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis,
     ResourceKind, ResourceVector, sovereignty_floor, v1_basis,

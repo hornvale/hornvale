@@ -94,7 +94,7 @@ possess_ot_tmp="$(mktemp)"
 run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
 {
     head -n 1 "$possess_ot_tmp"
-    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty, seek its\nresource, and return — narrated by `wait`, felt directly through `needs`,\nand recounted with its own reason by `why`. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
+    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and set out\nseeking fresh water — narrated by `wait`, felt directly through `needs`,\nand recounted with its own reason by `why`. Belief is a cache the NPC\npopulates by perception, not ground truth: this settlement never happens\nto find a river within the walk shown here, so it wanders rather than\nreturning — a real, honest outcome of "plan over belief, not truth" (The\nSurmise), not every settlement'"'"'s fate. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
 } > book/src/gallery/possession-over-time-seed-42.md
 rm -f "$possess_ot_tmp"

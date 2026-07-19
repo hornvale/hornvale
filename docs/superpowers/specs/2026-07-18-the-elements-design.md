@@ -1,7 +1,7 @@
 # The Elements — Design
 
 **Date:** 2026-07-18
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop). **Fidelity
+**Status:** Shipped — G3 approved (conservative-first/felt-broadly); all three stages merged. Chronicle: `book/src/chronicle/the-elements.md`. **Fidelity
 carve-out: the pantheon reshape is a deliberate accuracy tradeoff — see §5.**
 **Campaign:** (confirm numbering at merge)
 **Provenance:** The correspondence audit's inverse view surfaced that the world

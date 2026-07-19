@@ -546,11 +546,15 @@
     "phenomenon_kinds": {
       "ambient": "a pervasive atmospheric condition",
       "celestial-body": "a body visible in the sky",
+      "cold": "biting cold",
       "eclipse": "a syzygy shadow: a moon crossing the sun, or the world's shadow crossing a moon",
+      "heat": "oppressive heat",
       "heliacal-rising": "a star's first dawn return from behind the sun",
       "heliacal-setting": "a star's last evening before the sun swallows it",
       "night-star": "a fixed star notable in the night sky",
+      "rain": "falling rain",
       "seasonal-cycle": "the annual daylight cycle",
+      "snow": "falling snow",
       "tide": "the rise and fall of the waters under the moons",
       "wandering-star": "a bright star that will not keep its station"
     },
@@ -608,6 +612,12 @@
         "domain": "language",
         "kind": "Kin",
         "doc": "one's son or daughter"
+      },
+      "cold": {
+        "name": "cold",
+        "domain": "climate",
+        "kind": "Quality",
+        "doc": "felt, biting chill"
       },
       "coral-reef": {
         "name": "coral-reef",
@@ -722,6 +732,12 @@
         "domain": "settlement",
         "kind": "Social",
         "doc": "the fire at the center of a home"
+      },
+      "heat": {
+        "name": "heat",
+        "domain": "climate",
+        "kind": "Quality",
+        "doc": "felt, oppressive warmth"
       },
       "hobgoblin-kind": {
         "name": "hobgoblin-kind",

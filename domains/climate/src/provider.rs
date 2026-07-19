@@ -6,10 +6,15 @@
 
 use crate::biome::{self, Biome, SeafloorFeature};
 use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
+use crate::currents::ocean_current_field;
 use crate::habitability;
 use crate::moisture::moisture_field;
 use crate::temperature::{diurnal_amplitude_field, mean_temperature, temperature_at};
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Temperature};
+use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
+use hornvale_kernel::{
+    CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
+    ReferenceElevation, Temperature, Venue,
+};
 
 /// The inputs the composition root supplies to build a climate (all bare
 /// kernel types or climate-owned types — no terrain/astronomy imports).
@@ -43,11 +48,15 @@ pub struct ClimateInputs<'a> {
 #[derive(Debug, Clone)]
 pub struct GeneratedClimate {
     geosphere: Geosphere,
+    /// Latitude-bucketed cell index, built once at construction so `phenomena`
+    /// resolves an observer's cell without rebuilding it (O(cells)) per call.
+    nearest_cell: NearestCellIndex,
     elevation: CellMap<ReferenceElevation>,
     sea_level: ReferenceElevation,
     mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     diurnal_amp: CellMap<f64>,
+    current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
     band_count: Option<u32>,
@@ -110,6 +119,9 @@ impl GeneratedClimate {
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
             diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
+        let sea_level = inputs.sea_level;
+        let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
+        let current = ocean_current_field(geo, &is_ocean, band_count);
         let biome = CellMap::from_fn(geo, |cell| {
             let temp = *mean_temp.get(cell);
             let upwell = is_upwelling(geo, inputs.elevation, inputs.sea_level, cell, band_count);
@@ -133,11 +145,13 @@ impl GeneratedClimate {
         );
         GeneratedClimate {
             geosphere: geo.clone(),
+            nearest_cell: NearestCellIndex::new(geo),
             elevation: inputs.elevation.clone(),
             sea_level: inputs.sea_level,
             mean_temp,
             moisture,
             diurnal_amp,
+            current,
             biome,
             habitability,
             band_count,
@@ -265,6 +279,13 @@ impl GeneratedClimate {
     pub fn diurnal_amp_at(&self, cell: CellId) -> f64 {
         *self.diurnal_amp.get(cell)
     }
+    /// The precomputed ocean surface-current vector at a cell (a unit-sphere
+    /// tangent vector, zero over land and zero everywhere when locked — see
+    /// [`crate::currents::ocean_current`]).
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn current_at(&self, cell: CellId) -> [f64; 3] {
+        *self.current.get(cell)
+    }
     /// The biome at a cell.
     pub fn biome_at(&self, cell: CellId) -> Biome {
         *self.biome.get(cell)
@@ -282,6 +303,132 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(ratio)
     pub fn habitable_fraction(&self) -> f64 {
         habitability::habitable_fraction(&self.habitability)
+    }
+}
+
+// Felt weather decouples TWO thresholds (The Elements, Stage 2, G3-refined):
+// the world is felt BROADLY (a narrow EMISSION band, so mild-but-imperfect
+// climes emit a low-salience standing condition), but weather-gods stay RARE
+// (a gentle salience SLOPE, so only a genuinely brutal clime crosses the 0.25
+// pantheon FLOOR). Mild = felt sub-floor; brutal = deified.
+
+/// The comfortable temperate midpoint, °C: roughly Earth's global mean
+/// annual surface temperature. Felt heat/cold is the deviation from here.
+const TEMPERATE_BASELINE_C: f64 = 14.0;
+/// EMISSION threshold, °C: a cell whose annual mean deviates by at least this
+/// from [`TEMPERATE_BASELINE_C`] emits a felt heat/cold standing condition.
+/// Narrow, so mild climes (e.g. an 18 °C settlement, 4 °C off) ARE felt.
+const TEMP_EMIT_MARGIN_C: f64 = 2.0;
+/// Felt-temperature salience per °C of deviation beyond the emission margin, a
+/// gentle slope (G3): crossing the 0.25 pantheon FLOOR (deification) needs a
+/// genuinely brutal ~±15 °C from baseline — `0.019 × (15 − 2) = 0.247`, which
+/// `round2`s to 0.25 (mean ≥ ~29 °C or ≤ ~−1 °C). A mild 4 °C deviation is
+/// felt at only `round2(0.019 × 2) = 0.04` — well sub-floor.
+const TEMP_SALIENCE_PER_C: f64 = 0.019;
+/// Below this annual-mean temperature, precipitation on a wet cell falls as
+/// snow rather than rain (water's freezing point).
+const FREEZING_C: f64 = 0.0;
+/// EMISSION threshold for moisture: a cell at or above this ("moderately wet",
+/// not only near-saturated) emits a felt rain/snow standing condition. Below
+/// it, no precipitation phenomenon (dryness is deferred). Narrow, so the world
+/// is felt broadly.
+const WET_EMIT_THRESHOLD: f64 = 0.5;
+/// Precipitation salience per unit of moisture beyond the emission threshold, a
+/// gentle slope: crossing the 0.25 FLOOR needs genuinely extreme wetness —
+/// `0.5 × (1.0 − 0.5) = 0.25`, so only a near-saturated cell (moisture ≈ 1.0)
+/// deifies. A moderately-wet 0.75 cell is felt at only
+/// `round2(0.5 × 0.25) = 0.13` — sub-floor.
+const MOISTURE_SALIENCE_PER_UNIT: f64 = 0.5;
+/// Ceiling on any standing climate phenomenon's salience: felt weather never
+/// outranks the sky's headline bodies.
+const MAX_CLIMATE_SALIENCE: f64 = 0.9;
+
+/// Round to two decimals — the salience precision every phenomena source
+/// emits at (matches astronomy's emitter and `observe`'s lens arithmetic).
+fn round2(x: f64) -> f64 {
+    (x * 100.0).round() / 100.0
+}
+
+/// The tier-1 climate as a phenomena source: felt, standing conditions that
+/// vary with place (spec §3.1.6). Pure function of `(self, ctx)`. A
+/// position-blind observation (`ctx.position == None`) yields only the
+/// inherited AMBIENT claim — felt weather needs a place. Refines, never
+/// contradicts, the tier-0 [`UniformClimate`] (decision 0039): the AMBIENT
+/// phenomenon is emitted byte-identically, with heat/cold/rain/snow added
+/// beneath it. Emission is BROAD (a narrow deviation band, so the world is
+/// felt widely) but salience is a GENTLE slope (so only a genuinely brutal
+/// clime crosses the 0.25 pantheon floor and mints a weather-god).
+impl PhenomenaSource for GeneratedClimate {
+    fn phenomena(&self, ctx: &ObserverContext) -> Vec<Phenomenon> {
+        // Tier-0's ambient claim still holds — emit it unchanged first, then
+        // refine with the felt structure beneath it.
+        let mut out = vec![Phenomenon {
+            kind: AMBIENT.to_string(),
+            description: "warm, still, unchanging air".to_string(),
+            period_days: None,
+            salience: 0.15,
+            venue: Venue::Ambient,
+        }];
+
+        let Some(coord) = ctx.position else {
+            return out;
+        };
+        let cell = self
+            .nearest_cell
+            .nearest(&self.geosphere, coord.latitude, coord.longitude);
+
+        // Felt temperature: deviation from the temperate baseline. Warm past
+        // the emission margin → heat; cold past it → cold; within the narrow
+        // band → neither. Salience is a gentle slope so mild climes are felt
+        // sub-floor and only a brutal one deifies.
+        let mean = self.mean_temperature_at(cell).get();
+        let deviation = mean - TEMPERATE_BASELINE_C;
+        let temp_salience = round2(
+            (TEMP_SALIENCE_PER_C * (deviation.abs() - TEMP_EMIT_MARGIN_C))
+                .clamp(0.0, MAX_CLIMATE_SALIENCE),
+        );
+        if deviation >= TEMP_EMIT_MARGIN_C {
+            out.push(Phenomenon {
+                kind: HEAT.to_string(),
+                description: "oppressive heat".to_string(),
+                period_days: None,
+                salience: temp_salience,
+                venue: Venue::Ambient,
+            });
+        } else if deviation <= -TEMP_EMIT_MARGIN_C {
+            out.push(Phenomenon {
+                kind: COLD.to_string(),
+                description: "biting cold".to_string(),
+                period_days: None,
+                salience: temp_salience,
+                venue: Venue::Ambient,
+            });
+        }
+
+        // Felt precipitation: moderately-wet cells and up. Snow when frozen,
+        // else rain. Gentle slope: felt sub-floor unless genuinely extreme.
+        // Dryness/drought is deferred (Stage 2 scope).
+        let moisture = self.moisture_at(cell);
+        if moisture >= WET_EMIT_THRESHOLD {
+            let salience = round2(
+                (MOISTURE_SALIENCE_PER_UNIT * (moisture - WET_EMIT_THRESHOLD))
+                    .clamp(0.0, MAX_CLIMATE_SALIENCE),
+            );
+            let (kind, description) = if mean <= FREEZING_C {
+                (SNOW, "falling snow")
+            } else {
+                (RAIN, "falling rain")
+            };
+            out.push(Phenomenon {
+                kind: kind.to_string(),
+                description: description.to_string(),
+                period_days: None,
+                salience,
+                venue: Venue::Ambient,
+            });
+        }
+
+        out
     }
 }
 
@@ -481,5 +628,254 @@ mod tests {
             year_phase_offset: 0.2,
         });
         assert_eq!(climate.year_phase_offset(), 0.2);
+    }
+
+    // --- The felt-weather emitter (The Elements, Stage 2). ---
+
+    use hornvale_kernel::{EntityId, GeoCoord, ObserverContext, PhenomenaSource, WorldTime};
+
+    /// A high-insolation spinning climate whose cells span a wide range of
+    /// mean temperatures and moistures — enough to exercise every emitter arm.
+    fn varied_climate() -> GeneratedClimate {
+        let geo = Geosphere::new(5);
+        let elev = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[2] > 0.0 {
+                200.0
+            } else {
+                -2000.0
+            };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        GeneratedClimate::generate(&ClimateInputs {
+            insolation: 1.6,
+            ..inputs(&geo, &elev, &sea, RotationRegime::Spinning { day_std: 1.0 })
+        })
+    }
+
+    fn observe_at(climate: &GeneratedClimate, coord: GeoCoord) -> Vec<Phenomenon> {
+        climate.phenomena(&ObserverContext::at_position(
+            EntityId::new(1).unwrap(),
+            WorldTime { day: 3.0 },
+            coord,
+        ))
+    }
+
+    #[test]
+    fn emitter_is_pure() {
+        let climate = varied_climate();
+        let coord = climate.geosphere().coord(CellId(7));
+        assert_eq!(observe_at(&climate, coord), observe_at(&climate, coord));
+    }
+
+    #[test]
+    fn ambient_is_always_emitted_and_unrefined() {
+        // Tier refinement (0039): the tier-0 ambient claim survives at every
+        // vantage — position-blind (no cell) and placed alike, byte-identical
+        // to UniformClimate's.
+        let climate = varied_climate();
+        let blind = climate.phenomena(&ObserverContext::at(
+            EntityId::new(1).unwrap(),
+            WorldTime { day: 3.0 },
+        ));
+        assert_eq!(
+            blind.len(),
+            1,
+            "position-blind yields only the ambient claim"
+        );
+        let expected = crate::UniformClimate.phenomena(&ObserverContext::at(
+            EntityId::new(1).unwrap(),
+            WorldTime { day: 3.0 },
+        ));
+        assert_eq!(blind, expected, "ambient is byte-identical to tier 0");
+        for cell in climate.geosphere().cells() {
+            let out = observe_at(&climate, climate.geosphere().coord(cell));
+            assert!(
+                out.iter().any(|p| p.kind == AMBIENT),
+                "every placed vantage keeps the ambient claim"
+            );
+        }
+    }
+
+    #[test]
+    fn felt_weather_matches_the_documented_thresholds() {
+        // For every cell, the emitter's heat/cold/rain/snow arms must agree
+        // with the documented EMISSION rule computed from the same fields — a
+        // strong correctness+purity check without forcing a specific extreme.
+        let climate = varied_climate();
+        for cell in climate.geosphere().cells() {
+            let out = observe_at(&climate, climate.geosphere().coord(cell));
+            let mean = climate.mean_temperature_at(cell).get();
+            let deviation = mean - TEMPERATE_BASELINE_C;
+            let has_heat = out.iter().any(|p| p.kind == HEAT);
+            let has_cold = out.iter().any(|p| p.kind == COLD);
+            assert_eq!(has_heat, deviation >= TEMP_EMIT_MARGIN_C, "cell {}", cell.0);
+            assert_eq!(
+                has_cold,
+                deviation <= -TEMP_EMIT_MARGIN_C,
+                "cell {}",
+                cell.0
+            );
+
+            let moisture = climate.moisture_at(cell);
+            let has_snow = out.iter().any(|p| p.kind == SNOW);
+            let has_rain = out.iter().any(|p| p.kind == RAIN);
+            let wet = moisture >= WET_EMIT_THRESHOLD;
+            assert_eq!(has_snow, wet && mean <= FREEZING_C, "cell {}", cell.0);
+            assert_eq!(has_rain, wet && mean > FREEZING_C, "cell {}", cell.0);
+
+            // Salience never exceeds the ceiling, and every weather phenomenon
+            // is a standing (aperiodic) ambient condition.
+            for p in &out {
+                assert!(p.salience <= MAX_CLIMATE_SALIENCE + 1e-9);
+                if p.kind != AMBIENT {
+                    assert_eq!(p.period_days, None);
+                    assert_eq!(p.venue, Venue::Ambient);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn mild_climes_are_felt_but_never_deified() {
+        // The two decoupled thresholds: BROAD emission (a cell within the
+        // narrow ±2 °C band mints nothing; just past it IS felt) but a RARE
+        // floor (crossing 0.25 needs a genuinely brutal deviation).
+        let climate = varied_climate();
+        let mut saw_felt_subfloor = false;
+        for cell in climate.geosphere().cells() {
+            let out = observe_at(&climate, climate.geosphere().coord(cell));
+            let deviation = climate.mean_temperature_at(cell).get() - TEMPERATE_BASELINE_C;
+            let felt = out.iter().find(|p| p.kind == HEAT || p.kind == COLD);
+
+            // Emission tracks the narrow band exactly.
+            if deviation.abs() < TEMP_EMIT_MARGIN_C {
+                assert!(
+                    felt.is_none(),
+                    "cell {} within the ±2 °C band should mint nothing",
+                    cell.0
+                );
+            } else {
+                assert!(
+                    felt.is_some(),
+                    "cell {} past the emission margin should be felt",
+                    cell.0
+                );
+            }
+
+            // A mild clime (felt, but well short of brutal) stays sub-floor.
+            if let Some(p) = felt {
+                if deviation.abs() < 10.0 {
+                    assert!(
+                        p.salience < 0.25,
+                        "cell {} at {deviation:.1} °C deviation should be felt sub-floor, \
+                         got salience {}",
+                        cell.0,
+                        p.salience
+                    );
+                    saw_felt_subfloor = true;
+                }
+                // Crossing the deity FLOOR needs a genuinely brutal deviation.
+                // The raw slope crosses 0.25 at 15 °C (`0.019 × (15 − 2) =
+                // 0.247` → round2 0.25); round2 pulls the effective boundary
+                // down to ~14.89 °C (raw 0.245 → 0.25), no further.
+                if p.salience >= 0.25 {
+                    assert!(
+                        deviation.abs() >= 14.88,
+                        "cell {} crossed the deity floor at only {deviation:.2} °C deviation",
+                        cell.0
+                    );
+                }
+            }
+        }
+        assert!(
+            saw_felt_subfloor,
+            "the varied climate must contain a mild-but-felt cell (the whole point)"
+        );
+    }
+
+    // Coast tangency: an ocean cell adjacent to land has its into-land
+    // component suppressed — the current runs ALONG the coast, not into it.
+    // Build a real world with a coastline (the same land/ocean split
+    // `ocean_cells_map_to_marine_biomes` uses), find an ocean cell with a
+    // land neighbor, and assert the current's component toward the mean
+    // land-neighbor direction is at most a small tolerance. The toward-land
+    // direction is computed independently here (tangent-projected, normalized
+    // mean of neighbor-minus-self over land neighbors) so this is a genuine
+    // check on `current_at`'s output, not a restatement of the production
+    // formula.
+    #[test]
+    fn coastal_current_does_not_flow_into_land() {
+        let geo = Geosphere::new(5);
+        let sea_level = ReferenceElevation::new(0.0).unwrap();
+        let elev = CellMap::from_fn(&geo, |c| {
+            let m = if geo.position(c)[2] > 0.0 {
+                300.0
+            } else {
+                -1000.0
+            };
+            ReferenceElevation::new(m).unwrap()
+        });
+        let sea = CellMap::from_fn(&geo, |_| SeafloorFeature::None);
+        let regime = RotationRegime::Spinning { day_std: 1.0 };
+        let climate = GeneratedClimate::generate(&inputs(&geo, &elev, &sea, regime));
+        let is_ocean = |c: CellId| *elev.get(c) < sea_level;
+
+        let mut checked = false;
+        for cell in geo.cells() {
+            if !is_ocean(cell) {
+                continue;
+            }
+            let pos = geo.position(cell);
+            let len = (pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]).sqrt();
+            let up = [pos[0] / len, pos[1] / len, pos[2] / len];
+
+            let mut toward_land_sum = [0.0, 0.0, 0.0];
+            for &n in geo.neighbors(cell) {
+                if is_ocean(n) {
+                    continue;
+                }
+                let npos = geo.position(n);
+                let dir = [npos[0] - pos[0], npos[1] - pos[1], npos[2] - pos[2]];
+                let radial = dir[0] * up[0] + dir[1] * up[1] + dir[2] * up[2];
+                let tangent = [
+                    dir[0] - radial * up[0],
+                    dir[1] - radial * up[1],
+                    dir[2] - radial * up[2],
+                ];
+                toward_land_sum = [
+                    toward_land_sum[0] + tangent[0],
+                    toward_land_sum[1] + tangent[1],
+                    toward_land_sum[2] + tangent[2],
+                ];
+            }
+            let tl_len = (toward_land_sum[0] * toward_land_sum[0]
+                + toward_land_sum[1] * toward_land_sum[1]
+                + toward_land_sum[2] * toward_land_sum[2])
+                .sqrt();
+            if tl_len < 1e-9 {
+                // No land neighbor (or a degenerate cancellation) — skip.
+                continue;
+            }
+            let toward_land = [
+                toward_land_sum[0] / tl_len,
+                toward_land_sum[1] / tl_len,
+                toward_land_sum[2] / tl_len,
+            ];
+            let current = climate.current_at(cell);
+            let into_land = current[0] * toward_land[0]
+                + current[1] * toward_land[1]
+                + current[2] * toward_land[2];
+            assert!(
+                into_land <= 1e-6,
+                "cell {} current flows into land: into_land={into_land}",
+                cell.0
+            );
+            checked = true;
+        }
+        assert!(
+            checked,
+            "expected at least one ocean cell with a land neighbor"
+        );
     }
 }

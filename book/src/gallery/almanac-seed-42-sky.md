@@ -25,6 +25,8 @@ Salient phenomena, most attention-demanding first:
 - [0.10] *night-star* — a deep orange star that does not wander
 - [0.10] *night-star* — a dim red star that does not wander
 - [0.10] *night-star* — a pale white star that does not wander
+- [0.05] *rain* — falling rain
+- [0.02] *cold* — biting cold
 - [0.01] *seasonal-cycle* — the slow swelling and shrinking of daylight
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
@@ -140,6 +142,8 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 The driest interior's day swings about 21°C, warmest in the afternoon and coolest before dawn.
 The open ocean's day swings about 1°C, warmest in the afternoon and coolest before dawn.
+
+The seas: a current runs east along the coast.
 
 ## The Ground
 

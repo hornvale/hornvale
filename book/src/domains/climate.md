@@ -42,6 +42,18 @@ entirely: no bands, no latitude organization — climate reorganizes around
 the substellar/antistellar axis instead, a single day–night overturning
 cell.
 
+**The wind drives the sea.** The band winds also drive a surface **ocean
+current** field ([The Gyre](../chronicle/the-gyre.md)): each ocean cell's
+current is the prevailing wind turned by the Coriolis-signed Ekman angle
+(right in the north, left in the south) and projected along any coast it
+meets, so the belts resolve into subtropical **gyres** — clockwise north,
+counter-clockwise south — with along-shore boundary currents. Zero on land,
+empty on a locked world. It is a kinematic sketch, one-pass over the
+geosphere like drainage, and — being level-0 — it advects no temperature, so
+it moves not one byte of the census; the orrery advects it as particle flow
+over the ocean. The current *warming* coasts (the feedback that would move the
+mean) is a later campaign.
+
 **Temperature and moisture as real fields.** The temperature field's
 boundary speaks the kernel's `Temperature` type (promoted in
 [Temperature](../chronicle/temperature.md)), so an absolute reading can
@@ -119,8 +131,19 @@ by nothing but the sky above it.
 Chronicle: [3c, Climate & Biomes](../chronicle/campaign-3c.md). Laboratory:
 [Study 002, the Census of Lands](../laboratory/study-002.md).
 
-**The tier ladder ahead:** weather as day-to-day variation on top of the
-mean fields, ocean currents and cloud feedback promoting the declared
-approximations above to derived quantities (each such promotion an epoch
-bump, never a silent change), and the local-refinement campaign that lets
-a habitable cell host a walk-around interior.
+**Tier 1 speaks, too ([The Elements](../chronicle/the-elements.md)).** The
+generated climate is no longer only a field provider: it emits *felt weather*
+into the phenomena stream — heat, cold, rain, and snow as `Venue::Ambient`
+standing conditions that vary with place and time (riding the seasonal and
+diurnal temperature terms). Salience tracks a cell's deviation from a temperate
+baseline, so mild country is felt but sub-floor while only a brutal clime
+crosses religion's threshold — weather-gods are earned by hardship, not
+sprinkled across every valley. It reaches the stream through the
+phenomena-source roster, the same `Domain`-trait seam concept registration uses.
+
+**The tier ladder ahead:** *stochastic* weather — day-to-day variation the
+world's pure `world(place, time)` cannot yet express (standing felt weather has
+shipped; the *changing* kind waits on an event model) — ocean currents and cloud
+feedback promoting the declared approximations above to derived quantities (each
+such promotion an epoch bump, never a silent change), and the local-refinement
+campaign that lets a habitable cell host a walk-around interior.

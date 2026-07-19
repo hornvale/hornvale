@@ -118,21 +118,48 @@ pub const SUSTENANCE: DriveParams = DriveParams {
     sated: 0.15,
 };
 
-/// The resource cell the drive seeks: the lowest-elevation of `home`'s three
-/// mesh neighbors ("toward water"), ties broken by `RoomAddr` order for
-/// determinism. Reads the locale elevation field.
-/// type-audit: bare-ok(return)
-pub fn resource_room(home: &RoomAddr, ctx: &LocaleContext) -> RoomAddr {
+/// The elevation field and fresh-water truth the belief/exploration logic
+/// reads, abstracted so pure tests plant synthetic terrain without building a
+/// world. The session backs it with a `LocaleContext` (see
+/// `session.rs::LocaleTerrain`).
+pub trait Terrain {
+    /// The room's elevation in metres (INFINITY for an undescribable room —
+    /// never chosen downhill). Still the exploration prior ("water lies
+    /// low" — rivers ARE the downhill drainage channels), even though water
+    /// itself is no longer classified by elevation (the-surmise T5 re-wire;
+    /// see `is_fresh_water`).
+    /// type-audit: waiver(elevation-convention: return)
+    fn elevation(&self, room: &RoomAddr) -> f64;
+
+    /// Whether the room's water is FRESH — drinkable — rather than salt.
+    /// Reads The Freshet's own classification (`WaterKind::is_fresh`), not
+    /// an elevation threshold: "below sea level" is the unreachable SALT
+    /// OCEAN, not water an agent can drink or ever reach (decision-ledger
+    /// #9, the T4 finding that parked this campaign). `LocaleTerrain` reads
+    /// this from the locale's own `water` field; planted test terrain marks
+    /// specific rooms fresh directly.
+    /// type-audit: bare-ok(flag: return)
+    fn is_fresh_water(&self, room: &RoomAddr) -> bool;
+}
+
+/// Water-truth (L0): a room is water iff its terrain reports it as FRESH
+/// water (The Freshet's `WaterKind::is_fresh` — rivers only, never the salt
+/// ocean or a salt basin). Pure over the terrain field; rivers scatter along
+/// drainage, so sources are naturally many, not one.
+/// type-audit: bare-ok(flag: return)
+pub fn is_water(room: &RoomAddr, terrain: &dyn Terrain) -> bool {
+    terrain.is_fresh_water(room)
+}
+
+/// The single steepest-descent neighbour ("water lies low" — the prior an
+/// ignorant agent explores along). `total_cmp` with an ascending-`RoomAddr`
+/// tie-break (the constitutional no-native-float-cmp rule), the same rule
+/// `nearest_water`'s BFS and `lowest_unvisited_neighbor` use. Always a
+/// neighbour (never `from` itself).
+pub fn downhill_step(from: &RoomAddr, terrain: &dyn Terrain) -> RoomAddr {
     let mut best: Option<(RoomAddr, f64)> = None;
-    for n in home.neighbors() {
-        let elev = ctx
-            .describe(&n, WorldTime { day: 0.0 })
-            .map(|loc| loc.fields.elevation_m)
-            .unwrap_or(f64::INFINITY);
-        // Float ordering uses `total_cmp` with a deterministic tie-break (the
-        // constitutional no-native-float-cmp rule; CLAUDE.md determinism), ties
-        // broken by ascending `RoomAddr`. Keep `n` only when it is strictly
-        // lower (or equal-and-smaller-addr) than the current best.
+    for n in from.neighbors() {
+        let elev = terrain.elevation(&n);
         let keep_existing = match &best {
             Some((ba, be)) => elev.total_cmp(be).then_with(|| n.cmp(ba)).is_ge(),
             None => false,
@@ -142,6 +169,71 @@ pub fn resource_room(home: &RoomAddr, ctx: &LocaleContext) -> RoomAddr {
         }
     }
     best.expect("a room has three neighbors").0
+}
+
+/// The true nearest water room to `from` (ground-truth-best) — a deterministic
+/// breadth-first walk over the mesh to the closest `is_water` room, frontier
+/// processed in `RoomAddr` order, capped at `budget` expansions (`None` if no
+/// water within it). The agent does not know this until it has PERCEIVED it.
+/// type-audit: bare-ok(count: budget)
+pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> Option<RoomAddr> {
+    let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut frontier: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    frontier.insert(from.clone());
+    let mut expansions = 0usize;
+    while let Some(room) = frontier.iter().next().cloned() {
+        frontier.remove(&room);
+        if !visited.insert(room.clone()) {
+            continue;
+        }
+        if is_water(&room, terrain) {
+            return Some(room);
+        }
+        expansions += 1;
+        if expansions >= budget {
+            return None;
+        }
+        for n in room.neighbors() {
+            if !visited.contains(&n) {
+                frontier.insert(n);
+            }
+        }
+    }
+    None
+}
+
+/// A `Terrain` backed by a `LocaleContext` — the elevation and fresh-water
+/// fields the belief/exploration logic reads in a live session (tests use a
+/// planted terrain instead). Elevation mirrors the undescribable-room
+/// fallback (INFINITY); fresh water reads The Freshet's own salt/fresh
+/// classification (`LocaleFields::water`, `WaterKind::is_fresh`) rather than
+/// deriving a sea-level threshold — the-surmise T5 re-wire: the prior
+/// elevation-threshold model classified the unreachable SALT OCEAN as
+/// "water" (decision-ledger #9), never the rivers an agent can actually
+/// drink from and reach.
+pub struct LocaleTerrain<'a> {
+    /// The locale context whose fields are read.
+    pub ctx: &'a LocaleContext,
+}
+impl<'a> LocaleTerrain<'a> {
+    /// Build the adapter over `ctx`.
+    pub fn new(ctx: &'a LocaleContext) -> Self {
+        Self { ctx }
+    }
+}
+impl<'a> Terrain for LocaleTerrain<'a> {
+    fn elevation(&self, room: &RoomAddr) -> f64 {
+        self.ctx
+            .describe(room, WorldTime { day: 0.0 })
+            .map(|l| l.fields.elevation_m)
+            .unwrap_or(f64::INFINITY)
+    }
+    fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+        self.ctx
+            .describe(room, WorldTime { day: 0.0 })
+            .map(|l| l.fields.water.is_fresh())
+            .unwrap_or(false)
+    }
 }
 
 /// A game-layer predicate: the agent drank (satisfied its sustenance goal) on
@@ -163,16 +255,54 @@ pub fn drive_at(ledger: &Ledger, entity: EntityId, t: WorldTime, p: &DriveParams
     (p.rise * (t.day - last_drank)).clamp(0.0, 1.0)
 }
 
-/// What the agent perceives of the world — the `view` the decision reads. Today
-/// its contents are ground truth; PSY-6's "plan over belief, not truth" (UNI-16)
-/// is later a change to what fills this, not to the seam.
+/// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
+/// `agent-at` history ∩ water-truth. Among the water rooms the agent has stood in
+/// at or before `t`, the one nearest to `npc.home` by planned hop-distance (ties
+/// by ascending `RoomAddr`), else `None` (ignorant). BELIEF == FOLD-OVER-PERCEIVED:
+/// no stored belief — it re-derives from facts already committed (the matrix
+/// verdict; UNI-20). Nearness anchors to home (nearest-to-current is a followup).
+/// type-audit: bare-ok(count: budget)
+pub fn believed_water(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let mut seen: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
+        let sighted = f.day.map(|d| d <= t.day).unwrap_or(false);
+        if sighted && let Value::Text(s) = &f.object {
+            let room = room_from_text(s);
+            if is_water(&room, terrain) {
+                seen.insert(room);
+            }
+        }
+    }
+    seen.into_iter()
+        .filter_map(|r| plan_to_room(&npc.home, &r, budget).map(|p| (p.len(), r)))
+        .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
+        .map(|(_, r)| r)
+}
+
+/// What the agent perceives of the world — the `view` the decision reads. Splits
+/// SELF-knowledge (position, drive — always true) from world-BELIEF
+/// (`believed_water` — a cache that may be absent/ignorant) and immediate
+/// perceived affordance (`explore_step`). PSY-6's "plan over belief, not truth"
+/// (UNI-16), realized: the ground-truth `water` argument `decide` once took now
+/// lives here as belief.
 /// type-audit: bare-ok(ratio: drive)
 #[derive(Clone, Debug)]
 pub struct Perceived {
-    /// The agent's current room.
+    /// The agent's current room (self-knowledge — always true).
     pub position: RoomAddr,
-    /// The agent's perceived drive level.
+    /// The agent's perceived drive level (self-knowledge — always true).
     pub drive: f64,
+    /// The nearest water the agent KNOWS of (belief), or `None` (ignorant).
+    pub believed_water: Option<RoomAddr>,
+    /// The next exploration move for an ignorant agent (lowest-elevation
+    /// unvisited neighbour), or `None` (nowhere new to look → Hold).
+    pub explore_step: Option<RoomAddr>,
 }
 
 /// The decision's output — the FIRST action of the agent's current plan, or
@@ -188,34 +318,31 @@ pub enum Intent {
     Hold,
 }
 
-/// The planner (The Foresight): the drive generates a goal, A* plans to it, and
-/// `decide` returns the plan's first action. Two goal-states of the ONE drive
-/// (no arbitration): thirsty (`view.drive >= act`) -> plan to water + drink;
-/// otherwise -> return home. `budget` bounds the search (Hold if unreachable).
-///
-/// PRESERVES The Wanting's reserved `view` seam: `decide` reads `view`
-/// (`Perceived { position, drive }`) — ground-truth today; PSY-6's
-/// "plan over belief, not truth" (UNI-16) is later a change to what FILLS
-/// `view`, not to this signature. `water`/`home`/`budget` are the planner's
-/// static inputs. The tick still depends only on the `Intent` output.
+/// The planner (The Foresight), now planning over BELIEF (The Surmise): thirsty
+/// and knows water -> A* to it and drink; thirsty and ignorant -> take the
+/// explore step (or Hold if nowhere new); not thirsty and away -> plan home; else
+/// Hold. Preserves the seam: `decide` reads `view` (now carrying belief), the tick
+/// depends only on `Intent`.
 /// type-audit: bare-ok(count: budget)
-pub fn decide(
-    view: &Perceived,
-    home: &RoomAddr,
-    water: &RoomAddr,
-    p: &DriveParams,
-    budget: usize,
-) -> Intent {
+pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     if view.drive >= p.act {
-        match plan_to_water(&view.position, water, budget).and_then(|plan| plan.into_iter().next())
-        {
-            Some(a) => Intent::Do(a),
-            None => Intent::Hold, // water unreachable within budget
+        match &view.believed_water {
+            Some(w) => {
+                match plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
+                {
+                    Some(a) => Intent::Do(a),
+                    None => Intent::Hold, // known water unreachable within budget
+                }
+            }
+            None => match &view.explore_step {
+                Some(step) => Intent::Do(Action::MoveTo(step.clone())),
+                None => Intent::Hold, // ignorant and nowhere new to explore
+            },
         }
     } else if &view.position != home {
-        match plan_to_room(&view.position, home, budget).and_then(|plan| plan.into_iter().next()) {
+        match plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next()) {
             Some(a) => Intent::Do(a),
-            None => Intent::Hold, // home unreachable within budget
+            None => Intent::Hold,
         }
     } else {
         Intent::Hold
@@ -223,10 +350,11 @@ pub fn decide(
 }
 
 /// The plan search's node-expansion budget: generous for the short local
-/// journeys every derived NPC actually walks (`resource_room` always anchors
-/// water at a single mesh hop from home), but finite so a pathological
-/// distance genuinely gives up (`Intent::Hold`) rather than paying for a
-/// global search — the one search-budget judgment call (spec §8).
+/// journeys every derived NPC actually walks (`nearest_water` finds a real
+/// world's water within a handful of mesh hops of home), but finite so a
+/// pathological distance genuinely gives up (`Intent::Hold`) rather than
+/// paying for a global search — the one search-budget judgment call
+/// (spec §8).
 const PLAN_BUDGET: usize = 1_000;
 
 /// One action's duration: the one authored action-duration judgment call
@@ -265,12 +393,13 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
     }
 }
 
-/// The drive-driven movement system (The Foresight): over (from, to], each NPC
-/// steps through its planned actions (A* over `GoapSpace`/`NavSpace`) —
-/// walking, drinking, walking home — committing a dated `agent-at`/`drank` at
-/// each executed step. Run through c6's `tick`.
+/// The drive-driven movement system (The Foresight → The Surmise): each NPC
+/// steps through its belief-driven plan — exploring while ignorant, beelining
+/// once it knows water — committing a dated `agent-at`/`drank` at each
+/// executed step. Holds a `Terrain` to compute belief and exploration
+/// mid-walk. Run through c6's `tick`.
 /// type-audit: bare-ok(return)
-pub struct DriveMovements {
+pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Npc>,
     /// The interval start (the session's previous day).
@@ -279,16 +408,17 @@ pub struct DriveMovements {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
+    /// The elevation field belief and exploration read.
+    pub terrain: &'a dyn Terrain,
 }
 
-impl TickSystem for DriveMovements {
+impl<'a> TickSystem for DriveMovements<'a> {
     fn label(&self) -> &'static str {
         "drive-movements"
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         let mut out = Vec::new();
         for npc in &self.npcs {
-            let water = &npc.resource;
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
             // A scratch ledger view isn't available; track drank locally: derive
@@ -299,34 +429,61 @@ impl TickSystem for DriveMovements {
                 .filter(|f| f.subject == npc.entity)
                 .filter_map(|f| f.day)
                 .fold(0.0_f64, f64::max);
+            // Belief and exploration state, evolved locally across the walk (the
+            // fold includes this tick's own emitted moves). Seed belief from the
+            // pre-tick history; grow it whenever the agent stands in water.
+            let mut believed = believed_water(frozen, npc, self.from, self.terrain, PLAN_BUDGET);
+            let mut visited: std::collections::BTreeSet<RoomAddr> =
+                std::collections::BTreeSet::new();
+            visited.insert(pos.clone());
             let mut steps = 0usize;
             loop {
                 if day > self.to.day || steps >= MAX_STEPS {
                     break;
                 }
                 steps += 1;
+                // Standing in water forms/updates belief (nearest-to-home wins).
+                if is_water(&pos, self.terrain) {
+                    believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
+                }
                 let drive = (self.params.rise * (day - last_drank)).clamp(0.0, 1.0);
+                let explore_step = lowest_unvisited_neighbor(&pos, &visited, self.terrain);
                 let view = Perceived {
                     position: pos.clone(),
                     drive,
+                    believed_water: believed.clone(),
+                    explore_step,
                 };
                 let seeking_water = drive >= self.params.act;
-                match decide(&view, &npc.home, water, &self.params, PLAN_BUDGET) {
+                match decide(&view, &npc.home, &self.params, PLAN_BUDGET) {
                     Intent::Do(Action::MoveTo(n)) => {
                         day += MOVE_DURATION;
                         if day > self.to.day {
                             break;
                         }
-                        let provenance = if seeking_water {
-                            "walking to water (thirst)"
+                        // Discovery prose (the-surmise T5): honest to what the
+                        // tick actually commits — BELIEVED (knows a source,
+                        // beelining) vs IGNORANT (never found one, exploring
+                        // downhill blind) are genuinely different situations,
+                        // and "water" is now specifically FRESH water (The
+                        // Freshet) — a river, never the sea.
+                        let provenance = if seeking_water && believed.is_some() {
+                            "went down to the river it knew (thirst)"
+                        } else if seeking_water {
+                            "wandered, having found no water yet (thirst)" // ignorant, exploring
                         } else {
                             "walking home (sated)"
                         };
                         out.push(agent_at_fact(npc.entity, &n, day, provenance));
+                        visited.insert(n.clone());
                         pos = n;
                     }
                     Intent::Do(Action::Drink) => {
-                        out.push(drank_fact(npc.entity, day, "drank (thirst sated)"));
+                        out.push(drank_fact(
+                            npc.entity,
+                            day,
+                            "drank from the river (thirst sated)",
+                        ));
                         last_drank = day;
                     }
                     Intent::Hold => {
@@ -336,7 +493,26 @@ impl TickSystem for DriveMovements {
                         // (a thirsty-but-unreachable Hold recomputes the SAME
                         // next_act every iteration — without this check, that
                         // spins to `MAX_STEPS` for nothing).
+                        //
+                        // A degenerate `rise == 0.0` makes `next_act` NaN
+                        // (`act / rise` == `0.0 / 0.0`). Every NaN comparison
+                        // is `false`, so leaving `day` untouched here (rather
+                        // than assigning the NaN) keeps `drive` well-defined
+                        // on the NEXT iteration (`rise * (day - last_drank)`
+                        // with a finite `day` stays exactly 0.0, not NaN).
+                        // Without this guard a NaN `day` makes `drive` itself
+                        // NaN next iteration, which flips `decide`'s thirst
+                        // check (`NaN >= act` is `false`) into the
+                        // plan-home branch — re-running a budgeted A* search
+                        // every remaining iteration up to `MAX_STEPS`, an
+                        // O(MAX_STEPS * PLAN_BUDGET) blowup measured at ~60s
+                        // for this test (the-surmise T3 review) instead of
+                        // the intended O(MAX_STEPS) cheap spin. `steps >=
+                        // MAX_STEPS` alone still bounds the loop.
                         let next_act = last_drank + self.params.act / self.params.rise;
+                        if !next_act.is_finite() {
+                            continue;
+                        }
                         if next_act <= day || next_act > self.to.day {
                             break;
                         }
@@ -347,6 +523,60 @@ impl TickSystem for DriveMovements {
         }
         out
     }
+}
+
+/// The nearer-to-home of an existing belief and a newly-perceived water room.
+/// The tick's incremental fold — and its tie-break MUST match `believed_water`'s
+/// (smaller `RoomAddr` wins on an equal hop-distance), or a mid-walk incremental
+/// belief could disagree with the same belief re-derived from the committed
+/// history, making the chosen source faintly sensitive to `wait` granularity
+/// (the-surmise T3+T4 review). Aligned here so the two folds are identical.
+fn nearer_to_home(
+    home: &RoomAddr,
+    current: Option<RoomAddr>,
+    found: RoomAddr,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let d = |r: &RoomAddr| plan_to_room(home, r, budget).map(|p| p.len());
+    match current {
+        None => Some(found),
+        Some(c) => match (d(&c), d(&found)) {
+            (Some(dc), Some(df)) => Some(match df.cmp(&dc) {
+                std::cmp::Ordering::Less => found,
+                std::cmp::Ordering::Greater => c,
+                // Tie on hop-distance: smaller RoomAddr wins (matches
+                // `believed_water`'s `min_by((hop, RoomAddr))`).
+                std::cmp::Ordering::Equal => std::cmp::min(c, found),
+            }),
+            (None, Some(_)) => Some(found),
+            _ => Some(c),
+        },
+    }
+}
+
+/// The lowest-elevation neighbour not yet visited this walk (the directed-
+/// exploration step), or `None` if every neighbour is visited. Terminating: the
+/// visited set only grows.
+fn lowest_unvisited_neighbor(
+    from: &RoomAddr,
+    visited: &std::collections::BTreeSet<RoomAddr>,
+    terrain: &dyn Terrain,
+) -> Option<RoomAddr> {
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in from.neighbors() {
+        if visited.contains(&n) {
+            continue;
+        }
+        let elev = terrain.elevation(&n);
+        let keep = match &best {
+            Some((ba, be)) => elev.total_cmp(be).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep {
+            best = Some((n, elev));
+        }
+    }
+    best.map(|(r, _)| r)
 }
 
 /// Order settlements for NPC derivation: population descending (ties broken
@@ -372,8 +602,8 @@ fn ordered_for_derivation(
 /// payoff (spec: "the herder has gone down to the river") can never fire
 /// (the-quickening T3 review). Each NPC is minted in `ledger` (a
 /// session-owned clone), homed at its settlement's cell room, with its
-/// drive's resource anchor (`resource_room`, the-wanting) and species'
-/// activity-cycle.
+/// drive's resource anchor (`nearest_water` over the true terrain, The
+/// Surmise) and species' activity-cycle.
 /// type-audit: bare-ok(count: k)
 pub fn derive_npcs(
     world: &World,
@@ -390,7 +620,8 @@ pub fn derive_npcs(
         .into_iter()
         .map(|village| {
             let home = settlement_room(world, ctx, village.id);
-            let resource = resource_room(&home, ctx);
+            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
+                .unwrap_or_else(|| home.clone());
             let species = hornvale_species::species_of(world, village.id)
                 .unwrap_or_else(|| "goblin".to_string());
             let activity = species_activity(world, &species);
@@ -580,7 +811,213 @@ pub fn plan_to_room(from: &RoomAddr, dest: &RoomAddr, budget: usize) -> Option<V
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
+    use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
+    fn commit_agent_at(
+        ledger: &mut Ledger,
+        reg: &ConceptRegistry,
+        entity: EntityId,
+        room: &RoomAddr,
+        day: f64,
+    ) {
+        ledger
+            .commit(agent_at_fact(entity, room, day, "test"), reg)
+            .unwrap();
+    }
+
+    /// A registry with just `AGENT_AT` registered, for the belief-fold tests.
+    fn agent_at_reg() -> ConceptRegistry {
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg
+    }
+
+    #[test]
+    fn believed_water_is_none_until_the_agent_has_stood_in_water() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        // no agent-at yet -> ignorant
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+        // stood in the water room on day 2 -> now believes it
+        commit_agent_at(&mut ledger, &reg, e, &water, 2.0);
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(water)
+        );
+    }
+
+    #[test]
+    fn believed_water_ignores_dry_rooms_the_agent_stood_in() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let dry = home.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only(std::iter::empty()); // `dry` is never fresh
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn believed_water_keeps_the_nearest_to_home_of_several_known_sources() {
+        // THE MULTI-SOURCE FOLD: the agent has stood in a NEAR and a FAR water room;
+        // belief is the near one (fewer hops from home).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let near = home.neighbors()[0].clone(); // 1 hop
+        let far = near
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone(); // 2 hops
+        let t = PlantedTerrain::fresh_only([near.clone(), far.clone()]);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: near.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(far.clone())
+        );
+        commit_agent_at(&mut ledger, &reg, e, &near, 3.0); // later discovers the nearer one
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            Some(near),
+            "belief switches to the nearer known source"
+        );
+    }
+
+    #[test]
+    fn believed_water_only_counts_sightings_at_or_before_t() {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn believed_water_is_deterministic_reload_stable_and_per_agent() {
+        // BELIEF == FOLD: same ledger+t -> same value; reload-stable; another agent's
+        // sightings never leak in (subject-scoped).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let other = ledger.mint_entity();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
+        assert_eq!(
+            believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            None,
+            "another agent's sighting does not become e's belief"
+        );
+        commit_agent_at(&mut ledger, &reg, e, &water, 3.0);
+        let a = believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000);
+        let json = serde_json::to_string(&ledger).unwrap();
+        let reloaded: Ledger = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            a
+        );
+        assert_eq!(a, Some(water));
+    }
+
+    #[test]
+    fn believed_water_breaks_equal_hop_ties_by_ascending_room_addr() {
+        // DETERMINISM UNDER GENUINE TIES (the tie-break the reload/isolation test
+        // can't reach — it never has two equal-distance candidates): two water
+        // sources the SAME hop-distance from home (two neighbours, both 1 hop) must
+        // resolve to the smaller-`RoomAddr` one, identically every run and across
+        // reload. A nondeterministic (HashSet) accumulation would make this flaky;
+        // the `BTreeSet` + `min_by((hop, RoomAddr))` fold makes it total.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let n = home.neighbors();
+        let (first, second) = (n[0].clone(), n[1].clone()); // both exactly 1 hop from home
+        let smaller = std::cmp::min(first.clone(), second.clone());
+        let larger = std::cmp::max(first.clone(), second.clone());
+        let t = PlantedTerrain::fresh_only([first.clone(), second.clone()]);
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: first.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        // Stand in the LARGER-addr source first, then the smaller — so a naive
+        // "first sighting wins" would pick the larger; the tie-break must not.
+        commit_agent_at(&mut ledger, &reg, e, &larger, 2.0);
+        commit_agent_at(&mut ledger, &reg, e, &smaller, 3.0);
+        let got = believed_water(&ledger, &npc, WorldTime { day: 5.0 }, &t, 10_000);
+        assert_eq!(
+            got,
+            Some(smaller.clone()),
+            "an equal-hop tie resolves to the smaller RoomAddr, not sighting order"
+        );
+        let json = serde_json::to_string(&ledger).unwrap();
+        let reloaded: Ledger = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
+            got,
+            "the tie resolves identically after reload"
+        );
+    }
 
     #[test]
     fn derive_npcs_are_distinct_and_placed() {
@@ -598,16 +1035,142 @@ mod tests {
         let home = hornvale_settlement::village_info(&world).unwrap().id;
         let npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
         assert_eq!(npcs.len(), 3);
-        // distinct entities, and each has a real resource anchor (home != resource)
+        // distinct entities, and each has a VALID resource anchor: `derive_npcs`
+        // resolves it as `nearest_water(home, ..., PLAN_BUDGET).unwrap_or(home)`
+        // (against the WORLD's own derived sea level, via the same
+        // `LocaleTerrain` adapter a live session uses) — so `resource` is either
+        // a room that genuinely reads as water, OR the unreachable-water
+        // fallback to `home` itself. `resource == home` is therefore NOT by
+        // itself a bug (the old `resource_room` guaranteed a distinct
+        // neighbour regardless of whether it was real water; `nearest_water`
+        // makes no such promise — not every settlement has water within
+        // budget, and that's a real, legitimate outcome, not a derivation
+        // failure). What must hold is the disjunction below.
         let ids: std::collections::BTreeSet<_> = npcs.iter().map(|n| n.entity).collect();
         assert_eq!(ids.len(), 3);
+        let terrain = LocaleTerrain::new(&ctx);
         for n in &npcs {
-            assert_ne!(
-                n.home, n.resource,
-                "NPC {} must have a real resource anchor",
-                n.label
+            assert!(
+                is_water(&n.resource, &terrain) || n.resource == n.home,
+                "NPC {}'s resource {:?} must be either real water or the home fallback",
+                n.label,
+                n.resource
             );
         }
+    }
+
+    #[test]
+    fn seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding() {
+        // T5 RE-WIRE, MEASURED NOT ASSUMED: The Freshet shipped a real
+        // salt/fresh classification (`WaterKind::is_fresh`, rivers only).
+        // Decision-ledger #9 parked this campaign because the OLD resource
+        // (sea-level "water") put the salt ocean thousands of hops from any
+        // inland settlement — unreachable, and the wrong referent besides
+        // (nobody drinks the sea). This test measures, with the REAL
+        // mechanism a live session runs (`DriveMovements`'s greedy-downhill,
+        // never-revisit-within-a-call exploration — NOT `nearest_water`'s
+        // own address-ordered BFS, which is a different, unrepresentative
+        // traversal used only to set `Npc.resource`'s reference value),
+        // whether the possessed agent's OWN home settlement (the one
+        // `possess --seed 42` actually starts at) now discovers fresh water.
+        //
+        // MEASURED (hand-verified at the larger budgets below while
+        // diagnosing — not re-run every gate, too slow):
+        //   - `nearest_water`'s own BFS finds fresh water from this
+        //     settlement at ~93,000 expansions — three orders of magnitude
+        //     closer than the old salt ocean (unreachable within 500,000),
+        //     but still two orders of magnitude past `PLAN_BUDGET` (1,000),
+        //     so `Npc.resource` still falls back to `home` for THIS
+        //     settlement specifically.
+        //   - The REAL exploration mechanism below walks 2,592 distinct
+        //     rooms over an enormous 100,000-day wait (far beyond anything a
+        //     player would ever `wait`) and STILL never reaches fresh water:
+        //     it gets "boxed in" (every neighbor of its current room already
+        //     visited this call) before finding one.
+        //   - Checked directly against `derive_npcs`'s real selection (this
+        //     settlement plus its two next-most-populous neighbors — the
+        //     actual three NPCs a `possess --seed 42` session derives): ALL
+        //     THREE walk (2,592 / 1,710 / 3,142 moves) and NONE drink.
+        //   - This is settlement-PLACEMENT-dependent, not universal: a
+        //     hand-swept sample of ten of this seed's settlements found the
+        //     mechanism DOES work elsewhere (two of ten drink — one starts
+        //     already adjacent to a river, one reaches one in 448 moves).
+        //
+        // WHY (not a regression this task introduces): a walker that never
+        // revisits a room within one call is not a global search — it can
+        // wall itself into a riverless drainage basin whose every boundary
+        // room's neighbors are already visited, even though unvisited
+        // (lower, river-bearing) ground exists elsewhere in the same
+        // connected mesh. This is exactly the risk spec decision #6 named
+        // and reserved when it chose the greedy prior over a frontier
+        // search ("more machinery than a greedy prior... a followup").
+        // Widening `PLAN_BUDGET`/`MAX_STEPS` does not help — the walk is
+        // topologically stuck, not budget-limited; the fix is smarter
+        // exploration (decision-ledger followup #6), out of this task's
+        // scope.
+        //
+        // REPORTED LOUDLY, NOT PAPERED OVER: the mechanism-level keystones
+        // above (`an_ignorant_agent_discovers_water_then_later_beelines`,
+        // `two_agents_believe_different_sources_...`) prove BELIEF itself
+        // is correct on planted terrain; this test pins that the real
+        // world's terrain/exploration-policy interaction is the remaining
+        // gap for THIS specific seed/settlement — visible here, not lost,
+        // so a future exploration-policy change that fixes (or worsens) it
+        // is caught, not silently assumed.
+        let mut world_reg = hornvale_kernel::ConceptRegistry::default();
+        world_reg
+            .register_predicate(AGENT_AT, false, "pos")
+            .unwrap();
+        world_reg.register_predicate(DRANK, false, "drank").unwrap();
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let terrain = LocaleTerrain::new(&ctx);
+        let home_id = hornvale_settlement::village_info(&world).unwrap().id;
+        let home = settlement_room(&world, &ctx, home_id);
+        let npc = Npc {
+            entity: EntityId::new(1).unwrap(),
+            home: home.clone(),
+            resource: home.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "measure".into(),
+        };
+        let ledger = Ledger::default();
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime { day: 0.0 },
+            // Deliberately enormous: rules out "it just needed a longer
+            // wait" — a real session's `wait` would never span this.
+            to: WorldTime { day: 100_000.0 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
+        let moves = next
+            .find(AGENT_AT)
+            .filter(|f| f.subject == npc.entity)
+            .count();
+        let drinks = next.find(DRANK).filter(|f| f.subject == npc.entity).count();
+        println!(
+            "seed 42 home settlement: {moves} exploration move(s) over an \
+             enormous wait, {drinks} drink(s)"
+        );
+        assert_eq!(
+            drinks, 0,
+            "PINNED FINDING (update this assertion AND the doc comment above \
+             together if it now drinks — don't just delete it): the \
+             possessed agent's own home settlement's NPC does not currently \
+             discover fresh water via the greedy-downhill exploration policy \
+             on real seed 42 (see the doc comment above for why, and the \
+             followup this points at)"
+        );
     }
 
     #[test]
@@ -782,53 +1345,61 @@ mod tests {
         let p = SUSTENANCE;
         let home = addr(1.0);
         let water = home.neighbors()[0].clone();
-        // parched (drive >= act), at home -> the plan's first step, toward water
+        // parched (drive >= act), at home, KNOWS water -> the plan's first
+        // step, toward water
         let v = Perceived {
             position: home.clone(),
             drive: 0.9,
+            believed_water: Some(water.clone()),
+            explore_step: None,
         };
         assert_eq!(
-            decide(&v, &home, &water, &p, 10_000),
+            decide(&v, &home, &p, 10_000),
             Intent::Do(Action::MoveTo(water.clone()))
         );
         // not thirsty, away from home (at water) -> the plan's first step home
         let v = Perceived {
             position: water.clone(),
             drive: 0.1,
+            believed_water: Some(water.clone()),
+            explore_step: None,
         };
         assert_eq!(
-            decide(&v, &home, &water, &p, 10_000),
+            decide(&v, &home, &p, 10_000),
             Intent::Do(Action::MoveTo(home.clone()))
         );
         // not thirsty, at home -> nothing to do
         let v = Perceived {
             position: home.clone(),
             drive: 0.1,
+            believed_water: Some(water.clone()),
+            explore_step: None,
         };
-        assert_eq!(decide(&v, &home, &water, &p, 10_000), Intent::Hold);
+        assert_eq!(decide(&v, &home, &p, 10_000), Intent::Hold);
     }
 
     #[test]
     fn decide_holds_when_the_plan_is_unreachable_within_budget() {
         // A zero search budget can never find even a one-step plan: both the
-        // thirsty (plan-to-water) and homeward (plan-to-room) branches must
-        // give up rather than loop.
+        // thirsty-and-knows-water (plan-to-water) and homeward (plan-to-room)
+        // branches must give up rather than loop.
         let p = SUSTENANCE;
         let home = addr(1.0);
         let water = home.neighbors()[0].clone();
         let thirsty = Perceived {
             position: home.clone(),
             drive: 0.9,
+            believed_water: Some(water.clone()),
+            explore_step: None,
         };
-        assert_eq!(decide(&thirsty, &home, &water, &p, 0), Intent::Hold);
+        assert_eq!(decide(&thirsty, &home, &p, 0), Intent::Hold);
         let away_not_thirsty = Perceived {
             position: water.clone(),
             drive: 0.1,
+            believed_water: Some(water.clone()),
+            explore_step: None,
         };
-        assert_eq!(
-            decide(&away_not_thirsty, &home, &water, &p, 0),
-            Intent::Hold
-        );
+        assert_eq!(decide(&away_not_thirsty, &home, &p, 0), Intent::Hold);
     }
 
     fn raddr(seed: f64) -> RoomAddr {
@@ -836,9 +1407,77 @@ mod tests {
     }
 
     #[test]
+    fn decide_plans_to_believed_water_or_explores_when_ignorant() {
+        // BELIEF DRIVES THE DECISION: two views identical but for belief produce
+        // different first moves — the believer A*-steps toward its known water; the
+        // ignorant one takes the explore step. (Water two hops away so the A* first
+        // step differs from an arbitrary explore step.)
+        let p = SUSTENANCE;
+        let home = raddr(1.0);
+        let mid = home.neighbors()[0].clone();
+        let water = mid
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone();
+        let explore = home.neighbors()[2].clone(); // a different direction
+        // believer, thirsty, at home -> first A* step toward water (== mid)
+        let believer = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+            believed_water: Some(water.clone()),
+            explore_step: Some(explore.clone()),
+        };
+        assert_eq!(
+            decide(&believer, &home, &p, 10_000),
+            Intent::Do(Action::MoveTo(mid.clone()))
+        );
+        // ignorant, thirsty, at home -> the explore step (not toward water)
+        let ignorant = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+            believed_water: None,
+            explore_step: Some(explore.clone()),
+        };
+        assert_eq!(
+            decide(&ignorant, &home, &p, 10_000),
+            Intent::Do(Action::MoveTo(explore.clone()))
+        );
+        assert_ne!(
+            mid, explore,
+            "the two beliefs must yield different moves for this to prove anything"
+        );
+        // ignorant with nowhere new to explore -> Hold
+        let stuck = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+            believed_water: None,
+            explore_step: None,
+        };
+        assert_eq!(decide(&stuck, &home, &p, 10_000), Intent::Hold);
+        // not thirsty, away from home -> plan home (unchanged behavior)
+        let sated_away = Perceived {
+            position: water.clone(),
+            drive: 0.1,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        assert!(matches!(
+            decide(&sated_away, &home, &p, 10_000),
+            Intent::Do(Action::MoveTo(_))
+        ));
+    }
+
+    #[test]
     fn a_thirsty_agent_plans_to_water_and_the_tick_walks_it() {
         // Over a wait long enough to grow thirsty, the tick commits a run of agent-at
-        // moves ending at water plus a `drank`, and the drive resets.
+        // moves ending at water plus a `drank`, and the drive resets. Under the
+        // belief model the agent starts IGNORANT: its first approach to water
+        // is an EXPLORE step (not a ground-truth beeline) — water is planted
+        // as home's only low neighbour, so exploration discovers it on the
+        // very first thirsty step; belief then persists (the fold across the
+        // walk) so every later cycle A*-steps to it directly.
         let mut world_reg = hornvale_kernel::ConceptRegistry::default();
         world_reg
             .register_predicate(AGENT_AT, false, "pos")
@@ -847,12 +1486,7 @@ mod tests {
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
         let home = raddr(1.0);
-        let water = home.neighbors()[0]
-            .neighbors()
-            .iter()
-            .find(|n| **n != home)
-            .unwrap()
-            .clone();
+        let water = home.neighbors()[0].clone();
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -860,11 +1494,21 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
+        // Elevation still steers the exploration prior (downhill), separate
+        // from fresh-water truth: `water` must be the uniquely lowest
+        // neighbor for the comment above's "very first thirsty step"
+        // guarantee to hold deterministically (not by RoomAddr tie-break
+        // luck among equally-INFINITY neighbors).
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+        };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            terrain: &t,
         };
         let next =
             hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &world_reg).unwrap();
@@ -885,21 +1529,112 @@ mod tests {
     }
 
     #[test]
+    fn the_recount_surfaces_the_drives_own_provenance_for_the_full_round_trip() {
+        // THE PROVENANCE READ, DECOUPLED FROM REAL-WORLD REACHABILITY
+        // (the-surmise T4 review): `why`'s recount
+        // (`hornvale_historiography::recount`) must surface the drive's own
+        // reason for a move AND the drink that satisfied it — proven here
+        // directly against `DriveMovements`'s committed facts on PLANTED
+        // (guaranteed-one-hop) terrain — a deterministic, seed-independent
+        // proof of the mechanism, orthogonal to
+        // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`'s
+        // measurement of the real seed-42 world's own exploration-policy gap.
+        // Mutation-verify: blanking `agent_at_fact`'s "went down to the
+        // river it knew (thirst)" string, or `drank_fact`'s "drank from the
+        // river (thirst sated)" string, reds ONE of the two assertions
+        // below without touching the other.
+        // (This test predates The Freshet re-wire; kept on planted terrain
+        // deliberately — the mechanism-level provenance read should not
+        // depend on any one real seed's fresh-water placement.)
+        let mut world = World::new(Seed(0));
+        world
+            .registry
+            .register_predicate(AGENT_AT, false, "pos")
+            .unwrap();
+        world
+            .registry
+            .register_predicate(DRANK, false, "drank")
+            .unwrap();
+        let entity = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                Fact {
+                    subject: entity,
+                    predicate: hornvale_kernel::NAME.to_string(),
+                    object: Value::Text("herder".to_string()),
+                    place: None,
+                    day: None,
+                    provenance: "test".to_string(),
+                },
+                &world.registry,
+            )
+            .unwrap();
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone();
+        let npc = Npc {
+            entity,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "herder".into(),
+        };
+        // Elevation still steers the exploration prior (downhill), separate
+        // from fresh-water truth: `water` must be the uniquely lowest
+        // neighbor so the first (ignorant) thirsty cycle explores directly
+        // onto it, letting a later cycle's believer beeline actually fire
+        // "went down to the river it knew (thirst)" below.
+        let t = PlantedTerrain {
+            elevations: [(water.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: WorldTime { day: 0.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            terrain: &t,
+        };
+        world.ledger = hornvale_kernel::tick(
+            &world.ledger,
+            &[&sys],
+            &["drive-movements"],
+            &world.registry,
+        )
+        .unwrap();
+        let recount = hornvale_historiography::recount(&world, entity).expect("facts exist");
+        assert!(
+            recount.contains("went down to the river it knew (thirst)"),
+            "the recount names the drive's own reason for the move: {recount}"
+        );
+        assert!(
+            recount.contains("drank from the river (thirst sated)"),
+            "the recount also names the drink that satisfied the goal: {recount}"
+        );
+    }
+
+    #[test]
     fn thirsty_but_unreachable_water_gives_up_quickly_not_at_max_steps() {
-        // THE ANTI-HANG GUARD (The Foresight T3 review): if water is
-        // unreachable within `PLAN_BUDGET`, `decide` returns `Hold`, and the
-        // idle-jump's strict-progress guard (`next_act <= day` breaks) must
-        // fire on the FIRST such Hold — not spin to `MAX_STEPS`. Antipodal
-        // water (the far side of the mesh) is far beyond any reasonable
-        // search budget, so this is a genuine unreachable-within-budget case,
-        // not a contrived one.
+        // THE ANTI-HANG GUARD (The Foresight T3 review), reinterpreted for
+        // belief (The Surmise): under the OLD ground-truth model, unreachable
+        // water made `decide` return `Hold` immediately and the idle-jump's
+        // strict-progress guard fired on that very first Hold. Under the
+        // belief model an IGNORANT agent no longer "gives up" on water it has
+        // never reached — it EXPLORES instead — so a genuinely water-less
+        // world (all-INFINITY terrain: no water anywhere for the agent to
+        // ever discover) exercises the OTHER termination guarantee: the
+        // unconditional `steps >= MAX_STEPS` cap bounds the walk even though
+        // it never reaches "thirsty and known-unreachable" in the old sense.
+        // The load-bearing assertion is boundedness/termination, not an
+        // exact fact count (an ignorant agent commits real exploration moves
+        // now, where it once committed none).
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
         reg.register_predicate(DRANK, false, "drank").unwrap();
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
-        let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // antipodal: unreachable within PLAN_BUDGET
+        let water = RoomAddr::containing([-1.0, 0.0, 0.0], 6); // irrelevant now: no water exists anywhere
         let npc = Npc {
             entity: e,
             home: home.clone(),
@@ -907,20 +1642,31 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
-        // A long wait: if the guard didn't fire, the tick would burn
-        // MAX_STEPS re-searching the same unreachable plan every iteration.
+        // No fresh water anywhere, so belief never forms and the agent
+        // explores for the whole run.
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
+        // A long wait: the MAX_STEPS cap (not the wait) must be what bounds
+        // this — if it weren't a real backstop, work would scale with the
+        // wait instead.
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10_000.0 },
             params: SUSTENANCE,
+            terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
-        // No agent-at/drank ever committed (water is never reached); the tick
-        // still returns promptly (this test's own harness timeout is the
-        // proof it didn't hang).
-        assert_eq!(next.find(AGENT_AT).filter(|f| f.subject == e).count(), 0);
-        assert_eq!(next.find(DRANK).filter(|f| f.subject == e).count(), 0);
+        // Never drinks (no water exists); the walk is bounded by MAX_STEPS —
+        // the tick's own prompt return here (within this test's harness
+        // timeout) is additional proof it didn't hang, but the real
+        // assertion is the explicit bound below, not an exact fact count.
+        let drank_count = next.find(DRANK).filter(|f| f.subject == e).count();
+        assert_eq!(drank_count, 0, "no water exists so the agent never drinks");
+        let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
+        assert!(
+            moves <= MAX_STEPS,
+            "the MAX_STEPS cap must bound the exploring walk; got {moves} moves"
+        );
     }
 
     #[test]
@@ -935,6 +1681,17 @@ mod tests {
         // NaN is false). Only the unconditional `steps >= MAX_STEPS` cap
         // (10_000) stops the loop — this test proves that cap is the real
         // backstop, not the closed-form guard (which is a no-op here).
+        //
+        // Under belief (The Surmise): `drive == 0.0 >= act == 0.0` is true
+        // from the very first iteration (`rise == 0.0` means `drive` is
+        // exactly `0.0`, not NaN, for the ENTIRE run — the NaN only ever
+        // appears inside the Hold arm's own `act / rise` division), so the
+        // agent is "thirsty" on every step. With all-INFINITY terrain (no
+        // water anywhere), belief never forms, so every thirsty step takes
+        // the EXPLORE branch instead of the old ground-truth
+        // beeline-then-drink-forever; the walk is bounded by the same
+        // MAX_STEPS cap regardless of which branch (explore-move vs.
+        // NaN-Hold) it spins in.
         //
         // The old regression test for this class
         // (`a_misconfigured_drive_terminates_instead_of_hanging`, keyed on
@@ -956,6 +1713,8 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
+        // No fresh water anywhere, so belief never forms.
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
         let degenerate = DriveParams {
             rise: 0.0,
             act: 0.0,
@@ -970,15 +1729,15 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 1_000_000.0 },
             params: degenerate,
+            terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         // It terminates (the call above returned at all) with a BOUNDED
-        // number of facts — MAX_STEPS iterations, not an unbounded run: with
-        // drive == 0.0 >= act == 0.0, every step is "thirsty", so the first
-        // step plans to water (one MoveTo, since water is one hop from
-        // home), then every subsequent step is Drink (already at water,
-        // still "thirsty" since act stays 0.0) — MAX_STEPS-1 drinks plus one
-        // move, capped by the 10_000-iteration backstop.
+        // number of facts — MAX_STEPS iterations, not an unbounded run: every
+        // step is "thirsty" (drive == act == 0.0) and ignorant (no water
+        // exists), so every step either explores (a move) or, once boxed in
+        // with no unvisited neighbour, Holds on the NaN-producing idle jump —
+        // either way, `steps >= MAX_STEPS` is what stops it.
         let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
         let drinks = next.find(DRANK).filter(|f| f.subject == e).count();
         assert!(
@@ -1010,11 +1769,13 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             label: "herder".into(),
         };
+        let t = PlantedTerrain::fresh_only([resource.clone()]);
         let sys = DriveMovements {
             npcs: vec![npc],
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10.0 },
             params: p,
+            terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
         let first = next.find(AGENT_AT).find(|f| f.subject == e).unwrap();
@@ -1091,5 +1852,227 @@ mod tests {
         let plan = plan_to_room(&home, &dest, 10_000).unwrap();
         assert!(plan.iter().all(|a| matches!(a, Action::MoveTo(_))));
         assert!(!plan.is_empty());
+    }
+
+    /// A synthetic elevation + fresh-water field for pure tests: planted
+    /// heights, INFINITY elsewhere (INFINITY = "never chosen downhill" —
+    /// mirrors `LocaleTerrain`'s undescribable-room fallback), and a planted
+    /// SET of fresh-water rooms (the-surmise T5 re-wire: water is no longer
+    /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
+    struct PlantedTerrain {
+        elevations: std::collections::BTreeMap<RoomAddr, f64>,
+        fresh: std::collections::BTreeSet<RoomAddr>,
+    }
+    impl PlantedTerrain {
+        /// No elevation data — just a set of fresh-water rooms (the common
+        /// case for the belief-fold tests, which never exercise
+        /// `downhill_step`/`nearest_water`'s elevation reads).
+        fn fresh_only(rooms: impl IntoIterator<Item = RoomAddr>) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: rooms.into_iter().collect(),
+            }
+        }
+        /// No fresh water anywhere — just planted elevations (the
+        /// exploration/downhill tests, which never exercise belief).
+        fn dry(elevations: std::collections::BTreeMap<RoomAddr, f64>) -> Self {
+            Self {
+                elevations,
+                fresh: std::collections::BTreeSet::new(),
+            }
+        }
+    }
+    impl Terrain for PlantedTerrain {
+        fn elevation(&self, room: &RoomAddr) -> f64 {
+            self.elevations.get(room).copied().unwrap_or(f64::INFINITY)
+        }
+        fn is_fresh_water(&self, room: &RoomAddr) -> bool {
+            self.fresh.contains(room)
+        }
+    }
+
+    #[test]
+    fn is_water_delegates_to_terrain_is_fresh_water() {
+        // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
+        // normalizes its input direction first — so `raddr(1.0)` and `raddr(2.0)`
+        // collapse to the SAME room (both are the direction [1,0,0]). Use a
+        // genuine mesh neighbor for `high` instead, so the two planted rooms
+        // are actually distinct (deviation from the brief's literal `raddr(2.0)`;
+        // see task-1-report.md). Renamed from
+        // `is_water_is_the_elevation_threshold` (T5 re-wire): `is_water` no
+        // longer reads elevation at all — it delegates to
+        // `Terrain::is_fresh_water` (The Freshet's salt/fresh classification).
+        let low = raddr(1.0);
+        let high = low.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([low.clone()]);
+        assert!(is_water(&low, &t));
+        assert!(!is_water(&high, &t));
+    }
+
+    #[test]
+    fn downhill_step_picks_the_lowest_neighbor_deterministically() {
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // Make ns[1] strictly lowest; others high.
+        let mut m = std::collections::BTreeMap::new();
+        for (i, n) in ns.iter().enumerate() {
+            m.insert(n.clone(), if i == 1 { 0.0 } else { 100.0 });
+        }
+        let t = PlantedTerrain::dry(m);
+        assert_eq!(downhill_step(&home, &t), ns[1]);
+    }
+
+    #[test]
+    fn nearest_water_finds_the_closest_water_room_by_hops() {
+        // home (dry) -> a neighbor that is fresh water: 1 hop.
+        let home = raddr(1.0);
+        let near = home.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([near.clone()]);
+        assert_eq!(nearest_water(&home, &t, 10_000), Some(near));
+    }
+
+    #[test]
+    fn nearest_water_returns_from_itself_when_already_on_water() {
+        let here = raddr(1.0);
+        let t = PlantedTerrain::fresh_only([here.clone()]);
+        assert_eq!(nearest_water(&here, &t, 10_000), Some(here));
+    }
+
+    #[test]
+    fn nearest_water_gives_up_within_budget_when_no_water() {
+        let home = raddr(1.0); // no fresh water anywhere
+        let t = PlantedTerrain::fresh_only(std::iter::empty());
+        assert_eq!(nearest_water(&home, &t, 50), None);
+    }
+
+    #[test]
+    fn two_agents_believe_different_sources_from_their_histories_and_beeline_differently() {
+        // THE MULTI-SOURCE KEYSTONE (destination divergence): two NPCs, same home,
+        // thirst, world — differing ONLY in a pre-seeded agent-at (perceived source).
+        // A knows the near source W1; B knows the far source W2. Each beelines to its
+        // OWN believed source. Belief ignored ⇒ both go to the same true-nearest ⇒
+        // this fails.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r
+        };
+        let home = raddr(1.0);
+        let w1 = home.neighbors()[0].clone(); // near source
+        let w2 = home.neighbors()[1]
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone(); // far source
+        let terrain = PlantedTerrain::fresh_only([w1.clone(), w2.clone()]);
+        let run = |seed_room: &RoomAddr| -> Vec<RoomAddr> {
+            let mut ledger = Ledger::default();
+            let e = ledger.mint_entity();
+            // The prior sighting (day 0), THEN a return-home (day 0.5): history holds
+            // the sighting (→ belief) but the agent's current position is home, not
+            // the water. (Position = latest agent-at; belief = the fold over history.)
+            commit_agent_at(&mut ledger, &reg, e, seed_room, 0.0);
+            commit_agent_at(&mut ledger, &reg, e, &home, 0.5);
+            let npc = Npc {
+                entity: e,
+                home: home.clone(),
+                resource: w1.clone(),
+                activity: hornvale_species::ActivityCycle::Diurnal,
+                label: "h".into(),
+            };
+            // from > both seed days so the frozen ledger holds no future facts and the
+            // agent starts at home, not yet thirsty.
+            let sys = DriveMovements {
+                npcs: vec![npc],
+                from: WorldTime { day: 1.0 },
+                to: WorldTime { day: 41.0 },
+                params: SUSTENANCE,
+                terrain: &terrain,
+            };
+            let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+            // the rooms it drank at (its believed destinations)
+            next.find(DRANK)
+                .filter(|f| f.subject == e)
+                .filter_map(|f| f.day)
+                .filter_map(|d| {
+                    next.find(AGENT_AT)
+                        .filter(|g| g.subject == e)
+                        .filter(|g| g.day.is_some_and(|gd| gd <= d))
+                        .filter_map(|g| match &g.object {
+                            Value::Text(s) => Some((g.day.unwrap(), room_from_text(s))),
+                            _ => None,
+                        })
+                        .max_by(|a, b| a.0.total_cmp(&b.0))
+                        .map(|(_, r)| r)
+                })
+                .collect()
+        };
+        let a_dests = run(&w1);
+        let b_dests = run(&w2);
+        assert!(
+            a_dests.iter().all(|r| *r == w1),
+            "A (knows W1) drinks at W1: {a_dests:?}"
+        );
+        assert!(
+            b_dests.iter().all(|r| *r == w2),
+            "B (knows W2) drinks at W2: {b_dests:?}"
+        );
+        assert_ne!(w1, w2);
+    }
+
+    #[test]
+    fn an_ignorant_agent_discovers_water_then_later_beelines() {
+        // DISCOVERY: a fresh NPC (no perceived water) explores downhill, finds water,
+        // drinks; belief now formed, a later thirst cycle beelines. The first journey
+        // (exploration) differs from the later (beeline).
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r
+        };
+        // A downhill chain home(100) -> a(50) -> water(fresh); other neighbors high
+        // (elevation still steers the exploration prior; fresh-water truth is
+        // now a separate planted set — the-surmise T5 re-wire).
+        let home = raddr(1.0);
+        let a = home.neighbors()[0].clone();
+        let water = a.neighbors().iter().find(|n| **n != home).unwrap().clone();
+        let mut m = std::collections::BTreeMap::new();
+        m.insert(home.clone(), 100.0);
+        m.insert(a.clone(), 50.0);
+        m.insert(water.clone(), 10.0); // still the lowest, so exploration steps onto it
+        let terrain = PlantedTerrain {
+            elevations: m,
+            fresh: [water.clone()].into_iter().collect(),
+        };
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: water.clone(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            label: "h".into(),
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc.clone()],
+            from: WorldTime { day: 0.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+        // It drank at least twice (multiple cycles) and reached the water room.
+        let drinks = next.find(DRANK).filter(|f| f.subject == e).count();
+        assert!(
+            drinks >= 2,
+            "discovered water and drank across cycles: {drinks}"
+        );
+        // Belief formed: after the run, believed_water is the discovered source.
+        assert_eq!(
+            believed_water(&next, &npc, WorldTime { day: 40.0 }, &terrain, PLAN_BUDGET),
+            Some(water)
+        );
+        let _ = ledger;
     }
 }
