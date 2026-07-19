@@ -1,7 +1,7 @@
 # The Deep Grammar (C7) — Design
 
 **Date:** 2026-07-19
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** **Approved at G3 (2026-07-19)** — non-additive tongue-line blast radius confirmed; census untouched; ledger digest due at G6.
 **Campaign:** C7 of the self-writing-book program
 (metaplan: [program metaplan](2026-07-17-the-self-writing-book-program-metaplan-design.md) §3 C7)
 **Theory:** registry row LANG-40, full — the five filters grammaticalize;
