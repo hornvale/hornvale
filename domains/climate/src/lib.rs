@@ -20,8 +20,8 @@ pub use substellar::{
 pub use temperature::locked_temperature_at_position;
 
 use hornvale_kernel::{
-    ConceptKind, ConceptRegistry, ObserverContext, PhenomenaSource, Phenomenon, Position,
-    RegistryError, Venue,
+    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, ObserverContext,
+    PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -35,22 +35,42 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 }
 
 /// Register climate's contribution to the concept registry.
+///
+/// Each concept is registered through its correspondence [`Manifest`], which
+/// records — honestly, per edge — how the concept is (or is not yet) carried
+/// across the lexicon, perception, and cognition ledgers:
+/// - **lexeme**: no language pack names any of climate's concepts yet —
+///   neither the everyday substances (snow/rain/ice) nor the biome classes —
+///   so every lexeme edge is a `Gap`. (The Correspondence campaign's
+///   reconciliation drift-check made the earlier over-optimistic `Expected`
+///   on snow/rain/ice honest: an `Expected` a pack must actually cover.)
+/// - **percept**: climate emits only the AMBIENT wind gloss, which is none of
+///   these substances or biomes, so every edge is a `Gap` — not `AMBIENT`.
+/// - **cognition**: the whole column voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")?;
 
-    registry.register_concept(
-        "snow",
-        "climate",
-        ConceptKind::Substance,
-        "frozen precipitation",
-    )?;
-    registry.register_concept(
-        "rain",
-        "climate",
-        ConceptKind::Substance,
-        "liquid precipitation",
-    )?;
-    registry.register_concept("ice", "climate", ConceptKind::Substance, "frozen water")?;
+    // The everyday precipitation/frozen-water substances. No language pack
+    // names them yet, so the lexeme edge is an honest Gap (not `Expected`).
+    for (name, doc) in [
+        ("snow", "frozen precipitation"),
+        ("rain", "liquid precipitation"),
+        ("ice", "frozen water"),
+    ] {
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Substance,
+                doc: doc.to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names it yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
+    }
 
     for b in biome::ALL {
         let name = b.concept_name();
@@ -61,7 +81,19 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         if registry.concept(name).is_some() {
             continue;
         }
-        registry.register_concept(name, "climate", ConceptKind::Terrain, "a biome class")?;
+        registry.register_manifest(Manifest {
+            concept: ConceptDef {
+                name: name.to_string(),
+                domain: "climate".to_string(),
+                kind: ConceptKind::Terrain,
+                doc: "a biome class".to_string(),
+            },
+            lexeme: Correspondent::Absent(Void::Gap("no language pack names biome classes yet")),
+            percept: Correspondent::Absent(Void::Gap("not emitted as a phenomenon yet")),
+            cognition: Correspondent::Absent(Void::Uncognized {
+                pending_wave: "wave-cognition",
+            }),
+        })?;
     }
     Ok(())
 }
