@@ -577,6 +577,37 @@ pub fn mineral_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
 }
 
+/// The mineral supply field's amplitude (BIO-35 Stage 2: The Demesne, task
+/// T2) — the one calibration knob for [`mineral_supply_field`]'s `scale`
+/// argument as consumed by [`niche_per_species_k`]. Re-fit in a later task
+/// (T3) once the emergence keystone's measured diversification is read
+/// against a wider seed sample; frozen here at parity with `MINERAL`'s
+/// pre-repoint contribution magnitude (chosen, not fit — see the emergence
+/// test's doc comment for the measured before/after).
+/// type-audit: bare-ok(ratio)
+const MINERAL_SUPPLY_SCALE: f64 = 1.0;
+
+/// The per-axis resource supply for one niche at one cell (BIO-35 Stage 2:
+/// The Demesne, task T2): the dot product of the species' uptake vector
+/// (`niche`) with the per-cell supply vector (`per_axis`) — the
+/// rank-restored replacement for the old `base_carrying(cell) × Σuptake`
+/// scalar, which collapsed every species' spatial pattern onto the same
+/// single field (differing only by an overall magnitude). A niche direction
+/// now SELECTS which cells supply it — a photosynthate-heavy niche peaks
+/// where `PHOTOSYNTHATE` supply peaks, a mineral-heavy niche peaks where
+/// `MINERAL` supply peaks, even when those are different cells. Pure; no
+/// RNG, no float ordering (a plain weighted sum, not a comparison).
+/// type-audit: bare-ok(ratio: per_axis), bare-ok(ratio: return)
+pub fn axis_supply(
+    niche: &hornvale_kernel::ResourceVector,
+    per_axis: &[(hornvale_kernel::ResourceAxis, f64)],
+) -> f64 {
+    per_axis
+        .iter()
+        .map(|(axis, supply)| niche.weight(*axis) * supply)
+        .sum()
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
@@ -595,13 +626,15 @@ pub fn mineral_supply_field(
 /// survives a save/load boundary. The other `.enumerate()` sites in this
 /// file that mint a `(tag as u32, ..)` pair share this exact contract.
 ///
-/// For each species and cell: `saturate(base_carrying(cell) *
-/// total_uptake_s)` (the resource-supply term — the shared, psychology-free
-/// NPP proxy scaled by the species' summed niche weight over
-/// [`hornvale_kernel::v1_basis`], Type-II-saturated so intake plateaus)
-/// multiplied by the four condition-response terms
-/// (temperature/moisture/insolation/elevation), each
-/// [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
+/// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
+/// resource-supply term — BIO-35 Stage 2's rank-restored per-axis dot
+/// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
+/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL` read their own T1
+/// supply fields, `DETRITUS` reads the ambient constant, and `ANIMAL_PREY`
+/// is Stage 2's placeholder zero (a later stage's trophic wiring); see
+/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
+/// four condition-response terms (temperature/moisture/insolation/elevation),
+/// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
 /// buffer-able (floored by the species'
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
@@ -626,20 +659,33 @@ pub fn niche_per_species_k(
         insolation_scalar,
         regime,
     );
+    // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
+    // loop below — each is a pure function of terrain/climate, built once
+    // and shared by every species' dot product.
+    let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
+    let forage = forage_supply_field(geo, &base_carrying);
 
     species_biosphere
         .iter()
         .enumerate()
         .map(|(tag, bio)| {
-            let total_uptake: f64 = hornvale_kernel::v1_basis()
-                .iter()
-                .map(|axis| bio.niche.weight(*axis))
-                .sum();
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
-                let supply = base_carrying.get(cell) * total_uptake;
+                // Rank-restored supply via the extracted helper: the axis
+                // dot product, not the old summed-uptake scalar.
+                use hornvale_kernel::{
+                    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                };
+                let per_axis = [
+                    (PHOTOSYNTHATE, *base_carrying.get(cell)),
+                    (PLANT_FORAGE, *forage.get(cell)),
+                    (MINERAL, *mineral.get(cell)),
+                    (DETRITUS, DETRITUS_AMBIENT),
+                    (ANIMAL_PREY, 0.0),
+                ];
+                let supply = axis_supply(&bio.niche, &per_axis);
                 let saturated = supply / (1.0 + supply);
                 saturated
                     * cn.temperature.eval(s.temperature_c, floor_buf)
@@ -5001,11 +5047,16 @@ mod tests {
         // term at `river_proximity` (deliberately, so settlements condense
         // near rivers -- see `windows/worldgen/tests/confluence.rs`), which
         // redistributes carrying capacity and hence catchments; re-pinning
-        // 8 -> 4 here. Re-pin here (with review) whenever a deliberate
-        // terrain/carrying-capacity change moves world identity.
+        // 8 -> 4 here. The Demesne (T2) then replaced `niche_per_species_k`'s
+        // `base_carrying × Σuptake` scalar supply with the per-axis dot
+        // product (`axis_supply`, see `windows/worldgen/tests/demesne.rs`) --
+        // a deliberate, reviewed re-point of the resource-supply term every
+        // species' K is built from, which redistributes catchments again;
+        // re-pinning 4 -> 2 here. Re-pin here (with review) whenever a
+        // deliberate terrain/carrying-capacity change moves world identity.
         assert_eq!(
-            village.population, 4,
-            "the world's largest attractor headcount is pinned at this seed (the-confluence T2)"
+            village.population, 2,
+            "the world's largest attractor headcount is pinned at this seed (the-demesne T2)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
@@ -6942,6 +6993,22 @@ mod tests {
     /// or deleted, so they stand ready to re-run once a calibration pass
     /// lands. Full breakdown, per-species max-density trace, and the
     /// calibration writeup: `.superpowers/sdd/task-6-report.md`.
+    ///
+    /// UPDATE (BIO-35, the-demesne T2): `niche_per_species_k` no longer
+    /// scales one shared `base_carrying` field by each species' summed
+    /// uptake — it now dot-products the uptake vector against per-axis
+    /// supply fields (`axis_supply`; `windows/worldgen/tests/demesne.rs`).
+    /// Re-measured post-repoint: distinct dominants rose 2 -> 4 (`xorn`
+    /// 29136 cells, `rust-monster` 9551, `twig-blight` 1328, `goblin` 947)
+    /// — `xorn`'s pure-`MINERAL` niche now tracks its own spatial supply
+    /// field instead of a rescaled copy of everyone else's. `treant` is
+    /// STILL swept by `twig-blight` (the Kleiber home-range root cause
+    /// above is untouched by T2 — a resource-AXIS fix, not a body-mass
+    /// one) and no chromatic dragon/`owlbear` ever wins (their pure-
+    /// `ANIMAL_PREY` niche reads T2's placeholder zero supply — trophic
+    /// wiring is explicitly out of Stage 2's scope). This test's `>= 6`
+    /// bar and its `treant`/dragon assertions are therefore still correctly
+    /// unmet; it stays `#[ignore]`d for the same calibration reason.
     #[test]
     #[ignore = "CALIBRATION FINDING (task 6, 2026-07-16, ledger #48): seed-42 \
                 full-roster per-cell dominant-density count is 2, not richer \
