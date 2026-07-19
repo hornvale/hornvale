@@ -630,6 +630,24 @@ fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
     }
 }
 
+/// Whether one placed culture's held knowledge falls short of the true
+/// count (spec §3.4's margin rule), extracted pure and world-free (mirrors
+/// [`reckoning_culture_lines`] below) so the per-culture logic is testable
+/// without depending on a live world that happens to exhibit both arms:
+/// a folk-only/sub-`Numbered` culture holds no cardinal at all, so it
+/// always falls short regardless of `held`; an organized
+/// (`Numbered`/`Predictive`) culture falls short exactly when its own
+/// witnessed cardinal is less than the true count (it cannot witness what
+/// its sky-capability gates out) — an organized culture whose `held`
+/// equals `true_count` does not fall short on its own account.
+fn culture_falls_short(rung: hornvale_worldgen::LadderRung, held: u64, true_count: u64) -> bool {
+    let organized = matches!(
+        rung,
+        hornvale_worldgen::LadderRung::Numbered | hornvale_worldgen::LadderRung::Predictive
+    );
+    !organized || held < true_count
+}
+
 /// One epoch's Reckoning-of-Years section (spec §3.4), for every placed
 /// culture in [`hornvale_worldgen::placed_peoples`] order: the empty arm
 /// when nothing has happened by `at` (the true count is zero); otherwise,
@@ -692,16 +710,7 @@ fn reckoning_epoch(
         let held = observations.events.len() as u64;
         lines.extend(reckoning_culture_lines(autonym, rung, held, prediction));
 
-        let organized = matches!(
-            rung,
-            hornvale_worldgen::LadderRung::Numbered | hornvale_worldgen::LadderRung::Predictive
-        );
-        if !organized || held < true_count as u64 {
-            // Folk-only/sub-threshold cultures hold no cardinal at all
-            // (qualitative memory always falls short); an organized
-            // culture falls short exactly when its own witnessed cardinal
-            // is less than the true count (it cannot witness what its
-            // sky-capability gates out).
+        if culture_falls_short(rung, held, true_count as u64) {
             falls_short = true;
         }
     }
@@ -4114,6 +4123,12 @@ mod tests {
              (6472, unwitnessed lunar events included)"
         );
 
+        // Re-pinned post-absorption (the Rains moisture epoch, merge
+        // 9843b8f): seed 2 kobold flipped from an organized cult to a FOLK
+        // flagship (the SOC-1 gate's negative arm — see
+        // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`), so it now
+        // renders the folk line ONLY — no cardinal, no prediction line —
+        // the same shape as seed 3's folk-only cultures below.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -4125,16 +4140,14 @@ mod tests {
                 "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36611.".to_string(),
                 "The sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngkoshngta numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
             vec!["In truth, the darkenings of the first hundred years number 81.".to_string()],
-            "seed 2: kobold holds the true count (81) exactly, but goblin/hobgoblin hold only \
-             49 (they cannot witness kobold's 32 lunar events) — the margin fires from their \
-             shortfall even though kobold's own count is clean"
+            "seed 2: the true count is still 81 (kobold witnesses that many events even as \
+             folk memory only, unwitnessed by doctrine); goblin/hobgoblin hold only 49 and \
+             kobold now holds no cardinal at all — the margin fires from either shortfall"
         );
 
         let seed3 = render_volume(&generated(3));
@@ -4409,16 +4422,51 @@ mod tests {
         );
     }
 
-    /// C8 T2, the margin law (spec §3.4): a culture at `Predictive`/
-    /// `Numbered` whose own witnessed cardinal equals the true count
-    /// contributes no shortfall (seed 2's kobold: 81 == 81), while a
-    /// culture whose cardinal falls short (seed 2's goblin/hobgoblin: 49 <
-    /// 81) or holds no cardinal at all (any `Counted`/`Unknown` culture)
-    /// always does — both arms measured in one world, so the margin's
-    /// per-culture logic is pinned exactly, not just its whole-epoch
-    /// effect.
+    /// C8 T2, the margin law (spec §3.4). Re-pinned post-absorption (the
+    /// Rains moisture epoch, merge 9843b8f): seed 2's kobold — this test's
+    /// original "organized culture whose own witnessed cardinal equals the
+    /// true count contributes no shortfall" example (81 == 81, rung
+    /// `Predictive`) — flipped to a FOLK flagship under the epoch (see
+    /// `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`); a sweep of
+    /// seeds 1..=40 found no placed culture where an organized rung's held
+    /// count equals the true count, so that arm is no longer reachable
+    /// live in the measured landscape. Rather than assert an absence that
+    /// may just be this sweep's ceiling, the per-culture predicate
+    /// ([`culture_falls_short`]) is extracted pure and world-free (mirrors
+    /// [`reckoning_culture_lines`]) so BOTH arms — organized-and-clean
+    /// (no shortfall) and organized-short/folk-always-short — are pinned
+    /// exactly regardless of which the live seeds happen to exhibit. The
+    /// live-world half of the test still measures what seeds 2 and 3
+    /// actually show today: both kobolds are folk-only and fall short
+    /// even though each happens to witness every true event.
     #[test]
     fn the_margin_fires_exactly_when_knowledge_falls_short() {
+        // The pure predicate, both arms, driven synthetically — the
+        // authoritative pin now that no live seed exhibits the clean arm.
+        assert!(
+            !culture_falls_short(hornvale_worldgen::LadderRung::Predictive, 81, 81),
+            "organized (Predictive) and held == true_count: no shortfall from it"
+        );
+        assert!(
+            !culture_falls_short(hornvale_worldgen::LadderRung::Numbered, 10, 10),
+            "organized (Numbered) and held == true_count: no shortfall from it"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Predictive, 49, 81),
+            "organized but held < true_count: a shortfall (cannot witness what capability gates out)"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Counted, 81, 81),
+            "folk-only (Counted): no cardinal held at all, falls short regardless of held == true_count"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Unknown, 0, 5),
+            "Unknown: no cardinal held at all, falls short"
+        );
+
+        // The live-world half: seed 2, goblin/hobgoblin fall short of the
+        // true count (49 < 81); kobold — now folk-only, post-epoch — also
+        // falls short despite witnessing every true event (81 == 81).
         let world = generated(2);
         let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
 
@@ -4428,10 +4476,11 @@ mod tests {
         assert_eq!(
             kobold.events.len(),
             81,
-            "kobold's own witnessed cardinal equals the true count — no shortfall from it"
+            "kobold witnesses every true event (capability 1.0), but holds no cardinal \
+             (folk-only, post-epoch) — the margin's folk arm, not the count arm"
         );
         let (kobold_rung, _) = hornvale_worldgen::ladder_of(&world, "kobold", at).unwrap();
-        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Predictive);
+        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Counted);
 
         for kind in ["goblin", "hobgoblin"] {
             let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
@@ -4443,9 +4492,8 @@ mod tests {
             );
         }
 
-        // The epoch's own margin fires (from goblin/hobgoblin's shortfall)
-        // even though kobold's individual count is clean — the whole-
-        // epoch effect of the per-culture law above.
+        // The epoch's own margin fires (from goblin/hobgoblin's shortfall,
+        // and now from kobold's folk arm too).
         let vol = render_volume(&world);
         assert!(!vol.reckoning[1].margin.is_empty());
 

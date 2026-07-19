@@ -192,13 +192,19 @@ const LADDER_TABLE: &[Row] = &[
         49,
         Some(36611.93610859729),
     ),
+    // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
+    // seed 2 kobold flipped from an organized cult to a FOLK flagship
+    // (the SOC-1 gate's negative arm) — the moisture model shifted
+    // demography enough to re-form the culture without doctrine, so it
+    // never exceeds Counted no matter how many events it witnesses (81).
+    // Was: LadderRung::Predictive, 81, Some(36611.93610859729).
     (
         2,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         81,
-        Some(36611.93610859729),
+        None,
     ),
     (
         3,
@@ -251,13 +257,18 @@ const LADDER_TABLE: &[Row] = &[
         304,
         Some(36550.4595587471),
     ),
+    // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
+    // seed 5 hobgoblin flipped from an organized cult to a FOLK flagship
+    // (same SOC-1 negative arm as seed 2 kobold above), so it never
+    // exceeds Counted no matter how many events it witnesses (304).
+    // Was: LadderRung::Predictive, 304, Some(36550.4595587471).
     (
         5,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         304,
-        Some(36550.4595587471),
+        None,
     ),
 ];
 
