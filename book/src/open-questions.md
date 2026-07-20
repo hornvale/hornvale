@@ -414,7 +414,8 @@ at the existing carrying-capacity site, and the rank-restoration paid off
 wherever an abiotic specialist could reach it — seed-42's distinct material
 dominants rose 2→4, and the pure-mineral xorn went from a noise-level single
 settlement to the single largest domain on the world (≈29k cells), a
-mineral-eater owning its mountains as BIO-27 intended. Two pieces stay open,
+mineral-eater owning its mountains as the place-identity model intends. Two
+pieces stay open,
 both measured rather than asserted: the **prey axis** (dragons and predators
 still hold no place) waits on Stage 2's trophic food-web field, and — newly
 surfaced by the shipped half — the four small **peoples** do not diversify at
