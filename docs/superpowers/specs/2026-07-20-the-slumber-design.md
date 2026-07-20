@@ -1,155 +1,185 @@
-# The Slumber — the rest drive & the wake cycle
+# The Slumber — the rest drive & the wake cycle (the first oscillator)
 
-**Status:** spec (G3 review)
+**Status:** spec v2 — reframed through ideonomy (the two-process model + a
+general chronobiology engine). Supersedes the fractional-day-window v1.
 **Date:** 2026-07-20
 **Campaign:** The Slumber (Temperament followup #3, first drive: fatigue/rest)
 **Precedes:** implementation plan → execution → merge
 
 ## Problem
 
-Creatures never sleep. They forage, drink, and seek comfort around the clock,
-because the drive layer has no notion of rest — and `Npc.activity`, the
-species' `ActivityCycle` (diurnal / nocturnal / crepuscular), is dead weight:
-its own doc calls it *"write-only this slice… retained for the deferred
-activity-gating followup (a diurnal NPC seeking water only while awake)."* The
-rhythm every living thing keeps — active by day or by night, resting the other
-half — is authored per species and never read.
+Creatures never sleep — they forage, drink, and seek comfort around the clock —
+and `Npc.activity` (the species `ActivityCycle`: diurnal / nocturnal /
+crepuscular) is dead weight, *"write-only… retained for the deferred
+activity-gating followup."* The rhythm every living thing keeps is authored per
+species and never read.
 
-This campaign adds the third drive, **fatigue**, and in doing so activates the
-activity cycle: a creature now wakes, tires, and sleeps on its own rhythm, and
-seeks its other needs only while awake.
+## The model: sleep is two processes, and the clock is one instance of an engine
+
+Chronobiology's canonical account (Borbély's two-process model) factors cleanly,
+and the factoring is what makes this generalize:
+
+- **Process S — homeostatic sleep pressure.** A debt that rises while awake and
+  discharges while asleep. This is the fatigue drive.
+- **Process C — an entrainable phase oscillator.** And every oscillator is three
+  numbers: **`(zeitgeber, period, endogeneity)`** — the time-cue it locks to,
+  its cycle length, and how much it free-runs without the cue. A circadian wake
+  clock is just `(sun, ~1 day, entrained)`.
+
+Lift once more (the abstraction pass) and Process C *is* the agent predicting
+*when* conditions are good — the same **active inference** (UNI-1) the cognition
+layer already runs. The Slumber ships **one instance** of this engine — the
+`(sun, circadian, masked)` wake clock — the way The Kindling shipped the first
+instance of `MetabolicClass`-in-the-drive-layer and GOAP the first instance of
+the A* engine. The general engine is the registered followup (§6).
 
 ## Design
 
-### 1. The wake state — `is_awake(activity, day)`
+### 1. Process C — the wake oscillator (solar masking)
 
-A creature's wake state at a moment is a pure function of its `ActivityCycle`
-and the *time of day* — the fractional part of `WorldTime.day`. A **diurnal**
-creature is awake through the light half of the day, a **nocturnal** one through
-the dark half, a **crepuscular** one at the twilight edges. This is an authored
-simplification (a fractional-day window, the same altitude as the drive layer's
-per-day temperature) — true solar-altitude waking, with latitude and season, is
-deferred.
+A creature's wake state is read from the **real sun**, not a fixed clock:
+`is_awake(activity, cell, day)` combines the astronomy **daylight model**
+(day-length as a function of latitude × season, driven by the drawn obliquity)
+with the **diurnal phase** (where in the rotation `day` falls). The sun is *up*
+at a cell when the diurnal phase lies inside that latitude-and-season's lit
+fraction. **Diurnal** is awake then, **nocturnal** the complement,
+**crepuscular** near the terminator crossings (dawn/dusk).
 
-### 2. The fatigue drive (stock, wake-gated accrual)
+This is **masking** (endogeneity = 0): the creature reads the sun directly, no
+persistent internal clock yet. It already buys the realism the window couldn't —
+polar summers of endless activity, winter's long dark, ~12h at the equator, dusk
+drifting with the season.
 
-A third `Drive` beside thirst and thermal. Its urgency is the **accumulated
-awake-time since the creature last rested**, normalized and clamped `[0, 1]` —
-a stock drive like thirst, but its clock ticks *only while awake* (a sleeping
-creature does not tire), which is exactly what binds it to the cycle. Its
-**ceiling sits below survival** (like thermal comfort): a mildly thirsty tired
-creature sleeps, but a creature dying of thirst does not sleep through it.
+**Locked worlds have no day/night** (no rotation, the sun fixed in the sky —
+`calendar` reports no daylight cycle). There the solar zeitgeber is *absent*, so
+the wake-gate does not fire and the creature falls back to fatigue-only rest — a
+natural degenerate case the general `(zeitgeber, …)` framing predicts and a
+hardcoded-sun model would mishandle.
 
-- **Affordance:** `Rest`, serviceable at the creature's **home** (its
-  rest-place) — a tired creature plans home to sleep, the same shape as thirst
-  planning to water.
-- **Discharge:** resting commits a `rested` fact (a new session-only predicate,
-  like `drank`/`agent-at`), resetting the fatigue clock — an instant reset, and
-  the wake-gate (below) keeps the creature home for the rest of the off-phase.
+### 2. Process S — fatigue as sleep-debt
 
-### 3. Wake-gating — seek only while awake
+Fatigue is a stock drive whose urgency is **sleep debt**: it rises gently while
+awake and is reset by sleeping (a `rested` event). Crucially, **the daily rest
+comes from Process C, not from fatigue** — a creature sleeps because it is *its
+off-phase*, not because it hit an exhaustion threshold. Fatigue is the
+**backstop**: the debt that accrues only when sleep is *prevented* (kept awake
+past the off-phase, or stranded from home at nightfall), eventually forcing rest
+even out of phase. Its ceiling sits **below survival** (like thermal comfort),
+so a creature dying of thirst does not sleep through it.
 
-Thirst and thermal are **active only while the creature is awake**. A sleeping
-creature does not seek water or a kinder clime — the named followup, realized.
-The one **survival override:** thirst past a critical urgency stays active
-regardless (a creature *wakes to drink* if it is dying of thirst — soft Maslow,
-consistent with the ceilings). Thermal has no override (comfort is not lethal in
-this model). Fatigue itself is **not** wake-gated — it is the drive that carries
-a creature *into* sleep.
+This corrects v1's error (a fatigue steep enough to drive a *daily* rest left
+creatures perpetually weary, arousal never settling): a gentle debt reset each
+night by the wake-gate stays low in normal operation, so calm returns — and the
+felt-state test re-pins cleanly.
+
+- **Affordance:** `Rest`, serviceable at **home** (else a step home).
+- **Discharge:** a `rested` fact (a new session predicate, like `drank`) resets
+  the debt.
+
+### 3. The wake-gate — seek only while awake
+
+Thirst and thermal are **active only while the creature is awake** (Process C
+gates them). A sleeping creature does not seek water or comfort. One **survival
+override:** thirst past a critical urgency stays active (a creature *wakes to
+drink* if dying). Thermal has no override; fatigue is not gated (it carries the
+creature *into* sleep).
 
 ### 4. The emergent rhythm
 
-By day, a diurnal creature is awake: thirst and thermal drive it to forage,
-drink, and seek comfort while fatigue climbs. Toward the end of its active phase
-fatigue crosses its threshold and wins the arbitration; it heads home and rests,
-resetting fatigue. Through the off-phase, thirst and thermal are gated off and
-fatigue is spent, so no drive is active — it holds at home, asleep. At the next
-wake it rises refreshed and forages again. A nocturnal species runs the same
-loop shifted half a day. A creature caught far from home at duskfall is driven
-home; a creature dying of thirst wakes to drink.
+By day (or its niche-phase) a creature forages, drinks, and lets sleep-debt
+accrue gently; at its off-phase the wake-gate closes, thirst/thermal fall silent,
+and it holds at home, asleep, the debt discharging. A creature stranded far from
+home at nightfall, or one dying of thirst, is the exception the backstop and the
+override handle.
 
-### 5. Across creature types (who sleeps)
+### 5. Across creature types (who keeps which beat)
 
-The "who sleeps" question is answered by metabolism, for free — fatigue is a
-homeostatic drive, so The Kindling's gate governs it exactly as it governs
-thirst and thermal:
+Metabolism answers *who sleeps* for free (The Kindling's gate): an **Ametabolic**
+creature has no homeostatic drives, so no fatigue and no wake cycle — the
+deathless keep their round-the-clock stillness. Metabolizers keep the solar wake
+clock on their `ActivityCycle` phase.
 
-- **Ametabolic** (construct / undead / elemental — the xorn and its kin): no
-  homeostatic drives, so **no fatigue → never sleeps.** The deathless keep their
-  round-the-clock stillness; the wake cycle does not apply (nothing to gate). No
-  new code — it falls out of the gate.
-- **Metabolizing** (Endotherm / Ectotherm / Autotroph — the four settled peoples,
-  dragons, treants, beasts): tire and sleep on their authored `ActivityCycle`
-  phase (diurnal / nocturnal / crepuscular).
-
-The four settled peoples are all diurnal or nocturnal, so the fixed-phase model
-is correct for all shipping content. Two nuances the model deliberately does NOT
-express yet (deferred — no authored species needs them): a **cathemeral /
-no-fixed-schedule** creature (a shark-like beast, a being of appetite) that rests
-opportunistically rather than on a phase; and an **alive-but-sleepless** creature
-(a cursed knight who thirsts but never rests), which would require decoupling
-"has fatigue" from "has metabolism." Both are captured as idea-registry rows.
+The deeper generalization (the engine, §6) is what covers the *exotic*: the
+**zeitgeber is a per-kind field**, and swapping it spans every animacy —
+**alive** (a biological solar clock), **mechanical** (a construct's programmed
+free-running cycle, `endogeneity = 1`, no zeitgeber), **informational** (an
+undead's death-hour walk, entrained to a *place* + the sun), **abstract** (a
+culture's canonical hours / festivals). One machine, one per-kind datum — the
+`MetabolicClass` pattern again, now for *rhythm*.
 
 ## Architecture
 
-Fatigue is a derived view (UNI-20): a fold over the wake-time integral +
-committed `rested` facts, never stored, re-derived by both the tick and
-`affect_of` from the same history (the shared-fold discipline The Kindling
-established). `is_awake` is pure over `(activity, day)`. `arbitrate` gains an
-`awake: bool` input (computed by the caller, like `helpless`) that applies the
-wake-gate and the survival override; the `Rest` action joins `Drink`/`MoveTo`
-in the candidate set. No new stream draw (reads authored `ActivityCycle`); one
-new session predicate `rested`.
+Process C's wake state is a pure read of `(activity, cell-coordinate, day)`
+against the astronomy daylight model — no stored state (it's masking). Fatigue
+(Process S) is a derived fold over `rested` events, re-derived identically by the
+tick and `affect_of` (the shared-fold discipline). `arbitrate` gains an
+`awake: bool` (computed by the caller) that applies the wake-gate and the
+survival override; `Action::Rest` joins the candidate set. No new stream draw
+(reads authored `ActivityCycle` + existing astronomy); one new session predicate
+`rested`.
 
 ## Determinism
 
-- **No stream draw, no epoch** — fatigue is a derived session view; `rested` is
-  a session-only predicate (never genesis), like `drank`.
-- **Committed-artifact drift — YES (the first of these followups).** Creatures
-  now sleep, so the **possession-over-time gallery** (`possession-over-time-seed-42.md`,
-  a ~97-day walk) changes and must be **regenerated and accepted at close**. The
-  day-0 possession transcript is unaffected (fatigue is 0 at day 0 and the walk
-  is a single moment). To verify at implementation: whether the short day-0 walk
-  and the seed-42 *live* pane drift, and re-freeze/accept accordingly.
-- **Behavior change** across the walk/health tests — NPC movement now has a
-  rhythm; behavior-test assertions update, and the **health null-control is
-  re-verified** (a sleeping creature that isn't seeking must not read as
-  distressed — it is Idle/Content, not blocked).
+- **No stream draw, no epoch** — fatigue is a derived session view; `rested` a
+  session predicate like `drank`; the wake read consumes only existing
+  astronomy fields.
+- **Committed-artifact drift — YES.** Creatures now sleep on the real solar
+  cycle, so the **possession-over-time gallery** (~97-day walk) changes and is
+  **regenerated + accepted at close** (the first Temperament followup to drift a
+  committed artifact). The day-0 transcript is a single moment; verify it and the
+  live pane at implementation.
+- **Behavior change** across walk/health tests — NPC movement gains a rhythm;
+  assertions re-pin, and the **health null-control is re-verified** (a sleeping
+  creature reads Idle/Content, never blocked/distressed).
+- **Locked worlds** take the no-solar-zeitgeber branch (fatigue-only) — asserted,
+  not left to chance.
 
 ## Model card
 
-Activates `ActivityCycle`; realizes the "seek only while awake" followup.
-`is_awake` is a fractional-day approximation, not true solar altitude (deferred).
-Fatigue's ceiling-below-survival makes the wake/sleep tradeoff emerge from the
-same soft-Maslow ranges thermal uses — no priority table.
+Ships the `(sun, circadian, masked)` instance of a general oscillator engine.
+`is_awake` reads the real daylight model (latitude × season × diurnal phase), not
+a fixed window — the true terminator, deferred only in its *endogenous*
+refinement (a free-running clock that drifts in caves and jet-lags on travel;
+§6). Process S = homeostatic sleep debt; Process C gating = the "seek only while
+awake" followup, realized against the sun. The wake/sleep tradeoff emerges from
+the same soft-Maslow ceilings thermal uses — no priority table.
 
 ## Test plan
 
-- **Unit:** `is_awake` per cycle across the day; fatigue accrues only while
-  awake and resets on `Rest`; the wake-gate suppresses thirst/thermal while
-  asleep; the survival override keeps a dying creature seeking water; the
-  fatigue affordance plans home; 3-drive arbitration.
+- **Unit:** `is_awake` follows the sun by latitude × season (equatorial ~half,
+  poles seasonal, locked → no cycle); fatigue rises gently and resets on `Rest`;
+  the wake-gate suppresses thirst/thermal while asleep; the survival override
+  keeps a dying creature seeking; the fatigue affordance plans home; 3-drive
+  arbitration.
 - **Harness (`lab::synthetic`):** a creature keeps a day/night rhythm over a
-  multi-day sim (active then resting); a creature stranded far from home at
-  duskfall is driven toward home.
-- **Calibration:** the health null-control holds (sleep is not distress).
+  multi-day sim; a creature stranded from home at nightfall is driven home; a
+  locked-world creature rests on fatigue alone.
+- **Calibration:** the health null-control holds (sleep ≠ distress).
 - **Artifacts:** the possession-over-time gallery regenerated and reviewed.
 
-## Deferred (captured)
+## Deferred (captured — the general engine)
 
-- **Cathemeral / no-fixed-schedule creatures** — a 4th `ActivityCycle` (or an
-  opportunistic-rest mode) for a living creature with no consolidated sleep
-  phase (a shark-like beast, a being of appetite). Rely-on-the-gate holds for
-  now (no authored species needs it).
-- **Alive-but-sleepless** — decoupling "has fatigue" from "has metabolism" (a
-  per-kind sleep flag), so a cursed sleepless knight who still thirsts is
-  expressible independently of the ametabolic gate.
-- **True-solar waking** — wake state from solar altitude (latitude, season, the
-  real terminator), replacing the fractional-day window.
-- **Fatigue as a modulator** — tiredness degrading perception/decision quality,
-  not just driving rest.
-- **A thermal survival override** — freezing to death in one's sleep.
-- **Rest quality** — an unsafe or uncomfortable rest-place giving poorer
-  recovery (waits on the danger drive / a safety notion).
-- The `arbitrate` `Disposition`/`MindState` struct tidy (now three campaigns
-  deep).
+The registered followup is the **general chronobiology engine** — an oscillator
+stack `(zeitgeber, period, endogeneity)` coupled to homeostatic pressures — and
+its payoffs, each an idea-registry row:
+
+- **The endogenous oscillator (Process C, Tier 2)** — a free-running clock whose
+  phase is a fold over zeitgeber-exposure history, giving **jet lag** (long
+  travel), **free-running drift** (caves, dungeons, polar night), and chronotype
+  variation. The Lorenz caveat: full-precision phase integration, never
+  re-seeded from quantized floats.
+- **Other zeitgebers & periods** — moons (lycanthropy, circalunar breeding),
+  tides (circatidal foraging), season (hibernation / migration / estivation),
+  magic flux (potency at conjunctions), a place/host (an undead's death-hour), or
+  none (a construct's programmed cycle).
+- **Other gated behaviours** — the periodic-grid of `zeitgeber × gated-behaviour`
+  whose empty cells *predict* creatures (a moon-waxed mage, a tidal spawner, a
+  clockwork war-idol).
+- **Cross-domain reuse** — the same oscillator for cultural canonical-hours /
+  festivals, ecological temporal-niche partitioning (diurnal predator vs
+  nocturnal prey), and **eclipse-as-false-zeitgeber** (a midday night → omens,
+  mis-timed behaviour).
+- **Second-order realism** — saturating-exponential sleep pressure, sleep
+  inertia, napping/polyphasic sleep, a thermal survival-override (freezing in
+  one's sleep).
+- The `arbitrate` `Disposition`/`MindState` struct tidy.
