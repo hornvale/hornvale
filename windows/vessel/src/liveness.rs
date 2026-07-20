@@ -136,6 +136,42 @@ pub const SUSTENANCE: DriveParams = DriveParams {
     act: 0.85,
 };
 
+/// How long a creature's SURVIVAL drive (thirst) may go unmet — days since it
+/// last drank — before it learns helplessness and gives up seeking (§7, the
+/// `Helpless` scar). Set well past the act crossing (`act/rise ≈ 5.7` days) so
+/// it marks a genuinely unrelievable need, not ordinary thirst: a creature that
+/// reaches water on any normal errand resets `last_drank` long before this, so
+/// only one truly stuck — boxed in, or seeking water that isn't there — ever
+/// despairs. One authored judgment call (spec §8).
+const HELPLESS_ONSET_DAYS: f64 = 15.0;
+
+/// The helplessness PROBE period, in days: a helpless creature abandons the
+/// search, but not forever — one day in every `HELPLESS_PROBE_DAYS` it tries
+/// again (a flicker of renewed effort), the seam through which relief, and so
+/// recovery, remains possible. This is what makes the scar "reverse slowly"
+/// (the `AffectLabel::Helpless` contract) rather than trap the creature
+/// permanently. One authored judgment call.
+const HELPLESS_PROBE_DAYS: f64 = 5.0;
+
+/// Whether a creature has learned helplessness at `day` — its survival drive
+/// has gone unmet since `last_drank` for at least [`HELPLESS_ONSET_DAYS`], so
+/// it has given up seeking. NOT a permanent trap: it returns `false` one day in
+/// every [`HELPLESS_PROBE_DAYS`] (a probe — renewed effort through which relief
+/// and recovery stay reachable), so the state "reverses slowly". Pure over
+/// `(last_drank, day)` — a fold, exactly like the drive it reads, so
+/// `affect_of` (the read) and the drive tick (the mover) compute it identically
+/// and never disagree.
+fn learned_helplessness(last_drank: f64, day: f64) -> bool {
+    let unmet = day - last_drank;
+    if unmet < HELPLESS_ONSET_DAYS {
+        return false;
+    }
+    // Probe on the first day of each period (`since_onset` in `[0, 1)`), give up
+    // the other days — so effort is reduced, never wholly abandoned.
+    let since_onset = unmet - HELPLESS_ONSET_DAYS;
+    (since_onset % HELPLESS_PROBE_DAYS) >= 1.0
+}
+
 /// The maximum anticipation lead-time, in days, a fully-foresighted creature
 /// (`time_horizon == 1`) pre-empts a STOCK drive by: it acts as though the
 /// drive had already climbed the urgency it will gain over this many days
@@ -752,7 +788,7 @@ fn comfort_step(
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(view, home, &drives, 0.0, 0.0, Mode::Idle, budget).intent
+    arbitrate(view, home, &drives, 0.0, 0.0, false, Mode::Idle, budget).intent
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -780,16 +816,49 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(count: budget)
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(count: budget)
+// The perceived world, the two psychology dials (latency/horizon), the derived
+// helpless state, the incumbent mode, and the plan budget are each a distinct,
+// individually type-audited input to one decision; bundling them into a
+// `Disposition`/`MindState` struct is a reasonable future tidy, deferred rather
+// than done mid-followup.
+#[allow(clippy::too_many_arguments)]
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
     drives: &[&dyn Drive],
     latency: f64,
     horizon: f64,
+    helpless: bool,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
+    // Learned helplessness (§7, the sticky scar): the survival drive has gone
+    // unmet so long the creature has GIVEN UP — it Holds regardless of any
+    // affordance (the behavioural difference: it stops trying, where a merely
+    // Frustrated creature would still strain), reading `Helpless`. Computed by
+    // the caller as a fold over `last_drank` (`learned_helplessness`), which
+    // probes periodically so this reverses; here it simply short-circuits the
+    // arbitration. Arousal stays high (the need is real and unmet); valence is
+    // negative (progress abandoned). Object is thirst — the survival drive whose
+    // chronic frustration this measures.
+    if helpless {
+        let arousal = drives
+            .iter()
+            .map(|d| d.urgency(view))
+            .fold(0.0_f64, f64::max);
+        return Resolution {
+            intent: Intent::Hold,
+            mode: Mode::Pursuing(DriveKind::Thirst),
+            affect: Affect {
+                arousal,
+                valence: -1.0,
+                label: AffectLabel::Helpless,
+                object: Some(DriveKind::Thirst),
+            },
+        };
+    }
+
     // Which drives are ACTIVE (contribute to the utility sum). A drive engages
     // at its EFFECTIVE threshold `act − anticipation_lead(horizon)` — foresight
     // (§6, `time_horizon`) lowers `act` so a projectable stock drive engages
@@ -1018,6 +1087,7 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         &drives,
         npc.deliberation_latency,
         npc.time_horizon,
+        learned_helplessness(last_drank, day.day),
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1165,6 +1235,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     &drives,
                     npc.deliberation_latency,
                     npc.time_horizon,
+                    learned_helplessness(last_drank, day),
                     mode,
                     PLAN_BUDGET,
                 );
@@ -3180,9 +3251,18 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
-            arbitrate(view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET)
-                .affect
-                .label
+            arbitrate(
+                view,
+                &home,
+                &drives,
+                0.5,
+                0.0,
+                false,
+                Mode::Idle,
+                PLAN_BUDGET,
+            )
+            .affect
+            .label
         };
 
         // CONTENT — not thirsty (drive < act): no active drive, puttering.
@@ -3302,7 +3382,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(v, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).intent,
+                arbitrate(v, &home, &drives, 0.5, 0.0, false, Mode::Idle, PLAN_BUDGET).intent,
                 decide(v, &home, &params, PLAN_BUDGET),
                 "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
             );
@@ -3342,7 +3422,17 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let intent = arbitrate(&view, &home, &drives, 1.0, 0.0, Mode::Idle, PLAN_BUDGET).intent;
+        let intent = arbitrate(
+            &view,
+            &home,
+            &drives,
+            1.0,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        )
+        .intent;
         assert_eq!(
             intent,
             Intent::Do(Action::MoveTo(both)),
@@ -3387,8 +3477,27 @@ mod tests {
             intent: grab,
             mode: gm,
             ..
-        } = arbitrate(&view, &home, &drives, 0.0, 0.0, Mode::Idle, PLAN_BUDGET);
-        let weigh = arbitrate(&view, &home, &drives, 1.0, 0.0, Mode::Idle, PLAN_BUDGET).intent;
+        } = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.0,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        let weigh = arbitrate(
+            &view,
+            &home,
+            &drives,
+            1.0,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        )
+        .intent;
         assert_eq!(
             grab,
             Intent::Do(Action::MoveTo(warm.clone())),
@@ -3445,6 +3554,7 @@ mod tests {
                 &mild_drives,
                 0.5,
                 0.0,
+                false,
                 Mode::Idle,
                 PLAN_BUDGET
             )
@@ -3469,6 +3579,7 @@ mod tests {
                 &dying_drives,
                 0.5,
                 0.0,
+                false,
                 Mode::Idle,
                 PLAN_BUDGET
             )
@@ -3508,12 +3619,30 @@ mod tests {
         };
         // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
         // no active drive, already home → Idle Hold, nothing engaged.
-        let myopic = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
+        let myopic = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
         assert_eq!(myopic.intent, Intent::Hold, "a myopic creature waits");
         assert_eq!(myopic.affect.object, None, "no drive is engaged yet");
         // Foresighted (horizon 1): thirst active (0.70 ≥ act_eff 0.55) → already
         // beelining to known water, Eager, object Thirst.
-        let foresighted = arbitrate(&view, &home, &drives, 0.5, 1.0, Mode::Idle, PLAN_BUDGET);
+        let foresighted = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            1.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
         assert_eq!(
             foresighted.intent,
             Intent::Do(Action::MoveTo(water.clone())),
@@ -3554,6 +3683,94 @@ mod tests {
     }
 
     #[test]
+    fn learned_helplessness_onsets_after_prolonged_thirst_and_probes_periodically() {
+        // The fold (§7): unmet survival drive past the onset → helpless, but with
+        // a periodic probe (renewed effort) so the state reverses rather than
+        // trapping the creature forever.
+        assert!(
+            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS - 1.0),
+            "ordinary thirst is not helplessness"
+        );
+        assert!(
+            learned_helplessness(0.0, HELPLESS_ONSET_DAYS + 1.0),
+            "unmet past onset → helpless"
+        );
+        // The probe: the first day of each period is a retry (not helpless).
+        assert!(
+            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS),
+            "the onset day itself probes"
+        );
+        assert!(
+            !learned_helplessness(0.0, HELPLESS_ONSET_DAYS + HELPLESS_PROBE_DAYS),
+            "each period opens with a probe"
+        );
+        assert!(
+            !learned_helplessness(30.0, 31.0),
+            "a fresh drink clears helplessness"
+        );
+    }
+
+    #[test]
+    fn a_helpless_creature_gives_up_even_with_a_reachable_affordance() {
+        // THE BEHAVIOURAL DIFFERENCE (§7): a helpless creature Holds and reads
+        // Helpless even when it COULD act — where a Frustrated creature strains,
+        // a helpless one has stopped trying. Same view; the `helpless` flag alone
+        // flips it.
+        let home = raddr(1.0);
+        let water = home.neighbors()[1].clone();
+        let terrain = PlantedTerrain::fresh_only([water.clone()]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day: WorldTime { day: 0.0 },
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        // Maxed thirst, KNOWS reachable water → would normally beeline.
+        let view = Perceived {
+            position: home.clone(),
+            drive: 1.0,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        let trying = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert!(
+            matches!(trying.intent, Intent::Do(_)),
+            "a creature still trying acts toward the water"
+        );
+        let given_up = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            given_up.intent,
+            Intent::Hold,
+            "a helpless creature stops trying, even with reachable water"
+        );
+        assert_eq!(given_up.affect.label, AffectLabel::Helpless);
+        assert_eq!(given_up.affect.object, Some(DriveKind::Thirst));
+        assert!(
+            given_up.affect.valence < 0.0,
+            "helplessness is negative valence"
+        );
+    }
+
+    #[test]
     fn commitment_hysteresis_prevents_flip_flop_between_near_equal_drives() {
         // HYSTERESIS: once committed to a drive, a challenger only marginally
         // louder (within the switch margin δ) does NOT steal the errand — the
@@ -3588,7 +3805,17 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let m1 = arbitrate(&low, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).mode;
+        let m1 = arbitrate(
+            &low,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        )
+        .mode;
         assert_eq!(
             m1,
             Mode::Pursuing(DriveKind::Thermal),
@@ -3604,13 +3831,23 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(&high, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).mode,
+            arbitrate(
+                &high,
+                &home,
+                &drives,
+                0.5,
+                0.0,
+                false,
+                Mode::Idle,
+                PLAN_BUDGET
+            )
+            .mode,
             Mode::Pursuing(DriveKind::Thirst),
             "control: with no committed mode, the now-louder thirst is pursued (the test bites)"
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(&high, &home, &drives, 0.5, 0.0, mode, PLAN_BUDGET).mode;
+            let m = arbitrate(&high, &home, &drives, 0.5, 0.0, false, mode, PLAN_BUDGET).mode;
             assert_eq!(
                 m,
                 Mode::Pursuing(DriveKind::Thermal),
@@ -3653,8 +3890,26 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let a = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
-        let b = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
+        let a = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        let b = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
         assert_eq!(a, b, "same inputs → same (Intent, Mode); reload-stable");
         assert_eq!(
             a.intent,
