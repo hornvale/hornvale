@@ -123,7 +123,7 @@ preflight: ## GO/NO-GO before integrating a campaign branch with main (run from 
 doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh
 
-install-hooks: ## Point git at scripts/hooks (runs `make quick` pre-commit)
+install-hooks: ## Point git at scripts/hooks (runs `make quick` + the golden-pins.sql tripwire guard pre-commit)
 	git config core.hooksPath scripts/hooks
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
 

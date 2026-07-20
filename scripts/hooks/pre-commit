@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14).
+# scripts/hooks/pre-commit — the cheap half of the gate (TOOL-14), plus a
+# conditional tripwire-guard (see below).
 #
 # Runs `make quick` (fmt --check + clippy) before every commit. These are the
 # cheapest checks and the most common review finding per CLAUDE.md, so catching
@@ -16,4 +17,28 @@ cd "$repo_root"
 if ! make quick; then
     echo "pre-commit: 'make quick' failed — fix fmt/clippy before committing." >&2
     exit 1
+fi
+
+# The golden-pins.sql tripwire guard. `tools/census/queries/calibrate/
+# golden-pins.sql` deliberately duplicates every pinned calibration constant
+# in the three calibration test files, checked against the committed census
+# fixture as an independent second path (its own header explains why). That
+# duplication has gone stale TWICE (2026-07-13 and 2026-07-20) because
+# `make census-check` is not part of `make gate` and nobody remembered to run
+# it by hand at re-pin time. Closing the gap by construction instead of by
+# memory: any commit that stages one of the four files below must pass
+# `make census-check` before it can land — ~2.5 minutes, only paid on the
+# rare commit that actually touches these.
+census_guard_files='windows/lab/tests/calibration\.rs|windows/lab/tests/branches_family_calibration\.rs|windows/lab/tests/gathering_calibration\.rs|tools/census/queries/calibrate/golden-pins\.sql'
+if git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
+    echo "pre-commit: a calibration-pin file is staged — running 'make census-check' (~2.5 min; this is the golden-pins.sql tripwire guard)..." >&2
+    if ! make census-check; then
+        echo "pre-commit: 'make census-check' failed — a calibration test file and" >&2
+        echo "tools/census/queries/calibrate/golden-pins.sql have drifted apart." >&2
+        echo "Re-sync golden-pins.sql's literals to match the Rust pins exactly" >&2
+        echo "(the Rust file is primary; never edit it to match the SQL) and" >&2
+        echo "re-run 'make census-check' before committing." >&2
+        echo "If duckdb/python3 aren't installed: brew install duckdb; then retry." >&2
+        exit 1
+    fi
 fi
