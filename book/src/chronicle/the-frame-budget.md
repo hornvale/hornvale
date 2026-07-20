@@ -102,3 +102,45 @@ being the renderer, which a real graphics card dispatches in a blink. The zoom's
 rebuild had been the *only* processor-bound hotspot in the client. So the campaign
 stopped where the measurements flattened — not at a quota of fixes, but at the
 honest floor where there was no more main-thread work left to win.
+
+## What only real hardware showed
+
+The headless floor was not the end. It could not be: a headless software
+renderer measures the wrong thing, and the two things it could not see were both
+waiting on a real screen.
+
+The first was that *no dropped-JS is not the same as no jerk*. On real hardware
+the zoom was still visibly stepping — because cutting the *total* work had not cut
+the *per-change* spike, and the eye sees the spike, not the sum. Each level-of-
+detail change still built its whole batch of new tiles in a single frame: at
+worst, thirty-six tiles in sixty-nine milliseconds — four dropped frames in one
+lurch. The cure was to stop doing it all at once. A change now only *enqueues* the
+tiles it wants; a few are built each frame under a time budget, so a big refine
+sharpens progressively over about ten frames instead of freezing one, and the
+coarse tiles it replaces are held on screen until their finer replacements exist,
+so no hole ever opens. The worst single frame fell from sixty-nine milliseconds to
+seven. The glide was real this time.
+
+The second was hiding in plain sight, and it took a genuinely embarrassing detour
+to find: the globe had been broken for weeks and no one had seen it, because *the
+site had never been redeploying*. A profiling harness committed early in the
+campaign wrote its output to a hard-coded path that existed only on the author's
+machine; on the deploy server it threw, which failed the end-to-end gate, which
+silently blocked every deploy. Every fix had been pushed to a repository that
+never reached the live page. Once a build stamp was added — the build time and
+commit printed to the console on boot — the staleness was obvious in a glance, the
+deploy gate was fixed, and the real globe finally appeared on a real screen: a
+planet riddled with black speckle. Bisection was merciless. The **analytic
+normals** — this campaign's own first move, the one that passed every synthetic
+unit test — were the culprit. On the real world's elevation, sampled in hard steps
+at the data grid and then exaggerated sixty-fold, the finite difference the normal
+is built from spikes at every cell boundary into a near-vertical wall, tilting the
+normal to grazing: black where the light should catch, bright fragments where it
+should not. The synthetic fixtures — a flat patch, a gentle slope — had never
+exercised a real stepped field. The fix restored what the test fixtures had
+promised without a stitch: sample the elevation *bilinearly* so the field, and the
+gradient the normal is taken from, are continuous. Correct normals, smoother
+relief, and — because two tiles still evaluate the same continuous function at a
+shared edge — still no cross-tile reconciliation. A performance campaign had shipped
+a rendering regression as its opening move and only its own real-hardware pass, at
+the very end, caught it.
