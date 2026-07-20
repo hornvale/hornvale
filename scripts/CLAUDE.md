@@ -62,4 +62,12 @@ confirmation-gated in the Makefile.
   deliberately where a step is best-effort (e.g. `panic.sh`, safe to run
   repeatedly).
 - The git hooks in `hooks/` run `make quick` pre-commit (`make install-hooks`
-  points git at them).
+  points git at them). The hook also carries the **golden-pins.sql tripwire
+  guard**: staging any of `windows/lab/tests/{calibration,
+  branches_family_calibration,gathering_calibration}.rs` or
+  `tools/census/queries/calibrate/golden-pins.sql` runs `make census-check`
+  (~2.5 min) before the commit lands. That SQL file deliberately duplicates
+  every calibration pin as an independent check against the committed census
+  fixture, and the duplication went stale twice (2026-07-13, 2026-07-20)
+  because nothing forced it back into sync — this closes the gap by
+  construction rather than by memory.
