@@ -46,24 +46,28 @@ the close learned that the code does not record.
 ## What was awkward
 
 - **A registry-ID citation slipped through five task reviews and one
-  whole-branch review, and only surfaced at `make gate` on the merged
-  tree.** The plan's own `stream_labels()` string literals cited
-  "LANG-43:" directly — invisible to every review because the generated
-  book page those strings render into
+  whole-branch review, and only surfaced at close-time `make gate` on the
+  merged tree.** The plan's own `stream_labels()` string literals cited
+  "LANG-43:" directly. `docs_consistency`'s book-purity check (banning any
+  registry-ID citation outside the Frontier part) genuinely IS part of
+  `make gate` — it is not a CI-only gap the way the type-audit check is —
+  but the citation was invisible to every review for a more specific
+  reason: the generated book page those strings render into
   (`book/src/reference/stream-manifest-generated.md`) was *stale*
   throughout the whole review cycle (a separate, already-caught defect),
-  so the citation only became live in the committed artifact once the
-  whole-branch review's own fix regenerated that file. The book-purity
-  drift-check (`docs_consistency`) is not part of any task-level review's
-  checklist and isn't in `make gate`'s fast path either — it only runs
-  during the close-time `make gate` on the fully merged, fully regenerated
-  tree. This is the same class of gap as the type-audit check (also
-  CI/close-time-only, also invisible to `make gate`'s fast path) that
-  Task 5 found on `level_paradigm` — a second instance of "a generated
-  artifact's regen is what makes a defect visible, and nothing regenerates
-  it until the very end." Fixed directly by the controller rather than
-  another subagent round-trip, since the fix was two words repeated six
-  times.
+  so the offending string never appeared in the committed tree until the
+  whole-branch review's own fix regenerated that file — and nobody
+  re-ran the full gate after that regen until the close-time walk. The
+  precise lesson: regenerating a stale generated artifact as part of a fix
+  can make a LATENT defect live for the first time, and a task or
+  whole-branch review that only re-checks the specific diff it dispatched
+  will not catch a defect a DIFFERENT commit's regen just exposed — only a
+  full gate re-run after every artifact regen closes that gap. This is a
+  distinct lesson from Task 5's type-audit finding (a genuinely
+  close-time/CI-only check, invisible to `make gate` by design) — the two
+  looked similar but have different root causes. Fixed directly by the
+  controller rather than another subagent round-trip, since the fix was
+  two words repeated six times.
 - **The plan itself had two small, harmless arithmetic/generator slips**
   (a "7 tests" vs. actual 6 count in Task 3's step text; the length-
   collision bug in both Task 4's and Task 5's test generators). None
@@ -85,8 +89,14 @@ the close learned that the code does not record.
   tongues to actually speak with plurals and past tenses, but this
   campaign's own scope (spec §6) deliberately stopped at the mechanism and
   its proof.
-- **Book-purity and type-audit checks should get an earlier checkpoint** in
-  future plans that add `stream_labels()` entries or new `pub`-boundary
-  primitives: neither is part of `make gate`'s fast tier, so both defects
-  this campaign hit were only caught at the close-time full gate, not by
-  any of the five task reviews or the whole-branch review that preceded it.
+- **Any task or fix dispatch that regenerates a stale generated artifact
+  should re-run the full gate afterward, not just the tests covering its
+  own change.** The book-purity defect this campaign hit existed in
+  source from Task 1 onward but stayed dormant until the whole-branch
+  review's own fix regenerated `stream-manifest-generated.md` — a full
+  gate re-run at that point (rather than only the narrower fmt/clippy/test
+  commands the fix dispatch ran) would have caught it before close. The
+  type-audit check is a separate, genuinely CI-only gap (not part of
+  `make gate` at all) that future plans touching `stream_labels()` or new
+  `pub`-boundary primitives should have a task explicitly run, since no
+  task in this plan did until Task 5's final step.
