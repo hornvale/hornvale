@@ -32,33 +32,45 @@ fn generated(seed: u64) -> hornvale_kernel::World {
     .unwrap()
 }
 
-/// The SOC-1 gate law, restated: at seed 1, every placed culture's
-/// flagship is committed `"organized"` (Task 2's ledger #1 measurement),
-/// so `doctrine_of` gates every one to `Some`, and `doctrines_of`'s length
-/// matches `placed_peoples`'s exactly. A future roster or genesis change
-/// that stops placing an organized culture at seed 1 must redden this
-/// assertion, from the lab crate, without needing to touch
+/// The SOC-1 gate law, restated: at seed 1, a placed culture's flagship
+/// cult-form gates `doctrine_of` exactly — `"organized"` <=> `Some`,
+/// `"folk"` <=> `None` — and `doctrines_of`'s length matches the organized
+/// subset. Post-Demesne (BIO-35 Stage 1 recalibration), seed-1's goblin is
+/// organized while its hobgoblin flipped to folk, so this seed exercises
+/// BOTH arms of the gate directly (the anticipated genesis-change reddening
+/// this docstring warned of: it no longer holds that *every* placed culture
+/// is organized). Verified from the lab crate, without touching
 /// `windows/worldgen/tests/` at all.
 #[test]
 fn the_soc1_gate_holds_at_seed_1() {
     let world = generated(1);
     let placed = hornvale_worldgen::placed_peoples(&world);
     assert!(!placed.is_empty(), "seed 1 must place at least one culture");
+    let mut organized_count = 0usize;
+    let mut goblin_organized = false;
     for (kind, village) in &placed {
         let cult_form = hornvale_religion::cult_form_held_by(&world, village.id);
+        let is_organized = cult_form.as_deref() == Some("organized");
         assert_eq!(
-            cult_form.as_deref(),
-            Some("organized"),
-            "seed 1's {kind} flagship must be organized"
-        );
-        assert!(
             doctrine_of(&world, kind).is_some(),
-            "{kind}'s organized flagship must gate doctrine_of to Some"
+            is_organized,
+            "seed 1's {kind}: doctrine_of must be Some iff its flagship cult-form is organized \
+             (cult_form={cult_form:?})"
         );
+        if is_organized {
+            organized_count += 1;
+        }
+        if *kind == "goblin" {
+            goblin_organized = is_organized;
+        }
     }
+    assert!(
+        goblin_organized,
+        "seed 1's goblin flagship is organized (the seed-1 anchor)"
+    );
     assert_eq!(
         doctrines_of(&world).len(),
-        placed.len(),
+        organized_count,
         "doctrines_of must cover exactly every organized placed culture"
     );
 }

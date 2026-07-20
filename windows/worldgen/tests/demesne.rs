@@ -354,14 +354,19 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
         "capacity-by-abs-latitude on seed 42 fell to {ratio:.4} (below the preregistered floor \
          of 3) — the K-grounding may have drifted despite the-demesne touching a different K"
     );
-    // Pinned to `confluence.rs`'s exact live reading: proof of ZERO drift,
-    // not merely "still above the floor" — the vector supply's code path
-    // (`niche_per_species_k`/`axis_supply`) is disjoint from this one
-    // (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`).
+    // Pinned to the merged-tree live reading: proof of ZERO drift from the
+    // vector supply, not merely "still above the floor" — the vector supply's
+    // code path (`niche_per_species_k`/`axis_supply`) is disjoint from this
+    // one (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`),
+    // so this ratio is BY CONSTRUCTION the pure scalar-path reading and the
+    // vector supply cannot move it. The absolute value tracks the climate
+    // inputs: it was 31.2563 pre-Rains (confluence.rs) and is 31.1236 after
+    // absorbing The Rains' moisture epoch (a 0.4% shift in the tropical/polar
+    // NPP balance, still far above the preregistered floor of 3).
     assert!(
-        (ratio - 31.2563).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.2563, unchanged from \
-         confluence.rs's pre-demesne reading) — something outside the-demesne's per-axis \
+        (ratio - 31.1236).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.1236, the post-Rains \
+         merged-tree scalar-path reading) — something outside the-demesne's per-axis \
          supply fields moved this K"
     );
 }

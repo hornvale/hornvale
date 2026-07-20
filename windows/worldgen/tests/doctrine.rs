@@ -23,28 +23,42 @@ fn generated(seed: u64) -> hornvale_kernel::World {
 
 #[test]
 fn the_soc1_gate_is_the_flagship_cult_form() {
-    // Positive arm, seed 1: measured — every placed culture's flagship is
-    // organized (ledger #1), so every one gains a doctrine voice, and
-    // doctrines_of's length matches placed_peoples' exactly.
+    // Positive arm, seed 1: the SOC-1 gate is exact — a placed culture's
+    // flagship cult-form gates doctrine_of exactly (organized <=> Some, folk
+    // <=> None). Post-Demesne (BIO-35 Stage 1 recalibration), seed-1's goblin
+    // is organized and its hobgoblin flipped to folk (the same organized->folk
+    // drift the book's seed-1 doctrine tests pin), so this seed exercises BOTH
+    // arms of the gate directly, and doctrines_of covers exactly the organized
+    // subset (no longer every placed culture).
     let w = generated(1);
     let placed = hornvale_worldgen::placed_peoples(&w);
     assert!(!placed.is_empty(), "seed 1 must place at least one culture");
+    let mut organized_count = 0usize;
+    let mut goblin_organized = false;
     for (kind, village) in &placed {
         let cult_form = hornvale_religion::cult_form_held_by(&w, village.id);
+        let is_organized = cult_form.as_deref() == Some("organized");
         assert_eq!(
-            cult_form.as_deref(),
-            Some("organized"),
-            "seed 1's {kind} flagship must be organized (ledger #1's measurement)"
-        );
-        assert!(
             doctrine_of(&w, kind).is_some(),
-            "{kind}'s organized flagship must gate doctrine_of to Some"
+            is_organized,
+            "seed 1's {kind}: doctrine_of must be Some iff its flagship cult-form is organized \
+             (cult_form={cult_form:?})"
         );
+        if is_organized {
+            organized_count += 1;
+        }
+        if *kind == "goblin" {
+            goblin_organized = is_organized;
+        }
     }
+    assert!(
+        goblin_organized,
+        "seed 1's goblin flagship is organized (the seed-1 anchor; ledger #1)"
+    );
     let doctrines = doctrines_of(&w);
     assert_eq!(
         doctrines.len(),
-        placed.len(),
+        organized_count,
         "doctrines_of must cover exactly every organized placed culture"
     );
 

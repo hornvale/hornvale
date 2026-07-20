@@ -195,13 +195,13 @@ fn moons_explained_only_where_kept() {
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
-    // Re-pinned under The Rains moisture epoch (this merge): seed 2's kobold
-    // re-derived its settlement demography (it also lost organized status —
-    // see `EVIDENTIAL_DEPTH_LANDSCAPE` in `windows/book`), so its language
-    // re-mapped and the Slow manner verb shifted "strides" -> "drives". The
-    // agent ("Nggo"), schema (Agentive), underlying (Kept), and manner
-    // (Slow) are all unchanged — only the drawn lexeme moved, the expected
-    // signature of a language re-derivation.
+    // Re-pinned again under The Demesne (BIO-35 Stage 1 per-axis supply, this
+    // merge): seed 2's kobold re-derived its settlement demography once more,
+    // so its language re-mapped and the Slow manner verb shifted
+    // "drives" -> "stalks". The agent ("Nggo"), schema (Agentive), underlying
+    // (Kept), and manner (Slow) are all unchanged — only the drawn lexeme
+    // moved, the expected signature of a language re-derivation. (Under The
+    // Rains it had shifted "strides" -> "drives".)
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -225,7 +225,7 @@ fn moons_explained_only_where_kept() {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
             agent: Some("Nggo".to_string()),
-            lexeme: Some(hornvale_language::LexemeId("drives")),
+            lexeme: Some(hornvale_language::LexemeId("stalks")),
             manner: Manner::Slow,
         }
     );

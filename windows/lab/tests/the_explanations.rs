@@ -134,9 +134,37 @@ fn differing_subframes_do_not_share_one_verb() {
         return;
     }
 
-    // The "differ" arm (not reached at today's floor, kept live for when
-    // it is): group verbs by SubFrame and assert that cultures with
-    // different SubFrames don't all converge on one shared verb lexeme.
+    // Distinct SubFrames have now appeared (measured post-Demesne: seed-5's
+    // hobgoblin herds -> Mounted, alongside the Walking farmers). But the
+    // uncanny-literalism law only has bite when TWO OR MORE distinct
+    // SubFrames each actually PRODUCE an Agentive verb draw — only then can
+    // distinct motion-frames be said to "collapse" onto one shared verb.
+    // Post-Demesne the Mounted culture (seed-5 hobgoblin) is folk-only, so it
+    // emits no Agentive explanation: only the Walking frame produced verbs.
+    // That is a DEGENERATE SAMPLE, not a collapse — flag it loudly rather
+    // than false-alarming (a future change that gives a second SubFrame an
+    // organized, verb-producing culture must redden the real "differ" arm
+    // below).
+    let mut framed: Vec<SubFrame> = Vec::new();
+    for (sf, _) in &observed {
+        if !framed.contains(sf) {
+            framed.push(*sf);
+        }
+    }
+    if framed.len() < 2 {
+        assert_eq!(
+            framed.len(),
+            1,
+            "distinct SubFrames exist ({subframes:?}) but only one produced any Agentive \
+             verb draw (the others are folk-only / silent): {observed:?} — re-derive the \
+             'differ' arm once a second SubFrame gains an organized, verb-producing culture"
+        );
+        return;
+    }
+
+    // The real "differ" arm (>=2 SubFrames each produced verbs): assert
+    // cultures with different SubFrames don't all converge on one shared verb
+    // lexeme.
     let mut all_verbs: Vec<&'static str> = observed.iter().map(|(_, v)| *v).collect();
     all_verbs.sort_unstable();
     all_verbs.dedup();

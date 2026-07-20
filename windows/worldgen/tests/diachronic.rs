@@ -168,13 +168,19 @@ const LADDER_TABLE: &[Row] = &[
         4010,
         Some(36526.1181181615),
     ),
+    // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): seed 1
+    // hobgoblin flipped from an organized cult to a FOLK flagship (the
+    // recalibrated per-axis supply moved its demography below the SOC-1
+    // gate — the same organized->folk drift the book's seed-1 tests pin),
+    // so it never exceeds Counted no matter how many events it witnesses
+    // (4010). Was: LadderRung::Predictive, Some(36526.1181181615).
     (
         1,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Predictive,
+        LadderRung::Counted,
         4010,
-        Some(36526.1181181615),
+        None,
     ),
     (
         2,
@@ -214,24 +220,19 @@ const LADDER_TABLE: &[Row] = &[
         32,
         Some(36953.336612553074),
     ),
-    // Seed 3 hobgoblin and kobold carry FOLK flagships (the SOC-1 gate's
-    // negative arm, post-Confluence): no records, so they never exceed
-    // Counted no matter how many events they witness (32 and 53).
+    // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
+    // recalibrated per-axis supply flipped seed 3 hobgoblin folk->organized
+    // (its priesthood now records and predicts, at 32) and dropped kobold
+    // from placement entirely at this seed (no row — placed_peoples no longer
+    // returns it, so the placed.len()==rows law drops it too). Was: hobgoblin
+    // Counted/None; kobold Counted/53/None.
     (
         3,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         32,
-        None,
-    ),
-    (
-        3,
-        "kobold",
-        LadderRung::Unknown,
-        LadderRung::Counted,
-        53,
-        None,
+        Some(36953.336612553074),
     ),
     (
         4,
