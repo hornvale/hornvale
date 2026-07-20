@@ -1,7 +1,7 @@
 # Few and Many — Design
 
 **Date:** 2026-07-20
-**Status:** Draft (G3 review pending).
+**Status:** **Approved at G3 (2026-07-20)**.
 **Campaign:** LANG-44, "numeracy as a quantity register" — a new mechanism
 in `domains/language`, plus one demonstrated integration point in
 `windows/book`. Answers the bridge The Echo's own G3 review explicitly
