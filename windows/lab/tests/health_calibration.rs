@@ -217,6 +217,33 @@ fn a_stranded_creature_is_scored_chronic_end_to_end() {
 }
 
 #[test]
+fn a_stranded_creature_learns_helplessness_end_to_end() {
+    // LEARNED HELPLESSNESS (followup #2, §7): a creature whose survival drive
+    // goes unmet long enough stops trying — its felt state deepens from
+    // Frustrated (still straining) to Helpless (given up), on the sim's own
+    // output. The stranded creature never reaches its water, so past the onset
+    // it reads Helpless (with periodic probe days it briefly strains again).
+    let traces = stranded_from_known_water().simulate(HARNESS_TICKS);
+    let labels: Vec<AffectLabel> = traces[0].affects.iter().map(|a| a.label).collect();
+    assert!(
+        labels.contains(&AffectLabel::Helpless),
+        "prolonged unmet survival must produce Helpless, not endless Frustrated: {labels:?}"
+    );
+    assert!(
+        labels.contains(&AffectLabel::Frustrated),
+        "and it strains (Frustrated) before giving up, and on probe days: {labels:?}"
+    );
+    // Helplessness follows frustration in time — it is the deepening, never the
+    // opening state.
+    let first_helpless = labels.iter().position(|&l| l == AffectLabel::Helpless);
+    let first_frustrated = labels.iter().position(|&l| l == AffectLabel::Frustrated);
+    assert!(
+        first_frustrated < first_helpless,
+        "straining precedes giving up: {labels:?}"
+    );
+}
+
+#[test]
 fn a_passing_heat_wave_is_scored_a_recovered_spike_end_to_end() {
     // THE RESILIENT SPIKE, now end to end: a creature on its spring (thirst
     // stays serviceable) is boxed in by a blistering heat wave, then the wave
