@@ -20,8 +20,8 @@ one verb:
 > The sky keeps no dates to number.
 > The Book holds more for the initiated.
 >
-> `> tell Vebe is a planet with two moons`
-> Heard.
+> `> write Vebe is a planet with two moons`
+> Written in the margin.
 > `> consult`
 > *The Reckoning, at day 12.*
 > The sky keeps no dates to number.
@@ -30,15 +30,23 @@ one verb:
 `consult` renders, for the session's world, **The Reckoning at the
 session's own day** (the C8 time axis, finally read from inside the
 world) and **the initiated lines the session's Knowledge unlocks** (the
-C6 esoteric layer, finally unlockable by play): what you have been told —
-or will someday observe — is what the Book confirms to you. Heard is not
-true (the Echo's standing point), but heard is *initiation*.
+C6 esoteric layer, finally unlockable by play): what you have written
+into your own margin — heard in play, or someday observed — is what the
+Book confirms to you. Heard is not true (the Echo's standing point), but
+written is *initiation*.
+
+**The verb rename (G3 exchange, Nathan):** the Echo's `tell` becomes
+`write` — the player writes what they have learned into their copy's
+margin (the program's own margin device, turned toward the reader), and
+the response says so: `Written in the margin.` The rename is total (no
+`tell` alias — pre-1.0 game surface, no compatibility debt); every test
+pinning `tell` re-pins in the rename task.
 
 ## 2. What exists (verified, main @7b02da0)
 
 - `windows/vessel`: `Knowledge(BTreeMap<String, String>)` keyed
   `"{subject}::{predicate}"` → surface value; `absorb_common` (the Echo's
-  `tell` seam); the session's `day: WorldTime` (the Quickening's tick);
+  transfer seam — its `tell` verb renames to `write` here); the session's `day: WorldTime` (the Quickening's tick);
   the verb dispatch match; vessel already depends on `hornvale-book`.
 - `windows/book`: `esoteric_lines(world, reader: &BTreeSet<(String,
   String)>)` (C6 — the exact reader type the adapter produces);
@@ -68,8 +76,8 @@ committed-artifact change of any kind.
   unlocks, the closed fallback `The Book holds more for the initiated.`
   Output is a normal `Turn::Out` — a turn's worth of text, never the
   full volume.
-- Unlock channels at the floor: `tell` (live today) and whatever walking
-  already absorbs (verified at plan time; sky facts are not walked
+- Unlock channels at the floor: `write` (the renamed `tell` — live
+  today) and whatever walking already absorbs (verified at plan time; sky facts are not walked
   today). **The observational unlock — an astronomy verb that earns
   initiation by watching the night sky in-possession — is the recorded
   followup, not scope.**
@@ -82,9 +90,9 @@ deploy-built from the vessel crate and gains the verb automatically.
 ## 4. The laws (standing tests)
 
 1. **The stitch law (end to end):** a fresh session's `consult` shows the
-   fallback; after `tell`-ing the moon sentence, `consult` shows the
+   fallback; after `write`-ing the moon sentence, `consult` shows the
    initiated line whose value equals the LEDGER's committed count
-   (mutation-verified: a wrong told count still unlocks the key but the
+   (mutation-verified: a wrong WRITTEN count still unlocks the key but the
    rendered value is the ledger's — heard ≠ true, printed).
 2. **The day law:** `consult` at day 0 and after `wait`-ing days renders
    the reckoning at the session's actual day (monotone with play).
@@ -120,13 +128,14 @@ possession loop).
 
 1. **Determinism:** nothing moves — no draws, facts, artifacts, census.
    The flag is the ABSENCE of flags; confirm the posture reads right.
-2. **The heard≠true rendering (the one semantic choice):** a wrong told
-   count still initiates (the KEY unlocks) but the Book prints the
+2. **The heard≠true rendering (the one semantic choice):** a wrong
+   WRITTEN count still initiates (the KEY unlocks) but the Book prints the
    LEDGER's value — the Book never repeats your error back to you; it
    confirms what the initiated may see. Alternative: refuse to unlock on
    a wrong value (initiation requires truth). I recommend the former
    (the Book as authority, not a mirror; and the Echo deliberately kept
    heard-knowledge outside the truth contract). Your call if you read
    initiation differently.
-3. **Surface taste:** the verb name (`consult`), the heading, the
-   fallback line.
+3. **Surface taste (settled at G3):** `consult` + `write` (Nathan's
+   pick over `tell`/`scribe`/`annotate`), the margin response line, the
+   heading, the fallback line.
