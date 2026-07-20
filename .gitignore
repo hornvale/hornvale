@@ -51,3 +51,8 @@ tools/census/.build/
 # the wasm crate is outside the workspace so it has its own target/.
 book/src/gallery/vessel.wasm
 clients/vessel/wasm/target/
+
+# perf/flamegraph captures (scratch — never commit; they hit GitHub 100MB limit)
+perf.data
+perf.data.old
+*.perf
