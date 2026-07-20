@@ -6999,11 +6999,16 @@ mod tests {
     /// controller/Nathan calibration call (fauna mass and/or sovereignty/
     /// devotion coefficients), not something this task retunes unilaterally.
     ///
-    /// The assertions below are written to the SPEC's real target (not
-    /// weakened to the observed 2) and are `#[ignore]`d rather than forced
-    /// or deleted, so they stand ready to re-run once a calibration pass
-    /// lands. Full breakdown, per-species max-density trace, and the
-    /// calibration writeup: `.superpowers/sdd/task-6-report.md`.
+    /// The preregistered `>= 6` target is NOT weakened to the observed value:
+    /// the-demesne T3 splits this group into a pinned Stage-1 ACHIEVEMENT test
+    /// (`menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold`,
+    /// un-ignored, asserts the measured 4 + xorn's stronghold) and the
+    /// still-`#[ignore]`d preregistered `>= 6` target
+    /// (`menagerie_distinct_dominants_reach_the_preregistered_six`), plus the
+    /// treant (mass-calibration) and dragon (Stage-2) splits — each `#[ignore]`d
+    /// with its true reason rather than forced, deleted, or silently rebased.
+    /// Full breakdown, per-species max-density trace, and the calibration
+    /// writeup: `.superpowers/sdd/task-6-report.md`.
     ///
     /// UPDATE (BIO-35, the-demesne T2): `niche_per_species_k` no longer
     /// scales one shared `base_carrying` field by each species' summed
@@ -7109,21 +7114,41 @@ mod tests {
     /// per-axis repoint landed; see the module doc above this test group.
     const PRE_DEMESNE_DISTINCT_DOMINANTS_42: usize = 2;
 
+    /// The Stage-1 ACHIEVEMENT (BIO-35 the-demesne, measured post-repoint,
+    /// seed 42): the per-axis vector supply raises distinct full-roster
+    /// dominants from 2 to exactly 4 (`xorn`, `rust-monster`, `twig-blight`,
+    /// `goblin`). Pinned as a `>=` regression floor — a future change that
+    /// drops below this reddens. NOT the preregistered target: see
+    /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`].
+    const STAGE1_DISTINCT_DOMINANTS_42: usize = 4;
+
+    /// The PREREGISTERED distinct-dominant target (task 6, frozen before
+    /// BIO-35): the campaign's stated ambition is `>= 6` distinct dominants
+    /// incl. treant/xorn/dragon strongholds. Stage 1 (abiotic) reaches 4 —
+    /// the gap to 6 is the treant mass-calibration (below, `#[ignore]`d) + the
+    /// dragon/`ANIMAL_PREY` Stage-2 field (below, `#[ignore]`d) + the still-OPEN
+    /// peoples-diversity problem (the goblinoid niches don't span the new
+    /// axes). The `>= 6` bar is DELIBERATELY NOT weakened — it stays pinned as
+    /// an ignored target-to-reach, not silently rebased to the observed value.
+    const PREREGISTERED_DISTINCT_DOMINANTS_TARGET: usize = 6;
+
     /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
-    /// vector supply materially diversifies the full-roster (fauna
-    /// included) per-cell dominance beyond [`PRE_DEMESNE_DISTINCT_DOMINANTS_42`],
-    /// and `xorn` — the pure-`MINERAL` specialist the mineral supply field
-    /// was built to unlock — holds a real stronghold. See the module doc
-    /// above for what stays `#[ignore]`d (treant: mass calibration; dragons:
-    /// Stage 2) and why.
+    /// vector supply diversifies full-roster (fauna-included) per-cell
+    /// dominance to the measured Stage-1 achievement
+    /// ([`STAGE1_DISTINCT_DOMINANTS_42`] = 4, up from the baseline 2), and
+    /// `xorn` — the pure-`MINERAL` specialist the mineral supply field was
+    /// built to unlock — holds a real stronghold. This pins the ACHIEVEMENT,
+    /// not the preregistered `>= 6` target (which stays `#[ignore]`d below,
+    /// honestly unmet — see the module doc for the treant/dragon/peoples gap).
     #[test]
     fn menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         let distinct_dominants = dominant_counts.len();
         assert!(
-            distinct_dominants > PRE_DEMESNE_DISTINCT_DOMINANTS_42,
-            "expected the per-axis vector supply to diversify full-roster dominance beyond \
-             the pre-repoint baseline of {PRE_DEMESNE_DISTINCT_DOMINANTS_42}, got \
+            distinct_dominants >= STAGE1_DISTINCT_DOMINANTS_42,
+            "expected the per-axis vector supply to hold the Stage-1 achievement of \
+             {STAGE1_DISTINCT_DOMINANTS_42} distinct full-roster dominants (up from the \
+             pre-repoint baseline {PRE_DEMESNE_DISTINCT_DOMINANTS_42}), got \
              {distinct_dominants}: {breakdown:?}"
         );
 
@@ -7137,6 +7162,27 @@ mod tests {
         assert!(
             dominates_a_cell("xorn"),
             "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
+        );
+    }
+
+    /// STILL `#[ignore]`d — the PREREGISTERED `>= 6` target, honestly unmet
+    /// (BIO-35 the-demesne T3, measured not faked): Stage 1 reaches
+    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4. Reaching
+    /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`] = 6 needs the treant
+    /// mass-calibration + the dragon/`ANIMAL_PREY` Stage-2 field + the open
+    /// peoples-diversity problem. Kept (not deleted, not weakened) so the
+    /// original ambition stands ready to re-run once those land.
+    #[test]
+    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; \
+                the gap to 6 is treant mass-calibration + dragon/ANIMAL_PREY (Stage 2) + \
+                the open peoples-diversity problem. Not weakened — stands as the target."]
+    fn menagerie_distinct_dominants_reach_the_preregistered_six() {
+        let (_names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        assert!(
+            dominant_counts.len() >= PREREGISTERED_DISTINCT_DOMINANTS_TARGET,
+            "the preregistered target is {PREREGISTERED_DISTINCT_DOMINANTS_TARGET} distinct \
+             dominants; got {}: {breakdown:?}",
+            dominant_counts.len()
         );
     }
 
