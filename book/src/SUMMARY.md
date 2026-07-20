@@ -190,6 +190,7 @@
 - [The Firmament](./chronicle/the-firmament.md)
 - [The Mantle](./chronicle/the-mantle.md)
 - [The Local Census](./chronicle/the-local-census.md)
+- [The Temperament](./chronicle/the-temperament.md)
 
 # Appendix: The Frontier
 

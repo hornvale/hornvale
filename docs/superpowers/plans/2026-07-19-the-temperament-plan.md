@@ -113,7 +113,22 @@ metric; the null control reads ≈0; an injected novel event spikes-then-recover
 an injected unsatisfiable need spikes-and-persists (the bug signal).
 **Tests:** affect-read unit tests; the Lab metric study + its null-control and
 injected-fault probes.
-**Status:** Not Started
+**Status:** Complete. **3A (affect):** `arbitrate` returns
+`Resolution{intent,mode,affect}` (decide byte-identical, takes `.intent`); the
+6-region derivation (Content/Eager/Searching/Frustrated/Lost/Helpless) is
+STRUCTURAL — from met/known/unknown/blocked, not an arousal threshold (which
+broke on the real `act=0.85` + binary serviceability); `affect_of` snapshots a
+co-located NPC's felt state and `Session::needs` renders it as object-coloured
+prose. The dead `DriveParams.sated` (only reader was the old `needs`) removed.
+**3B (health metric):** `windows/lab/health` — a headless drive-sim harness
+(reuses `derive_npcs`/`DriveMovements`/`affect_of`; lab now depends on
+vessel+locale, window→window) + the distress family (prevalence/chronicity/
+recovery/by-cause/by-species; Searching excluded). Preregistered
+(`health_calibration.rs`, 6 tests): null control reads 0 (seed 42 + a seed
+sweep), the reduction FIRES on injected spike-recover vs spike-persist, a pure
+Searching run reads 0, by-species separates. FINDING: genuine distress is rare
+(a creature searches, not despairs), so the metric is a regression alarm armed
+by staying quiet. `Npc` gained a `species` field.
 
 ## Stage 4: The correspondence payoff
 **Goal:** `cold`/`heat` earn their cognitive handle.
