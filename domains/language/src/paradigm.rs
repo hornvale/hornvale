@@ -6,8 +6,10 @@
 //! authored. See `docs/superpowers/specs/2026-07-20-the-residue-design.md`.
 #![warn(missing_docs)]
 
-use crate::morphology::{ClassPosition, MorphDepth};
+use crate::etymology::{Cascade, Derivation, evolve};
+use crate::morphology::{ClassPosition, MorphDepth, MorphForm, affix};
 use crate::phoneme::Segment;
+use crate::phonology::Phonology;
 use hornvale_kernel::Seed;
 
 /// A tongue's drawn Number/Tense grammaticalization depths and attachment
@@ -149,6 +151,75 @@ pub fn draw_paradigm_affix_proto(
     crate::morphology::draw_morph_proto(seed, family, axis, value, proto_ph)
 }
 
+/// One root's paradigm-cell computation for one axis value (spec §3.3):
+/// both candidate modern forms, kept fully traceable, and whether they
+/// diverge. `regular_root`/`regular_affix` are kept as their own
+/// [`Derivation`]s (rather than folding the regular path into one
+/// `Derivation`) because "regular" is never a single `evolve` call — it is
+/// two independent calls, joined — so keeping both sub-derivations is
+/// MORE traceable than a single composite would be, not less.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParadigmCell {
+    /// Root-proto and affix-proto joined at the segment level BEFORE
+    /// evolution, then evolved as one sequence — the order that lets
+    /// `evolve`'s word-edge rules see the true joined boundary.
+    pub cascade_native: Derivation,
+    /// The root's own derivation, evolved independently of the affix.
+    pub regular_root: Derivation,
+    /// The affix's own derivation, evolved independently of the root.
+    pub regular_affix: Derivation,
+    /// `regular_root.modern` and `regular_affix.modern` joined at the
+    /// segment level AFTER both were already evolved — today's implicit
+    /// grammaticalization order (`crate::morphology::affix`'s existing
+    /// call sites all join two already-evolved sides).
+    pub regular_form: MorphForm,
+    /// Whether `cascade_native.modern` differs from `regular_form.segments`
+    /// — the irregularity signal itself, derived, never drawn.
+    pub is_irregular: bool,
+}
+
+/// Compute both candidate modern forms for one root's one paradigm cell
+/// (spec §3.3) and whether they diverge. Pure and total: same inputs
+/// always produce the same [`ParadigmCell`], mirroring [`evolve`]'s own
+/// purity law — this function calls `evolve` and
+/// [`crate::morphology::affix`] and nothing else, so it inherits their
+/// purity directly.
+pub fn realize_paradigm_cell(
+    root_proto: &[Segment],
+    affix_proto: &[Segment],
+    position: ClassPosition,
+    cascade: &Cascade,
+    ph: &Phonology,
+) -> ParadigmCell {
+    let regular_root = evolve(root_proto, cascade, ph);
+    let regular_affix = evolve(affix_proto, cascade, ph);
+    let regular_form = affix(&regular_root.modern, &regular_affix.modern, position);
+
+    let mut joined_proto = Vec::with_capacity(root_proto.len() + affix_proto.len());
+    match position {
+        ClassPosition::Prefix => {
+            joined_proto.extend_from_slice(affix_proto);
+            joined_proto.extend_from_slice(root_proto);
+        }
+        ClassPosition::Suffix => {
+            joined_proto.extend_from_slice(root_proto);
+            joined_proto.extend_from_slice(affix_proto);
+        }
+    }
+    let cascade_native = evolve(&joined_proto, cascade, ph);
+
+    let is_irregular = cascade_native.modern != regular_form.segments;
+
+    ParadigmCell {
+        cascade_native,
+        regular_root,
+        regular_affix,
+        regular_form,
+        is_irregular,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,5 +283,152 @@ mod tests {
             }
         }
         assert!(saw_none && saw_particle && saw_affix);
+    }
+
+    use crate::etymology::{Cascade, RuleKind, SoundRule};
+    use crate::phoneme::{Manner, Place};
+
+    fn t() -> Segment {
+        Segment::Consonant {
+            place: Place::Alveolar,
+            manner: Manner::Stop,
+            voiced: false,
+        }
+    }
+
+    fn a() -> Segment {
+        Segment::Vowel {
+            height: Height::Low,
+            backness: Backness::Central,
+            rounded: false,
+            tone: Tone::Neutral,
+        }
+    }
+
+    fn e() -> Segment {
+        Segment::Vowel {
+            height: Height::Mid,
+            backness: Backness::Front,
+            rounded: false,
+            tone: Tone::Neutral,
+        }
+    }
+
+    fn edge_test_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                t(),
+                a(),
+                e(),
+                Segment::Consonant {
+                    place: Place::Alveolar,
+                    manner: Manner::Stop,
+                    voiced: true,
+                }, // d, for the lenition case's Lenition output
+            ],
+            onsets: vec![vec![]],
+            nuclei: 1,
+            codas: vec![vec![Manner::Stop], vec![]],
+        }
+    }
+
+    #[test]
+    fn final_loss_makes_a_suffixed_root_irregular() {
+        // Root "tat" (t,a,t) ends in a consonant: evolved ALONE under
+        // FinalLoss, the final /t/ drops ("ta"). But joined with a
+        // vowel-initial suffix /e/ BEFORE evolution ("tate"), that same
+        // /t/ is no longer word-final — FinalLoss checks the LAST segment
+        // of whatever sequence it's given (etymology.rs's apply_final_loss),
+        // and the joined sequence's last segment is the suffix's /e/, a
+        // vowel, so FinalLoss never fires on the joined form at all.
+        let ph = edge_test_phonology();
+        let cascade = Cascade {
+            rules: vec![SoundRule {
+                kind: RuleKind::FinalLoss,
+                param: 0,
+            }],
+        };
+        let root_proto = vec![t(), a(), t()];
+        let affix_proto = vec![e()];
+
+        let cell = realize_paradigm_cell(
+            &root_proto,
+            &affix_proto,
+            ClassPosition::Suffix,
+            &cascade,
+            &ph,
+        );
+
+        assert_eq!(
+            cell.regular_form.segments,
+            vec![t(), a(), e()],
+            "regular: root's own /t/ already dropped before affixing"
+        );
+        assert_eq!(
+            cell.cascade_native.modern,
+            vec![t(), a(), t(), e()],
+            "cascade-native: /t/ survives, no longer word-final in the joined form"
+        );
+        assert!(cell.is_irregular);
+    }
+
+    #[test]
+    fn a_position_independent_rule_never_diverges() {
+        // Lenition is per-segment and position-independent (etymology.rs's
+        // apply_segment_rule maps every segment regardless of index), so
+        // joining before or after evolution can never change its outcome —
+        // confirms the mechanism is non-degenerate: SOME cascades/roots
+        // diverge (above), this one never does.
+        let ph = edge_test_phonology();
+        let cascade = Cascade {
+            rules: vec![SoundRule {
+                kind: RuleKind::Lenition,
+                param: 0,
+            }],
+        };
+        let root_proto = vec![t(), a()];
+        let affix_proto = vec![e()];
+
+        let cell = realize_paradigm_cell(
+            &root_proto,
+            &affix_proto,
+            ClassPosition::Suffix,
+            &cascade,
+            &ph,
+        );
+
+        assert_eq!(cell.cascade_native.modern, cell.regular_form.segments);
+        assert!(!cell.is_irregular);
+    }
+
+    #[test]
+    fn realize_paradigm_cell_is_pure() {
+        let ph = edge_test_phonology();
+        let cascade = Cascade {
+            rules: vec![SoundRule {
+                kind: RuleKind::FinalLoss,
+                param: 0,
+            }],
+        };
+        let root_proto = vec![t(), a(), t()];
+        let affix_proto = vec![e()];
+
+        let a_cell = realize_paradigm_cell(
+            &root_proto,
+            &affix_proto,
+            ClassPosition::Suffix,
+            &cascade,
+            &ph,
+        );
+        let b_cell = realize_paradigm_cell(
+            &root_proto,
+            &affix_proto,
+            ClassPosition::Suffix,
+            &cascade,
+            &ph,
+        );
+        assert_eq!(a_cell.cascade_native.modern, b_cell.cascade_native.modern);
+        assert_eq!(a_cell.regular_form.segments, b_cell.regular_form.segments);
+        assert_eq!(a_cell.is_irregular, b_cell.is_irregular);
     }
 }
