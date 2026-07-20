@@ -10,8 +10,8 @@
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
 <text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 91.5 252.0)">&lt; 0</text>
-<rect x="132.3" y="204.8" width="60.4" height="31.2" fill="#5b8dd9" rx="2" />
-<text x="162.5" y="200.8" font-size="11" fill="currentColor" text-anchor="middle">156</text>
+<rect x="132.3" y="211.4" width="60.4" height="24.6" fill="#5b8dd9" rx="2" />
+<text x="162.5" y="207.4" font-size="11" fill="currentColor" text-anchor="middle">123</text>
 <text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 162.5 252.0)">[0, 100)</text>
 <text x="233.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[100, 200)</text>
@@ -23,7 +23,7 @@
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[400, 500)</text>
 <text x="517.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 500</text>
-<rect x="558.3" y="67.2" width="60.4" height="168.8" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="63.2" font-size="11" fill="currentColor" text-anchor="middle">844</text>
+<rect x="558.3" y="60.6" width="60.4" height="175.4" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="56.6" font-size="11" fill="currentColor" text-anchor="middle">877</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">absent</text>
 </svg>
