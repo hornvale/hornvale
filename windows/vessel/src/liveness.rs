@@ -620,6 +620,26 @@ pub trait Drive {
     /// for `Drink` — a flow drive has no consume).
     /// type-audit: bare-ok(ratio: return), bare-ok(count: budget)
     fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64;
+
+    /// Whether this drive is pursued WHILE ASLEEP — the off-phase (The Slumber,
+    /// spec §3). The default is `false`: thirst and thermal are wake-gated (a
+    /// sleeping creature does not seek water or comfort). Fatigue overrides to
+    /// `true` — it is the drive that carries a creature INTO sleep, so the
+    /// off-phase is exactly when it engages.
+    /// type-audit: bare-ok(flag: return)
+    fn seek_while_asleep(&self) -> bool {
+        false
+    }
+
+    /// Whether this drive at `urgency` is severe enough to OVERRIDE the wake-gate
+    /// — to keep the creature seeking even while asleep (spec §3, the survival
+    /// override). The default is `false`; thirst overrides once it is close
+    /// enough to killing the creature that it wakes to drink. Comfort is not
+    /// lethal here, so thermal never overrides.
+    /// type-audit: bare-ok(ratio: _urgency), bare-ok(flag: return)
+    fn survival_override(&self, _urgency: f64) -> bool {
+        false
+    }
 }
 
 /// A drive's identity — the second key (beside urgency) the arbitration needs:
@@ -764,6 +784,10 @@ impl Drive for Thirst {
             Some(a) if &a == action => 1.0,
             _ => 0.0,
         }
+    }
+    fn survival_override(&self, urgency: f64) -> bool {
+        // Dying of thirst wakes a creature to drink (The Slumber, spec §3).
+        urgency >= SURVIVAL_OVERRIDE
     }
 }
 
@@ -936,16 +960,25 @@ pub const RESTED: &str = "rested";
 /// AWAKE_END)` of the day (a fractional-day window, the authored simplification
 /// standing in for a true solar terminator; spec §1). Nocturnal is the
 /// complement; crepuscular the twilight edges.
+// NOTE: the fractional-day wake window and `is_awake` below are the Stage-2b
+// PLACEHOLDER for Process C — `is_awake` is not yet wired into the live tick
+// (that's Stage 2b, which swaps this body for the real solar read via the
+// astronomy daylight model). Exercised by unit tests today; `allow(dead_code)`
+// until the live wiring lands.
+#[allow(dead_code)]
 const AWAKE_START: f64 = 0.25;
 /// The end of the diurnal wake window (see [`AWAKE_START`]).
+#[allow(dead_code)]
 const AWAKE_END: f64 = 0.75;
 /// The half-width of a crepuscular creature's dawn/dusk wake bands.
+#[allow(dead_code)]
 const CREP_HALFWIDTH: f64 = 0.1;
 
-/// Fatigue gained per day since the last rest (The Slumber). Chosen so the drive
-/// crosses `FATIGUE_ACT` roughly once per day, so a creature sleeps about daily.
-/// Authored.
-const FATIGUE_RISE: f64 = 0.9;
+/// Fatigue (Process S, sleep-debt) gained per day AWAKE since the last rest (The
+/// Slumber v2). Gentle: it stays low under normal nightly sleep (Process C, the
+/// wake-gate, drives the daily rest) and only crosses `FATIGUE_ACT` after days
+/// of PREVENTED sleep — the exhaustion backstop. Authored.
+const FATIGUE_RISE: f64 = 0.3;
 /// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
 /// thirst's `act`.
 const FATIGUE_ACT: f64 = 0.85;
@@ -963,9 +996,10 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// Slumber, spec §1). Diurnal is awake through the day window, nocturnal the
 /// complement, crepuscular the twilight edges. A fractional-day approximation
 /// (true solar altitude is deferred).
+#[allow(dead_code)] // Stage 2b wires this into the live tick (solar body-swap).
 fn is_awake(activity: ActivityCycle, day: f64) -> bool {
     let frac = day - day.floor();
-    let in_day = frac >= AWAKE_START && frac < AWAKE_END;
+    let in_day = (AWAKE_START..AWAKE_END).contains(&frac);
     match activity {
         ActivityCycle::Diurnal => in_day,
         ActivityCycle::Nocturnal => !in_day,
@@ -1027,6 +1061,11 @@ impl Drive for Fatigue {
             _ => 0.0,
         }
     }
+    fn seek_while_asleep(&self) -> bool {
+        // Fatigue carries the creature INTO sleep: the off-phase is when it
+        // engages, not when it yields (The Slumber, spec §3).
+        true
+    }
 }
 
 /// The single-drive (thirst-only) decision — the Stage-0 seam, preserved
@@ -1042,7 +1081,18 @@ impl Drive for Fatigue {
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(view, home, &drives, 0.0, 0.0, false, Mode::Idle, budget).intent
+    arbitrate(
+        view,
+        home,
+        &drives,
+        0.0,
+        0.0,
+        false,
+        true,
+        Mode::Idle,
+        budget,
+    )
+    .intent
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -1070,7 +1120,7 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(count: budget)
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake), bare-ok(count: budget)
 // The perceived world, the two psychology dials (latency/horizon), the derived
 // helpless state, the incumbent mode, and the plan budget are each a distinct,
 // individually type-audited input to one decision; bundling them into a
@@ -1084,6 +1134,7 @@ pub fn arbitrate(
     latency: f64,
     horizon: f64,
     helpless: bool,
+    awake: bool,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
@@ -1119,16 +1170,27 @@ pub fn arbitrate(
     // early (a flow drive grants no lead, so its threshold is just `act`); the
     // incumbent pursued drive stays engaged until it falls a further `h` below
     // that (hysteresis — no boundary dithering).
+    // The WAKE-GATE (The Slumber, spec §3): while ASLEEP a wake-gated drive
+    // (thirst, thermal) is silent unless it is survival-critical, and the
+    // sleep drive (fatigue) is engaged BECAUSE it is the off-phase; while awake
+    // every drive engages normally at its threshold.
     let active: Vec<bool> = drives
         .iter()
         .map(|d| {
             let u = d.urgency(view);
             let act_eff = (d.act_threshold() - d.anticipation_lead(horizon)).max(0.0);
             let is_incumbent = matches!(incoming, Mode::Pursuing(k) if k == d.kind());
-            if is_incumbent {
+            let normally = if is_incumbent {
                 u >= act_eff - HYSTERESIS_H
             } else {
                 u >= act_eff
+            };
+            if d.seek_while_asleep() {
+                !awake || normally
+            } else if awake {
+                normally
+            } else {
+                d.survival_override(u)
             }
         })
         .collect();
@@ -1372,6 +1434,7 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         npc.deliberation_latency,
         npc.time_horizon,
         helpless,
+        true,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1576,6 +1639,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     npc.deliberation_latency,
                     npc.time_horizon,
                     helpless,
+                    true,
                     mode,
                     PLAN_BUDGET,
                 );
@@ -3795,6 +3859,7 @@ mod tests {
                 0.5,
                 0.0,
                 false,
+                true,
                 Mode::Idle,
                 PLAN_BUDGET,
             )
@@ -3928,7 +3993,18 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(v, &home, &drives, 0.5, 0.0, false, Mode::Idle, PLAN_BUDGET).intent,
+                arbitrate(
+                    v,
+                    &home,
+                    &drives,
+                    0.5,
+                    0.0,
+                    false,
+                    true,
+                    Mode::Idle,
+                    PLAN_BUDGET
+                )
+                .intent,
                 decide(v, &home, &params, PLAN_BUDGET),
                 "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
             );
@@ -3976,6 +4052,7 @@ mod tests {
             1.0,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         )
@@ -4032,6 +4109,7 @@ mod tests {
             0.0,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
@@ -4042,6 +4120,7 @@ mod tests {
             1.0,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         )
@@ -4104,6 +4183,7 @@ mod tests {
                 0.5,
                 0.0,
                 false,
+                true,
                 Mode::Idle,
                 PLAN_BUDGET
             )
@@ -4130,6 +4210,7 @@ mod tests {
                 0.5,
                 0.0,
                 false,
+                true,
                 Mode::Idle,
                 PLAN_BUDGET
             )
@@ -4177,6 +4258,7 @@ mod tests {
             0.5,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
@@ -4191,6 +4273,7 @@ mod tests {
             0.5,
             1.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
@@ -4292,6 +4375,7 @@ mod tests {
             0.5,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
@@ -4305,6 +4389,7 @@ mod tests {
             &drives,
             0.5,
             0.0,
+            true,
             true,
             Mode::Idle,
             PLAN_BUDGET,
@@ -4357,6 +4442,83 @@ mod tests {
             b.label,
             AffectLabel::Content,
             "a metabolizer is not content, parched in the heat: {b:?}"
+        );
+    }
+
+    #[test]
+    fn asleep_a_creature_rests_and_wakes_only_for_survival() {
+        // THE WAKE-GATE (The Slumber, spec §3): while asleep, thirst and thermal
+        // fall silent and the creature rests — unless thirst is survival-critical,
+        // which wakes it to drink.
+        let home = raddr(1.0);
+        let water = home.neighbors()[1].clone();
+        let terrain = PlantedTerrain::fresh_only([water.clone()]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day: WorldTime { day: 0.0 },
+        };
+        let rest = Fatigue { home: home.clone() };
+        let drives: [&dyn Drive; 3] = [&thirst, &thermal, &rest];
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.85, // thirsty (active while awake), but not yet dying
+            fatigue: 0.2,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        // Awake: it seeks water.
+        let awake = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(awake.affect.object, Some(DriveKind::Thirst));
+        // Asleep: the wake-gate silences thirst; it rests instead.
+        let asleep = arbitrate(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            asleep.affect.object,
+            Some(DriveKind::Fatigue),
+            "asleep it rests, not seeks: {asleep:?}"
+        );
+        assert_eq!(asleep.intent, Intent::Do(Action::Rest));
+        // Asleep and DYING of thirst: the survival override wakes it to drink.
+        let dying = Perceived {
+            drive: 0.95,
+            ..view.clone()
+        };
+        let survival = arbitrate(
+            &dying,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            false,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            survival.affect.object,
+            Some(DriveKind::Thirst),
+            "dying of thirst wakes it even asleep: {survival:?}"
         );
     }
 
@@ -4460,6 +4622,7 @@ mod tests {
             0.5,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         )
@@ -4487,6 +4650,7 @@ mod tests {
                 0.5,
                 0.0,
                 false,
+                true,
                 Mode::Idle,
                 PLAN_BUDGET
             )
@@ -4496,7 +4660,18 @@ mod tests {
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(&high, &home, &drives, 0.5, 0.0, false, mode, PLAN_BUDGET).mode;
+            let m = arbitrate(
+                &high,
+                &home,
+                &drives,
+                0.5,
+                0.0,
+                false,
+                true,
+                mode,
+                PLAN_BUDGET,
+            )
+            .mode;
             assert_eq!(
                 m,
                 Mode::Pursuing(DriveKind::Thermal),
@@ -4547,6 +4722,7 @@ mod tests {
             0.5,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
@@ -4557,6 +4733,7 @@ mod tests {
             0.5,
             0.0,
             false,
+            true,
             Mode::Idle,
             PLAN_BUDGET,
         );
