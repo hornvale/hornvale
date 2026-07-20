@@ -32,9 +32,9 @@ pub use weather::{
 };
 
 use hornvale_kernel::{
-    ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest, ObserverContext,
-    PerceptKind, PhenomenaSource, Phenomenon, Position, RegistryError, Venue, Void, World,
-    WorldContext,
+    CognitiveHandle, ConceptDef, ConceptKind, ConceptRegistry, Correspondent, Manifest,
+    ObserverContext, PerceptKind, PhenomenaSource, Phenomenon, Position, RegistryError, Venue,
+    Void, World, WorldContext,
 };
 
 /// Phenomenon kind for pervasive atmospheric conditions.
@@ -94,7 +94,11 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     // Heat and cold as felt qualities. Unlike snow/rain/ice below, the
     // tier-1 provider DOES emit these as phenomena (Stage 2), so the percept
     // edge is `Present` at once — no language pack names them yet (lexeme
-    // Gap), and cognition waits for its wave.
+    // Gap). Cognition is now `Present` too: The Temperament gave creatures a
+    // thermal drive that READS a cell's temperature against its niche and ACTS
+    // on the discomfort (seeks a kinder clime) — cold and heat are cognized,
+    // not merely felt. The correspondence payoff of the cognition wave's first
+    // edge (the audit moves 0/76 → 2/76).
     for (name, doc) in [
         ("heat", "felt, oppressive warmth"),
         ("cold", "felt, biting chill"),
@@ -108,9 +112,9 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
             },
             lexeme: Correspondent::Absent(Void::Gap("no pack names it yet")),
             percept: Correspondent::Present(PerceptKind(name.to_string())),
-            cognition: Correspondent::Absent(Void::Uncognized {
-                pending_wave: "wave-cognition",
-            }),
+            // Cognized by The Temperament's thermal drive (reads the niche,
+            // acts on discomfort) — the cognition wave's first two edges.
+            cognition: Correspondent::Present(CognitiveHandle),
         })?;
     }
 
