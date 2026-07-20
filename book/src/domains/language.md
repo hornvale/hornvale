@@ -238,7 +238,13 @@ out (steeped experience speaks witnessed, the priesthood's teaching
 speaks taught); and a culture whose drawn cosmology is agentive
 grammatically animates its sky — the noun class and the folk explanation
 are one worldview fact at two layers, held equal by a standing law. See
-[The Deep Grammar](../chronicle/the-deep-grammar.md).
+[The Deep Grammar](../chronicle/the-deep-grammar.md). And since The
+Diachronic Book, knowledge has a time axis: what a culture holds at day
+T is what it could have witnessed and kept by T — its priesthood's
+records climb from counting to numbering to checkable, vindicated
+prediction as the sky's dated events accumulate, and the Book's margins
+measure the exact shortfall of every vantage. See
+[The Diachronic Book](../chronicle/the-diachronic-book.md).
 
 And since The Chorus, what a people *says* is filtered through what it
 *holds*: each placed culture's account of the world is ground truth

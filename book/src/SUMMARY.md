@@ -186,6 +186,7 @@
 - [The Confluence](./chronicle/the-confluence.md)
 - [The Deep Grammar](./chronicle/the-deep-grammar.md)
 - [The Rains](./chronicle/the-rains.md)
+- [The Diachronic Book](./chronicle/the-diachronic-book.md)
 - [The Firmament](./chronicle/the-firmament.md)
 
 # Appendix: The Frontier
