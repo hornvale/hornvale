@@ -1,5 +1,7 @@
 # The Mantle (Globe Cloud Shell) Implementation Plan
 
+> **Status: COMPLETE** (shipped 2026-07-19, world-wasm-v11).
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Render legible, typed, realistic clouds on the orrery globe as a transparent **cloud-texture shell** (replacing The Firmament's deferred billboarded-sprite particles), driven by the sim's per-tile `cloud_type`/`weather_propensity`.
