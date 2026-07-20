@@ -276,7 +276,23 @@ conflict map governing disclosure, and the Book itself now
 reader-relative at the floor (the committed edition asserts the
 priesthood *knows*; the initiated line speaks the ledger's value only to
 a reader who already holds the fact) — see
-[The Doctrine](../chronicle/the-doctrine.md).
+[The Doctrine](../chronicle/the-doctrine.md). And since The Residue, a
+tongue's morphology can be genuinely irregular without a single authored
+exception: a Number or Tense affix is joined to a root's proto-form
+*before* the sound-change cascade runs, not after, so the cascade's own
+word-edge rules (a final consonant dropping, an onset cluster
+simplifying) see a different boundary than they would evolving the root
+alone — the two orders sometimes agree and sometimes don't, and where
+they disagree, that disagreement *is* irregularity, falling out of a
+root's own phonological shape rather than being chosen. Analogical
+leveling then lets a fixed fraction of the shortest (Zipf-resistant)
+divergent roots per category keep that irregular shape while the rest
+regularize, a rank read off the root's own proto length rather than a
+new draw. Nothing renders it yet — the mechanism and its four measured
+properties (determinism, non-degenerate divergence, leveling that
+narrows the divergent set, and the length/survival correlation itself)
+are this campaign's whole claim — see
+[The Residue](../chronicle/the-residue.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
