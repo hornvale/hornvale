@@ -120,6 +120,16 @@ impl<'w> Session<'w> {
         self.ledger.find(AGENT_AT).count()
     }
 
+    /// How many `drank` facts the session's owned ledger has committed —
+    /// zero until the first `wait` (test accessor: The Confluence's
+    /// on-water settlements can satisfy sustenance without ever committing
+    /// an `agent-at`, so `committed_agent_at_count` alone can no longer
+    /// stand in for "the world moved").
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_drank_count(&self) -> usize {
+        self.ledger.find(DRANK).count()
+    }
+
     /// The session's owned, evolving ledger, serialized — a determinism
     /// accessor: same seed + same waits must yield the same bytes (test
     /// accessor: T3's determinism test).

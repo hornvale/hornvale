@@ -20,7 +20,8 @@ use hornvale_language::clause::{
 };
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
-    ConflictState, LexemeId, SchemaId, TongueClause, conflict_of, realize_tongue, tongue_grammar,
+    ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueClause, TongueMorphology,
+    conflict_of, realize_tongue_deep, tongue_grammar,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -34,12 +35,17 @@ pub struct BookVolume {
     /// then one per rendered `instance-of` fact (C2 T5: a placed peopled
     /// species' collective, "The ⟨Autonym⟩ are ⟨species⟩.").
     pub lines: Vec<String>,
-    /// C3 T3: one self-statement per placed people, realized in its own
-    /// tongue (`realize_tongue` over that people's `TongueGrammar` and
-    /// lexicon) — "⟨autonym⟩ ⟨copula?⟩ ⟨own-kind⟩." glossed with the
-    /// matching Common line. The self-statement law (spec §5): autonym and
-    /// own-kind are Steeped by construction, so this never gaps — see
-    /// `every_placed_people_self_states_in_its_own_tongue`.
+    /// C3 T3, deepened by C7: one self-statement per placed people, plus
+    /// (C7) one emic world-statement per placed people, both realized in
+    /// its own tongue (`realize_tongue_deep` over that people's
+    /// `TongueGrammar`/`TongueMorphology` and lexicon, `Evidential::Witnessed`)
+    /// — "⟨autonym⟩ ⟨copula?⟩ ⟨own-kind⟩." and "⟨planet⟩ ⟨copula?⟩ ⟨their
+    /// carving of "earth"⟩.", each glossed with its matching Common
+    /// sentence. The self-statement law (spec §5) and the world-statement
+    /// law (C7 §3.5/§4.5): autonym/own-kind and the planet/"earth" concept
+    /// are all Steeped by construction, so neither ever gaps — see
+    /// `every_placed_people_self_states_in_its_own_tongue` and
+    /// `every_people_states_the_world_in_its_tongue`.
     pub tongue_lines: Vec<String>,
     /// C3 T3: the per-tongue coverage report — one gap line per placed
     /// people recording that its tongue cannot yet state the planet's own
@@ -52,6 +58,13 @@ pub struct BookVolume {
     /// reproduces `lines` byte-identically — see
     /// `identity_chorus_reproduces_the_gods_eye_lines`.
     pub chorus: Vec<ChorusSection>,
+    /// C8 (The Diachronic Book): the Book's time axis — one
+    /// [`ReckoningEpoch`] per preregistered epoch (day 0 and the
+    /// hundredth year, `36_525.0` standard days; see [`reckoning_epochs`]),
+    /// always the same fixed pair regardless of any `--at` lens the CLI
+    /// renders separately ([`reckoning_at`]). Zero new draws/facts: pure
+    /// derivation over `hornvale_worldgen::{observations_of, ladder_of}`.
+    pub reckoning: Vec<ReckoningEpoch>,
 }
 
 /// One placed people's chorus section (C4 T4): its epistemic account,
@@ -83,17 +96,26 @@ pub struct ChorusSection {
 /// C6 (The Doctrine): one organized culture's doctrine section — the
 /// institution's second account (the priesthood's own composition of the
 /// SAME ground truth, run through `hornvale_worldgen::doctrine_of`'s four
-/// preregistered deltas), split into three registers rather than the folk
-/// section's two: `emic` (the doctrine's own paragraph, with the
-/// `RevealedClaim` substitution), `annotations` (the disclosure law's
-/// `Contested` counter-lines — a separate register, never interleaved into
-/// `emic`), and `margin` (the doctrine account's own etic margin, the same
-/// law as any other voice). See [`doctrine_section`] for the construction.
-/// type-audit: bare-ok(prose: heading), bare-ok(prose: emic), bare-ok(prose: annotations), bare-ok(prose: margin)
+/// preregistered deltas), split into four registers rather than the folk
+/// section's two: `tongue_taught_line` (C7: the in-tongue taught contrast),
+/// `emic` (the doctrine's own paragraph, with the `RevealedClaim`
+/// substitution), `annotations` (the disclosure law's `Contested`
+/// counter-lines — a separate register, never interleaved into `emic`), and
+/// `margin` (the doctrine account's own etic margin, the same law as any
+/// other voice). See [`doctrine_section`] for the construction.
+/// type-audit: bare-ok(prose: heading), bare-ok(prose: tongue_taught_line), bare-ok(prose: emic), bare-ok(prose: annotations), bare-ok(prose: margin)
 pub struct DoctrineSection {
     /// `"As the priesthood of the ⟨Autonym⟩ teach it"` — scaffolding, not
     /// a Book corpus line.
     pub heading: String,
+    /// C7 T3: the doctrine's ONE in-tongue taught line — the SAME emic
+    /// world-statement the Tongues section renders (same subject, same
+    /// `"earth"` complement), but with `Evidential::Taught` rather than
+    /// `Witnessed` — the visible morphological folk/doctrine contrast on one
+    /// proposition (spec §3.5, the taught-contrast law). Glossed the same
+    /// way the Tongues section glosses its lines, plus the doctrine's own
+    /// "— as it is taught" marker.
+    pub tongue_taught_line: String,
     /// The doctrine's own emic paragraph, in the doctrine account's own
     /// order — a `RevealedClaim` entry's construction fragment is replaced
     /// by the closed exoteric formula ([`revealed_claim_line`]) rather than
@@ -105,6 +127,32 @@ pub struct DoctrineSection {
     pub annotations: Vec<String>,
     /// The doctrine account's own etic margin — [`render_world_margin`],
     /// unmodified.
+    pub margin: Vec<String>,
+}
+
+/// C8 (The Diachronic Book): one epoch's Reckoning-of-Years section — the
+/// observation ledger at a fixed day `T`, read back through
+/// `hornvale_worldgen::{observations_of, ladder_of}` for every placed
+/// culture (see [`reckoning_epoch`]). `lines` is empty-arm-or-per-culture
+/// (never both): the empty arm (`"The sky keeps no dates to number."`)
+/// when the true event count at `T` is zero, else one run of lines per
+/// placed culture at `Counted`+ (the folk line, then — organized cultures
+/// only — the Numbered line, then — `Predictive` only — the prediction
+/// line). `margin` carries the truth-margin sentence (spec §3.4) exactly
+/// when some culture's held knowledge falls short of the true count —
+/// empty otherwise, the same sparseness convention `ChorusSection::margin`
+/// already follows.
+/// type-audit: bare-ok(prose: heading), bare-ok(prose: lines), bare-ok(prose: margin)
+pub struct ReckoningEpoch {
+    /// `"In the first days"` / `"In the hundredth year"` for the committed
+    /// pair; an ad hoc `"At day ⟨N⟩"` for the CLI's `--at` lens.
+    pub heading: String,
+    /// The empty arm, or one run of lines per placed culture (registry
+    /// order) — see the struct doc.
+    pub lines: Vec<String>,
+    /// The truth-margin sentence, present iff some culture's held count
+    /// falls short of the true (unwitnessed-included) count — at most one
+    /// line.
     pub margin: Vec<String>,
 }
 
@@ -293,16 +341,26 @@ pub fn render_volume(world: &World) -> BookVolume {
         lines.push(line);
     }
 
-    // C3 T3: each placed people states its own kind in its own tongue, then
-    // every tongue's attempt to state each probe's kind is recorded — a
-    // rendered line on success, a coverage gap on failure (spec §5 — no
-    // culture holds `planet` today). Iterated over `placed_peoples`
-    // (registry order, deterministic) rather than the ledger scan above so
-    // the section's order matches every other peoples-keyed section in the
-    // almanac/book.
+    // C3 T3, deepened by C7: each placed people states its own kind AND
+    // (C7) an emic world-statement in its own tongue — both through the
+    // deep realizer (`realize_tongue_deep`, C7 T1) with that people's own
+    // drawn `TongueMorphology` (C7 T2's `tongue_morphology_of`) and derived
+    // noun-class readout (`noun_class_of`) — then every tongue's attempt to
+    // state each probe's kind is recorded — a rendered line on success, a
+    // coverage gap on failure (spec §5 — no culture holds `planet` today).
+    // Iterated over `placed_peoples` (registry order, deterministic) rather
+    // than the ledger scan above so the section's order matches every other
+    // peoples-keyed section in the almanac/book.
     let mut tongue_lines = Vec::new();
     let mut tongue_gaps = Vec::new();
     let probes = tongue_probes(world);
+    // C7 T3: the world-statement's shared subject — the planet's own
+    // committed name (`hornvale_kernel::NAME` on the entity classified
+    // `is-a` `"planet"`), the SAME fact the C3 planet probe's own subject
+    // already reads (never re-derived via `hornvale_worldgen::world_name`,
+    // which would redundantly reconstruct the whole lexicon/component
+    // pipeline just to recover a fact already sitting in the ledger).
+    let planet_name = planet_name_of(world);
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some((autonym, common_line)) = people_by_kind.get(kind) else {
             continue;
@@ -312,26 +370,62 @@ pub fn render_volume(world: &World) -> BookVolume {
         let Ok(lexicon) = hornvale_worldgen::lexicon_of(world, kind) else {
             continue;
         };
+        let Ok(morph) = hornvale_worldgen::tongue_morphology_of(world, kind) else {
+            continue;
+        };
+        let noun_class_of = |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
 
         let own_kind = format!("{kind}-kind");
         let self_statement = TongueClause {
             subject: autonym.clone(),
             complement_concept: own_kind,
+            // The self-statement is a folk (self-)statement, grounded in
+            // lived experience (its autonym and own-kind concept are
+            // Steeped by construction) — Witnessed (C7's readout law).
+            evidential: Evidential::Witnessed,
         };
         let tongue_line =
-            realize_tongue(&self_statement, &grammar, &lexicon).unwrap_or_else(|gap| {
-                panic!(
-                    "the self-statement law (spec §5) is violated for {kind}: \
-                     gap on {} ({})",
-                    gap.concept, gap.reason
-                )
-            });
+            realize_tongue_deep(&self_statement, &grammar, &morph, &noun_class_of, &lexicon)
+                .unwrap_or_else(|gap| {
+                    panic!(
+                        "the self-statement law (spec §5) is violated for {kind}: \
+                 gap on {} ({})",
+                        gap.concept, gap.reason
+                    )
+                });
         tongue_lines.push(format!(
             "{tongue_line} (in the {kind} tongue: \"{common_line}\")"
         ));
 
+        // C7 T3: the emic world-statement — "⟨planet⟩ [cop] ⟨their word for
+        // "earth"⟩", Witnessed — the world-statement law (spec §3.5/§4.5):
+        // `earth` is universal-stratum Steeped (packs.rs, ladder_rank 0,
+        // never a `LexEntry::Gap`), so this never gaps for a placed people —
+        // panic loudly rather than record a coverage gap, since a gap here
+        // would be a violated invariant, not the C3 planet-concept probe's
+        // ordinary (etic-concept) coverage gap.
+        let name = planet_name.as_deref().unwrap_or_else(|| {
+            panic!(
+                "the world-statement law is violated: {kind} is placed but the planet has no \
+                 committed name — the dominant race's \"earth\" entry is universal-stratum \
+                 Steeped and the planet stage must have named the world"
+            )
+        });
+        let world_line = world_statement(
+            kind,
+            name,
+            Evidential::Witnessed,
+            &grammar,
+            &morph,
+            &noun_class_of,
+            &lexicon,
+        );
+        tongue_lines.push(format!(
+            "{world_line} (in the {kind} tongue: \"{name} is the earth.\")"
+        ));
+
         for probe in &probes {
-            match probe_tongue(probe, kind, &grammar, &lexicon) {
+            match probe_tongue(probe, kind, &grammar, &morph, &noun_class_of, &lexicon) {
                 Ok(line) => tongue_lines.push(format!(
                     "{line} (in the {kind} tongue: \"{} is a {}.\")",
                     probe.subject, probe.concept
@@ -349,6 +443,7 @@ pub fn render_volume(world: &World) -> BookVolume {
         tongue_lines,
         tongue_gaps,
         chorus: chorus_sections(world),
+        reckoning: reckoning_epochs(world),
     }
 }
 
@@ -377,19 +472,308 @@ fn autonym_by_kind(world: &World) -> BTreeMap<String, String> {
 /// C4 T4: every placed people's chorus section, in
 /// `hornvale_worldgen::accounts_of` order — a people with no committed
 /// collective is skipped (mirrors C3's `continue` in the tongue-lines
-/// loop above).
+/// loop above). C7 T3: each organized culture's doctrine section also gets
+/// its in-tongue taught line here — [`planet_name_of`] and the tongue's own
+/// grammar/morphology/lexicon are (re-)derived once per doctrine-bearing
+/// culture, independently of `render_volume`'s own tongue-lines loop (the
+/// same "each section derives its own inputs" idiom `autonym_by_kind`
+/// already follows here, rather than threading state between the two
+/// unrelated `BookVolume` fields).
 fn chorus_sections(world: &World) -> Vec<ChorusSection> {
     let autonyms = autonym_by_kind(world);
+    let planet_name = planet_name_of(world);
     hornvale_worldgen::accounts_of(world)
         .into_iter()
         .filter_map(|voice| {
             let autonym = autonyms.get(&voice.kind)?;
             let mut section = voice_section(&voice.kind, autonym, &voice.account, world);
-            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind)
-                .map(|dv| doctrine_section(autonym, &dv, &voice.params, &voice.account));
+            section.doctrine = hornvale_worldgen::doctrine_of(world, &voice.kind).map(|dv| {
+                let kind = voice.kind.as_str();
+                let ph = hornvale_worldgen::language_of(world, kind);
+                let grammar = tongue_grammar(&world.seed, kind, &ph);
+                let lexicon = hornvale_worldgen::lexicon_of(world, kind).unwrap_or_else(|e| {
+                    panic!(
+                        "the taught-contrast law is violated for {kind}: lexicon derivation \
+                         failed: {e:?}"
+                    )
+                });
+                let morph =
+                    hornvale_worldgen::tongue_morphology_of(world, kind).unwrap_or_else(|e| {
+                        panic!(
+                            "the taught-contrast law is violated for {kind}: morphology \
+                             derivation failed: {e:?}"
+                        )
+                    });
+                let noun_class_of =
+                    |concept: &str| hornvale_worldgen::noun_class_of(world, kind, concept);
+                let name = planet_name.as_deref().unwrap_or_else(|| {
+                    panic!(
+                        "the world-statement law is violated: {kind}'s doctrine is organized \
+                         but the planet has no committed name"
+                    )
+                });
+                let taught_line = world_statement(
+                    kind,
+                    name,
+                    Evidential::Taught,
+                    &grammar,
+                    &morph,
+                    &noun_class_of,
+                    &lexicon,
+                );
+                let tongue_taught_line =
+                    format!("{taught_line} (\"{name} is the earth — as it is taught.\")");
+                doctrine_section(
+                    autonym,
+                    &dv,
+                    &voice.params,
+                    &voice.account,
+                    tongue_taught_line,
+                )
+            });
             Some(section)
         })
         .collect()
+}
+
+// ---------------------------------------------------------------------
+// C8, The Diachronic Book: the Reckoning of Years — the Book's time axis.
+// Pure derivation over `hornvale_worldgen::{observations_of, ladder_of}`
+// (T1); zero new draws, facts, or save-format state. See `ReckoningEpoch`'s
+// doc for the per-epoch shape and the plan's Preregistered block for every
+// closed string below (frozen before measurement).
+// ---------------------------------------------------------------------
+
+/// The preregistered epoch pair (plan Global Constraints): day 0 (before
+/// any culture could have witnessed a darkening) and the hundredth year —
+/// `36_525.0` standard days. The committed artifact always renders exactly
+/// these two, regardless of the CLI's `--at` lens ([`reckoning_at`]).
+const RECKONING_EPOCH_1_DAY: f64 = 0.0;
+const RECKONING_EPOCH_2_DAY: f64 = 36_525.0;
+const RECKONING_EPOCH_1_HEADING: &str = "In the first days";
+const RECKONING_EPOCH_2_HEADING: &str = "In the hundredth year";
+const RECKONING_EPOCH_1_MARGIN_PHRASE: &str = "of the first days";
+const RECKONING_EPOCH_2_MARGIN_PHRASE: &str = "of the first hundred years";
+
+/// The empty arm (spec §3.4): rendered alone, with no margin, whenever the
+/// true event count at `T` is zero.
+const RECKONING_EMPTY_ARM: &str = "The sky keeps no dates to number.";
+
+/// The folk register (spec §3.4): rendered for every placed culture at
+/// [`hornvale_worldgen::LadderRung::Counted`] or above — even an organized
+/// cult's own priesthood shares this lived experience before its Numbered
+/// line adds the institutional cardinal.
+const RECKONING_FOLK_COUNTED: &str = "The sky has darkened, now and again.";
+
+/// Every placed culture's Reckoning-of-Years read, at the two
+/// preregistered epochs — the committed `BookVolume::reckoning`. Always
+/// exactly two entries; never gated on world content (an eventless world
+/// renders the empty arm at both).
+fn reckoning_epochs(world: &World) -> Vec<ReckoningEpoch> {
+    let autonyms = autonym_by_kind(world);
+    [
+        (
+            RECKONING_EPOCH_1_HEADING,
+            RECKONING_EPOCH_1_DAY,
+            RECKONING_EPOCH_1_MARGIN_PHRASE,
+        ),
+        (
+            RECKONING_EPOCH_2_HEADING,
+            RECKONING_EPOCH_2_DAY,
+            RECKONING_EPOCH_2_MARGIN_PHRASE,
+        ),
+    ]
+    .into_iter()
+    .map(|(heading, day, margin_phrase)| {
+        let at = hornvale_astronomy::StdDays::new(day).unwrap_or_else(|e| {
+            panic!("the Reckoning's preregistered epoch day {day} must be a valid StdDays: {e}")
+        });
+        reckoning_epoch(world, &autonyms, heading, at, margin_phrase)
+    })
+    .collect()
+}
+
+/// The CLI `--at <day>` lens (Task 2): a single ad hoc Reckoning epoch at
+/// an arbitrary day, rendered to stdout only — never part of the
+/// committed `BookVolume::reckoning`, which always uses the two
+/// preregistered epochs above regardless of this function ever being
+/// called (`scripts/regenerate-artifacts.sh` never passes `--at`).
+pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
+    let day = at.get();
+    let heading = format!("At day {day}");
+    let margin_phrase = format!("by day {day}");
+    reckoning_epoch(world, &autonym_by_kind(world), &heading, at, &margin_phrase)
+}
+
+/// The true count of eclipse events to `at` (spec §3.4): every syzygy in
+/// `[0, at]`, solar AND lunar, regardless of any culture's witnessing
+/// capability — the world's own physical record, as opposed to
+/// [`hornvale_worldgen::observations_of`]'s per-culture WITNESSED subset.
+/// The margin law compares each culture's held count against this. A
+/// tier-0 constant-sun world ([`hornvale_worldgen::Sky::Constant`]) has no
+/// calendar and so no eclipses ever — honestly zero, never a panic, so
+/// `render_volume` stays total over every world `hornvale_worldgen` can
+/// build (not just the Book's own `SkyChoice::Generated` worlds); the
+/// zero short-circuits [`reckoning_epoch`] straight to the empty arm
+/// before it ever calls `observations_of`/`ladder_of` (both of which
+/// themselves require a Generated sky).
+fn true_event_count(world: &World, at: hornvale_astronomy::StdDays) -> usize {
+    let sky = hornvale_worldgen::sky_of(world)
+        .unwrap_or_else(|e| panic!("the Reckoning section requires a derivable sky: {e}"));
+    match sky {
+        hornvale_worldgen::Sky::Generated(sky) => {
+            let from =
+                hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+            hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at).len()
+        }
+        hornvale_worldgen::Sky::Constant(_) => 0,
+    }
+}
+
+/// Whether one placed culture's held knowledge falls short of the true
+/// count (spec §3.4's margin rule), extracted pure and world-free (mirrors
+/// [`reckoning_culture_lines`] below) so the per-culture logic is testable
+/// without depending on a live world that happens to exhibit both arms:
+/// a folk-only/sub-`Numbered` culture holds no cardinal at all, so it
+/// always falls short regardless of `held`; an organized
+/// (`Numbered`/`Predictive`) culture falls short exactly when its own
+/// witnessed cardinal is less than the true count (it cannot witness what
+/// its sky-capability gates out) — an organized culture whose `held`
+/// equals `true_count` does not fall short on its own account.
+fn culture_falls_short(rung: hornvale_worldgen::LadderRung, held: u64, true_count: u64) -> bool {
+    let organized = matches!(
+        rung,
+        hornvale_worldgen::LadderRung::Numbered | hornvale_worldgen::LadderRung::Predictive
+    );
+    !organized || held < true_count
+}
+
+/// One epoch's Reckoning-of-Years section (spec §3.4), for every placed
+/// culture in [`hornvale_worldgen::placed_peoples`] order: the empty arm
+/// when nothing has happened by `at` (the true count is zero); otherwise,
+/// per culture at [`hornvale_worldgen::LadderRung::Counted`] or above, the
+/// folk line, then — organized cultures only (`Numbered`/`Predictive`) —
+/// the Numbered line naming that culture's own held cardinal, then —
+/// `Predictive` only, and only when the taught day falls inside the
+/// prediction horizon — the prediction line. The truth margin renders
+/// exactly when some culture's held knowledge falls short of the true
+/// count: an organized culture falls short when its own witnessed cardinal
+/// is less than the true count (it cannot witness what its sky-capability
+/// gates out); any culture below `Numbered` holds no cardinal at all —
+/// qualitative memory always falls short of a true count that is, by
+/// construction of this branch, at least one.
+fn reckoning_epoch(
+    world: &World,
+    autonyms: &BTreeMap<String, String>,
+    heading: &str,
+    at: hornvale_astronomy::StdDays,
+    margin_phrase: &str,
+) -> ReckoningEpoch {
+    let true_count = true_event_count(world, at);
+    if true_count == 0 {
+        return ReckoningEpoch {
+            heading: heading.to_string(),
+            lines: vec![RECKONING_EMPTY_ARM.to_string()],
+            margin: Vec::new(),
+        };
+    }
+
+    let mut lines = Vec::new();
+    let mut falls_short = false;
+    for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
+        let Some(autonym) = autonyms.get(kind) else {
+            continue;
+        };
+        let observations =
+            hornvale_worldgen::observations_of(world, kind, at).unwrap_or_else(|e| {
+                panic!(
+                    "the Reckoning section requires observations_of to succeed for placed culture \
+                 {kind}: {e}"
+                )
+            });
+        let (rung, prediction) =
+            hornvale_worldgen::ladder_of(world, kind, at).unwrap_or_else(|e| {
+                panic!(
+                    "the Reckoning section requires ladder_of to succeed for placed culture \
+                     {kind}: {e}"
+                )
+            });
+
+        if rung == hornvale_worldgen::LadderRung::Unknown {
+            // Nothing witnessed: no line, and this culture's (zero) held
+            // count trivially falls short of a true count that is >= 1
+            // here.
+            falls_short = true;
+            continue;
+        }
+
+        let held = observations.events.len() as u64;
+        lines.extend(reckoning_culture_lines(autonym, rung, held, prediction));
+
+        if culture_falls_short(rung, held, true_count as u64) {
+            falls_short = true;
+        }
+    }
+
+    let margin = if falls_short {
+        vec![format!(
+            "In truth, the darkenings {margin_phrase} number {}.",
+            cardinal(true_count as u64)
+        )]
+    } else {
+        Vec::new()
+    };
+
+    ReckoningEpoch {
+        heading: heading.to_string(),
+        lines,
+        margin,
+    }
+}
+
+/// One placed culture's Reckoning-of-Years lines at a given rung (spec
+/// §3.4): nothing at [`hornvale_worldgen::LadderRung::Unknown`]; the folk
+/// line alone at `Counted`; the folk line plus the Numbered line (with the
+/// witnessed cardinal `held`) at `Numbered`; both of those plus — only
+/// when `prediction` falls inside the teaching horizon — the prediction
+/// line at `Predictive`. Pure and world-free (unlike [`reckoning_epoch`],
+/// which also needs the true count to judge the margin), so the honest
+/// omit-the-prediction arm (`Predictive` with `prediction: None` — T1's
+/// report: unreached at seeds 1..=5, since every measured Predictive
+/// culture's next event falls inside the horizon) can be driven
+/// synthetically rather than only through a live world that may never
+/// produce it.
+fn reckoning_culture_lines(
+    autonym: &str,
+    rung: hornvale_worldgen::LadderRung,
+    held: u64,
+    prediction: Option<f64>,
+) -> Vec<String> {
+    if rung == hornvale_worldgen::LadderRung::Unknown {
+        return Vec::new();
+    }
+    let mut lines = vec![RECKONING_FOLK_COUNTED.to_string()];
+    if matches!(
+        rung,
+        hornvale_worldgen::LadderRung::Numbered | hornvale_worldgen::LadderRung::Predictive
+    ) {
+        lines.push(format!(
+            "The priesthood of the {autonym} numbers the darkenings: {}.",
+            cardinal(held)
+        ));
+        if rung == hornvale_worldgen::LadderRung::Predictive
+            && let Some(next_day) = prediction
+        {
+            lines.push(format!(
+                "The next darkening, it teaches, comes on day {}.",
+                next_day.trunc() as u64
+            ));
+        }
+        // `Predictive` + `None`: the taught day is beyond the priesthood's
+        // teaching horizon — an honest arm; the line is simply omitted
+        // rather than stating a falsehood.
+    }
+    lines
 }
 
 /// Read through a C5 `Explained` wrapper to what the four-filter account
@@ -862,6 +1246,7 @@ fn doctrine_section(
     doctrine: &hornvale_worldgen::DoctrineVoice,
     folk_params: &AccountParams,
     folk_account: &Account,
+    tongue_taught_line: String,
 ) -> DoctrineSection {
     let mut folk_by_key: BTreeMap<(String, String), &AccountEntry> = BTreeMap::new();
     for entry in &folk_account.entries {
@@ -980,6 +1365,7 @@ fn doctrine_section(
 
     DoctrineSection {
         heading: format!("As the priesthood of the {autonym} teach it"),
+        tongue_taught_line,
         emic,
         annotations,
         margin,
@@ -1122,22 +1508,79 @@ pub fn tongue_probes(world: &World) -> Vec<TongueProbe> {
 }
 
 /// Run one probe against one tongue: realize `⟨subject⟩ ⟨copula?⟩
-/// ⟨concept⟩` — `Ok` is a rendered line (the success path C3 dropped),
-/// `Err` the recountable gap.
+/// ⟨concept⟩` through the deep realizer (C7) — `Ok` is a rendered line
+/// (the success path C3 dropped), `Err` the recountable gap (today, always
+/// the `planet` probe: no culture holds that etic concept).
 fn probe_tongue(
     probe: &TongueProbe,
     _kind: &str,
     grammar: &hornvale_language::TongueGrammar,
+    morph: &TongueMorphology,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
     lexicon: &hornvale_language::Lexicon,
 ) -> Result<String, hornvale_language::TongueGap> {
-    realize_tongue(
+    realize_tongue_deep(
         &TongueClause {
             subject: probe.subject.clone(),
             complement_concept: probe.concept.clone(),
+            // Every probe states a claim grounded in the same
+            // lived-experience footing as the self-statement above.
+            evidential: Evidential::Witnessed,
         },
         grammar,
+        morph,
+        noun_class_of,
         lexicon,
     )
+}
+
+/// C7 T3: the planet's own committed name (the entity classified `is-a`
+/// `"planet"`; its `NAME`, committed once at genesis from the dominant
+/// people's "earth" endonym — `hornvale_worldgen`'s planet stage) — the
+/// SAME subject the C3 planet probe already carries as `TongueProbe::subject`
+/// (this reads the identical ledger fact, not a re-derivation). `None` only
+/// when the world has not reached the planet stage (no placed people at
+/// all) — every call site here guards on at least one placed people first,
+/// so a `None` at that point is the world-statement law's own violation,
+/// not an ordinary coverage gap.
+fn planet_name_of(world: &World) -> Option<String> {
+    hornvale_worldgen::planet_entity(world)
+        .and_then(|planet| world.ledger.text_of(planet, hornvale_kernel::NAME))
+        .map(str::to_string)
+}
+
+/// C7 T3: build one tongue's emic world-statement — `TongueClause { subject:
+/// planet_name, complement_concept: "earth", evidential }` — through the
+/// deep realizer, using that tongue's own already-derived grammar/morphology/
+/// lexicon (never re-derived here; callers pass what they already hold, the
+/// same "measure once" discipline `render_volume`'s loop and
+/// `chorus_sections` both follow). `earth` is universal-stratum Steeped
+/// (`packs.rs`, `ladder_rank: 0` — always in the lexicon), so this must never
+/// gap for a placed people; panics loudly naming the culprit rather than
+/// returning a `Result`, since a gap here is an invariant violation, not a
+/// coverage fact to record (contrast the C3 planet-concept probe, which
+/// gaps by design).
+fn world_statement(
+    kind: &str,
+    planet_name: &str,
+    evidential: Evidential,
+    grammar: &hornvale_language::TongueGrammar,
+    morph: &TongueMorphology,
+    noun_class_of: &dyn Fn(&str) -> NounClass,
+    lexicon: &hornvale_language::Lexicon,
+) -> String {
+    let clause = TongueClause {
+        subject: planet_name.to_string(),
+        complement_concept: "earth".to_string(),
+        evidential,
+    };
+    realize_tongue_deep(&clause, grammar, morph, noun_class_of, lexicon).unwrap_or_else(|gap| {
+        panic!(
+            "the world-statement law is violated for {kind}: gap on {} ({}) — \"earth\" is \
+             universal-stratum Steeped and must never gap",
+            gap.concept, gap.reason
+        )
+    })
 }
 
 /// Predicates present in the ledger that C1's grammar cannot yet render:
@@ -1493,6 +1936,47 @@ pub enum ChorusLine {
     /// fact — see [`doctrine_section`]'s doc — but the recursion makes no
     /// such assumption itself).
     Counter(Box<ChorusLine>),
+    /// C8 (The Diachronic Book): one Reckoning-of-Years line.
+    Reckoning(ReckoningLine),
+}
+
+/// C8 (The Diachronic Book): one Reckoning-of-Years line's recovered
+/// shape — pure closed-string table inversion (the plan's four new
+/// sentence shapes plus the truth margin, which carries a count rather
+/// than a classification clause, so it cannot reuse `ParsedLine`). Carries
+/// no ground-fact recovery: the section states counts drawn from
+/// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
+/// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
+/// truth walk has nothing here to check.
+/// type-audit: bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count)
+#[derive(Clone, Debug, PartialEq)]
+pub enum ReckoningLine {
+    /// `"The sky keeps no dates to number."` — the empty arm.
+    Empty,
+    /// `"The sky has darkened, now and again."` — the folk register.
+    FolkCounted,
+    /// `"The priesthood of the ⟨autonym⟩ numbers the darkenings: ⟨count⟩."`
+    Numbered {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+        /// The witnessed cardinal this culture holds.
+        count: u64,
+    },
+    /// `"The next darkening, it teaches, comes on day ⟨day⟩."`
+    Prediction {
+        /// The taught next event's integer-truncated day.
+        day: u64,
+    },
+    /// `"In truth, the darkenings ⟨epoch_phrase⟩ number ⟨count⟩."` — the
+    /// truth margin.
+    Margin {
+        /// Which epoch's phrase this margin used (`"of the first days"` /
+        /// `"of the first hundred years"` for the committed pair, or an ad
+        /// hoc `--at` phrase).
+        epoch_phrase: String,
+        /// The true event count.
+        count: u64,
+    },
 }
 
 /// The closed verb-literal table [`parse_explanation_body`] matches a
@@ -1642,6 +2126,89 @@ fn rerender_explanation(explanation: &ParsedExplanation) -> String {
     )
 }
 
+/// The two committed margin phrases [`parse_reckoning_line`] recognizes —
+/// neither is a prefix of the other, so trying them in either order is
+/// safe. An ad hoc `--at` phrase (`reckoning_at`) is never produced by the
+/// committed artifact, so this closed table need not (and does not) cover
+/// it.
+const RECKONING_MARGIN_PHRASES: &[&str] = &[
+    RECKONING_EPOCH_1_MARGIN_PHRASE,
+    RECKONING_EPOCH_2_MARGIN_PHRASE,
+];
+
+/// Invert one Reckoning-of-Years line (C8) against its closed surfaces —
+/// the plan's four new sentence shapes (the empty arm, the folk line, the
+/// Numbered line, the prediction line) plus the truth margin. Tried before
+/// [`parse_chorus_line`]'s existing arms: none of the Reckoning surfaces
+/// can collide with a copula clause, a `RevealedClaim`/counter/explanation
+/// prefix, or the ordinary `"In truth, "` margin dress, so trying this
+/// first is safe. `None` when `line` matches none of the closed shapes,
+/// so the caller falls through to its own arms unchanged.
+fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
+    if line == RECKONING_EMPTY_ARM {
+        return Some(ReckoningLine::Empty);
+    }
+    if line == RECKONING_FOLK_COUNTED {
+        return Some(ReckoningLine::FolkCounted);
+    }
+    if let Some(rest) = line
+        .strip_prefix("The priesthood of the ")
+        .and_then(|r| r.strip_suffix('.'))
+    {
+        let (autonym, count_word) = rest.split_once(" numbers the darkenings: ")?;
+        if autonym.is_empty() {
+            return None;
+        }
+        let count = uncardinal(count_word)?;
+        return Some(ReckoningLine::Numbered {
+            autonym: autonym.to_string(),
+            count,
+        });
+    }
+    if let Some(rest) = line
+        .strip_prefix("The next darkening, it teaches, comes on day ")
+        .and_then(|r| r.strip_suffix('.'))
+    {
+        let day: u64 = rest.parse().ok()?;
+        return Some(ReckoningLine::Prediction { day });
+    }
+    for &phrase in RECKONING_MARGIN_PHRASES {
+        let prefix = format!("In truth, the darkenings {phrase} number ");
+        if let Some(rest) = line.strip_prefix(&prefix).and_then(|r| r.strip_suffix('.')) {
+            let count = uncardinal(rest)?;
+            return Some(ReckoningLine::Margin {
+                epoch_phrase: phrase.to_string(),
+                count,
+            });
+        }
+    }
+    None
+}
+
+/// Re-realize a [`ReckoningLine`] back to its exact surface text — the
+/// closed-table forward direction, the exact inverse of
+/// [`parse_reckoning_line`].
+fn rerender_reckoning_line(line: &ReckoningLine) -> String {
+    match line {
+        ReckoningLine::Empty => RECKONING_EMPTY_ARM.to_string(),
+        ReckoningLine::FolkCounted => RECKONING_FOLK_COUNTED.to_string(),
+        ReckoningLine::Numbered { autonym, count } => format!(
+            "The priesthood of the {autonym} numbers the darkenings: {}.",
+            cardinal(*count)
+        ),
+        ReckoningLine::Prediction { day } => {
+            format!("The next darkening, it teaches, comes on day {day}.")
+        }
+        ReckoningLine::Margin {
+            epoch_phrase,
+            count,
+        } => format!(
+            "In truth, the darkenings {epoch_phrase} number {}.",
+            cardinal(*count)
+        ),
+    }
+}
+
 /// Invert one rendered chorus line (emic, annotation, or margin): try C6's
 /// two closed surfaces first — the exact `RevealedClaim` formula
 /// ([`parse_revealed_claim`]) and the counter-annotation prefix (stripped,
@@ -1654,9 +2221,16 @@ fn rerender_explanation(explanation: &ParsedExplanation) -> String {
 /// then the stance appositive suffix (restoring the clause's terminal `'.'`
 /// in its place), then delegate to [`parse_line`]. Returns the recovered
 /// [`ChorusLine`] — the design-freedom variant the brief allows over a bare
-/// `ParsedLine`.
+/// `ParsedLine`. C8 (The Diachronic Book) adds a fifth try, first: the
+/// Reckoning-of-Years closed shapes ([`parse_reckoning_line`]) — none of
+/// their surfaces can collide with the other four (no copula, no
+/// `RevealedClaim`/counter/explanation prefix), so trying it first is safe
+/// and never shadows an existing line.
 /// type-audit: bare-ok(prose: line)
 pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, LineError> {
+    if let Some(reckoning) = parse_reckoning_line(line) {
+        return Ok(ChorusLine::Reckoning(reckoning));
+    }
     if let Some(plural) = parse_revealed_claim(line) {
         return Ok(ChorusLine::RevealedClaim { plural });
     }
@@ -1708,6 +2282,7 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
         ChorusLine::RevealedClaim { plural } => rerender_revealed_claim(*plural),
         ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
+        ChorusLine::Reckoning(reckoning) => rerender_reckoning_line(reckoning),
     }
 }
 
@@ -1891,7 +2466,10 @@ mod tests {
     /// C3 T3's self-statement law (spec §5): every placed people's autonym
     /// and own-kind concept are Steeped by construction (worldgen's
     /// `exposure_of`), so every placed people's tongue self-statement
-    /// renders — no gaps.
+    /// renders — no gaps. C7 T3 adds a second line per placed people (the
+    /// emic world-statement — `every_people_states_the_world_in_its_tongue`
+    /// pins that law directly), so `tongue_lines` now carries TWO lines per
+    /// placed people, not one.
     #[test]
     fn every_placed_people_self_states_in_its_own_tongue() {
         for seed in [1u64, 2, 3] {
@@ -1900,13 +2478,248 @@ mod tests {
             let peoples = hornvale_worldgen::placed_peoples(&world);
             assert_eq!(
                 vol.tongue_lines.len(),
-                peoples.len(),
-                "seed {seed}: one tongue line per placed people"
+                2 * peoples.len(),
+                "seed {seed}: two tongue lines per placed people (self-statement + \
+                 C7's world-statement)"
             );
             for line in &vol.tongue_lines {
                 assert!(line.contains(" ("), "line carries a gloss: {line}");
             }
         }
+    }
+
+    /// C7 T3's world-statement law (spec §3.5/§4.5): every placed people
+    /// renders the emic world-statement — `earth` is universal-stratum
+    /// Steeped (`packs.rs`, `ladder_rank: 0`), so this never gaps, joining
+    /// the self-statement law above. One world-statement tongue line per
+    /// placed people, seeds 1..=3, glossed `"⟨planet⟩ is the earth."`.
+    #[test]
+    fn every_people_states_the_world_in_its_tongue() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            let name = planet_name_of(&world).expect(
+                "the planet is named once any people is placed (seeds 1..=3 all place one)",
+            );
+            let peoples = hornvale_worldgen::placed_peoples(&world);
+            let gloss = format!("\"{name} is the earth.\")");
+            let world_lines: Vec<&String> = vol
+                .tongue_lines
+                .iter()
+                .filter(|l| l.ends_with(&gloss))
+                .collect();
+            assert_eq!(
+                world_lines.len(),
+                peoples.len(),
+                "seed {seed}: one world-statement line per placed people: {:?}",
+                vol.tongue_lines
+            );
+        }
+    }
+
+    /// T2's measured depth landscape (frozen; `depth_landscape_measured` in
+    /// `windows/worldgen/tests/deep_grammar.rs` pins the SAME numbers at the
+    /// derivation layer), reduced to the one bit
+    /// `the_taught_contrast_is_visible_where_deep` needs: whether
+    /// `evidential_depth` is non-`None` for this (seed, species). Every row
+    /// here must also be an ORGANIZED culture (a doctrine section exists) —
+    /// this is a separate, settlement-demography-driven fact from
+    /// `evidential_depth` (a morphology draw), so the two can move
+    /// independently across an absorb.
+    ///
+    /// Re-pinned post-absorption (the Confluence settlement re-baseline,
+    /// merge a46749f): seed 3's hobgoblin (`Shteozqae`) is no longer
+    /// organized at this seed (its doctrine/priesthood section is gone from
+    /// the regenerated `the-book.md` — a settlement-demography fact, not a
+    /// morphology change; its `evidential_depth` measured in
+    /// `deep_grammar.rs` is unchanged at `None`), so its row is dropped
+    /// rather than re-measured as `false`: this test requires
+    /// `section.doctrine` to be `Some` for every listed (seed, kind), and it
+    /// no longer is. Seed 3's new kobold (`Jjajjjo`) is ALSO not organized
+    /// at this seed (no priesthood section renders for it either), so it is
+    /// not added. Both arms (`true`/`false`) remain exercised by the
+    /// surviving rows.
+    ///
+    /// Re-pinned again post-absorption (The Rains moisture epoch, this
+    /// merge): seed 2's kobold is no longer organized under the epoch's
+    /// re-derived settlement layout (its chorus section still renders — it
+    /// still places, and `depth_landscape_measured` still pins its
+    /// morphology at `None`/`None`, unchanged, since morphology is a draw
+    /// the epoch does not touch — but its doctrine/priesthood section is
+    /// gone from the regenerated `the-book.md`, a settlement-demography
+    /// fact). Its row is dropped rather than re-measured as `false`, for the
+    /// same reason as seed 3's hobgoblin above. Both arms remain exercised
+    /// by the surviving rows (`true`: seeds 1/2 hobgoblin, seed 3 goblin;
+    /// `false`: seeds 1/2 goblin).
+    const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
+        (1, "goblin", false),   // None
+        (1, "hobgoblin", true), // Particle
+        (2, "goblin", false),   // None
+        (2, "hobgoblin", true), // Particle
+        (3, "goblin", true),    // Particle
+    ];
+
+    /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for
+    /// every organized culture whose evidential depth is non-`None`, the
+    /// doctrine's taught line's realized SURFACE (excluding each line's own
+    /// gloss, which always differs in text) differs from the folk
+    /// world-statement's surface — the morpheme contrast; for depth `None`
+    /// the two surfaces are byte-identical (no marking to contrast).
+    /// Per-species arms pinned against T2's frozen landscape (both arms are
+    /// exercised within seeds 1..=3, per the measured table).
+    #[test]
+    fn the_taught_contrast_is_visible_where_deep() {
+        for &(seed, kind, evidential_marks) in EVIDENTIAL_DEPTH_LANDSCAPE {
+            let world = generated(seed);
+            let vol = render_volume(&world);
+            let name = planet_name_of(&world).expect("the planet is named at every measured seed");
+            let section = vol
+                .chorus
+                .iter()
+                .find(|s| s.kind == kind)
+                .unwrap_or_else(|| panic!("seed {seed}: {kind} has a chorus section"));
+            let doctrine = section.doctrine.as_ref().unwrap_or_else(|| {
+                panic!("seed {seed}: {kind} is organized (T2's measured landscape)")
+            });
+            let folk_world_line = vol
+                .tongue_lines
+                .iter()
+                .find(|l| l.ends_with(&format!("(in the {kind} tongue: \"{name} is the earth.\")")))
+                .unwrap_or_else(|| {
+                    panic!("seed {seed}: {kind}'s folk world-statement line exists")
+                });
+            let folk_surface = folk_world_line
+                .split(" (")
+                .next()
+                .expect("split always yields at least one piece");
+            let taught_surface = doctrine
+                .tongue_taught_line
+                .split(" (")
+                .next()
+                .expect("split always yields at least one piece");
+            if evidential_marks {
+                assert_ne!(
+                    taught_surface, folk_surface,
+                    "seed {seed} {kind}: non-None evidential depth must show the taught \
+                     contrast — folk {folk_surface:?} vs taught {taught_surface:?}"
+                );
+            } else {
+                assert_eq!(
+                    taught_surface, folk_surface,
+                    "seed {seed} {kind}: evidential depth None must show no marking — folk \
+                     and taught surfaces must be identical"
+                );
+            }
+        }
+    }
+
+    /// C7 T3's readout law (spec §4.1): every rendered evidential equals the
+    /// shipped epistemic state — this module's PRODUCTION tongue-construction
+    /// sites (everything above the `mod tests` boundary) pass only
+    /// `Evidential::Witnessed` (self-statement/world-statement/probes, all
+    /// Steeped-grounded) or `Evidential::Taught` (the doctrine's taught
+    /// line), never `Evidential::Inferred` — checked against the LITERAL
+    /// construction sites (not rendered text, which cannot distinguish
+    /// evidential values that happen to share a drawn marker form; see the
+    /// seed-1 hobgoblin doctrine line measured during this task, where the
+    /// Taught marker coincidentally renders identically to the Inanimate
+    /// class marker). The loud guard: [`tests::readout_of`], the grounding
+    /// function a future because-clause tongue surface would need, panics
+    /// rather than silently minting `Evidential::Inferred` for an
+    /// `Explained`-grounded (inference-only) disposition — driven
+    /// synthetically, since no real account entry reaches this arm at the
+    /// Classify-only floor (spec §6: the because-clause stays Common-only).
+    #[test]
+    fn the_readout_law() {
+        let source = include_str!("lib.rs");
+        let production = source
+            .split("#[cfg(test)]\nmod tests {\n")
+            .next()
+            .expect("this module's own `mod tests` boundary must exist");
+        assert!(
+            !production.contains("Evidential::Inferred"),
+            "no production construction site in this module may ever pass \
+             Evidential::Inferred — it is floor-unreachable (the readout law)"
+        );
+        assert!(
+            production.contains("evidential: Evidential::Witnessed"),
+            "the self-statement/world-statement/probe construction sites must exist"
+        );
+        assert!(
+            production.contains("Evidential::Taught"),
+            "the doctrine's taught-line construction site must exist"
+        );
+
+        /// The readout law's grounding function, driven synthetically: map
+        /// an account entry's disposition to the `Evidential` a tongue
+        /// clause about it would need. `Kept`/`Substituted`/`Lost` are all
+        /// directly perceived classifications → `Witnessed`; `Explained` (an
+        /// inference/story overlay — C5's causal filter) has no authored
+        /// in-tongue surface at the Classify-only floor (spec §6: "the
+        /// because-clause stays Common-only") — panics naming the gap
+        /// rather than silently returning `Inferred`, so a future verbal-
+        /// tongue campaign must author that surface deliberately before this
+        /// function may return it.
+        fn readout_of(disposition: &Disposition) -> Evidential {
+            match disposition {
+                Disposition::Kept | Disposition::Substituted { .. } | Disposition::Lost(_) => {
+                    Evidential::Witnessed
+                }
+                Disposition::Explained { .. } => panic!(
+                    "no in-tongue surface is authored for an Explained-grounded (inferred) \
+                     tongue line yet — the Classify-only floor only ever renders Witnessed/ \
+                     Taught; author a tongue surface for the because-clause (or extend the \
+                     tongue grammar past Classify) before this disposition may ground \
+                     Evidential::Inferred"
+                ),
+            }
+        }
+
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            readout_of(&Disposition::Explained {
+                underlying: Box::new(Disposition::Lost(
+                    hornvale_language::LossReason::BeyondCapability { domain: "sky" },
+                )),
+                schema: SchemaId::PathJourney,
+                agent: None,
+                lexeme: None,
+                manner: Manner::Neutral,
+            })
+        }))
+        .is_err();
+        assert!(
+            panicked,
+            "readout_of must panic loudly on an Explained-grounded disposition rather than \
+             silently return Evidential::Inferred"
+        );
+    }
+
+    /// C7 T3's shallow-identity guarantee (plan G4): for every species T2
+    /// measured at depth `(None, None, _)` on both axes — seed 2's goblin
+    /// and kobold are the only such (seed, species) pairs within 1..=3 (T2's
+    /// frozen landscape) — that people's self-statement line is
+    /// BYTE-IDENTICAL to the pre-C7 committed string (the literal from
+    /// `book/src/gallery/the-book.md` before this task's regeneration).
+    #[test]
+    fn shallow_species_lines_are_byte_identical_to_c3() {
+        let world = generated(2);
+        let vol = render_volume(&world);
+        assert!(
+            vol.tongue_lines.contains(
+                &"Maetmea Gmaapmae. (in the goblin tongue: \"The Maetmea are goblins.\")"
+                    .to_string()
+            ),
+            "seed 2 goblin's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
+            vol.tongue_lines
+        );
+        assert!(
+            vol.tongue_lines.contains(
+                &"Ngkoshngta Nggasdsha. (in the kobold tongue: \"The Ngkoshngta are kobolds.\")"
+                    .to_string()
+            ),
+            "seed 2 kobold's self-statement must be byte-identical to the pre-C7 artifact: {:?}",
+            vol.tongue_lines
+        );
     }
 
     /// C3 T3's gap law (spec §5): no culture holds `planet` — every
@@ -2051,6 +2864,10 @@ mod tests {
         let world = generated(1);
         let ph = hornvale_worldgen::language_of(&world, "goblin");
         let grammar = hornvale_language::tongue_grammar(&world.seed, "goblin", &ph);
+        let morph = hornvale_worldgen::tongue_morphology_of(&world, "goblin")
+            .expect("goblin morphology derives at seed 1");
+        let noun_class_of =
+            |concept: &str| hornvale_worldgen::noun_class_of(&world, "goblin", concept);
         let mut exposures = BTreeMap::new();
         exposures.insert("planet".to_string(), ExposureClass::Steeped);
         let lexicon = build_lexicon(&world.seed, "goblin", "goblin", &ph, &ph, &exposures, &[]);
@@ -2058,8 +2875,8 @@ mod tests {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
         };
-        let line =
-            probe_tongue(&probe, "goblin", &grammar, &lexicon).expect("a Steeped concept realizes");
+        let line = probe_tongue(&probe, "goblin", &grammar, &morph, &noun_class_of, &lexicon)
+            .expect("a Steeped concept realizes");
         assert!(
             !line.is_empty() && line.ends_with('.'),
             "a realized sentence: {line}"
@@ -2745,7 +3562,16 @@ mod tests {
             },
         };
 
-        let section = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
+        // The taught line is not under test in this fixture (a synthetic
+        // Contested pair over a hand-built account, not a real world) — any
+        // non-empty placeholder satisfies `doctrine_section`'s signature.
+        let section = doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
         assert_eq!(
             section.annotations,
             vec![
@@ -2838,7 +3664,13 @@ mod tests {
                 entries: doctrine_entries,
             },
         };
-        let _ = doctrine_section("Nggoshk", &doctrine_voice, &params, &folk_account);
+        let _ = doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
     }
 
     /// C6 T3, the null-effect law: this campaign adds a NEW field
@@ -3084,7 +3916,13 @@ mod tests {
         };
 
         // Panics: STAR_CLASS carries no `revealed_claim_line` formula arm.
-        doctrine_section("Nggoshk", &doctrine_voice, &folk_params, &folk_account);
+        doctrine_section(
+            "Nggoshk",
+            &doctrine_voice,
+            &folk_params,
+            &folk_account,
+            "placeholder — not under test here".to_string(),
+        );
     }
 
     /// C6 T4, the esoteric law, mutation-verified: an empty reader
@@ -3166,8 +4004,8 @@ mod tests {
 
     /// One `BookVolume`'s complete line inventory, every register
     /// flattened: `lines`, `tongue_lines`, then each chorus section's
-    /// `emic`/`margin` and (when present) `doctrine.emic`/`annotations`/
-    /// `margin` — used only by
+    /// `emic`/`margin` and (when present) `doctrine.tongue_taught_line`/
+    /// `emic`/`annotations`/`margin` — used only by
     /// `initiate_edition_supersets_the_committed_artifact` to compare the
     /// committed edition against the initiated one.
     fn all_committed_lines(vol: &BookVolume) -> Vec<String> {
@@ -3178,6 +4016,7 @@ mod tests {
             all.extend(section.emic.iter().cloned());
             all.extend(section.margin.iter().cloned());
             if let Some(doctrine) = &section.doctrine {
+                all.push(doctrine.tongue_taught_line.clone());
                 all.extend(doctrine.emic.iter().cloned());
                 all.extend(doctrine.annotations.iter().cloned());
                 all.extend(doctrine.margin.iter().cloned());
@@ -3228,5 +4067,452 @@ mod tests {
             extra_set, esoteric_set,
             "nothing else differs beyond the esoteric lines"
         );
+    }
+
+    /// C8 T2, the surface task: seeds 1..=3 each render exactly the two
+    /// preregistered epochs; epoch 1 (day 0) is always the empty arm
+    /// (T1's `observations_at_day_zero_are_empty`: every culture is
+    /// `Unknown` at day 0). Epoch 2's lines are pinned exact against the
+    /// live measurement (T1's report table, re-derived here through the
+    /// surface): seed 1's goblin/hobgoblin both climb to `Predictive` on
+    /// an identical (shared, all-solar) recurrence class; seed 2 adds
+    /// kobold, whose higher sky-capability also witnesses the lunar
+    /// class; seed 3's goblin alone is organized (`Predictive`) while
+    /// hobgoblin/kobold are folk-only (`Counted`, no cardinal, no
+    /// prediction) — the ladder's folk cap made visible in the section
+    /// itself, not just T1's unit tests.
+    #[test]
+    fn the_reckoning_renders_the_epoch_pair() {
+        for seed in [1u64, 2, 3] {
+            let vol = render_volume(&generated(seed));
+            assert_eq!(
+                vol.reckoning.len(),
+                2,
+                "seed {seed}: exactly the two preregistered epochs"
+            );
+            assert_eq!(vol.reckoning[0].heading, "In the first days");
+            assert_eq!(
+                vol.reckoning[0].lines,
+                vec![RECKONING_EMPTY_ARM.to_string()],
+                "seed {seed}: day 0 is the empty arm (T1: every culture is Unknown at day 0)"
+            );
+            assert!(
+                vol.reckoning[0].margin.is_empty(),
+                "seed {seed}: the empty arm carries no margin"
+            );
+            assert_eq!(vol.reckoning[1].heading, "In the hundredth year");
+        }
+
+        let seed1 = render_volume(&generated(1));
+        assert_eq!(
+            seed1.reckoning[1].lines,
+            vec![
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36526.".to_string(),
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Babako numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36526.".to_string(),
+            ]
+        );
+        assert_eq!(
+            seed1.reckoning[1].margin,
+            vec!["In truth, the darkenings of the first hundred years number 6472.".to_string()],
+            "seed 1: both cultures hold 4010 (all-solar; neither witnesses the lunar class \
+             since both are below the 0.6 threshold), which falls short of the true count \
+             (6472, unwitnessed lunar events included)"
+        );
+
+        // Re-pinned post-absorption (the Rains moisture epoch, merge
+        // 9843b8f): seed 2 kobold flipped from an organized cult to a FOLK
+        // flagship (the SOC-1 gate's negative arm — see
+        // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`), so it now
+        // renders the folk line ONLY — no cardinal, no prediction line —
+        // the same shape as seed 3's folk-only cultures below.
+        let seed2 = render_volume(&generated(2));
+        assert_eq!(
+            seed2.reckoning[1].lines,
+            vec![
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Maetmea numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
+                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                "The sky has darkened, now and again.".to_string(),
+            ]
+        );
+        assert_eq!(
+            seed2.reckoning[1].margin,
+            vec!["In truth, the darkenings of the first hundred years number 81.".to_string()],
+            "seed 2: the true count is still 81 (kobold witnesses that many events even as \
+             folk memory only, unwitnessed by doctrine); goblin/hobgoblin hold only 49 and \
+             kobold now holds no cardinal at all — the margin fires from either shortfall"
+        );
+
+        let seed3 = render_volume(&generated(3));
+        assert_eq!(
+            seed3.reckoning[1].lines,
+            vec![
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
+                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                "The sky has darkened, now and again.".to_string(),
+                "The sky has darkened, now and again.".to_string(),
+            ],
+            "seed 3: goblin alone is organized; hobgoblin/kobold (folk-only, no doctrine) \
+             render the folk line ONLY — never a cardinal"
+        );
+        assert_eq!(
+            seed3.reckoning[1].margin,
+            vec!["In truth, the darkenings of the first hundred years number 53.".to_string()],
+            "seed 3: hobgoblin/kobold hold no cardinal at all (qualitative memory), so the \
+             margin fires regardless of what either witnessed"
+        );
+    }
+
+    /// C8 T2, the additivity law (plan Global Constraints): this campaign's
+    /// only change to `BookVolume` is the additive `reckoning` field — every
+    /// pre-C8 register stays byte-identical. Pinned against seed 1's
+    /// current committed literals (`book/src/gallery/the-book.md`, before
+    /// this task's regeneration) — the C6/C7 idiom (mirrors
+    /// `folk_sections_are_byte_unchanged`), widened here to cover every
+    /// pre-C8 `BookVolume` field at seed 1, not just the chorus folk
+    /// registers.
+    #[test]
+    fn the_additivity_law() {
+        let vol = render_volume(&generated(1));
+
+        assert_eq!(
+            vol.lines,
+            vec![
+                "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
+                 lasts about 1.5 standard days."
+                    .to_string(),
+                "The Vavako are goblins.".to_string(),
+                "The Babako are hobgoblins.".to_string(),
+            ]
+        );
+        assert_eq!(
+            vol.tongue_lines,
+            vec![
+                "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
+                "Saa Wovewe Vebe. (in the goblin tongue: \"Vebe is the earth.\")".to_string(),
+                "Babako Babo Be Bo. (in the hobgoblin tongue: \"The Babako are hobgoblins.\")"
+                    .to_string(),
+                "Vebe Vebe Be Bo. (in the hobgoblin tongue: \"Vebe is the earth.\")".to_string(),
+            ]
+        );
+        assert_eq!(
+            vol.tongue_gaps,
+            vec![
+                "goblin: gap — planet (no entry in this lexicon)".to_string(),
+                "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
+            ]
+        );
+
+        let goblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "goblin")
+            .expect("goblin voice");
+        assert_eq!(
+            goblin.emic,
+            vec![
+                "The Vavako are goblins — ourselves.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The day returns because the sky must be crossed.".to_string(),
+            ]
+        );
+        assert_eq!(
+            goblin.margin,
+            vec![
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                 (F); its day lasts about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+        let goblin_doctrine = goblin.doctrine.as_ref().expect("goblin is organized");
+        assert_eq!(
+            goblin_doctrine.heading,
+            "As the priesthood of the Vavako teach it"
+        );
+        assert_eq!(
+            goblin_doctrine.tongue_taught_line,
+            "Saa Wovewe Vebe. (\"Vebe is the earth — as it is taught.\")"
+        );
+        assert_eq!(
+            goblin_doctrine.emic,
+            vec![
+                "The Vavako are goblins — ourselves.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The moons are counted and known to the priesthood.".to_string(),
+                "The moons cross because Soevvae strides the sky, slowly.".to_string(),
+                "The day returns because Wowako strides the sky, briskly.".to_string(),
+            ]
+        );
+        assert!(goblin_doctrine.annotations.is_empty());
+        assert_eq!(
+            goblin_doctrine.margin,
+            vec![
+                "In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                 about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+
+        let hobgoblin = vol
+            .chorus
+            .iter()
+            .find(|s| s.kind == "hobgoblin")
+            .expect("hobgoblin voice");
+        assert_eq!(
+            hobgoblin.emic,
+            vec![
+                "The Vavako are goblins — rivals.".to_string(),
+                "The Babako are hobgoblins — ourselves.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The day returns, as all things return.".to_string(),
+            ]
+        );
+        assert_eq!(
+            hobgoblin.margin,
+            vec![
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                 (F); its day lasts about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+        let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
+        assert_eq!(
+            hobgoblin_doctrine.heading,
+            "As the priesthood of the Babako teach it"
+        );
+        assert_eq!(
+            hobgoblin_doctrine.tongue_taught_line,
+            "Vebe Vebe Bo Bo. (\"Vebe is the earth — as it is taught.\")"
+        );
+        assert_eq!(
+            hobgoblin_doctrine.emic,
+            vec![
+                "The Vavako are goblins — rivals.".to_string(),
+                "The Babako are hobgoblins — ourselves.".to_string(),
+                "Vebe is the earth.".to_string(),
+                "The moons are counted and known to the priesthood.".to_string(),
+                "The moons cross because Kdonbem strides the sky, slowly.".to_string(),
+                "The day returns because Bobako strides the sky, briskly.".to_string(),
+            ]
+        );
+        assert!(hobgoblin_doctrine.annotations.is_empty());
+        assert_eq!(
+            hobgoblin_doctrine.margin,
+            vec![
+                "In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                 about 1.5 standard days."
+                    .to_string()
+            ]
+        );
+    }
+
+    /// C8 T2, the corpus law extended once more (mirrors
+    /// `every_chorus_line_round_trips`): every Reckoning line + margin,
+    /// across seeds 1..=3, round-trips byte-identically through
+    /// `parse_chorus_line` + `rerender_chorus_line`. The epoch-1 margin
+    /// phrase (`"of the first days"`) is never produced live (epoch 1 is
+    /// always the empty arm at every measured seed — the true count is
+    /// always zero at day 0), so it is exercised synthetically here
+    /// through the SAME public round-trip pair, rather than left as
+    /// vacuous coverage.
+    #[test]
+    fn every_reckoning_line_round_trips() {
+        let mut reckoning_seen = 0usize;
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            let ctx = parse_context(&world);
+            let vol = render_volume(&world);
+            for epoch in &vol.reckoning {
+                for line in epoch.lines.iter().chain(epoch.margin.iter()) {
+                    let chorus_line = parse_chorus_line(line, &ctx).unwrap_or_else(|e| {
+                        panic!(
+                            "seed {seed} {}: reckoning line failed to parse: {line} ({e:?})",
+                            epoch.heading
+                        )
+                    });
+                    assert!(
+                        matches!(chorus_line, ChorusLine::Reckoning(_)),
+                        "seed {seed} {}: {line:?} must invert to ChorusLine::Reckoning",
+                        epoch.heading
+                    );
+                    reckoning_seen += 1;
+                    let again = rerender_chorus_line(&chorus_line);
+                    assert_eq!(
+                        &again, line,
+                        "seed {seed} {}: re-realization drifted",
+                        epoch.heading
+                    );
+                }
+            }
+        }
+        assert!(
+            reckoning_seen > 0,
+            "the walk over seeds 1..=3 should encounter at least one Reckoning line"
+        );
+
+        // Synthetic: the epoch-1 margin phrase is unreached live (every
+        // measured seed's epoch 1 is the empty arm, which carries no
+        // margin) — exercised directly through the same public
+        // `parse_chorus_line`/`rerender_chorus_line` pair so a regression
+        // here cannot hide behind vacuous coverage.
+        let ctx = ParseContext {
+            complements: BTreeSet::new(),
+        };
+        let synthetic = "In truth, the darkenings of the first days number three.";
+        let chorus_line = parse_chorus_line(synthetic, &ctx)
+            .unwrap_or_else(|e| panic!("the epoch-1 margin phrase must invert: {e:?}"));
+        let ChorusLine::Reckoning(reckoning) = &chorus_line else {
+            panic!("the epoch-1 margin phrase must invert to ChorusLine::Reckoning");
+        };
+        assert_eq!(
+            *reckoning,
+            ReckoningLine::Margin {
+                epoch_phrase: "of the first days".to_string(),
+                count: 3,
+            }
+        );
+        assert_eq!(rerender_chorus_line(&chorus_line), synthetic);
+    }
+
+    /// C8 T2: the honest omit-the-prediction arm (`Predictive` with
+    /// `prediction: None` — T1's report: unreached at seeds 1..=5, since
+    /// every measured Predictive culture's next event of its most-observed
+    /// class falls inside the teaching horizon). Driven synthetically
+    /// against the pure `reckoning_culture_lines` helper (world-free by
+    /// construction, exactly so this arm doesn't need a live world that
+    /// may never produce it): the priesthood still states its count, but
+    /// teaches no day rather than a falsehood.
+    #[test]
+    fn the_prediction_line_omits_honestly_beyond_the_teaching_horizon() {
+        let lines =
+            reckoning_culture_lines("Vavako", hornvale_worldgen::LadderRung::Predictive, 8, None);
+        assert_eq!(
+            lines,
+            vec![
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Vavako numbers the darkenings: eight.".to_string(),
+            ],
+            "Predictive + None: the count still renders, but no prediction line"
+        );
+
+        let lines_with_prediction = reckoning_culture_lines(
+            "Vavako",
+            hornvale_worldgen::LadderRung::Predictive,
+            8,
+            Some(9080.42957840976),
+        );
+        assert_eq!(
+            lines_with_prediction,
+            vec![
+                "The sky has darkened, now and again.".to_string(),
+                "The priesthood of the Vavako numbers the darkenings: eight.".to_string(),
+                "The next darkening, it teaches, comes on day 9080.".to_string(),
+            ],
+            "Predictive + Some: the prediction line renders, integer-truncated"
+        );
+    }
+
+    /// C8 T2, the margin law (spec §3.4). Re-pinned post-absorption (the
+    /// Rains moisture epoch, merge 9843b8f): seed 2's kobold — this test's
+    /// original "organized culture whose own witnessed cardinal equals the
+    /// true count contributes no shortfall" example (81 == 81, rung
+    /// `Predictive`) — flipped to a FOLK flagship under the epoch (see
+    /// `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`); a sweep of
+    /// seeds 1..=40 found no placed culture where an organized rung's held
+    /// count equals the true count, so that arm is no longer reachable
+    /// live in the measured landscape. Rather than assert an absence that
+    /// may just be this sweep's ceiling, the per-culture predicate
+    /// ([`culture_falls_short`]) is extracted pure and world-free (mirrors
+    /// [`reckoning_culture_lines`]) so BOTH arms — organized-and-clean
+    /// (no shortfall) and organized-short/folk-always-short — are pinned
+    /// exactly regardless of which the live seeds happen to exhibit. The
+    /// live-world half of the test still measures what seeds 2 and 3
+    /// actually show today: both kobolds are folk-only and fall short
+    /// even though each happens to witness every true event.
+    #[test]
+    fn the_margin_fires_exactly_when_knowledge_falls_short() {
+        // The pure predicate, both arms, driven synthetically — the
+        // authoritative pin now that no live seed exhibits the clean arm.
+        assert!(
+            !culture_falls_short(hornvale_worldgen::LadderRung::Predictive, 81, 81),
+            "organized (Predictive) and held == true_count: no shortfall from it"
+        );
+        assert!(
+            !culture_falls_short(hornvale_worldgen::LadderRung::Numbered, 10, 10),
+            "organized (Numbered) and held == true_count: no shortfall from it"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Predictive, 49, 81),
+            "organized but held < true_count: a shortfall (cannot witness what capability gates out)"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Counted, 81, 81),
+            "folk-only (Counted): no cardinal held at all, falls short regardless of held == true_count"
+        );
+        assert!(
+            culture_falls_short(hornvale_worldgen::LadderRung::Unknown, 0, 5),
+            "Unknown: no cardinal held at all, falls short"
+        );
+
+        // The live-world half: seed 2, goblin/hobgoblin fall short of the
+        // true count (49 < 81); kobold — now folk-only, post-epoch — also
+        // falls short despite witnessing every true event (81 == 81).
+        let world = generated(2);
+        let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+
+        assert_eq!(true_event_count(&world, at), 81);
+
+        let kobold = hornvale_worldgen::observations_of(&world, "kobold", at).unwrap();
+        assert_eq!(
+            kobold.events.len(),
+            81,
+            "kobold witnesses every true event (capability 1.0), but holds no cardinal \
+             (folk-only, post-epoch) — the margin's folk arm, not the count arm"
+        );
+        let (kobold_rung, _) = hornvale_worldgen::ladder_of(&world, "kobold", at).unwrap();
+        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Counted);
+
+        for kind in ["goblin", "hobgoblin"] {
+            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            assert_eq!(
+                obs.events.len(),
+                49,
+                "{kind}: witnesses only the (universally-public) solar class, missing kobold's \
+                 32 lunar events — a shortfall against the true count"
+            );
+        }
+
+        // The epoch's own margin fires (from goblin/hobgoblin's shortfall,
+        // and now from kobold's folk arm too).
+        let vol = render_volume(&world);
+        assert!(!vol.reckoning[1].margin.is_empty());
+
+        // seed 3: hobgoblin/kobold are folk-only (Counted) — no cardinal
+        // held at all, so they always fall short regardless of what they
+        // witnessed, even where (as kobold does here) the witnessed set
+        // happens to equal the true count.
+        let seed3 = generated(3);
+        let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
+        let (kobold3_rung, _) = hornvale_worldgen::ladder_of(&seed3, "kobold", at3).unwrap();
+        assert_eq!(kobold3_rung, hornvale_worldgen::LadderRung::Counted);
+        let kobold3_obs = hornvale_worldgen::observations_of(&seed3, "kobold", at3).unwrap();
+        assert_eq!(
+            kobold3_obs.events.len(),
+            true_event_count(&seed3, at3),
+            "seed 3's kobold happens to witness everything (cap 1.0) but still holds no \
+             cardinal (folk-only, no doctrine) — the margin's folk arm, not the count arm"
+        );
+        let seed3_vol = render_volume(&seed3);
+        assert!(!seed3_vol.reckoning[1].margin.is_empty());
     }
 }

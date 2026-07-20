@@ -12,8 +12,8 @@ use hornvale_astronomy::{
     streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
-    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
-    UniformClimate, diurnal_waveform,
+    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, PrecipRegime, RotationRegime,
+    SeafloorFeature, UniformClimate, diurnal_waveform,
 };
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -79,9 +79,11 @@ pub mod components;
 pub mod schedule;
 pub mod settlement_pins;
 pub use chorus::{
-    ChorusVoice, DoctrineVoice, account_params_of, accounts_of, beta_of, chorus_ground,
-    cyclic_beliefs_of, doctrine_beta_of, doctrine_of, doctrine_params_of, doctrines_of,
-    folk_verifiable, observability_table, pathological_params, schema_prior, sky_capability,
+    ChorusVoice, DoctrineVoice, LadderRung, Observations, account_params_of, accounts_from,
+    accounts_of, beta_of, chorus_ground, cyclic_beliefs_of, day_schema_of, doctrine_beta_of,
+    doctrine_of, doctrine_params_of, doctrines_of, folk_verifiable, ladder_of, noun_class_of,
+    observability_table, observations_of, pathological_params, schema_prior, sky_capability,
+    tongue_morphology_of,
 };
 pub use components::WorldComponents;
 pub use settlement_pins::SettlementPins;
@@ -387,23 +389,56 @@ pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeCla
     }
 }
 
-/// Drainage normalization reference for the carrying-capacity freshwater
-/// term (§2): drainage accumulation above this reads as "as good as any
-/// river gets", not an unbounded score.
-const DRAINAGE_REF: f64 = 200.0;
+/// Weight the ambient moisture floor carries in the carrying-capacity
+/// freshwater term (The Confluence), against the `river_proximity` term it
+/// is `max`-combined with. Keeps riverless-but-wet regions habitable
+/// (moisture alone can still contribute up to this fraction) while leaving
+/// headroom for river proximity (`1.0` on a river, decaying over
+/// `RIVER_REACH`) to dominate near actual rivers — the mechanism
+/// condensation is meant to ride. TUNED (the-confluence T2, from the
+/// brief's placeholder 0.5): the keystone measurement
+/// (`windows/worldgen/tests/confluence.rs`) found that `RIVER_REACH`'s hop
+/// radius is also the ruler the test uses for "near a river" — widening it
+/// to inflate the settlement fraction just inflates the ambient land
+/// coverage of "near" too (90% of seed-42's land sits within 7 hops of a
+/// river), which trivializes the emergence claim rather than strengthening
+/// it. `RIVER_REACH` therefore stays at its T1 value (3 hops; ~55% ambient
+/// land coverage); this constant alone was pulled down from 0.5 to sharpen
+/// the river-vs-moisture contrast without touching the ruler.
+const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 
 /// Condensation threshold: an attractor whose catchment population clears
 /// this becomes a settlement. CALIBRATED (the-gathering, 2026-07-13): tuned
 /// against the carrying_capacity constants to a manageable seed-42
 /// settlement count. Before tuning, the placeholder 0.5 condensed 998
-/// settlements on the level-6 seed-42 world (avg catchment ~7 people); this
-/// value condenses 182 (avg catchment ~22, max 71) — low hundreds, an order
-/// of magnitude down from the placeholder and in the range of the retired
-/// spaced scatter's town count. A save-format constant from here on. Module
-/// scope (hoisted from the settlement-genesis stage closure, Task A16a) so
+/// settlements on the level-6 seed-42 world (avg catchment ~7 people); the
+/// then-value of 10.0 condensed 182 (avg catchment ~22, max 71) — low
+/// hundreds, an order of magnitude down from the placeholder and in the
+/// range of the retired spaced scatter's town count.
+///
+/// RE-CALIBRATED (the-confluence T3, 2026-07-19): the sharper freshwater
+/// term (T2's re-point at `river_proximity`, with `MOISTURE_FLOOR_WEIGHT`
+/// pulled to 0.2) concentrates catchments along river corridors rather than
+/// spreading them over broad riverless-but-moist land, and the old
+/// `THRESHOLD = 10.0` condensed only 79 seed-42 settlements — below the
+/// [100, 400] sane band (`windows/worldgen/tests/confluence.rs`,
+/// `settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint`).
+///
+/// A naive re-fit is not enough: lowering `THRESHOLD` alone trades settlement
+/// COUNT against T2's keystone (`settlements_condense_near_rivers_emergently`)
+/// — a sweep found both move together non-monotonically in a narrow band
+/// (e.g. 0.9–1.5 clears the [100, 400] count band comfortably but the
+/// near-river fraction hovers right AT the keystone's 0.7 floor, 0.6991–
+/// 0.7018, effectively zero margin; 2.5+ gives the keystone real headroom but
+/// drops the count below 100). `1.7` was chosen as the best point found in
+/// that sweep: seed 42 condenses 108 settlements (comfortably inside the
+/// band, well clear of its 100 floor) while the near-river fraction reads
+/// 0.7222 — a real, if modest, margin over the keystone floor rather than
+/// sitting on top of it. A save-format constant from here on. Module scope
+/// (hoisted from the settlement-genesis stage closure, Task A16a) so
 /// [`demography_report`]'s Lab accessor and the genesis path share the one
 /// definition — they must never diverge.
-const CONDENSATION_THRESHOLD: f64 = 10.0;
+const CONDENSATION_THRESHOLD: f64 = 1.7;
 
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
@@ -416,13 +451,21 @@ pub fn carrying_inputs_of(
     terrain: &GeneratedTerrain,
     climate: &GeneratedClimate,
 ) -> hornvale_kernel::CellMap<hornvale_demography::CarryingInput> {
+    // The Confluence: freshwater rides proximity to the real river network,
+    // not a smooth drainage/moisture proxy — so K spikes near rivers and
+    // settlements condense there (emergent). A moisture floor keeps
+    // riverless-but-wet regions habitable.
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     hornvale_kernel::CellMap::from_fn(geo, |cell| {
         let coastal = geo.neighbors(cell).iter().any(|n| terrain.is_ocean(*n));
         let moisture = climate.moisture_at(cell);
-        let drainage_norm = (terrain.drainage_at(cell) / DRAINAGE_REF).min(1.0);
         // Seawater is not freshwater: coastal access is priced by the
         // coast bonus in carrying_capacity, not smuggled in here.
-        let freshwater = drainage_norm.max(moisture).clamp(0.0, 1.0);
+        let freshwater = (moisture * MOISTURE_FLOOR_WEIGHT)
+            .max(*river_prox.get(cell))
+            .clamp(0.0, 1.0);
         let aridity = ((0.2 - moisture).max(0.0) * 5.0).clamp(0.0, 1.0);
         let hostility = terrain.unrest_at(cell).max(aridity).clamp(0.0, 1.0);
         hornvale_demography::CarryingInput {
@@ -597,6 +640,23 @@ pub fn demography_report_with_beta(
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
+    demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
+}
+
+/// [`demography_report_with_beta`], reusing ALREADY-BUILT terrain/climate
+/// (a Lab view's `terrain()`/`climate()`) instead of re-sculpting the globe —
+/// the census's demography metrics call this. Byte-identical: the passed
+/// terrain/climate equal `terrain_of`/`climate_of`, and the report is pure
+/// over the committed world (no seed draws).
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub(crate) fn demography_report_with_beta_from(
+    world: &World,
+    wc: &WorldComponents,
+    beta: f64,
+    floor: f64,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
@@ -611,8 +671,8 @@ pub fn demography_report_with_beta(
 
     let per_species_k = niche_per_species_k(
         geo,
-        &terrain,
-        &climate,
+        terrain,
+        climate,
         obliquity_deg,
         insolation_scalar,
         &regime,
@@ -666,6 +726,25 @@ pub fn demography_report(
         wc,
         hornvale_demography::BETA,
         hornvale_demography::FLOOR,
+    )
+}
+
+/// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
+/// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
+/// demography metrics call this. Byte-identical to `demography_report`.
+pub fn demography_report_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta_from(
+        world,
+        wc,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        terrain,
+        climate,
     )
 }
 
@@ -735,6 +814,7 @@ pub fn climate_from(
         regime,
         year_length_std,
         year_phase_offset,
+        seed: world.seed,
     }))
 }
 
@@ -887,6 +967,10 @@ struct EraContext<'a> {
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Temperature,
+    /// The world seed — threaded through so `glacial_maximum_habitable`'s
+    /// full climate rebuild derives the same weather seed `climate_of` would
+    /// (climate is otherwise seed-free; this perturbs no existing draw).
+    seed: hornvale_kernel::Seed,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -1006,6 +1090,7 @@ fn glacial_maximum_habitable(
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
         year_phase_offset: ctx.year_phase_offset,
+        seed: ctx.seed,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -1109,6 +1194,7 @@ pub fn paleoclimate_from(
         year_phase_offset,
         present_ice: &present_ice,
         freeze,
+        seed: world.seed,
     };
 
     // Fine ice integration: sample the caloric index back through the window.
@@ -1371,6 +1457,180 @@ fn seas_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Ve
         )];
     }
     Vec::new()
+}
+
+/// "rain" or "snow", by which phase carries the majority of the year's
+/// precipitation at a site (The Rains): `>= 0.5` snow fraction reads as
+/// snow, else rain.
+/// type-audit: bare-ok(ratio: snow_fraction), bare-ok(identifier-text: return)
+fn precip_phase_word(snow_fraction: f64) -> &'static str {
+    if snow_fraction >= 0.5 { "snow" } else { "rain" }
+}
+
+/// The stable prose word for a seasonal precipitation regime (The Rains,
+/// spec §2) — the same kebab-case labels the spec's model card names
+/// (`hornvale_climate::precip_regime`'s four variants).
+/// type-audit: bare-ok(identifier-text: return)
+fn regime_word(regime: PrecipRegime) -> &'static str {
+    match regime {
+        PrecipRegime::Uniform => "uniform",
+        PrecipRegime::SummerMax => "summer-max",
+        PrecipRegime::WinterMax => "winter-max",
+        PrecipRegime::Monsoon => "monsoon",
+    }
+}
+
+/// The rains' headline lines for the almanac's Land section (The Rains,
+/// spec §2/§7): annual precipitation, phase (rain/snow), and seasonal
+/// regime at the same two sample sites `diurnal_lines` reports — the
+/// driest interior land cell (highest diurnal amplitude, a continentality
+/// proxy) and the open ocean cell (lowest diurnal amplitude among ocean
+/// cells) — completing that section's thermal picture with the year's
+/// moisture total. Unlike `diurnal_lines`, never empty: precipitation,
+/// snow fraction, and regime are all defined regardless of rotation regime
+/// (a tidally locked world's single day–night cell still carries a
+/// moisture field and a `Uniform`-biased regime — `precip_regime`'s
+/// `band == 0` default).
+/// type-audit: bare-ok(prose: return)
+pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+}
+
+/// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
+/// the internal re-derivations, so the almanac render shares one terrain and
+/// one climate (The Single Sculpt). Byte-identical to `rains_lines`.
+fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
+    let geo = terrain.geosphere();
+
+    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
+    for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
+        if terrain.is_ocean(cell) {
+            // Same tie-break convention as `diurnal_lines`: strict `<`
+            // keeps the first-seen (lowest `CellId`) cell on ties.
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
+            }
+            continue;
+        }
+        if driest.is_none_or(|(_, best)| amp > best) {
+            driest = Some((cell, amp));
+        }
+    }
+
+    let mut lines = Vec::new();
+    if let Some((cell, _)) = driest {
+        lines.push(rains_line("The driest interior", climate, cell));
+    }
+    if let Some((cell, _)) = ocean {
+        lines.push(rains_line("The open ocean", climate, cell));
+    }
+    lines
+}
+
+/// Below this annual total (mm/yr) a cell is effectively rainless, and its
+/// seasonal-regime label — a categorical circulation classification computed
+/// independently of the amount (spec §2) — carries no meaning: a "monsoon"
+/// with no rain reads as a contradiction. The regime parenthetical is dropped
+/// below this floor. 50 mm/yr is the conventional hyperarid boundary.
+/// type-audit: bare-ok(threshold: mm/yr)
+const REGIME_FLOOR_MM: f64 = 50.0;
+
+/// Render one sample site's precipitation readout: annual mm, phase
+/// (rain/snow), and — above the arid floor, where it means something — the
+/// seasonal regime word (see [`rains_lines`] and [`REGIME_FLOOR_MM`]).
+/// type-audit: bare-ok(prose: site), bare-ok(prose: return)
+fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::CellId) -> String {
+    let mm = climate.precip_at(cell).get();
+    let phase = precip_phase_word(climate.snow_fraction_at(cell));
+    // "about 0 mm" reads oddly for a cell that rounds to nothing; name the
+    // bound instead.
+    let amount = if mm < 1.0 {
+        "under 1 mm".to_string()
+    } else {
+        format!("about {mm:.0} mm")
+    };
+    if mm < REGIME_FLOOR_MM {
+        format!("{site} receives {amount} of {phase} a year.")
+    } else {
+        let regime = regime_word(climate.regime_at(cell));
+        format!("{site} receives {amount} of {phase} a year ({regime}).")
+    }
+}
+
+/// The plain-prose sky phrase for a weather state (The Firmament). `pub` so
+/// both the almanac's headline lines ([`weather_line_for`]) and possession's
+/// [`sky_report`] render the same weather vocabulary — one definition, no
+/// drift between the two surfaces.
+/// type-audit: bare-ok(prose: return)
+pub fn sky_phrase(
+    state: hornvale_climate::WeatherState,
+    cloud: hornvale_climate::CloudType,
+) -> &'static str {
+    use hornvale_climate::{CloudType, WeatherState};
+    match (state, cloud) {
+        (WeatherState::Storm, _) => "torn by storm, towering thunderheads overhead",
+        (WeatherState::Rain, _) => "a low grey rain-deck",
+        (WeatherState::Overcast, _) => "a flat overcast",
+        (WeatherState::Fair, _) => "fair, with scattered cumulus",
+        (WeatherState::Clear, CloudType::Cirrus) => "clear but for high cirrus",
+        (WeatherState::Clear, _) => "clear",
+    }
+}
+
+/// The Firmament's headline lines for the almanac's Land section: the felt
+/// sky at the same two sample sites the rains line uses (driest interior,
+/// open ocean), on the almanac's reference day (0.0). Level 0 — a pure
+/// observation.
+/// type-audit: bare-ok(prose: return)
+pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    Ok(firmament_lines_from(
+        &terrain_of(world)?,
+        &climate_of(world)?,
+    ))
+}
+
+/// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
+/// Sculpt).
+fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
+    let geo = terrain.geosphere();
+
+    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
+    for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
+        if terrain.is_ocean(cell) {
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
+            }
+            continue;
+        }
+        if driest.is_none_or(|(_, best)| amp > best) {
+            driest = Some((cell, amp));
+        }
+    }
+
+    let mut lines = Vec::new();
+    if let Some((cell, _)) = driest {
+        lines.push(weather_line_for("The driest interior", climate, cell));
+    }
+    if let Some((cell, _)) = ocean {
+        lines.push(weather_line_for("The open ocean", climate, cell));
+    }
+    lines
+}
+
+/// One sample site's weather line at day 0.0.
+/// type-audit: bare-ok(prose: site), bare-ok(prose: return)
+fn weather_line_for(
+    site: &str,
+    climate: &GeneratedClimate,
+    cell: hornvale_kernel::CellId,
+) -> String {
+    let state = climate.weather_at(cell, 0.0);
+    let cloud = climate.cloud_type_at(cell, 0.0);
+    hornvale_almanac::render_weather_line(site, sky_phrase(state, cloud))
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
@@ -1857,6 +2117,63 @@ pub fn observed_phenomena_as_at(
     observed_phenomena_at(world, wc, name, place)
 }
 
+/// [`observed_phenomena_as_at`], reusing an ALREADY-BUILT climate instead of
+/// re-deriving one (which runs the full terrain-sculpting pipeline over the
+/// globe). For a caller observing MANY places of one world — the lab's
+/// `name-gloss-true` metric, one observation per settlement — this pays the
+/// sculpt once (the caller's pre-built `climate`, e.g. a Lab view's
+/// `climate()`) instead of once per place. Byte-identical to
+/// [`observed_phenomena_as_at`]: the reused climate is the same
+/// `climate_of(world)` value that path derives, threaded through
+/// [`phenomena_sources_from`], and observation reads only its fields.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_at_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    place: EntityId,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// [`observed_phenomena_as_in`], reusing an ALREADY-BUILT climate — the
+/// world's-first-place counterpart of [`observed_phenomena_as_at_from`], for
+/// the lab's per-species religion metrics (`pantheon-sig`, `epithet-honorific`).
+/// Byte-identical to [`observed_phenomena_as_in`] for the same world's climate.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
+        return Ok(Vec::new());
+    };
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// The shared core of the `_from` observers: [`observed_phenomena_from`] with
+/// the phenomena sources built off an ALREADY-BUILT climate
+/// ([`phenomena_sources_from`]) rather than re-derived per call. Byte-identical
+/// to the per-call path — `phenomena_sources` is pure over the observed world,
+/// and the reused climate equals the one that path would derive.
+fn observed_phenomena_from_with_climate(
+    world: &World,
+    wc: &WorldComponents,
+    name: &'static str,
+    place: EntityId,
+    position: Option<GeoCoord>,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let boxed = phenomena_sources_from(world, climate)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    observe_with_sources(world, wc, name, place, position, &sources)
+}
+
 /// The observation itself, factored out with an explicit `position` so
 /// glossed settlement naming (Task 9) can observe from the settlement's own
 /// cell coordinate BEFORE the settlement entity exists — names are drawn
@@ -1975,6 +2292,20 @@ fn sentiment_concept(sentiment: hornvale_religion::Sentiment) -> &'static str {
 pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
     let wc = WorldComponents::assemble()?;
     observed_phenomena_as_in(world, &wc, species)
+}
+
+/// [`observed_phenomena_as`], reusing an ALREADY-BUILT climate (via
+/// [`observed_phenomena_as_in_from`]) instead of re-deriving one — threaded
+/// down the chorus `cyclic_beliefs_from` path so the census stops re-sculpting.
+/// Byte-identical to `observed_phenomena_as`.
+/// type-audit: bare-ok(identifier-text: species)
+fn observed_phenomena_as_from(
+    world: &World,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    observed_phenomena_as_in_from(world, &wc, species, climate)
 }
 
 /// Map a kind's (language-owned) articulation vector onto language's own
@@ -2257,6 +2588,29 @@ pub fn exposure_of(
     exposure_of_impl(world, &wc, name, &settled, &coexisting, &terrain, &climate)
 }
 
+/// [`exposure_of`], reusing ALREADY-BUILT terrain and climate instead of
+/// re-sculpting them (`exposure_of` runs the terrain pipeline twice — once
+/// directly, once inside its `climate_of`). Byte-identical: the sole
+/// difference is that the passed terrain/climate replace `terrain_of(world)`/
+/// `climate_of(world)`, which a Lab view's `terrain()`/`climate()` equal by
+/// construction; every other input (the assembled roster, the settled/
+/// coexisting cells) is derived exactly as `exposure_of` derives it. Threaded
+/// down the `lexicon_from` chain so the census's ~14 lexicon metrics stop
+/// re-sculpting per call.
+/// type-audit: bare-ok(identifier-text)
+fn exposure_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
+    let settled = settled_cells(world, species);
+    let coexisting = placed_species(world);
+    exposure_of_impl(world, &wc, name, &settled, &coexisting, terrain, climate)
+}
+
 /// [`exposure_of`]'s classification rules (spec §7), factored out so
 /// glossed naming (Task 9) can classify a species' exposure from the
 /// scatter *this build pass is about to place* rather than from committed
@@ -2458,6 +2812,59 @@ pub fn lexicon_of_in(
         &exposures,
         &daughters,
     ))
+}
+
+/// [`lexicon_of_in`], reusing ALREADY-BUILT terrain and climate down the
+/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. Only
+/// the `exposure_*` line differs from `lexicon_of_in`; the draw order (`ph`
+/// before exposure, exactly as `lexicon_of_in`) is preserved so the seed
+/// stream is consumed identically. Byte-identity pinned by the census A/B and
+/// the `lexicon_from_matches_lexicon_of` test.
+/// type-audit: bare-ok(identifier-text: species)
+fn lexicon_of_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of_in(world, wc, species);
+    let exposures = exposure_from(world, species, terrain, climate)?;
+    let name = resolve_kind(wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
+        None => (name, ph.clone()),
+    };
+    let daughters = family_daughters(world, wc, family);
+    Ok(hornvale_language::build_lexicon(
+        &world.seed,
+        name,
+        fam_label,
+        &ph,
+        &proto_ph,
+        &exposures,
+        &daughters,
+    ))
+}
+
+/// [`lexicon_of`], reusing ALREADY-BUILT terrain and climate (a Lab view's
+/// `terrain()`/`climate()`) so the census's many lexicon metrics stop
+/// re-sculpting the globe per call — the terrain sculpt was ~80% of the
+/// post-name-gloss census cost, almost all of it here. Byte-identical to
+/// `lexicon_of` (same assembled roster, same draw order).
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    lexicon_of_in_from(world, &wc, species, terrain, climate)
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
@@ -2922,6 +3329,23 @@ fn build_to(
         &mass_map,
         CONDENSATION_THRESHOLD,
     );
+    // the-confluence T3 (save-format surface, spec §6): re-pointing the
+    // freshwater term at `river_proximity` and re-fitting
+    // `CONDENSATION_THRESHOLD` changes WHICH cells clear condensation (and
+    // therefore WHICH cells this pass places settlements on) — but this is
+    // a **derived-formula change**, not a stream-label epoch. Everything
+    // upstream of `condense_stack` (`carrying_inputs_of`,
+    // `carrying_capacity`, `coexist::pack`) is a pure, seed-free function of
+    // terrain/climate — `hornvale_demography` never imports `Seed`/`Stream`
+    // at all — and every name drawn below is salted by the settlement's own
+    // cell id (see the comment above `phonologies`), not by settlement COUNT
+    // or ORDER, so a shifted settlement set perturbs no OTHER draw's inputs.
+    // `settlement::stream_labels()` already documents `settlement/placement`/
+    // `settlement/population` as drawing nothing from the seed (retired
+    // pre-the-gathering); that remains true unchanged here. No new stream
+    // label, no draw-order shift — same seed + pins still yields a
+    // byte-identical world (`windows/worldgen/tests/confluence.rs`,
+    // `seed_42_is_byte_identical_across_two_builds_after_the_confluence`).
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -3337,7 +3761,7 @@ fn build_to(
                 &world.registry,
             )
             .expect("world_entity has no prior is-a fact, so this cannot conflict");
-        if let Some(name) = world_name_in(&world, wc) {
+        if let Some(name) = world_name_in_from(&world, wc, &terrain, &climate) {
             world
                 .ledger
                 .commit(
@@ -3375,7 +3799,7 @@ fn build_to(
         for kind in placed_peoples(&world) {
             let collective =
                 mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
-            let autonym = lexicon_of_in(&world, wc, kind.0)?
+            let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
                 .entry("person")
                 .and_then(|entry| match entry {
                     hornvale_language::LexEntry::Root { views, .. }
@@ -3712,8 +4136,24 @@ pub fn world_name(world: &World) -> Option<String> {
 /// injected `wc` it already built rather than re-assembling components.
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
+    let terrain = terrain_of(world).ok()?;
+    let climate = climate_of(world).ok()?;
+    world_name_in_from(world, wc, &terrain, &climate)
+}
+
+/// [`world_name_in`], reusing ALREADY-BUILT terrain/climate down
+/// [`lexicon_of_in_from`] instead of re-sculpting the globe. The planet genesis
+/// stage — which already holds the sculpted terrain/climate — calls this so
+/// naming the world costs no extra sculpt. Byte-identical to `world_name_in`.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Option<String> {
     let kind = dominant_people_in(world, wc)?;
-    let lex = lexicon_of_in(world, wc, kind.0).ok()?;
+    let lex = lexicon_of_in_from(world, wc, kind.0, terrain, climate).ok()?;
     match lex.entry("earth")? {
         hornvale_language::LexEntry::Root { views, .. }
         | hornvale_language::LexEntry::Compound { views, .. } => Some(views.roman.clone()),
@@ -3789,8 +4229,42 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
 /// The single construction site for the provider (Constitution §2.4 tiers).
+///
+/// Appends a weather clause (The Firmament, spec Weather Program C4): the
+/// felt sky at the world's representative cell — the first settlement's
+/// location, the same "first place" vantage `calendar_lines` and
+/// `night_sky_lines` already read via [`place_coord`] — rendered through
+/// [`sky_phrase`], the one weather vocabulary the almanac's headline lines
+/// share. A placeless world (no settlement has been placed, or has no
+/// committed coordinate) falls back to cell 0 — still informative, just not
+/// settlement-anchored, mirroring the fallback-free-but-defaulting posture
+/// `night_sky_lines`' heliacal latitude uses. `windows/vessel/src/vantage.rs`
+/// turns the rendered `description` into `Vantage.sky`, so a possessed
+/// agent's sky and the almanac's placed-observer lines describe the same
+/// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    Ok(sky_of(world)?.sky_at(time))
+    let mut report = sky_of(world)?.sky_at(time);
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    let cell = hornvale_terrain::places(world)
+        .into_iter()
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
+        .unwrap_or(hornvale_kernel::CellId(0));
+    let state = climate.weather_at(cell, time.day);
+    let cloud = climate.cloud_type_at(cell, time.day);
+    report.description = format!(
+        "{} The sky is {}.",
+        report.description,
+        sky_phrase(state, cloud)
+    );
+    Ok(report)
 }
 
 /// The local climate, from whichever climate provider this world uses.
@@ -4355,6 +4829,8 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         water_lines: water_lines_from(&terrain),
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
+        rains_lines: rains_lines_from(&terrain, &climate),
+        firmament_lines: firmament_lines_from(&terrain, &climate),
         deep_time_lines,
         peoples,
         pantheons: {
@@ -4896,12 +5372,22 @@ mod tests {
         // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
         // season moved it again within the epoch: iteration 2's clip-taper
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
-        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Re-pin
-        // here (with review) whenever a deliberate terrain change moves world
-        // identity.
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Two
+        // parallel campaigns then each moved world identity off that 8, and
+        // this merge carries BOTH: The Confluence (T2) re-pointed
+        // `carrying_inputs_of`'s freshwater term at `river_proximity` (so
+        // settlements condense near rivers -- see
+        // `windows/worldgen/tests/confluence.rs`), redistributing carrying
+        // capacity (8 -> 4 on its branch); The Rains (precipitation epoch)
+        // rewrote the moisture field (advected budget trace), shifting the
+        // biomes and so the settlement layout (8 -> 9 on its branch). On the
+        // merged tree the two combine and the largest attractor re-derives to
+        // 6 (measured on the merged tree — not either branch's value alone).
+        // Re-pin here (with review) whenever a deliberate
+        // terrain/carrying-capacity/moisture change moves world identity.
         assert_eq!(
-            village.population, 8,
-            "the world's largest attractor headcount is pinned at this seed (epoch v4)"
+            village.population, 6,
+            "the world's largest attractor headcount is pinned at this seed (the-confluence freshwater + the-rains moisture epoch, merged)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
@@ -5218,6 +5704,25 @@ mod tests {
         assert!(sky.description.contains("zenith"));
         let climate = climate_report(&world);
         assert_eq!(climate.temperature_c, 18.0);
+    }
+
+    /// The Firmament: possession's sky report narrates the felt weather, not
+    /// just the astronomical scene — `sky_phrase` shared with the almanac's
+    /// headline lines (DRY). Deterministic for a fixed `(seed, day)`.
+    #[test]
+    fn the_sky_report_names_the_weather() {
+        let world = generated(42);
+        let report = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let text = &report.description;
+        assert!(
+            ["clear", "fair", "overcast", "rain", "storm"]
+                .iter()
+                .any(|w| text.contains(w)),
+            "the sky report must narrate the weather: {text}"
+        );
+
+        let again = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        assert_eq!(report, again, "the weather clause is deterministic");
     }
 
     #[test]
@@ -5835,6 +6340,111 @@ mod tests {
         let world = constant(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seas_lines, seas_lines(&world).unwrap());
+    }
+
+    // A spinning world names both sample sites with a real precipitation
+    // readout; unlike `diurnal_lines`/`seas_lines`, a locked world is NOT
+    // empty — precipitation, snow fraction, and regime are all defined
+    // regardless of rotation regime (The Rains).
+    #[test]
+    fn rains_lines_report_both_sample_sites_and_are_present_on_a_spinning_world() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Normal),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = rains_lines(&spinning).unwrap();
+        assert_eq!(
+            lines.len(),
+            2,
+            "expected one line per sample site: {lines:?}"
+        );
+        assert!(lines[0].contains("The driest interior"));
+        assert!(lines[1].contains("The open ocean"));
+        assert!(
+            lines[0].contains("mm of"),
+            "expected an mm readout: {}",
+            lines[0]
+        );
+        // The regime-floor guard (both arms exercised on seed 42): the driest
+        // interior is effectively rainless, so it carries no seasonal-regime
+        // parenthetical (a "monsoon" with no rain is a contradiction) and never
+        // reads "about 0 mm"; the open ocean is well above the floor and keeps
+        // its regime label.
+        assert!(
+            !lines[0].contains('('),
+            "a near-rainless cell must not claim a seasonal regime: {}",
+            lines[0]
+        );
+        assert!(
+            !lines[0].contains("about 0 mm"),
+            "a cell that rounds to zero should read 'under 1 mm', not 'about 0 mm': {}",
+            lines[0]
+        );
+        assert!(
+            lines[1].contains('('),
+            "a wet cell above the arid floor still names its regime: {}",
+            lines[1]
+        );
+
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        assert!(
+            !rains_lines(&locked).unwrap().is_empty(),
+            "precipitation is defined regardless of rotation regime"
+        );
+    }
+
+    #[test]
+    fn rains_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.rains_lines, rains_lines(&world).unwrap());
+    }
+
+    #[test]
+    fn firmament_lines_report_the_sky_at_both_sample_sites() {
+        let world = generated(42);
+        let lines = firmament_lines(&world).unwrap();
+        assert_eq!(
+            lines.len(),
+            2,
+            "one weather line per sample site: {lines:?}"
+        );
+        assert!(lines[0].contains("The driest interior"));
+        assert!(lines[1].contains("The open ocean"));
+        // Each names a sky condition word.
+        for l in &lines {
+            assert!(
+                ["clear", "fair", "overcast", "rain", "storm"]
+                    .iter()
+                    .any(|w| l.contains(w)),
+                "a weather line must name a sky condition: {l}"
+            );
+        }
+    }
+
+    #[test]
+    fn firmament_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.firmament_lines, firmament_lines(&world).unwrap());
     }
 
     #[test]

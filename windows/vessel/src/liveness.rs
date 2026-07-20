@@ -1605,62 +1605,66 @@ mod tests {
 
     #[test]
     fn seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding() {
-        // T5 RE-WIRE, MEASURED NOT ASSUMED: The Freshet shipped a real
-        // salt/fresh classification (`WaterKind::is_fresh`, rivers only).
-        // Decision-ledger #9 parked this campaign because the OLD resource
-        // (sea-level "water") put the salt ocean thousands of hops from any
-        // inland settlement — unreachable, and the wrong referent besides
-        // (nobody drinks the sea). This test measures, with the REAL
-        // mechanism a live session runs (`DriveMovements`'s greedy-downhill,
-        // never-revisit-within-a-call exploration — NOT `nearest_water`'s
-        // own address-ordered BFS, which is a different, unrepresentative
-        // traversal used only to set `Npc.resource`'s reference value),
-        // whether the possessed agent's OWN home settlement (the one
-        // `possess --seed 42` actually starts at) now discovers fresh water.
+        // THE CONFLUENCE'S PAYOFF, MEASURED NOT ASSUMED: the earlier pinned
+        // finding here (see git history) measured that seed 42's possessed
+        // home settlement was topologically stuck — the greedy-downhill,
+        // never-revisit-within-a-call exploration walked 2,592 rooms over an
+        // enormous 100,000-day wait and never reached fresh water, boxed in
+        // by a riverless drainage basin. That was a settlement-PLACEMENT
+        // fact, not a belief-mechanism bug: the settlement itself sat off
+        // the river network.
         //
-        // MEASURED (hand-verified at the larger budgets below while
-        // diagnosing — not re-run every gate, too slow):
-        //   - `nearest_water`'s own BFS finds fresh water from this
-        //     settlement at ~93,000 expansions — three orders of magnitude
-        //     closer than the old salt ocean (unreachable within 500,000),
-        //     but still two orders of magnitude past `PLAN_BUDGET` (1,000),
-        //     so `Npc.resource` still falls back to `home` for THIS
-        //     settlement specifically.
-        //   - The REAL exploration mechanism below walks 2,592 distinct
-        //     rooms over an enormous 100,000-day wait (far beyond anything a
-        //     player would ever `wait`) and STILL never reaches fresh water:
-        //     it gets "boxed in" (every neighbor of its current room already
-        //     visited this call) before finding one.
-        //   - Checked directly against `derive_npcs`'s real selection (this
-        //     settlement plus its two next-most-populous neighbors — the
-        //     actual three NPCs a `possess --seed 42` session derives): ALL
-        //     THREE walk (2,592 / 1,710 / 3,142 moves) and NONE drink.
-        //   - This is settlement-PLACEMENT-dependent, not universal: a
-        //     hand-swept sample of ten of this seed's settlements found the
-        //     mechanism DOES work elsewhere (two of ten drink — one starts
-        //     already adjacent to a river, one reaches one in 448 moves).
+        // The Confluence re-points the carrying-capacity freshwater term at
+        // real proximity to `WaterKind::River` cells, so settlements now
+        // condense onto/adjacent-to rivers (measured: seed 42 fraction
+        // within reach 0.7222, up from a pre-Confluence baseline nowhere
+        // close). Re-measuring this exact settlement (same accessor,
+        // `village_info`, on the post-Confluence world — the campaign moved
+        // WHERE settlements land, so "home" now names a different site) with
+        // the identical real mechanism:
         //
-        // WHY (not a regression this task introduces): a walker that never
-        // revisits a room within one call is not a global search — it can
-        // wall itself into a riverless drainage basin whose every boundary
-        // room's neighbors are already visited, even though unvisited
-        // (lower, river-bearing) ground exists elsewhere in the same
-        // connected mesh. This is exactly the risk spec decision #6 named
-        // and reserved when it chose the greedy prior over a frontier
-        // search ("more machinery than a greedy prior... a followup").
-        // Widening `PLAN_BUDGET`/`MAX_STEPS` does not help — the walk is
-        // topologically stuck, not budget-limited; the fix is smarter
-        // exploration (decision-ledger followup #6), out of this task's
-        // scope.
+        //   seed 42 home settlement: 0 exploration move(s) over an enormous
+        //   wait, 2 drink(s).
         //
-        // REPORTED LOUDLY, NOT PAPERED OVER: the mechanism-level keystones
-        // above (`an_ignorant_agent_discovers_water_then_later_beelines`,
-        // `two_agents_believe_different_sources_...`) prove BELIEF itself
-        // is correct on planted terrain; this test pins that the real
-        // world's terrain/exploration-policy interaction is the remaining
-        // gap for THIS specific seed/settlement — visible here, not lost,
-        // so a future exploration-policy change that fixes (or worsens) it
-        // is caught, not silently assumed.
+        // Zero moves means the home settlement's own room now reads as
+        // fresh water directly (`is_water` true at spawn) — no discovery
+        // walk is even needed; the agent drinks in place. Checked against
+        // `derive_npcs`'s real selection (this settlement plus its two
+        // next-most-populous neighbors — the actual three NPCs a
+        // `possess --seed 42` session derives): ALL THREE now read 0 moves,
+        // 2 drinks — the condensation pulled every one of them onto water,
+        // not just the lucky one. This is the campaign's visible payoff:
+        // The Surmise's parked "can't reach water" finding is resolved by
+        // fixing WHERE towns are, not by making agents smarter.
+        //
+        // The general exploration-policy gap this pin used to document
+        // (a walker that can box itself into an unvisited-but-connected
+        // basin) is not disproven by this result — it's just no longer
+        // triggered by seed 42's home settlement. It remains a real,
+        // out-of-scope gap for settlements condensation still leaves off a
+        // river (decision-ledger followup #2), and the coarse-cell vs.
+        // walk-depth resolution bridge (followup #1) is a related, separate
+        // concern this measurement does not exercise (0 moves means the
+        // coarse cell itself already reads as water at walk depth too).
+        //
+        // MEASURED, ALSO SURPRISING: only 2 drinks register over the
+        // 100,000-day wait, not the thousands a ~5.667-day drive cycle would
+        // suggest. Traced (debug prints, not left in): the zero-distance
+        // on-water case is new — no prior settlement ever landed exactly ON
+        // its own water source, so this is the first time the closed-form
+        // `Hold` jump (`next_act = last_drank + act/rise`) and a drink cycle
+        // of the exact same length interact at THIS boundary. By the third
+        // cycle, `last_drank + act/rise` lands (floating-point rounding) a
+        // hair BELOW `act` when read back as `drive`, so `decide` sees
+        // "not yet thirsty" and re-derives an IDENTICAL `next_act`, which
+        // trips the strict-progress guard (`next_act <= day`) and ends the
+        // tick. This is not this campaign's regression (the guard predates
+        // it, guarding a different case — a genuinely unreachable plan
+        // recomputing the same Hold forever) and does not weaken the
+        // payoff (2 confirmed drinks is already `>= 1`, and no real
+        // `possess` session ever `wait`s 100,000 days) — but it is a real,
+        // newly-exposed quirk in the on-water zero-distance path, captured
+        // as a followup rather than silently absorbed.
         let mut world_reg = hornvale_kernel::ConceptRegistry::default();
         world_reg
             .register_predicate(AGENT_AT, false, "pos")
@@ -1708,14 +1712,23 @@ mod tests {
             "seed 42 home settlement: {moves} exploration move(s) over an \
              enormous wait, {drinks} drink(s)"
         );
+        assert!(
+            drinks >= 1,
+            "THE CONFLUENCE'S PAYOFF (update this assertion AND the doc \
+             comment above together if it regresses — don't just delete \
+             it): the possessed agent's own home settlement's NPC must \
+             reach fresh water on real seed 42 now that settlement \
+             condensation pulls towns onto the river network (see the doc \
+             comment above for the measured before/after); got {drinks} \
+             drink(s) over the wait"
+        );
         assert_eq!(
-            drinks, 0,
-            "PINNED FINDING (update this assertion AND the doc comment above \
-             together if it now drinks — don't just delete it): the \
-             possessed agent's own home settlement's NPC does not currently \
-             discover fresh water via the greedy-downhill exploration policy \
-             on real seed 42 (see the doc comment above for why, and the \
-             followup this points at)"
+            moves, 0,
+            "measured finding: the home settlement's own room now reads as \
+             fresh water directly, so no discovery walk is needed — update \
+             this pin (and the doc comment) if a future settlement-position \
+             change makes this settlement's water a real walk rather than \
+             immediate"
         );
     }
 
@@ -2087,7 +2100,8 @@ mod tests {
         // (guaranteed-one-hop) terrain — a deterministic, seed-independent
         // proof of the mechanism, orthogonal to
         // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`'s
-        // measurement of the real seed-42 world's own exploration-policy gap.
+        // measurement of the real seed-42 world's own settlement/water
+        // placement.
         // Mutation-verify: blanking `agent_at_fact`'s "went down to the
         // river it knew (thirst)" string, or `drank_fact`'s "drank from the
         // river (thirst sated)" string, reds ONE of the two assertions

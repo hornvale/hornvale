@@ -84,17 +84,23 @@ rm -f "$possess_tmp"
 # The over-time transcript (the-quickening, T4; the-wanting, T4): a NEW,
 # separate recording — the day-0 transcript above never advances time, so it
 # cannot show the world moving. This one `wait`s across a full drive cycle,
-# so a derived NPC's homeostatic thirst rises, it departs for its resource
-# and returns (named on `look`/`wait`'s own narration and readable directly
-# via `needs`'s diegetic felt-state prose), and `why` recounts its dated
-# `agent-at` history with the drive's own provenance ("sought water
-# (thirst)"). Wiring it here (rather than editing the day-0 script) is what
+# so a derived NPC's homeostatic thirst rises and is satisfied (narrated by
+# `wait`, felt directly through `needs`, and recounted with its own reason
+# by `why`). Wiring it here (rather than editing the day-0 script) is what
 # keeps the day-0 transcript byte-identical.
+#
+# THE CONFLUENCE (settlement condensation re-pointed at the real river
+# network): this world's flagship settlement now sits directly on fresh
+# water, so the NPC drinks in place rather than walking to it — `why`
+# recounts a drink, not a journey. Not every settlement's fate (condensation
+# lands most, not all, towns on the river network — a real, measured
+# fraction, not every seed/settlement), but this world's own flagship
+# settlement's real, measured outcome.
 possess_ot_tmp="$(mktemp)"
 run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time-walk.txt > "$possess_ot_tmp"
 {
     head -n 1 "$possess_ot_tmp"
-    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and set out\nseeking fresh water — narrated by `wait`, felt directly through `needs`,\nand recounted with its own reason by `why`. Belief is a cache the NPC\npopulates by perception, not ground truth: this settlement never happens\nto find a river within the walk shown here, so it wanders rather than\nreturning — a real, honest outcome of "plan over belief, not truth" (The\nSurmise), not every settlement'"'"'s fate. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
+    printf '\n*(This transcript is frozen too — a recording, not a live session — but\nunlike the [day-0 transcript](./possession-seed-42.md), it `wait`s across a\nfull homeostatic drive cycle: watch a derived NPC grow thirsty and\nsatisfy it — narrated by `wait`, felt directly through `needs`, and\nrecounted with its own reason by `why`. This settlement condenses\ndirectly onto fresh water (settlements-near-rivers): the NPC drinks in\nplace rather than walking to it, so `why` recounts a drink, not a\njourney — not every settlement'"'"'s fate (condensation lands most, not\nall, towns on the river network), but this world'"'"'s own flagship\nsettlement'"'"'s real, measured outcome. The world still moves only\ninside a possess session; a freshly built world commits none of this.)*\n'
     tail -n +2 "$possess_ot_tmp"
 } > book/src/gallery/possession-over-time-seed-42.md
 rm -f "$possess_ot_tmp"
@@ -126,20 +132,22 @@ run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-se
 run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
 
-# OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
-# local box unless Nathan explicitly says so. The sanctioned path is the
-# AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
-# invokes this script with HV_CENSUS=1. Locally the censuses are therefore
-# skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
-# Cadence: once per campaign, just before the merge to main, with warning
-# given to Nathan first — census/validation coverage deliberately lags
-# (the local gate stays < 5 min; rapid development is the ratified trade).
+# Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
+# skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
+# But since decision 0063 (The Local Census cut the per-world cost ~285 → ~8
+# CPU-s) the sanctioned refresh is LOCAL: run `HV_CENSUS=1 bash
+# scripts/regenerate-artifacts.sh` once per campaign at the pre-merge close —
+# the full ~2000-world census takes ~7 min — keeping the fixtures current with
+# main instead of lagging. `make regen-remote` (the AWS box) is ABANDONED —
+# this box is the single canonical platform (AWS differs on ~0.1% of
+# discrete-count metrics, so it can't be a parallel reference; supersedes the
+# AWS-only mandate of 0046, decision 0063).
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
-    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min local)" >&2
     run_release -p hornvale -- lab run studies/the-census.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
 else
-    echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
+    echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 to refresh; ~7 min local since decision 0063)" >&2
 fi
 
 echo "regenerate-artifacts: type-audit report" >&2

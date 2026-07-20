@@ -63,6 +63,58 @@ pub fn classify(
     }
 }
 
+/// The hop radius over which river proximity falls to zero. Tuned (The
+/// Confluence) so carrying capacity spikes ADJACENT to rivers — settlements
+/// condense a short walk from fresh water, not necessarily on it.
+/// type-audit: bare-ok(count)
+pub const RIVER_REACH: u32 = 3;
+
+/// Per-cell proximity to fresh flowing water, in `[0, 1]`: `1.0` on a
+/// `WaterKind::River` cell, decaying linearly to `0.0` at `reach` hops. A
+/// deterministic multi-source BFS outward from all River cells (frontier
+/// processed in `CellId` order — no RNG, no HashMap). The carrying-capacity
+/// freshwater term (The Confluence) rides this instead of the smooth
+/// drainage/moisture proxy, so condensation pulls towns near rivers.
+/// type-audit: bare-ok(count: reach), bare-ok(ratio: return)
+pub fn river_proximity(
+    geo: &Geosphere,
+    water_kind: &CellMap<WaterKind>,
+    reach: u32,
+) -> CellMap<f64> {
+    // hop distance to nearest River, capped at reach+1 (unreached).
+    let unreached = reach + 1;
+    let mut dist: Vec<u32> = vec![unreached; geo.cell_count()];
+    let mut frontier: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+    for c in geo.cells() {
+        if matches!(*water_kind.get(c), WaterKind::River) {
+            dist[c.0 as usize] = 0;
+            frontier.insert(c);
+        }
+    }
+    let mut d = 0u32;
+    while d < reach && !frontier.is_empty() {
+        let mut next: std::collections::BTreeSet<CellId> = std::collections::BTreeSet::new();
+        for c in &frontier {
+            for &n in geo.neighbors(*c) {
+                if dist[n.0 as usize] > d + 1 {
+                    dist[n.0 as usize] = d + 1;
+                    next.insert(n);
+                }
+            }
+        }
+        frontier = next;
+        d += 1;
+    }
+    CellMap::from_fn(geo, |c| {
+        let h = dist[c.0 as usize];
+        if h > reach {
+            0.0
+        } else {
+            1.0 - (h as f64) / (reach as f64 + 1.0)
+        }
+    })
+}
+
 /// Materialize the per-cell classification (recomputed at genesis, never
 /// serialized). `downhill[c] == None` marks a local minimum; a terminal salt
 /// sink is an endorheic local minimum.
@@ -175,5 +227,93 @@ mod tests {
         // cell 1 is land + high drainage + not-a-sink (downhill None makes it a sink
         // ONLY if endorheic; endorheic is false here) -> River.
         assert_eq!(*a.get(hornvale_kernel::CellId(1)), WaterKind::River);
+    }
+
+    #[test]
+    fn river_proximity_is_one_on_a_river_cell_and_decays_with_hops() {
+        // A tiny globe; mark one cell River, rest DryLand; proximity is 1.0 on it,
+        // strictly decreasing by hop distance, 0.0 beyond reach.
+        let geo = hornvale_kernel::Geosphere::new(3);
+        let river = hornvale_kernel::CellId(0);
+        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+            if c == river {
+                WaterKind::River
+            } else {
+                WaterKind::DryLand
+            }
+        });
+        let prox = river_proximity(&geo, &wk, RIVER_REACH);
+        assert_eq!(*prox.get(river), 1.0, "on a river cell");
+        // an immediate neighbour is high but < 1
+        let nb = geo.neighbors(river)[0];
+        assert!(
+            *prox.get(nb) > 0.0 && *prox.get(nb) < 1.0,
+            "adjacent is high but < 1"
+        );
+        assert!(
+            *prox.get(nb)
+                >= *prox.get(
+                    geo.neighbors(nb)
+                        .iter()
+                        .copied()
+                        .find(|n| *n != river)
+                        .unwrap()
+                ),
+            "monotone non-increasing with hops"
+        );
+    }
+
+    #[test]
+    fn river_proximity_is_zero_with_no_rivers() {
+        let geo = hornvale_kernel::Geosphere::new(3);
+        let wk = hornvale_kernel::CellMap::from_fn(&geo, |_| WaterKind::DryLand);
+        let prox = river_proximity(&geo, &wk, RIVER_REACH);
+        for c in geo.cells() {
+            assert_eq!(*prox.get(c), 0.0);
+        }
+    }
+
+    #[test]
+    fn river_proximity_is_deterministic_and_reload_stable() {
+        let geo = hornvale_kernel::Geosphere::new(3);
+        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+            if c.0 % 7 == 0 {
+                WaterKind::River
+            } else {
+                WaterKind::DryLand
+            }
+        });
+        let a = river_proximity(&geo, &wk, RIVER_REACH);
+        let b = river_proximity(&geo, &wk, RIVER_REACH);
+        for c in geo.cells() {
+            assert_eq!(a.get(c), b.get(c));
+        }
+    }
+
+    #[test]
+    fn river_proximity_seeds_every_river_not_just_the_first() {
+        // MULTI-SOURCE (the T1-review coverage catch): two distinct River cells
+        // must BOTH read proximity 1.0. A single-source BFS that seeds only the
+        // first river leaves the second at < 1.0 (it is >= 1 hop from the only
+        // source), so this distinguishes the correct multi-source BFS from a
+        // single-source one — which every other test passes.
+        let geo = hornvale_kernel::Geosphere::new(4);
+        let r1 = hornvale_kernel::CellId(0);
+        let r2 = hornvale_kernel::CellId(geo.cell_count() as u32 / 2);
+        assert_ne!(r1, r2);
+        let wk = hornvale_kernel::CellMap::from_fn(&geo, |c| {
+            if c == r1 || c == r2 {
+                WaterKind::River
+            } else {
+                WaterKind::DryLand
+            }
+        });
+        let prox = river_proximity(&geo, &wk, RIVER_REACH);
+        assert_eq!(*prox.get(r1), 1.0);
+        assert_eq!(
+            *prox.get(r2),
+            1.0,
+            "every river cell is a BFS source, not just the first"
+        );
     }
 }

@@ -62,9 +62,12 @@ usage:
   hornvale phonology                       dump per-species phonology as markdown
   hornvale dictionary [--world <PATH>]     dump per-species dictionary as markdown
   hornvale proto                           dump proto-goblinoid's inventory/phonotactics/proto-root table as markdown
-  hornvale book [--initiate]                render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
+  hornvale book [--initiate] [--at <DAY>]  render The Book: three volumes (seeds 1, 2, 3) of committed is-a facts as markdown
                                             (--initiate: the omniscient-reader edition — every organized culture's
                                             RevealedClaim entries disclosed too; compare-only, never committed)
+                                            (--at <DAY>: render the Reckoning of Years at one arbitrary standard
+                                            day instead of the committed epoch pair; stdout lens only, never
+                                            part of the committed artifact)
   hornvale voice [--out <DIR>]             author missing phonology audio clips (espeak-ng + ffmpeg; default out: book/src/audio)
   hornvale lab run <PATH>                  run a batch study, publishing CSV + book artifacts
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
@@ -336,6 +339,21 @@ fn parse_possess_day(args: &[String]) -> Result<f64, String> {
         ));
     }
     Ok(day)
+}
+
+/// Parse and validate `--at` for `book` (C8, The Diachronic Book): a
+/// finite, non-negative standard day, or `None` when the flag is absent
+/// (the committed artifact's fixed epoch pair). Mirrors
+/// `parse_possess_day`'s validation.
+fn parse_at_day(args: &[String]) -> Result<Option<f64>, String> {
+    let Some(s) = flag_value(args, "--at") else {
+        return Ok(None);
+    };
+    let day: f64 = s.parse().map_err(|_| format!("bad --at: {s}"))?;
+    if !(day.is_finite() && day >= 0.0) {
+        return Err(format!("bad --at: {s} (must be a finite non-negative day)"));
+    }
+    Ok(Some(day))
 }
 
 /// Possess the flagship agent and walk. `--seed` builds the world in
@@ -682,11 +700,17 @@ fn cmd_proto() -> Result<(), String> {
 /// lines are followed by a `### Tongues` subsection (C3 T3): one
 /// self-statement per placed people realized in its own tongue, then that
 /// tongue's per-tongue coverage note (the planet-kind gap every tongue
-/// carries — spec §5). After the Book is printed to stdout, a PROC-15
-/// coverage report (unrendered predicates per volume) is printed to
-/// stderr. Markdown to stdout; deterministic.
+/// carries — spec §5). Each volume also gets a `### The Reckoning of
+/// Years` subsection (C8): the observation ledger at the two
+/// preregistered epochs (day 0, the hundredth year), or — with `--at
+/// <DAY>` — a single ad hoc epoch at that day instead (stdout lens only;
+/// the committed artifact always uses the fixed pair regardless —
+/// `scripts/regenerate-artifacts.sh` never passes `--at`). After the Book
+/// is printed to stdout, a PROC-15 coverage report (unrendered predicates
+/// per volume) is printed to stderr. Markdown to stdout; deterministic.
 fn cmd_book(args: &[String]) -> Result<(), String> {
     let initiate = args.iter().any(|a| a == "--initiate");
+    let at = parse_at_day(args)?;
     let mut out = String::from("# The Book\n");
     let mut coverage: Vec<(u64, Vec<String>)> = Vec::new();
     for seed in [1u64, 2, 3] {
@@ -736,6 +760,8 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                 }
                 if let Some(doctrine) = &section.doctrine {
                     out.push_str(&format!("\n##### {}\n\n", doctrine.heading));
+                    out.push_str(&doctrine.tongue_taught_line);
+                    out.push_str("\n\n");
                     for line in &doctrine.emic {
                         out.push_str(line);
                         out.push('\n');
@@ -752,6 +778,34 @@ fn cmd_book(args: &[String]) -> Result<(), String> {
                         for line in &doctrine.margin {
                             out.push_str(&format!("*{line}*\n"));
                         }
+                    }
+                }
+            }
+        }
+        // C8 (The Diachronic Book): the committed pair, unless `--at`
+        // asks for a single ad hoc epoch instead (stdout lens only — the
+        // committed artifact never takes this branch, since
+        // `regenerate-artifacts.sh` never passes `--at`).
+        let reckoning: Vec<hornvale_book::ReckoningEpoch> = match at {
+            Some(day) => {
+                let at_days =
+                    hornvale_astronomy::StdDays::new(day).map_err(|e| format!("--at: {e}"))?;
+                vec![hornvale_book::reckoning_at(&world, at_days)]
+            }
+            None => vol.reckoning,
+        };
+        if !reckoning.is_empty() {
+            out.push_str("\n### The Reckoning of Years\n");
+            for epoch in reckoning {
+                out.push_str(&format!("\n#### {}\n\n", epoch.heading));
+                for line in &epoch.lines {
+                    out.push_str(line);
+                    out.push('\n');
+                }
+                if !epoch.margin.is_empty() {
+                    out.push('\n');
+                    for line in &epoch.margin {
+                        out.push_str(&format!("*{line}*\n"));
                     }
                 }
             }
@@ -1293,6 +1347,42 @@ mod tests {
     }
 
     #[test]
+    fn bad_at_value_rejects_non_finite_and_negative_spans() {
+        let err = parse_at_day(&args(&["--at", "inf"])).unwrap_err();
+        assert!(err.contains("bad --at"), "unexpected error text: {err}");
+        let err = parse_at_day(&args(&["--at", "-inf"])).unwrap_err();
+        assert!(err.contains("bad --at"), "unexpected error text: {err}");
+        let err = parse_at_day(&args(&["--at", "nan"])).unwrap_err();
+        assert!(err.contains("bad --at"), "unexpected error text: {err}");
+        let err = parse_at_day(&args(&["--at", "-1"])).unwrap_err();
+        assert!(err.contains("bad --at"), "unexpected error text: {err}");
+        assert_eq!(
+            parse_at_day(&args(&["--at", "36525"])).unwrap(),
+            Some(36525.0)
+        );
+        assert_eq!(parse_at_day(&args(&[])).unwrap(), None);
+    }
+
+    /// C8 (The Diachronic Book): the committed artifact always uses the
+    /// fixed epoch pair, never the CLI's `--at` lens — grepped directly
+    /// against the script (rather than merely asserted by convention), so
+    /// a future edit that slips `--at` into the regen command would
+    /// redden this test instead of silently changing the committed
+    /// artifact's Reckoning section to a single ad hoc epoch.
+    #[test]
+    fn regenerate_artifacts_never_passes_at() {
+        let script = include_str!("../../scripts/regenerate-artifacts.sh");
+        for line in script.lines() {
+            if line.contains("-- book") {
+                assert!(
+                    !line.contains("--at"),
+                    "regenerate-artifacts.sh must never pass --at to `book`: {line}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn usage_mentions_scout() {
         assert!(USAGE.contains("scout"));
     }
@@ -1399,6 +1489,11 @@ mod tests {
     #[test]
     fn usage_mentions_proto() {
         assert!(USAGE.contains("proto"));
+    }
+
+    #[test]
+    fn usage_mentions_book_at() {
+        assert!(USAGE.contains("--at"));
     }
 
     #[test]
