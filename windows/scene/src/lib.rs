@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(diagnostic-value: snow_fraction), bare-ok(index: precip_regime), bare-ok(diagnostic-value: cloud_fraction)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(diagnostic-value: snow_fraction), bare-ok(index: precip_regime), bare-ok(diagnostic-value: cloud_fraction), bare-ok(ratio: weather_propensity), bare-ok(index: cloud_type)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -189,6 +189,14 @@ pub struct TilesScene {
     /// per the schema stability contract.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub cloud_fraction: Vec<f64>,
+    /// Per-tile climatological storm propensity `[0,1]` (The Firmament) — the
+    /// slow prior the client animates typed clouds from. Appended after
+    /// `cloud_fraction` per the append-at-end stability rule.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub weather_propensity: Vec<f64>,
+    /// Per-tile cloud type at the scene's day (0 none, 1 cumulus, 2 stratus, 3
+    /// nimbostratus, 4 cumulonimbus, 5 cirrus) — the weather state's face.
+    pub cloud_type: Vec<u8>,
 }
 
 /// Dot product a · b.
@@ -255,6 +263,13 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut snow_fraction = Vec::with_capacity(tiles);
     let mut precip_regime = Vec::with_capacity(tiles);
     let mut cloud_fraction = Vec::with_capacity(tiles);
+    let mut weather_propensity = Vec::with_capacity(tiles);
+    let mut cloud_type = Vec::with_capacity(tiles);
+    // `tiles_scene` is a day-independent static document (unlike
+    // `temperature_grid`, which takes a day): the cloud-type face is sampled
+    // at day 0.0, the same snapshot convention the worldgen almanac's
+    // weather line uses (`weather_line_for`, `windows/worldgen/src/lib.rs`).
+    let scene_day = 0.0;
     for py in 0..height {
         let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;
         for px in 0..width {
@@ -285,6 +300,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             snow_fraction.push(climate.snow_fraction_at(c_cell));
             precip_regime.push(climate.regime_at(c_cell) as u8);
             cloud_fraction.push(climate.cloud_fraction_at(c_cell));
+            weather_propensity.push(climate.storm_propensity_at(c_cell));
+            cloud_type.push(climate.cloud_type_at(c_cell, scene_day) as u8);
         }
     }
     debug_assert!(
@@ -300,6 +317,7 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(precip_mm_yr.iter())
             .chain(snow_fraction.iter())
             .chain(cloud_fraction.iter())
+            .chain(weather_propensity.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
     );
@@ -329,6 +347,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         snow_fraction,
         precip_regime,
         cloud_fraction,
+        weather_propensity,
+        cloud_type,
     })
 }
 
@@ -1193,6 +1213,24 @@ mod tests {
         // PrecipRegime has 4 declared variants (Uniform, SummerMax,
         // WinterMax, Monsoon) — every index must land in 0..4.
         assert!(scene.precip_regime.iter().all(|&r| r < 4));
+    }
+
+    #[test]
+    fn scene_carries_weather_fields_additively() {
+        let scene = tiles_scene(&world(), 16).unwrap();
+        let n = scene.width as usize * scene.height as usize;
+        assert_eq!(scene.weather_propensity.len(), n);
+        assert_eq!(scene.cloud_type.len(), n);
+        assert!(
+            scene
+                .weather_propensity
+                .iter()
+                .all(|p| (0.0..=1.0).contains(p))
+        );
+        assert!(
+            scene.cloud_type.iter().all(|&t| t <= 5),
+            "cloud type is a 0..=5 enum tag"
+        );
     }
 
     #[test]

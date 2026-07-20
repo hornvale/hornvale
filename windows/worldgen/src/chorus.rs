@@ -1437,6 +1437,192 @@ pub fn noun_class_of(world: &World, species: &str, concept: &str) -> NounClass {
     }
 }
 
+// --- C8, The Diachronic Book: the observation ledger and the knowledge
+// ladder. Everything below is pure derivation over already-committed
+// state (the world's ledger, the reconstructed sky, and the same
+// `AccountParams`/`doctrine_of` machinery C4/C6 already ship) — zero new
+// draws, zero new facts, zero new save-format state. Re-running any
+// function here over the same `(world, species, at)` always reconstructs
+// the identical answer byte-for-byte (LANG-36's derived-never-stored
+// posture); nothing here is ever cached or serialized.
+
+/// The sky-capability threshold gating LUNAR witnessing (C8 §3.1): the
+/// same C4 threshold [`Requirement::SkyGraded`]'s moons row already uses
+/// (`account.rs`), reused verbatim rather than re-authored. Solar events
+/// carry no such gate — a darkened day-sky needs no night eyes, so every
+/// placed culture witnesses every solar event unconditionally.
+const LUNAR_WITNESS_THRESHOLD: f64 = 0.6;
+
+/// Preregistered (plan Global Constraints / spec §3.2): total witnessed
+/// events (any recurrence class) an organized cult needs to climb from
+/// `Counted` to [`LadderRung::Numbered`]. Folk-only cultures (no
+/// `doctrine_of`) never cross this rung regardless of count.
+const K_COUNT: usize = 3;
+
+/// Preregistered: witnessed events of ONE recurrence class (`(moon
+/// index, EclipseBody)` — the floor's honest class, no saros-search
+/// dependency) an organized cult needs to climb to
+/// [`LadderRung::Predictive`].
+const K_PREDICT: usize = 8;
+
+/// How far past `at` [`ladder_of`] scans for the taught prediction: one
+/// Metonic-generous window. Chosen so the closed-form scan comfortably
+/// spans several cycles of any witnessed recurrence class without
+/// depending on a particular moon's period. If no matching event falls
+/// inside this horizon the culture is still `Predictive` (the record
+/// stands) but the taught day is `None` — the next event is beyond the
+/// priesthood's teaching horizon, an honest arm.
+const PREDICTION_HORIZON_STD_DAYS: f64 = 10_000.0;
+
+/// One culture's witnessed eclipse record by day `at` (C8 §3.1) — pure,
+/// derived, ascending by day (the same order [`hornvale_astronomy::eclipse_events`]
+/// returns). There is no separate "memory" store: the institution's
+/// records ARE this witnessed set, and the folk's qualitative rung reads
+/// the identical set through [`ladder_of`] — it just renders no cardinal.
+/// Solar events are witnessed unconditionally; lunar events are
+/// witnessed iff `species`' own [`account_params_of`]`.sky_capability`
+/// meets [`LUNAR_WITNESS_THRESHOLD`].
+///
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observations_of(
+    world: &World,
+    species: &str,
+    at: hornvale_astronomy::StdDays,
+) -> Result<Observations, BuildError> {
+    let sky = crate::sky_of(world)?;
+    let crate::Sky::Generated(sky) = sky else {
+        return Err(BuildError::Pins(
+            "the diachronic observation ledger requires a Generated sky".to_string(),
+        ));
+    };
+    let params = account_params_of(world, species)?;
+    let from = hornvale_astronomy::StdDays::new(0.0).expect("0.0 is always a valid StdDays");
+
+    let events = hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), from, at)
+        .into_iter()
+        .filter(|event| match event.body {
+            hornvale_astronomy::EclipseBody::Solar => true,
+            hornvale_astronomy::EclipseBody::Lunar => {
+                params.sky_capability >= LUNAR_WITNESS_THRESHOLD
+            }
+        })
+        .map(|event| (event.day.get(), event.moon, event.body))
+        .collect();
+
+    Ok(Observations { events })
+}
+
+/// One culture's witnessed eclipse record by day `at` — pure, derived
+/// (see [`observations_of`]).
+/// type-audit: bare-ok(diagnostic-value: events)
+#[derive(Debug, Clone, PartialEq)]
+pub struct Observations {
+    /// Witnessed events (day, moon index, body), ascending by day.
+    pub events: Vec<(f64, usize, hornvale_astronomy::EclipseBody)>,
+}
+
+/// MAP-18's knowledge ladder, C8's diachronic axis (spec §3.2, thresholds
+/// preregistered above): `Unknown` (nothing witnessed) → `Counted` (folk
+/// qualitative memory — "the sky has darkened, now and again", any n ≥ 1,
+/// no cardinal) → `Numbered` (organized cult only, total witnessed ≥
+/// [`K_COUNT`] — an exact cardinal) → `Predictive` (organized cult, some
+/// recurrence class witnessed ≥ [`K_PREDICT`] times — the next event of
+/// that class is taught, dated). Folk-only cultures (no [`doctrine_of`])
+/// never cross `Counted` — the SOC-1 gate's diachronic consequence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LadderRung {
+    /// No witnessed events by `at`.
+    Unknown,
+    /// Folk qualitative memory: recency without a record.
+    Counted,
+    /// Organized-cult records: an exact witnessed cardinal.
+    Numbered,
+    /// Organized-cult prediction: the next event of the most-observed
+    /// recurrence class, dated (or beyond the teaching horizon).
+    Predictive,
+}
+
+/// The recurrence class [`eclipse_events`](hornvale_astronomy::eclipse_events)
+/// scans and [`ladder_of`] predicts over: a distance-sorted moon index
+/// paired with which body darkens. `EclipseBody` carries no `Ord`, so
+/// this maps it to a stable discriminant (`Solar` = 0, `Lunar` = 1) for
+/// use as a `BTreeMap` key — no `HashMap` (disallowed workspace-wide).
+fn recurrence_key(moon: usize, body: hornvale_astronomy::EclipseBody) -> (usize, u8) {
+    let discriminant = match body {
+        hornvale_astronomy::EclipseBody::Solar => 0,
+        hornvale_astronomy::EclipseBody::Lunar => 1,
+    };
+    (moon, discriminant)
+}
+
+/// `species`'s ladder rung by day `at`, plus — at `Predictive` only — the
+/// predicted next event's day of the most-observed recurrence class
+/// (C8 §3.2/§3.3). The organized gate reuses
+/// [`doctrine_of`]`(world, species).is_some()` (SOC-1); a tie among
+/// equally-observed recurrence classes breaks toward the numerically
+/// smallest `(moon index, body)` key — deterministic, no significance
+/// claimed beyond that.
+///
+/// type-audit: bare-ok(identifier-text: species), bare-ok(diagnostic-value: return)
+pub fn ladder_of(
+    world: &World,
+    species: &str,
+    at: hornvale_astronomy::StdDays,
+) -> Result<(LadderRung, Option<f64>), BuildError> {
+    let observations = observations_of(world, species, at)?;
+    if observations.events.is_empty() {
+        return Ok((LadderRung::Unknown, None));
+    }
+
+    if doctrine_of(world, species).is_none() {
+        return Ok((LadderRung::Counted, None));
+    }
+
+    let mut class_counts: BTreeMap<(usize, u8), usize> = BTreeMap::new();
+    for &(_, moon, body) in &observations.events {
+        *class_counts.entry(recurrence_key(moon, body)).or_insert(0) += 1;
+    }
+    // `class_counts` is never empty here: `observations.events` is
+    // non-empty (checked above), and every event contributes to exactly
+    // one class.
+    let (&top_key, &top_count) = class_counts
+        .iter()
+        .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
+        .expect("class_counts is non-empty whenever observations.events is");
+
+    if top_count < K_PREDICT {
+        let rung = if observations.events.len() >= K_COUNT {
+            LadderRung::Numbered
+        } else {
+            LadderRung::Counted
+        };
+        return Ok((rung, None));
+    }
+
+    let sky = crate::sky_of(world)?;
+    let crate::Sky::Generated(sky) = sky else {
+        return Err(BuildError::Pins(
+            "the diachronic prediction requires a Generated sky".to_string(),
+        ));
+    };
+    let horizon_end = hornvale_astronomy::StdDays::new(at.get() + PREDICTION_HORIZON_STD_DAYS)
+        .map_err(|e| BuildError::Pins(e.to_string()))?;
+    let target_body = if top_key.1 == 0 {
+        hornvale_astronomy::EclipseBody::Solar
+    } else {
+        hornvale_astronomy::EclipseBody::Lunar
+    };
+    let prediction =
+        hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), at, horizon_end)
+            .into_iter()
+            .find(|event| {
+                event.day.get() > at.get() && event.moon == top_key.0 && event.body == target_body
+            })
+            .map(|event| event.day.get());
+
+    Ok((LadderRung::Predictive, prediction))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
