@@ -8,16 +8,17 @@ use hornvale_kernel::{RoomId, Value, World, WorldTime};
 use hornvale_language::clause::ParseContext;
 use hornvale_locale::LocaleContext;
 use hornvale_species::PerceptionVector;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// What an agent knows: key → value. Projection-derived entries (the
 /// `room/<id>` and `settlement/<id>/<field>` shapes written by
 /// [`Projection::project`]) carry the subset contract — every one
 /// re-derivable from ground truth, checked by [`knowledge_is_subset`].
 /// Heard entries (the `"{subject}::{predicate}"` shape written by
-/// [`absorb_common`]) are deliberately outside that contract: `tell` can
-/// transfer a false belief into a listener's knowledge, and heard ≠ true
-/// is the epistemic point (The Echo, spec §6).
+/// [`absorb_common`]) are deliberately outside that contract: `write` (the
+/// Echo's `tell`, renamed at the Vessel Stitch, T2) can transfer a false
+/// belief into a listener's knowledge, and heard ≠ true is the epistemic
+/// point (The Echo, spec §6).
 /// type-audit: bare-ok(artifact: 0)
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Knowledge(pub BTreeMap<String, String>);
@@ -68,6 +69,29 @@ pub fn absorb_common(
         absorbed += 1;
     }
     Ok(absorbed)
+}
+
+/// The Vessel Stitch's Knowledge→reader-set adapter (T2): every heard key
+/// (`"{subject}::{predicate}"`, [`absorb_common`]'s own shape) split on its
+/// `"::"` separator into the `(subject, predicate)` pair
+/// `hornvale_book::esoteric_lines` accepts as its `reader` — the initiated
+/// unlock is exactly "have you been told this fact", nothing more. The
+/// walking-derived shapes ([`IdentityProjection`]'s `room/<id>` and
+/// `settlement/<id>/<field>`, `/`-separated) carry no `"::"` and are
+/// silently skipped, not converted — the floor's only unlock channel is
+/// `write` (spec §3.2; the observational unlock is a recorded followup,
+/// not scope). A key with no `"::"` at all is likewise skipped; today
+/// there is none (every entry either `absorb_common` or a projection ever
+/// writes carries one separator or the other), asserted by
+/// `reader_set_splits_every_key`.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn reader_set(knowledge: &Knowledge) -> BTreeSet<(String, String)> {
+    knowledge
+        .0
+        .keys()
+        .filter_map(|key| key.split_once("::"))
+        .map(|(subject, predicate)| (subject.to_string(), predicate.to_string()))
+        .collect()
 }
 
 /// knowledge = project(ground_truth, vantage, perception).
@@ -283,6 +307,40 @@ mod tests {
                 .map(String::as_str),
             Some("1.5"),
             "a fractional quantity keeps its digits"
+        );
+    }
+
+    /// The Vessel Stitch T2's adapter law: every key `absorb_common` ever
+    /// writes carries the `"::"` separator, so `reader_set` skips nothing
+    /// today — the skipped-key arm is reachable only by a future knowledge
+    /// shape, not this one.
+    #[test]
+    fn reader_set_splits_every_key() {
+        let world = generated(1);
+        let ctx = hornvale_book::parse_context(&world);
+        let volume = hornvale_book::render_volume(&world);
+        let planet_line = volume
+            .lines
+            .iter()
+            .find(|l| l.contains(" is a planet"))
+            .expect("seed 1 renders a planet line");
+        let mut heard = Knowledge::default();
+        absorb_common(&mut heard, planet_line, &ctx).expect("the listener parses Common");
+
+        let reader = reader_set(&heard);
+        assert_eq!(
+            reader.len(),
+            heard.0.len(),
+            "every heard key splits on '::' — none skipped"
+        );
+        let subject = planet_line.split(" is ").next().unwrap();
+        assert!(
+            reader.contains(&(subject.to_string(), "is-a".to_string())),
+            "the classification key splits into (subject, \"is-a\")"
+        );
+        assert!(
+            reader.contains(&(subject.to_string(), "moon-count".to_string())),
+            "the moon-count key splits into (subject, \"moon-count\")"
         );
     }
 }

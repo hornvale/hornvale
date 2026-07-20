@@ -39,7 +39,7 @@ Night. The vast moon shows its first-quarter face. The small, distant moon shows
   room/694190188 = {"schema":"locale/room/v2","id":694190188,"face":12,"path…
   room/694550540 = {"schema":"locale/room/v2","id":694550540,"face":12,"path…
   settlement/7/name = Foenjoavaenoenoanoagoo
-  settlement/7/population = 6
+  settlement/7/population = 2
 > release
 You let go.
 ```

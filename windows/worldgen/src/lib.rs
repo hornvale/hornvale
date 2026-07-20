@@ -537,6 +537,78 @@ pub fn species_carrying_input(
     }
 }
 
+/// Ambient detritus supply (BIO-35 Stage 1: The Demesne). Dead-matter
+/// resource is treated as broadly available this stage — a small constant
+/// floor, not a spatial field. A real spatial detritus field (litterfall /
+/// carcass turnover) is a later refinement once T2 wires the per-axis dot
+/// product this stage is building toward.
+/// type-audit: bare-ok(ratio)
+pub const DETRITUS_AMBIENT: f64 = 0.2;
+
+/// Fraction of primary production that is grazable plant forage. Plant-
+/// forage supply tracks photosynthate spatially, at a reduced amplitude
+/// (not all NPP is grazable — wood, roots, and unpalatable growth are not).
+/// type-audit: bare-ok(ratio)
+const FORAGE_FRACTION: f64 = 0.5;
+
+/// The `PLANT_FORAGE` supply field (BIO-35 Stage 1: The Demesne, task T1): a
+/// fraction of the NPP-based `base_carrying` (grazable matter tracks primary
+/// production spatially). Pure, deterministic, no RNG — a direct scale of an
+/// already-computed field.
+/// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
+pub fn forage_supply_field(
+    geo: &Geosphere,
+    base_carrying: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
+}
+
+/// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
+/// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
+/// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
+/// in the weighted sum T2 builds (`scale` is the mineral supply amplitude —
+/// the one calibration knob, re-fit in T3). Pure, deterministic — a direct
+/// read, no float ordering involved (`total_cmp`-free).
+/// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
+pub fn mineral_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    scale: f64,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
+}
+
+/// The mineral supply field's amplitude (BIO-35 Stage 1: The Demesne, task
+/// T2) — the one calibration knob for [`mineral_supply_field`]'s `scale`
+/// argument as consumed by [`niche_per_species_k`]. Re-fit in a later task
+/// (T3) once the emergence keystone's measured diversification is read
+/// against a wider seed sample; frozen here at parity with `MINERAL`'s
+/// pre-repoint contribution magnitude (chosen, not fit — see the emergence
+/// test's doc comment for the measured before/after).
+/// type-audit: bare-ok(ratio)
+const MINERAL_SUPPLY_SCALE: f64 = 1.0;
+
+/// The per-axis resource supply for one niche at one cell (BIO-35 Stage 1:
+/// The Demesne, task T2): the dot product of the species' uptake vector
+/// (`niche`) with the per-cell supply vector (`per_axis`) — the
+/// rank-restored replacement for the old `base_carrying(cell) × Σuptake`
+/// scalar, which collapsed every species' spatial pattern onto the same
+/// single field (differing only by an overall magnitude). A niche direction
+/// now SELECTS which cells supply it — a photosynthate-heavy niche peaks
+/// where `PHOTOSYNTHATE` supply peaks, a mineral-heavy niche peaks where
+/// `MINERAL` supply peaks, even when those are different cells. Pure; no
+/// RNG, no float ordering (a plain weighted sum, not a comparison).
+/// type-audit: bare-ok(ratio: per_axis), bare-ok(ratio: return)
+pub fn axis_supply(
+    niche: &hornvale_kernel::ResourceVector,
+    per_axis: &[(hornvale_kernel::ResourceAxis, f64)],
+) -> f64 {
+    per_axis
+        .iter()
+        .map(|(axis, supply)| niche.weight(*axis) * supply)
+        .sum()
+}
+
 /// Per-species niche-differentiated carrying-capacity K = resource-supply ×
 /// condition-response (The Niche). Pure; seed-free. Replaces the flat-NPP K
 /// for the coexistence stack. `species_biosphere` index order tags the fields.
@@ -555,13 +627,15 @@ pub fn species_carrying_input(
 /// survives a save/load boundary. The other `.enumerate()` sites in this
 /// file that mint a `(tag as u32, ..)` pair share this exact contract.
 ///
-/// For each species and cell: `saturate(base_carrying(cell) *
-/// total_uptake_s)` (the resource-supply term — the shared, psychology-free
-/// NPP proxy scaled by the species' summed niche weight over
-/// [`hornvale_kernel::v1_basis`], Type-II-saturated so intake plateaus)
-/// multiplied by the four condition-response terms
-/// (temperature/moisture/insolation/elevation), each
-/// [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
+/// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
+/// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
+/// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
+/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL` read their own T1
+/// supply fields, `DETRITUS` reads the ambient constant, and `ANIMAL_PREY`
+/// is Stage 2's placeholder zero (a later stage's trophic wiring); see
+/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
+/// four condition-response terms (temperature/moisture/insolation/elevation),
+/// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
 /// buffer-able (floored by the species'
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
@@ -586,20 +660,33 @@ pub fn niche_per_species_k(
         insolation_scalar,
         regime,
     );
+    // The Demesne/T2: per-axis supply fields, hoisted out of the per-species
+    // loop below — each is a pure function of terrain/climate, built once
+    // and shared by every species' dot product.
+    let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
+    let forage = forage_supply_field(geo, &base_carrying);
 
     species_biosphere
         .iter()
         .enumerate()
         .map(|(tag, bio)| {
-            let total_uptake: f64 = hornvale_kernel::v1_basis()
-                .iter()
-                .map(|axis| bio.niche.weight(*axis))
-                .sum();
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
                 let s = substrate.get(cell);
-                let supply = base_carrying.get(cell) * total_uptake;
+                // Rank-restored supply via the extracted helper: the axis
+                // dot product, not the old summed-uptake scalar.
+                use hornvale_kernel::{
+                    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                };
+                let per_axis = [
+                    (PHOTOSYNTHATE, *base_carrying.get(cell)),
+                    (PLANT_FORAGE, *forage.get(cell)),
+                    (MINERAL, *mineral.get(cell)),
+                    (DETRITUS, DETRITUS_AMBIENT),
+                    (ANIMAL_PREY, 0.0),
+                ];
+                let supply = axis_supply(&bio.niche, &per_axis);
                 let saturated = supply / (1.0 + supply);
                 saturated
                     * cn.temperature.eval(s.temperature_c, floor_buf)
@@ -5372,22 +5459,20 @@ mod tests {
         // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
         // season moved it again within the epoch: iteration 2's clip-taper
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
-        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Two
-        // parallel campaigns then each moved world identity off that 8, and
-        // this merge carries BOTH: The Confluence (T2) re-pointed
-        // `carrying_inputs_of`'s freshwater term at `river_proximity` (so
-        // settlements condense near rivers -- see
-        // `windows/worldgen/tests/confluence.rs`), redistributing carrying
-        // capacity (8 -> 4 on its branch); The Rains (precipitation epoch)
-        // rewrote the moisture field (advected budget trace), shifting the
-        // biomes and so the settlement layout (8 -> 9 on its branch). On the
-        // merged tree the two combine and the largest attractor re-derives to
-        // 6 (measured on the merged tree — not either branch's value alone).
-        // Re-pin here (with review) whenever a deliberate
-        // terrain/carrying-capacity/moisture change moves world identity.
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. THREE
+        // deliberate identity-moving campaigns now combine on the merged tree:
+        // The Confluence re-pointed `carrying_inputs_of`'s freshwater term at
+        // `river_proximity` (settlements condense near rivers); The Rains
+        // (precipitation epoch) rewrote the moisture field, shifting biomes and
+        // the settlement layout; The Demesne replaced `niche_per_species_k`'s
+        // `base_carrying × Σuptake` scalar supply with the per-axis dot product
+        // (`axis_supply`), redistributing catchments again. The value below is
+        // MEASURED on the fully-merged tree (all three), not any branch's alone.
+        // Re-pin here (with review) whenever a deliberate terrain/carrying-
+        // capacity/moisture change moves world identity.
         assert_eq!(
-            village.population, 6,
-            "the world's largest attractor headcount is pinned at this seed (the-confluence freshwater + the-rains moisture epoch, merged)"
+            village.population, 2,
+            "the world's largest attractor headcount is pinned at this seed (Confluence freshwater + Rains moisture epoch + Demesne per-axis supply, merged — the Demesne per-axis supply dominates the flagship count)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
@@ -7402,6 +7487,17 @@ mod tests {
         );
     }
 
+    /// The three build-local reads
+    /// [`menagerie_full_roster_dominant_breakdown`] returns: every kind's
+    /// name (biosphere order, the `tag`-indexable slice), the per-kind
+    /// dominant-cell count, and that count re-keyed by name and sorted for
+    /// a readable failure message.
+    type DominantBreakdown = (
+        Vec<&'static str>,
+        std::collections::BTreeMap<u32, usize>,
+        Vec<(&'static str, usize)>,
+    );
+
     /// The Seam's behavioral exit criterion (Task 6, ledger #48): does the
     /// full 16-species HABITAT stack (fauna included — distinct from the
     /// peopled-only SETTLEMENT stack `species_pin_isolation` etc. probe)
@@ -7443,23 +7539,72 @@ mod tests {
     /// controller/Nathan calibration call (fauna mass and/or sovereignty/
     /// devotion coefficients), not something this task retunes unilaterally.
     ///
-    /// The assertions below are written to the SPEC's real target (not
-    /// weakened to the observed 2) and are `#[ignore]`d rather than forced
-    /// or deleted, so they stand ready to re-run once a calibration pass
-    /// lands. Full breakdown, per-species max-density trace, and the
-    /// calibration writeup: `.superpowers/sdd/task-6-report.md`.
-    #[test]
-    #[ignore = "CALIBRATION FINDING (task 6, 2026-07-16, ledger #48): seed-42 \
-                full-roster per-cell dominant-density count is 2, not richer \
-                than the peopled-only 2-way split; treant/xorn/all three \
-                chromatic dragons hold zero strongholds (Kleiber home-range \
-                scaling swamps their resource-share advantage in a per- \
-                individual density metric). Awaiting controller calibration \
-                (fauna mass / sovereignty-devotion retune) before re-\
-                asserting the campaign's exit criterion — see \
-                .superpowers/sdd/task-6-report.md."]
-    fn menagerie_fauna_hold_resource_partitioned_strongholds() {
-        let world = generated(42);
+    /// The preregistered `>= 6` target is NOT weakened to the observed value:
+    /// the-demesne T3 splits this group into a pinned Stage-1 ACHIEVEMENT test
+    /// (`menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold`,
+    /// un-ignored, asserts the measured 4 + xorn's stronghold) and the
+    /// still-`#[ignore]`d preregistered `>= 6` target
+    /// (`menagerie_distinct_dominants_reach_the_preregistered_six`), plus the
+    /// treant (mass-calibration) and dragon (Stage-2) splits — each `#[ignore]`d
+    /// with its true reason rather than forced, deleted, or silently rebased.
+    /// Full breakdown, per-species max-density trace, and the calibration
+    /// writeup: `.superpowers/sdd/task-6-report.md`.
+    ///
+    /// UPDATE (BIO-35, the-demesne T2): `niche_per_species_k` no longer
+    /// scales one shared `base_carrying` field by each species' summed
+    /// uptake — it now dot-products the uptake vector against per-axis
+    /// supply fields (`axis_supply`; `windows/worldgen/tests/demesne.rs`).
+    /// Re-measured post-repoint: distinct dominants rose 2 -> 4 (`xorn`
+    /// 29136 cells, `rust-monster` 9551, `twig-blight` 1328, `goblin` 947)
+    /// — `xorn`'s pure-`MINERAL` niche now tracks its own spatial supply
+    /// field instead of a rescaled copy of everyone else's. `treant` is
+    /// STILL swept by `twig-blight` (the Kleiber home-range root cause
+    /// above is untouched by T2 — a resource-AXIS fix, not a body-mass
+    /// one) and no chromatic dragon/`owlbear` ever wins (their pure-
+    /// `ANIMAL_PREY` niche reads T2's placeholder zero supply — trophic
+    /// wiring is explicitly out of Stage 2's scope). This test's `>= 6`
+    /// bar and its `treant`/dragon assertions are therefore still correctly
+    /// unmet; it stays `#[ignore]`d for the same calibration reason.
+    ///
+    /// UPDATE (BIO-35, the-demesne T3): re-measured after T3's settlement-
+    /// count investigation (`FORAGE_FRACTION` swept 0.5..3.0, kept at 0.5 —
+    /// see `windows/worldgen/tests/confluence.rs`'s settlement-count test
+    /// for the full writeup; the sweep left `niche_per_species_k`'s
+    /// per-cell dominance unchanged from T2's reading). The breakdown is
+    /// BYTE-IDENTICAL to T2's: `[xorn: 29136, rust-monster: 9551,
+    /// twig-blight: 1328, goblin: 947]`, 4 distinct dominants. Splitting
+    /// this test three ways rather than un-ignoring the whole thing, per
+    /// what is actually measured (not faked):
+    ///
+    /// - **Un-ignored**: distinct dominants materially exceed the pre-
+    ///   repoint baseline of 2 (the-demesne's own emergence claim, mirrored
+    ///   from `demesne.rs`'s `settlements_and_dominants_diversify_on_seed_42`),
+    ///   and `xorn` — the pure-`MINERAL` niche the per-axis supply was built
+    ///   to unlock — holds a real, large stronghold (29136 cells). Both are
+    ///   Stage-1-reachable and both clear.
+    /// - **Still `#[ignore]`d, mass/sovereignty calibration (NOT Stage 2)**:
+    ///   `treant` holds ZERO strongholds. Measured, not faked: the
+    ///   per-axis supply gave `treant` its OWN photosynthate-tracking
+    ///   field (unlike the old shared-scalar model), but `twig-blight`
+    ///   still wins every contested cell — the root cause traced above
+    ///   (Kleiber home-range scaling: `treant` at 1800 kg has a ~1568x
+    ///   larger home range than `twig-blight` at 5 kg, so `treant`'s
+    ///   resource-share advantage never survives the per-INDIVIDUAL
+    ///   density conversion) is orthogonal to the resource-AXIS fix T1/T2
+    ///   made and is untouched by it. This is task 6's original finding,
+    ///   confirmed still true after the-demesne; it awaits a body-mass /
+    ///   sovereignty-devotion retune, not a resource-supply change.
+    /// - **Still `#[ignore]`d, Stage 2 (`ANIMAL_PREY` field)**: no
+    ///   chromatic dragon (or `owlbear`) ever wins a cell — their pure-
+    ///   `ANIMAL_PREY` niche reads Stage 1's placeholder-zero supply, so
+    ///   they can never out-compete a species riding a real axis. Trophic
+    ///   wiring is explicitly Stage 2's job.
+    ///
+    /// Returns every kind's name (biosphere order, the `tag`-indexable
+    /// slice), the per-kind dominant-cell count, and that count re-keyed by
+    /// name and sorted for a readable failure message ([`DominantBreakdown`]).
+    fn menagerie_full_roster_dominant_breakdown(seed: u64) -> DominantBreakdown {
+        let world = generated(seed);
         let wc = WorldComponents::assemble().unwrap();
         let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
         // Reuse the exact pack params (BETA/FLOOR) genesis and
@@ -7500,15 +7645,50 @@ mod tests {
             .collect();
         breakdown.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
 
+        (names, dominant_counts, breakdown)
+    }
+
+    /// Pre-repoint baseline distinct full-roster dominant count (task 6,
+    /// 2026-07-16, ledger #48): the flat shared-`base_carrying` scalar gave
+    /// exactly 2 (`twig-blight`, `rust-monster`). Frozen before T1/T2's
+    /// per-axis repoint landed; see the module doc above this test group.
+    const PRE_DEMESNE_DISTINCT_DOMINANTS_42: usize = 2;
+
+    /// The Stage-1 ACHIEVEMENT (BIO-35 the-demesne, measured post-repoint,
+    /// seed 42): the per-axis vector supply raises distinct full-roster
+    /// dominants from 2 to exactly 4 (`xorn`, `rust-monster`, `twig-blight`,
+    /// `goblin`). Pinned as a `>=` regression floor — a future change that
+    /// drops below this reddens. NOT the preregistered target: see
+    /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`].
+    const STAGE1_DISTINCT_DOMINANTS_42: usize = 4;
+
+    /// The PREREGISTERED distinct-dominant target (task 6, frozen before
+    /// BIO-35): the campaign's stated ambition is `>= 6` distinct dominants
+    /// incl. treant/xorn/dragon strongholds. Stage 1 (abiotic) reaches 4 —
+    /// the gap to 6 is the treant mass-calibration (below, `#[ignore]`d) + the
+    /// dragon/`ANIMAL_PREY` Stage-2 field (below, `#[ignore]`d) + the still-OPEN
+    /// peoples-diversity problem (the goblinoid niches don't span the new
+    /// axes). The `>= 6` bar is DELIBERATELY NOT weakened — it stays pinned as
+    /// an ignored target-to-reach, not silently rebased to the observed value.
+    const PREREGISTERED_DISTINCT_DOMINANTS_TARGET: usize = 6;
+
+    /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
+    /// vector supply diversifies full-roster (fauna-included) per-cell
+    /// dominance to the measured Stage-1 achievement
+    /// ([`STAGE1_DISTINCT_DOMINANTS_42`] = 4, up from the baseline 2), and
+    /// `xorn` — the pure-`MINERAL` specialist the mineral supply field was
+    /// built to unlock — holds a real stronghold. This pins the ACHIEVEMENT,
+    /// not the preregistered `>= 6` target (which stays `#[ignore]`d below,
+    /// honestly unmet — see the module doc for the treant/dragon/peoples gap).
+    #[test]
+    fn menagerie_distinct_dominants_diversify_and_xorn_holds_a_stronghold() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         let distinct_dominants = dominant_counts.len();
-        // Substantially richer than the peopled-only 2-way split — the
-        // campaign's stated target (spec's illustrative floor shape:
-        // observe, then pin well below it). NOT weakened to match today's
-        // observed 2.
         assert!(
-            distinct_dominants >= 6,
-            "expected a broad, resource-partitioned biogeography (>= 6 distinct \
-             dominants, well above the peopled-only 2-way split), got \
+            distinct_dominants >= STAGE1_DISTINCT_DOMINANTS_42,
+            "expected the per-axis vector supply to hold the Stage-1 achievement of \
+             {STAGE1_DISTINCT_DOMINANTS_42} distinct full-roster dominants (up from the \
+             pre-repoint baseline {PRE_DEMESNE_DISTINCT_DOMINANTS_42}), got \
              {distinct_dominants}: {breakdown:?}"
         );
 
@@ -7519,15 +7699,84 @@ mod tests {
                 .expect("species in registry") as u32;
             dominant_counts.get(&id).copied().unwrap_or(0) > 0
         };
-
-        assert!(
-            dominates_a_cell("treant"),
-            "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
-        );
         assert!(
             dominates_a_cell("xorn"),
             "the mineral specialist (xorn) should hold a stronghold: {breakdown:?}"
         );
+    }
+
+    /// STILL `#[ignore]`d — the PREREGISTERED `>= 6` target, honestly unmet
+    /// (BIO-35 the-demesne T3, measured not faked): Stage 1 reaches
+    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4. Reaching
+    /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`] = 6 needs the treant
+    /// mass-calibration + the dragon/`ANIMAL_PREY` Stage-2 field + the open
+    /// peoples-diversity problem. Kept (not deleted, not weakened) so the
+    /// original ambition stands ready to re-run once those land.
+    #[test]
+    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; \
+                the gap to 6 is treant mass-calibration + dragon/ANIMAL_PREY (Stage 2) + \
+                the open peoples-diversity problem. Not weakened — stands as the target."]
+    fn menagerie_distinct_dominants_reach_the_preregistered_six() {
+        let (_names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        assert!(
+            dominant_counts.len() >= PREREGISTERED_DISTINCT_DOMINANTS_TARGET,
+            "the preregistered target is {PREREGISTERED_DISTINCT_DOMINANTS_TARGET} distinct \
+             dominants; got {}: {breakdown:?}",
+            dominant_counts.len()
+        );
+    }
+
+    /// STILL `#[ignore]`d — mass/sovereignty calibration, NOT Stage 2
+    /// (BIO-35 the-demesne T3, measured not faked): `treant` (the
+    /// photosynthate specialist) holds ZERO strongholds at seed 42 even
+    /// under the per-axis vector supply. Root cause (task 6, unchanged by
+    /// the-demesne): Kleiber home-range scaling (treant 1800 kg vs
+    /// twig-blight 5 kg, ~1568x home-range ratio) swamps treant's
+    /// resource-share advantage once converted to a per-INDIVIDUAL
+    /// density. This is a body-mass/sovereignty-devotion retune, not a
+    /// resource-axis fix — out of the-demesne's scope.
+    #[test]
+    #[ignore = "mass/sovereignty calibration (task 6 CALIBRATION FINDING, confirmed unchanged \
+                by the-demesne T1/T2/T3): treant holds zero full-roster strongholds at seed 42 \
+                — Kleiber home-range scaling swamps its resource-share advantage in a \
+                per-individual density metric, a body-mass/sovereignty-devotion retune the \
+                per-axis vector supply does not touch. See \
+                .superpowers/sdd/task-6-report.md and this test group's module doc."]
+    fn menagerie_treant_stronghold_awaits_mass_calibration() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        let dominates_a_cell = |name: &str| {
+            let id = names
+                .iter()
+                .position(|n| *n == name)
+                .expect("species in registry") as u32;
+            dominant_counts.get(&id).copied().unwrap_or(0) > 0
+        };
+        assert!(
+            dominates_a_cell("treant"),
+            "the photosynthate specialist (treant) should hold a stronghold: {breakdown:?}"
+        );
+    }
+
+    /// STILL `#[ignore]`d — Stage 2 (`ANIMAL_PREY` field), BIO-35 the-demesne
+    /// T3: no chromatic dragon (a pure-`ANIMAL_PREY` niche) ever wins a
+    /// full-roster per-cell dominance comparison, because Stage 1's
+    /// `ANIMAL_PREY` supply is a placeholder zero — a species reading it
+    /// can never out-compete one riding a real (nonzero) axis. Awaits the
+    /// trophic/prey-field wiring a later stage adds.
+    #[test]
+    #[ignore = "Stage 2 (ANIMAL_PREY field): chromatic dragons' pure-ANIMAL_PREY niche reads \
+                Stage 1's placeholder-zero ANIMAL_PREY supply, so no dragon can ever win a \
+                per-cell density comparison against a species riding a real axis; awaiting the \
+                trophic/prey-field wiring (BIO-35 Stage 2)."]
+    fn menagerie_dragon_stronghold_awaits_animal_prey_stage_2() {
+        let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
+        let dominates_a_cell = |name: &str| {
+            let id = names
+                .iter()
+                .position(|n| *n == name)
+                .expect("species in registry") as u32;
+            dominant_counts.get(&id).copied().unwrap_or(0) > 0
+        };
         assert!(
             dominates_a_cell("white-dragon")
                 || dominates_a_cell("red-dragon")

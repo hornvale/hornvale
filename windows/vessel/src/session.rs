@@ -7,7 +7,7 @@ use crate::liveness::{
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
-    TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable,
+    TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
 use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, World, WorldTime, tick};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
@@ -15,6 +15,10 @@ use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 /// How many NPCs a session derives (spec §4: a small authored constant, not
 /// every settlement — the flagship's own leader plus a couple of neighbors).
 const NPC_COUNT: usize = 3;
+
+/// The closed fallback line `consult` renders when no initiated line
+/// unlocks (spec §3.2; the Global Constraints' closed-strings list).
+const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 
 const HELP: &str = "\
 verbs:
@@ -28,7 +32,10 @@ verbs:
   npcs             the derived NPCs sharing this world (label, id)
   why <who>        recount an NPC's dated history (by label or id)
   needs            read the felt state of anyone sharing this room
-  tell <sentence>  speak a line of Common; you absorb what it says
+  write <sentence> speak a line of Common; you absorb what it says, written
+                   into your own margin
+  consult          read the Book's Reckoning at your own day, and whatever
+                   your margin has initiated you into
   release          let go (quit works too)
 ";
 
@@ -190,7 +197,8 @@ impl<'w> Session<'w> {
             "npcs" => Turn::Out(self.list_npcs()),
             "why" => Turn::Out(self.why(rest)),
             "needs" => Turn::Out(self.needs()),
-            "tell" => Turn::Out(self.tell(rest)),
+            "write" => Turn::Out(self.write(rest)),
+            "consult" => Turn::Out(self.consult()),
             "enter" | "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
                     .to_string(),
@@ -482,20 +490,51 @@ impl<'w> Session<'w> {
             .join("\n")
     }
 
-    /// Speak a Common sentence: the session absorbs its own spoken line
-    /// into its `Knowledge` via the transfer seam (The Echo T4). The
-    /// acceptable floor shape — no NPC addressing yet (a future `tell
-    /// <npc> <sentence>` is a UX decision this spec doesn't commit to,
-    /// G3 flag 2).
-    fn tell(&mut self, line: &str) -> String {
+    /// Write a Common sentence into the margin: the session absorbs its own
+    /// spoken line into its `Knowledge` via the transfer seam (The Echo
+    /// T4). Renamed from `tell` at the Vessel Stitch (T2, G3 exchange) —
+    /// the player writes what they have learned into their copy's margin,
+    /// the program's own margin device turned toward the reader; the
+    /// response is the closed string `Written in the margin.` regardless
+    /// of how many facts the sentence carried (heard is not true, but
+    /// written is initiation — spec §1). The acceptable floor shape — no
+    /// NPC addressing yet (a future `write <npc> <sentence>` is a UX
+    /// decision this spec doesn't commit to, G3 flag 2).
+    fn write(&mut self, line: &str) -> String {
         if line.is_empty() {
-            return "Tell what? Speak a line of Common.".to_string();
+            return "Write what? Speak a line of Common.".to_string();
         }
         let ctx = hornvale_book::parse_context(self.world);
         match absorb_common(&mut self.knowledge, line, &ctx) {
-            Ok(n) => format!("You take that in ({n} fact(s) learned)."),
+            Ok(_) => "Written in the margin.".to_string(),
             Err(e) => format!("That doesn't parse as Common: {e}"),
         }
+    }
+
+    /// Read the Book from inside the world (the Vessel Stitch, T2): the
+    /// Reckoning of Years at the session's own day (`hornvale_book::
+    /// reckoning_at` — the same accessor the CLI's `--at` lens calls, spec
+    /// §3.1/§4.4), then whatever the session's own margin (`Knowledge`,
+    /// via `write`) has initiated it into
+    /// (`hornvale_book::esoteric_lines`) — or the closed fallback line when
+    /// nothing has unlocked yet. Reads only: the session's owned `ledger`
+    /// and `knowledge` are both untouched (the purity law, spec §4.3);
+    /// this method takes `&self`, not `&mut self`.
+    fn consult(&self) -> String {
+        let day = self.day.day.trunc() as u64;
+        let mut lines = vec![format!("The Reckoning, at day {day}.")];
+        let at = hornvale_astronomy::StdDays::new(self.day.day)
+            .expect("a session's day is always finite and non-negative");
+        let epoch = hornvale_book::reckoning_at(self.world, at);
+        lines.extend(epoch.lines);
+        lines.extend(epoch.margin);
+        let initiated = hornvale_book::esoteric_lines(self.world, &reader_set(&self.knowledge));
+        if initiated.is_empty() {
+            lines.push(CONSULT_FALLBACK.to_string());
+        } else {
+            lines.extend(initiated);
+        }
+        lines.join("\n")
     }
 
     fn knows(&self) -> String {

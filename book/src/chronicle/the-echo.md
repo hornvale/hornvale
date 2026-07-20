@@ -49,7 +49,7 @@ complement filter's own guarantees).
 
 ## Text as a knowledge carrier
 
-The game-facing proof lives in the vessel: `tell Vebe is a planet with
+The game-facing proof lives in the vessel: `write Vebe is a planet with
 two moons.` parses through the same grammar and lands in the possession
 session's knowledge ledger as the facts the sentence carried. The
 transfer law is pinned end to end — a fact rendered by the speaker,

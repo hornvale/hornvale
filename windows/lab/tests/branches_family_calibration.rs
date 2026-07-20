@@ -335,10 +335,13 @@ fn homophony_count_is_measured_and_pinned() {
     // re-measured on this machine (goblin 1.843 -> 2.365; hobgoblin/bugbear
     // below). The large goblin move inherits origin/main's un-pinned physics
     // (the AWS goldens lagged ~26 commits before this first local refresh).
-    assert!((mg - 2.365).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.727).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // spatial supply relocates settlements and shifts each people's naming
+    // draws (goblin 2.365 -> 1.939; others below).
+    assert!((mg - 1.939).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.689).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     assert!((mb - 3.025).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 0.942).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mk - 0.904).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -24,6 +24,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-book"
+version = "0.1.0"
+dependencies = [
+ "hornvale-astronomy",
+ "hornvale-kernel",
+ "hornvale-language",
+ "hornvale-worldgen",
+]
+
+[[package]]
 name = "hornvale-climate"
 version = "0.1.0"
 dependencies = [
@@ -39,6 +49,13 @@ dependencies = [
 
 [[package]]
 name = "hornvale-demography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-historiography"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
@@ -111,7 +128,11 @@ dependencies = [
 name = "hornvale-vessel"
 version = "0.1.0"
 dependencies = [
+ "hornvale-astronomy",
+ "hornvale-book",
+ "hornvale-historiography",
  "hornvale-kernel",
+ "hornvale-language",
  "hornvale-locale",
  "hornvale-settlement",
  "hornvale-species",
