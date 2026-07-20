@@ -169,13 +169,16 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
         }
     }
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // per-axis spatial supply moved settlement composition — (122, 0) -> (114, 0).
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (122, 0),
+        (114, 0),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
     assert_eq!(
-        spinning_eternal, 1,
+        spinning_eternal, 2,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -353,8 +356,11 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // reshapes coastlines again; re-measured (353 -> 316 coastal,
     // 643 -> 683 inland; 1 seed reports neither flag).
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
-    assert_eq!(coastal, 307, "coastal flagship count drifted");
-    assert_eq!(inland, 693, "inland flagship count drifted");
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // spatial supply reshuffles coastal-vs-inland condensation (307 -> 404
+    // coastal, 693 -> 587 inland; the balance are neither).
+    assert_eq!(coastal, 404, "coastal flagship count drifted");
+    assert_eq!(inland, 587, "inland flagship count drifted");
 }
 
 #[test]
@@ -523,12 +529,14 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // field a kobold settlement at all (see the name-length re-pin below);
     // re-measured (13 -> 12 solar, 19 -> 14 lunar).
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // spatial supply shifts which seeds field a kobold head (10 -> 9 solar).
     assert_eq!(
-        moonless_solar, 10,
+        moonless_solar, 9,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 12,
+        moonless_lunar, 11,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -620,8 +628,10 @@ fn blind_attribution_beats_chance_decisively() {
     // kobold presence (224 -> 163 pairs; 188 -> 135 correct, accuracy
     // 0.828, still above the 0.8 floor). Same named investigation as above.
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
-    assert_eq!(correct, 120, "blind-attribution count drifted");
-    assert_eq!(total, 156, "attributable-pair count drifted");
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // spatial supply shrinks the attributable pool (120 -> 94 correct).
+    assert_eq!(correct, 94, "blind-attribution count drifted");
+    assert_eq!(total, 120, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -926,8 +936,11 @@ fn name_collision_rate_is_measured_and_pinned() {
     // fixtures' first refresh since; the chorus itself adds zero draws
     // (genesis byte-identical).
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
-    assert_eq!(zero, 278, "zero-collision world count drifted");
-    assert_eq!(nonzero, 722, "nonzero-collision world count drifted");
+    // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+    // spatial supply reshuffles rosters, shifting per-culture lexicon reuse
+    // (278 -> 304 zero-collision worlds).
+    assert_eq!(zero, 304, "zero-collision world count drifted");
+    assert_eq!(nonzero, 696, "nonzero-collision world count drifted");
     assert_eq!(absent, 0, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -952,7 +965,9 @@ fn name_collision_rate_is_measured_and_pinned() {
         // Local-canonical adoption (2026-07-19, The Local Census, decision
         // 0063): re-measured 0.075_947... -> 0.042_045... on this machine
         // (longer names collide less; inherits origin/main's un-pinned physics).
-        (mean - 0.042_045_556_609_300).abs() < 1e-6,
+        // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+        // 0.042_045_556_609_300 -> 0.063_951_743_953_100.
+        (mean - 0.063_951_743_953_100).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1039,14 +1054,18 @@ fn name_length_distributions_are_measured_and_pinned() {
         // refresh since; the chorus itself adds zero draws (genesis
         // byte-identical).
         // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
-        ("goblin", 1000u32, 16.638_814_393_799_997),
+        // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+        // spatial supply drops goblin from 9 seeds (1000 -> 991 present).
+        ("goblin", 991u32, 14.125_926_952_472_248),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
         // grammar streams (C3), The Echo) surfacing at the fixtures' first
         // refresh since; the chorus itself adds zero draws (genesis
         // byte-identical).
-        ("kobold", 156u32, 9.799_287_246_153_844),
+        // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+        // spatial supply drops kobold from more seeds (156 -> 123 present).
+        ("kobold", 123u32, 10.036_733_166_666_673),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1277,7 +1296,10 @@ fn null_control_name_length_smd_is_pinned() {
         // 0063): re-measured on this machine (was -0.056_923_687_297_304_355
         // pinned, then -0.053_161_626... at the-chorus); still well inside the
         // ±0.2 sampling bound.
-        (namelen - -0.053_112_830_046_401_69).abs() < 1e-9,
+        // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
+        // -0.053_112_830_046_401_69 -> -0.047_266_428_630_096_086; still well
+        // inside the ±0.2 sampling bound.
+        (namelen - -0.047_266_428_630_096_086).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

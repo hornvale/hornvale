@@ -22,9 +22,9 @@ You stand in temperate forest — a shaft of clear light sun-warmed — in the l
 Ways on: SE, N, SW.
 > npcs
 3 NPC(s) derived this session:
-  [158] hobgoblin of Foenjoavaenoenoanoagoo
-  [159] hobgoblin of Njeoxaeveanoagoo
-  [160] hobgoblin of Qbaetteemjaonoenoa
+  [136] hobgoblin of Foenjoavaenoenoanoagoo
+  [137] hobgoblin of Njeoxaeveanoagoo
+  [138] hobgoblin of Qbaetteemjaonoenoa
 > needs
 The hobgoblin of Foenjoavaenoenoanoagoo seems content.
 > wait 5

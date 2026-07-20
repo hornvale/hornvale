@@ -8,12 +8,12 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">750</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
-<rect x="70.2" y="204.8" width="160.9" height="31.2" fill="#5b8dd9" rx="2" />
-<text x="150.7" y="200.8" font-size="11" fill="currentColor" text-anchor="middle">156</text>
+<rect x="70.2" y="211.4" width="160.9" height="24.6" fill="#5b8dd9" rx="2" />
+<text x="150.7" y="207.4" font-size="11" fill="currentColor" text-anchor="middle">123</text>
 <text x="150.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">true</text>
 <text x="340.0" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">false</text>
-<rect x="448.9" y="67.2" width="160.9" height="168.8" fill="#5b8dd9" rx="2" />
-<text x="529.3" y="63.2" font-size="11" fill="currentColor" text-anchor="middle">844</text>
+<rect x="448.9" y="60.6" width="160.9" height="175.4" fill="#5b8dd9" rx="2" />
+<text x="529.3" y="56.6" font-size="11" fill="currentColor" text-anchor="middle">877</text>
 <text x="529.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">absent</text>
 </svg>

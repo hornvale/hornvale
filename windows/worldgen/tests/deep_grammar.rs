@@ -166,6 +166,15 @@ fn depth_landscape_measured() {
     // the Elements percepts, merge a46749f): seed 3 now places a kobold
     // (row appended below); the other 7 rows are unchanged (re-measured and
     // verified byte-for-byte identical to the pre-absorption pins).
+    // Re-pinned again (the-demesne T2, `niche_per_species_k`'s axis-dot-
+    // product re-point): seed 3 no longer places a kobold — dropping the
+    // row below. Root cause is the same one `confluence.rs`'s settlement-
+    // count band documents: `ANIMAL_PREY` supply is Stage 2's placeholder
+    // zero, so kobold's 0.45 `ANIMAL_PREY` weight (its niche is
+    // `PLANT_FORAGE 0.55 / ANIMAL_PREY 0.45`) now contributes nothing,
+    // shrinking its K broadly and dropping seed 3's marginal kobold
+    // catchment below `CONDENSATION_THRESHOLD`. The other 7 rows are
+    // unchanged (re-measured and verified byte-for-byte identical).
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
@@ -174,7 +183,6 @@ fn depth_landscape_measured() {
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
-        (3, "kobold", MorphDepth::None, MorphDepth::Affix),
     ];
     assert_eq!(
         measured, expect,

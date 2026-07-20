@@ -2586,23 +2586,35 @@ mod tests {
     /// not added. Both arms (`true`/`false`) remain exercised by the
     /// surviving rows.
     ///
-    /// Re-pinned again post-absorption (The Rains moisture epoch, this
-    /// merge): seed 2's kobold is no longer organized under the epoch's
-    /// re-derived settlement layout (its chorus section still renders — it
-    /// still places, and `depth_landscape_measured` still pins its
-    /// morphology at `None`/`None`, unchanged, since morphology is a draw
-    /// the epoch does not touch — but its doctrine/priesthood section is
-    /// gone from the regenerated `the-book.md`, a settlement-demography
-    /// fact). Its row is dropped rather than re-measured as `false`, for the
-    /// same reason as seed 3's hobgoblin above. Both arms remain exercised
-    /// by the surviving rows (`true`: seeds 1/2 hobgoblin, seed 3 goblin;
-    /// `false`: seeds 1/2 goblin).
+    /// Re-pinned again post-absorption (The Rains moisture epoch): seed 2's
+    /// kobold is no longer organized under the epoch's re-derived settlement
+    /// layout (its chorus section still renders — it still places, and
+    /// `depth_landscape_measured` still pins its morphology at `None`/`None`,
+    /// unchanged, since morphology is a draw the epoch does not touch — but
+    /// its doctrine/priesthood section is gone from the regenerated
+    /// `the-book.md`, a settlement-demography fact). Its row is dropped rather
+    /// than re-measured as `false`, for the same reason as seed 3's hobgoblin
+    /// above.
+    ///
+    /// Re-pinned again post-absorption (The Demesne, BIO-35 Stage 1 per-axis
+    /// supply, this merge): the recalibrated settlement layout flipped seed 1's
+    /// hobgoblin organized→folk (its priesthood section is gone from the
+    /// regenerated `the-book.md`) and seed 3's hobgoblin folk→organized (its
+    /// priesthood section returns). Both are settlement-demography facts, not
+    /// morphology changes — `evidential_depth` is a draw The Demesne does not
+    /// touch (placement is a deterministic function of K, no new draws), so
+    /// seed 1 hobgoblin's `Particle` and seed 3 hobgoblin's `None` are
+    /// unchanged at the derivation layer; only which of them currently carries
+    /// a doctrine moved. So seed 1's hobgoblin row is dropped (folk-only, no
+    /// doctrine to contrast) and seed 3's hobgoblin row is added as `false`
+    /// (organized, depth `None`). Both arms remain exercised (`true`: seed 2
+    /// hobgoblin, seed 3 goblin; `false`: seeds 1/2 goblin, seed 3 hobgoblin).
     const EVIDENTIAL_DEPTH_LANDSCAPE: &[(u64, &str, bool)] = &[
-        (1, "goblin", false),   // None
-        (1, "hobgoblin", true), // Particle
-        (2, "goblin", false),   // None
-        (2, "hobgoblin", true), // Particle
-        (3, "goblin", true),    // Particle
+        (1, "goblin", false),    // None
+        (2, "goblin", false),    // None
+        (2, "hobgoblin", true),  // Particle
+        (3, "goblin", true),     // Particle
+        (3, "hobgoblin", false), // None
     ];
 
     /// C7 T3's taught-contrast law (spec §3.5, the visible payoff): for
@@ -3390,26 +3402,40 @@ mod tests {
         );
     }
 
-    /// C6 T3: every seed-1 placed culture is organized (Task 2's ledger
-    /// #1 measurement), so every chorus section gains a doctrine section.
-    /// Goblin's exact measured surface (verified against the committed
-    /// world): heading names the priesthood; the emic carries the
-    /// `RevealedClaim` exoteric formula for the moons (folk capability 0.5
-    /// loses `moon-count`, doctrine's boosted 0.75 clears the 0.6
-    /// threshold and keeps it) and a day explanation whose bound agent is
-    /// the doctrine's own measured deity, Wowako (folk's own day
-    /// explanation is agentless `PathJourney`, so this is genuinely a
-    /// doctrine-only causal story, not an echo of folk's).
+    /// C6 T3: on seed 1, GOBLIN ALONE reaches the organized rung and gains a
+    /// doctrine section — of the two placed peoples (goblin, hobgoblin), only
+    /// goblin is organized. This is precedented genesis drift: The Demesne
+    /// (BIO-35 Stage 1) recalibration shrank seed-1 hobgoblin below the
+    /// organized rung, flipping it organized→folk (the same organized↔folk
+    /// flip documented for seeds 2/3 under prior epochs; matches the
+    /// regenerated `book/src/gallery/the-book.md`). Goblin's exact measured
+    /// surface is unchanged (verified against the committed world): heading
+    /// names the priesthood; the emic carries the `RevealedClaim` exoteric
+    /// formula for the moons (folk capability 0.5 loses `moon-count`,
+    /// doctrine's boosted 0.75 clears the 0.6 threshold and keeps it) and a
+    /// day explanation whose bound agent is the doctrine's own measured deity,
+    /// Wowako (folk's own day explanation is agentless `PathJourney`, so this
+    /// is genuinely a doctrine-only causal story, not an echo of folk's).
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
         let vol = render_volume(&world);
         let peoples = hornvale_worldgen::placed_peoples(&world);
+        let organized: Vec<&str> = vol
+            .chorus
+            .iter()
+            .filter(|s| s.doctrine.is_some())
+            .map(|s| s.kind.as_str())
+            .collect();
         assert_eq!(
-            vol.chorus.iter().filter(|s| s.doctrine.is_some()).count(),
+            organized,
+            vec!["goblin"],
+            "seed-1: goblin alone is organized post-Demesne (hobgoblin flipped to folk)"
+        );
+        assert_eq!(
             peoples.len(),
-            "every seed-1 placed culture is organized: every chorus section \
-             should gain a doctrine section"
+            2,
+            "seed-1: both goblin and hobgoblin are placed; only goblin is organized"
         );
 
         let goblin = vol
@@ -4130,9 +4156,10 @@ mod tests {
     /// (T1's `observations_at_day_zero_are_empty`: every culture is
     /// `Unknown` at day 0). Epoch 2's lines are pinned exact against the
     /// live measurement (T1's report table, re-derived here through the
-    /// surface): seed 1's goblin/hobgoblin both climb to `Predictive` on
-    /// an identical (shared, all-solar) recurrence class; seed 2 adds
-    /// kobold, whose higher sky-capability also witnesses the lunar
+    /// surface): seed 1's goblin alone climbs to `Predictive` (post-Demesne
+    /// its hobgoblin dropped to folk-only — `Counted`, a qualitative
+    /// "darkened, now and again" with no cardinal or prediction); seed 2
+    /// adds kobold, whose higher sky-capability also witnesses the lunar
     /// class; seed 3's goblin alone is organized (`Predictive`) while
     /// hobgoblin/kobold are folk-only (`Counted`, no cardinal, no
     /// prediction) — the ladder's folk cap made visible in the section
@@ -4170,16 +4197,17 @@ mod tests {
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36526.".to_string(),
                 "Among the Babako, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Babako numbers the darkenings: 4010.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
-            ]
+            ],
+            "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
+             (Babako) is now folk-only, so it contributes only the attributed qualitative \
+             arm with no cardinal or prediction"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec!["In truth, the darkenings of the first hundred years number 6472.".to_string()],
-            "seed 1: both cultures hold 4010 (all-solar; neither witnesses the lunar class \
-             since both are below the 0.6 threshold), which falls short of the true count \
-             (6472, unwitnessed lunar events included)"
+            "seed 1: goblin holds 4010 (all-solar; below the 0.6 threshold, so it never \
+             witnesses the lunar class), which falls short of the true count (6472, \
+             unwitnessed lunar events included)"
         );
 
         // Re-pinned post-absorption (the Rains moisture epoch, merge
@@ -4210,6 +4238,11 @@ mod tests {
              kobold now holds no cardinal at all — the margin fires from either shortfall"
         );
 
+        // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
+        // recalibrated seed-3 layout flipped hobgoblin (Shteozqae) folk→
+        // organized (its priesthood now numbers the darkenings) and dropped
+        // kobold from placement entirely (no chorus/reckoning line at all).
+        // So seed 3 now renders TWO priesthood arms, both at 32.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
@@ -4221,16 +4254,17 @@ mod tests {
                 "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36953.".to_string(),
                 "Among the Shteozqae, the sky has darkened, now and again.".to_string(),
-                "Among the Jjajjjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Shteozqae numbers the darkenings: 32.".to_string(),
+                "The next darkening, it teaches, comes on day 36953.".to_string(),
             ],
-            "seed 3: goblin alone is organized; hobgoblin/kobold (folk-only, no doctrine) \
-             render the folk line ONLY — never a cardinal"
+            "seed 3 post-Demesne: goblin (Sdeozqae) and hobgoblin (Shteozqae) are both \
+             organized and each number 32; kobold no longer places at this seed"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
             vec!["In truth, the darkenings of the first hundred years number 53.".to_string()],
-            "seed 3: hobgoblin/kobold hold no cardinal at all (qualitative memory), so the \
-             margin fires regardless of what either witnessed"
+            "seed 3: both organized cultures hold 32 (all-solar, below the lunar threshold), \
+             which falls short of the true count (53, unwitnessed lunar events included)"
         );
     }
 
@@ -4406,34 +4440,17 @@ mod tests {
                     .to_string()
             ]
         );
-        let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
-        assert_eq!(
-            hobgoblin_doctrine.heading,
-            "As the priesthood of the Babako teach it"
-        );
-        assert_eq!(
-            hobgoblin_doctrine.tongue_taught_line,
-            "Vebe Vebe Bo Bo. (\"Vebe is the earth — as it is taught.\")"
-        );
-        assert_eq!(
-            hobgoblin_doctrine.emic,
-            vec![
-                "The Vavako are goblins — rivals.".to_string(),
-                "The Babako are hobgoblins — ourselves.".to_string(),
-                "Vebe is the earth.".to_string(),
-                "The moons are counted and known to the priesthood.".to_string(),
-                "The moons cross because Kdonbem strides the sky, slowly.".to_string(),
-                "The day returns because Bobako strides the sky, briskly.".to_string(),
-            ]
-        );
-        assert!(hobgoblin_doctrine.annotations.is_empty());
-        assert_eq!(
-            hobgoblin_doctrine.margin,
-            vec![
-                "In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts \
-                 about 1.5 standard days."
-                    .to_string()
-            ]
+        // The Demesne (BIO-35 Stage 1) recalibration shrank seed-1 hobgoblin
+        // below the organized rung: it is now a FOLK-only voice — no
+        // priesthood/doctrine section — matching the regenerated
+        // `book/src/gallery/the-book.md` (the Babako section ends at its folk
+        // margin, straight into the Reckoning). Goblin (above) is unchanged
+        // and still carries the doctrine that witnesses the additivity law.
+        assert!(
+            hobgoblin.doctrine.is_none(),
+            "post-Demesne, seed-1 hobgoblin is folk-only (organized→folk flip); \
+             unexpected doctrine heading: {:?}",
+            hobgoblin.doctrine.as_ref().map(|d| &d.heading)
         );
     }
 

@@ -10,7 +10,7 @@ Salient phenomena, most attention-demanding first:
 
 - [1.00] *celestial-body* — a golden sun fixed at zenith
 - [0.15] *ambient* — warm, still, unchanging air
-- [0.02] *heat* — oppressive heat
+- [0.01] *rain* — falling rain
 
 ## The Land
 
@@ -21,183 +21,135 @@ Notable: the Great Delta, salt flats.
 The air organizes into 3 circulation band(s) per hemisphere; 11 land biomes and 8 marine biomes cover the globe.
 Some 13% of the surface is habitable — land with water and a tolerable season.
 
-- **Ngjoangjoeqqeanoagoo** — alpine
-- **Ngjeomjeenoagooboe** — alpine
-- **Xoaxeeboenoagoo** — alpine
-- **Kboonjeovoenoagooboe** — alpine
-- **Bbaonjeanoenoa** — temperate-forest
 - **Voaqbaeveanoenoa** — temperate-forest
+- **Ngjeomjeenoagooboe** — alpine
+- **Btaexeanoagoo** — alpine
+- **Xoaxeeboenoagoo** — alpine
+- **Bbaonjeanoenoa** — temperate-forest
+- **Mjaavaonoagooboe** — alpine
 - **Vaoveamjaeboenoagoo** — alpine
 - **Veoqkoonaabaenoagoo** — savanna
+- **Qgeonjoatkeenoagoonoenoa** — temperate-forest
+- **Feenjeaboe** — alpine
+- **Bgoekgeengjoonoagoonoenoa** — temperate-forest
 - **Mjaevaofaanaagoa** — shrubland
-- **Njeeqkoonoagoogeetao** — tropical-seasonal-forest
-- **Ggeakqoenoagoo** — alpine
-- **Ngjeanjaenoenoanoagoo** — temperate-forest
+- **Kkaangjoenoagoogeetao** — tropical-seasonal-forest
 - **Veaxaemjeonoagoonaabae** — savanna
-- **Ggaexoegtaaboe** — alpine
 - **Gqoofaafaanoenoanoagoo** — temperate-forest
 - **Kboexaegeetaonoagoo** — tropical-seasonal-forest
-- **Tkooqgeevaenoagoo** — temperate-forest
-- **Tkaexoengjaanoagooboe** — alpine
-- **Qgeemjeegbaenoagoo** — alpine
-- **Vaenjoonoagoo** — alpine
-- **Kbeovaonoagoo** — temperate-forest
-- **Mjaaxeenoagoo** — alpine
-- **Mjoenjoeboenoagoo** — alpine
-- **Xoenjaabqeoboe** — alpine
-- **Njoomjoetkoegeetaonoagoo** — tropical-seasonal-forest
-- **Vaevoeveanoagoonoenoa** — temperate-forest
-- **Njeegboamjoonoagoo** — alpine
-- **Tgooxaenoagoo** — savanna
-- **Foangjeongjoonoagooboe** — alpine
-- **Mjaonjaenjeaboe** — alpine
-- **Tteotgaenoagoo** — alpine
-- **Ngjoemjaanoagoo** — alpine
-- **Ngjeeqkoegeetao** — tropical-seasonal-forest
-- **Bgooxeonoagoonaabae** — savanna
-- **Ngjeonjaonoagoo** — tropical-seasonal-forest
-- **Ngjeofoeveenoagooboe** — alpine
-- **Njoangjoenoagooboe** — alpine
-- **Qtoeggoonaabaenoagoo** — savanna
-- **Ngokvngebbeetao** — tropical-seasonal-forest
-- **Voatgaonoenoa** — temperate-forest
-- **Faetteongjoanaabaenoagoo** — savanna
-- **Faekqeonoagoo** — alpine
 - **Xeanjeoboenoagoo** — alpine
-- **Tqaomjoenoagoogeetao** — tropical-seasonal-forest
+- **Tkooqgeevaenoagoo** — temperate-forest
+- **Faanjoonjeenoagoonoenoa** — temperate-forest
+- **Ggaexoegtaaboe** — alpine
+- **Njoaxeobgaonoagoogeetao** — tropical-seasonal-forest
+- **Bgeenjaomjoonaabaenoagoo** — savanna
+- **Qkoabqeekteonoenoa** — temperate-forest
+- **Xaaveonaabae** — savanna
+- **Mjoenjoeboenoagoo** — alpine
+- **Qgeemjeegbaenoagoo** — alpine
+- **Gbaatkaofeanoagoonoenoa** — temperate-forest
+- **Njoangjoenoagooboe** — alpine
+- **Gbaongjeeggaenoagoonoenoa** — temperate-forest
+- **Njoomjoetkoegeetaonoagoo** — tropical-seasonal-forest
+- **Mjaaxeenoagoo** — alpine
+- **Tgooxaenoagoo** — savanna
+- **Vaevoeveanoagoonoenoa** — temperate-forest
+- **Feoxoonoagoo** — tropical-seasonal-forest
+- **Ngjoemjaanoagoo** — alpine
+- **Foangjeongjoonoagooboe** — alpine
+- **Gtaegtaonjaenoenoanoagoo** — temperate-forest
+- **Ngjeofoeveenoagooboe** — alpine
+- **Qgeemjeanoagoo** — savanna
+- **Ngjeonjaonoagoo** — tropical-seasonal-forest
+- **Ngjeaxaanjaonoagoo** — temperate-forest
 - **Vaevaomjoenoagoo** — temperate-forest
-- **Mjeexoamjeenoagoo** — alpine
-- **Njeangjoonoagoo** — alpine
-- **Qqoangjeonoagoo** — temperate-forest
-- **Njooqtaefaanoagooboe** — alpine
-- **Mjooveekqeegeetao** — tropical-seasonal-forest
 - **Ngjeoxoenoagoonaabae** — savanna
+- **Qbeeggoeqtaenoagoo** — savanna
+- **Qtoeggoonaabaenoagoo** — savanna
+- **Tqaomjoenoagoogeetao** — tropical-seasonal-forest
+- **Faavoengjeegeetaonoagoo** — tropical-seasonal-forest
+- **Njeangjoonoagoo** — alpine
 - **Xeotkoaxaenoagoo** — temperate-forest
-- **Kqaengjeanoagoo** — savanna
-- **Tgoeqbeaxeanoagoogeetao** — tropical-seasonal-forest
-- **Bbeebbaexoogeetaonoagoo** — tropical-seasonal-forest
-- **Njaafaonoenoanoagoo** — temperate-forest
-- **Njoatqeonaabaenoagoo** — savanna
-- **Gbaoktoaboenoagoo** — alpine
-- **Feenjoexeaboenoagoo** — alpine
-- **Veeqboeboenoagoo** — alpine
-- **Njoegqoanoenoa** — temperate-forest
-- **Vaemjoonoenoanoagoo** — temperate-forest
+- **Mjooveekqeegeetao** — tropical-seasonal-forest
 - **Tgoetteobbeenoagoonoenoa** — temperate-forest
-- **Njoexeetkaenoagoo** — alpine
-- **Ngekfngadnoaboo** — tropical-seasonal-forest
-- **Njeaxeanaagoanoagoo** — shrubland
-- **Veakkoanoagoo** — tropical-seasonal-forest
+- **Njoengjoonaabae** — savanna
+- **Njoatqeonaabaenoagoo** — savanna
+- **Faekqeonoagoo** — alpine
+- **Njoegqoanoenoa** — temperate-forest
+- **Njaafaonoenoanoagoo** — temperate-forest
+- **Feenjoexeaboenoagoo** — alpine
+- **Vaemjoonoenoanoagoo** — temperate-forest
 - **Foonjeonaabaenoagoo** — savanna
-- **Mjoanjeenoagoo** — tropical-seasonal-forest
+- **Veeqboeboenoagoo** — alpine
+- **Njoexeetkaenoagoo** — alpine
+- **Mjoagbaenoagooboe** — alpine
+- **Veakkoanoagoo** — tropical-seasonal-forest
+- **Ngekfngadnoaboo** — tropical-seasonal-forest
+- **Foatkoenoenoa** — temperate-forest
+- **Mjaomjeexaanaabae** — savanna
 - **Gkeavoekkoogaegoanoagoo** — tundra
 - **Ngjeekkeevoonoagooboanoo** — temperate-grassland
-- **Ngobzxadvnabnoaboonaadae** — savanna
-- **Ngjoamjaegeetaonoagoo** — tropical-seasonal-forest
-- **Njoavoagaegoanoagoo** — tundra
-- **Veofeenoagooboanoo** — temperate-grassland
+- **Mjoanjeenoagoo** — tropical-seasonal-forest
 - **Tgeakbaaggeonoenoanoagoo** — temperate-forest
-- **Mjoagbaenoagooboe** — alpine
-- **Njoaqbaakboaboanoo** — temperate-grassland
-- **Qbaavaebtoenoagoo** — tundra
+- **Ngjaebqaangjaenaabae** — savanna
+- **Gtaevaanoagoonoenoa** — temperate-forest
 - **Vaenjoomjoenoagoonaabae** — savanna
-- **Voavoatteanoagoonoenoa** — temperate-forest
+- **Ngjoamjaegeetaonoagoo** — tropical-seasonal-forest
+- **Veofeenoagooboanoo** — temperate-grassland
+- **Njooxoangjaenoagoogeetao** — tropical-seasonal-forest
+- **Kboanjaanaabae** — savanna
+- **Njoomjeafoonoenoanoagoo** — temperate-forest
+- **Njoaqbaakboaboanoo** — temperate-grassland
+- **Bkeaxoengjoanoagoo** — alpine
+- **Vaobbeanoagoo** — alpine
+- **Qkoaveafaonoenoanoagoo** — temperate-forest
+- **Ngjaotkeenoagoonoenoa** — temperate-forest
+- **Veomjoogqaanoagoogeetao** — tropical-seasonal-forest
+- **Kbaoktoonjeenoagooboe** — alpine
 - **Vnetvngekzhxeknoaboobeetao** — tropical-seasonal-forest
 - **Btoemjeegteeboe** — alpine
-- **Kbaoktoonjeenoagooboe** — alpine
-- **Ngjaotkeenoagoonoenoa** — temperate-forest
+- **Njoavoagaegoanoagoo** — tundra
 - **Mjoanjoanoagooboanoo** — temperate-grassland
-- **Qkoaveafaonoenoanoagoo** — temperate-forest
-- **Gbeavaogkaonoagoo** — alpine
-- **Qgoenjaofoenoagoo** — temperate-grassland
-- **Mjaaveeqteeboanoo** — temperate-grassland
-- **Bkeaxoengjoanoagoo** — alpine
-- **Veakgaemjeoboanoo** — temperate-grassland
-- **Ttaaqkoanoagoo** — shrubland
-- **Njoomjeafoonoenoanoagoo** — temperate-forest
-- **Nednaksfetbeetaonoaboo** — tropical-seasonal-forest
 - **Njeafeenoagooboanoo** — temperate-grassland
-- **Foovaenjeonaagoa** — shrubland
+- **Gboevoagaegoanoagoo** — tundra
+- **Gbeavaogkaonoagoo** — alpine
 - **Faabtoofaanoagoonaabae** — savanna
-- **Njooxeoboanoo** — temperate-grassland
-- **Feetbaongjeogaegoa** — tundra
+- **Qgoenjaofoenoagoo** — temperate-grassland
 - **Mjeakboefaageetaonoagoo** — tropical-seasonal-forest
-- **Ngjeangjeebbaenoagooboanoo** — temperate-grassland
-- **Ngjaakbaaboanoonoagoo** — temperate-grassland
+- **Mjaaveeqteeboanoo** — temperate-grassland
 - **Bqoangjeanoagoogeetao** — tropical-seasonal-forest
-- **Foemjootgaeboanoo** — temperate-grassland
-- **Zhvabvnetsfebbeetaonoaboo** — tropical-seasonal-forest
-- **Voakgeanoagoogaegoa** — tundra
-- **Nabzfotfnakkaekoanoaboo** — tundra
-- **Nadngotvneknaakoa** — shrubland
-- **Vaobbeanoagoo** — alpine
-- **Kqoefeegaegoa** — tundra
-- **Fnobnetdoanoonoaboo** — temperate-grassland
+- **Nednaksfetbeetaonoaboo** — tropical-seasonal-forest
+- **Foovaenjeonaagoa** — shrubland
+- **Ttaaqkoanoagoo** — shrubland
+- **Njooxeoboanoo** — temperate-grassland
+- **Qbaavaebtoenoagoo** — tundra
+- **Feetbaongjeogaegoa** — tundra
+- **Veakgaemjeoboanoo** — temperate-grassland
+- **Ngjeangjeebbaenoagooboanoo** — temperate-grassland
 - **Mjaoxaangjaenoagoo** — tundra
+- **Faetteongjoanaabaenoagoo** — savanna
+- **Tboavaanoagooboanoo** — temperate-grassland
+- **Foemjootgaeboanoo** — temperate-grassland
+- **Ngjaakbaaboanoonoagoo** — temperate-grassland
+- **Tboaqgeovoonoagoonaabae** — savanna
+- **Kqoefeegaegoa** — tundra
+- **Njoaxaevooboanoonoagoo** — temperate-grassland
 - **Njeongjeonoagoo** — temperate-grassland
 - **Veaggeonoagoogaegoa** — tundra
-- **Tboaqgeovoonoagoonaabae** — savanna
-- **Bkeengjoonaagoanoagoo** — shrubland
-- **Nabvnaknoaboonaadae** — savanna
 - **Vaavaanoagoo** — savanna
-- **Qqoeveotboagaegoanoagoo** — tundra
-- **Tboavaanoagooboanoo** — temperate-grassland
-- **Kgoongjoaxaagaegoanoagoo** — tundra
-- **Njookbeatbeanoagoo** — temperate-grassland
+- **Bkeengjoonaagoanoagoo** — shrubland
+- **Tkoaxaokteanoagoo** — savanna
 - **Btaekteanoagoonaagoa** — shrubland
+- **Faaxaofoogeetao** — tropical-seasonal-forest
+- **Zhvabvnetsfebbeetaonoaboo** — tropical-seasonal-forest
+- **Qgaongjeanjoanoagoo** — shrubland
+- **Qqoeveotboagaegoanoagoo** — tundra
+- **Nadngotvneknaakoa** — shrubland
+- **Kgoongjoaxaagaegoanoagoo** — tundra
+- **Njeegkaonoagoogaegoa** — tundra
 - **Veemjaoxoenoagoo** — alpine
-- **Nokvngaknoaboonaadae** — savanna
-- **Xaetgaeqbeaboanoonoagoo** — temperate-grassland
-- **Svotfnatzhvednoabookaekoa** — tundra
-- **Vngatfngebnoaboonaakoa** — shrubland
-- **Tqeemjaetkoeboanoo** — temperate-grassland
 - **Njeoggoaboanoonoagoo** — temperate-grassland
-- **Zhfakvnadxngatnoaboonoenoa** — temperate-forest
-- **Xnadsvotnoaboonaakoa** — shrubland
-- **Xeamjaafoanoagoo** — tundra
-- **Mjeefaokgeanoagoo** — tundra
-- **Feomjaanoagoonaagoa** — shrubland
-- **Kkeovaonoagoo** — shrubland
-- **Notsxaknaakoanoaboo** — shrubland
-- **Sxebnatvnobnaakoanoaboo** — shrubland
-- **Njoakqeoveagaegoa** — tundra
-- **Fngotfngotngednoaboonaakoa** — shrubland
-- **Tkoekboemjaanoagooboanoo** — temperate-grassland
-- **Zhxekzvaknoaboo** — tundra
-- **Ngokzxokxngetnoaboonaakoa** — shrubland
-- **Xaevaotkaonoagoo** — tundra
-- **Xngodvngetzxodnoaboo** — temperate-forest
-- **Gqaabbaanoagoogeetao** — tropical-seasonal-forest
-- **Fnekvngabnaakoa** — shrubland
-- **Tteegkaoboanoonoagoo** — temperate-grassland
-- **Zfakzhvatkaanoaboo** — taiga
-- **Veefeobbaaboanoo** — temperate-grassland
-- **Ngjaengjeogtoonoenoanoagoo** — temperate-forest
-- **Njoenjaenaagoa** — shrubland
-- **Zhxebngabvnaknaadae** — savanna
-- **Njeomjeoboanoonoagoo** — temperate-grassland
-- **Gqaengjoonoagoo** — temperate-grassland
-- **Sfabzhxaksfodnoaboo** — savanna
-- **Fnokzvatnoaboo** — temperate-forest
-- **Qboavaanoagooboe** — alpine
-- **Zveknoksfakbeetao** — tropical-seasonal-forest
-- **Zxaknoknoaboo** — savanna
-- **Zfokngaknoaboonaadae** — savanna
-- **Fnaknobngaknoaboo** — temperate-forest
-- **Ngadngadzhvatnoaboo** — shrubland
-- **Sfobvngetkaekoanoaboo** — tundra
-- **Fngodngekngetnoaboo** — temperate-forest
-- **Voabqaenjoaboanoonoagoo** — temperate-grassland
-- **Nodvnebnoenoanoaboo** — temperate-forest
-- **Ngadzxokzhvadnaakoa** — shrubland
-- **Svabxngekzvabdoanoonoaboo** — temperate-grassland
-- **Ngabnebngobnoaboo** — taiga
-- **Fngatfnotnoaboodoanoo** — temperate-grassland
-- **Ngadngatdoanoonoaboo** — temperate-grassland
-- **Zfatsfokxngodnoaboo** — temperate-grassland
-- **Zfakngatnoaboonoenoa** — temperate-forest
-- **Ngebnotzxodnoaboonoenoa** — temperate-forest
-- **Nobzxekngatbeetao** — tropical-seasonal-forest
+- **Zhxetfnakbeetao** — tropical-seasonal-forest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -223,31 +175,31 @@ Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 
 
 ## The People
 
-The land holds 177 settlement(s).
-The chief goblin settlement, Ngokvngebbeetao, holds 1 souls amid tropical-seasonal-forest.
-The chief hobgoblin settlement, Ngjoangjoeqqeanoagoo, holds 11 souls amid alpine.
+The land holds 129 settlement(s).
+The chief goblin settlement, Ngekfngadnoaboo, holds 1 souls amid tropical-seasonal-forest.
+The chief hobgoblin settlement, Voaqbaeveanoenoa, holds 3 souls amid temperate-forest.
 
-The goblin village of **Ngokvngebbeetao**, population 1.
+The goblin village of **Ngekfngadnoaboo**, population 1.
 
-Ngokvngebbeetao lives by farming.
+Ngekfngadnoaboo lives by farming.
 Its roles, lowest to highest: farmer, shaman, chief.
 The goblin run a basal metabolism of 30 W; fast-lived and prolific, lifespan ~49 yr, matures ~10 yr.
 
-The hobgoblin legion of **Ngjoangjoeqqeanoagoo**, population 11.
+The hobgoblin legion of **Voaqbaeveanoenoa**, population 3.
 
-Ngjoangjoeqqeanoagoo lives by foraging.
-Its roles, lowest to highest: laborer, warlord.
+Voaqbaeveanoenoa lives by farming.
+Its roles, lowest to highest: laborer, augur, warlord.
 The hobgoblin run a basal metabolism of 86 W; moderate-paced, lifespan ~70 yr, matures ~14 yr.
 
 ## The Gods
 
-In the village of **Ngokvngebbeetao**, an organized priesthood tends its own pantheon:
+In the village of **Ngekfngadnoaboo**, an organized priesthood tends its own pantheon:
 
 > Toeteanoaboo the Vnodtoetea is ever: Toeteanoaboo the Vnodtoetea watches unceasing. So it was, so it is.
 >
 > — derived from the phenomenon *celestial-body*
 
-The legion of **Ngjoangjoeqqeanoagoo** keeps its own folk pantheon:
+In the legion of **Voaqbaeveanoenoa**, an organized priesthood tends its own pantheon:
 
 > Toeqea the Ngjeanoagoo is ever: Toeqea the Ngjeanoagoo watches unceasing. So it was, so it is.
 >

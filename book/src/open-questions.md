@@ -404,11 +404,27 @@ roster: carrying capacity is `supply × fitness`, but supply is a **single**
 net-primary-productivity field scaled per species by uptake, so a resource
 niche changes a species' *magnitude* everywhere, never its *place*. Only the
 climate term is spatial, and climate alone differentiates ~two ways however
-many creatures compete. So the stronghold payoff now waits, precisely, on
+many creatures compete. The stronghold payoff waited, precisely, on
 **per-axis spatial resource fields** (minerals in the mountains, prey where
 the prey is) and a way to read dominance as resource captured rather than
-headcount — a modeling increment named and set aside, with a preregistered
-`#[ignore]`d test standing as its target. Naming all three pieces against the
-field that already exists is the honest state of the rescore — the packing
-win banked, the stronghold debt now correctly attributed to the supply
-field's missing geography, the vary-time debt still open.
+headcount. *The Demesne* (Stage 1 of a named Living-Biomes arc) shipped the
+**abiotic half** of exactly that: photosynthate, forage, and mineral became
+real per-cell supply fields, dot-producted against each kind's uptake vector
+at the existing carrying-capacity site, and the rank-restoration paid off
+wherever an abiotic specialist could reach it — seed-42's distinct material
+dominants rose 2→4, and the pure-mineral xorn went from a noise-level single
+settlement to the single largest domain on the world (≈29k cells), a
+mineral-eater owning its mountains as the place-identity model intends. Two
+pieces stay open,
+both measured rather than asserted: the **prey axis** (dragons and predators
+still hold no place) waits on Stage 2's trophic food-web field, and — newly
+surfaced by the shipped half — the four small **peoples** do not diversify at
+all, because their authored niches carry zero weight on any axis this stage
+spatialized, leaving them competing on one shared forage number. That last is
+not a tuning shortfall but its own open design question (an order-independent
+territory force — a field or a fixed point, never a cumulative tally), and the
+preregistered `≥6`-distinct-dominants test stays honestly `#[ignore]`d as its
+remaining target. So the rescore moves the **abiotic** stronghold debt from
+open to **banked and measured**, holds the prey-stronghold debt against
+Stage 2, adds the peoples-territory question as a new named bet, and leaves
+the vary-time debt still open.
