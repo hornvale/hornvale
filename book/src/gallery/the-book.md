@@ -70,10 +70,10 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-The sky has darkened, now and again.
+Among the Vavako, the sky has darkened, now and again.
 The priesthood of the Vavako numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36526.
-The sky has darkened, now and again.
+Among the Babako, the sky has darkened, now and again.
 The priesthood of the Babako numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36526.
 
@@ -168,13 +168,13 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-The sky has darkened, now and again.
+Among the Maetmea, the sky has darkened, now and again.
 The priesthood of the Maetmea numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36611.
-The sky has darkened, now and again.
+Among the Waedwea, the sky has darkened, now and again.
 The priesthood of the Waedwea numbers the darkenings: 49.
 The next darkening, it teaches, comes on day 36611.
-The sky has darkened, now and again.
+Among the Ngkoshngta, the sky has darkened, now and again.
 
 *In truth, the darkenings of the first hundred years number 81.*
 
@@ -253,10 +253,10 @@ The sky keeps no dates to number.
 
 #### In the hundredth year
 
-The sky has darkened, now and again.
+Among the Sdeozqae, the sky has darkened, now and again.
 The priesthood of the Sdeozqae numbers the darkenings: 32.
 The next darkening, it teaches, comes on day 36953.
-The sky has darkened, now and again.
-The sky has darkened, now and again.
+Among the Shteozqae, the sky has darkened, now and again.
+Among the Jjajjjo, the sky has darkened, now and again.
 
 *In truth, the darkenings of the first hundred years number 53.*
