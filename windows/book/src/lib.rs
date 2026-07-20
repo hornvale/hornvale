@@ -593,11 +593,21 @@ fn reckoning_epochs(world: &World) -> Vec<ReckoningEpoch> {
     .collect()
 }
 
-/// The CLI `--at <day>` lens (Task 2): a single ad hoc Reckoning epoch at
-/// an arbitrary day, rendered to stdout only — never part of the
-/// committed `BookVolume::reckoning`, which always uses the two
-/// preregistered epochs above regardless of this function ever being
-/// called (`scripts/regenerate-artifacts.sh` never passes `--at`).
+/// The single-epoch reckoning accessor: a Reckoning-of-Years epoch at any
+/// arbitrary day, exposed so a caller outside this crate can read the
+/// Book's own time axis. Originally the CLI's `--at <day>` lens (C8 T2:
+/// rendered to stdout only, never part of the committed
+/// `BookVolume::reckoning`, which always uses the two preregistered
+/// epochs above regardless of this function ever being called —
+/// `scripts/regenerate-artifacts.sh` never passes `--at`); The Vessel
+/// Stitch T1 promotes it to the crate's public accessor and cuts the CLI
+/// path over to calling it directly, so it is now this function's own
+/// implementation the CLI renders rather than a parallel one — the
+/// accessor law (spec §4.4), checked by
+/// `reckoning_at_matches_the_fixed_pair_and_renders_arbitrary_days`. The
+/// possessed session's `consult` verb (`windows/vessel`, T2) is the
+/// second caller: it reads the Reckoning at the session's own day through
+/// this same function.
 pub fn reckoning_at(world: &World, at: hornvale_astronomy::StdDays) -> ReckoningEpoch {
     let day = at.get();
     let heading = format!("At day {day}");
@@ -4168,6 +4178,64 @@ mod tests {
             vec!["In truth, the darkenings of the first hundred years number 53.".to_string()],
             "seed 3: hobgoblin/kobold hold no cardinal at all (qualitative memory), so the \
              margin fires regardless of what either witnessed"
+        );
+    }
+
+    /// The Vessel Stitch T1, the accessor law (spec §4.4): `reckoning_at`
+    /// is the CLI `--at` path's own implementation (one function, two
+    /// callers) — it must equal `reckoning_epochs`'s per-epoch output for
+    /// the same day, not just resemble it. Checked against seed 1's fixed
+    /// pair (day 0's empty arm, day 36525's six-line/one-margin epoch,
+    /// both pinned above in `the_reckoning_renders_the_epoch_pair`) by
+    /// comparing `lines` exactly (the substantive per-culture registers —
+    /// identical regardless of caller) while `heading` and the margin's
+    /// leading phrase are lens-parameterized closed strings, not part of
+    /// the law: the fixed pair's are the committed prose (`"In the first
+    /// days"`/`"In the hundredth year"`, `"...of the first hundred
+    /// years..."`), while `reckoning_at`'s are always the ad hoc `"At day
+    /// ⟨N⟩"` / `"...by day ⟨N⟩..."` lens — only the CLI's `--at` stdout
+    /// path ever sees them, never the committed artifact. The margin's
+    /// trailing cardinal (the true count the phrase reports) IS part of
+    /// the law and is pinned exact below, verified live. A third,
+    /// non-preregistered day (20000) exercises the general case: some
+    /// culture's ladder rung at an arbitrary day, not just the two frozen
+    /// epochs.
+    #[test]
+    fn reckoning_at_matches_the_fixed_pair_and_renders_arbitrary_days() {
+        let world = generated(1);
+        let pair = render_volume(&world).reckoning;
+
+        let day0 = reckoning_at(&world, hornvale_astronomy::StdDays::new(0.0).unwrap());
+        assert_eq!(
+            day0.lines, pair[0].lines,
+            "day 0 matches the fixed pair's empty arm"
+        );
+        assert_eq!(
+            day0.margin, pair[0].margin,
+            "the empty arm carries no margin, either way"
+        );
+
+        let day100 = reckoning_at(
+            &world,
+            hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap(),
+        );
+        assert_eq!(
+            day100.lines, pair[1].lines,
+            "the hundredth year's per-culture lines match the fixed pair exactly"
+        );
+        assert_eq!(
+            day100.margin,
+            vec!["In truth, the darkenings by day 36525 number 6472.".to_string()],
+            "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
+             fixed pair's margin, phrased through reckoning_at's own ad hoc lens"
+        );
+
+        let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
+        assert!(
+            !mid.heading.is_empty() && !mid.lines.is_empty(),
+            "an arbitrary day renders: heading={:?} lines={:?}",
+            mid.heading,
+            mid.lines
         );
     }
 
