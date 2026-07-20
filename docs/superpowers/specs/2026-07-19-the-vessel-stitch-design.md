@@ -1,7 +1,7 @@
 # The Vessel Stitch — Design
 
 **Date:** 2026-07-19
-**Status:** **Approved at G3 (2026-07-19, as amended — the verb is `write`)**.
+**Status:** **COMPLETE — shipped (see [the chronicle](../../../book/src/chronicle/the-vessel-stitch.md)).**
 **Campaign:** the first post-program campaign — the game-layer stitch the
 self-writing-book program's C6 and C8 each filed as their named followup.
 **Theory:** no new registry row — this executes LANG-39's recorded
@@ -50,8 +50,9 @@ pinning `tell` re-pins in the rename task.
   the verb dispatch match; vessel already depends on `hornvale-book`.
 - `windows/book`: `esoteric_lines(world, reader: &BTreeSet<(String,
   String)>)` (C6 — the exact reader type the adapter produces);
-  the `--at` single-epoch reckoning rendering (C8 — currently internal
-  to the CLI path; needs a small additive pub accessor).
+  the `--at` single-epoch reckoning rendering (C8 — this survey line was
+  STALE at writing: C8 T2 had already exposed `reckoning_at` pub and cut
+  the CLI over; T1 measured this and shrank to the accessor law + docs).
 - `make vessel-check` — the Casement's local gate; the wasm exhibit is
   deploy-built, never committed (nothing to release here).
 
