@@ -574,6 +574,89 @@ fn explain_moons(
     };
 }
 
+/// Explanation for LANG-48's `moon-period-ratio` fact — structurally
+/// identical to [`explain_moons`] (same locate → admit → prior → select
+/// → bind → mutate shape), reusing every one of its primitives
+/// unchanged: [`admitted`], [`schema_prior`], [`select_schema`],
+/// [`bind_agent`]. The only differences from `explain_moons` are the
+/// predicate and the fact-shape (`FactShape::CyclicEvent`, the shape
+/// `day-length-std` already uses — no change to `schemas.rs`'s admission
+/// lists). Binds the SAME representative agent `explain_moons` already
+/// uses (`cyclic`'s own slowest-ranked belief) rather than attempting to
+/// identify the two specific moons the ratio involves by entity — this
+/// campaign's fact is a single world-level scalar, exactly like
+/// `moon-count`'s own, so it needs no per-moon entity resolution.
+#[allow(clippy::too_many_arguments)]
+fn explain_moon_ratio(
+    world_seed: Seed,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    beta: f64,
+    subsistence: Subsistence,
+    sociality: Sociality,
+) {
+    let predicate = hornvale_astronomy::facts::MOON_PERIOD_RATIO;
+    if domain_of(params, predicate) != Some("sky") {
+        return;
+    }
+    let Some(ratio_index) = account
+        .entries
+        .iter()
+        .position(|e| e.fact.predicate == predicate)
+    else {
+        return;
+    };
+    if account.entries[ratio_index].disposition != Disposition::Kept {
+        return;
+    }
+    if cyclic.is_empty() {
+        return;
+    }
+
+    let slowest_rank = cyclic.len() - 1;
+    let (belief, _period) = &cyclic[slowest_rank];
+    let manner = manner_of(slowest_rank, cyclic.len());
+
+    let candidates = admitted(FactShape::CyclicEvent);
+    let prior = schema_prior(subsistence, sociality, &candidates);
+    let mut schema_stream = world_seed
+        .derive("language")
+        .derive(species)
+        .derive("schema")
+        .derive("sky")
+        .derive(fact_shape_key(FactShape::CyclicEvent))
+        .derive(predicate)
+        .stream();
+    let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
+        return;
+    };
+
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
+        let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
+        let mut lexeme_stream = world_seed
+            .derive("language")
+            .derive(species)
+            .derive("lexeme")
+            .derive(predicate)
+            .stream();
+        select_lexeme(lex_candidates, &mut lexeme_stream)
+    } else {
+        None
+    };
+
+    let underlying = account.entries[ratio_index].disposition.clone();
+    account.entries[ratio_index].disposition = Disposition::Explained {
+        underlying: Box::new(underlying),
+        schema,
+        agent,
+        lexeme,
+        manner,
+    };
+}
+
 /// Explanation assembly (C5): wraps `account`'s day and (where kept)
 /// moons entries in [`Disposition::Explained`] where a schema fires and
 /// binds. Called from [`accounts_of`], after [`account_of`] — never from
@@ -633,6 +716,16 @@ fn explain(
         params,
         &cyclic,
         day,
+        beta,
+        subsistence,
+        psych.sociality,
+    );
+    explain_moon_ratio(
+        world.seed,
+        species,
+        account,
+        params,
+        &cyclic,
         beta,
         subsistence,
         psych.sociality,
@@ -1932,6 +2025,83 @@ mod tests {
                     && g.object == hornvale_kernel::Value::Number(2.0)
             ),
             "moon-period-ratio must flow into chorus_ground once committed: {ground:?}"
+        );
+    }
+
+    fn hornvale_worldgen_test_world(seed: u64) -> World {
+        crate::build_world(
+            Seed(seed),
+            &hornvale_astronomy::SkyPins::default(),
+            crate::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &crate::SettlementPins::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn moon_period_ratio_is_explained_with_an_admitted_schema() {
+        let world = hornvale_worldgen_test_world(1);
+        let cyclic = cyclic_beliefs_of(&world, "goblin");
+        assert!(
+            !cyclic.is_empty(),
+            "seed 1 must place a goblin culture with a real pantheon"
+        );
+        let _climate = crate::climate_of(&world).unwrap();
+        let flagship = crate::flagship_of(&world, "goblin").expect("goblin must have a flagship");
+        let subsistence = hornvale_culture::subsistence_of(&world, flagship.id)
+            .as_deref()
+            .and_then(subsistence_from_name)
+            .expect("goblin flagship must have a subsistence");
+        let wc = WorldComponents::assemble().expect("component assembly must succeed");
+        let psych = wc
+            .psyche
+            .get_by_label("goblin")
+            .expect("goblin psychology must exist");
+        let beta = beta_of(psych);
+
+        let ground = vec![GroundFact {
+            subject: "Vebe".to_string(),
+            predicate: hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+            object: hornvale_kernel::Value::Number(2.0),
+        }];
+        let mut params = observability_table_params();
+        params.holdings.insert("moon".to_string());
+        let mut account = account_of(&ground, &params);
+        assert_eq!(
+            account.entries[0].disposition,
+            Disposition::Kept,
+            "sky_capability=1.0 in observability_table_params() must keep a SkyGraded fact"
+        );
+
+        explain_moon_ratio(
+            world.seed,
+            "goblin",
+            &mut account,
+            &params,
+            &cyclic,
+            beta,
+            subsistence,
+            psych.sociality,
+        );
+
+        let Disposition::Explained { schema, .. } = &account.entries[0].disposition else {
+            panic!(
+                "expected Explained, got {:?}",
+                account.entries[0].disposition
+            );
+        };
+        assert!(
+            matches!(
+                schema,
+                SchemaId::Agentive
+                    | SchemaId::PathJourney
+                    | SchemaId::Balance
+                    | SchemaId::CycleReturn
+            ),
+            "fired schema {schema:?} must be in FactShape::CyclicEvent's real admitted set \
+             (domains/language/src/schemas.rs's own admissions_match_the_preregistered_gates \
+             test: Agentive, PathJourney, Balance, CycleReturn)"
         );
     }
 }
