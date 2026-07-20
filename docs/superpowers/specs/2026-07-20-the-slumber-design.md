@@ -68,6 +68,28 @@ wake it rises refreshed and forages again. A nocturnal species runs the same
 loop shifted half a day. A creature caught far from home at duskfall is driven
 home; a creature dying of thirst wakes to drink.
 
+### 5. Across creature types (who sleeps)
+
+The "who sleeps" question is answered by metabolism, for free — fatigue is a
+homeostatic drive, so The Kindling's gate governs it exactly as it governs
+thirst and thermal:
+
+- **Ametabolic** (construct / undead / elemental — the xorn and its kin): no
+  homeostatic drives, so **no fatigue → never sleeps.** The deathless keep their
+  round-the-clock stillness; the wake cycle does not apply (nothing to gate). No
+  new code — it falls out of the gate.
+- **Metabolizing** (Endotherm / Ectotherm / Autotroph — the four settled peoples,
+  dragons, treants, beasts): tire and sleep on their authored `ActivityCycle`
+  phase (diurnal / nocturnal / crepuscular).
+
+The four settled peoples are all diurnal or nocturnal, so the fixed-phase model
+is correct for all shipping content. Two nuances the model deliberately does NOT
+express yet (deferred — no authored species needs them): a **cathemeral /
+no-fixed-schedule** creature (a shark-like beast, a being of appetite) that rests
+opportunistically rather than on a phase; and an **alive-but-sleepless** creature
+(a cursed knight who thirsts but never rests), which would require decoupling
+"has fatigue" from "has metabolism." Both are captured as idea-registry rows.
+
 ## Architecture
 
 Fatigue is a derived view (UNI-20): a fold over the wake-time integral +
@@ -115,6 +137,13 @@ same soft-Maslow ranges thermal uses — no priority table.
 
 ## Deferred (captured)
 
+- **Cathemeral / no-fixed-schedule creatures** — a 4th `ActivityCycle` (or an
+  opportunistic-rest mode) for a living creature with no consolidated sleep
+  phase (a shark-like beast, a being of appetite). Rely-on-the-gate holds for
+  now (no authored species needs it).
+- **Alive-but-sleepless** — decoupling "has fatigue" from "has metabolism" (a
+  per-kind sleep flag), so a cursed sleepless knight who still thirsts is
+  expressible independently of the ametabolic gate.
 - **True-solar waking** — wake state from solar altitude (latitude, season, the
   real terminator), replacing the fractional-day window.
 - **Fatigue as a modulator** — tiredness degrading perception/decision quality,
