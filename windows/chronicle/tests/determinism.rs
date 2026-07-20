@@ -60,3 +60,15 @@ fn the_loop_actually_produces_events() {
         "raids never delivered: no Fled events in {total} events (coupling is inert)"
     );
 }
+
+#[test]
+fn replay_is_deterministic_in_result() {
+    // Timings vary; the DERIVED forward state must not. We assert the
+    // event-count a replay produces is stable across two calls.
+    use hornvale_chronicle::NodeId;
+    use hornvale_chronicle::measure::replay_event_count;
+    let world = run(&cfg(7));
+    let a = replay_event_count(&world, NodeId(0), 20, &cfg(7));
+    let b = replay_event_count(&world, NodeId(0), 20, &cfg(7));
+    assert_eq!(a, b, "a replay's derived events must be reproducible");
+}
