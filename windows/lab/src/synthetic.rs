@@ -34,7 +34,7 @@ use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, WorldTime};
 use hornvale_species::{ActivityCycle, MetabolicClass};
-use hornvale_vessel::liveness::{AGENT_AT, DRANK, Npc, Terrain, place_agent};
+use hornvale_vessel::liveness::{AGENT_AT, DRANK, Npc, RESTED, Terrain, place_agent};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A hand-planted terrain field for the harness — the pub sibling of the
@@ -121,6 +121,7 @@ fn harness_registry() -> ConceptRegistry {
     let mut registry = ConceptRegistry::default();
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
+    let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
     registry
 }
 

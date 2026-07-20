@@ -519,13 +519,16 @@ pub fn believed_water(
 /// perceived affordance (`explore_step`). PSY-6's "plan over belief, not truth"
 /// (UNI-16), realized: the ground-truth `water` argument `decide` once took now
 /// lives here as belief.
-/// type-audit: bare-ok(ratio: drive)
+/// type-audit: bare-ok(ratio: drive), bare-ok(ratio: fatigue)
 #[derive(Clone, Debug)]
 pub struct Perceived {
     /// The agent's current room (self-knowledge — always true).
     pub position: RoomAddr,
-    /// The agent's perceived drive level (self-knowledge — always true).
+    /// The agent's perceived thirst drive level (self-knowledge — always true).
     pub drive: f64,
+    /// The agent's perceived fatigue level (self-knowledge — always true, The
+    /// Slumber): time since it last rested, normalized `[0, 1]`.
+    pub fatigue: f64,
     /// The nearest water the agent KNOWS of (belief), or `None` (ignorant).
     pub believed_water: Option<RoomAddr>,
     /// The next exploration move for an ignorant agent (lowest-elevation
@@ -630,6 +633,9 @@ pub enum DriveKind {
     Thirst,
     /// The thermal-comfort flow drive.
     Thermal,
+    /// The rest (fatigue) stock drive — The Slumber. Ordered LAST so the
+    /// existing thirst-before-thermal tie-break is unperturbed.
+    Fatigue,
 }
 
 /// The per-NPC behavioural commitment mode — the errand an NPC is on
@@ -878,7 +884,8 @@ impl<'a> Drive for Thermal<'a> {
         // doesn't improve comfort). No consume — `Drink` serves it not at all.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
-            Action::Drink => 0.0,
+            // No consume — neither `Drink` nor `Rest` serves comfort.
+            Action::Drink | Action::Rest => 0.0,
         }
     }
 }
@@ -916,6 +923,109 @@ fn comfort_step(
         Some(best_room)
     } else {
         None
+    }
+}
+
+/// A game-layer predicate: the agent rested (slept, resetting fatigue) on this
+/// day — The Slumber's discharge event, the fatigue analogue of `drank`.
+/// Registered by the session, NOT at genesis.
+/// type-audit: bare-ok(identifier-text)
+pub const RESTED: &str = "rested";
+
+/// The fraction of the day a DIURNAL creature is awake — `[AWAKE_START,
+/// AWAKE_END)` of the day (a fractional-day window, the authored simplification
+/// standing in for a true solar terminator; spec §1). Nocturnal is the
+/// complement; crepuscular the twilight edges.
+const AWAKE_START: f64 = 0.25;
+/// The end of the diurnal wake window (see [`AWAKE_START`]).
+const AWAKE_END: f64 = 0.75;
+/// The half-width of a crepuscular creature's dawn/dusk wake bands.
+const CREP_HALFWIDTH: f64 = 0.1;
+
+/// Fatigue gained per day since the last rest (The Slumber). Chosen so the drive
+/// crosses `FATIGUE_ACT` roughly once per day, so a creature sleeps about daily.
+/// Authored.
+const FATIGUE_RISE: f64 = 0.9;
+/// The fatigue seek threshold: at/above this, the creature seeks rest. Mirrors
+/// thirst's `act`.
+const FATIGUE_ACT: f64 = 0.85;
+/// The soft-Maslow ceiling on fatigue's urgency contribution — below survival
+/// (like thermal comfort), so a creature dying of thirst does not sleep through
+/// it, but a mildly thirsty tired one rests. Authored.
+const FATIGUE_CEIL: f64 = 0.6;
+
+/// The thirst urgency past which the wake-gate is OVERRIDDEN — a creature this
+/// close to dying of thirst WAKES to drink (spec §3). Authored.
+const SURVIVAL_OVERRIDE: f64 = 0.9;
+
+/// Whether a creature of `activity` is awake at `day` — a pure function of its
+/// `ActivityCycle` and the time of day (the fractional part of `day`; The
+/// Slumber, spec §1). Diurnal is awake through the day window, nocturnal the
+/// complement, crepuscular the twilight edges. A fractional-day approximation
+/// (true solar altitude is deferred).
+fn is_awake(activity: ActivityCycle, day: f64) -> bool {
+    let frac = day - day.floor();
+    let in_day = frac >= AWAKE_START && frac < AWAKE_END;
+    match activity {
+        ActivityCycle::Diurnal => in_day,
+        ActivityCycle::Nocturnal => !in_day,
+        ActivityCycle::Crepuscular => {
+            (frac - AWAKE_START).abs() < CREP_HALFWIDTH || (frac - AWAKE_END).abs() < CREP_HALFWIDTH
+        }
+    }
+}
+
+/// The fatigue at `t`: time since the last rest, a fold over committed `rested`
+/// events (0 before any rest), clamped `[0, 1]` (The Slumber). FATIGUE == FOLD,
+/// over `rested` — the structural twin of thirst's `drive_at` over `drank`.
+/// type-audit: bare-ok(ratio: return)
+pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
+    let last_rested = ledger
+        .find(RESTED)
+        .filter(|f| f.subject == entity)
+        .filter_map(|f| f.day)
+        .fold(0.0_f64, f64::max);
+    (FATIGUE_RISE * (t.day - last_rested)).clamp(0.0, 1.0)
+}
+
+/// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
+/// urgency accrues over time and is reset by a discrete `Rest`. Its affordance
+/// is to be at `home` (the rest-place) and rest — `Rest` when already there,
+/// else the first step of the plan home — so a tired creature beelines home to
+/// sleep, exactly as thirst beelines to water.
+/// type-audit: bare-ok(return)
+pub struct Fatigue {
+    /// The creature's home — where it rests.
+    pub home: RoomAddr,
+}
+
+impl Drive for Fatigue {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        view.fatigue
+    }
+    fn act_threshold(&self) -> f64 {
+        FATIGUE_ACT
+    }
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
+        if view.position == self.home {
+            Some(Action::Rest)
+        } else {
+            plan_to_room(&view.position, &self.home, budget).and_then(|pl| pl.into_iter().next())
+        }
+    }
+    fn kind(&self) -> DriveKind {
+        DriveKind::Fatigue
+    }
+    fn urgency_ceiling(&self) -> f64 {
+        FATIGUE_CEIL
+    }
+    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+        // A stock drive serves exactly the one step its affordance would take
+        // (a step home, or `Rest` at home).
+        match self.affordance(view, budget) {
+            Some(a) if &a == action => 1.0,
+            _ => 0.0,
+        }
     }
 }
 
@@ -1068,6 +1178,7 @@ pub fn arbitrate(
     neighbors.sort();
     let mut candidates: Vec<Action> = neighbors.into_iter().map(Action::MoveTo).collect();
     candidates.push(Action::Drink);
+    candidates.push(Action::Rest);
 
     // A drive's best single-drive (grab-style) utility over the candidates —
     // the score the commitment switch compares incumbent vs challenger on.
@@ -1158,8 +1269,14 @@ pub fn arbitrate(
         // once the cell is comfortable no drive is active, so it reads Content.
         let known = view.believed_water.is_some();
         let (label, valence) = match &chosen {
-            Action::Drink => (AffectLabel::Eager, 1.0),
-            Action::MoveTo(_) if known => (AffectLabel::Eager, 0.5),
+            // A need directly MET — a drink or a rest.
+            Action::Drink | Action::Rest => (AffectLabel::Eager, 1.0),
+            // Beelining to a KNOWN target it can reach: home (fatigue always
+            // knows home) or a believed water source.
+            Action::MoveTo(_) if pursued_kind == DriveKind::Fatigue || known => {
+                (AffectLabel::Eager, 0.5)
+            }
+            // Following a gradient toward an UNKNOWN one (normal Searching).
             Action::MoveTo(_) => (AffectLabel::Searching, 0.0),
         };
         Resolution {
@@ -1220,9 +1337,11 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
     );
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
+    let fatigue = fatigue_at(frozen, npc.entity, day);
     let view = Perceived {
         position: pos,
         drive,
+        fatigue,
         believed_water: believed,
         explore_step,
     };
@@ -1232,14 +1351,18 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         day,
     };
+    let rest = Fatigue {
+        home: npc.home.clone(),
+    };
     // The metabolism gate (The Kindling): an Ametabolic creature has no
-    // homeostatic drives at all — it neither thirsts nor thermoregulates, so it
-    // reads Content, never distress. Metabolizers carry thirst + thermal.
+    // homeostatic drives at all — it neither thirsts, thermoregulates, nor tires
+    // (The Slumber), so it reads Content, never distress. Metabolizers carry all
+    // three.
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
     let drives: Vec<&dyn Drive> = if ametabolic {
         Vec::new()
     } else {
-        vec![&thirst, &thermal]
+        vec![&thirst, &thermal, &rest]
     };
     let helpless = !ametabolic && learned_helplessness(last_drank, day.day);
     arbitrate(
@@ -1311,6 +1434,19 @@ fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
     }
 }
 
+/// A committed `rested` fact: `entity` slept (reset its fatigue) on `day` — The
+/// Slumber's discharge, the fatigue twin of [`drank_fact`].
+fn rested_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
+    Fact {
+        subject: entity,
+        predicate: RESTED.to_string(),
+        object: Value::Flag(true),
+        place: None,
+        day: Some(day),
+        provenance: provenance.to_string(),
+    }
+}
+
 /// The drive-driven movement system (The Foresight → The Surmise): each NPC
 /// steps through its belief-driven plan — exploring while ignorant, beelining
 /// once it knows water — committing a dated `agent-at`/`drank` at each
@@ -1344,6 +1480,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // updating a local `last_drank` as we emit `DRANK` facts.
             let mut last_drank = frozen
                 .find(DRANK)
+                .filter(|f| f.subject == npc.entity)
+                .filter_map(|f| f.day)
+                .fold(0.0_f64, f64::max);
+            // Likewise the last rest day (The Slumber): fatigue is time since it,
+            // reset when a `rested` fact is emitted.
+            let mut last_rested = frozen
+                .find(RESTED)
                 .filter(|f| f.subject == npc.entity)
                 .filter_map(|f| f.day)
                 .fold(0.0_f64, f64::max);
@@ -1393,9 +1536,11 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     &self.params,
                 );
                 let explore_step = lowest_unvisited_neighbor(&pos, &visited, self.terrain);
+                let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
                 let view = Perceived {
                     position: pos.clone(),
                     drive,
+                    fatigue,
                     believed_water: believed.clone(),
                     explore_step,
                 };
@@ -1413,12 +1558,15 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     day: WorldTime { day },
                 };
+                let rest = Fatigue {
+                    home: npc.home.clone(),
+                };
                 // The metabolism gate (The Kindling): Ametabolic → no drives.
                 let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
                 let drives: Vec<&dyn Drive> = if ametabolic {
                     Vec::new()
                 } else {
-                    vec![&thirst, &thermal]
+                    vec![&thirst, &thermal, &rest]
                 };
                 let helpless = !ametabolic && learned_helplessness(last_drank, day);
                 let resolution = arbitrate(
@@ -1444,6 +1592,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         // the comfort-seeking; homing names the sated walk back.
                         let provenance = match mode {
                             Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
+                            Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
                             Mode::Pursuing(DriveKind::Thirst) if believed.is_some() => {
                                 "went down to the river it knew (thirst)"
                             }
@@ -1463,6 +1612,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
                             "drank from the river (thirst sated)",
                         ));
                         last_drank = day;
+                    }
+                    Intent::Do(Action::Rest) => {
+                        out.push(rested_fact(
+                            npc.entity,
+                            day,
+                            "slept at home (fatigue eased)",
+                        ));
+                        last_rested = day;
                     }
                     Intent::Hold => {
                         // Idle (or unreachable): jump to the next act-crossing
@@ -1727,6 +1884,9 @@ pub enum Action {
     MoveTo(RoomAddr),
     /// Drink (precondition: at the water room; effect: hydrated).
     Drink,
+    /// Rest / sleep (precondition: at home; effect: fatigue reset) — The
+    /// Slumber's discharge action, the fatigue analogue of `Drink`.
+    Rest,
 }
 
 /// The GOAP planning state A* searches: where the agent is and whether it has
@@ -2192,6 +2352,9 @@ mod tests {
             .register_predicate(AGENT_AT, false, "pos")
             .unwrap();
         world_reg.register_predicate(DRANK, false, "drank").unwrap();
+        world_reg
+            .register_predicate(RESTED, false, "rested")
+            .unwrap();
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -2340,6 +2503,7 @@ mod tests {
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let e = ledger.mint_entity();
         // no drank yet: rises from day 0
         assert!(
@@ -2392,6 +2556,7 @@ mod tests {
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let e = ledger.mint_entity();
         let other = ledger.mint_entity();
         // Another entity's drink must not affect `e`'s drive (subject-scoped fold).
@@ -2498,6 +2663,7 @@ mod tests {
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let e = ledger.mint_entity();
         for day in [1.0, 4.0, 9.0] {
             ledger
@@ -2565,6 +2731,7 @@ mod tests {
         let v = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2576,6 +2743,7 @@ mod tests {
         let v = Perceived {
             position: water.clone(),
             drive: 0.1,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2587,6 +2755,7 @@ mod tests {
         let v = Perceived {
             position: home.clone(),
             drive: 0.1,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2604,6 +2773,7 @@ mod tests {
         let thirsty = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2611,6 +2781,7 @@ mod tests {
         let away_not_thirsty = Perceived {
             position: water.clone(),
             drive: 0.1,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2641,6 +2812,7 @@ mod tests {
         let believer = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: Some(explore.clone()),
         };
@@ -2652,6 +2824,7 @@ mod tests {
         let ignorant = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: None,
             explore_step: Some(explore.clone()),
         };
@@ -2667,6 +2840,7 @@ mod tests {
         let stuck = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: None,
             explore_step: None,
         };
@@ -2675,6 +2849,7 @@ mod tests {
         let sated_away = Perceived {
             position: water.clone(),
             drive: 0.1,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -2698,6 +2873,9 @@ mod tests {
             .register_predicate(AGENT_AT, false, "pos")
             .unwrap();
         world_reg.register_predicate(DRANK, false, "drank").unwrap();
+        world_reg
+            .register_predicate(RESTED, false, "rested")
+            .unwrap();
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
         let home = raddr(1.0);
@@ -2776,6 +2954,10 @@ mod tests {
         world
             .registry
             .register_predicate(DRANK, false, "drank")
+            .unwrap();
+        world
+            .registry
+            .register_predicate(RESTED, false, "rested")
             .unwrap();
         let entity = world.ledger.mint_entity();
         world
@@ -2859,6 +3041,7 @@ mod tests {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
@@ -2937,6 +3120,7 @@ mod tests {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let ledger = Ledger::default();
         let e = EntityId::new(1).unwrap();
         let home = raddr(1.0);
@@ -3001,6 +3185,7 @@ mod tests {
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(AGENT_AT, false, "pos").unwrap();
         reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
         let e = ledger.mint_entity();
         let home = addr(1.0);
         let resource = home.neighbors()[0].clone();
@@ -3083,6 +3268,7 @@ mod tests {
                     assert_eq!(pos, water, "Drink precondition: at water");
                     hydrated = true;
                 }
+                Action::Rest => unreachable!("plan_to_water never emits Rest"),
             }
         }
         assert!(hydrated, "the plan achieves the goal");
@@ -3220,6 +3406,7 @@ mod tests {
         let reg = {
             let mut r = agent_at_reg();
             r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
             r
         };
         let home = raddr(1.0);
@@ -3299,6 +3486,7 @@ mod tests {
         let reg = {
             let mut r = agent_at_reg();
             r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
             r
         };
         // A downhill chain home(100) -> a(50) -> water(fresh); other neighbors high
@@ -3380,6 +3568,7 @@ mod tests {
         Perceived {
             position,
             drive: 0.0,
+            fatigue: 0.0,
             believed_water: None,
             explore_step: None,
         }
@@ -3618,6 +3807,7 @@ mod tests {
             label(&Perceived {
                 position: home.clone(),
                 drive: 0.1,
+                fatigue: 0.0,
                 believed_water: Some(water.clone()),
                 explore_step: None,
             }),
@@ -3628,6 +3818,7 @@ mod tests {
             label(&Perceived {
                 position: water.clone(),
                 drive: 0.95,
+                fatigue: 0.0,
                 believed_water: Some(water.clone()),
                 explore_step: None,
             }),
@@ -3639,6 +3830,7 @@ mod tests {
             label(&Perceived {
                 position: home.clone(),
                 drive: 0.95,
+                fatigue: 0.0,
                 believed_water: None,
                 explore_step: Some(ns[2].clone()),
             }),
@@ -3655,6 +3847,7 @@ mod tests {
             label(&Perceived {
                 position: home.clone(),
                 drive: 0.95,
+                fatigue: 0.0,
                 believed_water: None,
                 explore_step: None,
             }),
@@ -3696,6 +3889,7 @@ mod tests {
             Perceived {
                 position: home.clone(),
                 drive: 0.9,
+                fatigue: 0.0,
                 believed_water: Some(water.clone()),
                 explore_step: None,
             },
@@ -3703,6 +3897,7 @@ mod tests {
             Perceived {
                 position: water.clone(),
                 drive: 0.1,
+                fatigue: 0.0,
                 believed_water: Some(water.clone()),
                 explore_step: None,
             },
@@ -3710,6 +3905,7 @@ mod tests {
             Perceived {
                 position: home.clone(),
                 drive: 0.1,
+                fatigue: 0.0,
                 believed_water: Some(water.clone()),
                 explore_step: None,
             },
@@ -3717,6 +3913,7 @@ mod tests {
             Perceived {
                 position: home.clone(),
                 drive: 0.9,
+                fatigue: 0.0,
                 believed_water: None,
                 explore_step: Some(ns[2].clone()),
             },
@@ -3724,6 +3921,7 @@ mod tests {
             Perceived {
                 position: home.clone(),
                 drive: 0.9,
+                fatigue: 0.0,
                 believed_water: None,
                 explore_step: None,
             },
@@ -3758,6 +3956,7 @@ mod tests {
         let view = Perceived {
             position: home.clone(),
             drive: 0.9,
+            fatigue: 0.0,
             believed_water: Some(both.clone()),
             explore_step: None,
         };
@@ -3809,6 +4008,7 @@ mod tests {
         let view = Perceived {
             position: home.clone(),
             drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
+            fatigue: 0.0,
             believed_water: Some(both.clone()),
             explore_step: None,
         };
@@ -3888,6 +4088,7 @@ mod tests {
         let mild = Perceived {
             position: home.clone(),
             drive: 0.5,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -3915,6 +4116,7 @@ mod tests {
         let dying = Perceived {
             position: home.clone(),
             drive: 1.0,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -3962,6 +4164,7 @@ mod tests {
         let view = Perceived {
             position: home.clone(), // at home, so a non-seeking creature idles
             drive: 0.70,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -4078,6 +4281,7 @@ mod tests {
         let view = Perceived {
             position: home.clone(),
             drive: 1.0,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -4157,6 +4361,63 @@ mod tests {
     }
 
     #[test]
+    fn is_awake_follows_the_activity_cycle() {
+        use ActivityCycle::*;
+        // Midday (frac 0.5): diurnal awake, nocturnal asleep. Midnight (0.0):
+        // the reverse.
+        assert!(is_awake(Diurnal, 3.5));
+        assert!(!is_awake(Nocturnal, 3.5));
+        assert!(!is_awake(Diurnal, 3.0));
+        assert!(is_awake(Nocturnal, 3.0));
+        // Crepuscular: awake at the twilight edges, asleep at midday.
+        assert!(is_awake(Crepuscular, 3.0 + AWAKE_START));
+        assert!(!is_awake(Crepuscular, 3.5));
+    }
+
+    #[test]
+    fn fatigue_folds_rested_events() {
+        // FATIGUE == FOLD over `rested`: rises since the last rest, resets on it,
+        // clamps at 1 — the structural twin of thirst's `drive_at`.
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        assert!((fatigue_at(&ledger, e, WorldTime { day: 0.5 }) - FATIGUE_RISE * 0.5).abs() < 1e-9);
+        ledger.commit(rested_fact(e, 2.0, "t"), &reg).unwrap();
+        assert!(fatigue_at(&ledger, e, WorldTime { day: 2.0 }) < 1e-9);
+        assert!((fatigue_at(&ledger, e, WorldTime { day: 3.0 }) - FATIGUE_RISE).abs() < 1e-9);
+        assert_eq!(fatigue_at(&ledger, e, WorldTime { day: 100.0 }), 1.0);
+    }
+
+    #[test]
+    fn the_fatigue_drive_seeks_home_to_rest() {
+        // A tired creature rests where it is if home, else steps toward home —
+        // the same shape as thirst seeking water.
+        let home = raddr(1.0);
+        let away = home.neighbors()[0].clone();
+        let rest = Fatigue { home: home.clone() };
+        let at_home = Perceived {
+            position: home.clone(),
+            drive: 0.0,
+            fatigue: 1.0,
+            believed_water: None,
+            explore_step: None,
+        };
+        assert_eq!(rest.affordance(&at_home, PLAN_BUDGET), Some(Action::Rest));
+        let elsewhere = Perceived {
+            position: away.clone(),
+            drive: 0.0,
+            fatigue: 1.0,
+            believed_water: None,
+            explore_step: None,
+        };
+        assert!(matches!(
+            rest.affordance(&elsewhere, PLAN_BUDGET),
+            Some(Action::MoveTo(_))
+        ));
+    }
+
+    #[test]
     fn commitment_hysteresis_prevents_flip_flop_between_near_equal_drives() {
         // HYSTERESIS: once committed to a drive, a challenger only marginally
         // louder (within the switch margin δ) does NOT steal the errand — the
@@ -4188,6 +4449,7 @@ mod tests {
         let low = Perceived {
             position: home.clone(),
             drive: 0.50,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -4213,6 +4475,7 @@ mod tests {
         let high = Perceived {
             position: home.clone(),
             drive: 0.65,
+            fatigue: 0.0,
             believed_water: Some(water.clone()),
             explore_step: None,
         };
@@ -4266,6 +4529,7 @@ mod tests {
         let view = Perceived {
             position: home.clone(),
             drive: 0.0,
+            fatigue: 0.0,
             believed_water: None,
             explore_step: None,
         };
