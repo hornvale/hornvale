@@ -248,7 +248,7 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
 
     // Day 0.5 (PossessOpts::default, before any wait): the co-located
     // home-settlement NPC's drive is barely risen (0.5 * 0.15 = 0.075),
-    // at or below the `sated` threshold (0.15) -> "seems content".
+    // below RESTLESS_AROUSAL (still calm) -> "seems content".
     let early = out_text(session.handle("needs"));
     assert!(
         early.contains("seems content"),
@@ -260,14 +260,15 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
     );
 
     // Wait to day 5.5: still short of the ~5.667 seek crossing (still away
-    // from the resource, still co-located at home), but the drive has
-    // risen into the dead-band (5.5 * 0.15 = 0.825, between sated and act)
-    // -> "could do with a drink", not "seems content" anymore.
+    // from the resource, still co-located at home, still Content — below the
+    // `act` threshold, so not yet seeking), but the drive has risen (5.5 * 0.15
+    // = 0.825) past RESTLESS_AROUSAL, so the affect read (spec §7) now reads the
+    // rising edge — "grows restless", not "seems content" anymore.
     session.handle("wait 5");
     let later = out_text(session.handle("needs"));
     assert!(
-        later.contains("could do with a drink"),
-        "a risen drive reads as wanting, not content: {later}"
+        later.contains("grows restless"),
+        "a risen drive reads as restless, not calm: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the

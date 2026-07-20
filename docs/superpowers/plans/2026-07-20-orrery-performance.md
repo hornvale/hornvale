@@ -1,6 +1,6 @@
 # The Frame Budget (Orrery Performance) Implementation Plan
 
-> **Status: DRAFT.** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> **Status: COMPLETE** (2026-07-20; zoom tile-build JS work ~17x less — 13.9s→0.8s over the scripted zoom, same harness; sweep confirmed zoom was the only JS-bound hotspot). The close caught two bugs green tests missed: a settle-gate keyed off the spinning frame that suppressed all refinement under autoplay (fixed, orrery `512c48f`), and (via the whole-branch review) a region↔region shading seam from clamped analytic normals (fixed with a scoped region stitch, orrery `2517723`; proper region-export-halo cure deferred to a future producer release). REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
 
 **Goal:** Make the Orrery smooth — every common interaction under the frame budget (no main-thread long-task > 50ms) — by taking the perf-lever scale in order, measured by a committed flamegraph harness.
 

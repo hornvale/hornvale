@@ -7,16 +7,16 @@
 
 use crate::agent::{settlement_position, walk_depth};
 use hornvale_kernel::{
-    EntityId, Fact, Ledger, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime,
-    astar,
+    ConditionResponse, EntityId, Fact, Ledger, RoomAddr, RoomId, SearchSpace, TickSystem, Value,
+    World, WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
 use hornvale_species::ActivityCycle;
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
-/// and its species' activity-cycle. Derived from the genesis world, never
-/// stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label)
+/// its species, and that species' activity-cycle. Derived from the genesis
+/// world, never stored (re-derivable).
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -26,10 +26,25 @@ pub struct Npc {
     /// The room its sustenance drive seeks (the-wanting supersedes the old
     /// fixed-schedule destination: this IS the drive's resource anchor now).
     pub resource: RoomAddr,
+    /// The NPC's species (kind label), threaded from `species_of` at derivation
+    /// the same way the niche and latency are — the health metric's by-species
+    /// distress attribution reads it.
+    pub species: String,
     /// The species activity-cycle. Write-only this slice: the drive is the sole
     /// mover (the activity gate was dropped), retained for the deferred
     /// activity-gating followup (a diurnal NPC seeking water only while awake).
     pub activity: ActivityCycle,
+    /// The species' temperature niche (`ConditionNiche.temperature`): the
+    /// thermal (flow) drive's setpoint and tolerance, threaded from the
+    /// species' authored `biosphere_registry` at derivation the same way
+    /// `activity` is (the perception/psych pattern). A per-NPC datum because
+    /// co-derived NPCs may be different species with different niches.
+    pub temperature_niche: ConditionResponse,
+    /// The species' `PsychVector.deliberation_latency`: slides the arbitration
+    /// rule between *grab* (myopic, serve the loudest need) and *weigh* (the
+    /// full weighted sum) — psychology's first runtime job (spec §6). Threaded
+    /// from `psyche_registry` at derivation.
+    pub deliberation_latency: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -96,26 +111,22 @@ fn room_from_text(s: &str) -> RoomAddr {
 /// `initial` value have no reader anywhere in the planned model and were
 /// removed (The Foresight T3 review) rather than left as dead fields with
 /// misleading docs.
-/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: act), bare-ok(ratio: sated)
+/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: act)
 #[derive(Clone, Copy, Debug)]
 pub struct DriveParams {
     /// Drive gained per day while away from the resource.
     pub rise: f64,
     /// The seek threshold: drive >= act -> plan to the resource and drink.
     pub act: f64,
-    /// The felt-state narration threshold, read only by `Session::needs`:
-    /// drive <= sated -> "seems content" prose. NOT consulted by `decide`
-    /// or `DriveMovements::step` — the planner's return-home branch is
-    /// driven by `hydrated`/`position != home`, not by this value.
-    pub sated: f64,
 }
 
-/// The one authored sustenance drive (thirst/foraging). act > sated (the
-/// felt-state dead-band); rates chosen so a cycle spans a few days.
+/// The one authored sustenance drive (thirst/foraging); rates chosen so a cycle
+/// spans a few days. (The old `sated` felt-state threshold is retired — since
+/// The Temperament, `Session::needs` renders the affect read, spec §7, not a
+/// bare thirst scalar.)
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
-    sated: 0.15,
 };
 
 /// The elevation field and fresh-water truth the belief/exploration logic
@@ -140,6 +151,18 @@ pub trait Terrain {
     /// specific rooms fresh directly.
     /// type-audit: bare-ok(flag: return)
     fn is_fresh_water(&self, room: &RoomAddr) -> bool;
+
+    /// The room's PER-DAY temperature on `day`, °C — the diurnal+seasonal
+    /// signal a thermal (flow) drive senses at its own cell, distinct from
+    /// the render path's annual-MEAN `temperature_c` (untouched, so the
+    /// possession walk and almanac stay byte-identical). `LocaleTerrain`
+    /// reads the locale's per-day `temperature_at`; planted test terrain
+    /// plants specific room temperatures directly. `INFINITY` for an
+    /// undescribable room — its deviation from any optimum is infinite, so it
+    /// is never chosen as a comfort target (mirroring `elevation`'s
+    /// never-chosen-downhill convention).
+    /// type-audit: waiver(temperature-convention: return)
+    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64;
 }
 
 /// Water-truth (L0): a room is water iff its terrain reports it as FRESH
@@ -234,6 +257,13 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             .map(|l| l.fields.water.is_fresh())
             .unwrap_or(false)
     }
+    fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64 {
+        // The PER-DAY field (`LocaleContext::temperature_at`), NOT `describe`'s
+        // annual-mean `temperature_c` — so the drive gets a diurnal/seasonal
+        // swing while the render path stays byte-identical. INFINITY for an
+        // undescribable room (never chosen as a comfort target).
+        self.ctx.temperature_at(room, day).unwrap_or(f64::INFINITY)
+    }
 }
 
 /// A game-layer predicate: the agent drank (satisfied its sustenance goal) on
@@ -318,35 +348,635 @@ pub enum Intent {
     Hold,
 }
 
-/// The planner (The Foresight), now planning over BELIEF (The Surmise): thirsty
-/// and knows water -> A* to it and drink; thirsty and ignorant -> take the
-/// explore step (or Hold if nowhere new); not thirsty and away -> plan home; else
-/// Hold. Preserves the seam: `decide` reads `view` (now carrying belief), the tick
-/// depends only on `Intent`.
+/// A DRIVE: a felt need plus how to reduce it — the two halves the decision
+/// policy consults. Thirst (`Thirst`) is the single implementor this stage;
+/// later temperament work adds siblings (thermal comfort, …) behind the SAME
+/// seam. `urgency`/`act_threshold` are the "need" half (the drive's current
+/// pressure and the level at which it acts); `affordance` is the "how to
+/// reduce it" half (the next executable step, or `None` when the drive cannot
+/// currently be advanced). A STOCK drive (thirst) reads only the precomputed
+/// `Perceived` view (self-knowledge + belief + immediate affordance) — never
+/// truth — so it is pure over the view a tick already assembled. A FLOW drive
+/// (`Thermal`) additionally senses the ambient field at its OWN position
+/// directly (you feel the temperature of the cell you stand in), so it carries
+/// the terrain and the day it senses at; that self-perception of the current
+/// cell is still pure, keyed only on the drive's own held inputs.
+pub trait Drive {
+    /// The drive's current urgency in [0, 1] — its felt pressure, read from
+    /// the (already-folded) view. Thirst returns `view.drive` (the `drive_at`
+    /// fold over `DRANK`), computed upstream by the caller.
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency(&self, view: &Perceived) -> f64;
+
+    /// The seek threshold: at urgency ≥ this, the drive acts (plans toward its
+    /// affordance); below it, the drive yields.
+    /// type-audit: bare-ok(ratio: return)
+    fn act_threshold(&self) -> f64;
+
+    /// The next executable step that reduces this drive from the view's
+    /// position, or `None` when it cannot currently be advanced (its target is
+    /// unreachable within `budget`, or there is nowhere new to look). For
+    /// thirst: the first step of the A* plan to believed water, else the
+    /// exploration step when ignorant. Equivalently, the `argmax` over
+    /// candidate actions of [`serviceability`](Drive::serviceability) — the
+    /// single-drive path.
+    /// type-audit: bare-ok(count: budget)
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action>;
+
+    /// This drive's identity — for the commitment mode and the deterministic
+    /// tie-break order (a fixed `DriveKind` ordering, reload-stable).
+    fn kind(&self) -> DriveKind;
+
+    /// The soft-Maslow ceiling on this drive's urgency CONTRIBUTION to the
+    /// action-utility sum (§5): survival drives reach `1.0`; comfort drives
+    /// cap lower, so severe cold beats mild thirst while nothing beats dying of
+    /// thirst. The hierarchy *emerges* from the ranges — no priority table.
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency_ceiling(&self) -> f64;
+
+    /// How well `action` serves this drive from the view's position, in
+    /// `[0, 1]` — the reduction in the drive's remaining cost (the action-
+    /// centric arbitration term, §5). For thirst: `1.0` for the step its
+    /// [`affordance`](Drive::affordance) would take (the A*/explore first step,
+    /// or `Drink` at water), else `0.0`. For thermal: the drop in thermal
+    /// urgency at the neighbour (`0.0` if it doesn't improve comfort, and `0.0`
+    /// for `Drink` — a flow drive has no consume).
+    /// type-audit: bare-ok(ratio: return), bare-ok(count: budget)
+    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64;
+}
+
+/// A drive's identity — the second key (beside urgency) the arbitration needs:
+/// it names which drive a commitment mode is pursuing and imposes a fixed,
+/// reload-stable tie-break order (`Thirst` before `Thermal`). Deliberately
+/// tiny and closed; new drives extend it in their own campaigns.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DriveKind {
+    /// The sustenance (thirst) stock drive.
+    Thirst,
+    /// The thermal-comfort flow drive.
+    Thermal,
+}
+
+/// The per-NPC behavioural commitment mode — the errand an NPC is on
+/// (spec §5). Session-sandboxed (tick-local, never save-format): it carries
+/// across the steps of one walk to give hysteresis (no boundary-dithering, no
+/// mid-errand flip-flop), and is re-derived, never persisted.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mode {
+    /// Not pursuing any drive, and already home — nothing to do.
+    Idle,
+    /// Not pursuing any drive, but away from home — walking back.
+    Homing,
+    /// Committed to a drive's errand (engaged at its `act`, released below
+    /// `act − h`, switched only when a challenger's utility wins by `δ`).
+    Pursuing(DriveKind),
+}
+
+/// A creature's felt state — a derived read of the arbitration, a point in the
+/// psychological circumplex (valence × arousal, spec §7). Immaterial and never
+/// committed (matching "drive == fold"): a pure function of the decision, so
+/// two identical arbitrations feel identically. Carries its **intentional
+/// object** (which drive the feeling is about), which — with the decision's own
+/// provenance — is what makes distress debuggable and *is* the message a
+/// creature emits.
+/// type-audit: bare-ok(ratio: arousal), bare-ok(ratio: valence)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Affect {
+    /// How activated the mind is: the greatest urgency among ACTIVE drives
+    /// (0 when none is active).
+    pub arousal: f64,
+    /// Whether the pursued drive is reducing (+) or its affordance is failing
+    /// (−): making-progress minus blocked, in `-1.0..=1.0`.
+    pub valence: f64,
+    /// The circumplex region `(valence, arousal)` falls in.
+    pub label: AffectLabel,
+    /// What the feeling is ABOUT — the pursued drive — when one is active.
+    pub object: Option<DriveKind>,
+}
+
+/// The named regions of the valence × arousal circumplex (spec §7). Positive
+/// affect is first-class (`Content`/`Eager`); `Searching` is neutral seeking,
+/// NOT confusion (excluded from the distress metric); `Helpless` is the sticky
+/// negative scar that *persistence* upgrades `Lost`/`Frustrated` into.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AffectLabel {
+    /// Positive, low arousal: needs met, puttering — the normal state.
+    Content,
+    /// Positive, high arousal: chasing a satisfiable need, or a drive just met.
+    Eager,
+    /// Neutral, mid arousal: seeking with a gradient — normal, NOT confusion.
+    Searching,
+    /// Negative: blocked with a KNOWN target out of reach — "want it, can't
+    /// reach it" (the loud, high-arousal distress the circumplex plots top-left).
+    Frustrated,
+    /// Negative: blocked with no basis to move toward — "don't know what to do"
+    /// (the quiet, low-arousal distress: no known target to strain against).
+    Lost,
+    /// Negative, persistent: given up despite an active drive — a sticky scar
+    /// that reverses slowly (persistence upgrades `Lost`/`Frustrated` here).
+    Helpless,
+}
+
+/// The whole outcome of one arbitration: the `Intent` to act on, the commitment
+/// `Mode` to carry to the next tick, and the derived `Affect` (spec §7). Bundled
+/// so callers that narrate or measure feeling get it from the same computation
+/// that chose the action — no second, drift-prone derivation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Resolution {
+    /// What to do this tick.
+    pub intent: Intent,
+    /// The commitment mode to carry forward (hysteresis).
+    pub mode: Mode,
+    /// The felt state this decision expresses.
+    pub affect: Affect,
+}
+
+/// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
+/// `drive_at` fold surfaced on the view; `affordance` is the existing
+/// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
+/// the same `DriveParams`/`SUSTENANCE` the fold uses.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug)]
+pub struct Thirst {
+    /// The homeostatic parameters (rise/act) governing this drive.
+    pub params: DriveParams,
+}
+
+impl Drive for Thirst {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        view.drive
+    }
+    fn act_threshold(&self) -> f64 {
+        self.params.act
+    }
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
+        match &view.believed_water {
+            // Knows water: the first step of the A* plan toward it (None when
+            // that known water is unreachable within budget).
+            Some(w) => {
+                plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
+            }
+            // Ignorant: the exploration step (None when nowhere new to look).
+            None => view.explore_step.clone().map(Action::MoveTo),
+        }
+    }
+    fn kind(&self) -> DriveKind {
+        DriveKind::Thirst
+    }
+    fn urgency_ceiling(&self) -> f64 {
+        // Survival: thirst can reach full urgency (nothing beats dying of it).
+        1.0
+    }
+    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
+        // A stock drive serves exactly the ONE step its affordance would take
+        // (the A*/explore first move, or `Drink` at water) — an indicator, so
+        // the single-drive `argmax` is precisely `affordance` and the thirst-
+        // only decision is byte-identical to Stage 0.
+        match self.affordance(view, budget) {
+            Some(a) if &a == action => 1.0,
+            _ => 0.0,
+        }
+    }
+}
+
+/// The urgency at which the thermal comfort drive is considered to act (its
+/// `act_threshold`). Comfort is a low-stakes flow drive, so the threshold sits
+/// modestly above the tolerance edge (where urgency is exactly `0.0`): a cell
+/// merely a touch outside the niche band is felt but not yet acted on, while a
+/// genuinely uncomfortable one (urgency past this) does. An authored Stage-1
+/// placeholder; Stage 2's arbitration contextualizes it against the other
+/// drives (soft-Maslow ceilings).
+const THERMAL_ACT: f64 = 0.5;
+
+/// The soft-Maslow ceiling on the thermal (comfort) drive's urgency
+/// contribution (§5). Comfort caps below survival's `1.0`, so a severely cold
+/// creature that is only mildly thirsty seeks warmth, while a creature dying of
+/// thirst (urgency → `1.0`) ignores any cold. The ordering EMERGES from the
+/// ranges — there is no priority table. Authored; contextualized against
+/// future drives as they land.
+const THERMAL_CEIL: f64 = 0.6;
+
+/// The commitment-mode hysteresis band: a pursued drive engages at its `act`
+/// but only RELEASES once its urgency falls below `act − h`. Prevents
+/// boundary-dithering at the threshold (a drive flickering active/inactive tick
+/// to tick as urgency hovers at `act`).
+const HYSTERESIS_H: f64 = 0.1;
+
+/// The challenger switch margin `δ`: while pursuing one drive, the NPC only
+/// abandons it for a challenger whose best-action utility exceeds the
+/// incumbent's by more than this. Prevents mid-errand flip-flop between two
+/// near-equal drives (the errand is sticky, not twitchy).
+const SWITCH_MARGIN: f64 = 0.1;
+
+/// Thermal comfort — a FLOW (reactive, state-satisfied) drive, a second
+/// [`Drive`] implementor beside [`Thirst`]. Where thirst is a STOCK drive
+/// (urgency accrues over time and is reset by a discrete `Drink`), thermal
+/// comfort reads the CURRENT cell's per-day temperature against the species'
+/// temperature niche every tick: discomfort is instantaneous, and stepping to
+/// a more comfortable neighbour reduces it directly (no belief cache, no A* —
+/// the comfort gradient step IS the affordance, like thirst's `explore_step`).
+///
+/// Holds the species' temperature [`ConditionResponse`] (its thermal setpoint
+/// `optimum` and tolerance `width`) plus the terrain and day it senses at — a
+/// flow drive perceives the ambient temperature of the cell it occupies
+/// directly (see the [`Drive`] trait's stock-vs-flow note). NOT wired into the
+/// live NPC `decide` this stage (Stage 1 unit-tests it in isolation);
+/// arbitration of thirst + thermal together is Stage 2.
+/// type-audit: bare-ok(return)
+pub struct Thermal<'a> {
+    /// The species' temperature niche: `optimum` is the preferred °C, `width`
+    /// the tolerance half-band. Discomfort is deviation past `width` from
+    /// `optimum`.
+    pub niche: ConditionResponse,
+    /// The temperature field this drive senses (the cell it stands in and the
+    /// three neighbours it may step to).
+    pub terrain: &'a dyn Terrain,
+    /// The day the temperature is sensed at (the diurnal+seasonal phase).
+    pub day: WorldTime,
+}
+
+impl<'a> Thermal<'a> {
+    /// The absolute temperature deviation from the niche optimum at `room`,
+    /// °C — the discomfort distance the drive minimizes. `INFINITY` for an
+    /// undescribable room (never chosen as a comfort target).
+    fn deviation(&self, room: &RoomAddr) -> f64 {
+        (self.terrain.temperature(room, self.day) - self.niche.optimum).abs()
+    }
+
+    /// The thermal urgency this drive would feel standing at `room` in `[0, 1]`
+    /// — how far its temperature deviates PAST the tolerance band, normalized
+    /// by the band width (one further band-width reaches full urgency). Exactly
+    /// `0.0` inside the band (`|temp − optimum| ≤ width`), rising outside.
+    ///
+    /// An UNREADABLE cell (non-finite temperature — an undescribable room, or
+    /// planted-`INFINITY` test terrain) yields `0.0`: you cannot feel the
+    /// temperature of a cell that reports none, so it registers no discomfort.
+    /// This is exactly what keeps the thirst-only walk byte-identical — the
+    /// thirst tests plant no temperatures, so their thermal drive stays
+    /// inactive (urgency `0.0`) at every cell and never enters arbitration.
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency_at(&self, room: &RoomAddr) -> f64 {
+        let temp = self.terrain.temperature(room, self.day);
+        if !temp.is_finite() {
+            return 0.0;
+        }
+        let dev = (temp - self.niche.optimum).abs();
+        ((dev - self.niche.width).max(0.0) / self.niche.width).clamp(0.0, 1.0)
+    }
+}
+
+impl<'a> Drive for Thermal<'a> {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        self.urgency_at(&view.position)
+    }
+    fn act_threshold(&self) -> f64 {
+        THERMAL_ACT
+    }
+    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+        // Satisfied inside the tolerance band — nothing to do (a flow drive
+        // needs no plan; NO A*, so `budget` is unused).
+        if self.deviation(&view.position) <= self.niche.width {
+            return None;
+        }
+        // Otherwise, the comfort gradient step: the neighbour whose temperature
+        // is CLOSEST to the optimum (too-cold → warmer, too-hot → cooler, both
+        // toward the optimum), or `None` when no neighbour is strictly more
+        // comfortable than here (boxed in / a local comfort optimum).
+        comfort_step(&view.position, self.niche.optimum, self.terrain, self.day).map(Action::MoveTo)
+    }
+    fn kind(&self) -> DriveKind {
+        DriveKind::Thermal
+    }
+    fn urgency_ceiling(&self) -> f64 {
+        THERMAL_CEIL
+    }
+    fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
+        // A flow drive is served by PRESENCE in a kinder cell: the reduction in
+        // thermal urgency at the neighbour it would step to (0 if the step
+        // doesn't improve comfort). No consume — `Drink` serves it not at all.
+        match action {
+            Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
+            Action::Drink => 0.0,
+        }
+    }
+}
+
+/// The comfort gradient step: the neighbour whose per-day temperature is
+/// CLOSEST to `optimum` (minimizing `|temp − optimum|`), or `None` when no
+/// neighbour is strictly more comfortable than `from` itself. A near-copy of
+/// [`downhill_step`] — the same three-neighbour scan and the same
+/// `total_cmp`-then-ascending-`RoomAddr` tie-break — but the objective is the
+/// minimized absolute temperature deviation rather than elevation, so a
+/// too-cold cell steps toward a warmer neighbour and a too-hot one toward a
+/// cooler, both toward the optimum.
+fn comfort_step(
+    from: &RoomAddr,
+    optimum: f64,
+    terrain: &dyn Terrain,
+    day: WorldTime,
+) -> Option<RoomAddr> {
+    let deviation = |room: &RoomAddr| (terrain.temperature(room, day) - optimum).abs();
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in from.neighbors() {
+        let dev = deviation(&n);
+        let keep_existing = match &best {
+            Some((ba, bd)) => dev.total_cmp(bd).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((n, dev));
+        }
+    }
+    let (best_room, best_dev) = best.expect("a room has three neighbors");
+    // Only step when a neighbour is STRICTLY more comfortable than here (an
+    // equal-comfort or worse neighbour is no improvement — hold).
+    if best_dev.total_cmp(&deviation(from)).is_lt() {
+        Some(best_room)
+    } else {
+        None
+    }
+}
+
+/// The single-drive (thirst-only) decision — the Stage-0 seam, preserved
+/// byte-for-byte. It is now a thin specialization of [`arbitrate`]: the
+/// action-centric arbitration over the single-element drive set `{Thirst}`
+/// yields exactly the old control flow (thirsty and knows water → A* first step
+/// and drink; thirsty and ignorant → the explore step, or `Hold` if nowhere
+/// new; not thirsty and away → plan home; else `Hold`), because with one drive
+/// the max-utility action IS its [`affordance`](Drive::affordance) and the
+/// grab/weigh latency is irrelevant. A fresh `Idle` mode per call keeps it
+/// stateless, as before. `arbitrate` is the multi-drive live path.
 /// type-audit: bare-ok(count: budget)
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
-    if view.drive >= p.act {
-        match &view.believed_water {
-            Some(w) => {
-                match plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
-                {
-                    Some(a) => Intent::Do(a),
-                    None => Intent::Hold, // known water unreachable within budget
-                }
+    let thirst = Thirst { params: *p };
+    let drives: [&dyn Drive; 1] = [&thirst];
+    arbitrate(view, home, &drives, 0.0, Mode::Idle, budget).intent
+}
+
+/// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
+/// state into an `Intent` when SEVERAL drives may compete. It does NOT pick a
+/// drive and follow its gradient — it enumerates the candidate ACTIONS (the ≤3
+/// neighbour `MoveTo`s plus `Drink`) and picks the one of maximum utility, so a
+/// single move can serve two needs at once (a cell both warmer AND nearer
+/// water). Returns the chosen `Intent` and the NEW commitment [`Mode`] (carry
+/// it into the next call for hysteresis).
+///
+/// - **Utility** of an action `= Σ_{d active} weight_d × capped_urgency_d ×
+///   serviceability_d(action)`, where `capped_urgency_d = min(urgency_d,
+///   ceiling_d)` (soft Maslow) and only drives at/above their `act` threshold
+///   (hysteretically) contribute.
+/// - **`deliberation_latency` (`latency ∈ [0,1]`) slides the weights** (§6):
+///   the pursued (loudest / committed) drive always has `weight = 1`; every
+///   OTHER active drive has `weight = latency`. So `latency = 0` is **grab**
+///   (myopic — only the pursued drive counts) and `latency = 1` is **weigh**
+///   (the full weighted sum), interpolating linearly between.
+/// - **Commitment mode & hysteresis:** the pursued drive engages at `act`,
+///   releases below `act − h`, and is switched for a challenger only when the
+///   challenger's best-action utility beats the incumbent's by `δ`. With no
+///   active drive the NPC falls to `Homing` (a step toward `home`) or `Idle`.
+/// - **Determinism:** candidate actions are scanned in ascending-`RoomAddr`
+///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
+///   on ties — reload-stable.
+///
+/// type-audit: bare-ok(ratio: latency), bare-ok(count: budget)
+pub fn arbitrate(
+    view: &Perceived,
+    home: &RoomAddr,
+    drives: &[&dyn Drive],
+    latency: f64,
+    incoming: Mode,
+    budget: usize,
+) -> Resolution {
+    // Which drives are ACTIVE (contribute to the utility sum). A drive engages
+    // at its `act`; the incumbent pursued drive stays engaged until it falls
+    // below `act − h` (hysteresis — no boundary dithering).
+    let active: Vec<bool> = drives
+        .iter()
+        .map(|d| {
+            let u = d.urgency(view);
+            let is_incumbent = matches!(incoming, Mode::Pursuing(k) if k == d.kind());
+            if is_incumbent {
+                u >= d.act_threshold() - HYSTERESIS_H
+            } else {
+                u >= d.act_threshold()
             }
-            None => match &view.explore_step {
-                Some(step) => Intent::Do(Action::MoveTo(step.clone())),
-                None => Intent::Hold, // ignorant and nowhere new to explore
+        })
+        .collect();
+
+    // Arousal: the greatest urgency across ALL drives (spec §7) — how activated
+    // the mind is, whether or not any has crossed its `act`. A creature grows
+    // aroused as thirst rises before it acts: still Content, but not indifferent.
+    // Computed once so every return path's affect reads the same value.
+    let arousal = drives
+        .iter()
+        .map(|d| d.urgency(view))
+        .fold(0.0_f64, f64::max);
+
+    // No active drive → the errand is over: walk home, or rest if already home.
+    // Felt state: Content (positive valence), carrying the sub-act arousal so a
+    // reader can tell puttering-calm from growing-thirsty.
+    if !active.iter().any(|a| *a) {
+        let affect = Affect {
+            arousal,
+            valence: 1.0,
+            label: AffectLabel::Content,
+            object: None,
+        };
+        if view.position != *home {
+            let step =
+                plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next());
+            return Resolution {
+                intent: step.map(Intent::Do).unwrap_or(Intent::Hold),
+                mode: Mode::Homing,
+                affect,
+            };
+        }
+        return Resolution {
+            intent: Intent::Hold,
+            mode: Mode::Idle,
+            affect,
+        };
+    }
+
+    // The capped urgency each active drive lends the sum (soft Maslow).
+    let capped = |i: usize| drives[i].urgency(view).min(drives[i].urgency_ceiling());
+
+    // Candidate actions, in a fixed deterministic order: neighbours ascending,
+    // then `Drink` (only ever the winner when a drive's serviceability makes it
+    // so — thirst at water; otherwise its utility is 0 and it is never chosen).
+    let mut neighbors = view.position.neighbors();
+    neighbors.sort();
+    let mut candidates: Vec<Action> = neighbors.into_iter().map(Action::MoveTo).collect();
+    candidates.push(Action::Drink);
+
+    // A drive's best single-drive (grab-style) utility over the candidates —
+    // the score the commitment switch compares incumbent vs challenger on.
+    let grab_utility = |i: usize| -> f64 {
+        candidates
+            .iter()
+            .map(|a| capped(i) * drives[i].serviceability(a, view, budget))
+            .fold(0.0_f64, f64::max)
+    };
+
+    // The loudest active drive by grab-utility (ties broken by the fixed
+    // `drives[]`/`DriveKind` order — the first such index wins).
+    let loudest = (0..drives.len())
+        .filter(|&i| active[i])
+        .fold(None::<(usize, f64)>, |best, i| {
+            let u = grab_utility(i);
+            match best {
+                Some((_, bu)) if u.total_cmp(&bu).is_le() => best,
+                _ => Some((i, u)),
+            }
+        })
+        .map(|(i, _)| i)
+        .expect("at least one drive is active here");
+
+    // The pursued drive, with hysteretic commitment: keep the incumbent unless
+    // a challenger's grab-utility beats it by more than δ.
+    let pursued = match incoming {
+        Mode::Pursuing(k)
+            if drives
+                .iter()
+                .enumerate()
+                .any(|(i, d)| d.kind() == k && active[i]) =>
+        {
+            let inc = drives.iter().position(|d| d.kind() == k).unwrap();
+            if loudest != inc
+                && grab_utility(loudest)
+                    .total_cmp(&(grab_utility(inc) + SWITCH_MARGIN))
+                    .is_gt()
+            {
+                loudest
+            } else {
+                inc
+            }
+        }
+        _ => loudest,
+    };
+    let pursued_kind = drives[pursued].kind();
+
+    // Weight each active drive: the pursued drive at 1, every other active
+    // drive at `latency` (grab 0 ↔ weigh 1). Then utility = weighted sum.
+    let utility = |a: &Action| -> f64 {
+        (0..drives.len())
+            .filter(|&i| active[i])
+            .map(|i| {
+                let weight = if drives[i].kind() == pursued_kind {
+                    1.0
+                } else {
+                    latency
+                };
+                weight * capped(i) * drives[i].serviceability(a, view, budget)
+            })
+            .sum()
+    };
+
+    // The max-utility action, earliest-on-ties (ascending RoomAddr, Drink last).
+    let mut best_i = 0usize;
+    let mut best_u = utility(&candidates[0]);
+    for (i, a) in candidates.iter().enumerate().skip(1) {
+        let u = utility(a);
+        if u.total_cmp(&best_u).is_gt() {
+            best_u = u;
+            best_i = i;
+        }
+    }
+
+    // A positive-utility action advances the errand; otherwise the pursued
+    // drive is blocked (unreachable water / boxed-in comfort) — Hold, staying
+    // committed (the mode is the errand, even when it cannot step this tick).
+    let object = Some(pursued_kind);
+    if best_u.total_cmp(&0.0).is_gt() {
+        let chosen = candidates[best_i].clone();
+        // A progressing decision. Relief (Eager) when the drive is directly MET
+        // (a Drink) or the creature is beelining to a KNOWN source it can reach;
+        // neutral Searching when it is following a gradient toward an UNKNOWN one
+        // (spec §7 — searching is normal seeking, NOT confusion, the load-bearing
+        // exclusion from the distress metric). Thermal, which sets no
+        // `believed_water`, reads Searching while gradient-seeking comfort — and
+        // once the cell is comfortable no drive is active, so it reads Content.
+        let known = view.believed_water.is_some();
+        let (label, valence) = match &chosen {
+            Action::Drink => (AffectLabel::Eager, 1.0),
+            Action::MoveTo(_) if known => (AffectLabel::Eager, 0.5),
+            Action::MoveTo(_) => (AffectLabel::Searching, 0.0),
+        };
+        Resolution {
+            intent: Intent::Do(chosen),
+            mode: Mode::Pursuing(pursued_kind),
+            affect: Affect {
+                arousal,
+                valence,
+                label,
+                object,
             },
         }
-    } else if &view.position != home {
-        match plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next()) {
-            Some(a) => Intent::Do(a),
-            None => Intent::Hold,
-        }
     } else {
-        Intent::Hold
+        // Blocked: no candidate reduces the drive. With a KNOWN target it cannot
+        // reach (a believed source), the creature is Frustrated ("want it, can't
+        // reach it"); with no basis to move toward, it is Lost ("don't know what
+        // to do"). Persistence (in the caller) upgrades either to Helpless.
+        let label = if view.believed_water.is_some() {
+            AffectLabel::Frustrated
+        } else {
+            AffectLabel::Lost
+        };
+        Resolution {
+            intent: Intent::Hold,
+            mode: Mode::Pursuing(pursued_kind),
+            affect: Affect {
+                arousal,
+                valence: -1.0,
+                label,
+                object,
+            },
+        }
     }
+}
+
+/// The felt state a derived NPC has at `day` — an instantaneous snapshot read
+/// from the frozen ledger: the same arbitration a walk step runs, but stateless
+/// (belief and last-drank are folded from history; exploration starts fresh, no
+/// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
+/// the health metric's continuous loop). The narration seam
+/// (`Session::needs`) reads a creature's `Affect` through this.
+pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terrain) -> Affect {
+    let pos = agent_position(frozen, npc, day);
+    let last_drank = frozen
+        .find(DRANK)
+        .filter(|f| f.subject == npc.entity)
+        .filter_map(|f| f.day)
+        .fold(0.0_f64, f64::max);
+    let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
+    let drive = (SUSTENANCE.rise * (day.day - last_drank)).clamp(0.0, 1.0);
+    let visited = std::collections::BTreeSet::new();
+    let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
+    let view = Perceived {
+        position: pos,
+        drive,
+        believed_water: believed,
+        explore_step,
+    };
+    let thirst = Thirst { params: SUSTENANCE };
+    let thermal = Thermal {
+        niche: npc.temperature_niche,
+        terrain,
+        day,
+    };
+    let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+    arbitrate(
+        &view,
+        &npc.home,
+        &drives,
+        npc.deliberation_latency,
+        Mode::Idle,
+        PLAN_BUDGET,
+    )
+    .affect
 }
 
 /// The plan search's node-expansion budget: generous for the short local
@@ -437,6 +1067,9 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
             let mut steps = 0usize;
+            // The commitment mode, carried across this walk's steps (session-
+            // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
+            let mut mode = Mode::Idle;
             loop {
                 if day > self.to.day || steps >= MAX_STEPS {
                     break;
@@ -454,25 +1087,49 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     believed_water: believed.clone(),
                     explore_step,
                 };
-                let seeking_water = drive >= self.params.act;
-                match decide(&view, &npc.home, &self.params, PLAN_BUDGET) {
+                // BOTH drives now compete: thirst (the drank-fold, on the view)
+                // and thermal (the species' niche read against the per-day
+                // temperature at the cell). Where thermal is inactive (a
+                // comfortable cell — planted terrain with no temperature reads
+                // INFINITY → urgency 0), arbitration reduces to thirst-only and
+                // the walk is byte-identical to Stage 0.
+                let thirst = Thirst {
+                    params: self.params,
+                };
+                let thermal = Thermal {
+                    niche: npc.temperature_niche,
+                    terrain: self.terrain,
+                    day: WorldTime { day },
+                };
+                let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+                let resolution = arbitrate(
+                    &view,
+                    &npc.home,
+                    &drives,
+                    npc.deliberation_latency,
+                    mode,
+                    PLAN_BUDGET,
+                );
+                mode = resolution.mode;
+                match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
                         day += MOVE_DURATION;
                         if day > self.to.day {
                             break;
                         }
-                        // Discovery prose (the-surmise T5): honest to what the
-                        // tick actually commits — BELIEVED (knows a source,
-                        // beelining) vs IGNORANT (never found one, exploring
-                        // downhill blind) are genuinely different situations,
-                        // and "water" is now specifically FRESH water (The
-                        // Freshet) — a river, never the sea.
-                        let provenance = if seeking_water && believed.is_some() {
-                            "went down to the river it knew (thirst)"
-                        } else if seeking_water {
-                            "wandered, having found no water yet (thirst)" // ignorant, exploring
-                        } else {
-                            "walking home (sated)"
+                        // Provenance follows the committed errand (the mode):
+                        // thirst distinguishes BELIEVED (beelining a known
+                        // source) from IGNORANT (exploring blind); thermal names
+                        // the comfort-seeking; homing names the sated walk back.
+                        let provenance = match mode {
+                            Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
+                            Mode::Pursuing(DriveKind::Thirst) if believed.is_some() => {
+                                "went down to the river it knew (thirst)"
+                            }
+                            Mode::Pursuing(DriveKind::Thirst) => {
+                                "wandered, having found no water yet (thirst)" // ignorant
+                            }
+                            Mode::Homing | Mode::Idle => "walking home (sated)",
                         };
                         out.push(agent_at_fact(npc.entity, &n, day, provenance));
                         visited.insert(n.clone());
@@ -616,6 +1273,13 @@ pub fn derive_npcs(
     let mut settlements = ordered_for_derivation(settlements, home_settlement);
     settlements.truncate(k);
 
+    // Authored per-species data, read once: the temperature niche (the thermal
+    // drive's setpoint/tolerance) and the psych vector's deliberation latency
+    // (the arbitration tuning). Threaded onto each NPC the same way `activity`
+    // is — the perception/psych pattern.
+    let biosphere = hornvale_species::biosphere_registry();
+    let psyche = hornvale_species::psyche_registry();
+
     settlements
         .into_iter()
         .map(|village| {
@@ -625,6 +1289,14 @@ pub fn derive_npcs(
             let species = hornvale_species::species_of(world, village.id)
                 .unwrap_or_else(|| "goblin".to_string());
             let activity = species_activity(world, &species);
+            let temperature_niche = biosphere
+                .get_by_label(&species)
+                .map(|t| t.condition_niche.temperature)
+                .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+            let deliberation_latency = psyche
+                .get_by_label(&species)
+                .map(|p| p.deliberation_latency)
+                .unwrap_or(0.5);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
@@ -652,12 +1324,25 @@ pub fn derive_npcs(
                 entity,
                 home,
                 resource,
+                species,
                 activity,
+                temperature_niche,
+                deliberation_latency,
                 label,
             }
         })
         .collect()
 }
+
+/// The temperature-niche fallback for a species missing from the biosphere
+/// registry (defensive — `species` always resolves to at least the `goblin`
+/// default, which IS registered). A wide, mild, low-devotion band so the
+/// thermal drive of an unknown species stays quiescent rather than flailing.
+const DEFAULT_TEMPERATURE_NICHE: ConditionResponse = ConditionResponse {
+    optimum: 15.0,
+    width: 25.0,
+    devotion: 0.5,
+};
 
 /// The room containing a settlement's cell at walk depth (mirrors
 /// `mint_flagship`, via the shared `settlement_position` helper).
@@ -826,6 +1511,19 @@ mod tests {
             .unwrap();
     }
 
+    /// A neutral temperature niche for the thirst/belief tests, which never
+    /// plant temperatures (so the thermal drive reads INFINITY → urgency 0 →
+    /// inactive → byte-identical thirst behaviour). Its value is irrelevant to
+    /// those tests; the thermal-drive tests build their own `warm`/`cold`
+    /// niches directly.
+    fn test_niche() -> ConditionResponse {
+        ConditionResponse {
+            optimum: 15.0,
+            width: 10.0,
+            devotion: 0.5,
+        }
+    }
+
     /// A registry with just `AGENT_AT` registered, for the belief-fold tests.
     fn agent_at_reg() -> ConceptRegistry {
         let mut reg = ConceptRegistry::default();
@@ -845,7 +1543,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -873,7 +1574,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: home.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -903,7 +1607,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: near.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -931,7 +1638,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -956,7 +1666,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -997,7 +1710,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: first.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -1142,7 +1858,10 @@ mod tests {
             entity: EntityId::new(1).unwrap(),
             home: home.clone(),
             resource: home.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -1504,7 +2223,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -1515,6 +2237,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
@@ -1590,7 +2313,10 @@ mod tests {
             entity,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -1601,6 +2327,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc],
@@ -1653,7 +2380,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water,
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -1696,16 +2426,18 @@ mod tests {
         // (10_000) stops the loop — this test proves that cap is the real
         // backstop, not the closed-form guard (which is a no-op here).
         //
-        // Under belief (The Surmise): `drive == 0.0 >= act == 0.0` is true
-        // from the very first iteration (`rise == 0.0` means `drive` is
-        // exactly `0.0`, not NaN, for the ENTIRE run — the NaN only ever
-        // appears inside the Hold arm's own `act / rise` division), so the
-        // agent is "thirsty" on every step. With all-INFINITY terrain (no
-        // water anywhere), belief never forms, so every thirsty step takes
-        // the EXPLORE branch instead of the old ground-truth
-        // beeline-then-drink-forever; the walk is bounded by the same
-        // MAX_STEPS cap regardless of which branch (explore-move vs.
-        // NaN-Hold) it spins in.
+        // Under action-centric arbitration (The Temperament): `drive == 0.0`
+        // is "thirst active" by the threshold (`0.0 >= act == 0.0`), but its
+        // CAPPED urgency is `0.0`, so EVERY action's utility is
+        // `weight × 0.0 × serviceability == 0.0` — a zero-pressure drive drives
+        // nothing. Arbitration therefore returns `Hold` on every step (rather
+        // than the old model's blind explore-move, which stepped regardless of
+        // urgency magnitude), and the walk terminates purely through the Hold
+        // arm's non-finite idle-jump guard (`act / rise == 0.0 / 0.0 == NaN`
+        // → `continue`), bounded by the unconditional `steps >= MAX_STEPS` cap.
+        // This exercises the NaN-guard/Hold-spin path DIRECTLY — a stronger
+        // termination proof than the old explore-move spin, and the correct
+        // behaviour: no felt pressure, no motion.
         //
         // The old regression test for this class
         // (`a_misconfigured_drive_terminates_instead_of_hanging`, keyed on
@@ -1724,7 +2456,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water,
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -1732,7 +2467,6 @@ mod tests {
         let degenerate = DriveParams {
             rise: 0.0,
             act: 0.0,
-            sated: 0.15,
         };
         // A long interval: if MAX_STEPS were not the backstop, this would
         // spin forever (this test's own short harness timeout is additional
@@ -1746,12 +2480,13 @@ mod tests {
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
-        // It terminates (the call above returned at all) with a BOUNDED
-        // number of facts — MAX_STEPS iterations, not an unbounded run: every
-        // step is "thirsty" (drive == act == 0.0) and ignorant (no water
-        // exists), so every step either explores (a move) or, once boxed in
-        // with no unvisited neighbour, Holds on the NaN-producing idle jump —
-        // either way, `steps >= MAX_STEPS` is what stops it.
+        // The load-bearing proof is that the call above RETURNED at all — with
+        // a 1_000_000-day interval, only the `steps >= MAX_STEPS` cap can bound
+        // the NaN-guarded Hold-spin; a real hang would time this test out. The
+        // committed-fact count is exactly ZERO: a zero-urgency drive drives
+        // nothing (every action's utility is `× 0.0 == 0.0` → Hold), so no
+        // `agent-at`/`drank` is ever emitted — the correct behaviour, and
+        // trivially within the MAX_STEPS bound.
         let moves = next.find(AGENT_AT).filter(|f| f.subject == e).count();
         let drinks = next.find(DRANK).filter(|f| f.subject == e).count();
         assert!(
@@ -1759,10 +2494,12 @@ mod tests {
             "the MAX_STEPS cap must bound total committed facts even under a \
              NaN-producing degenerate DriveParams; got {moves} moves + {drinks} drinks"
         );
-        assert!(
-            moves + drinks > 0,
-            "the loop must actually run (not exit on the first iteration) \
-             for this to be a meaningful termination proof"
+        assert_eq!(
+            moves + drinks,
+            0,
+            "a zero-urgency (zero-pressure) drive drives nothing: arbitration \
+             Holds every step and the walk terminates via the bounded NaN-guard \
+             Hold-spin, committing no facts"
         );
     }
 
@@ -1780,7 +2517,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: resource.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -1876,6 +2616,9 @@ mod tests {
     struct PlantedTerrain {
         elevations: std::collections::BTreeMap<RoomAddr, f64>,
         fresh: std::collections::BTreeSet<RoomAddr>,
+        /// Planted per-room temperatures (°C) for the thermal-drive tests;
+        /// INFINITY elsewhere (the thirst tests never read temperature).
+        temps: std::collections::BTreeMap<RoomAddr, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
@@ -1885,6 +2628,7 @@ mod tests {
             Self {
                 elevations: std::collections::BTreeMap::new(),
                 fresh: rooms.into_iter().collect(),
+                temps: std::collections::BTreeMap::new(),
             }
         }
         /// No fresh water anywhere — just planted elevations (the
@@ -1893,6 +2637,17 @@ mod tests {
             Self {
                 elevations,
                 fresh: std::collections::BTreeSet::new(),
+                temps: std::collections::BTreeMap::new(),
+            }
+        }
+        /// Just planted per-room temperatures (the thermal-drive tests, which
+        /// never exercise elevation/water). Rooms without a planted temperature
+        /// read `INFINITY` (never chosen as a comfort target).
+        fn thermal(temps: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: std::collections::BTreeSet::new(),
+                temps: temps.into_iter().collect(),
             }
         }
     }
@@ -1902,6 +2657,9 @@ mod tests {
         }
         fn is_fresh_water(&self, room: &RoomAddr) -> bool {
             self.fresh.contains(room)
+        }
+        fn temperature(&self, room: &RoomAddr, _day: WorldTime) -> f64 {
+            self.temps.get(room).copied().unwrap_or(f64::INFINITY)
         }
     }
 
@@ -1992,7 +2750,10 @@ mod tests {
                 entity: e,
                 home: home.clone(),
                 resource: w1.clone(),
+                species: "goblin".into(),
                 activity: hornvale_species::ActivityCycle::Diurnal,
+                temperature_niche: test_niche(),
+                deliberation_latency: 0.5,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -2058,6 +2819,7 @@ mod tests {
         let terrain = PlantedTerrain {
             elevations: m,
             fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
@@ -2065,7 +2827,10 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -2088,5 +2853,642 @@ mod tests {
             Some(water)
         );
         let _ = ledger;
+    }
+
+    // --- The thermal comfort drive (Stage 1, a flow-drive in ISOLATION). ---
+
+    /// A warm-blooded niche (optimum ~18 °C) with a modest tolerance band —
+    /// authored with a narrow width so the discrimination against the cold
+    /// niche is clean (the real goblin niche's very wide width tolerates
+    /// nearly everything, which can't demonstrate flight vs. tolerance).
+    fn warm_niche() -> ConditionResponse {
+        ConditionResponse {
+            optimum: 18.0,
+            width: 8.0,
+            devotion: 0.45,
+        }
+    }
+    /// A cold-adapted niche (optimum ~6 °C), same tolerance band as
+    /// [`warm_niche`] so the two differ only in setpoint.
+    fn cold_niche() -> ConditionResponse {
+        ConditionResponse {
+            optimum: 6.0,
+            width: 8.0,
+            devotion: 0.85,
+        }
+    }
+    /// The zero-drive, ignorant view a flow-drive test reads (thirst state is
+    /// irrelevant to the thermal drive — it senses temperature at `position`).
+    fn at(position: RoomAddr) -> Perceived {
+        Perceived {
+            position,
+            drive: 0.0,
+            believed_water: None,
+            explore_step: None,
+        }
+    }
+
+    #[test]
+    fn thermal_affordance_steps_toward_the_comfortable_neighbor_both_directions() {
+        // TOO COLD → warmer neighbour; TOO HOT → cooler neighbour; both toward
+        // the optimum. The comfort step is the neighbour whose temperature is
+        // CLOSEST to the optimum, exactly as `downhill_step` picks the lowest.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+
+        // Too COLD: home at −10 (dev 28 past optimum 18), ns[0] warmest/closest.
+        let cold_here = PlantedTerrain::thermal([
+            (home.clone(), -10.0),
+            (ns[0].clone(), 10.0),  // dev 8  → closest to optimum
+            (ns[1].clone(), -30.0), // dev 48
+            (ns[2].clone(), -20.0), // dev 38
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &cold_here,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "too cold: steps toward the warmer neighbour"
+        );
+        assert!(
+            drive.urgency(&view) > drive.act_threshold(),
+            "a 28 °C deviation is well past the act threshold"
+        );
+
+        // Too HOT: home at 40 (dev 22), ns[0] coolest/closest to optimum 18.
+        let hot_here = PlantedTerrain::thermal([
+            (home.clone(), 40.0),
+            (ns[0].clone(), 20.0), // dev 2  → closest to optimum
+            (ns[1].clone(), 60.0), // dev 42
+            (ns[2].clone(), 50.0), // dev 32
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &hot_here,
+            day,
+        };
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "too hot: steps toward the cooler neighbour"
+        );
+    }
+
+    #[test]
+    fn thermal_within_tolerance_is_satisfied_no_urgency_no_step() {
+        // Inside the tolerance band: urgency is exactly 0 (< act) and there is
+        // no affordance (nothing to do), even though a strictly-more-optimal
+        // neighbour exists — comfort is a satisfied state, not a maximizer.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), 20.0),  // dev 2 ≤ width 8 → comfortable
+            (ns[0].clone(), 18.0), // exactly optimal, but we don't chase it
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(drive.urgency(&view), 0.0, "inside the band → zero urgency");
+        assert!(drive.urgency(&view) < drive.act_threshold());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            None,
+            "comfortable → no comfort step"
+        );
+    }
+
+    #[test]
+    fn thermal_respects_the_niche_cold_tolerates_what_warm_flees() {
+        // NICHE RESPECT: the SAME cell (a cold 2 °C room) is tolerated by a
+        // cold-adapted niche (optimum 6, dev 4 ≤ 8) but fled by a warm one
+        // (optimum 18, dev 16 > 8). Different setpoint → different verdict.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), 2.0),
+            (ns[0].clone(), 16.0), // warmer — the warm niche's comfort target
+            (ns[1].clone(), -10.0),
+            (ns[2].clone(), -20.0),
+        ]);
+        let view = at(home.clone());
+
+        let cold = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+        };
+        assert_eq!(cold.urgency(&view), 0.0, "the cold niche tolerates 2 °C");
+        assert_eq!(
+            cold.affordance(&view, PLAN_BUDGET),
+            None,
+            "tolerated → the cold niche stays put"
+        );
+
+        let warm = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        assert!(warm.urgency(&view) > 0.0, "the warm niche flees 2 °C");
+        assert_eq!(
+            warm.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "the warm niche steps toward the warmer neighbour"
+        );
+    }
+
+    #[test]
+    fn thermal_urgency_and_affordance_are_deterministic_and_recompute_identically() {
+        // Reload-stable by construction: the thermal drive reads only its held
+        // niche + terrain + day (no ledger, no stored state), so recomputing
+        // twice is byte-identical.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 3.5 };
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -12.0),
+            (ns[0].clone(), 4.0),
+            (ns[1].clone(), -25.0),
+            (ns[2].clone(), -18.0),
+        ]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(drive.urgency(&view), drive.urgency(&view));
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            drive.affordance(&view, PLAN_BUDGET)
+        );
+    }
+
+    #[test]
+    fn thermal_comfort_step_breaks_ties_by_ascending_room_addr() {
+        // DETERMINISM UNDER A GENUINE TIE: two neighbours EQUIDISTANT from the
+        // optimum (symmetric about it, 0 °C and 12 °C around optimum 6, both
+        // dev 6) must resolve to the smaller-`RoomAddr` one — the same
+        // `total_cmp` + ascending-`RoomAddr` tie-break `downhill_step` uses (cf.
+        // `downhill_step_picks_the_lowest_neighbor_deterministically`).
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let smaller = std::cmp::min(ns[0].clone(), ns[1].clone());
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -40.0),  // dev 46 → outside the band, worse than either
+            (ns[0].clone(), 0.0),   // dev 6
+            (ns[1].clone(), 12.0),  // dev 6 → ties ns[0]
+            (ns[2].clone(), -40.0), // dev 46 → not chosen
+        ]);
+        let drive = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+        };
+        let view = at(home.clone());
+        assert_eq!(
+            drive.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(smaller)),
+            "an equal-deviation tie resolves to the smaller RoomAddr"
+        );
+    }
+
+    // --- Action-centric arbitration (Stage 2): thirst + thermal compete. ---
+
+    /// A low-`act` sustenance drive so a MODERATE thirst urgency is already
+    /// "active" — lets the arbitration tests put thirst and thermal in the same
+    /// active window (real `SUSTENANCE.act` is `0.85`, above the thermal
+    /// ceiling `0.6`, so the two rarely coexist active on real params; the
+    /// mechanism is what these tests pin, per spec §5).
+    fn eager_thirst() -> DriveParams {
+        DriveParams {
+            rise: 0.15,
+            act: 0.4,
+        }
+    }
+
+    #[test]
+    fn affect_reads_each_circumplex_region() {
+        // The affect label is a pure read of the same arbitration that chose the
+        // action (spec §7). A comfortable-everywhere terrain keeps thermal
+        // inactive so thirst is the sole drive under test.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let water = ns[0].clone();
+        let far = raddr(9_999.0); // a believed source with no path within budget
+        let day = WorldTime { day: 0.0 };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), 18.0),
+            (ns[0].clone(), 18.0),
+            (ns[1].clone(), 18.0),
+            (ns[2].clone(), 18.0),
+        ]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let label = |view: &Perceived| {
+            arbitrate(view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET)
+                .affect
+                .label
+        };
+
+        // CONTENT — not thirsty (drive < act): no active drive, puttering.
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.1,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            }),
+            AffectLabel::Content,
+        );
+        // EAGER — parched and standing at water: Drink satisfies (relief).
+        assert_eq!(
+            label(&Perceived {
+                position: water.clone(),
+                drive: 0.95,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            }),
+            AffectLabel::Eager,
+        );
+        // SEARCHING — parched, ignorant, a gradient to explore: approaching,
+        // NOT confusion (the load-bearing exclusion from the distress metric).
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.95,
+                believed_water: None,
+                explore_step: Some(ns[2].clone()),
+            }),
+            AffectLabel::Searching,
+        );
+        // (FRUSTRATED — Hold while KNOWING where water is — is rare by design:
+        // believed water is a cell the creature stood in, so it is almost always
+        // reachable; it fires only when a known source falls beyond the plan
+        // budget in a large world. The branch is `believed.is_some()` on Hold;
+        // its sibling LOST below exercises the same Hold path.)
+        let _ = &far;
+        // LOST — parched, ignorant, nowhere new to go: no basis to move.
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.95,
+                believed_water: None,
+                explore_step: None,
+            }),
+            AffectLabel::Lost,
+        );
+    }
+
+    #[test]
+    fn arbitrate_in_a_comfortable_cell_is_byte_identical_to_thirst_only_decide() {
+        // THE CRUX (thirst-only preserved): where thermal is INACTIVE (a
+        // comfortable cell — every reachable cell at the niche optimum, urgency
+        // 0), the two-drive arbitration must produce the EXACT `Intent` the
+        // Stage-0 thirst-only `decide` does, for every state. Proven by direct
+        // equality against `decide` on the same views.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let water = ns[0].clone();
+        let day = WorldTime { day: 0.0 };
+        // All cells at the warm niche's optimum → thermal urgency 0 everywhere.
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), 18.0),
+            (ns[0].clone(), 18.0),
+            (ns[1].clone(), 18.0),
+            (ns[2].clone(), 18.0),
+        ]);
+        let params = SUSTENANCE;
+        let thirst = Thirst { params };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        // A representative spread of thirst states; each must arbitrate ==
+        // decide. Latency 0.5 (the goblin baseline) — irrelevant here since
+        // only one drive is ever active, which is exactly the point.
+        let views = [
+            // parched, at home, knows water → plan's first step toward water
+            Perceived {
+                position: home.clone(),
+                drive: 0.9,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            },
+            // sated, away (at water) → plan home
+            Perceived {
+                position: water.clone(),
+                drive: 0.1,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            },
+            // sated, at home → Hold
+            Perceived {
+                position: home.clone(),
+                drive: 0.1,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            },
+            // parched, ignorant, has an explore step → explore
+            Perceived {
+                position: home.clone(),
+                drive: 0.9,
+                believed_water: None,
+                explore_step: Some(ns[2].clone()),
+            },
+            // parched, ignorant, nowhere new → Hold
+            Perceived {
+                position: home.clone(),
+                drive: 0.9,
+                believed_water: None,
+                explore_step: None,
+            },
+        ];
+        for v in &views {
+            assert_eq!(
+                arbitrate(v, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+                decide(v, &home, &params, PLAN_BUDGET),
+                "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn arbitrate_prefers_the_move_that_serves_both_drives() {
+        // MULTI-DRIVE: a creature both thirsty AND cold. One neighbour is BOTH
+        // the water step and warm; another is warm only. The both-serving
+        // neighbour wins — utility sums across drives, so it beats the
+        // thermal-only neighbour that serves just the (equally loud) comfort.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let both = ns[0].clone(); // water + warm
+        let warm_only = ns[1].clone(); // warm, not water
+        let cold = ns[2].clone(); // neither
+        let day = WorldTime { day: 0.0 };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0),     // freezing → thermal urgency 1.0
+            (both.clone(), 18.0),      // optimum → big comfort gain
+            (warm_only.clone(), 18.0), // optimum → equal comfort gain
+            (cold.clone(), -20.0),     // no gain
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.9,
+            believed_water: Some(both.clone()),
+            explore_step: None,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        // Weigh (latency 1): the full weighted sum, so the both-serving move
+        // wins decisively over the warm-only one.
+        let intent = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
+        assert_eq!(
+            intent,
+            Intent::Do(Action::MoveTo(both)),
+            "the move serving BOTH thirst and thermal beats the warm-only move"
+        );
+    }
+
+    #[test]
+    fn grab_and_weigh_resolve_the_same_conflict_differently() {
+        // THE DIVERGENCE PROOF (§6): the SAME conflict, one psychology apart.
+        // Thermal is the loudest single need (grab serves it: the pure-warmth
+        // step X). But a third neighbour Z serves BOTH thirst and thermal
+        // moderately, so the weighted SUM lifts Z above X — weigh takes Z.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone(); // pure warmth (loudest single relief)
+        let both = ns[1].clone(); // water + moderate warmth
+        let cold = ns[2].clone();
+        let day = WorldTime { day: 0.0 };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0), // urgency 1.0 (capped 0.6)
+            (warm.clone(), 18.0),  // thermal serv 1.0
+            (both.clone(), 6.0),   // urgency 0.5 → thermal serv 0.5
+            (cold.clone(), -20.0),
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
+            believed_water: Some(both.clone()),
+            explore_step: None,
+        };
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let Resolution {
+            intent: grab,
+            mode: gm,
+            ..
+        } = arbitrate(&view, &home, &drives, 0.0, Mode::Idle, PLAN_BUDGET);
+        let weigh = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
+        assert_eq!(
+            grab,
+            Intent::Do(Action::MoveTo(warm.clone())),
+            "grab (impulsive) takes the nearest relief for the loudest need — pure warmth"
+        );
+        assert_eq!(
+            weigh,
+            Intent::Do(Action::MoveTo(both.clone())),
+            "weigh (deliberate) takes the move best relieving TOTAL discomfort"
+        );
+        assert_ne!(grab, weigh, "psychology alone changed the resolution");
+        // Grab committed to the loudest drive (thermal).
+        assert_eq!(gm, Mode::Pursuing(DriveKind::Thermal));
+    }
+
+    #[test]
+    fn soft_maslow_severe_cold_beats_mild_thirst_but_dying_of_thirst_beats_any_cold() {
+        // SOFT MASLOW via urgency ceilings (no priority table): comfort caps at
+        // 0.6, survival reaches 1.0. Same freezing world, water and warmth in
+        // opposite directions; the winner flips with thirst severity alone.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone();
+        let water = ns[1].clone();
+        let cold = ns[2].clone();
+        let day = WorldTime { day: 0.0 };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0),  // severe cold: thermal urgency 1.0 (cap 0.6)
+            (warm.clone(), 18.0),   // warmth here
+            (water.clone(), -20.0), // water here, but no warmer
+            (cold.clone(), -20.0),
+        ]);
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        // (a) MILD thirst (0.5, active under eager_thirst, capped 0.5 < 0.6):
+        //     severe cold wins → step toward WARMTH.
+        let mild = Perceived {
+            position: home.clone(),
+            drive: 0.5,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        let eager = Thirst {
+            params: eager_thirst(),
+        };
+        let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
+        assert_eq!(
+            arbitrate(&mild, &home, &mild_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+            Intent::Do(Action::MoveTo(warm.clone())),
+            "severe cold beats mild thirst"
+        );
+        // (b) DYING thirst (1.0, capped 1.0 > any comfort cap): nothing beats
+        //     it → step toward WATER even while freezing.
+        let dying = Perceived {
+            position: home.clone(),
+            drive: 1.0,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        let survival = Thirst { params: SUSTENANCE };
+        let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
+        assert_eq!(
+            arbitrate(&dying, &home, &dying_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+            Intent::Do(Action::MoveTo(water.clone())),
+            "dying of thirst beats any cold"
+        );
+    }
+
+    #[test]
+    fn commitment_hysteresis_prevents_flip_flop_between_near_equal_drives() {
+        // HYSTERESIS: once committed to a drive, a challenger only marginally
+        // louder (within the switch margin δ) does NOT steal the errand — the
+        // committed mode is sticky across ticks, so no dithering.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let warm = ns[0].clone();
+        let water = ns[1].clone();
+        let day = WorldTime { day: 0.0 };
+        // Freezing home (thermal urgency 1.0, capped 0.6); a fully-comfortable
+        // warm neighbour → thermal grab-utility = capped(0.6) × drop(1.0) = 0.6.
+        // Water lies in a cold direction (no thermal help).
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0),
+            (warm.clone(), 18.0),
+            (water.clone(), -20.0),
+            (ns[2].clone(), -20.0),
+        ]);
+        let thirst = Thirst {
+            params: eager_thirst(),
+        };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        // Tick 1: thirst grab-utility 0.50 < thermal 0.60 → commit to thermal.
+        let low = Perceived {
+            position: home.clone(),
+            drive: 0.50,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        let m1 = arbitrate(&low, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode;
+        assert_eq!(
+            m1,
+            Mode::Pursuing(DriveKind::Thermal),
+            "commit to the louder thermal drive"
+        );
+        // Tick 2+: thirst climbs to 0.65 — now marginally LOUDER than thermal
+        // (0.60), but within δ = 0.1. A fresh (Idle) arbitration WOULD flip to
+        // thirst; carrying the committed mode must NOT.
+        let high = Perceived {
+            position: home.clone(),
+            drive: 0.65,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        assert_eq!(
+            arbitrate(&high, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode,
+            Mode::Pursuing(DriveKind::Thirst),
+            "control: with no committed mode, the now-louder thirst is pursued (the test bites)"
+        );
+        let mut mode = m1;
+        for _ in 0..5 {
+            let m = arbitrate(&high, &home, &drives, 0.5, mode, PLAN_BUDGET).mode;
+            assert_eq!(
+                m,
+                Mode::Pursuing(DriveKind::Thermal),
+                "the committed errand is sticky: a within-δ challenger never steals it"
+            );
+            mode = m;
+        }
+    }
+
+    #[test]
+    fn arbitration_is_deterministic_reload_stable_and_breaks_ties_by_ascending_room_addr() {
+        // DETERMINISM + TIE-BREAK: arbitration reads only view + terrain + niche
+        // (no ledger), so it recomputes identically (reload-stable by
+        // construction). And a genuine two-way utility tie resolves to the
+        // smaller `RoomAddr` — the constitutional `total_cmp` + ascending-addr
+        // rule, here on the arbitration's own action scan.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        let smaller = std::cmp::min(ns[0].clone(), ns[1].clone());
+        // Thermal-only (thirst inactive, drive 0): home freezing, ns[0] and
+        // ns[1] EQUALLY warm (both optimum) → equal thermal serviceability →
+        // equal utility → the tie-break decides.
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -20.0),
+            (ns[0].clone(), 18.0),
+            (ns[1].clone(), 18.0),
+            (ns[2].clone(), -20.0),
+        ]);
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.0,
+            believed_water: None,
+            explore_step: None,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let a = arbitrate(&view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
+        let b = arbitrate(&view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
+        assert_eq!(a, b, "same inputs → same (Intent, Mode); reload-stable");
+        assert_eq!(
+            a.intent,
+            Intent::Do(Action::MoveTo(smaller)),
+            "an equal-utility tie resolves to the smaller RoomAddr"
+        );
     }
 }

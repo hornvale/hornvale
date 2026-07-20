@@ -8,6 +8,8 @@ description = "Hornvale laboratory: batch studies over generated worlds."
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
 hornvale-worldgen = { path = "../worldgen" }
+hornvale-vessel = { path = "../vessel" }
+hornvale-locale = { path = "../locale" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-terrain = { path = "../../domains/terrain" }
 hornvale-climate = { path = "../../domains/climate" }

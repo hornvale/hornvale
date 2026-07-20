@@ -263,6 +263,28 @@ impl LocaleContext {
             exits: exits_of(addr), // base + vertical exits (§6)
         })
     }
+
+    /// The room's PER-DAY temperature at `at`, °C — the diurnal+seasonal
+    /// signal a thermal drive senses at its own cell, distinct from
+    /// [`describe`](Self::describe)'s annual-MEAN `temperature_c` render field
+    /// (left untouched, so the walk/almanac stay byte-identical). Blends the
+    /// three corner cells' [`GeneratedClimate::temperature_at`] by the SAME
+    /// integer barycentric weights `describe` uses for the mean. Full
+    /// precision — this is a compute-path read, never a serialization
+    /// boundary, so it is NOT quantized (quantize-at-emit-only). `None` for a
+    /// room the canonical grid does not cover (above the grid or unaddressable);
+    /// the caller supplies the never-chosen fallback.
+    /// type-audit: pending(wave-2: return)
+    pub fn temperature_at(&self, addr: &RoomAddr, at: WorldTime) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights(geo, &self.index)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.temperature_at(c, at.day).get())
+            .sum();
+        Some(sum / denom as f64)
+    }
 }
 
 /// Stable biome name for the `locale/room/v2` schema (owned here, not Debug).

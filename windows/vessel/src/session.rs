@@ -2,8 +2,8 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, DRANK, DriveMovements, LocaleTerrain, Npc, SUSTENANCE, agent_position, derive_npcs,
-    drive_at,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, LocaleTerrain, Npc,
+    SUSTENANCE, affect_of, agent_position, derive_npcs,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -477,17 +477,14 @@ impl<'w> Session<'w> {
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
+        // Read each co-located NPC's felt state through the SAME arbitration
+        // that drives it (spec §7) — the affect label coloured by what the
+        // feeling is about (its intentional object), not a bare thirst scalar.
+        let terrain = LocaleTerrain::new(&self.ctx);
         here.iter()
             .map(|npc| {
-                let drive = drive_at(&self.ledger, npc.entity, self.day, &SUSTENANCE);
-                let felt = if drive >= SUSTENANCE.act {
-                    "looks parched"
-                } else if drive <= SUSTENANCE.sated {
-                    "seems content"
-                } else {
-                    "could do with a drink"
-                };
-                format!("The {} {felt}.", npc.label)
+                let affect = affect_of(&self.ledger, npc, self.day, &terrain);
+                format!("The {} {}.", npc.label, felt_phrase(&affect))
             })
             .collect::<Vec<_>>()
             .join("\n")
@@ -560,6 +557,54 @@ impl<'w> Session<'w> {
             Ok(s) => Turn::Out(s),
             Err(e) => Turn::Out(format!("error: {e}")),
         }
+    }
+}
+
+/// The arousal above which a still-Content (sub-act) creature reads as restless
+/// rather than calm — the rising edge of a need felt before it is acted on.
+const RESTLESS_AROUSAL: f64 = 0.4;
+
+/// Render a creature's `Affect` as a felt-state phrase (spec §7): the
+/// circumplex label coloured by its intentional object — what the feeling is
+/// *about* — so a reader sees not just *that* it frets but *what for*. The
+/// object/reason is the debuggable "message" a distressed creature emits.
+fn felt_phrase(affect: &Affect) -> String {
+    // Pick the object-appropriate wording (thirst / thermal / no object).
+    let about = |thirst: &str, thermal: &str, none: &str| {
+        match affect.object {
+            Some(DriveKind::Thirst) => thirst,
+            Some(DriveKind::Thermal) => thermal,
+            None => none,
+        }
+        .to_string()
+    };
+    match affect.label {
+        // Below the seek threshold the creature is puttering — but arousal still
+        // rises with the need, so a reader can tell true calm from the restless
+        // edge before it starts to act.
+        AffectLabel::Content if affect.arousal >= RESTLESS_AROUSAL => "grows restless".to_string(),
+        AffectLabel::Content => "seems content".to_string(),
+        AffectLabel::Eager => about(
+            "drinks its fill",
+            "settles into a kinder warmth",
+            "looks pleased",
+        ),
+        AffectLabel::Searching => about(
+            "casts about for water",
+            "casts about for a kinder clime",
+            "wanders, searching",
+        ),
+        AffectLabel::Frustrated => about(
+            "frets, wanting water it cannot reach",
+            "shivers, with no warmth within reach",
+            "frets, blocked at every turn",
+        ),
+        AffectLabel::Lost => "looks lost, unsure where to turn".to_string(),
+        AffectLabel::Helpless => about(
+            "has given up on water",
+            "has given up on warmth",
+            "has given up",
+        ),
     }
 }
 

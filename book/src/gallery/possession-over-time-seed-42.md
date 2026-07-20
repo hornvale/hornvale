@@ -34,7 +34,7 @@ Time passes; the world keeps its shape.
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo could do with a drink.
+The hobgoblin of Foenjoavaenoenoanoagoo grows restless.
 > wait 1
 Time passes. You sense movement nearby (3 stirred).
 > look
@@ -50,7 +50,7 @@ Time passes; the world keeps its shape.
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo could do with a drink.
+The hobgoblin of Foenjoavaenoenoanoagoo seems content.
 > why hobgoblin
 hobgoblin of Foenjoavaenoenoanoagoo:
 - canonical name of an entity: hobgoblin of Foenjoavaenoenoanoagoo (asserted by the-quickening)
@@ -63,7 +63,7 @@ Time passes. You sense movement nearby (12 stirred).
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo looks parched.
+The hobgoblin of Foenjoavaenoenoanoagoo casts about for water.
 > release
 You let go.
 ```
