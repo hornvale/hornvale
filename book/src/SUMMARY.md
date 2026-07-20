@@ -192,6 +192,7 @@
 - [The Local Census](./chronicle/the-local-census.md)
 - [The Vessel Stitch](./chronicle/the-vessel-stitch.md)
 - [The Demesne](./chronicle/the-demesne.md)
+- [The Book Polish](./chronicle/the-book-polish.md)
 - [The Temperament](./chronicle/the-temperament.md)
 
 # Appendix: The Frontier

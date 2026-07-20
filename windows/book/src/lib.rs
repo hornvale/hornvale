@@ -559,11 +559,25 @@ const RECKONING_EPOCH_2_MARGIN_PHRASE: &str = "of the first hundred years";
 /// true event count at `T` is zero.
 const RECKONING_EMPTY_ARM: &str = "The sky keeps no dates to number.";
 
-/// The folk register (spec §3.4): rendered for every placed culture at
-/// [`hornvale_worldgen::LadderRung::Counted`] or above — even an organized
-/// cult's own priesthood shares this lived experience before its Numbered
-/// line adds the institutional cardinal.
-const RECKONING_FOLK_COUNTED: &str = "The sky has darkened, now and again.";
+/// The folk register (spec §3.4, attributed per The Book Polish): rendered
+/// for every placed culture at [`hornvale_worldgen::LadderRung::Counted`] or
+/// above — even an organized cult's own priesthood shares this lived
+/// experience before its Numbered line adds the institutional cardinal.
+/// Named per culture (`"Among the {autonym}, "`) so two folk-only cultures
+/// sharing one epoch never render byte-identical lines (The Book Polish,
+/// 2026-07-20: two consecutive anonymous instances of this line read as a
+/// duplicate to a cold reader, not two peoples).
+fn reckoning_folk_counted(autonym: &str) -> String {
+    format!("Among the {autonym}, the sky has darkened, now and again.")
+}
+
+/// [`reckoning_folk_counted`]'s closed inverse: strip the fixed prefix and
+/// suffix, recovering the autonym — `None` if `line` doesn't match the
+/// shape at all (mirrors [`parse_reckoning_line`]'s `Numbered` arm).
+fn parse_reckoning_folk_counted(line: &str) -> Option<&str> {
+    line.strip_prefix("Among the ")?
+        .strip_suffix(", the sky has darkened, now and again.")
+}
 
 /// Every placed culture's Reckoning-of-Years read, at the two
 /// preregistered epochs — the committed `BookVolume::reckoning`. Always
@@ -762,7 +776,7 @@ fn reckoning_culture_lines(
     if rung == hornvale_worldgen::LadderRung::Unknown {
         return Vec::new();
     }
-    let mut lines = vec![RECKONING_FOLK_COUNTED.to_string()];
+    let mut lines = vec![reckoning_folk_counted(autonym)];
     if matches!(
         rung,
         hornvale_worldgen::LadderRung::Numbered | hornvale_worldgen::LadderRung::Predictive
@@ -1472,9 +1486,22 @@ pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec
             let Some(Value::Number(n)) = world.ledger.value_of(entity, predicate) else {
                 continue;
             };
+            // The Book Polish (2026-07-20): name the subject and agree in
+            // number, mirroring `revealed_claim_line`'s own singular/plural
+            // split — the bare em-dash continuation this replaced read fine
+            // inside the vessel's turn-by-turn flow (the player just wrote
+            // about the moons) but floated with no antecedent in the CLI's
+            // static `--initiate` dump, which has no surrounding context at
+            // all. Narrow to MOON_COUNT exactly as `revealed_claim_line`
+            // is (the only predicate that reaches `RevealedClaim` today);
+            // widening either narrowing is a shared future task, not this
+            // campaign's.
+            let count = *n as u64;
+            let moon_word = if count == 1 { "moon" } else { "moons" };
             lines.push(format!(
-                "— {}, as the initiated count.",
-                cardinal(*n as u64)
+                "{} has {} {moon_word}, as the initiated count.",
+                entry.fact.subject,
+                cardinal(count)
             ));
             seen.insert(key);
         }
@@ -1958,13 +1985,17 @@ pub enum ChorusLine {
 /// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
-/// type-audit: bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count)
+/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count)
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReckoningLine {
     /// `"The sky keeps no dates to number."` — the empty arm.
     Empty,
-    /// `"The sky has darkened, now and again."` — the folk register.
-    FolkCounted,
+    /// `"Among the ⟨autonym⟩, the sky has darkened, now and again."` — the
+    /// folk register, attributed per culture (The Book Polish).
+    FolkCounted {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+    },
     /// `"The priesthood of the ⟨autonym⟩ numbers the darkenings: ⟨count⟩."`
     Numbered {
         /// The culture's autonym, as it appeared in the line.
@@ -2158,8 +2189,13 @@ fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
     if line == RECKONING_EMPTY_ARM {
         return Some(ReckoningLine::Empty);
     }
-    if line == RECKONING_FOLK_COUNTED {
-        return Some(ReckoningLine::FolkCounted);
+    if let Some(autonym) = parse_reckoning_folk_counted(line) {
+        if autonym.is_empty() {
+            return None;
+        }
+        return Some(ReckoningLine::FolkCounted {
+            autonym: autonym.to_string(),
+        });
     }
     if let Some(rest) = line
         .strip_prefix("The priesthood of the ")
@@ -2201,7 +2237,7 @@ fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
 fn rerender_reckoning_line(line: &ReckoningLine) -> String {
     match line {
         ReckoningLine::Empty => RECKONING_EMPTY_ARM.to_string(),
-        ReckoningLine::FolkCounted => RECKONING_FOLK_COUNTED.to_string(),
+        ReckoningLine::FolkCounted { autonym } => reckoning_folk_counted(autonym),
         ReckoningLine::Numbered { autonym, count } => format!(
             "The priesthood of the {autonym} numbers the darkenings: {}.",
             cardinal(*count)
@@ -4005,7 +4041,9 @@ mod tests {
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
-            vec!["— two, as the initiated count.".to_string()],
+            // The Book Polish (2026-07-20): re-pinned with its subject
+            // (was the bare "— two, as the initiated count.").
+            vec!["Vebe has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
@@ -4025,12 +4063,19 @@ mod tests {
             ledger_value, 2,
             "Vebe's committed moon-count is two at seed 1"
         );
+        let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
-            format!("— {}, as the initiated count.", cardinal(ledger_value)),
+            format!(
+                "Vebe has {} {moon_word}, as the initiated count.",
+                cardinal(ledger_value)
+            ),
             "the line's cardinal must equal the ledger's own value"
         );
-        let wrong = format!("— {}, as the initiated count.", cardinal(ledger_value + 1));
+        let wrong = format!(
+            "Vebe has {} {moon_word}, as the initiated count.",
+            cardinal(ledger_value + 1)
+        );
         assert_ne!(
             lines[0], wrong,
             "a wrong cardinal must not match what esoteric_lines produced — proving \
@@ -4080,7 +4125,8 @@ mod tests {
             .collect();
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
-            initiated_extra.contains(&"— two, as the initiated count.".to_string()),
+            // The Book Polish (2026-07-20): re-pinned with its subject.
+            initiated_extra.contains(&"Vebe has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -4144,14 +4190,17 @@ mod tests {
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
-                "The sky has darkened, now and again.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed (was
+                // the bare, unattributed "The sky has darkened, now and
+                // again." for both entries below).
+                "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36526.".to_string(),
-                "The sky has darkened, now and again.".to_string(),
+                "Among the Babako, the sky has darkened, now and again.".to_string(),
             ],
             "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
-             (Babako) is now folk-only, so it contributes only the qualitative arm with no \
-             cardinal or prediction"
+             (Babako) is now folk-only, so it contributes only the attributed qualitative \
+             arm with no cardinal or prediction"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
@@ -4171,13 +4220,14 @@ mod tests {
         assert_eq!(
             seed2.reckoning[1].lines,
             vec![
-                "The sky has darkened, now and again.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed.
+                "Among the Maetmea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Maetmea numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36611.".to_string(),
-                "The sky has darkened, now and again.".to_string(),
+                "Among the Waedwea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36611.".to_string(),
-                "The sky has darkened, now and again.".to_string(),
+                "Among the Ngkoshngta, the sky has darkened, now and again.".to_string(),
             ]
         );
         assert_eq!(
@@ -4197,10 +4247,13 @@ mod tests {
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "The sky has darkened, now and again.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed — this
+                // is the exact stutter the campaign fixes: the last two
+                // lines below were byte-identical bare strings before.
+                "Among the Sdeozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36953.".to_string(),
-                "The sky has darkened, now and again.".to_string(),
+                "Among the Shteozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shteozqae numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36953.".to_string(),
             ],
@@ -4484,7 +4537,8 @@ mod tests {
         assert_eq!(
             lines,
             vec![
-                "The sky has darkened, now and again.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed.
+                "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: eight.".to_string(),
             ],
             "Predictive + None: the count still renders, but no prediction line"
@@ -4499,7 +4553,7 @@ mod tests {
         assert_eq!(
             lines_with_prediction,
             vec![
-                "The sky has darkened, now and again.".to_string(),
+                "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: eight.".to_string(),
                 "The next darkening, it teaches, comes on day 9080.".to_string(),
             ],
