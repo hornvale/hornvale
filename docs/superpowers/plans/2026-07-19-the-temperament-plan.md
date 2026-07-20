@@ -124,7 +124,8 @@ injected-fault probes.
 byte-free to worlds (the edge is `#[serde(skip)]`); `cli/tests/correspondence.rs`
 green.
 **Tests:** `cargo test -p hornvale --test correspondence`; the manifest drift-check.
-**Status:** Not Started
+**Status:** Complete — cold/heat cognition edge flipped to Present(CognitiveHandle);
+audit 0/76 → 2/76; trial balance foots; manifest regenerated.
 
 ---
 

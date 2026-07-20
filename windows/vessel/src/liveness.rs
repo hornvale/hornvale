@@ -14,9 +14,9 @@ use hornvale_locale::LocaleContext;
 use hornvale_species::ActivityCycle;
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
-/// and its species' activity-cycle. Derived from the genesis world, never
-/// stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(ratio: deliberation_latency)
+/// its species, and that species' activity-cycle. Derived from the genesis
+/// world, never stored (re-derivable).
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -26,6 +26,10 @@ pub struct Npc {
     /// The room its sustenance drive seeks (the-wanting supersedes the old
     /// fixed-schedule destination: this IS the drive's resource anchor now).
     pub resource: RoomAddr,
+    /// The NPC's species (kind label), threaded from `species_of` at derivation
+    /// the same way the niche and latency are — the health metric's by-species
+    /// distress attribution reads it.
+    pub species: String,
     /// The species activity-cycle. Write-only this slice: the drive is the sole
     /// mover (the activity gate was dropped), retained for the deferred
     /// activity-gating followup (a diurnal NPC seeking water only while awake).
@@ -1320,6 +1324,7 @@ pub fn derive_npcs(
                 entity,
                 home,
                 resource,
+                species,
                 activity,
                 temperature_niche,
                 deliberation_latency,
@@ -1538,6 +1543,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1568,6 +1574,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: home.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1600,6 +1607,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: near.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1630,6 +1638,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1657,6 +1666,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1700,6 +1710,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: first.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -1847,6 +1858,7 @@ mod tests {
             entity: EntityId::new(1).unwrap(),
             home: home.clone(),
             resource: home.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2211,6 +2223,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2300,6 +2313,7 @@ mod tests {
             entity,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2366,6 +2380,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water,
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2441,6 +2456,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water,
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2501,6 +2517,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: resource.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
@@ -2733,6 +2750,7 @@ mod tests {
                 entity: e,
                 home: home.clone(),
                 resource: w1.clone(),
+                species: "goblin".into(),
                 activity: hornvale_species::ActivityCycle::Diurnal,
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
@@ -2809,6 +2827,7 @@ mod tests {
             entity: e,
             home: home.clone(),
             resource: water.clone(),
+            species: "goblin".into(),
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,

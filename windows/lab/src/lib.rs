@@ -4,6 +4,7 @@
 pub mod blackbox;
 pub mod chart;
 pub mod diff;
+pub mod health;
 mod metrics;
 pub mod publish;
 pub mod roster;
