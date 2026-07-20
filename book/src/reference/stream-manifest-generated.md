@@ -68,14 +68,14 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `language/<species>/grammar/depth/evidential` | C7's depth vector: how deeply evidentiality grammaticalizes (None/Particle/Affix, weighted [60,25,15]) |
 | `language/<species>/grammar/depth/noun-class` | C7's depth vector: how deeply noun class grammaticalizes (None/Particle/Affix, weighted [55,15,30]) |
 | `language/<species>/grammar/class-position` | C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60) |
-| `language/<species>/grammar/depth/number` | LANG-43: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class |
-| `language/<species>/grammar/depth/tense` | LANG-43: the species' drawn Tense grammaticalization depth (None/Particle/Affix) |
-| `language/<species>/grammar/number-position` | LANG-43: which side of the marked word the Number affix binds |
-| `language/<species>/grammar/tense-position` | LANG-43: which side of the marked word the Tense affix binds |
+| `language/<species>/grammar/depth/number` | The Residue: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class |
+| `language/<species>/grammar/depth/tense` | The Residue: the species' drawn Tense grammaticalization depth (None/Particle/Affix) |
+| `language/<species>/grammar/number-position` | The Residue: which side of the marked word the Number affix binds |
+| `language/<species>/grammar/tense-position` | The Residue: which side of the marked word the Tense affix binds |
 | `language/family/<family>/morph/evidential/<value>` | C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law |
 | `language/family/<family>/morph/class/<value>` | C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law |
-| `language/family/<family>/morph/number/plural` | LANG-43: the family's Plural affix proto-form, shared by every daughter (family-cognate law) |
-| `language/family/<family>/morph/tense/past` | LANG-43: the family's Past-tense affix proto-form, shared by every daughter |
+| `language/family/<family>/morph/number/plural` | The Residue: the family's Plural affix proto-form, shared by every daughter (family-cognate law) |
+| `language/family/<family>/morph/tense/past` | The Residue: the family's Past-tense affix proto-form, shared by every daughter |
 | `language/<species>/schema/<domain>/<fact-shape>` | C5's causal-schema draw (render-time, `schemas::select_schema`): the β-sharpened pick among the fact-shape's admitted schemas for one culture's account of one (source-domain, fact-shape) pair — `<domain>` and `<fact-shape>` are the salt legs (e.g. `sky`/`cyclic-event` for the day) |
 | `language/<species>/lexeme/<fact-key>` | C5's lexeme draw (render-time, `schemas::select_lexeme`): the uniform pick among a fired schema's gate-surviving verb candidates for one explained fact — `<fact-key>` salts by the ground fact's predicate (e.g. `day-length-std`) |
 | `language/<species>/doctrine-schema/<domain>/<fact-shape>` | C6's institutional causal-schema draw (The Doctrine, render-time, `schemas::select_schema` again): the β-sharpened pick among the fact-shape's admitted schemas for the SAME culture's doctrine account (folk prior × the authored mediation column, before β) — a sibling stream to `schema/<domain>/<fact-shape>` above, never a shared draw, so the folk and doctrine schema picks can diverge independently |

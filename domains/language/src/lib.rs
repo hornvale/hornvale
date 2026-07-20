@@ -443,19 +443,19 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/<species>/grammar/depth/number",
-            "LANG-43: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class",
+            "The Residue: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class",
         ),
         (
             "language/<species>/grammar/depth/tense",
-            "LANG-43: the species' drawn Tense grammaticalization depth (None/Particle/Affix)",
+            "The Residue: the species' drawn Tense grammaticalization depth (None/Particle/Affix)",
         ),
         (
             "language/<species>/grammar/number-position",
-            "LANG-43: which side of the marked word the Number affix binds",
+            "The Residue: which side of the marked word the Number affix binds",
         ),
         (
             "language/<species>/grammar/tense-position",
-            "LANG-43: which side of the marked word the Tense affix binds",
+            "The Residue: which side of the marked word the Tense affix binds",
         ),
         (
             "language/family/<family>/morph/evidential/<value>",
@@ -467,11 +467,11 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         ),
         (
             "language/family/<family>/morph/number/plural",
-            "LANG-43: the family's Plural affix proto-form, shared by every daughter (family-cognate law)",
+            "The Residue: the family's Plural affix proto-form, shared by every daughter (family-cognate law)",
         ),
         (
             "language/family/<family>/morph/tense/past",
-            "LANG-43: the family's Past-tense affix proto-form, shared by every daughter",
+            "The Residue: the family's Past-tense affix proto-form, shared by every daughter",
         ),
         (
             "language/<species>/schema/<domain>/<fact-shape>",
