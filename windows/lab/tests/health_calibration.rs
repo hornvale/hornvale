@@ -18,6 +18,7 @@
 use hornvale_lab::health::{AffectTrace, HealthReport, health_report, simulate_world};
 use hornvale_lab::synthetic::{
     a_heat_wave_that_passes, a_stricken_and_a_healthy_people, stranded_from_known_water,
+    stranded_in_a_hot_waste,
 };
 use hornvale_vessel::liveness::{Affect, AffectLabel, DriveKind};
 
@@ -214,6 +215,38 @@ fn a_stranded_creature_is_scored_chronic_end_to_end() {
         "the distress is entirely thirst (unreachable water)"
     );
     assert_eq!(r.by_cause["thermal"], 0.0);
+}
+
+#[test]
+fn heat_hastens_thirst_end_to_end() {
+    // THE KINDLING, end to end: a creature stranded in a hot-but-livable waste
+    // crosses into thirst-distress SOONER than one stranded in a temperate
+    // exile — heat quickened its dehydration through the real sim. The hot
+    // creature is heat-adapted (comfortable), so the effect is thirst alone, not
+    // thermal discomfort.
+    let onset = |t: &[AffectTrace]| t[0].affects.iter().position(|a| a.valence < 0.0);
+    let hot_traces = stranded_in_a_hot_waste().simulate(HARNESS_TICKS);
+    let temperate_traces = stranded_from_known_water().simulate(HARNESS_TICKS);
+    let hot = onset(&hot_traces);
+    let temperate = onset(&temperate_traces);
+    assert!(
+        hot.is_some() && temperate.is_some(),
+        "both eventually distress"
+    );
+    assert!(
+        hot < temperate,
+        "heat hastens thirst-distress: hot at day {hot:?} vs temperate at {temperate:?}"
+    );
+    let first_neg = hot_traces[0]
+        .affects
+        .iter()
+        .find(|a| a.valence < 0.0)
+        .unwrap();
+    assert_eq!(
+        first_neg.object,
+        Some(DriveKind::Thirst),
+        "the hot creature's distress is thirst, not heat (it is heat-adapted)"
+    );
 }
 
 #[test]

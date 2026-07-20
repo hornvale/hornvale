@@ -1,6 +1,6 @@
 # The Kindling — metabolism reaches the drive layer
 
-**Status:** spec (G3 review)
+**Status:** SHIPPED (2026-07-20, chronicle: the-kindling)
 **Date:** 2026-07-20
 **Campaign:** The Kindling (Temperament followup #1, reframed)
 **Precedes:** implementation plan → execution → merge
