@@ -16,7 +16,7 @@ use hornvale_species::ActivityCycle;
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -45,6 +45,13 @@ pub struct Npc {
     /// full weighted sum) — psychology's first runtime job (spec §6). Threaded
     /// from `psyche_registry` at derivation.
     pub deliberation_latency: f64,
+    /// The species' `PsychVector.time_horizon`: how far ahead the creature
+    /// plans (∈ [0,1]) — psychology's SECOND runtime dial (spec §6). A
+    /// foresighted creature pre-empts a projectable stock drive, engaging it
+    /// before its urgency crosses `act` (see `Drive::anticipation_lead`);
+    /// `0` is myopic (acts only once the need bites). Threaded from
+    /// `psyche_registry` at derivation, beside `deliberation_latency`.
+    pub time_horizon: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -128,6 +135,17 @@ pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
 };
+
+/// The maximum anticipation lead-time, in days, a fully-foresighted creature
+/// (`time_horizon == 1`) pre-empts a STOCK drive by: it acts as though the
+/// drive had already climbed the urgency it will gain over this many days
+/// (§6, `time_horizon`). One authored judgment call, kept well under the
+/// thirst cycle (`act/rise ≈ 5.7` days) so even full foresight only shifts the
+/// seek a couple of days early — never to a zero-urgency creature (`rise ×
+/// this < act`, so the effective threshold stays positive). The goblin
+/// baseline (`time_horizon == 0.5`) thus leads by one day; a myopic species
+/// (`0`) leads by none, exactly the pre-anticipation model.
+const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
 /// The elevation field and fresh-water truth the belief/exploration logic
 /// reads, abstracted so pure tests plant synthetic terrain without building a
@@ -373,6 +391,22 @@ pub trait Drive {
     /// type-audit: bare-ok(ratio: return)
     fn act_threshold(&self) -> f64;
 
+    /// The anticipation lead this drive grants a creature with foresight
+    /// `time_horizon` (∈ [0,1]): how far its `act_threshold` is lowered so the
+    /// drive engages BEFORE its urgency actually crosses `act`, pre-empting a
+    /// need the creature can project (§6, `time_horizon` — the second psychology
+    /// dial, beside `deliberation_latency`). A STOCK drive whose urgency climbs
+    /// predictably (thirst rises `rise`/day) can be projected, so foresight buys
+    /// a lead proportional to that climb; a FLOW drive (thermal), whose future
+    /// urgency depends on where the creature wanders and how the weather turns,
+    /// has no monotonic trajectory to anticipate and grants none (the default).
+    /// Zero foresight grants zero lead — the drive engages exactly at `act`,
+    /// byte-identical to the pre-anticipation model.
+    /// type-audit: bare-ok(ratio: _horizon), bare-ok(ratio: return)
+    fn anticipation_lead(&self, _horizon: f64) -> f64 {
+        0.0
+    }
+
     /// The next executable step that reduces this drive from the view's
     /// position, or `None` when it cannot currently be advanced (its target is
     /// unreachable within `budget`, or there is nowhere new to look). For
@@ -511,6 +545,11 @@ impl Drive for Thirst {
     }
     fn act_threshold(&self) -> f64 {
         self.params.act
+    }
+    fn anticipation_lead(&self, horizon: f64) -> f64 {
+        // Thirst climbs `rise`/day, so foresight projects that climb: the lead
+        // is the urgency the drive will gain over `horizon × HORIZON_DAYS` days.
+        self.params.rise * horizon * ANTICIPATION_HORIZON_DAYS
     }
     fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
         match &view.believed_water {
@@ -713,7 +752,7 @@ fn comfort_step(
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(view, home, &drives, 0.0, Mode::Idle, budget).intent
+    arbitrate(view, home, &drives, 0.0, 0.0, Mode::Idle, budget).intent
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -741,27 +780,32 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(count: budget)
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(count: budget)
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
     drives: &[&dyn Drive],
     latency: f64,
+    horizon: f64,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
     // Which drives are ACTIVE (contribute to the utility sum). A drive engages
-    // at its `act`; the incumbent pursued drive stays engaged until it falls
-    // below `act − h` (hysteresis — no boundary dithering).
+    // at its EFFECTIVE threshold `act − anticipation_lead(horizon)` — foresight
+    // (§6, `time_horizon`) lowers `act` so a projectable stock drive engages
+    // early (a flow drive grants no lead, so its threshold is just `act`); the
+    // incumbent pursued drive stays engaged until it falls a further `h` below
+    // that (hysteresis — no boundary dithering).
     let active: Vec<bool> = drives
         .iter()
         .map(|d| {
             let u = d.urgency(view);
+            let act_eff = (d.act_threshold() - d.anticipation_lead(horizon)).max(0.0);
             let is_incumbent = matches!(incoming, Mode::Pursuing(k) if k == d.kind());
             if is_incumbent {
-                u >= d.act_threshold() - HYSTERESIS_H
+                u >= act_eff - HYSTERESIS_H
             } else {
-                u >= d.act_threshold()
+                u >= act_eff
             }
         })
         .collect();
@@ -973,6 +1017,7 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         &npc.home,
         &drives,
         npc.deliberation_latency,
+        npc.time_horizon,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1119,6 +1164,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     &npc.home,
                     &drives,
                     npc.deliberation_latency,
+                    npc.time_horizon,
                     mode,
                     PLAN_BUDGET,
                 );
@@ -1286,9 +1332,10 @@ pub fn derive_npcs(
     settlements.truncate(k);
 
     // Authored per-species data, read once: the temperature niche (the thermal
-    // drive's setpoint/tolerance) and the psych vector's deliberation latency
-    // (the arbitration tuning). Threaded onto each NPC the same way `activity`
-    // is — the perception/psych pattern.
+    // drive's setpoint/tolerance) and the psych vector's two runtime dials —
+    // deliberation latency (the arbitration tuning) and time horizon (the
+    // anticipation lead). Threaded onto each NPC the same way `activity` is —
+    // the perception/psych pattern.
     let biosphere = hornvale_species::biosphere_registry();
     let psyche = hornvale_species::psyche_registry();
 
@@ -1308,6 +1355,10 @@ pub fn derive_npcs(
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
+                .unwrap_or(0.5);
+            let time_horizon = psyche
+                .get_by_label(&species)
+                .map(|p| p.time_horizon)
                 .unwrap_or(0.5);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
@@ -1340,6 +1391,7 @@ pub fn derive_npcs(
                 activity,
                 temperature_niche,
                 deliberation_latency,
+                time_horizon,
                 label,
             }
         })
@@ -1559,6 +1611,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -1590,6 +1643,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -1623,6 +1677,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -1654,6 +1709,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -1682,6 +1738,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -1726,6 +1783,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -1874,6 +1932,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -2239,6 +2298,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -2329,6 +2389,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -2396,6 +2457,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -2472,6 +2534,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -2533,6 +2596,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -2766,6 +2830,7 @@ mod tests {
                 activity: hornvale_species::ActivityCycle::Diurnal,
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
+                time_horizon: 0.0,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -2843,6 +2908,7 @@ mod tests {
             activity: hornvale_species::ActivityCycle::Diurnal,
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
+            time_horizon: 0.0,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -3114,7 +3180,7 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
-            arbitrate(view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET)
+            arbitrate(view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET)
                 .affect
                 .label
         };
@@ -3236,7 +3302,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(v, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+                arbitrate(v, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).intent,
                 decide(v, &home, &params, PLAN_BUDGET),
                 "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
             );
@@ -3276,7 +3342,7 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let intent = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
+        let intent = arbitrate(&view, &home, &drives, 1.0, 0.0, Mode::Idle, PLAN_BUDGET).intent;
         assert_eq!(
             intent,
             Intent::Do(Action::MoveTo(both)),
@@ -3321,8 +3387,8 @@ mod tests {
             intent: grab,
             mode: gm,
             ..
-        } = arbitrate(&view, &home, &drives, 0.0, Mode::Idle, PLAN_BUDGET);
-        let weigh = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
+        } = arbitrate(&view, &home, &drives, 0.0, 0.0, Mode::Idle, PLAN_BUDGET);
+        let weigh = arbitrate(&view, &home, &drives, 1.0, 0.0, Mode::Idle, PLAN_BUDGET).intent;
         assert_eq!(
             grab,
             Intent::Do(Action::MoveTo(warm.clone())),
@@ -3373,7 +3439,16 @@ mod tests {
         };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
-            arbitrate(&mild, &home, &mild_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+            arbitrate(
+                &mild,
+                &home,
+                &mild_drives,
+                0.5,
+                0.0,
+                Mode::Idle,
+                PLAN_BUDGET
+            )
+            .intent,
             Intent::Do(Action::MoveTo(warm.clone())),
             "severe cold beats mild thirst"
         );
@@ -3388,9 +3463,93 @@ mod tests {
         let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
-            arbitrate(&dying, &home, &dying_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
+            arbitrate(
+                &dying,
+                &home,
+                &dying_drives,
+                0.5,
+                0.0,
+                Mode::Idle,
+                PLAN_BUDGET
+            )
+            .intent,
             Intent::Do(Action::MoveTo(water.clone())),
             "dying of thirst beats any cold"
+        );
+    }
+
+    #[test]
+    fn foresight_engages_a_stock_drive_before_it_crosses_act() {
+        // TIME_HORIZON (§6, the second psychology dial): a foresighted creature
+        // acts on a projectable stock drive BEFORE its urgency crosses `act`,
+        // pre-empting a need a myopic creature would still be waiting on. Same
+        // view; only `time_horizon` differs — so it, alone, decides whether the
+        // creature is already seeking.
+        let home = raddr(1.0);
+        let water = home.neighbors()[1].clone();
+        let day = WorldTime { day: 0.0 };
+        // No planted temperatures → thermal reads INFINITY → urgency 0 →
+        // inactive, so thirst alone decides.
+        let terrain = PlantedTerrain::thermal([]);
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        // Thirst BELOW act (0.85) but within a full-foresight lead
+        // (rise·1·HORIZON_DAYS = 0.30 → act_eff 0.55): 0.70 sits in [0.55, 0.85).
+        let view = Perceived {
+            position: home.clone(), // at home, so a non-seeking creature idles
+            drive: 0.70,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
+        // no active drive, already home → Idle Hold, nothing engaged.
+        let myopic = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
+        assert_eq!(myopic.intent, Intent::Hold, "a myopic creature waits");
+        assert_eq!(myopic.affect.object, None, "no drive is engaged yet");
+        // Foresighted (horizon 1): thirst active (0.70 ≥ act_eff 0.55) → already
+        // beelining to known water, Eager, object Thirst.
+        let foresighted = arbitrate(&view, &home, &drives, 0.5, 1.0, Mode::Idle, PLAN_BUDGET);
+        assert_eq!(
+            foresighted.intent,
+            Intent::Do(Action::MoveTo(water.clone())),
+            "foresight pre-empts: already stepping toward water"
+        );
+        assert_eq!(foresighted.affect.object, Some(DriveKind::Thirst));
+    }
+
+    #[test]
+    fn a_flow_drive_grants_no_anticipation_lead_but_a_stock_drive_does() {
+        // The stock/flow split: thirst (a stock drive climbing `rise`/day) can be
+        // projected, so foresight buys a lead; thermal (a flow drive whose future
+        // depends on wandering and weather) cannot, so `time_horizon` grants it
+        // none — the effective threshold stays `act` at every foresight.
+        let terrain = PlantedTerrain::thermal([]);
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day: WorldTime { day: 0.0 },
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        assert_eq!(thermal.anticipation_lead(0.0), 0.0);
+        assert_eq!(
+            thermal.anticipation_lead(1.0),
+            0.0,
+            "a flow drive anticipates nothing"
+        );
+        // Zero foresight is byte-identical to the pre-anticipation model (no lead).
+        assert_eq!(
+            thirst.anticipation_lead(0.0),
+            0.0,
+            "myopia is the old model"
+        );
+        assert!(
+            thirst.anticipation_lead(1.0) > 0.0,
+            "foresight leads a stock drive"
         );
     }
 
@@ -3429,7 +3588,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let m1 = arbitrate(&low, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode;
+        let m1 = arbitrate(&low, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).mode;
         assert_eq!(
             m1,
             Mode::Pursuing(DriveKind::Thermal),
@@ -3445,13 +3604,13 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(&high, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode,
+            arbitrate(&high, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET).mode,
             Mode::Pursuing(DriveKind::Thirst),
             "control: with no committed mode, the now-louder thirst is pursued (the test bites)"
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(&high, &home, &drives, 0.5, mode, PLAN_BUDGET).mode;
+            let m = arbitrate(&high, &home, &drives, 0.5, 0.0, mode, PLAN_BUDGET).mode;
             assert_eq!(
                 m,
                 Mode::Pursuing(DriveKind::Thermal),
@@ -3494,8 +3653,8 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let a = arbitrate(&view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
-        let b = arbitrate(&view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
+        let a = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
+        let b = arbitrate(&view, &home, &drives, 0.5, 0.0, Mode::Idle, PLAN_BUDGET);
         assert_eq!(a, b, "same inputs → same (Intent, Mode); reload-stable");
         assert_eq!(
             a.intent,

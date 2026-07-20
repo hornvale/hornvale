@@ -259,12 +259,15 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
         "the home settlement's NPC must be co-located at the start: {early}"
     );
 
-    // Wait to day 5.5: still short of the ~5.667 seek crossing (still away
-    // from the resource, still co-located at home, still Content — below the
-    // `act` threshold, so not yet seeking), but the drive has risen (5.5 * 0.15
-    // = 0.825) past RESTLESS_AROUSAL, so the affect read (spec §7) now reads the
-    // rising edge — "grows restless", not "seems content" anymore.
-    session.handle("wait 5");
+    // Wait to day 3.5: short of the seek crossing for any species (with
+    // `time_horizon` anticipation — The Temperament followup #4 — a foresighted
+    // creature's effective threshold is `act − rise·horizon·HORIZON_DAYS`, which
+    // for the most foresighted species still crosses only past day 4, so at day
+    // 3.5 every NPC is still away from its resource and co-located, not yet
+    // seeking), but the drive has risen (3.5 * 0.15 = 0.525) past
+    // RESTLESS_AROUSAL, so the affect read (spec §7) now reads the rising edge —
+    // "grows restless", not "seems content" anymore.
+    session.handle("wait 3");
     let later = out_text(session.handle("needs"));
     assert!(
         later.contains("grows restless"),

@@ -173,6 +173,7 @@ fn creature(
         activity: ActivityCycle::Diurnal,
         temperature_niche: niche,
         deliberation_latency: 0.5,
+        time_horizon: 0.0,
         label: species.to_string(),
     }
 }
