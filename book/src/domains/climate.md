@@ -113,9 +113,14 @@ by nothing but the sky above it.
 
 **The model card.**
 
-- **Drawn:** essentially nothing — climate adds no labeled stream in C3
-  (`stream_labels()` stays empty); every quantity below is read from
-  astronomy and terrain or derived from them.
+- **Drawn:** almost nothing — the smooth climate fields (temperature,
+  moisture, biome) are pure derived reads that consume no seed draw. The one
+  exception is **drawn weather** (The Firmament): a single labeled noise
+  stream (the weather phase) seeds a sampled synoptic weather state — read at
+  a place and day, felt in possession and the almanac. It is an
+  observation-only layer that writes no fact and changes nothing a biome
+  reads, so it consumes its own stream independently and leaves every world
+  byte-identical.
 - **Derived:** band count and prevailing-wind direction from rotation
   period; the temperature field from insolation, latitude/substellar
   geometry, and elevation; the moisture field from circulation band, ocean
