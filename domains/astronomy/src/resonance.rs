@@ -13,7 +13,7 @@ use crate::StdDays;
 /// by the idealized rational it happens to sit near. `numerator` and
 /// `denominator` name the matched candidate (always `numerator >
 /// denominator`, so `ratio` is always expressed slower:faster, >= 1.0).
-/// type-audit: bare-ok(ratio), bare-ok(numerator), bare-ok(denominator)
+/// type-audit: bare-ok(ratio: ratio), bare-ok(count: numerator), bare-ok(count: denominator)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MoonPeriodRatio {
     /// The actual measured period ratio (slower period / faster period).
@@ -128,14 +128,9 @@ mod tests {
 
     #[test]
     fn an_unclean_pair_is_not_detected() {
-        // 30 vs 41 days: ratio ~1.367, nearest candidate is 4:3 (1.333),
-        // deviation ~2.5% — wait, that IS within 5%. Use a pair that
-        // genuinely misses every candidate: 30 vs 47 (ratio ~1.567,
-        // nearest candidates 3:2=1.5 (4.3% dev) and 5:3=1.667 (6.4% dev) —
-        // 4.3% is still within tolerance. Use 30 vs 52 instead: ratio
-        // ~1.733, nearest is 5:3=1.667 (4.0% dev, still within!) — use
-        // 30 vs 55: ratio ~1.833, nearest candidates 2:1=2.0 (8.3% dev)
-        // and 5:3=1.667 (10.0% dev) — both exceed 5%, genuinely unclean.
+        // 30 vs 55 days: ratio ~1.833, nearest candidates are 2:1 (8.3%
+        // deviation) and 5:3 (10.0% deviation) — both exceed
+        // RATIO_TOLERANCE, so no candidate matches.
         let periods = [days(30.0), days(55.0)];
         assert_eq!(detect_moon_period_ratio(&periods), None);
     }
@@ -146,6 +141,25 @@ mod tests {
         let periods = [days(30.0), days(60.0), days(41.0)];
         let found = detect_moon_period_ratio(&periods).expect("A/B is a clean 2:1");
         assert_eq!((found.numerator, found.denominator), (2, 1));
+    }
+
+    #[test]
+    fn tied_deviation_pairs_break_by_simplicity_then_index() {
+        // Moon periods (days): A=12, B=18, C=4.
+        // Pair (A,B): ratio 18/12 = 1.5, exact match to 3:2 (simplicity 3,
+        //   deviation 0.0).
+        // Pair (A,C): ratio 12/4 = 3.0, exact match to 3:1 (simplicity 3,
+        //   deviation 0.0) — the SAME deviation and simplicity as (A,B), so
+        //   only pair index can break the tie between these two.
+        // Pair (B,C): ratio 18/4 = 4.5, nearest candidate is 5:1 (10.0%
+        //   deviation), exceeding RATIO_TOLERANCE — never competes.
+        let periods = [days(12.0), days(18.0), days(4.0)];
+        let found = detect_moon_period_ratio(&periods).expect("(A,B) is a clean 3:2");
+        // (A,B) is visited before (A,C) (loop order `i in 0..len, j in
+        // (i+1)..len`); since ties use strict `<`, the later (A,C) match
+        // cannot displace it. If (A,B) had lost, `found` would be (3, 1)
+        // instead.
+        assert_eq!((found.numerator, found.denominator), (3, 2));
     }
 
     #[test]
