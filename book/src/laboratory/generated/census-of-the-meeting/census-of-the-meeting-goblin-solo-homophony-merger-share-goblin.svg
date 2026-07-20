@@ -20,10 +20,10 @@
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 375.5 252.0)">[0.6, 0.8)</text>
 <text x="446.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 446.5 252.0)">[0.8, 1)</text>
-<rect x="487.3" y="118.4" width="60.4" height="117.6" fill="#5b8dd9" rx="2" />
-<text x="517.5" y="114.4" font-size="11" fill="currentColor" text-anchor="middle">294</text>
+<rect x="487.3" y="108.8" width="60.4" height="127.2" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="104.8" font-size="11" fill="currentColor" text-anchor="middle">318</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 517.5 252.0)">&gt;= 1</text>
-<rect x="558.3" y="153.6" width="60.4" height="82.4" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="149.6" font-size="11" fill="currentColor" text-anchor="middle">206</text>
+<rect x="558.3" y="163.2" width="60.4" height="72.8" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="159.2" font-size="11" fill="currentColor" text-anchor="middle">182</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 588.5 252.0)">absent</text>
 </svg>

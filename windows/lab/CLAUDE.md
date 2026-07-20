@@ -27,14 +27,19 @@ speed the suite by memoizing world construction across tests. The levers that
 *do* exist: build to the shallowest sufficient `BuildDepth` (see
 `windows/worldgen/CLAUDE.md`), and the world-gen speedups in the kernel.
 
-## Censuses are regenerated remotely, never locally (decisions 0045/0046)
+## Censuses regenerate locally now, ~7 min (decision 0063, supersedes 0046)
 
-- The local gate stays < 5 min by **never** regenerating censuses.
-  `regenerate-artifacts.sh` skips them unless `HV_CENSUS=1`, which only the
-  AWS spot box sets (`make regen-remote`).
-- The committed census fixtures (`book/src/laboratory/generated/*/rows.csv`)
-  therefore **lag** after a worldgen change until the next pre-merge AWS regen.
-  That lag is the chosen trade — don't "fix" a stale census locally.
+- The everyday gate still stays fast by skipping censuses: `regenerate-
+  artifacts.sh` runs them only under `HV_CENSUS=1` (a plain `make rebaseline`
+  skips them). But since [The Local Census](../../book/src/chronicle/the-local-census.md)
+  the census is cheap — the all-metric per-world cost fell ~285 → ~8 CPU-s
+  (the metric + genesis-naming paths stopped re-sculpting terrain) — so the
+  full ~2000-world census regenerates **locally in ~7 min** on the 40-core box.
+- The sanctioned refresh is therefore `HV_CENSUS=1 bash
+  scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
+  close, keeping the census fixtures (`book/src/laboratory/generated/*/rows.csv`)
+  **current with main** — not lagging. `make regen-remote` (AWS) is retired to
+  an optional fallback for a sweep too large for the local box (decision 0063).
 - Calibration loads the drift-checked fixture, not a live recompute (decision
   0032).
 
