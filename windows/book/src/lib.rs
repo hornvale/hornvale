@@ -18,6 +18,7 @@ use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
     parse_common, quantity, realize_common,
 };
+use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
     ConflictState, Evidential, LexemeId, NounClass, SchemaId, TongueClause, TongueMorphology,
@@ -1746,6 +1747,30 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
     None
 }
 
+/// Apply a listener's numeracy rung to a heard quantity fragment (LANG-44
+/// spec §3.4): recover the fragment's stated surface value exactly as
+/// [`fact_for`] already does, then re-render it at `listener_rung` via
+/// [`hornvale_language::numeracy::render_quantity_at_rung`] — the
+/// listener retains only what their own rung can express, never more
+/// than the speaker actually said. Every speaker today renders at the
+/// ceiling rung (`NumeracyRung::Decimals`), so this is the collapsed
+/// `min(Decimals, listener_rung) == listener_rung` special case (spec
+/// §3.3) — full bidirectional rung variation is a follow-up. Returns
+/// `None` for a fragment [`fact_for`] itself would not recognize, or
+/// whose recovered value is not a number (e.g. a star class). Reserved
+/// integration seam: LANG-44's demonstrated `windows/book` entry point,
+/// exercised by this crate's tests; the live `write`/`consult` wiring
+/// that will call it in production is the deferred follow-up (spec §6).
+/// Present in all builds so that seam is real, not test-only.
+#[allow(dead_code)]
+fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<String> {
+    let (_, value) = fact_for(fragment)?;
+    match value {
+        Value::Number(x) => Some(render_quantity_at_rung(x, listener_rung)),
+        _ => None,
+    }
+}
+
 /// The closed complement set a `parse_line` call recognizes for `world`:
 /// every committed `is-a` object label, plus `species_label(kind)` for
 /// every committed `instance-of` object (the only source of a plural
@@ -2898,6 +2923,75 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Law 3 (spec §4): the fixed-speaker special case. Every speaker
+    /// today renders at the ceiling rung (`Decimals`), so comprehension
+    /// applied at any listener rung must agree EXACTLY with calling
+    /// `render_quantity_at_rung` directly on the recovered value — proving
+    /// the collapsed `min(Decimals, listener_rung) == listener_rung`
+    /// claim is what the code actually does, not merely what the spec
+    /// claims.
+    #[test]
+    fn comprehend_quantity_agrees_with_the_direct_render_at_every_rung() {
+        for seed in [1u64, 2, 3] {
+            let world = generated(seed);
+            for fact in world.ledger.find(DAY_LENGTH_STD) {
+                let Value::Number(days) = fact.object else {
+                    continue;
+                };
+                let value = Value::Number(days);
+                let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+                    Some(Fragment::Trailing(t)) => t,
+                    _ => panic!("expected a Trailing fragment for {days}"),
+                };
+                let truncated = (days * 10.0).trunc() / 10.0;
+                for rung in [
+                    NumeracyRung::Subitizing,
+                    NumeracyRung::FullCounting,
+                    NumeracyRung::Decimals,
+                ] {
+                    assert_eq!(
+                        comprehend_quantity(&fragment, rung),
+                        Some(render_quantity_at_rung(truncated, rung)),
+                        "comprehend_quantity disagreed with the direct render at rung {rung:?} for {fragment:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Law 4 (spec §4): no behavior change to the existing path.
+    /// `fact_for` itself, unmodified, must still recover the untruncated
+    /// surface value exactly as it did before this campaign.
+    #[test]
+    fn fact_for_itself_is_unchanged() {
+        let world = generated(1);
+        for fact in world.ledger.find(DAY_LENGTH_STD) {
+            let Value::Number(days) = fact.object else {
+                continue;
+            };
+            let value = Value::Number(days);
+            let fragment = match fragment_for(DAY_LENGTH_STD, &value) {
+                Some(Fragment::Trailing(t)) => t,
+                _ => panic!("expected a Trailing fragment for {days}"),
+            };
+            let truncated = (days * 10.0).trunc() / 10.0;
+            assert_eq!(
+                fact_for(&fragment),
+                Some((DAY_LENGTH_STD.to_string(), Value::Number(truncated)))
+            );
+        }
+    }
+
+    /// A fragment `fact_for` does not recognize returns `None`, exactly as
+    /// `fact_for` itself would.
+    #[test]
+    fn comprehend_quantity_returns_none_for_an_unrecognized_fragment() {
+        assert_eq!(
+            comprehend_quantity("this is not a real fragment", NumeracyRung::Subitizing),
+            None
+        );
     }
 
     /// C4 T1: the coverage report is DERIVED — the probe inventory contains

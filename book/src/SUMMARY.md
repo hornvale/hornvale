@@ -196,6 +196,7 @@
 - [The Temperament](./chronicle/the-temperament.md)
 - [The Frame Budget](./chronicle/the-frame-budget.md)
 - [The Residue](./chronicle/the-residue.md)
+- [Few and Many](./chronicle/few-and-many.md)
 - [The Kindling](./chronicle/the-kindling.md)
 
 # Appendix: The Frontier

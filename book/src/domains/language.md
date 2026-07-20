@@ -292,7 +292,20 @@ new draw. Nothing renders it yet — the mechanism and its four measured
 properties (determinism, non-degenerate divergence, leveling that
 narrows the divergent set, and the length/survival correlation itself)
 are this campaign's whole claim — see
-[The Residue](../chronicle/the-residue.md).
+[The Residue](../chronicle/the-residue.md). And since Few and Many, one
+filter finally sits on the LISTENER's side of an exchange rather than the
+speaker's — every earlier filter in this domain, the chorus's four stages
+among them, gates what a culture *says*; this one gates what a listener
+*retains*. Each tongue now draws its own numeral-system rung — how far its
+counting words reach past the near-universal, pre-linguistic floor every
+creature already shares — and one function serves both a speaker's own
+rendering and a listener's comprehension: told a day's length to the
+decimal, a listener whose tongue counts no further than that floor keeps
+only "more than one," while a full-counting listener keeps the nearest
+whole count, the same codec read from two directions rather than two
+independently authored mechanisms. Proven against the Book's own existing
+day-length sentences, unwired into any live exchange yet — see
+[Few and Many](../chronicle/few-and-many.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
