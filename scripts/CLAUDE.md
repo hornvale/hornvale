@@ -20,7 +20,8 @@ knobs:
   sanctioned pre-merge refresh — `HV_CENSUS=1 bash regenerate-artifacts.sh`,
   once per campaign at the close, keeping the fixtures current with main
   (decision 0063, superseding 0046's AWS-only mandate). `make regen-remote`
-  (the AWS box) is retired to an optional fallback.
+  (the AWS box) is abandoned — this box is the single canonical platform
+  (decision 0063; AWS differs on ~0.1% of discrete-count metrics).
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits` — note
   **`docs/audits/`** is in the list (the type-audit report drifts on

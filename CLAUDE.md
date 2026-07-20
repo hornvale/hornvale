@@ -72,9 +72,10 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 #   scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
 #   close — and the census goldens (book/src/laboratory/generated/*/rows.csv)
 #   are kept current with main, not left to lag. The AWS remote gate
-#   (`make regen-remote`; scripts/aws-gate/) is RETIRED as the mandatory
-#   path — kept only as an optional fallback for a sweep too large for the
-#   local box, never required for a normal campaign close.
+#   (`make regen-remote`; scripts/aws-gate/) is ABANDONED (owner decision
+#   2026-07-19; this machine is the single canonical platform — AWS differs on
+#   ~0.1% of discrete-count metrics, so it can't be a parallel reference). The
+#   scripts remain but are unused; goldens come from this box only.
 
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of

@@ -138,9 +138,10 @@ run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/s
 # CPU-s) the sanctioned refresh is LOCAL: run `HV_CENSUS=1 bash
 # scripts/regenerate-artifacts.sh` once per campaign at the pre-merge close —
 # the full ~2000-world census takes ~7 min — keeping the fixtures current with
-# main instead of lagging. `make regen-remote` (the AWS box) is retired to an
-# optional fallback for a sweep too large for the local box (supersedes the
-# AWS-only mandate of 0046).
+# main instead of lagging. `make regen-remote` (the AWS box) is ABANDONED —
+# this box is the single canonical platform (AWS differs on ~0.1% of
+# discrete-count metrics, so it can't be a parallel reference; supersedes the
+# AWS-only mandate of 0046, decision 0063).
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min local)" >&2
     run_release -p hornvale -- lab run studies/the-census.study.json

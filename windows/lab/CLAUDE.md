@@ -39,7 +39,8 @@ speed the suite by memoizing world construction across tests. The levers that
   scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
   close, keeping the census fixtures (`book/src/laboratory/generated/*/rows.csv`)
   **current with main** — not lagging. `make regen-remote` (AWS) is retired to
-  an optional fallback for a sweep too large for the local box (decision 0063).
+  abandoned — this box is the single canonical platform (decision 0063; AWS
+  differs on ~0.1% of discrete-count metrics, so it can't be a parallel ref).
 - Calibration loads the drift-checked fixture, not a live recompute (decision
   0032).
 
