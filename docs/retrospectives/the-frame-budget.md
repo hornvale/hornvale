@@ -76,6 +76,32 @@ lessons only.
   re-applying the two edits from the diff. Lesson: commit a fix before using
   `git checkout <ref> -- <file>` on the same file to A/B against an older revision.
 
+- **The visual pass has to look at the whole lit globe, not a corner.** This
+  campaign's own opening move — analytic normals — shipped a rendering regression
+  that turned the entire lit hemisphere into black speckle, and it passed every
+  visual check the campaign ran, because those checks asked one narrow question
+  ("is the tile boundary seam-free?") and answered it on a cropped seam detail.
+  A defect invisible in a boundary close-up and glaring on the full illuminated
+  planet is exactly the class a boundary-focused pass misses. Before calling a
+  render "seen," look at the whole thing, lit.
+
+- **A diagnostic that fails silently blocks everything downstream.** The
+  perf-harness — a no-assertion profiling tool — was committed into the
+  deploy-gating e2e set with a machine-specific output path; on CI it threw,
+  failed the gate, and silently blocked *every* deploy for the campaign's whole
+  length. The live site was stale the entire time, and every "fixed" push reached
+  no one — the reason real-hardware feedback kept saying "no change." Two rules
+  fell out: keep diagnostics OUT of the deploy gate (tag + exclude them), and make
+  "which build am I looking at" answerable without trust — a build stamp (build
+  time + commit, logged on boot) turns staleness into a glance.
+
+- **Cutting the total is not cutting the spike.** The 17× reduction in
+  main-thread work still left visible jerk, because the eye integrates the worst
+  *frame*, not the *sum*. Amortizing each change's work across frames — a number
+  the headline metric never showed — was what actually made it smooth. When a
+  perf number improves but the feel does not, you are measuring the wrong
+  aggregate.
+
 ## Follow-ups
 
 - **Region-patch normal halo (the proper seam cure)** — ship each streamed
@@ -84,9 +110,12 @@ lessons only.
   construction (retiring the scoped stitch this campaign kept as the client-only
   stopgap). It lives in the world generator, so it needs a producer change and a
   wasm release — a future campaign, not this one.
-- **Real-hardware visual pass** — the headless harness proved the JS win but
-  cannot render smoothness; confirm the glide on a real GPU, and that the on-settle
-  sharpening reads as "settling" rather than "sluggish."
+- **Real-hardware visual pass** — *done, and it was decisive.* The headless
+  harness proved the JS win but could not render smoothness; the real-GPU pass
+  found both the per-change hitch (→ amortized build) and the analytic-normals
+  shading regression (→ bilinear elevation). It also exposed the silent deploy
+  block. The lesson stands as the first note above: a client-render campaign is
+  not done until it has been *seen* on real hardware, whole and lit.
 - **Draw-call count** — the one real-hardware lever the headless harness cannot
   measure (many per-tile meshes → many draw calls). Reducing it fights the
   per-tile-mesh architecture the incremental diff depends on, so it was left
