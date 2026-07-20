@@ -32,6 +32,16 @@ night).
 creature wakes to drink; a multi-day sim shows a day/night rhythm.
 **Tests:** wake-gate suppresses thirst/thermal while asleep; survival override;
 3-drive arbitration; harness rhythm scenario.
+**Status:** MECHANISM DONE (2a) — `Drive::seek_while_asleep`/`survival_override`,
+`arbitrate.awake` gate, fatigue retuned to sleep-debt (0.3), wake-gate unit test,
+felt-state re-pinned. 56 liveness lib green; clippy + type-audit clean.
+REMAINING (2b): wire real solar `is_awake` (Terrain solar hook →
+`calendar.is_daylight`/`daylight_fraction_at` + `RoomAddr::coord().latitude`,
+`None`→locked→fatigue-only) into affect_of/tick; that bounds fatigue (nightly
+sleep) and resolves the 3 red health-calibration tests (fatigue-live-without-gate
+distresses real NPCs); then re-pin the harness + thirst-walk tests to the rhythm.
+
+## Stage 2b: wire the live solar wake-gate (bounds fatigue; fixes the reds)
 **Status:** Not Started
 
 ## Stage 3: Calibration, gallery rebaseline, close
