@@ -32,43 +32,54 @@ fn different_seeds_diverge() {
 }
 
 #[test]
-fn the_loop_actually_produces_events() {
-    // Guard against a vacuous spike: a 200-community, 300-epoch run must
-    // append a substantial number of events, and exercise the coupling
-    // (at least one Raided/Fled pair) — else the benchmark measures nothing.
-    let world = run(&cfg(42));
-    let total: usize = world.communities.iter().map(|c| c.biography.len()).sum();
-    assert!(total > 500, "expected many events, got {total}");
-    let raids = world
-        .communities
-        .iter()
-        .flat_map(|c| &c.biography)
-        .filter(|e| matches!(e.event, hornvale_chronicle::EventKind::Raided))
-        .count();
+fn the_workload_fires_at_volume() {
+    // The workload census must show the *measured* phenomena firing heavily —
+    // else the benchmark measures noise (the failure the review caught: the
+    // coupling had fired ~11 times). Grow, the coupling (Raided/Fled), and
+    // collapses must all be present in quantity.
+    use hornvale_chronicle::census;
+    let c = census(&run(&cfg(42)));
+    assert!(c.grew > 1_000, "too few grow events: {c:?}");
+    assert!(c.raided > 1_000, "the coupling barely fired: {c:?}");
     assert!(
-        raids > 0,
-        "the coupling never fired: no raids in {total} events"
+        c.fled > 1_000,
+        "raids barely delivered (coupling inert): {c:?}"
     );
-    let fled = world
-        .communities
-        .iter()
-        .flat_map(|c| &c.biography)
-        .filter(|e| matches!(e.event, hornvale_chronicle::EventKind::Fled))
-        .count();
-    assert!(
-        fled > 0,
-        "raids never delivered: no Fled events in {total} events (coupling is inert)"
+    assert!(c.collapsed > 0, "no collapses/ruins produced: {c:?}");
+}
+
+#[test]
+fn scan_and_index_deliveries_produce_identical_worlds() {
+    // The scan-vs-index timing comparison is only honest if both modes derive
+    // the SAME world — one alive community per node makes them agree.
+    use hornvale_chronicle::{DeliveryMode, run_with};
+    let scan = biography_digest(&run_with(&cfg(42), DeliveryMode::Scan));
+    let index = biography_digest(&run_with(&cfg(42), DeliveryMode::Index));
+    assert_eq!(
+        scan, index,
+        "scan and index delivery must produce byte-identical worlds"
     );
 }
 
 #[test]
-fn replay_is_deterministic_in_result() {
-    // Timings vary; the DERIVED forward state must not. We assert the
-    // event-count a replay produces is stable across two calls.
+fn replay_derives_events_and_the_intervention_matters() {
+    // Non-vacuous (the "asserting nothing" trap the review flagged): the replay
+    // must (a) be reproducible, (b) derive a NON-ZERO number of events (the
+    // neighbourhood churns forward), and (c) have that count CHANGED by the
+    // intervention — killing a neighbour must propagate through the local raid.
     use hornvale_chronicle::NodeId;
     use hornvale_chronicle::measure::replay_event_count;
     let world = run(&cfg(7));
-    let a = replay_event_count(&world, NodeId(0), 20, &cfg(7));
-    let b = replay_event_count(&world, NodeId(0), 20, &cfg(7));
-    assert_eq!(a, b, "a replay's derived events must be reproducible");
+    let with = replay_event_count(&world, NodeId(3), 40, &cfg(7), true);
+    let with_again = replay_event_count(&world, NodeId(3), 40, &cfg(7), true);
+    let without = replay_event_count(&world, NodeId(3), 40, &cfg(7), false);
+    assert_eq!(
+        with, with_again,
+        "a replay's derived events must be reproducible"
+    );
+    assert!(with > 0, "the replay derived no events (degenerate)");
+    assert_ne!(
+        with, without,
+        "the intervention had no consequence — killing a neighbour changed nothing"
+    );
 }

@@ -35,6 +35,20 @@ pub struct SpeciesId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RoleHandle(pub u64);
 
+/// How a delivery finds the community occupying its target node — the axis
+/// the benchmark exists to compare. `Scan` is the naive linear scan (O(Z) per
+/// delivery, O(Z²) coupling); `Index` uses the maintained node→community
+/// index (O(log Z)). With one alive community per node enforced, both find
+/// the *same* community, so they produce byte-identical worlds and differ
+/// only in speed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DeliveryMode {
+    /// Naive linear scan for the alive community at the node — O(Z)/delivery.
+    Scan,
+    /// The maintained node→community index — O(log Z)/delivery.
+    Index,
+}
+
 /// The kind of a connection-graph edge (its lag/character differs by kind).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EdgeKind {

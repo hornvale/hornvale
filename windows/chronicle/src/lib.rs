@@ -12,6 +12,10 @@ mod world;
 pub mod measure;
 pub mod sweep;
 
-pub use config::{EdgeKind, EventKind, NodeId, RoleHandle, SoundingConfig, SpeciesId};
-pub use simulate::run;
-pub use world::{BioEntry, Community, Edge, Ruin, SpeciesStub, World, biography_digest};
+pub use config::{
+    DeliveryMode, EdgeKind, EventKind, NodeId, RoleHandle, SoundingConfig, SpeciesId,
+};
+pub use simulate::{run, run_with};
+pub use world::{
+    BioEntry, Census, Community, Edge, Ruin, SpeciesStub, World, biography_digest, census,
+};

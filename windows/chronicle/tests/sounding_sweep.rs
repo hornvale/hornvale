@@ -13,8 +13,8 @@ fn exponent_fit_recovers_a_known_power_law() {
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn run_the_sounding_and_write_the_report() {
-    use hornvale_chronicle::sweep::{SweepRow, render_report, sweep_axis};
-    use hornvale_chronicle::{SoundingConfig, biography_digest, run};
+    use hornvale_chronicle::sweep::{SweepRow, render_report, sweep_axis, sweep_scan_vs_index};
+    use hornvale_chronicle::{SoundingConfig, biography_digest, census, run};
     use hornvale_kernel::Seed;
 
     let base = SoundingConfig {
@@ -26,12 +26,32 @@ fn run_the_sounding_and_write_the_report() {
         long_range_fraction: 0.05,
     };
 
-    // PREREGISTERED HYPOTHESES (frozen here BEFORE reading the fitted values):
-    //   bake vs communities ~ 1.0 (linear)   bake vs epochs ~ 1.0 (linear)
-    //   bake vs avg_degree  ~ 1.0 (coupling bounded-local, NOT quadratic)
-    //   read ~ 0.0 (flat, O(1))               replay ~ flat in world size
-    // The headline finding is the avg_degree exponent: > 1.5 would falsify
-    // "bounded-local coupling" and is the architectural red flag.
+    // PREREGISTERED HYPOTHESES (frozen BEFORE reading the fitted values):
+    //   coupling under SCAN delivery ~ 2.0 (quadratic — the naive dead end);
+    //   coupling under INDEX delivery ~ 1.0 (near-linear — the fix);
+    //   bake vs communities (index) ~ 1.0; vs epochs ~ 1.0; read ~ flat;
+    //   density axes (degree, long_range) ~ flat (event-coupling is O(1)/event).
+
+    // SAMPLE-SIZE FLOOR (the workload census guard): the coupling the sweep
+    // measures MUST fire at volume, or the exponents measure noise. Abort with
+    // a specific message rather than silently reporting a degenerate run.
+    let base_census = census(&run(&base));
+    const RAID_FLOOR: u64 = 100_000;
+    assert!(
+        base_census.raided >= RAID_FLOOR,
+        "The Sounding measures the coupling's scaling, but raids fired only {} times at the base config (floor {}). The dynamics do not exercise the coupling — re-tune before trusting any exponent. Full census: {:?}",
+        base_census.raided,
+        RAID_FLOOR,
+        base_census,
+    );
+
+    // The headline: scan vs index, on a small community range (the scan is
+    // quadratic and will dominate wall-time, so keep Z modest and epochs low).
+    let crossover_base = SoundingConfig {
+        epochs: 200,
+        ..base.clone()
+    };
+    let scan_index = sweep_scan_vs_index(&crossover_base, &[250, 500, 1_000, 2_000]);
 
     let mut rows: Vec<SweepRow> = Vec::new();
     rows.extend(sweep_axis(
@@ -42,12 +62,10 @@ fn run_the_sounding_and_write_the_report() {
     rows.extend(sweep_axis("species", &base, &[4, 16, 64, 256]));
     rows.extend(sweep_axis("epochs", &base, &[100, 300, 1_000, 3_000]));
     // Adversarial density axes (stress the sparsity assumption to its edge):
-    // push degree toward Z and long-range edges to 100%. NOTE: this spike's
-    // coupling is EVENT-based (a raid picks ONE neighbour, O(1) per event), so
-    // it is degree-independent by construction — these axes exercise graph
-    // CREATION/TRAVERSAL cost at density, not the *diffuse* (all-edges
-    // fixed-point) coupling, which is not in this spike and is the next
-    // sounding's target (see the retrospective).
+    // degree toward Z, long-range to 100%. The event-coupling picks ONE
+    // neighbour per raid (O(1)/event), so these exercise graph CREATION/
+    // TRAVERSAL at density, not the *diffuse* (all-edges) coupling — which is
+    // absent from this spike and is the next sounding's target (see the retro).
     rows.extend(sweep_axis(
         "avg_degree",
         &base,
@@ -57,7 +75,7 @@ fn run_the_sounding_and_write_the_report() {
 
     let sample = biography_digest(&run(&base));
     let sample_head: String = sample.lines().take(12).collect::<Vec<_>>().join("\n") + "\n";
-    let (md, csv) = render_report(&rows, &sample_head);
+    let (md, csv) = render_report(&rows, &scan_index, &base_census, &sample_head);
 
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../book/src/laboratory/generated/the-sounding");

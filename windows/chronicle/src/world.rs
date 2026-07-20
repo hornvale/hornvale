@@ -74,6 +74,58 @@ pub struct World {
     pub ruins: Vec<Ruin>,
 }
 
+/// A census of the *workload* a run produced — how many of each event
+/// actually fired. This is the transparency-and-floor surface: a benchmark
+/// that measures a phenomenon must prove the phenomenon happened at a
+/// meaningful sample size, or its timings are measuring noise.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Census {
+    /// `Grew` events.
+    pub grew: u64,
+    /// `Founded` events.
+    pub founded: u64,
+    /// `Raided` events — the inter-community coupling firing.
+    pub raided: u64,
+    /// `Fled` events — deliveries actually landing (the coupling completing).
+    pub fled: u64,
+    /// `Collapsed` events — communities dying into ruins.
+    pub collapsed: u64,
+    /// Total communities ever created (initial + founded + refounded).
+    pub communities_total: u64,
+    /// Communities still standing at the end.
+    pub communities_alive: u64,
+}
+
+impl Census {
+    /// Total events of all kinds.
+    pub fn events(&self) -> u64 {
+        self.grew + self.founded + self.raided + self.fled + self.collapsed
+    }
+}
+
+/// Count the workload a baked world represents.
+pub fn census(world: &World) -> Census {
+    let mut c = Census {
+        communities_total: world.communities.len() as u64,
+        ..Census::default()
+    };
+    for community in &world.communities {
+        if community.alive {
+            c.communities_alive += 1;
+        }
+        for entry in &community.biography {
+            match entry.event {
+                EventKind::Grew => c.grew += 1,
+                EventKind::Founded => c.founded += 1,
+                EventKind::Raided => c.raided += 1,
+                EventKind::Fled => c.fled += 1,
+                EventKind::Collapsed => c.collapsed += 1,
+            }
+        }
+    }
+    c
+}
+
 /// A stable, byte-deterministic text rendering of every biography — the
 /// determinism-test surface (timings are NOT part of this).
 pub fn biography_digest(world: &World) -> String {
