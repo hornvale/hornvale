@@ -23,10 +23,11 @@ editing:
   byte-identity discipline for the sculpting pipeline.
 - `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
 - `windows/lab/` — studies are data, metrics are code; nextest is process-per-
-  test; censuses regen remotely only.
+  test; censuses regen locally in ~7 min (`HV_CENSUS=1`) since The Local Census.
 - `tools/type-audit/` — the tag format and the stale-tag-on-signature-change
   footgun.
-- `scripts/` — the gate ladder, `regenerate-artifacts.sh`, the AWS remote gate.
+- `scripts/` — the gate ladder, `regenerate-artifacts.sh`, the (retired,
+  optional-fallback) AWS remote gate.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
 
 ## Commands
@@ -61,15 +62,20 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
 #   The census/calibration LIVE batteries (the calibration sweep, the
 #   1000-world canonical census) are their own #[ignore]d tests with
-#   non-`heavy:` reasons, so `make gate-full` does NOT run them. CENSUSES ARE
-#   NEVER REGENERATED LOCALLY (the local gate stays < 5 min): censuses are
-#   opt-in via HV_CENSUS=1, which only `make regen-remote` (the AWS spot
-#   box; scripts/aws-gate/regen-git.sh) sets — a plain local
-#   regenerate-artifacts.sh / `make rebaseline` skips them by default.
-#   Census fixtures refresh once per campaign, just before the merge to
-#   main, with warning given to Nathan first. After a worldgen change the
-#   census fixtures (book/src/laboratory/generated/*/rows.csv) lag until
-#   that pre-merge AWS regen; that lag is the chosen trade.
+#   non-`heavy:` reasons, so `make gate-full` does NOT run them. Censuses are
+#   opt-in via HV_CENSUS=1; a plain local regenerate-artifacts.sh / `make
+#   rebaseline` still skips them so the everyday gate stays fast. But since
+#   The Local Census campaign the census is CHEAP: the all-metric per-world
+#   cost fell ~285 → ~8 CPU-s (the metric path stopped re-sculpting terrain),
+#   so the full ~2000-world census regenerates LOCALLY in ~7 min. The
+#   sanctioned refresh is therefore local now — `HV_CENSUS=1 bash
+#   scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
+#   close — and the census goldens (book/src/laboratory/generated/*/rows.csv)
+#   are kept current with main, not left to lag. The AWS remote gate
+#   (`make regen-remote`; scripts/aws-gate/) is ABANDONED (owner decision
+#   2026-07-19; this machine is the single canonical platform — AWS differs on
+#   ~0.1% of discrete-count metrics, so it can't be a parallel reference). The
+#   scripts remain but are unused; goldens come from this box only.
 
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of

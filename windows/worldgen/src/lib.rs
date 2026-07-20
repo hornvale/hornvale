@@ -79,9 +79,9 @@ pub mod components;
 pub mod schedule;
 pub mod settlement_pins;
 pub use chorus::{
-    ChorusVoice, DoctrineVoice, LadderRung, Observations, account_params_of, accounts_of, beta_of,
-    chorus_ground, cyclic_beliefs_of, day_schema_of, doctrine_beta_of, doctrine_of,
-    doctrine_params_of, doctrines_of, folk_verifiable, ladder_of, noun_class_of,
+    ChorusVoice, DoctrineVoice, LadderRung, Observations, account_params_of, accounts_from,
+    accounts_of, beta_of, chorus_ground, cyclic_beliefs_of, day_schema_of, doctrine_beta_of,
+    doctrine_of, doctrine_params_of, doctrines_of, folk_verifiable, ladder_of, noun_class_of,
     observability_table, observations_of, pathological_params, schema_prior, sky_capability,
     tongue_morphology_of,
 };
@@ -727,6 +727,23 @@ pub fn demography_report_with_beta(
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_of(world)?;
+    demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
+}
+
+/// [`demography_report_with_beta`], reusing ALREADY-BUILT terrain/climate
+/// (a Lab view's `terrain()`/`climate()`) instead of re-sculpting the globe —
+/// the census's demography metrics call this. Byte-identical: the passed
+/// terrain/climate equal `terrain_of`/`climate_of`, and the report is pure
+/// over the committed world (no seed draws).
+/// type-audit: bare-ok(ratio: beta), bare-ok(count: floor)
+pub(crate) fn demography_report_with_beta_from(
+    world: &World,
+    wc: &WorldComponents,
+    beta: f64,
+    floor: f64,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let sky = sky_of(world)?;
     let geo = terrain.geosphere();
     let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) =
@@ -741,8 +758,8 @@ pub fn demography_report_with_beta(
 
     let per_species_k = niche_per_species_k(
         geo,
-        &terrain,
-        &climate,
+        terrain,
+        climate,
         obliquity_deg,
         insolation_scalar,
         &regime,
@@ -796,6 +813,25 @@ pub fn demography_report(
         wc,
         hornvale_demography::BETA,
         hornvale_demography::FLOOR,
+    )
+}
+
+/// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
+/// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
+/// demography metrics call this. Byte-identical to `demography_report`.
+pub fn demography_report_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_demography::DemographyReport, BuildError> {
+    demography_report_with_beta_from(
+        world,
+        wc,
+        hornvale_demography::BETA,
+        hornvale_demography::FLOOR,
+        terrain,
+        climate,
     )
 }
 
@@ -2168,6 +2204,63 @@ pub fn observed_phenomena_as_at(
     observed_phenomena_at(world, wc, name, place)
 }
 
+/// [`observed_phenomena_as_at`], reusing an ALREADY-BUILT climate instead of
+/// re-deriving one (which runs the full terrain-sculpting pipeline over the
+/// globe). For a caller observing MANY places of one world — the lab's
+/// `name-gloss-true` metric, one observation per settlement — this pays the
+/// sculpt once (the caller's pre-built `climate`, e.g. a Lab view's
+/// `climate()`) instead of once per place. Byte-identical to
+/// [`observed_phenomena_as_at`]: the reused climate is the same
+/// `climate_of(world)` value that path derives, threaded through
+/// [`phenomena_sources_from`], and observation reads only its fields.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_at_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    place: EntityId,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// [`observed_phenomena_as_in`], reusing an ALREADY-BUILT climate — the
+/// world's-first-place counterpart of [`observed_phenomena_as_at_from`], for
+/// the lab's per-species religion metrics (`pantheon-sig`, `epithet-honorific`).
+/// Byte-identical to [`observed_phenomena_as_in`] for the same world's climate.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn observed_phenomena_as_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let name = resolve_kind(wc, species)?;
+    let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
+        return Ok(Vec::new());
+    };
+    observed_phenomena_from_with_climate(world, wc, name, place, place_coord(world, place), climate)
+}
+
+/// The shared core of the `_from` observers: [`observed_phenomena_from`] with
+/// the phenomena sources built off an ALREADY-BUILT climate
+/// ([`phenomena_sources_from`]) rather than re-derived per call. Byte-identical
+/// to the per-call path — `phenomena_sources` is pure over the observed world,
+/// and the reused climate equals the one that path would derive.
+fn observed_phenomena_from_with_climate(
+    world: &World,
+    wc: &WorldComponents,
+    name: &'static str,
+    place: EntityId,
+    position: Option<GeoCoord>,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let boxed = phenomena_sources_from(world, climate)?;
+    let sources: Vec<&dyn PhenomenaSource> = boxed.iter().map(|s| s.as_ref()).collect();
+    observe_with_sources(world, wc, name, place, position, &sources)
+}
+
 /// The observation itself, factored out with an explicit `position` so
 /// glossed settlement naming (Task 9) can observe from the settlement's own
 /// cell coordinate BEFORE the settlement entity exists — names are drawn
@@ -2286,6 +2379,20 @@ fn sentiment_concept(sentiment: hornvale_religion::Sentiment) -> &'static str {
 pub fn observed_phenomena_as(world: &World, species: &str) -> Result<Vec<Phenomenon>, BuildError> {
     let wc = WorldComponents::assemble()?;
     observed_phenomena_as_in(world, &wc, species)
+}
+
+/// [`observed_phenomena_as`], reusing an ALREADY-BUILT climate (via
+/// [`observed_phenomena_as_in_from`]) instead of re-deriving one — threaded
+/// down the chorus `cyclic_beliefs_from` path so the census stops re-sculpting.
+/// Byte-identical to `observed_phenomena_as`.
+/// type-audit: bare-ok(identifier-text: species)
+fn observed_phenomena_as_from(
+    world: &World,
+    species: &str,
+    climate: &GeneratedClimate,
+) -> Result<Vec<Phenomenon>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    observed_phenomena_as_in_from(world, &wc, species, climate)
 }
 
 /// Map a kind's (language-owned) articulation vector onto language's own
@@ -2568,6 +2675,29 @@ pub fn exposure_of(
     exposure_of_impl(world, &wc, name, &settled, &coexisting, &terrain, &climate)
 }
 
+/// [`exposure_of`], reusing ALREADY-BUILT terrain and climate instead of
+/// re-sculpting them (`exposure_of` runs the terrain pipeline twice — once
+/// directly, once inside its `climate_of`). Byte-identical: the sole
+/// difference is that the passed terrain/climate replace `terrain_of(world)`/
+/// `climate_of(world)`, which a Lab view's `terrain()`/`climate()` equal by
+/// construction; every other input (the assembled roster, the settled/
+/// coexisting cells) is derived exactly as `exposure_of` derives it. Threaded
+/// down the `lexicon_from` chain so the census's ~14 lexicon metrics stop
+/// re-sculpting per call.
+/// type-audit: bare-ok(identifier-text)
+fn exposure_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<std::collections::BTreeMap<String, hornvale_language::ExposureClass>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
+    let settled = settled_cells(world, species);
+    let coexisting = placed_species(world);
+    exposure_of_impl(world, &wc, name, &settled, &coexisting, terrain, climate)
+}
+
 /// [`exposure_of`]'s classification rules (spec §7), factored out so
 /// glossed naming (Task 9) can classify a species' exposure from the
 /// scatter *this build pass is about to place* rather than from committed
@@ -2769,6 +2899,59 @@ pub fn lexicon_of_in(
         &exposures,
         &daughters,
     ))
+}
+
+/// [`lexicon_of_in`], reusing ALREADY-BUILT terrain and climate down the
+/// exposure step ([`exposure_from`]) instead of re-sculpting the globe. Only
+/// the `exposure_*` line differs from `lexicon_of_in`; the draw order (`ph`
+/// before exposure, exactly as `lexicon_of_in`) is preserved so the seed
+/// stream is consumed identically. Byte-identity pinned by the census A/B and
+/// the `lexicon_from_matches_lexicon_of` test.
+/// type-audit: bare-ok(identifier-text: species)
+fn lexicon_of_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let ph = language_of_in(world, wc, species);
+    let exposures = exposure_from(world, species, terrain, climate)?;
+    let name = resolve_kind(wc, species)?;
+    let family = *wc
+        .family_of
+        .get(&KindId(name))
+        .expect("every kind has a family row (integrity-checked)");
+    let (fam_label, proto_ph) = match wc.family_proto.get(&KindId(family)) {
+        Some(_) => (family, proto_phonology_of_in(world, wc, family)),
+        None => (name, ph.clone()),
+    };
+    let daughters = family_daughters(world, wc, family);
+    Ok(hornvale_language::build_lexicon(
+        &world.seed,
+        name,
+        fam_label,
+        &ph,
+        &proto_ph,
+        &exposures,
+        &daughters,
+    ))
+}
+
+/// [`lexicon_of`], reusing ALREADY-BUILT terrain and climate (a Lab view's
+/// `terrain()`/`climate()`) so the census's many lexicon metrics stop
+/// re-sculpting the globe per call — the terrain sculpt was ~80% of the
+/// post-name-gloss census cost, almost all of it here. Byte-identical to
+/// `lexicon_of` (same assembled roster, same draw order).
+/// type-audit: bare-ok(identifier-text: species)
+pub fn lexicon_from(
+    world: &World,
+    species: &str,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<hornvale_language::Lexicon, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    lexicon_of_in_from(world, &wc, species, terrain, climate)
 }
 
 /// A status basis' contribution to the `formality`/`epithet_density` voice
@@ -3665,7 +3848,7 @@ fn build_to(
                 &world.registry,
             )
             .expect("world_entity has no prior is-a fact, so this cannot conflict");
-        if let Some(name) = world_name_in(&world, wc) {
+        if let Some(name) = world_name_in_from(&world, wc, &terrain, &climate) {
             world
                 .ledger
                 .commit(
@@ -3703,7 +3886,7 @@ fn build_to(
         for kind in placed_peoples(&world) {
             let collective =
                 mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
-            let autonym = lexicon_of_in(&world, wc, kind.0)?
+            let autonym = lexicon_of_in_from(&world, wc, kind.0, &terrain, &climate)?
                 .entry("person")
                 .and_then(|entry| match entry {
                     hornvale_language::LexEntry::Root { views, .. }
@@ -4040,8 +4223,24 @@ pub fn world_name(world: &World) -> Option<String> {
 /// injected `wc` it already built rather than re-assembling components.
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
+    let terrain = terrain_of(world).ok()?;
+    let climate = climate_of(world).ok()?;
+    world_name_in_from(world, wc, &terrain, &climate)
+}
+
+/// [`world_name_in`], reusing ALREADY-BUILT terrain/climate down
+/// [`lexicon_of_in_from`] instead of re-sculpting the globe. The planet genesis
+/// stage — which already holds the sculpted terrain/climate — calls this so
+/// naming the world costs no extra sculpt. Byte-identical to `world_name_in`.
+/// type-audit: bare-ok(identifier-text)
+pub fn world_name_in_from(
+    world: &World,
+    wc: &WorldComponents,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Option<String> {
     let kind = dominant_people_in(world, wc)?;
-    let lex = lexicon_of_in(world, wc, kind.0).ok()?;
+    let lex = lexicon_of_in_from(world, wc, kind.0, terrain, climate).ok()?;
     match lex.entry("earth")? {
         hornvale_language::LexEntry::Root { views, .. }
         | hornvale_language::LexEntry::Compound { views, .. } => Some(views.roman.clone()),

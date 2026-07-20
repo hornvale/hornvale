@@ -85,7 +85,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0043](0043-numbers-not-slugs.md) | Numbers, not slugs (supersedes 0026's decision-record naming) | Accepted |
 | [0044](0044-shared-units-live-in-the-kernel.md) | Shared units live in the kernel (refines 0008) | Accepted |
 | [0045](0045-one-canonical-census.md) | One canonical census; frozen studies are evidence | Accepted |
-| [0046](0046-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Accepted |
+| [0046](0046-census-regen-is-remote-only.md) | Census regeneration is AWS-only | Superseded by 0063 |
 | [0047](0047-demography-is-extracted-from-settlement.md) | A `demography` domain is extracted from `settlement` | Accepted |
 | [0048](0048-flow-condensation-replaces-the-suitability-scatter.md) | Flow-condensation replaces the suitability scatter | Accepted |
 | [0049](0049-the-founder-floor-migrates-to-demography.md) | The MAP-22 founder floor migrates to `demography` | Accepted |
@@ -102,3 +102,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0060](0060-the-is-a-classification-predicate.md) | `is-a` is a kernel-core classification predicate | Accepted |
 | [0061](0061-x86-sse41-for-hardware-exact-rounding.md) | x86 builds enable SSE4.1 so exact rounding uses hardware `roundsd` (byte-identical; ~15% compute win) | Proposed |
 | [0062](0062-the-classification-split.md) | The classification split: `is-a` and `instance-of` coexist | Accepted |
+| [0063](0063-census-regen-is-local-again.md) | Census regeneration is local again (supersedes 0046) | Accepted |

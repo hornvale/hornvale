@@ -12,13 +12,21 @@ studies, the type-audit report) — and CI + `make rebaseline` both call it, so
 local and CI regeneration cannot silently diverge (that's the point). Key
 knobs:
 
-- **`SKIP_CENSUS=1`** — skip the 1000-world censuses (they take ~1–2 h). CI
-  sets this and uses a fast seed probe (`ci-census-probe.sh`) instead;
-  everyday local regen also skips them.
-- **`HV_CENSUS=1`** — the *only* way to regenerate censuses, and only
-  `make regen-remote` (the AWS box) sets it. Never regenerate censuses
-  locally; the committed fixtures are allowed to lag until the pre-merge AWS
-  regen (decisions 0045/0046).
+- **`SKIP_CENSUS=1`** — skip the census `lab run`s. CI sets this and uses a
+  fast seed probe (`ci-census-probe.sh`) instead; everyday local regen also
+  skips them so the gate stays fast.
+- **`HV_CENSUS=1`** — regenerate the censuses. Since The Local Census the
+  full ~2000-world census is a ~7-min LOCAL run (was ~1–2 h), so this is the
+  sanctioned pre-merge refresh — `HV_CENSUS=1 bash regenerate-artifacts.sh`,
+  once per campaign at the close, keeping the fixtures current with main
+  (decision 0063, superseding 0046's AWS-only mandate). `make regen-remote`
+  (the AWS box) is abandoned — this box is the single canonical platform
+  (decision 0063; AWS differs on ~0.1% of discrete-count metrics).
+- **`census-run.sh`** — run a census on THIS box under a `flock`, so triggers
+  from either dev machine (over SSH) queue one-at-a-time instead of contending.
+  `scripts/census-run.sh` regenerates the canonical goldens; `HV_CENSUS_REF=<ref>
+  scripts/census-run.sh` runs a pushed branch in a scratch worktree. Only this
+  box authors goldens (the canonical-machine constraint, decision 0063).
 - After regen, the drift check is `git diff` over
   `book/src/gallery book/src/reference book/src/laboratory docs/audits` — note
   **`docs/audits/`** is in the list (the type-audit report drifts on
