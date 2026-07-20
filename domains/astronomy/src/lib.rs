@@ -15,6 +15,7 @@ pub mod night_sky;
 pub mod pins;
 pub mod provider;
 pub mod render;
+pub mod resonance;
 pub mod sky_position;
 pub mod star;
 pub mod starfield;
