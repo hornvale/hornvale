@@ -185,6 +185,9 @@
 - [The Single Sculpt](./chronicle/the-single-sculpt.md)
 - [The Confluence](./chronicle/the-confluence.md)
 - [The Deep Grammar](./chronicle/the-deep-grammar.md)
+- [The Rains](./chronicle/the-rains.md)
+- [The Diachronic Book](./chronicle/the-diachronic-book.md)
+- [The Firmament](./chronicle/the-firmament.md)
 - [The Demesne](./chronicle/the-demesne.md)
 
 # Appendix: The Frontier

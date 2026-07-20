@@ -68,10 +68,14 @@ continental, near zero over the ocean, and — crucially — **zero-mean over a
 rotation**, so it moves every instantaneous reading while leaving the annual
 mean (and therefore the biome field and the census) untouched. Both the
 seasonal and diurnal swings exist for the REPL, the almanac's day-level
-queries, and the orrery's "watch a day". Moisture starts from the
-circulation band, rises near oceans, and falls in a mountain's lee: a
-single upwind trace along the prevailing wind finds the highest barrier a
-parcel crossed and dries the leeward cell in proportion. From temperature,
+queries, and the orrery's "watch a day". Moisture starts from a base floor —
+circulation band plus an ocean-proximity bonus — which a **moisture-budget
+trace** then dries: on a spinning world, walking upwind against the
+prevailing wind, a parcel gathers water evaporating over the sea and loses
+it to the slopes it must climb, the belts where it rises, and the distance
+it travels, so continental interiors dry with distance from the coast and
+successive ranges compound their rain shadows (a locked world, lacking band
+winds, keeps the older substellar model). From temperature,
 moisture, elevation, and (for the sea) depth, surface temperature, and
 seafloor feature, a **biome** field falls out — a Whittaker lookup on land
 (tundra, taiga, temperate and tropical forests, savanna, desert,
@@ -109,13 +113,20 @@ by nothing but the sky above it.
 
 **The model card.**
 
-- **Drawn:** essentially nothing — climate adds no labeled stream in C3
-  (`stream_labels()` stays empty); every quantity below is read from
-  astronomy and terrain or derived from them.
+- **Drawn:** almost nothing — the smooth climate fields (temperature,
+  moisture, biome) are pure derived reads that consume no seed draw. The one
+  exception is **drawn weather** (The Firmament): a single labeled noise
+  stream (the weather phase) seeds a sampled synoptic weather state — read at
+  a place and day, felt in possession and the almanac. It is an
+  observation-only layer that writes no fact and changes nothing a biome
+  reads, so it consumes its own stream independently and leaves every world
+  byte-identical.
 - **Derived:** band count and prevailing-wind direction from rotation
   period; the temperature field from insolation, latitude/substellar
   geometry, and elevation; the moisture field from circulation band, ocean
-  proximity, and the rain-shadow trace; the biome field from temperature,
+  proximity, and an upwind moisture-budget trace (an evaporation source over
+  the sea against orographic, convective, and distance-decay sinks) on
+  spinning worlds; the biome field from temperature,
   moisture, elevation, and seafloor feature; the habitability mask from
   biome-adjacent thresholds on temperature and moisture.
 - **Approximated (declared):** analytic circulation bands standing in for
@@ -123,10 +134,12 @@ by nothing but the sky above it.
   direction is fixed prograde** (astronomy draws no spin-direction bit;
   retrograde worlds are deferred, and this does not affect any exit
   criterion); no ocean currents (the ocean is a thermal buffer and
-  moisture source only, never a circulation); no cloud or albedo feedback;
-  seasons as a smooth sinusoid in obliquity and year phase, not a solved
-  radiative balance; a single-pass rain shadow (one upwind trace, not an
-  iterated moisture budget).
+  moisture source only, never a circulation); cloud fraction is diagnostic —
+  no cloud or albedo feedback into insolation; seasons as a smooth sinusoid
+  in obliquity and year phase, not a solved radiative balance; the moisture
+  budget is a single bounded upwind trace per cell, acyclic — not a
+  relaxation to a steady state (a locked world keeps the older substellar
+  moisture model, having no band winds to trace against).
 
 Chronicle: [3c, Climate & Biomes](../chronicle/campaign-3c.md). Laboratory:
 [Study 002, the Census of Lands](../laboratory/study-002.md).

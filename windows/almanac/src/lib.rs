@@ -102,7 +102,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -136,6 +136,17 @@ pub struct AlmanacContext {
     /// direction at a coastal ocean sample site. Empty for tidally locked
     /// worlds (no current field) and worlds with no qualifying coastal site.
     pub seas_lines: Vec<String>,
+    /// Per-sample-site precipitation readouts (The Rains, spec §2/§7): the
+    /// same two sites `diurnal_lines` reports, each with its annual mm/yr,
+    /// rain/snow phase, and seasonal regime word. Unlike `diurnal_lines`,
+    /// never empty — precipitation and regime are defined for both locked
+    /// and spinning worlds.
+    pub rains_lines: Vec<String>,
+    /// Per-sample-site felt-weather readouts (The Firmament): the same two
+    /// sites `diurnal_lines`/`rains_lines` report, each with a plain
+    /// description of the sky on the almanac's reference day (0.0). Level
+    /// 0 — a pure observation over the weather field, never empty.
+    pub firmament_lines: Vec<String>,
     /// Deep-time headline lines (the glacial history); empty for worlds with
     /// no glacial past (constant sky, or zero forcing).
     pub deep_time_lines: Vec<String>,
@@ -216,6 +227,13 @@ pub fn render_diurnal_range_line(site: &str, amplitude_c: f64, geo_peak: f64) ->
     format!(
         "{site}'s day swings about {range_c:.0}°C, warmest in the afternoon and coolest before dawn."
     )
+}
+
+/// Render a sample site's weather line (The Firmament): the site and a plain
+/// description of its sky on the reported day.
+/// type-audit: bare-ok(prose: site), bare-ok(prose: sky), bare-ok(prose: return)
+pub fn render_weather_line(site: &str, sky: &str) -> String {
+    format!("{site}: the sky is {sky}.")
 }
 
 /// Render the one-page world document as markdown. Deterministic: same
@@ -321,6 +339,20 @@ pub fn render(ctx: &AlmanacContext) -> String {
 
     if !ctx.seas_lines.is_empty() {
         for line in &ctx.seas_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
+    }
+
+    if !ctx.rains_lines.is_empty() {
+        for line in &ctx.rains_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
+    }
+
+    if !ctx.firmament_lines.is_empty() {
+        for line in &ctx.firmament_lines {
             doc.push_str(&format!("{line}\n"));
         }
         doc.push('\n');
@@ -472,6 +504,8 @@ mod tests {
             ],
             diurnal_lines: vec![],
             seas_lines: vec![],
+            rains_lines: vec![],
+            firmament_lines: vec![],
             deep_time_lines: vec![
                 "The frost retreated; ice advanced over 30% of the land at its greatest."
                     .to_string(),
@@ -553,6 +587,17 @@ mod tests {
         let land_pos = doc.find("## The Land").unwrap();
         let seas_pos = doc.find("The seas:").unwrap();
         assert!(land_pos < seas_pos, "seas line belongs under The Land");
+    }
+
+    #[test]
+    fn rains_lines_render_in_the_land_section() {
+        let mut ctx = sample_context();
+        ctx.rains_lines =
+            vec!["The driest interior receives about 200 mm of rain a year (uniform).".to_string()];
+        let doc = render(&ctx);
+        let land_pos = doc.find("## The Land").unwrap();
+        let rains_pos = doc.find("The driest interior receives").unwrap();
+        assert!(land_pos < rains_pos, "rains line belongs under The Land");
     }
 
     #[test]
