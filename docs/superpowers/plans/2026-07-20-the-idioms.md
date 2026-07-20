@@ -1,5 +1,7 @@
 # The Idioms Implementation Plan
 
+> **Status: COMPLETE** (2026-07-20; all 5 styles — photoreal identity + pixel-art, cel/ink, engraving, watercolor — shipped on orrery `the-idioms`, visually verified, full gate + final opus review clean). MAP-60 → shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a swappable render-STYLE axis to the Orrery globe — four screen-space "delight" skins (pixel-art, cel/ink, engraving, watercolor) over the same scene, orthogonal to the data lens, with photoreal as the identity.
