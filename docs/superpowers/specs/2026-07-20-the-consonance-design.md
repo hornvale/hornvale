@@ -1,7 +1,7 @@
 # The Consonance — Design
 
 **Date:** 2026-07-20
-**Status:** Draft (G3 review pending).
+**Status:** **Approved at G3 (2026-07-20)**.
 **Campaign:** LANG-48, "proportional/relational reasoning over already-
 witnessed quantities" — a new mechanism spanning `domains/astronomy`,
 `domains/language`, and `windows/worldgen`. Complements LANG-37 (the
