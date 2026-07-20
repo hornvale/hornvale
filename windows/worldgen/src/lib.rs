@@ -5272,8 +5272,8 @@ mod tests {
         // Re-pin here (with review) whenever a deliberate terrain/carrying-
         // capacity/moisture change moves world identity.
         assert_eq!(
-            village.population, 6,
-            "the world's largest attractor headcount is pinned at this seed (Confluence freshwater + Rains moisture epoch + Demesne per-axis supply, merged)"
+            village.population, 2,
+            "the world's largest attractor headcount is pinned at this seed (Confluence freshwater + Rains moisture epoch + Demesne per-axis supply, merged — the Demesne per-axis supply dominates the flagship count)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());

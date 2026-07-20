@@ -123,7 +123,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `home` | one's dwelling | Nee | /nee/ | Nee | Nee → no change → Nee |
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
-| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'kelp-forest' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): goblin has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Toetea | /toetea/ | Toeqea | Toeqea → no change → Toetea |
 | `many` | an indefinitely large count | Neodoa | /neodoa/ | Neodoa | Neodoa → no change → Neodoa |
@@ -142,7 +142,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | Naakoa | /naakoa/ | Naakoa | Naakoa → no change → Naakoa |
 | `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → no change → Beonae |
 | `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → no change → Neebeo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): goblin has no exposure to 'snow' |
