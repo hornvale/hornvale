@@ -11,6 +11,7 @@ use crate::morphology::{ClassPosition, MorphDepth, MorphForm, affix};
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
 use hornvale_kernel::Seed;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A tongue's drawn Number/Tense grammaticalization depths and attachment
 /// sides — the LANG-43 sibling of [`crate::morphology::TongueMorphology`]'s
@@ -218,6 +219,62 @@ pub fn realize_paradigm_cell(
         regular_form,
         is_irregular,
     }
+}
+
+/// One root's paradigm cell after analogical leveling (spec §3.4): which
+/// form actually surfaces.
+/// type-audit: bare-ok(identifier-text)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LeveledCell {
+    /// The underlying cell computation (Task 3), unchanged.
+    pub cell: ParadigmCell,
+    /// True if this cell's `cascade_native` form survived leveling (stayed
+    /// irregular); false if it regularized to `regular_form`, or if it was
+    /// never divergent in the first place (nothing to level).
+    pub survived: bool,
+}
+
+/// Apply analogical leveling (spec §3.4) across one paradigm category's
+/// cells: rank the DIVERGENT roots by their own proto-root segment length
+/// (shortest = most resistant, per Zipf's law of abbreviation), and let the
+/// shortest `leveling_fraction` (0.0-1.0, rounded to the nearest whole
+/// survivor count) keep their `cascade_native` form; the rest regularize.
+/// Non-divergent cells are untouched (nothing to level). Deterministic: a
+/// `Vec` sort by `(length, id)` — never a `HashMap`, never a draw — so
+/// equal-length roots break ties by their own `RootId`'s `Ord` (the
+/// `BTreeMap` key's natural alphabetical order), never by insertion order.
+pub fn level_paradigm(
+    cells: &BTreeMap<String, ParadigmCell>,
+    root_protos: &BTreeMap<String, Vec<Segment>>,
+    leveling_fraction: f64,
+) -> BTreeMap<String, LeveledCell> {
+    let mut divergent: Vec<&String> = cells
+        .iter()
+        .filter(|(_, cell)| cell.is_irregular)
+        .map(|(id, _)| id)
+        .collect();
+    divergent.sort_by(|a, b| {
+        let len_a = root_protos[*a].len();
+        let len_b = root_protos[*b].len();
+        len_a.cmp(&len_b).then_with(|| a.cmp(b))
+    });
+
+    let survivor_count = ((divergent.len() as f64) * leveling_fraction).round() as usize;
+    let survivors: BTreeSet<&String> = divergent.iter().take(survivor_count).copied().collect();
+
+    cells
+        .iter()
+        .map(|(id, cell)| {
+            let survived = cell.is_irregular && survivors.contains(id);
+            (
+                id.clone(),
+                LeveledCell {
+                    cell: cell.clone(),
+                    survived,
+                },
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -430,5 +487,76 @@ mod tests {
         assert_eq!(a_cell.cascade_native.modern, b_cell.cascade_native.modern);
         assert_eq!(a_cell.regular_form.segments, b_cell.regular_form.segments);
         assert_eq!(a_cell.is_irregular, b_cell.is_irregular);
+    }
+
+    #[test]
+    fn leveling_keeps_the_shortest_quartile_irregular() {
+        // 8 roots, all ending in /t/ (all diverge under FinalLoss, per
+        // final_loss_makes_a_suffixed_root_irregular's own mechanism),
+        // lengths 2..=9 segments. leveling_fraction=0.25 → the 2 shortest
+        // survive as irregular; the other 6 regularize.
+        let ph = edge_test_phonology();
+        let cascade = Cascade {
+            rules: vec![SoundRule {
+                kind: RuleKind::FinalLoss,
+                param: 0,
+            }],
+        };
+        let affix_proto = vec![e()];
+
+        let mut root_protos: BTreeMap<String, Vec<Segment>> = BTreeMap::new();
+        let mut cells: BTreeMap<String, ParadigmCell> = BTreeMap::new();
+        for len in 2..=9usize {
+            let id = format!("root-{len:02}");
+            // Alternate a/t to keep it a legal onset-free CV*C shape, always
+            // ending in /t/ so every one of these diverges under FinalLoss.
+            // Indexed from the END (not the start) so the proto's actual
+            // length always equals `len` exactly: alternating from the
+            // start and then padding-if-needed-to-end-in-t (the naive
+            // approach) collapses even/odd `len` pairs onto the same
+            // actual length (e.g. len=2 and len=3 both produce "tat"),
+            // which would make this test's own premise of 8 DISTINCT
+            // lengths 2..=9 unsatisfiable.
+            let mut proto = Vec::with_capacity(len);
+            for i in 0..len {
+                proto.push(if (len - 1 - i) % 2 == 0 { t() } else { a() });
+            }
+            assert_eq!(proto.len(), len);
+            assert!(matches!(proto.last(), Some(s) if *s == t()));
+            let cell =
+                realize_paradigm_cell(&proto, &affix_proto, ClassPosition::Suffix, &cascade, &ph);
+            assert!(
+                cell.is_irregular,
+                "root-{len:02} must diverge for this test's premise to hold"
+            );
+            root_protos.insert(id.clone(), proto);
+            cells.insert(id, cell);
+        }
+
+        let leveled = level_paradigm(&cells, &root_protos, 0.25);
+
+        let survivor_count = leveled.values().filter(|lc| lc.survived).count();
+        assert_eq!(survivor_count, 2, "round(8 * 0.25) == 2 survivors");
+
+        let mut survivor_lengths: Vec<usize> = leveled
+            .iter()
+            .filter(|(_, lc)| lc.survived)
+            .map(|(id, _)| root_protos[id].len())
+            .collect();
+        survivor_lengths.sort_unstable();
+        assert_eq!(
+            survivor_lengths,
+            vec![2, 3],
+            "the two SHORTEST divergent roots survive"
+        );
+
+        let leveled_away_count = leveled
+            .values()
+            .filter(|lc| lc.cell.is_irregular && !lc.survived)
+            .count();
+        assert_eq!(
+            leveled_away_count, 6,
+            "the remaining 6 divergent roots regularize"
+        );
     }
 }
