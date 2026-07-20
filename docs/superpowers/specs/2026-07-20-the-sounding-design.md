@@ -28,6 +28,22 @@ The primary finding is not absolute time but **scaling** — above all whether
 the inter-community coupling stays sub-quadratic, which is the one architectural
 go/no-go that cannot be fixed later by optimization.
 
+**This is the *macro-history* sounding — one of three profiles, named
+honestly.** The vision's richness spans three computational profiles with
+different cost shapes: the **macro history** (a city's centuries, a war's
+mobilization, the ruins — scales with *world size*, the profile that can
+architecturally blow up); the **fine cognition** (an individual's morning —
+perception, planning, drives — *LOD-bounded*, scaling with *observation*, not
+world size); and the **emergent quality** (whether the composition *reads* as
+rich rather than mush — taste-checked, unbenchmarkable). The Sounding measures
+the first, because it is the scariest scaling risk and the right one to retire
+first. It is **necessary, not sufficient**: the fine-cognition profile needs its
+own sounding (largely The Walk's territory — its pieces, The Surmise, The
+Foresight, The Wanting, The Quickening, already run), and emergent quality is
+cultivated and observed, never gated. A green Sounding retires the
+world-scale-blowup risk; it does **not**, and must not be read to, prove the
+whole vision. The companion soundings are named in the non-goals (§7).
+
 ## 2. Background
 
 The frontier sketches the engine (frontier §living-community, §connection-graph):
@@ -57,7 +73,38 @@ measuring the loop, not the integration.
 
 ### 3.1 The spike
 
-A minimal, deterministic core loop over synthetic inputs:
+**The input surface is deliberately tiny — six config fields; everything else
+is derived.** A run is fully specified by:
+
+```rust
+struct SoundingConfig {
+    seed: Seed,                 // determinism source (kernel newtype)
+    communities: u32,           // Z  — synthetic communities to seed
+    species: u32,               // Y  — synthetic species
+    epochs: u32,                // A  — history length, in epochs
+    avg_degree: f64,            // d̄  — mean connection-graph degree (edges/node)
+    long_range_fraction: f64,   // portal/route edges as a fraction of all edges
+}
+```
+
+The five numeric dials are the sweep axes (§3.3); the placeholder-dynamics
+constants (a pressure threshold, a base growth rate) are fixed *internal
+constants, not inputs*. From `(seed, config)`, deterministically, the loop
+derives **four kinds of synthetic state**: a **species table**
+(`Vec<{ carrying_need: f64, frequency_weight: f64 }>`, `Y` entries), a
+**community table** (`Vec<{ species: u32, population: f64, node: NodeId,
+biography: Vec<BioEntry> }>`, `Z` entries), a **sparse connection graph**
+(`BTreeMap<NodeId, Vec<{ to: NodeId, lag: u32, kind ∈ {Adjacent, Route,
+Portal} }>>`), and a per-community **capacity field**. Per epoch the dynamics
+read a **four-value set** — `population`, the species' `carrying_need`, the
+node's `capacity`, and the graph neighbors — which is deliberately the *same
+read-shape the real engine will have* (pressure `= f(population, capacity)`,
+event `= f(pressure, seed)`, coupling over `neighbors`), so the cost drivers
+are faithful even though the values are synthetic. `run(config) -> World` is a
+pure deterministic function; the benchmark evaluates it across the sweep.
+
+Concretely, that spike is a minimal, deterministic core loop over synthetic
+inputs:
 
 - **Communities**: `Z` synthetic communities, each an entity with a **dated
   biography** (an append-only list of `(epoch, event, role-handle)` records), a
@@ -170,6 +217,16 @@ one. No carve-out is triggered.
   affect the scaling this campaign measures.
 - **Integration with real worldgen** — synthetic inputs only.
 - **New biomes, rosters, or the ambient encounter-table layer.**
+- **The fine-cognition profile** — an individual's moment-to-moment cost
+  (perception, planning, drives; a goblin's or a drow-aide's *morning*). It is
+  LOD-bounded (scales with observation, not world size) and largely The Walk's
+  territory — its pieces (The Surmise, The Foresight, The Wanting, The
+  Quickening) already run. It needs its **own** sounding, not this one.
+- **Emergent quality** — whether the composed layers *read* as rich rather than
+  mush. Taste-checked, cultivated and observed; no scaling benchmark answers it.
+- **The institutional layer** — a mid-scale structure between community and
+  persona (a court, a bureaucracy, a slave system; the drow-aide's world). An
+  ontology gap for the sequel (frontier SOC-11), out of scope here.
 - **A performance *target*** — we report the ceiling; we do not commit to hitting
   a number (decision #3, "sweep and find the ceiling").
 
