@@ -61,6 +61,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-chronicle"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-climate"
 version = "0.1.0"
 dependencies = [

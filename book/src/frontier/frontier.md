@@ -51,6 +51,8 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The immune stack — boundary-maintenance across every scale](#the-immune-stack--boundary-maintenance-across-every-scale)
   - [The anti-phenomenon — meaningful absence as an observable](#the-anti-phenomenon--meaningful-absence-as-an-observable)
   - [The social graph — a derived, self-balancing relational layer](#the-social-graph--a-derived-self-balancing-relational-layer)
+  - [The living community — history as a baked, derivable biography](#the-living-community--history-as-a-baked-derivable-biography)
+  - [The connection graph — society's transport topology](#the-connection-graph--societys-transport-topology)
   - [The motivation engine — Goal-Oriented Action Planning over belief](#the-motivation-engine--goal-oriented-action-planning-over-belief)
   - [The planning engine — A-star as causality across the tenses](#the-planning-engine--a-star-as-causality-across-the-tenses)
   - [The verb as reaction — a property-transformation chemistry](#the-verb-as-reaction--a-property-transformation-chemistry)
@@ -92,6 +94,28 @@ actually holds, even if whether it *lands* is a matter of taste.
 rather than a bigger single ask — chart legibility and prose quality live
 here, and so, honestly, does "is this goblin funny." Naming which tier an
 ambition occupies is the first act of designing it.
+
+A companion compass names what the tiers are *for*. The tiers say how much
+of an ambition can be *checked*; a second reading asks what each ambition is
+*worth*, and to whom — four observers judging one artifact: the **scientist**
+(is it lawful?), the **player** (can I act, does it respond?), the
+**engineer** (how was it done?), the **audience** (does it move me?). The two
+readings lock together — the scientist's and engineer's judgments are
+*measurable* (they live in the formula- and calibration-checked tiers; you
+gate on them), while the player's and audience's are *experiential*
+(literature- and taste-checked; you cultivate and observe them — there is no
+unit test for "holy shit"). Three principles govern the trade. First,
+**discovery over invention**: Hornvale's good is *emergent from lawful sim*,
+never authored — when a rule must be written, author the rule, never the
+outcome (0021). Second, **legibility is the converter**: a real world the
+player cannot *perceive* yields no story and no agency, so realism is the
+substrate but legibility is what cashes it into every experiential payoff —
+and it is where deep-sim projects most often quietly die. Third, the
+**soul-call**: when realism and experience genuinely conflict, *realism wins
+and legibility is the fix* — a flat mechanism is a signal that the sim is too
+shallow or too hidden, never a licence to fudge it. Performance is not on the
+compass at all; it is the *budget*, spent by baking the slow, expensive
+layers once and reading them cheaply.
 
 ---
 
@@ -2094,6 +2118,134 @@ ledger is its source, structural balance its engine). Its cheapest instance is a
 single dyad — one debt minted by one gift, repaid or resented — before the balance
 dynamic is trusted on triads and the drama it produces is measured against a
 world's real history in the Lab.
+
+---
+
+## The living community — history as a baked, derivable biography
+
+*(Medium confidence on the framing, low on the calibration and the
+performance envelope — which is why its first build is a benchmark, not the
+engine (see [sequencing the deep-time stack](#sequencing-the-deep-time-stack)).
+The temporal sibling of the [biogeography of
+coexistence](#the-biogeography-of-coexistence--how-the-weak-persist), which is
+the same problem in space. From the peoples-diversity brainstorm following The
+Demesne.)*
+
+The biogeography section holds peoples-diversity open in *space* — pricing
+might, clearing homes so the weak persist. But two peoples of comparable
+build, near-identical on every spatial axis, cannot be separated by any
+spatial mechanism at all: they compete on one shared number and the strongest
+takes the map. The Demesne measured exactly this — four goblinoid peoples no
+supply field could tell apart. What separates near-identical peoples in
+reality is not resources but **history**: Basques in the Pyrenees, Hungarians
+in the Carpathians are the residue of migration and displacement, not niche
+competition. Diversity's missing axis is *time*.
+
+**A community is the atom that carries it** — a persistent, named entity with
+continuous identity, whose diversity is the readout of a **derived history**.
+The generator is a Reckoning-shaped move: a **coarse forward-simulation, run
+once at genesis, driven by structural pressures** — carrying-capacity stress
+and competition (the biosphere's own terms), never simulated agent decisions.
+Step over epochs; each epoch, read the pressure and resolve deterministic
+events — grow, found, raid/subjugate, flee, collapse — appending *dated*
+entries to each community's biography, written with **role-handles** ("the
+chieftain who led the flight of 312"), not full individuals. The past
+forward-integrates *at genesis*; the runtime only reads.
+
+**The side-effects of community events are the whole game, and they are one
+engine's output.** A raid *displaces* — the fled people refounds elsewhere,
+and displacement is the diversity generator (a diaspora, following [the
+connection graph](#the-connection-graph--societys-transport-topology)). A
+death leaves a *ruin* — the abandoned-village biome, stratified (village →
+occupation → abandonment), the archaeology a later explorer excavates. Every
+event leaves a *fact* in the ledger — the legibility source, surfaceable
+through the trace protocol. And the raid→flee→refound loop is not authored: it
+is an **emergent limit-cycle** of the structural dynamics, predator–prey
+shaped (bugbears grow by raiding goblins, goblins decline, the raid starves,
+goblins recover, it returns).
+
+**The present is the same field, evaluated later** (this is the [derived-view
+architecture](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
+extended to the time axis). There is no special "now": the whole timeline is
+one derivable **social field** (the Fields abstraction, over space × time),
+and forward-evolution is *replay of the epoch engine from the seed* —
+re-derivation at a larger T, never integration from saved state, so the Lorenz
+guard-rail is satisfied by construction. "Now" is not a clock reading but the
+**frontier of intervention**: before the player touches a region its entire
+timeline is pure-seed-derived and freely scrubbable (watch a village rise and
+fall); the player's first action there is a ledger delta the replay reads,
+branching the future. Autonomy resolves by lazy evaluation — the field is
+*defined* over all time everywhere (the cycle turns while you are away) but
+*computed* only where observed (nothing unwatched is simulated). And because a
+cycle is predictable, the player has leverage: kill the bugbears and the
+goblins' derived future stops including the raid. Agency is the perturbation
+of a cycle — storytelling from realism, exactly as the compass demands.
+
+**Sequencing.** Not one campaign but a program, and its first build is a
+**benchmark, not the engine**: measure the core loop — derive *A* years for
+*Z* communities across *Y* species, and report wall-time, memory, and output —
+before trusting the architecture (feasibility is the anxiety, and feasibility
+is measurable). The cheapest real slice after that is a *single* community
+with a derived, dated, legible biography — proving identity + history +
+legibility on one entity before the coupled network that generates diversity.
+
+---
+
+## The connection graph — society's transport topology
+
+*(Medium confidence in the abstraction, low on the conductance calibration.
+Distinct from the relational [social
+graph](#the-social-graph--a-derived-self-balancing-relational-layer): that
+graph's nodes are agents and its edges are dispositions; this graph's nodes
+are *places* and its edges are *transport*. Society's dynamics run on this
+one, not on Euclidean space. From the same brainstorm.)*
+
+The [living
+community](#the-living-community--history-as-a-baked-derivable-biography)'s
+dynamics look spatially local — you raid your neighbour — until portals and
+sailing routes break locality. The resolution is that social distance is
+**graph distance, not map distance**: places are nodes; edges are spatial
+adjacency *plus* roads, sailing lanes, and portals; a portal makes two distant
+cells adjacent. Non-local coupling is then native, not exceptional.
+
+**The edges are derived from the sandboxes below.** Natural edges fall out of
+physics already computed — sailing lanes follow the ocean currents and winds,
+roads thread mountain passes and river corridors. Artificial edges are built
+*by society* — a road a settlement raises is an edge added by a baked-history
+event, so the graph is dynamic and society reshapes its own connectivity. And
+**conductance is gated by the lower layers in time**: a sailing lane is
+seasonal (ice-locked in winter), a portal intermittent (open only at a
+conjunction — the sky deciding when it is passable), a route closed by a curse
+over the Blighted Lands. Rarely, a physical bottleneck losing its last edge
+**partitions** the graph — a component severs, its society *diverges* in
+isolation (its own drift of language and gods) until a reconnection brings
+rediscovery.
+
+**Interactions compute along the same Fields/Facts seam the ledger already
+uses.** Diffuse coupling — trade wealth, cultural and linguistic blend,
+endemic disease — is an **order-independent fixed-point** over the graph (a
+diffusion relaxed to convergence: a field, never a tally), cheap because the
+graph is *sparse* (a place has a handful of edges). Discrete coupling — a
+raid, a founding, a plague outbreak — **propagates along edges with
+edge-specific lag**: a sea-raid launched one epoch arrives two later; a portal
+delivers instantly, which is what makes portals dramatic. Tractability holds
+by the recursion the whole map runs on: bake a cheap **coarse-global** network
+state once (it absorbs the long-range coupling at low resolution), derive
+**fine-local** detail lazily within it. It is Lorenz-safe — fixed-points are
+solved from scratch, never integrated.
+
+**The graph is triple-duty:** the social-dynamics substrate, a legibility
+surface the player *discovers* (the anthropologist mapping who-connects-to-
+whom), and the player's own travel network (you sail the same edges).
+Diasporas follow it (fled goblins reach a distant isle along a trade lane,
+Phoenician-shaped), and cultural similarity tracks *graph* distance — two
+ports on a busy route share more than two villages a trackless ridge apart,
+refining isolation-by-distance into isolation-by-graph-distance.
+
+**Sequencing.** Lands under the living-community program, after the
+single-community slice — the coupled network is what needs it. Its natural
+first instance is the *natural* edges alone (currents → sailing lanes, passes
+→ roads), before portals and the magic layer add non-physical shortcuts.
 
 ---
 
