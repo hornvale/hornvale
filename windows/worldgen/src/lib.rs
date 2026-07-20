@@ -778,6 +778,7 @@ pub fn climate_from(
         regime,
         year_length_std,
         year_phase_offset,
+        seed: world.seed,
     }))
 }
 
@@ -930,6 +931,10 @@ struct EraContext<'a> {
     present_ice: &'a hornvale_kernel::CellMap<bool>,
     /// The absolute snowline threshold ([`FREEZE_C`], wrapped once).
     freeze: Temperature,
+    /// The world seed — threaded through so `glacial_maximum_habitable`'s
+    /// full climate rebuild derives the same weather seed `climate_of` would
+    /// (climate is otherwise seed-free; this perturbs no existing draw).
+    seed: hornvale_kernel::Seed,
 }
 
 /// This era's raw inputs, carried alongside its cheaply-diagnosed
@@ -1049,6 +1054,7 @@ fn glacial_maximum_habitable(
         regime: ctx.regime,
         year_length_std: ctx.year_length_std,
         year_phase_offset: ctx.year_phase_offset,
+        seed: ctx.seed,
     });
     let era_temperature = hornvale_kernel::CellMap::from_fn(geo, |c| {
         climate.mean_temperature_at(c) + inputs.temp_offset
@@ -1152,6 +1158,7 @@ pub fn paleoclimate_from(
         year_phase_offset,
         present_ice: &present_ice,
         freeze,
+        seed: world.seed,
     };
 
     // Fine ice integration: sample the caloric index back through the window.
@@ -1514,6 +1521,80 @@ fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::Cel
         let regime = regime_word(climate.regime_at(cell));
         format!("{site} receives {amount} of {phase} a year ({regime}).")
     }
+}
+
+/// The plain-prose sky phrase for a weather state (The Firmament). `pub` so
+/// both the almanac's headline lines ([`weather_line_for`]) and possession's
+/// [`sky_report`] render the same weather vocabulary — one definition, no
+/// drift between the two surfaces.
+/// type-audit: bare-ok(prose: return)
+pub fn sky_phrase(
+    state: hornvale_climate::WeatherState,
+    cloud: hornvale_climate::CloudType,
+) -> &'static str {
+    use hornvale_climate::{CloudType, WeatherState};
+    match (state, cloud) {
+        (WeatherState::Storm, _) => "torn by storm, towering thunderheads overhead",
+        (WeatherState::Rain, _) => "a low grey rain-deck",
+        (WeatherState::Overcast, _) => "a flat overcast",
+        (WeatherState::Fair, _) => "fair, with scattered cumulus",
+        (WeatherState::Clear, CloudType::Cirrus) => "clear but for high cirrus",
+        (WeatherState::Clear, _) => "clear",
+    }
+}
+
+/// The Firmament's headline lines for the almanac's Land section: the felt
+/// sky at the same two sample sites the rains line uses (driest interior,
+/// open ocean), on the almanac's reference day (0.0). Level 0 — a pure
+/// observation.
+/// type-audit: bare-ok(prose: return)
+pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    Ok(firmament_lines_from(
+        &terrain_of(world)?,
+        &climate_of(world)?,
+    ))
+}
+
+/// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
+/// Sculpt).
+fn firmament_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
+    let geo = terrain.geosphere();
+
+    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
+    for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
+        if terrain.is_ocean(cell) {
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
+            }
+            continue;
+        }
+        if driest.is_none_or(|(_, best)| amp > best) {
+            driest = Some((cell, amp));
+        }
+    }
+
+    let mut lines = Vec::new();
+    if let Some((cell, _)) = driest {
+        lines.push(weather_line_for("The driest interior", climate, cell));
+    }
+    if let Some((cell, _)) = ocean {
+        lines.push(weather_line_for("The open ocean", climate, cell));
+    }
+    lines
+}
+
+/// One sample site's weather line at day 0.0.
+/// type-audit: bare-ok(prose: site), bare-ok(prose: return)
+fn weather_line_for(
+    site: &str,
+    climate: &GeneratedClimate,
+    cell: hornvale_kernel::CellId,
+) -> String {
+    let state = climate.weather_at(cell, 0.0);
+    let cloud = climate.cloud_type_at(cell, 0.0);
+    hornvale_almanac::render_weather_line(site, sky_phrase(state, cloud))
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
@@ -3949,8 +4030,42 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 
 /// The sky at `time`, from whichever astronomy provider this world uses.
 /// The single construction site for the provider (Constitution §2.4 tiers).
+///
+/// Appends a weather clause (The Firmament, spec Weather Program C4): the
+/// felt sky at the world's representative cell — the first settlement's
+/// location, the same "first place" vantage `calendar_lines` and
+/// `night_sky_lines` already read via [`place_coord`] — rendered through
+/// [`sky_phrase`], the one weather vocabulary the almanac's headline lines
+/// share. A placeless world (no settlement has been placed, or has no
+/// committed coordinate) falls back to cell 0 — still informative, just not
+/// settlement-anchored, mirroring the fallback-free-but-defaulting posture
+/// `night_sky_lines`' heliacal latitude uses. `windows/vessel/src/vantage.rs`
+/// turns the rendered `description` into `Vantage.sky`, so a possessed
+/// agent's sky and the almanac's placed-observer lines describe the same
+/// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    Ok(sky_of(world)?.sky_at(time))
+    let mut report = sky_of(world)?.sky_at(time);
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    let cell = hornvale_terrain::places(world)
+        .into_iter()
+        .find(|p| {
+            world
+                .ledger
+                .value_of(p.id, hornvale_settlement::IS_SETTLEMENT)
+                .is_some()
+        })
+        .and_then(|p| place_coord(world, p.id))
+        .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
+        .unwrap_or(hornvale_kernel::CellId(0));
+    let state = climate.weather_at(cell, time.day);
+    let cloud = climate.cloud_type_at(cell, time.day);
+    report.description = format!(
+        "{} The sky is {}.",
+        report.description,
+        sky_phrase(state, cloud)
+    );
+    Ok(report)
 }
 
 /// The local climate, from whichever climate provider this world uses.
@@ -4516,6 +4631,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
+        firmament_lines: firmament_lines_from(&terrain, &climate),
         deep_time_lines,
         peoples,
         pantheons: {
@@ -5391,6 +5507,25 @@ mod tests {
         assert_eq!(climate.temperature_c, 18.0);
     }
 
+    /// The Firmament: possession's sky report narrates the felt weather, not
+    /// just the astronomical scene — `sky_phrase` shared with the almanac's
+    /// headline lines (DRY). Deterministic for a fixed `(seed, day)`.
+    #[test]
+    fn the_sky_report_names_the_weather() {
+        let world = generated(42);
+        let report = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        let text = &report.description;
+        assert!(
+            ["clear", "fair", "overcast", "rain", "storm"]
+                .iter()
+                .any(|w| text.contains(w)),
+            "the sky report must narrate the weather: {text}"
+        );
+
+        let again = sky_report(&world, hornvale_kernel::WorldTime { day: 10.0 }).unwrap();
+        assert_eq!(report, again, "the weather clause is deterministic");
+    }
+
     #[test]
     fn generated_sky_reconstructs_and_beliefs_are_non_empty() {
         let world = generated(42);
@@ -6082,6 +6217,35 @@ mod tests {
         let world = constant(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.rains_lines, rains_lines(&world).unwrap());
+    }
+
+    #[test]
+    fn firmament_lines_report_the_sky_at_both_sample_sites() {
+        let world = generated(42);
+        let lines = firmament_lines(&world).unwrap();
+        assert_eq!(
+            lines.len(),
+            2,
+            "one weather line per sample site: {lines:?}"
+        );
+        assert!(lines[0].contains("The driest interior"));
+        assert!(lines[1].contains("The open ocean"));
+        // Each names a sky condition word.
+        for l in &lines {
+            assert!(
+                ["clear", "fair", "overcast", "rain", "storm"]
+                    .iter()
+                    .any(|w| l.contains(w)),
+                "a weather line must name a sky condition: {l}"
+            );
+        }
+    }
+
+    #[test]
+    fn firmament_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.firmament_lines, firmament_lines(&world).unwrap());
     }
 
     #[test]

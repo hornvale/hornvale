@@ -2,7 +2,7 @@
 
 ## The Sky
 
-A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars.
+A sun hangs motionless above the day side; the night side lives beneath 5 unmoving stars. The sky is fair, with scattered cumulus.
 
 Visible bodies: the sun, moon 1, moon 2.
 
@@ -153,6 +153,9 @@ Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
 The driest interior receives about 24 mm of rain a year.
 The open ocean receives about 2000 mm of snow a year (uniform).
+
+The driest interior: the sky is fair, with scattered cumulus.
+The open ocean: the sky is clear.
 
 ## The Ground
 

@@ -2,7 +2,7 @@
 
 ## The Sky
 
-Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white.
+Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is clear but for high cirrus.
 
 Visible bodies: the sun, moon 1, moon 2.
 
@@ -200,6 +200,9 @@ The seas: a current runs east along the coast.
 
 The driest interior receives under 1 mm of snow a year.
 The open ocean receives about 1708 mm of rain a year (uniform).
+
+The driest interior: the sky is clear.
+The open ocean: the sky is a flat overcast.
 
 ## The Ground
 
