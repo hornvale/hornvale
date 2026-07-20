@@ -37,6 +37,10 @@ pub mod morphology;
 /// deterministic draw per `(seed, species, kind, salt)` (no re-draw), built
 /// from a drawn phonology.
 pub mod naming;
+/// LANG-44: numeracy as a per-listener quantity register — the per-species
+/// drawn numeral-system rung and the shared render codec both a speaker's
+/// own rendering and a listener's comprehension degradation reuse.
+pub mod numeracy;
 /// The Swadesh packs: authored core vocabulary (the universal stratum,
 /// color, body, and kin packs), Berlin & Kay acquisition ladders, the
 /// closed compound-recipe table, and `register_concepts`.
@@ -472,6 +476,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/family/<family>/morph/tense/past",
             "The Residue: the family's Past-tense affix proto-form, shared by every daughter",
+        ),
+        (
+            "language/<species>/grammar/numeracy-rung",
+            "The species' drawn numeral-system rung (Subitizing/FullCounting/Decimals) — how far counting words go past the universal subitizing floor",
         ),
         (
             "language/<species>/schema/<domain>/<fact-shape>",
