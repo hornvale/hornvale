@@ -12,6 +12,7 @@ pub mod runner;
 pub mod schema;
 pub mod study;
 pub mod summary;
+pub mod synthetic;
 
 pub use blackbox::record_failure;
 pub use chart::{bar_chart_svg, charts_for};

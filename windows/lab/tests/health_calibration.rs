@@ -2,13 +2,29 @@
 //! distress read over a simulated span, anchored to a control. Preregistered:
 //! a healthy world reads ~0 (no false alarm), and the family's reduction FIRES
 //! correctly on injected distress patterns — spike-then-recover vs
-//! spike-and-persist — while excluding normal Searching. Because genuine
-//! blocked-distress is rare in the drive model (a creature SEARCHES rather than
-//! despairs — a real barren mesh yields endless Searching, not Lost), the
-//! injected-fault signatures are exercised on constructed affect traces (the
-//! metric's detection logic), and the null control on a real world (end to end).
+//! spike-and-persist — while excluding normal Searching.
+//!
+//! Two tiers of evidence sit here. The CONSTRUCTED-trace tests exercise the
+//! reduction logic in isolation (hand-built `Affect` sequences → `health_report`
+//! — fast, precise, edge-case sharp). The END-TO-END tests (The Temperament
+//! followup #5, the synthetic distress harness) close the gap the reduction
+//! tier left open: because genuine blocked-distress is rare in the drive model
+//! (a creature SEARCHES rather than despairs — a real barren mesh yields endless
+//! Searching, not Lost), the harness hand-builds terrain + creatures the drive
+//! model can be FORCED into distress, runs the real sim, and scores the sim's
+//! own affect output — so chronicity/recovery/by-cause/by-species are proven on
+//! the path from a world into distress, not just on affect structs typed by
+//! hand. The null control runs on real generated worlds throughout.
 use hornvale_lab::health::{AffectTrace, HealthReport, health_report, simulate_world};
+use hornvale_lab::synthetic::{
+    a_heat_wave_that_passes, a_stricken_and_a_healthy_people, stranded_from_known_water,
+};
 use hornvale_vessel::liveness::{Affect, AffectLabel, DriveKind};
+
+/// The span the harness scenarios simulate — matches `health.rs`'s
+/// `HEALTH_TICKS` so a scenario's chronic run spans the same window a real
+/// sweep would read it over.
+const HARNESS_TICKS: usize = 40;
 
 fn world(seed: u64) -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
@@ -162,4 +178,122 @@ fn by_species_separates_a_stricken_people_from_a_healthy_one() {
         "the stricken people reads distressed"
     );
     assert_eq!(r.by_species["goblin"], 0.0, "the healthy people reads fine");
+}
+
+// --- END-TO-END: the synthetic distress harness (followup #5) ---------------
+// The scenarios below drive the REAL sim (`run_simulation` → `affect_of`) into
+// distress and score its own affect output, closing the gap the constructed-
+// trace tests left: the reduction was proven, but never the path from a world
+// into distress. Each asserts on the distress FAMILY (prevalence / chronicity /
+// recovery / by-cause), not on exact Content-vs-Eager tick counts (a creature's
+// mid-cycle drink lands an incidental positive tick whose timing is a sim
+// artifact — irrelevant to distress).
+
+#[test]
+fn a_stranded_creature_is_scored_chronic_end_to_end() {
+    // THE BUG ALARM, now end to end: a creature that believes in a spring it
+    // drank from but is stranded past the plan budget from it Holds in thirst
+    // `Frustrated` for the rest of the run — a real sim producing a chronic
+    // distress run the metric scores, not a hand-typed `[Lost, Lost, …]`.
+    let r = health_report(&stranded_from_known_water().simulate(HARNESS_TICKS));
+    assert_eq!(
+        r.chronicity, 1.0,
+        "the stranded creature is chronically stuck: {r:?}"
+    );
+    assert_eq!(
+        r.recovery_ticks, None,
+        "a never-ending stranding has no recovery half-life"
+    );
+    assert!(
+        r.prevalence > 0.5,
+        "distress dominates the span: {}",
+        r.prevalence
+    );
+    assert_eq!(
+        r.by_cause["thirst"], 1.0,
+        "the distress is entirely thirst (unreachable water)"
+    );
+    assert_eq!(r.by_cause["thermal"], 0.0);
+}
+
+#[test]
+fn a_stranded_creature_learns_helplessness_end_to_end() {
+    // LEARNED HELPLESSNESS (followup #2, §7): a creature whose survival drive
+    // goes unmet long enough stops trying — its felt state deepens from
+    // Frustrated (still straining) to Helpless (given up), on the sim's own
+    // output. The stranded creature never reaches its water, so past the onset
+    // it reads Helpless (with periodic probe days it briefly strains again).
+    let traces = stranded_from_known_water().simulate(HARNESS_TICKS);
+    let labels: Vec<AffectLabel> = traces[0].affects.iter().map(|a| a.label).collect();
+    assert!(
+        labels.contains(&AffectLabel::Helpless),
+        "prolonged unmet survival must produce Helpless, not endless Frustrated: {labels:?}"
+    );
+    assert!(
+        labels.contains(&AffectLabel::Frustrated),
+        "and it strains (Frustrated) before giving up, and on probe days: {labels:?}"
+    );
+    // Helplessness follows frustration in time — it is the deepening, never the
+    // opening state.
+    let first_helpless = labels.iter().position(|&l| l == AffectLabel::Helpless);
+    let first_frustrated = labels.iter().position(|&l| l == AffectLabel::Frustrated);
+    assert!(
+        first_frustrated < first_helpless,
+        "straining precedes giving up: {labels:?}"
+    );
+}
+
+#[test]
+fn a_passing_heat_wave_is_scored_a_recovered_spike_end_to_end() {
+    // THE RESILIENT SPIKE, now end to end: a creature on its spring (thirst
+    // stays serviceable) is boxed in by a blistering heat wave, then the wave
+    // breaks and it returns to Content — a real distress spike that recovers
+    // BELOW the chronic threshold, the resilient counterpart to stranding.
+    let r = health_report(&a_heat_wave_that_passes().simulate(HARNESS_TICKS));
+    assert_eq!(
+        r.chronicity, 0.0,
+        "a wave that breaks is not chronic distress: {r:?}"
+    );
+    assert!(
+        r.recovery_ticks.is_some(),
+        "the recovered spike yields a recovery half-life: {r:?}"
+    );
+    assert!(
+        r.prevalence > 0.0 && r.prevalence < 0.5,
+        "a transient spike, not a dominating one: {}",
+        r.prevalence
+    );
+    assert_eq!(
+        r.by_cause["thermal"], 1.0,
+        "the distress is entirely thermal (the heat wave)"
+    );
+    assert_eq!(r.by_cause["thirst"], 0.0);
+}
+
+#[test]
+fn by_species_separates_a_stricken_people_end_to_end() {
+    // The by-species diagnostic on real sim output: a stranded kobold beside a
+    // goblin on its own reachable spring in a mild climate — the reduction
+    // attributes the distress to the stricken species alone, from the sim's own
+    // traces rather than constructed ones.
+    let r = health_report(&a_stricken_and_a_healthy_people().simulate(HARNESS_TICKS));
+    assert!(
+        r.by_species["kobold"] > 0.5,
+        "the stranded people reads distressed: {r:?}"
+    );
+    assert_eq!(
+        r.by_species["goblin"], 0.0,
+        "the well-watered people reads fine: {r:?}"
+    );
+}
+
+#[test]
+fn the_harness_scenarios_are_deterministic() {
+    // Same scenario -> byte-identical report (the constitutional guarantee, on
+    // the synthetic path too): the harness is a pure function of its hand-built
+    // ledger and terrain, the same determinism the null control asserts on real
+    // worlds.
+    let a = health_report(&stranded_from_known_water().simulate(HARNESS_TICKS));
+    let b = health_report(&stranded_from_known_water().simulate(HARNESS_TICKS));
+    assert_eq!(a, b, "same scenario -> same report");
 }

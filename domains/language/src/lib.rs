@@ -37,10 +37,17 @@ pub mod morphology;
 /// deterministic draw per `(seed, species, kind, salt)` (no re-draw), built
 /// from a drawn phonology.
 pub mod naming;
+/// LANG-44: numeracy as a per-listener quantity register — the per-species
+/// drawn numeral-system rung and the shared render codec both a speaker's
+/// own rendering and a listener's comprehension degradation reuse.
+pub mod numeracy;
 /// The Swadesh packs: authored core vocabulary (the universal stratum,
 /// color, body, and kin packs), Berlin & Kay acquisition ladders, the
 /// closed compound-recipe table, and `register_concepts`.
 pub mod packs;
+/// LANG-43: paradigm slots (Number, Tense) whose cascade-native form can
+/// diverge from a mechanically-regular one.
+pub mod paradigm;
 /// The phoneme model: segments as articulatory feature-bundles.
 pub mod phoneme;
 /// The phonology engine: per-species inventory and phonotactics drawn
@@ -439,12 +446,40 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60)",
         ),
         (
+            "language/<species>/grammar/depth/number",
+            "The Residue: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class",
+        ),
+        (
+            "language/<species>/grammar/depth/tense",
+            "The Residue: the species' drawn Tense grammaticalization depth (None/Particle/Affix)",
+        ),
+        (
+            "language/<species>/grammar/number-position",
+            "The Residue: which side of the marked word the Number affix binds",
+        ),
+        (
+            "language/<species>/grammar/tense-position",
+            "The Residue: which side of the marked word the Tense affix binds",
+        ),
+        (
             "language/family/<family>/morph/evidential/<value>",
             "C7: the family's one-syllable evidential-marker proto-form for <value> (witnessed/taught/inferred), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),
         (
             "language/family/<family>/morph/class/<value>",
             "C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law",
+        ),
+        (
+            "language/family/<family>/morph/number/plural",
+            "The Residue: the family's Plural affix proto-form, shared by every daughter (family-cognate law)",
+        ),
+        (
+            "language/family/<family>/morph/tense/past",
+            "The Residue: the family's Past-tense affix proto-form, shared by every daughter",
+        ),
+        (
+            "language/<species>/grammar/numeracy-rung",
+            "The species' drawn numeral-system rung (Subitizing/FullCounting/Decimals) — how far counting words go past the universal subitizing floor",
         ),
         (
             "language/<species>/schema/<domain>/<fact-shape>",

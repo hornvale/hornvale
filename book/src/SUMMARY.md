@@ -195,6 +195,9 @@
 - [The Book Polish](./chronicle/the-book-polish.md)
 - [The Temperament](./chronicle/the-temperament.md)
 - [The Frame Budget](./chronicle/the-frame-budget.md)
+- [The Idioms](./chronicle/the-idioms.md)
+- [The Residue](./chronicle/the-residue.md)
+- [Few and Many](./chronicle/few-and-many.md)
 - [The Sounding](./chronicle/the-sounding.md)
 
 # Appendix: The Frontier

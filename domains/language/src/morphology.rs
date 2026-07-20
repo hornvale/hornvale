@@ -205,7 +205,7 @@ const CLASS_VALUES: [&str; 2] = ["animate", "inanimate"];
 /// cascade — so every daughter of the family draws the IDENTICAL proto-form;
 /// daughters' surface forms diverge only through [`evolve`] (the cognate
 /// law [`morph_forms`] upholds).
-fn draw_morph_proto(
+pub(crate) fn draw_morph_proto(
     seed: &Seed,
     family: &str,
     axis: &str,
