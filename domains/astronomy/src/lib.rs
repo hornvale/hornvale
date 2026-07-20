@@ -401,6 +401,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         false,
         "a moon's bulk density in grams per cubic centimeter",
     )?;
+    registry.register_predicate(
+        facts::MOON_PERIOD_RATIO,
+        true,
+        "the detected clean small-integer ratio between two of a world's \
+         moons' real periods, when one exists",
+    )?;
 
     // sun and moon are bodies visible in the sky; star is a fixed night-sky
     // point — each corresponds to a phenomenon kind registered above.
