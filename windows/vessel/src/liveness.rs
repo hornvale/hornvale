@@ -107,26 +107,22 @@ fn room_from_text(s: &str) -> RoomAddr {
 /// `initial` value have no reader anywhere in the planned model and were
 /// removed (The Foresight T3 review) rather than left as dead fields with
 /// misleading docs.
-/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: act), bare-ok(ratio: sated)
+/// type-audit: bare-ok(ratio: rise), bare-ok(ratio: act)
 #[derive(Clone, Copy, Debug)]
 pub struct DriveParams {
     /// Drive gained per day while away from the resource.
     pub rise: f64,
     /// The seek threshold: drive >= act -> plan to the resource and drink.
     pub act: f64,
-    /// The felt-state narration threshold, read only by `Session::needs`:
-    /// drive <= sated -> "seems content" prose. NOT consulted by `decide`
-    /// or `DriveMovements::step` — the planner's return-home branch is
-    /// driven by `hydrated`/`position != home`, not by this value.
-    pub sated: f64,
 }
 
-/// The one authored sustenance drive (thirst/foraging). act > sated (the
-/// felt-state dead-band); rates chosen so a cycle spans a few days.
+/// The one authored sustenance drive (thirst/foraging); rates chosen so a cycle
+/// spans a few days. (The old `sated` felt-state threshold is retired — since
+/// The Temperament, `Session::needs` renders the affect read, spec §7, not a
+/// bare thirst scalar.)
 pub const SUSTENANCE: DriveParams = DriveParams {
     rise: 0.15,
     act: 0.85,
-    sated: 0.15,
 };
 
 /// The elevation field and fresh-water truth the belief/exploration logic
@@ -434,6 +430,66 @@ pub enum Mode {
     Pursuing(DriveKind),
 }
 
+/// A creature's felt state — a derived read of the arbitration, a point in the
+/// psychological circumplex (valence × arousal, spec §7). Immaterial and never
+/// committed (matching "drive == fold"): a pure function of the decision, so
+/// two identical arbitrations feel identically. Carries its **intentional
+/// object** (which drive the feeling is about), which — with the decision's own
+/// provenance — is what makes distress debuggable and *is* the message a
+/// creature emits.
+/// type-audit: bare-ok(ratio: arousal), bare-ok(ratio: valence)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Affect {
+    /// How activated the mind is: the greatest urgency among ACTIVE drives
+    /// (0 when none is active).
+    pub arousal: f64,
+    /// Whether the pursued drive is reducing (+) or its affordance is failing
+    /// (−): making-progress minus blocked, in `-1.0..=1.0`.
+    pub valence: f64,
+    /// The circumplex region `(valence, arousal)` falls in.
+    pub label: AffectLabel,
+    /// What the feeling is ABOUT — the pursued drive — when one is active.
+    pub object: Option<DriveKind>,
+}
+
+/// The named regions of the valence × arousal circumplex (spec §7). Positive
+/// affect is first-class (`Content`/`Eager`); `Searching` is neutral seeking,
+/// NOT confusion (excluded from the distress metric); `Helpless` is the sticky
+/// negative scar that *persistence* upgrades `Lost`/`Frustrated` into.
+/// type-audit: bare-ok(return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AffectLabel {
+    /// Positive, low arousal: needs met, puttering — the normal state.
+    Content,
+    /// Positive, high arousal: chasing a satisfiable need, or a drive just met.
+    Eager,
+    /// Neutral, mid arousal: seeking with a gradient — normal, NOT confusion.
+    Searching,
+    /// Negative: blocked with a KNOWN target out of reach — "want it, can't
+    /// reach it" (the loud, high-arousal distress the circumplex plots top-left).
+    Frustrated,
+    /// Negative: blocked with no basis to move toward — "don't know what to do"
+    /// (the quiet, low-arousal distress: no known target to strain against).
+    Lost,
+    /// Negative, persistent: given up despite an active drive — a sticky scar
+    /// that reverses slowly (persistence upgrades `Lost`/`Frustrated` here).
+    Helpless,
+}
+
+/// The whole outcome of one arbitration: the `Intent` to act on, the commitment
+/// `Mode` to carry to the next tick, and the derived `Affect` (spec §7). Bundled
+/// so callers that narrate or measure feeling get it from the same computation
+/// that chose the action — no second, drift-prone derivation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Resolution {
+    /// What to do this tick.
+    pub intent: Intent,
+    /// The commitment mode to carry forward (hysteresis).
+    pub mode: Mode,
+    /// The felt state this decision expresses.
+    pub affect: Affect,
+}
+
 /// Thirst — the one authored (sustenance) drive, Drive #1. `urgency` is the
 /// `drive_at` fold surfaced on the view; `affordance` is the existing
 /// belief→`plan_to_water`-first-step / `explore_step` chain. Parameterized by
@@ -441,7 +497,7 @@ pub enum Mode {
 /// type-audit: bare-ok(return)
 #[derive(Clone, Copy, Debug)]
 pub struct Thirst {
-    /// The homeostatic parameters (rise/act/sated) governing this drive.
+    /// The homeostatic parameters (rise/act) governing this drive.
     pub params: DriveParams,
 }
 
@@ -653,7 +709,7 @@ fn comfort_step(
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(view, home, &drives, 0.0, Mode::Idle, budget).0
+    arbitrate(view, home, &drives, 0.0, Mode::Idle, budget).intent
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -689,7 +745,7 @@ pub fn arbitrate(
     latency: f64,
     incoming: Mode,
     budget: usize,
-) -> (Intent, Mode) {
+) -> Resolution {
     // Which drives are ACTIVE (contribute to the utility sum). A drive engages
     // at its `act`; the incumbent pursued drive stays engaged until it falls
     // below `act − h` (hysteresis — no boundary dithering).
@@ -706,14 +762,39 @@ pub fn arbitrate(
         })
         .collect();
 
+    // Arousal: the greatest urgency across ALL drives (spec §7) — how activated
+    // the mind is, whether or not any has crossed its `act`. A creature grows
+    // aroused as thirst rises before it acts: still Content, but not indifferent.
+    // Computed once so every return path's affect reads the same value.
+    let arousal = drives
+        .iter()
+        .map(|d| d.urgency(view))
+        .fold(0.0_f64, f64::max);
+
     // No active drive → the errand is over: walk home, or rest if already home.
+    // Felt state: Content (positive valence), carrying the sub-act arousal so a
+    // reader can tell puttering-calm from growing-thirsty.
     if !active.iter().any(|a| *a) {
+        let affect = Affect {
+            arousal,
+            valence: 1.0,
+            label: AffectLabel::Content,
+            object: None,
+        };
         if view.position != *home {
             let step =
                 plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next());
-            return (step.map(Intent::Do).unwrap_or(Intent::Hold), Mode::Homing);
+            return Resolution {
+                intent: step.map(Intent::Do).unwrap_or(Intent::Hold),
+                mode: Mode::Homing,
+                affect,
+            };
         }
-        return (Intent::Hold, Mode::Idle);
+        return Resolution {
+            intent: Intent::Hold,
+            mode: Mode::Idle,
+            affect,
+        };
     }
 
     // The capped urgency each active drive lends the sum (soft Maslow).
@@ -804,14 +885,94 @@ pub fn arbitrate(
     // A positive-utility action advances the errand; otherwise the pursued
     // drive is blocked (unreachable water / boxed-in comfort) — Hold, staying
     // committed (the mode is the errand, even when it cannot step this tick).
+    let object = Some(pursued_kind);
     if best_u.total_cmp(&0.0).is_gt() {
-        (
-            Intent::Do(candidates[best_i].clone()),
-            Mode::Pursuing(pursued_kind),
-        )
+        let chosen = candidates[best_i].clone();
+        // A progressing decision. Relief (Eager) when the drive is directly MET
+        // (a Drink) or the creature is beelining to a KNOWN source it can reach;
+        // neutral Searching when it is following a gradient toward an UNKNOWN one
+        // (spec §7 — searching is normal seeking, NOT confusion, the load-bearing
+        // exclusion from the distress metric). Thermal, which sets no
+        // `believed_water`, reads Searching while gradient-seeking comfort — and
+        // once the cell is comfortable no drive is active, so it reads Content.
+        let known = view.believed_water.is_some();
+        let (label, valence) = match &chosen {
+            Action::Drink => (AffectLabel::Eager, 1.0),
+            Action::MoveTo(_) if known => (AffectLabel::Eager, 0.5),
+            Action::MoveTo(_) => (AffectLabel::Searching, 0.0),
+        };
+        Resolution {
+            intent: Intent::Do(chosen),
+            mode: Mode::Pursuing(pursued_kind),
+            affect: Affect {
+                arousal,
+                valence,
+                label,
+                object,
+            },
+        }
     } else {
-        (Intent::Hold, Mode::Pursuing(pursued_kind))
+        // Blocked: no candidate reduces the drive. With a KNOWN target it cannot
+        // reach (a believed source), the creature is Frustrated ("want it, can't
+        // reach it"); with no basis to move toward, it is Lost ("don't know what
+        // to do"). Persistence (in the caller) upgrades either to Helpless.
+        let label = if view.believed_water.is_some() {
+            AffectLabel::Frustrated
+        } else {
+            AffectLabel::Lost
+        };
+        Resolution {
+            intent: Intent::Hold,
+            mode: Mode::Pursuing(pursued_kind),
+            affect: Affect {
+                arousal,
+                valence: -1.0,
+                label,
+                object,
+            },
+        }
     }
+}
+
+/// The felt state a derived NPC has at `day` — an instantaneous snapshot read
+/// from the frozen ledger: the same arbitration a walk step runs, but stateless
+/// (belief and last-drank are folded from history; exploration starts fresh, no
+/// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
+/// the health metric's continuous loop). The narration seam
+/// (`Session::needs`) reads a creature's `Affect` through this.
+pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terrain) -> Affect {
+    let pos = agent_position(frozen, npc, day);
+    let last_drank = frozen
+        .find(DRANK)
+        .filter(|f| f.subject == npc.entity)
+        .filter_map(|f| f.day)
+        .fold(0.0_f64, f64::max);
+    let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
+    let drive = (SUSTENANCE.rise * (day.day - last_drank)).clamp(0.0, 1.0);
+    let visited = std::collections::BTreeSet::new();
+    let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
+    let view = Perceived {
+        position: pos,
+        drive,
+        believed_water: believed,
+        explore_step,
+    };
+    let thirst = Thirst { params: SUSTENANCE };
+    let thermal = Thermal {
+        niche: npc.temperature_niche,
+        terrain,
+        day,
+    };
+    let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+    arbitrate(
+        &view,
+        &npc.home,
+        &drives,
+        npc.deliberation_latency,
+        Mode::Idle,
+        PLAN_BUDGET,
+    )
+    .affect
 }
 
 /// The plan search's node-expansion budget: generous for the short local
@@ -937,7 +1098,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     day: WorldTime { day },
                 };
                 let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-                let (intent, new_mode) = arbitrate(
+                let resolution = arbitrate(
                     &view,
                     &npc.home,
                     &drives,
@@ -945,8 +1106,8 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     mode,
                     PLAN_BUDGET,
                 );
-                mode = new_mode;
-                match intent {
+                mode = resolution.mode;
+                match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
                         day += MOVE_DURATION;
                         if day > self.to.day {
@@ -2290,7 +2451,6 @@ mod tests {
         let degenerate = DriveParams {
             rise: 0.0,
             act: 0.0,
-            sated: 0.15,
         };
         // A long interval: if MAX_STEPS were not the backstop, this would
         // spin forever (this test's own short harness timeout is additional
@@ -2896,8 +3056,85 @@ mod tests {
         DriveParams {
             rise: 0.15,
             act: 0.4,
-            sated: 0.15,
         }
+    }
+
+    #[test]
+    fn affect_reads_each_circumplex_region() {
+        // The affect label is a pure read of the same arbitration that chose the
+        // action (spec §7). A comfortable-everywhere terrain keeps thermal
+        // inactive so thirst is the sole drive under test.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let water = ns[0].clone();
+        let far = raddr(9_999.0); // a believed source with no path within budget
+        let day = WorldTime { day: 0.0 };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), 18.0),
+            (ns[0].clone(), 18.0),
+            (ns[1].clone(), 18.0),
+            (ns[2].clone(), 18.0),
+        ]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: warm_niche(),
+            terrain: &terrain,
+            day,
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let label = |view: &Perceived| {
+            arbitrate(view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET)
+                .affect
+                .label
+        };
+
+        // CONTENT — not thirsty (drive < act): no active drive, puttering.
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.1,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            }),
+            AffectLabel::Content,
+        );
+        // EAGER — parched and standing at water: Drink satisfies (relief).
+        assert_eq!(
+            label(&Perceived {
+                position: water.clone(),
+                drive: 0.95,
+                believed_water: Some(water.clone()),
+                explore_step: None,
+            }),
+            AffectLabel::Eager,
+        );
+        // SEARCHING — parched, ignorant, a gradient to explore: approaching,
+        // NOT confusion (the load-bearing exclusion from the distress metric).
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.95,
+                believed_water: None,
+                explore_step: Some(ns[2].clone()),
+            }),
+            AffectLabel::Searching,
+        );
+        // (FRUSTRATED — Hold while KNOWING where water is — is rare by design:
+        // believed water is a cell the creature stood in, so it is almost always
+        // reachable; it fires only when a known source falls beyond the plan
+        // budget in a large world. The branch is `believed.is_some()` on Hold;
+        // its sibling LOST below exercises the same Hold path.)
+        let _ = &far;
+        // LOST — parched, ignorant, nowhere new to go: no basis to move.
+        assert_eq!(
+            label(&Perceived {
+                position: home.clone(),
+                drive: 0.95,
+                believed_water: None,
+                explore_step: None,
+            }),
+            AffectLabel::Lost,
+        );
     }
 
     #[test]
@@ -2968,7 +3205,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(v, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).0,
+                arbitrate(v, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
                 decide(v, &home, &params, PLAN_BUDGET),
                 "a comfortable-cell creature must decide exactly as thirst-only: {v:?}"
             );
@@ -3008,7 +3245,7 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let (intent, _) = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET);
+        let intent = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
         assert_eq!(
             intent,
             Intent::Do(Action::MoveTo(both)),
@@ -3049,8 +3286,12 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let (grab, gm) = arbitrate(&view, &home, &drives, 0.0, Mode::Idle, PLAN_BUDGET);
-        let (weigh, _) = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET);
+        let Resolution {
+            intent: grab,
+            mode: gm,
+            ..
+        } = arbitrate(&view, &home, &drives, 0.0, Mode::Idle, PLAN_BUDGET);
+        let weigh = arbitrate(&view, &home, &drives, 1.0, Mode::Idle, PLAN_BUDGET).intent;
         assert_eq!(
             grab,
             Intent::Do(Action::MoveTo(warm.clone())),
@@ -3101,7 +3342,7 @@ mod tests {
         };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
-            arbitrate(&mild, &home, &mild_drives, 0.5, Mode::Idle, PLAN_BUDGET).0,
+            arbitrate(&mild, &home, &mild_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
             Intent::Do(Action::MoveTo(warm.clone())),
             "severe cold beats mild thirst"
         );
@@ -3116,7 +3357,7 @@ mod tests {
         let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
-            arbitrate(&dying, &home, &dying_drives, 0.5, Mode::Idle, PLAN_BUDGET).0,
+            arbitrate(&dying, &home, &dying_drives, 0.5, Mode::Idle, PLAN_BUDGET).intent,
             Intent::Do(Action::MoveTo(water.clone())),
             "dying of thirst beats any cold"
         );
@@ -3157,7 +3398,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let (_, m1) = arbitrate(&low, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
+        let m1 = arbitrate(&low, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode;
         assert_eq!(
             m1,
             Mode::Pursuing(DriveKind::Thermal),
@@ -3173,13 +3414,13 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(&high, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).1,
+            arbitrate(&high, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET).mode,
             Mode::Pursuing(DriveKind::Thirst),
             "control: with no committed mode, the now-louder thirst is pursued (the test bites)"
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let (_, m) = arbitrate(&high, &home, &drives, 0.5, mode, PLAN_BUDGET);
+            let m = arbitrate(&high, &home, &drives, 0.5, mode, PLAN_BUDGET).mode;
             assert_eq!(
                 m,
                 Mode::Pursuing(DriveKind::Thermal),
@@ -3226,7 +3467,7 @@ mod tests {
         let b = arbitrate(&view, &home, &drives, 0.5, Mode::Idle, PLAN_BUDGET);
         assert_eq!(a, b, "same inputs → same (Intent, Mode); reload-stable");
         assert_eq!(
-            a.0,
+            a.intent,
             Intent::Do(Action::MoveTo(smaller)),
             "an equal-utility tie resolves to the smaller RoomAddr"
         );
