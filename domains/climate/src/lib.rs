@@ -78,7 +78,9 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
 ///   on snow/rain/ice honest: an `Expected` a pack must actually cover.)
 /// - **percept**: climate emits only the AMBIENT wind gloss, which is none of
 ///   these substances or biomes, so every edge is a `Gap` — not `AMBIENT`.
-/// - **cognition**: the whole column voids to the future cognition wave.
+/// - **cognition**: cold and heat are cognized (The Temperament's thermal
+///   drive reads and acts on them — the cognition wave's first two edges);
+///   every other climate concept still voids to the future cognition wave.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
     registry.register_phenomenon_kind(AMBIENT, "a pervasive atmospheric condition")?;
 
