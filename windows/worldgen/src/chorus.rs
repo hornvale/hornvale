@@ -79,6 +79,15 @@ pub fn observability_table() -> BTreeMap<String, Observability> {
         },
     );
     table.insert(
+        hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+        Observability {
+            requirement: Requirement::SkyGraded { threshold: 0.85 },
+            domain: "sky",
+            concept: NeededConcept::Fixed("moon"),
+            shape: FactShape::CyclicEvent,
+        },
+    );
+    table.insert(
         hornvale_kernel::INSTANCE_OF.to_string(),
         Observability {
             requirement: Requirement::Manifest,
@@ -1222,10 +1231,11 @@ fn subject_name(world: &World, entity: hornvale_kernel::EntityId) -> String {
 pub fn chorus_ground(world: &World) -> Vec<GroundFact> {
     // The mirror obligation: this order must match
     // `windows/book::render_volume`'s `CONSTRUCTION_ORDER` exactly.
-    const CONSTRUCTION_ORDER: [&str; 3] = [
+    const CONSTRUCTION_ORDER: [&str; 4] = [
         hornvale_astronomy::facts::MOON_COUNT,
         hornvale_astronomy::facts::STAR_CLASS,
         hornvale_astronomy::facts::DAY_LENGTH_STD,
+        hornvale_astronomy::facts::MOON_PERIOD_RATIO,
     ];
 
     let mut ground = Vec::new();
@@ -1858,5 +1868,70 @@ mod tests {
             stances: BTreeMap::new(),
             world_carving: None,
         }
+    }
+
+    #[test]
+    fn moon_period_ratio_has_an_observability_row() {
+        let table = observability_table();
+        let row = table
+            .get(hornvale_astronomy::facts::MOON_PERIOD_RATIO)
+            .expect("moon-period-ratio must have an Observability row");
+        assert!(
+            matches!(row.requirement, Requirement::SkyGraded { threshold } if threshold > 0.6),
+            "the ratio's threshold must sit above moon-count's own 0.6 (spec §3.2)"
+        );
+        assert_eq!(row.shape, FactShape::CyclicEvent);
+    }
+
+    #[test]
+    fn moon_period_ratio_flows_into_chorus_ground() {
+        // Hand-built ledger, mirroring this module's own
+        // `unbindable_cultures_stay_plain_lost` test's style: mint one
+        // entity, mark it `is-a` "planet" (any classified subject
+        // qualifies for chorus_ground's own subject walk), commit a
+        // moon-period-ratio fact on it, then confirm chorus_ground
+        // surfaces it — proves CONSTRUCTION_ORDER's new entry works
+        // without needing a full genesis run.
+        let mut world = World::new(Seed(1));
+        hornvale_astronomy::register_concepts(&mut world.registry)
+            .expect("astronomy concepts register on a fresh registry");
+        let subject = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject,
+                    predicate: hornvale_kernel::world::IS_A.to_string(),
+                    object: hornvale_kernel::Value::Text("planet".to_string()),
+                    place: None,
+                    day: None,
+                    provenance: "test fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .unwrap();
+        world
+            .ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject,
+                    predicate: hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+                    object: hornvale_kernel::Value::Number(2.0),
+                    place: None,
+                    day: None,
+                    provenance: "test fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .unwrap();
+
+        let ground = chorus_ground(&world);
+        assert!(
+            ground.iter().any(
+                |g| g.predicate == hornvale_astronomy::facts::MOON_PERIOD_RATIO
+                    && g.object == hornvale_kernel::Value::Number(2.0)
+            ),
+            "moon-period-ratio must flow into chorus_ground once committed: {ground:?}"
+        );
     }
 }
