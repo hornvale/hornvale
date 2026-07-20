@@ -194,6 +194,7 @@
 - [The Demesne](./chronicle/the-demesne.md)
 - [The Book Polish](./chronicle/the-book-polish.md)
 - [The Temperament](./chronicle/the-temperament.md)
+- [The Frame Budget](./chronicle/the-frame-budget.md)
 
 # Appendix: The Frontier
 
