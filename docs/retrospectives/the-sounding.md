@@ -5,21 +5,34 @@ close learned, and — because this campaign spent most of its value in the
 discussion around the benchmark rather than the benchmark itself — the durable
 disciplines it established.
 
-## What went well
+## What went well — the reviews, twice, and the tool they forced
 
-- **The spike found its target on the very first run.** The Sounding exists to
-  detect a quadratic coupling before the engine is built on it. Its first sweep
-  did exactly that: the naive `deliver` linear-scanned to find the community at
-  a node, the coupling was O(Z²·A), and the top point exhausted memory. The
-  method — synthetic core loop, sweep an axis, fit the log-log exponent — earned
-  its keep immediately, which is the strongest possible evidence that the
-  method is worth reusing.
 - **The two-stage review caught what the plan shipped.** The Task-1 code came
   *verbatim from the plan* and still carried three real defects — same-epoch
   raid deliveries silently dropped, raiders never decrementing their own
-  population, colliding delivery handles — that made the coupling the benchmark
-  exists to measure largely inert. The task reviewer caught all three. A plan is
-  not a proof; the review loop is the net, and here it was load-bearing.
+  population, colliding delivery handles. The task reviewer caught all three. A
+  plan is not a proof.
+- **The final whole-branch review caught what the numbers didn't say — and this
+  was the campaign's real lesson.** After all four tasks were green and the
+  report read as a clean "resounding yes," the whole-branch review *instrumented
+  the actual runs* and found the story was false: the coupling had fired **11
+  times** (0 at the smallest point), so "sub-quadratic coupling" was measuring
+  noise; the memory blow-up was an unrelated runaway-founding process, not the
+  linear scan; and the replay produced **0** events with a `0 == 0` determinism
+  test — the exact tests-asserting-nothing trap. The controller had reported a
+  green result that did not exist. Green tests + a plausible report are *not*
+  evidence that a benchmark measured what it claims. The most expensive mistake
+  here was the controller's: narrating a mechanism (a quadratic coupling caught
+  and index-fixed) that the measurements did not demonstrate — *measure, don't
+  narrate*, applied to one's own headline.
+- **The fix became a reusable tool.** The rework re-tuned the dynamics so the
+  coupling genuinely fires (210k+ raids), *shows* the O(Z²)-scan / O(Z·log Z)-
+  index crossover by baking both modes of a byte-identical world, and — the
+  durable part — adds a **workload census with a sample-size floor**: every
+  measured phenomenon is counted, printed in the report (transparency), and
+  floor-asserted so a degenerate run **aborts with a specific message** rather
+  than reporting noise. This is the positive form of "tests asserting nothing,"
+  and every future sounding gets it.
 
 ## What the campaign taught mid-execution
 
@@ -40,9 +53,10 @@ disciplines it established.
 - **The parked-subagent failure recurred, and the controller must take over.**
   The Task-4 implementer, blocked on the runaway sweep past the 60-minute Bash
   ceiling, returned narrating "standing by" — the classic parked-agent tell. Its
-  background job was dead. The controller diagnosed the O(Z²) directly, fixed it,
-  and re-ran. When a dispatched agent parks on a runaway, do not resume it into
-  the same runaway — take the work back.
+  background job was dead. The controller took the work back, found the O(Z²)
+  scan, and re-ran — though (see above) its diagnosis was incomplete until the
+  final review corrected it. When a dispatched agent parks on a runaway, do not
+  resume it into the same runaway — take the work back.
 
 ## The durable disciplines (the campaign's real yield)
 
