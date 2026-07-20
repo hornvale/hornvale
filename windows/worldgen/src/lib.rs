@@ -12,8 +12,8 @@ use hornvale_astronomy::{
     streams::ROOT as ASTRONOMY_STREAM_ROOT,
 };
 use hornvale_climate::{
-    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, RotationRegime, SeafloorFeature,
-    UniformClimate, diurnal_waveform,
+    AMBIENT, ClimateInputs, ClimateReport, GeneratedClimate, PrecipRegime, RotationRegime,
+    SeafloorFeature, UniformClimate, diurnal_waveform,
 };
 use hornvale_kernel::math;
 use hornvale_kernel::{
@@ -1449,6 +1449,106 @@ fn seas_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Ve
         )];
     }
     Vec::new()
+}
+
+/// "rain" or "snow", by which phase carries the majority of the year's
+/// precipitation at a site (The Rains): `>= 0.5` snow fraction reads as
+/// snow, else rain.
+/// type-audit: bare-ok(ratio: snow_fraction), bare-ok(identifier-text: return)
+fn precip_phase_word(snow_fraction: f64) -> &'static str {
+    if snow_fraction >= 0.5 { "snow" } else { "rain" }
+}
+
+/// The stable prose word for a seasonal precipitation regime (The Rains,
+/// spec §2) — the same kebab-case labels the spec's model card names
+/// (`hornvale_climate::precip_regime`'s four variants).
+/// type-audit: bare-ok(identifier-text: return)
+fn regime_word(regime: PrecipRegime) -> &'static str {
+    match regime {
+        PrecipRegime::Uniform => "uniform",
+        PrecipRegime::SummerMax => "summer-max",
+        PrecipRegime::WinterMax => "winter-max",
+        PrecipRegime::Monsoon => "monsoon",
+    }
+}
+
+/// The rains' headline lines for the almanac's Land section (The Rains,
+/// spec §2/§7): annual precipitation, phase (rain/snow), and seasonal
+/// regime at the same two sample sites `diurnal_lines` reports — the
+/// driest interior land cell (highest diurnal amplitude, a continentality
+/// proxy) and the open ocean cell (lowest diurnal amplitude among ocean
+/// cells) — completing that section's thermal picture with the year's
+/// moisture total. Unlike `diurnal_lines`, never empty: precipitation,
+/// snow fraction, and regime are all defined regardless of rotation regime
+/// (a tidally locked world's single day–night cell still carries a
+/// moisture field and a `Uniform`-biased regime — `precip_regime`'s
+/// `band == 0` default).
+/// type-audit: bare-ok(prose: return)
+pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
+    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+}
+
+/// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
+/// the internal re-derivations, so the almanac render shares one terrain and
+/// one climate (The Single Sculpt). Byte-identical to `rains_lines`.
+fn rains_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> Vec<String> {
+    let geo = terrain.geosphere();
+
+    let mut driest: Option<(hornvale_kernel::CellId, f64)> = None;
+    let mut ocean: Option<(hornvale_kernel::CellId, f64)> = None;
+    for cell in geo.cells() {
+        let amp = climate.diurnal_amp_at(cell);
+        if terrain.is_ocean(cell) {
+            // Same tie-break convention as `diurnal_lines`: strict `<`
+            // keeps the first-seen (lowest `CellId`) cell on ties.
+            if ocean.is_none_or(|(_, best)| amp < best) {
+                ocean = Some((cell, amp));
+            }
+            continue;
+        }
+        if driest.is_none_or(|(_, best)| amp > best) {
+            driest = Some((cell, amp));
+        }
+    }
+
+    let mut lines = Vec::new();
+    if let Some((cell, _)) = driest {
+        lines.push(rains_line("The driest interior", climate, cell));
+    }
+    if let Some((cell, _)) = ocean {
+        lines.push(rains_line("The open ocean", climate, cell));
+    }
+    lines
+}
+
+/// Below this annual total (mm/yr) a cell is effectively rainless, and its
+/// seasonal-regime label — a categorical circulation classification computed
+/// independently of the amount (spec §2) — carries no meaning: a "monsoon"
+/// with no rain reads as a contradiction. The regime parenthetical is dropped
+/// below this floor. 50 mm/yr is the conventional hyperarid boundary.
+/// type-audit: bare-ok(threshold: mm/yr)
+const REGIME_FLOOR_MM: f64 = 50.0;
+
+/// Render one sample site's precipitation readout: annual mm, phase
+/// (rain/snow), and — above the arid floor, where it means something — the
+/// seasonal regime word (see [`rains_lines`] and [`REGIME_FLOOR_MM`]).
+/// type-audit: bare-ok(prose: site), bare-ok(prose: return)
+fn rains_line(site: &str, climate: &GeneratedClimate, cell: hornvale_kernel::CellId) -> String {
+    let mm = climate.precip_at(cell).get();
+    let phase = precip_phase_word(climate.snow_fraction_at(cell));
+    // "about 0 mm" reads oddly for a cell that rounds to nothing; name the
+    // bound instead.
+    let amount = if mm < 1.0 {
+        "under 1 mm".to_string()
+    } else {
+        format!("about {mm:.0} mm")
+    };
+    if mm < REGIME_FLOOR_MM {
+        format!("{site} receives {amount} of {phase} a year.")
+    } else {
+        let regime = regime_word(climate.regime_at(cell));
+        format!("{site} receives {amount} of {phase} a year ({regime}).")
+    }
 }
 
 /// The deep-time headline lines for the almanac; empty when the world has no
@@ -4613,6 +4713,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         water_lines: water_lines_from(&terrain),
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
+        rains_lines: rains_lines_from(&terrain, &climate),
         deep_time_lines,
         peoples,
         pantheons: {
@@ -5154,16 +5255,22 @@ mod tests {
         // highest-`mass_total` settlement) re-pinned 17 -> 14. The v4 tuning
         // season moved it again within the epoch: iteration 2's clip-taper
         // widening (`CLIP_TAPER` 0.08 -> 0.16, shelf-fraction recovery)
-        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. The
-        // Confluence (T2) then re-pointed `carrying_inputs_of`'s freshwater
-        // term at `river_proximity` (deliberately, so settlements condense
-        // near rivers -- see `windows/worldgen/tests/confluence.rs`), which
-        // redistributes carrying capacity and hence catchments; re-pinning
-        // 8 -> 4 here. Re-pin here (with review) whenever a deliberate
-        // terrain/carrying-capacity change moves world identity.
+        // reshaped the seed-42 coast once more, re-pinning 14 -> 8. Two
+        // parallel campaigns then each moved world identity off that 8, and
+        // this merge carries BOTH: The Confluence (T2) re-pointed
+        // `carrying_inputs_of`'s freshwater term at `river_proximity` (so
+        // settlements condense near rivers -- see
+        // `windows/worldgen/tests/confluence.rs`), redistributing carrying
+        // capacity (8 -> 4 on its branch); The Rains (precipitation epoch)
+        // rewrote the moisture field (advected budget trace), shifting the
+        // biomes and so the settlement layout (8 -> 9 on its branch). On the
+        // merged tree the two combine and the largest attractor re-derives to
+        // 6 (measured on the merged tree — not either branch's value alone).
+        // Re-pin here (with review) whenever a deliberate
+        // terrain/carrying-capacity/moisture change moves world identity.
         assert_eq!(
-            village.population, 4,
-            "the world's largest attractor headcount is pinned at this seed (the-confluence T2)"
+            village.population, 6,
+            "the world's largest attractor headcount is pinned at this seed (the-confluence freshwater + the-rains moisture epoch, merged)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
@@ -6097,6 +6204,82 @@ mod tests {
         let world = constant(42);
         let ctx = almanac_context(&world).unwrap();
         assert_eq!(ctx.seas_lines, seas_lines(&world).unwrap());
+    }
+
+    // A spinning world names both sample sites with a real precipitation
+    // readout; unlike `diurnal_lines`/`seas_lines`, a locked world is NOT
+    // empty — precipitation, snow fraction, and regime are all defined
+    // regardless of rotation regime (The Rains).
+    #[test]
+    fn rains_lines_report_both_sample_sites_and_are_present_on_a_spinning_world() {
+        use hornvale_astronomy::RotationPin;
+        let spinning = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Normal),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let lines = rains_lines(&spinning).unwrap();
+        assert_eq!(
+            lines.len(),
+            2,
+            "expected one line per sample site: {lines:?}"
+        );
+        assert!(lines[0].contains("The driest interior"));
+        assert!(lines[1].contains("The open ocean"));
+        assert!(
+            lines[0].contains("mm of"),
+            "expected an mm readout: {}",
+            lines[0]
+        );
+        // The regime-floor guard (both arms exercised on seed 42): the driest
+        // interior is effectively rainless, so it carries no seasonal-regime
+        // parenthetical (a "monsoon" with no rain is a contradiction) and never
+        // reads "about 0 mm"; the open ocean is well above the floor and keeps
+        // its regime label.
+        assert!(
+            !lines[0].contains('('),
+            "a near-rainless cell must not claim a seasonal regime: {}",
+            lines[0]
+        );
+        assert!(
+            !lines[0].contains("about 0 mm"),
+            "a cell that rounds to zero should read 'under 1 mm', not 'about 0 mm': {}",
+            lines[0]
+        );
+        assert!(
+            lines[1].contains('('),
+            "a wet cell above the arid floor still names its regime: {}",
+            lines[1]
+        );
+
+        let locked = build_world(
+            Seed(42),
+            &SkyPins {
+                rotation: Some(RotationPin::Locked),
+                ..SkyPins::default()
+            },
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        assert!(
+            !rains_lines(&locked).unwrap().is_empty(),
+            "precipitation is defined regardless of rotation regime"
+        );
+    }
+
+    #[test]
+    fn rains_lines_feed_the_almanac_context() {
+        let world = constant(42);
+        let ctx = almanac_context(&world).unwrap();
+        assert_eq!(ctx.rains_lines, rains_lines(&world).unwrap());
     }
 
     #[test]

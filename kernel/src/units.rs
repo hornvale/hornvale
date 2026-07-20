@@ -290,6 +290,40 @@ impl Years {
     }
 }
 
+/// Mean annual precipitation, millimetres per year, as an absolute
+/// non-negative quantity. 0 mm/yr is valid (a desert); only non-negative,
+/// finite values are physically meaningful.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Precipitation(f64);
+
+impl Precipitation {
+    /// Validating constructor: rejects non-finite and negative values.
+    /// type-audit: bare-ok(constructor-edge: mm_per_year)
+    pub fn new(mm_per_year: f64) -> Result<Self, UnitError> {
+        if !mm_per_year.is_finite() {
+            return Err(UnitError {
+                unit: "precipitation",
+                value: mm_per_year,
+                reason: "must be finite",
+            });
+        }
+        if mm_per_year < 0.0 {
+            return Err(UnitError {
+                unit: "precipitation",
+                value: mm_per_year,
+                reason: "must not be negative",
+            });
+        }
+        Ok(Self(mm_per_year))
+    }
+
+    /// The raw value in millimetres per year.
+    /// type-audit: bare-ok(constructor-edge: return)
+    pub fn get(self) -> f64 {
+        self.0
+    }
+}
+
 #[cfg(test)]
 mod temperature_tests {
     use super::*;
@@ -386,5 +420,18 @@ mod tests {
         // 1 year == 365.25 standard days
         assert!((Years::new(1.0).unwrap().days() - 365.25).abs() < 1e-9);
         assert!((Years::from_days(365.25).unwrap().get() - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn precip_accepts_zero_and_positive() {
+        assert_eq!(Precipitation::new(1200.0).unwrap().get(), 1200.0);
+        assert_eq!(Precipitation::new(0.0).unwrap().get(), 0.0);
+    }
+
+    #[test]
+    fn precip_rejects_negative_and_non_finite() {
+        assert!(Precipitation::new(-1.0).is_err());
+        assert!(Precipitation::new(f64::NAN).is_err());
+        assert!(Precipitation::new(f64::INFINITY).is_err());
     }
 }

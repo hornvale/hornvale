@@ -5,15 +5,22 @@
 //! serialized.
 
 use crate::biome::{self, Biome, SeafloorFeature};
-use crate::circulation::{RotationRegime, band_count_for, prevailing_wind};
+use crate::circulation::{
+    RotationRegime, band_count_for, band_index, is_rising_band, prevailing_wind,
+};
 use crate::currents::ocean_current_field;
 use crate::habitability;
-use crate::moisture::moisture_field;
-use crate::temperature::{diurnal_amplitude_field, mean_temperature, temperature_at};
+use crate::moisture::{moisture_field, upwind_neighbor};
+use crate::precipitation::{
+    PrecipRegime, cloud_fraction, precip_mm_yr, precip_regime, snow_fraction,
+};
+use crate::temperature::{
+    continentality, diurnal_amplitude_field, mean_temperature, temperature_at,
+};
 use crate::{AMBIENT, COLD, HEAT, RAIN, SNOW};
 use hornvale_kernel::{
     CellId, CellMap, Geosphere, NearestCellIndex, ObserverContext, PhenomenaSource, Phenomenon,
-    ReferenceElevation, Temperature, Venue,
+    Precipitation, ReferenceElevation, Temperature, Venue,
 };
 
 /// The inputs the composition root supplies to build a climate (all bare
@@ -56,6 +63,10 @@ pub struct GeneratedClimate {
     mean_temp: CellMap<Temperature>,
     moisture: CellMap<f64>,
     diurnal_amp: CellMap<f64>,
+    precip: CellMap<Precipitation>,
+    snow_fraction: CellMap<f64>,
+    precip_regime: CellMap<PrecipRegime>,
+    cloud_fraction: CellMap<f64>,
     current: CellMap<[f64; 3]>,
     biome: CellMap<Biome>,
     habitability: CellMap<bool>,
@@ -104,6 +115,26 @@ fn is_upwelling(
     wind[0] * toward[0] + wind[1] * toward[1] + wind[2] * toward[2] < 0.0
 }
 
+/// The local along-wind terrain rise at `cell`, meters: the elevation gained
+/// over the single immediate upwind hop (clamped to non-negative — downhill
+/// contributes no orographic uplift). The same signal
+/// `moisture::carried_water` sinks moisture on, recomputed here as a
+/// diagnostic (feeds only `cloud_fraction_at`, nothing else). `None` bands
+/// (tidally locked: no meaningful prevailing-wind direction) yield `0.0`.
+fn local_uplift_m(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    cell: CellId,
+    bands: Option<u32>,
+) -> f64 {
+    let Some(bands) = bands else { return 0.0 };
+    let wind = prevailing_wind(geo, cell, bands);
+    let Some(upwind) = upwind_neighbor(geo, cell, wind) else {
+        return 0.0;
+    };
+    (*elevation.get(cell) - *elevation.get(upwind)).max(0.0)
+}
+
 impl GeneratedClimate {
     /// Derive the full climate from inputs.
     pub fn generate(inputs: &ClimateInputs) -> GeneratedClimate {
@@ -119,6 +150,24 @@ impl GeneratedClimate {
         let moisture = moisture_field(geo, inputs.elevation, inputs.sea_level, &inputs.regime);
         let diurnal_amp =
             diurnal_amplitude_field(geo, inputs.elevation, inputs.sea_level, &moisture);
+        let precip = CellMap::from_fn(geo, |cell| precip_mm_yr(*moisture.get(cell)));
+        let snow_frac = CellMap::from_fn(geo, |cell| snow_fraction(mean_temp.get(cell).get()));
+        let precip_regime_field = CellMap::from_fn(geo, |cell| {
+            let band = band_count
+                .map(|bands| band_index(geo.coord(cell).latitude, bands))
+                .unwrap_or(0);
+            let cont = continentality(geo, inputs.elevation, inputs.sea_level, cell);
+            let hemisphere_sign = geo.coord(cell).latitude.signum();
+            precip_regime(band, cont, hemisphere_sign)
+        });
+        let cloud_frac = CellMap::from_fn(geo, |cell| {
+            let band = band_count
+                .map(|bands| band_index(geo.coord(cell).latitude, bands))
+                .unwrap_or(0);
+            let rising = is_rising_band(band);
+            let uplift = local_uplift_m(geo, inputs.elevation, cell, band_count);
+            cloud_fraction(*moisture.get(cell), uplift, rising)
+        });
         let sea_level = inputs.sea_level;
         let is_ocean = |cell: CellId| *inputs.elevation.get(cell) < sea_level;
         let current = ocean_current_field(geo, &is_ocean, band_count);
@@ -151,6 +200,10 @@ impl GeneratedClimate {
             mean_temp,
             moisture,
             diurnal_amp,
+            precip,
+            snow_fraction: snow_frac,
+            precip_regime: precip_regime_field,
+            cloud_fraction: cloud_frac,
             current,
             biome,
             habitability,
@@ -269,6 +322,31 @@ impl GeneratedClimate {
     /// type-audit: bare-ok(ratio)
     pub fn moisture_at(&self, cell: CellId) -> f64 {
         *self.moisture.get(cell)
+    }
+    /// Annual precipitation at a cell, mm/yr — the moisture field mapped
+    /// into an Earth-ranged total (see [`crate::precipitation::precip_mm_yr`]).
+    pub fn precip_at(&self, cell: CellId) -> Precipitation {
+        *self.precip.get(cell)
+    }
+    /// The fraction of precipitation falling as snow at a cell, `[0, 1]`,
+    /// derived from annual-mean temperature (see
+    /// [`crate::precipitation::snow_fraction`]).
+    /// type-audit: bare-ok(ratio)
+    pub fn snow_fraction_at(&self, cell: CellId) -> f64 {
+        *self.snow_fraction.get(cell)
+    }
+    /// The seasonal precipitation regime at a cell (see
+    /// [`crate::precipitation::precip_regime`]).
+    pub fn regime_at(&self, cell: CellId) -> PrecipRegime {
+        *self.precip_regime.get(cell)
+    }
+    /// Diagnostic cloud fraction at a cell, `[0, 1]` (see
+    /// [`crate::precipitation::cloud_fraction`]). **Feeds nothing** — no
+    /// insolation or temperature term reads this back; it is a readable
+    /// field only.
+    /// type-audit: bare-ok(ratio)
+    pub fn cloud_fraction_at(&self, cell: CellId) -> f64 {
+        *self.cloud_fraction.get(cell)
     }
     /// The precomputed diurnal half-range amplitude at a cell, °C: the
     /// coefficient `temperature_at` scales its diurnal waveform by. Zero has

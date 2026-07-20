@@ -135,21 +135,8 @@ The day returns to keep the balance.
 #### As the Ngkoshngta tell it
 
 Waobwoe is the earth with one moon.
-The moon crosses because Nggo strides the sky, slowly.
+The moon crosses because Nggo drives the sky, slowly.
 The day returns, as all things return.
-The Maetmea are goblins — rivals.
-The Waedwea are hobgoblins — rivals.
-The Ngkoshngta are kobolds — ourselves.
-
-*In truth, Waobwoe is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
-
-##### As the priesthood of the Ngkoshngta teach it
-
-Waobwoe Ngdasngko. ("Waobwoe is the earth — as it is taught.")
-
-Waobwoe is the earth with one moon.
-The moon crosses because Nggo walks the sky, slowly.
-The day returns because Ngdosngka walks the sky, briskly.
 The Maetmea are goblins — rivals.
 The Waedwea are hobgoblins — rivals.
 The Ngkoshngta are kobolds — ourselves.

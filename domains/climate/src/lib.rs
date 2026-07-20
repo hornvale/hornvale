@@ -7,6 +7,7 @@ pub mod currents;
 pub mod diurnal;
 pub mod habitability;
 pub mod moisture;
+pub mod precipitation;
 pub mod provider;
 pub mod render;
 pub mod substellar;
@@ -17,6 +18,7 @@ pub use circulation::{RotationRegime, band_count_for, prevailing_wind};
 pub use currents::{ocean_current, ocean_current_field};
 pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use habitability::{habitable_fraction, is_habitable};
+pub use precipitation::{PrecipRegime, precip_mm_yr, precip_regime, snow_fraction};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
 pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,

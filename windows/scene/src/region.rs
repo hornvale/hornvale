@@ -299,7 +299,12 @@ pub fn tiles_region_scene(
             climate.mean_temperature_at(c).get()
         }));
         t_swing_c.push(interp(cg, &c_index, *s, |c| climate.seasonal_swing_at(c)));
-        moisture.push(interp(cg, &c_index, *s, |c| climate.moisture_at(c)));
+        // Barycentric interpolation is a convex combination in theory, but
+        // when several sampled cells sit exactly at the moisture domain's
+        // boundary (`1.0` — common now that ocean cells clamp there),
+        // floating-point summation can overshoot by an ULP or two; clamp
+        // back into the declared `[0, 1]` domain.
+        moisture.push(interp(cg, &c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
     }
     Ok(RegionScene {
         schema: "scene/tiles-region/v1".to_string(),
