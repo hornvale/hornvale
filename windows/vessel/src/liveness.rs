@@ -1011,6 +1011,18 @@ fn agent_at_fact(entity: EntityId, target: &RoomAddr, day: f64, provenance: &str
     }
 }
 
+/// Plant an agent at `room` on `day` — the very `agent-at` fact the drive tick
+/// commits, exposed so a scenario harness can POSITION an agent before running
+/// the sim (e.g. stranding a creature far from a water source it believes in,
+/// to exercise genuine distress the drive model rarely produces on its own).
+/// Committing this into a seed ledger and reading `affect_of`/`run_simulation`
+/// over it is the synthetic complement to the real-world health sweep — the
+/// same seam, a hand-built scenario instead of a derived population. Typed
+/// throughout (no primitive at the boundary), so it needs no type-audit tag.
+pub fn place_agent(entity: EntityId, room: &RoomAddr, day: WorldTime) -> Fact {
+    agent_at_fact(entity, room, day.day, "harness-placement")
+}
+
 /// A committed `drank` fact: `entity` satisfied its sustenance goal on `day`.
 fn drank_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
     Fact {
