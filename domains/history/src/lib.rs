@@ -11,6 +11,7 @@
 //! bake must read terrain, paleoclimate, and demography together.
 #![warn(missing_docs)]
 
+pub mod flesh;
 pub mod record;
 pub mod streams;
 
@@ -98,19 +99,30 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     Ok(())
 }
 
-/// Every seed-derivation label this crate documents. This crate draws no
-/// stream of its own yet (Task 1 is data-model-only); the root is reserved
-/// for the local flesh derivations (Task 2) and the deep-history bake
-/// (Task 3), which runs at the composition root (`windows/worldgen`) but
-/// documents its draws under this same `history/*` namespace.
+/// Every seed-derivation label this crate documents. The root is reserved
+/// for the deep-history bake (Task 3), which runs at the composition root
+/// (`windows/worldgen`) but documents its draws under this same
+/// `history/*` namespace; the local flesh derivations (Task 2) draw against
+/// the sub-labels below, relative to whatever occupation-scoped seed the
+/// caller hands them.
 /// type-audit: bare-ok(identifier-text)
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![(
-        streams::ROOT,
-        "root stream for history: the local flesh derivations (Task 2) and \
-         the deep-history bake (Task 3, run at the composition root). No \
-         draw is made against it yet.",
-    )]
+    vec![
+        (
+            streams::ROOT,
+            "root stream for history: reserved for the deep-history bake \
+             (Task 3, run at the composition root). No draw is made \
+             against it directly.",
+        ),
+        (
+            streams::RESIDUE,
+            "flesh::residue_of's deterministic flavor draws (Task 2).",
+        ),
+        (
+            streams::STRUCTURES,
+            "flesh::structures_of's dwelling-count variance draws (Task 2).",
+        ),
+    ]
 }
 
 /// History as a registrable unit for the composition-root roster (mirrors
