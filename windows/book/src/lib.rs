@@ -18,7 +18,6 @@ use hornvale_language::clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, Subject, cardinal,
     parse_common, quantity, realize_common,
 };
-#[cfg(test)]
 use hornvale_language::numeracy::{NumeracyRung, render_quantity_at_rung};
 use hornvale_language::schemas::Manner;
 use hornvale_language::{
@@ -1758,11 +1757,12 @@ fn fact_for(fragment: &str) -> Option<(String, Value)> {
 /// `min(Decimals, listener_rung) == listener_rung` special case (spec
 /// §3.3) — full bidirectional rung variation is a follow-up. Returns
 /// `None` for a fragment [`fact_for`] itself would not recognize, or
-/// whose recovered value is not a number (e.g. a star class). `cfg(test)`-
-/// gated: this task's own tests are its only consumer (no later task
-/// depends on it), so an unconditional definition is dead code outside
-/// the test target.
-#[cfg(test)]
+/// whose recovered value is not a number (e.g. a star class). Reserved
+/// integration seam: LANG-44's demonstrated `windows/book` entry point,
+/// exercised by this crate's tests; the live `write`/`consult` wiring
+/// that will call it in production is the deferred follow-up (spec §6).
+/// Present in all builds so that seam is real, not test-only.
+#[allow(dead_code)]
 fn comprehend_quantity(fragment: &str, listener_rung: NumeracyRung) -> Option<String> {
     let (_, value) = fact_for(fragment)?;
     match value {

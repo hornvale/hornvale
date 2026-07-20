@@ -74,7 +74,9 @@ pub fn numeracy_rung(seed: &Seed, species: &str) -> NumeracyRung {
 /// the qualitative "more than one" (a fraction like `1.5` degrades to
 /// this, matching the spec's own worked example) rather than rounding to
 /// a false-precision exact word; `[3, 5)` renders "few"; `5` and above
-/// renders "many". `FullCounting` rounds to the nearest integer and
+/// renders "many" (`x < 1.0` is a spec-sketch extension: a sub-unit
+/// quantity renders "less than one" rather than being left unhandled).
+/// `FullCounting` rounds to the nearest integer and
 /// renders via [`crate::clause::cardinal`]. `Decimals` delegates to
 /// [`crate::clause::quantity`], unchanged from today's only decimal path.
 /// type-audit: bare-ok(prose)
@@ -141,5 +143,18 @@ mod tests {
         assert_ne!(subitizing, full_counting);
         assert_ne!(full_counting, decimals);
         assert_ne!(subitizing, decimals);
+
+        // The non-obvious pair at an integer: FullCounting's exact "two"
+        // vs Decimals' "about 2.0" must still genuinely differ, even
+        // though Subitizing and FullCounting correctly agree here.
+        let x2 = 2.0;
+        let subitizing2 = render_quantity_at_rung(x2, NumeracyRung::Subitizing);
+        let full_counting2 = render_quantity_at_rung(x2, NumeracyRung::FullCounting);
+        let decimals2 = render_quantity_at_rung(x2, NumeracyRung::Decimals);
+        assert_eq!(subitizing2, "two");
+        assert_eq!(full_counting2, "two");
+        assert_eq!(decimals2, "about 2.0");
+        assert_ne!(subitizing2, decimals2);
+        assert_ne!(full_counting2, decimals2);
     }
 }
