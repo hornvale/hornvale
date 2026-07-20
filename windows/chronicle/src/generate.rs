@@ -8,9 +8,12 @@ use std::collections::BTreeMap;
 pub(crate) fn seed_world(config: &SoundingConfig) -> World {
     let z = config.communities as usize;
 
-    // Species table.
+    // Species table. Always at least one entry: a `species == 0` config
+    // still needs a synthetic species so index 0 (used as the fallback in
+    // `seed_world` and `deliver`) is never out of bounds.
     let mut s = config.seed.derive("chronicle/species").stream();
-    let species: Vec<SpeciesStub> = (0..config.species)
+    let species_count = config.species.max(1);
+    let species: Vec<SpeciesStub> = (0..species_count)
         .map(|_| SpeciesStub {
             carrying_need: 0.5 + s.next_f64(), // 0.5..1.5
             frequency_weight: s.next_f64(),    // 0..1

@@ -11,15 +11,9 @@ pub fn run(config: &SoundingConfig) -> World {
     // Pending displacements: (arrival_epoch, target_node, incoming_population).
     let mut pending: BTreeMap<u32, Vec<(NodeId, f64)>> = BTreeMap::new();
     let mut ev = config.seed.derive("chronicle/events").stream();
+    let mut deliver_ev = config.seed.derive("chronicle/deliver").stream();
 
     for epoch in 0..config.epochs {
-        // Deliver displacements that arrive this epoch (graph-coupled, lagged).
-        if let Some(arrivals) = pending.remove(&epoch) {
-            for (node, pop) in arrivals {
-                deliver(&mut world, config, node, pop, epoch);
-            }
-        }
-
         let n = world.communities.len();
         for i in 0..n {
             if !world.communities[i].alive {
@@ -48,13 +42,16 @@ pub fn run(config: &SoundingConfig) -> World {
                     pick_neighbour(&world.graph, world.communities[i].node, &mut ev)
                 {
                     let taken = world.communities[i].population * 0.25;
+                    world.communities[i].population -= taken;
                     world.communities[i].biography.push(BioEntry {
                         epoch,
                         event: EventKind::Raided,
                         actor: handle,
                     });
-                    let arrival = epoch.saturating_add(lag).min(config.epochs);
-                    pending.entry(arrival).or_default().push((target, taken));
+                    let arrival = epoch.saturating_add(lag);
+                    if arrival < config.epochs {
+                        pending.entry(arrival).or_default().push((target, taken));
+                    }
                 } else {
                     world.communities[i].alive = false;
                     world.communities[i].biography.push(BioEntry {
@@ -69,14 +66,28 @@ pub fn run(config: &SoundingConfig) -> World {
                 }
             } // 0.6..=1.0: stable, no event this epoch.
         }
+
+        // Deliver displacements that arrive this epoch (graph-coupled,
+        // possibly lagged) after the community loop, so a same-epoch
+        // (lag == 0) raid enqueued above is delivered before the epoch ends.
+        if let Some(arrivals) = pending.remove(&epoch) {
+            for (node, pop) in arrivals {
+                deliver(&mut world, &mut deliver_ev, node, pop, epoch);
+            }
+        }
     }
     world
 }
 
 /// A displaced population arriving at a node: it flees into the community
 /// there (or refounds if none stands), appending to the biography.
-fn deliver(world: &mut World, config: &SoundingConfig, node: NodeId, pop: f64, epoch: u32) {
-    let mut ev = config.seed.derive("chronicle/deliver").stream();
+fn deliver(
+    world: &mut World,
+    ev: &mut hornvale_kernel::Stream,
+    node: NodeId,
+    pop: f64,
+    epoch: u32,
+) {
     let handle = RoleHandle(ev.next_u64() ^ ((node.0 as u64) << 32) ^ epoch as u64);
     if let Some(i) = world
         .communities

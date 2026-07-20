@@ -49,4 +49,14 @@ fn the_loop_actually_produces_events() {
         raids > 0,
         "the coupling never fired: no raids in {total} events"
     );
+    let fled = world
+        .communities
+        .iter()
+        .flat_map(|c| &c.biography)
+        .filter(|e| matches!(e.event, hornvale_chronicle::EventKind::Fled))
+        .count();
+    assert!(
+        fled > 0,
+        "raids never delivered: no Fled events in {total} events (coupling is inert)"
+    );
 }
