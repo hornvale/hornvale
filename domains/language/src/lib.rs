@@ -41,6 +41,9 @@ pub mod naming;
 /// color, body, and kin packs), Berlin & Kay acquisition ladders, the
 /// closed compound-recipe table, and `register_concepts`.
 pub mod packs;
+/// LANG-43: paradigm slots (Number, Tense) whose cascade-native form can
+/// diverge from a mechanically-regular one.
+pub mod paradigm;
 /// The phoneme model: segments as articulatory feature-bundles.
 pub mod phoneme;
 /// The phonology engine: per-species inventory and phonotactics drawn
@@ -437,6 +440,22 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
         (
             "language/<species>/grammar/class-position",
             "C7: which side of the noun the class marker binds when noun-class depth is Particle/Affix (prefix 40 / suffix 60)",
+        ),
+        (
+            "language/<species>/grammar/depth/number",
+            "LANG-43: the species' drawn Number grammaticalization depth (None/Particle/Affix), independent of evidentiality/noun-class",
+        ),
+        (
+            "language/<species>/grammar/depth/tense",
+            "LANG-43: the species' drawn Tense grammaticalization depth (None/Particle/Affix)",
+        ),
+        (
+            "language/<species>/grammar/number-position",
+            "LANG-43: which side of the marked word the Number affix binds",
+        ),
+        (
+            "language/<species>/grammar/tense-position",
+            "LANG-43: which side of the marked word the Tense affix binds",
         ),
         (
             "language/family/<family>/morph/evidential/<value>",
