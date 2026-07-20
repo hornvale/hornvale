@@ -5,6 +5,7 @@ use hornvale_kernel::Seed;
 
 /// The entire input surface of one Sounding run. Everything else is derived
 /// deterministically from `(seed, this)`.
+/// type-audit: bare-ok(count: communities), bare-ok(count: species), bare-ok(count: epochs), bare-ok(ratio: avg_degree), bare-ok(ratio: long_range_fraction)
 #[derive(Clone, Debug)]
 pub struct SoundingConfig {
     /// Determinism source.
@@ -22,16 +23,19 @@ pub struct SoundingConfig {
 }
 
 /// A node in the connection graph (a place a community occupies).
+/// type-audit: bare-ok(index: 0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeId(pub u32);
 
 /// An index into the synthetic species table.
+/// type-audit: bare-ok(index: 0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpeciesId(pub u32);
 
 /// A lazily-expandable handle to the individual a biography event implies
 /// (e.g. "the chieftain who led the flight"). Never expanded in the spike;
 /// it stands in for the real engine's role-handle so its cost is present.
+/// type-audit: bare-ok(identifier-text: 0)
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RoleHandle(pub u64);
 

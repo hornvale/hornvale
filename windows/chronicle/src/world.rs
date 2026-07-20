@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 
 /// A synthetic species: placeholder trait weights, the two the dynamics read.
+/// type-audit: bare-ok(ratio: carrying_need), bare-ok(ratio: frequency_weight)
 #[derive(Clone, Copy, Debug)]
 pub struct SpeciesStub {
     /// Per-head resource need (scales the pressure threshold).
@@ -14,6 +15,7 @@ pub struct SpeciesStub {
 }
 
 /// A connection-graph edge out of a node.
+/// type-audit: bare-ok(count: lag)
 #[derive(Clone, Copy, Debug)]
 pub struct Edge {
     /// The destination node.
@@ -25,6 +27,7 @@ pub struct Edge {
 }
 
 /// One dated biography entry.
+/// type-audit: bare-ok(count: epoch)
 #[derive(Clone, Copy, Debug)]
 pub struct BioEntry {
     /// The epoch the event occurred.
@@ -36,6 +39,7 @@ pub struct BioEntry {
 }
 
 /// A community: a persistent entity with a dated biography.
+/// type-audit: bare-ok(count: population), bare-ok(flag: alive)
 #[derive(Clone, Debug)]
 pub struct Community {
     /// Which synthetic species.
@@ -51,6 +55,7 @@ pub struct Community {
 }
 
 /// The trace a collapsed community leaves behind.
+/// type-audit: bare-ok(count: epoch)
 #[derive(Clone, Copy, Debug)]
 pub struct Ruin {
     /// The node where it died.
@@ -60,6 +65,7 @@ pub struct Ruin {
 }
 
 /// A fully-derived synthetic world (past baked, present at the final epoch).
+/// type-audit: bare-ok(count: capacity)
 #[derive(Clone, Debug)]
 pub struct World {
     /// The synthetic species table (Y entries).
@@ -78,6 +84,7 @@ pub struct World {
 /// actually fired. This is the transparency-and-floor surface: a benchmark
 /// that measures a phenomenon must prove the phenomenon happened at a
 /// meaningful sample size, or its timings are measuring noise.
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: communities_total), bare-ok(count: communities_alive)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Census {
     /// `Grew` events.
@@ -98,6 +105,7 @@ pub struct Census {
 
 impl Census {
     /// Total events of all kinds.
+    /// type-audit: bare-ok(count: return)
     pub fn events(&self) -> u64 {
         self.grew + self.founded + self.raided + self.fled + self.collapsed
     }
@@ -128,6 +136,7 @@ pub fn census(world: &World) -> Census {
 
 /// A stable, byte-deterministic text rendering of every biography — the
 /// determinism-test surface (timings are NOT part of this).
+/// type-audit: bare-ok(prose: return)
 pub fn biography_digest(world: &World) -> String {
     let mut out = String::new();
     for (i, c) in world.communities.iter().enumerate() {

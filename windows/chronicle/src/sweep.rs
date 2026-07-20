@@ -7,6 +7,7 @@ use hornvale_kernel::{Seed, math::ln, quantize};
 use std::fmt::Write as _;
 
 /// One measured point of the sweep.
+/// type-audit: bare-ok(identifier-text: axis), bare-ok(count: value), bare-ok(diagnostic-value: bake_nanos), bare-ok(ratio: read_ns_per_op), bare-ok(diagnostic-value: replay_nanos), bare-ok(count: peak_bytes), bare-ok(count: events)
 #[derive(Clone, Copy, Debug)]
 pub struct SweepRow {
     /// Which axis was varied ("communities" | "species" | "epochs" | "avg_degree" | "long_range").
@@ -26,6 +27,7 @@ pub struct SweepRow {
 }
 
 /// Vary one axis, holding the base config fixed, and measure each point.
+/// type-audit: bare-ok(identifier-text: axis), bare-ok(count: values)
 pub fn sweep_axis(axis: &'static str, base: &SoundingConfig, values: &[u64]) -> Vec<SweepRow> {
     values
         .iter()
@@ -55,6 +57,7 @@ pub fn sweep_axis(axis: &'static str, base: &SoundingConfig, values: &[u64]) -> 
 
 /// One point of the scan-vs-index comparison: the same config baked under
 /// both delivery modes (byte-identical worlds; only the times differ).
+/// type-audit: bare-ok(count: value), bare-ok(diagnostic-value: scan_nanos), bare-ok(diagnostic-value: index_nanos)
 #[derive(Clone, Copy, Debug)]
 pub struct ScanIndexRow {
     /// The community count at this point.
@@ -68,6 +71,7 @@ pub struct ScanIndexRow {
 /// Bake each community count under BOTH delivery modes — the pair whose
 /// exponents exhibit the O(Z²)-scan / O(Z·log Z)-index crossover. Keep the
 /// `values` small: the scan is quadratic and will dominate wall-time.
+/// type-audit: bare-ok(count: values)
 pub fn sweep_scan_vs_index(base: &SoundingConfig, values: &[u64]) -> Vec<ScanIndexRow> {
     values
         .iter()
@@ -86,6 +90,7 @@ pub fn sweep_scan_vs_index(base: &SoundingConfig, values: &[u64]) -> Vec<ScanInd
 }
 
 /// Least-squares slope of log(y) vs log(x) — the scaling exponent.
+/// type-audit: bare-ok(ratio: rows), bare-ok(ratio: return)
 pub fn fit_exponent(rows: &[(f64, f64)]) -> f64 {
     let pts: Vec<(f64, f64)> = rows
         .iter()
@@ -109,6 +114,7 @@ pub fn fit_exponent(rows: &[(f64, f64)]) -> f64 {
 }
 
 /// Render the report: a markdown summary and the raw CSV.
+/// type-audit: bare-ok(prose: sample), bare-ok(prose: return)
 pub fn render_report(
     rows: &[SweepRow],
     scan_index: &[ScanIndexRow],

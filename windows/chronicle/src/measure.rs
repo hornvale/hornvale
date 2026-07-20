@@ -8,6 +8,7 @@ use crate::world::{BioEntry, Community, Edge, Ruin, World};
 use hornvale_kernel::Seed;
 
 /// Metrics for the genesis-bake direction.
+/// type-audit: bare-ok(diagnostic-value: nanos), bare-ok(count: peak_bytes), bare-ok(count: total_bio_bytes), bare-ok(count: communities), bare-ok(count: events)
 #[derive(Clone, Copy, Debug)]
 pub struct BakeMetrics {
     /// Wall-time to derive the whole history, in nanoseconds.
@@ -66,6 +67,7 @@ pub fn bake_with(config: &SoundingConfig, mode: DeliveryMode) -> (World, BakeMet
 
 /// Hot-loop average nanoseconds per read op (sample a biography + expand a
 /// role-handle into a synthetic persona hash). Returns ns/op.
+/// type-audit: bare-ok(count: ops), bare-ok(ratio: return)
 pub fn read_nanos_per_op(world: &World, ops: u32, seed: Seed) -> f64 {
     if world.communities.is_empty() || ops == 0 {
         return 0.0;
@@ -99,6 +101,7 @@ fn expand_handle(h: RoleHandle) -> u64 {
 
 /// Time deriving one graph-neighbourhood forward `delta_epochs` under the
 /// intervention (a killed community). The living-present cost.
+/// type-audit: bare-ok(count: delta_epochs), bare-ok(diagnostic-value: return)
 pub fn replay_nanos(
     world: &World,
     region: NodeId,
@@ -118,6 +121,7 @@ pub fn replay_nanos(
 /// appended. `intervene` kills one neighbour at the start (the player delta);
 /// because the local raid couples the neighbourhood, that kill *propagates* —
 /// the event count with and without the intervention genuinely differ. Pure.
+/// type-audit: bare-ok(count: delta_epochs), bare-ok(flag: intervene), bare-ok(count: return)
 pub fn replay_event_count(
     world: &World,
     region: NodeId,
