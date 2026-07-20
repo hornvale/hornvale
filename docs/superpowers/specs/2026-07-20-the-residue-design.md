@@ -1,7 +1,7 @@
 # The Residue — Design
 
 **Date:** 2026-07-20
-**Status:** Draft (G3 review pending).
+**Status:** **Approved at G3 (2026-07-20)**.
 **Campaign:** LANG-43, "irregularity as cascade residue" — a new mechanism
 in `domains/language`. Complements LANG-40 (fully shipped by The Deep
 Grammar: the per-species `MorphDepth` grammaticalization-depth vector,
