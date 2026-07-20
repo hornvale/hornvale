@@ -37,6 +37,7 @@ map of the whole documentation set is [`docs/README.md`](https://github.com/horn
   - [The channel-capacity frontier — enriching a constrained phonology](#the-channel-capacity-frontier--enriching-a-constrained-phonology)
   - [The species-psychology substrate — the layer beneath the cluster](#the-species-psychology-substrate--the-layer-beneath-the-cluster)
   - [Ideonomic cognition — novel thought as seeded combinatorics](#ideonomic-cognition--novel-thought-as-seeded-combinatorics)
+  - [Proto-mathematics — relational reasoning over already-known quantities](#proto-mathematics--relational-reasoning-over-already-known-quantities)
   - [Social structure as orthogonal axes — cashing the substrate](#social-structure-as-orthogonal-axes--cashing-the-substrate)
   - [The biological substrate — body, reproduction, and deep time](#the-biological-substrate--body-reproduction-and-deep-time)
   - [The biosphere — the living substrate](#the-biosphere--the-living-substrate)
@@ -948,6 +949,72 @@ substrate, making The Words a prerequisite rather than a sibling. Not a
 near-term campaign; captured because it names the mechanism the culture
 stack will eventually need when "where do new ideas come from" stops being
 deferrable.
+
+---
+
+## Proto-mathematics — relational reasoning over already-known quantities
+
+*(The narrow idea is high confidence — pure arithmetic over facts already in
+the ledger; the wide ambition it opens onto is genuinely speculative and is
+named, not designed.)*
+
+Few and Many gave a listener a cap on how much of a *single* heard quantity
+they retain. Nothing in the culture stack yet asks whether a people notices
+a *relationship* between two quantities it already holds — and the raw
+material for that is already sitting in the ledger, unused this way. A
+two-mooned world's astronomy domain commits a real `moon-period-std` fact
+per moon — if one moon orbits in 30 days and the other in 60, the ledger
+already contains a clean 2:1 ratio; nothing computes it, and nothing lets a
+culture reason from it. **Proportional reasoning here means exactly what it
+means in real archaeoastronomy** (the saros cycle, the Metonic cycle, the
+lunar-synodic/sidereal beat) — societies that never developed abstract
+mathematics still noticed and *used* small-integer relationships between
+periods they could watch. The claim is narrow and checkable: given two
+periods a culture has actually witnessed (never omniscient ledger access —
+the same witnessed-exposure discipline every other epistemic layer here
+already keeps), a derived (never drawn) function asks whether their ratio is
+close to a small rational, and — the one real design question — whether that
+noticed relationship is expressible at all depends on the SAME numeracy rung
+Few and Many just shipped: a culture whose numerals stop at the subitizing
+floor can *notice* two moons keep step but has no register to *say*
+"twice as fast," while a full-counting culture can name it outright.
+
+The natural landing spot for a noticed ratio is not a new mechanism but an
+existing one, reused: The Explanations' causal-schema library already binds
+a schema's slots from a culture's own generated furniture (a sun-deity walks
+slowly; the day is long because of it) — a noticed 2:1 period ratio is
+exactly the kind of fact that could motivate binding the **cycle/return** or
+**kinship/descent** schema across *two* related phenomena at once rather
+than one at a time ("two gods walk in step, the elder keeping pace at half
+the speed of the younger"), instead of generating two unrelated deities for
+two unrelated moons. That reuse is speculative — no code today lets a schema
+bind across a *relationship between two facts* rather than one fact — but it
+names a concrete, buildable seam rather than a new subsystem.
+
+**The wider ambition this opens onto is a different size of claim, and
+deserves to be named honestly as one.** If a culture can notice a ratio
+between two periods, the same shape of question applies past astronomy —
+does a culture ever notice a repeatable cause-and-effect regularity worth
+calling proto-medicine (this herb, that fever, again and again); does a
+line of reasoning ever get checked against a counter-example and revised,
+the seed of proto-philosophy; does a body of noticed regularities ever get
+taught forward as its own tradition rather than re-derived by each
+individual. None of this has a mechanism today, and unlike the ratio idea
+above, none of it inherits an existing ground-truth-checkable substrate to
+lean on — "did this culture discover something true" has no ledger fact to
+verify against the way "is this ratio close to 2:1" does. It is captured
+here as a *named direction*, not a design, in the same spirit ideonomic
+cognition above was captured before PSY-1 existed to make it buildable: the
+proportional-reasoning idea is the first, checkable rung of a much longer
+ladder, and the ladder is worth naming even though only its first rung is
+buildable today.
+
+*Sequencing:* the narrow idea is downstream of Few and Many (numeracy
+gates expressibility) and The Explanations (the schema-binding target);
+buildable as soon as a campaign wants it. The wide ambition has no
+prerequisite list yet worth writing down — it waits on the narrow idea
+actually shipping and teaching this project what "a culture reasons
+correctly about the world" can mean before it can be scoped further.
 
 ---
 
