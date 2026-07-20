@@ -199,6 +199,10 @@ fn the_frequency_prediction_shorter_roots_survive() {
     // Preregistered directional claim (spec §4 law 4): mean proto length of
     // post-leveling survivors is strictly less than the mean proto length
     // of the divergent roots leveling erased. Measured, not narrated.
+    //
+    // Regression guard on level_paradigm's own selection logic, not
+    // independent empirical support for the Zipf-length prior itself (which
+    // nothing in a synthetic unit test could provide).
     let ph = scenario_phonology();
     let cascade = Cascade {
         rules: vec![SoundRule {
@@ -265,6 +269,10 @@ fn every_candidate_form_carries_a_derivation() {
     );
     assert_eq!(&cell.regular_root.proto, root);
     assert_eq!(&cell.regular_affix.proto, &affix_proto);
+    assert!(
+        !cell.cascade_native.steps.is_empty(),
+        "a real Derivation records its applied-rule steps, not just proto/modern"
+    );
 }
 
 fn root_proto_plus_affix(root: &[Segment], affix: &[Segment]) -> Vec<Segment> {
