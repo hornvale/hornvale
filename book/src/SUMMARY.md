@@ -198,6 +198,7 @@
 - [The Idioms](./chronicle/the-idioms.md)
 - [The Residue](./chronicle/the-residue.md)
 - [Few and Many](./chronicle/few-and-many.md)
+- [The Kindling](./chronicle/the-kindling.md)
 - [The Sounding](./chronicle/the-sounding.md)
 
 # Appendix: The Frontier
