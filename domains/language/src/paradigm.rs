@@ -243,6 +243,7 @@ pub struct LeveledCell {
 /// `Vec` sort by `(length, id)` — never a `HashMap`, never a draw — so
 /// equal-length roots break ties by their own `RootId`'s `Ord` (the
 /// `BTreeMap` key's natural alphabetical order), never by insertion order.
+/// type-audit: bare-ok(identifier-text: cells), bare-ok(identifier-text: root_protos), bare-ok(ratio: leveling_fraction), bare-ok(identifier-text: return)
 pub fn level_paradigm(
     cells: &BTreeMap<String, ParadigmCell>,
     root_protos: &BTreeMap<String, Vec<Segment>>,
