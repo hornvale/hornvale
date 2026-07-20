@@ -1,7 +1,7 @@
 # The Vessel Stitch — Design
 
 **Date:** 2026-07-19
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** **Approved at G3 (2026-07-19, as amended — the verb is `write`)**.
 **Campaign:** the first post-program campaign — the game-layer stitch the
 self-writing-book program's C6 and C8 each filed as their named followup.
 **Theory:** no new registry row — this executes LANG-39's recorded
