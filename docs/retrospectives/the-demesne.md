@@ -70,8 +70,50 @@ the close learned that the code does not record.
   a live census, `HV_CENSUS=1`, or a remote regeneration. Genesis moved
   (settlement composition and placement are visibly different on seed 42)
   without ever touching the thousand-seed census fixtures, which is the
-  accepted, named trade for this campaign — the fixtures lag until
-  Nathan's own backgrounded regeneration step, not this close.
+  accepted, named trade for this campaign. Note: the *mechanism* of that
+  deferral changed under the close (see below) — decision 0063 retired the
+  AWS regeneration path this campaign had planned to hand the census off to.
+
+## What the close taught
+
+- **A genesis-changing campaign pays a downstream-test tax at close
+  proportional to how many parallel campaigns pinned seed-specific
+  composition — and every drift must be re-measured, not guessed.**
+  Absorbing main at close surfaced nine drifted tests across three crates
+  (`windows/book`, `windows/worldgen`, `windows/lab`), every one a genuine
+  consequence of the recalibrated per-axis supply moving which cultures
+  reach the organized rung and which subframe each holds: seed-1 hobgoblin
+  flipped organized→folk, seed-3 hobgoblin folk→organized, seed-3 kobold
+  dropped from placement, and one seed-2 verb lexeme re-derived
+  (`drives`→`stalks`). Each was re-pinned to the merged tree's *measured*
+  value (via throwaway probes dumping the live surface), never to a guess —
+  the same book artifact (`the-book.md`) the merge had already regenerated
+  was the cross-check. The tax is real and unavoidable for a genesis change;
+  the discipline that keeps it honest is measure-first re-pinning.
+- **One false positive hid among the true drifts — the collision wave is
+  not uniformly "re-pin to the new value."** The lab's uncanny-literalism
+  guard (`differing_subframes_do_not_share_one_verb`) reddened not because
+  a value drifted but because the recalibration first satisfied its
+  long-dormant precondition (a second subsistence subframe appeared, as
+  seed-5 hobgoblin began herding) while leaving the sample degenerate (that
+  Mounted culture is folk-only, so it emits no verb to compare). The honest
+  fix was to *harden the guard* (require ≥2 subframes to actually produce
+  verbs before alleging a collapse), not to re-pin a value — proof that
+  each collision needs its own diagnosis, not a blanket re-pin.
+- **Absorbing main at close can change the very policy the campaign planned
+  around.** This campaign was designed and executed to defer its census to
+  a backgrounded AWS regeneration (per the then-current decision 0046).
+  Between the last plan-stage absorption and the close, decision 0063
+  landed on main: AWS is abandoned, the census regenerates locally on a
+  single canonical Linux box (~7 min), and the "fixtures deliberately lag"
+  trade is retired. The plan's entire census posture was obsolete before it
+  could be exercised. Because this close ran on a non-canonical macOS
+  machine (0063 forbids it from committing census goldens — the two boxes
+  disagree on ~0.1% of discrete-count metrics), the final census/calibration
+  regeneration and the fast-forward were handed to a session on the
+  canonical box. Lesson: a campaign's save-format/regeneration assumptions
+  are only as current as its last absorption — re-read the decision log at
+  the close, not just at the spec.
 
 ## Follow-ups promoted from the working register
 
