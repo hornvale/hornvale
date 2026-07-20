@@ -41,8 +41,19 @@ fn run_the_sounding_and_write_the_report() {
     ));
     rows.extend(sweep_axis("species", &base, &[4, 16, 64, 256]));
     rows.extend(sweep_axis("epochs", &base, &[100, 300, 1_000, 3_000]));
-    rows.extend(sweep_axis("avg_degree", &base, &[2, 4, 8, 16, 32]));
-    rows.extend(sweep_axis("long_range", &base, &[0, 5, 20, 50]));
+    // Adversarial density axes (stress the sparsity assumption to its edge):
+    // push degree toward Z and long-range edges to 100%. NOTE: this spike's
+    // coupling is EVENT-based (a raid picks ONE neighbour, O(1) per event), so
+    // it is degree-independent by construction — these axes exercise graph
+    // CREATION/TRAVERSAL cost at density, not the *diffuse* (all-edges
+    // fixed-point) coupling, which is not in this spike and is the next
+    // sounding's target (see the retrospective).
+    rows.extend(sweep_axis(
+        "avg_degree",
+        &base,
+        &[2, 4, 8, 16, 32, 64, 128, 256],
+    ));
+    rows.extend(sweep_axis("long_range", &base, &[0, 5, 20, 50, 100]));
 
     let sample = biography_digest(&run(&base));
     let sample_head: String = sample.lines().take(12).collect::<Vec<_>>().join("\n") + "\n";
