@@ -1,14 +1,35 @@
 //! The epoch loop: pure, deterministic `run(&SoundingConfig) -> World`.
+//!
+//! Coupling note (the headline the benchmark exists to expose): a raid
+//! delivers population to the community occupying a graph-neighbour node.
+//! Finding "the community at node N" by a linear scan is O(Z) per delivery
+//! and O(Z²·A) overall — a quadratic coupling that made the top sweep point
+//! intractable on first run. The fix here is the standard one: a
+//! `node_index: BTreeMap<NodeId, usize>` giving O(log Z) lookup, restoring
+//! near-linear scaling. The real engine must carry the same index.
 
 use crate::config::{EventKind, NodeId, RoleHandle, SoundingConfig};
 use crate::generate::seed_world;
-use crate::world::{BioEntry, Ruin, World};
+use crate::world::{BioEntry, Community, Ruin, World};
 use std::collections::BTreeMap;
 
 /// Run the whole `A`-epoch history and return the baked world.
 pub fn run(config: &SoundingConfig) -> World {
     let mut world = seed_world(config);
-    // Pending displacements: (arrival_epoch, target_node, incoming_population).
+    // O(log Z) "which alive community occupies node N" index — the current
+    // owner of each node, kept in step with founding/collapse/refounding.
+    let mut node_index: BTreeMap<NodeId, usize> = world
+        .communities
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (c.node, i))
+        .collect();
+    // Bound the placeholder founding instability so total communities stay
+    // O(Z) (the real engine balances founding against collapse; here a hard
+    // cap keeps memory proportional to Z instead of compounding).
+    let founding_cap = (config.communities as usize).saturating_mul(3).max(1);
+
+    // Pending displacements: (arrival_epoch -> [(target_node, population)]).
     let mut pending: BTreeMap<u32, Vec<(NodeId, f64)>> = BTreeMap::new();
     let mut ev = config.seed.derive("chronicle/events").stream();
     let mut deliver_ev = config.seed.derive("chronicle/deliver").stream();
@@ -33,8 +54,8 @@ pub fn run(config: &SoundingConfig) -> World {
                     event: EventKind::Grew,
                     actor: handle,
                 });
-                if ev.next_f64() < 0.02 {
-                    found_daughter(&mut world, config, i, epoch, &mut ev);
+                if ev.next_f64() < 0.02 && world.communities.len() < founding_cap {
+                    found_daughter(&mut world, &mut node_index, i, epoch, &mut ev);
                 }
             } else if pressure > 1.0 {
                 // Overshoot: raid a neighbour (coupling) or collapse.
@@ -54,15 +75,17 @@ pub fn run(config: &SoundingConfig) -> World {
                     }
                 } else {
                     world.communities[i].alive = false;
+                    let node = world.communities[i].node;
                     world.communities[i].biography.push(BioEntry {
                         epoch,
                         event: EventKind::Collapsed,
                         actor: handle,
                     });
-                    world.ruins.push(Ruin {
-                        node: world.communities[i].node,
-                        epoch,
-                    });
+                    world.ruins.push(Ruin { node, epoch });
+                    // The node is now vacant unless another owner took it.
+                    if node_index.get(&node) == Some(&i) {
+                        node_index.remove(&node);
+                    }
                 }
             } // 0.6..=1.0: stable, no event this epoch.
         }
@@ -72,7 +95,14 @@ pub fn run(config: &SoundingConfig) -> World {
         // (lag == 0) raid enqueued above is delivered before the epoch ends.
         if let Some(arrivals) = pending.remove(&epoch) {
             for (node, pop) in arrivals {
-                deliver(&mut world, &mut deliver_ev, node, pop, epoch);
+                deliver(
+                    &mut world,
+                    &mut node_index,
+                    &mut deliver_ev,
+                    node,
+                    pop,
+                    epoch,
+                );
             }
         }
     }
@@ -80,50 +110,53 @@ pub fn run(config: &SoundingConfig) -> World {
 }
 
 /// A displaced population arriving at a node: it flees into the community
-/// there (or refounds if none stands), appending to the biography.
+/// there (found in O(log Z) via `node_index`), or refounds if none stands.
 fn deliver(
     world: &mut World,
+    node_index: &mut BTreeMap<NodeId, usize>,
     ev: &mut hornvale_kernel::Stream,
     node: NodeId,
     pop: f64,
     epoch: u32,
 ) {
     let handle = RoleHandle(ev.next_u64() ^ ((node.0 as u64) << 32) ^ epoch as u64);
-    if let Some(i) = world
-        .communities
-        .iter()
-        .position(|c| c.alive && c.node == node)
-    {
-        world.communities[i].population += pop;
-        world.communities[i].biography.push(BioEntry {
-            epoch,
-            event: EventKind::Fled,
-            actor: handle,
-        });
-    } else {
-        let species = world
-            .communities
-            .first()
-            .map(|c| c.species)
-            .unwrap_or(crate::config::SpeciesId(0));
-        world.communities.push(crate::world::Community {
-            species,
-            population: pop,
-            node,
-            biography: vec![BioEntry {
+    match node_index.get(&node).copied() {
+        Some(i) if world.communities[i].alive => {
+            world.communities[i].population += pop;
+            world.communities[i].biography.push(BioEntry {
                 epoch,
                 event: EventKind::Fled,
                 actor: handle,
-            }],
-            alive: true,
-        });
+            });
+        }
+        _ => {
+            let species = world
+                .communities
+                .first()
+                .map(|c| c.species)
+                .unwrap_or(crate::config::SpeciesId(0));
+            let idx = world.communities.len();
+            world.communities.push(Community {
+                species,
+                population: pop,
+                node,
+                biography: vec![BioEntry {
+                    epoch,
+                    event: EventKind::Fled,
+                    actor: handle,
+                }],
+                alive: true,
+            });
+            node_index.insert(node, idx);
+        }
     }
 }
 
-/// Found a daughter community on a graph neighbour's node.
+/// Found a daughter community on a graph neighbour's node, recording it as
+/// that node's current owner in `node_index`.
 fn found_daughter(
     world: &mut World,
-    _config: &SoundingConfig,
+    node_index: &mut BTreeMap<NodeId, usize>,
     parent: usize,
     epoch: u32,
     ev: &mut hornvale_kernel::Stream,
@@ -140,13 +173,15 @@ fn found_daughter(
         event: EventKind::Founded,
         actor: handle,
     });
-    world.communities.push(crate::world::Community {
+    let idx = world.communities.len();
+    world.communities.push(Community {
         species,
         population: seed_pop,
         node,
         biography: Vec::new(),
         alive: true,
     });
+    node_index.insert(node, idx);
 }
 
 /// Pick a graph neighbour deterministically; returns (target_node, lag).
