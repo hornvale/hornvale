@@ -7,6 +7,7 @@
 #![warn(missing_docs)]
 
 use crate::morphology::{ClassPosition, MorphDepth};
+use crate::phoneme::Segment;
 use hornvale_kernel::Seed;
 
 /// A tongue's drawn Number/Tense grammaticalization depths and attachment
@@ -126,9 +127,66 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     }
 }
 
+/// Draw `family`'s proto-affix for one paradigm axis-value (e.g.
+/// `axis="number", value="plural"`; `axis="tense", value="past"`) — the
+/// family-cognate law: every daughter's affix traces to the SAME family
+/// proto (only `family`/`axis`/`value` key the draw, never the daughter or
+/// its cascade), diverging only through each daughter's own [`crate::
+/// etymology::evolve`], exactly like every other family-shared morpheme in
+/// this crate. Delegates to [`crate::morphology::draw_morph_proto`] (same
+/// one-syllable-fill mechanism every family-cognate proto in this crate
+/// uses) rather than duplicating it. New permanent streams:
+/// `language/family/<family>/morph/number/plural`,
+/// `language/family/<family>/morph/tense/past`.
+/// type-audit: bare-ok(identifier-text)
+pub fn draw_paradigm_affix_proto(
+    seed: &Seed,
+    family: &str,
+    axis: &str,
+    value: &str,
+    proto_ph: &crate::phonology::Phonology,
+) -> Vec<Segment> {
+    crate::morphology::draw_morph_proto(seed, family, axis, value, proto_ph)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::phoneme::{Backness, Height, Tone};
+    use crate::phonology::Phonology;
+
+    fn tiny_phonology() -> Phonology {
+        Phonology {
+            inventory: vec![
+                Segment::Consonant {
+                    place: crate::phoneme::Place::Alveolar,
+                    manner: crate::phoneme::Manner::Stop,
+                    voiced: false,
+                },
+                Segment::Vowel {
+                    height: Height::Mid,
+                    backness: Backness::Front,
+                    rounded: false,
+                    tone: Tone::Neutral,
+                },
+            ],
+            onsets: vec![vec![]],
+            nuclei: 1,
+            codas: vec![vec![]],
+        }
+    }
+
+    #[test]
+    fn paradigm_affix_proto_is_family_cognate() {
+        // Same (seed, family, axis, value) → identical proto, twice — the
+        // family-cognate law every other family-shared proto in this crate
+        // upholds (draw_morph_proto's own doc, mirrored here).
+        let ph = tiny_phonology();
+        let a = draw_paradigm_affix_proto(&Seed(3), "goblinoid", "number", "plural", &ph);
+        let b = draw_paradigm_affix_proto(&Seed(3), "goblinoid", "number", "plural", &ph);
+        assert_eq!(a, b);
+        assert!(!a.is_empty());
+    }
 
     #[test]
     fn paradigm_depths_is_pure() {

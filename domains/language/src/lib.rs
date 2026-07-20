@@ -466,6 +466,14 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "C7: the family's one-syllable noun-class-marker proto-form for <value> (animate/inanimate), drawn once per family and evolved per daughter via its own cascade — the cognate law",
         ),
         (
+            "language/family/<family>/morph/number/plural",
+            "LANG-43: the family's Plural affix proto-form, shared by every daughter (family-cognate law)",
+        ),
+        (
+            "language/family/<family>/morph/tense/past",
+            "LANG-43: the family's Past-tense affix proto-form, shared by every daughter",
+        ),
+        (
             "language/<species>/schema/<domain>/<fact-shape>",
             "C5's causal-schema draw (render-time, `schemas::select_schema`): the β-sharpened pick among the fact-shape's admitted schemas for one culture's account of one (source-domain, fact-shape) pair — `<domain>` and `<fact-shape>` are the salt legs (e.g. `sky`/`cyclic-event` for the day)",
         ),
