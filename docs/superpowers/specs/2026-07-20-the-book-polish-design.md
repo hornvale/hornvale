@@ -1,7 +1,7 @@
 # The Book Polish — Design
 
 **Date:** 2026-07-20
-**Status:** Draft — awaiting G3 review (campaign-autopilot hard stop)
+**Status:** **Approved at G3 (2026-07-20)**.
 **Campaign:** the second post-program campaign — a readability-only
 surface fix, no new mechanism. Follows up two rough edges C6's and C8's
 own final reviews flagged and deferred as out-of-scope at the time.
