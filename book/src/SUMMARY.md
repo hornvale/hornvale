@@ -189,6 +189,7 @@
 - [The Diachronic Book](./chronicle/the-diachronic-book.md)
 - [The Firmament](./chronicle/the-firmament.md)
 - [The Mantle](./chronicle/the-mantle.md)
+- [The Local Census](./chronicle/the-local-census.md)
 - [The Vessel Stitch](./chronicle/the-vessel-stitch.md)
 
 # Appendix: The Frontier

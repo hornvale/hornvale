@@ -1,6 +1,8 @@
 # 0046. Census regeneration is AWS-only
 
-**Status:** Accepted (2026-07-13) · **Decider:** Nathan
+**Status:** Superseded by 0063 (The Local Census made the full census a ~7-min
+local run; the load and cross-platform rationales below no longer hold) ·
+**Decider:** Nathan
 
 In the context of parallel campaign sessions sharing one M1 Max and full
 census regeneration (`the-census`, `census-of-the-meeting`, 1,000 and 500

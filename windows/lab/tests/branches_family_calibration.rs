@@ -237,7 +237,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
     // fixtures' first refresh since; the chorus itself adds zero draws
     // (genesis byte-identical).
-    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // Local-canonical adoption (2026-07-19, The Local Census, decision 0063):
+    // this machine is now the reference platform; re-measured 2.486 -> 2.485
+    // (a discrete count flips on ~1 seed between the old AWS goldens and local).
+    assert!((mh - 2.485).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     assert!((mb - 4.481).abs() < 1e-9, "bugbear mean drifted: {mb}");
@@ -260,7 +263,7 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // regen, commit 1c954d0): per-seed rates re-measured below.
     assert_eq!(bg, 859, "bugbear>=goblin rate drifted: {bg}/{n}");
     assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 907, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
     assert_eq!(chain, 586, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
@@ -328,10 +331,14 @@ fn homophony_count_is_measured_and_pinned() {
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
     // fixtures' first refresh since; the chorus itself adds zero draws
     // (genesis byte-identical).
-    assert!((mg - 1.843).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.674).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 3.05).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 0.938).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Local-canonical adoption (2026-07-19, The Local Census, decision 0063):
+    // re-measured on this machine (goblin 1.843 -> 2.365; hobgoblin/bugbear
+    // below). The large goblin move inherits origin/main's un-pinned physics
+    // (the AWS goldens lagged ~26 commits before this first local refresh).
+    assert!((mg - 2.365).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.727).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 3.025).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 0.942).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

@@ -8,8 +8,8 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">750</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
-<rect x="64.5" y="203.4" width="96.6" height="32.6" fill="#5b8dd9" rx="2" />
-<text x="112.8" y="199.4" font-size="11" fill="currentColor" text-anchor="middle">163</text>
+<rect x="64.5" y="204.8" width="96.6" height="31.2" fill="#5b8dd9" rx="2" />
+<text x="112.8" y="200.8" font-size="11" fill="currentColor" text-anchor="middle">156</text>
 <text x="112.8" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 112.8 252.0)">&lt; -0.5</text>
 <text x="226.4" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="226.4" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 226.4 252.0)">[-0.5, 0)</text>
@@ -17,7 +17,7 @@
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 340.0 252.0)">[0, 0.5)</text>
 <text x="453.6" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="453.6" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 453.6 252.0)">&gt;= 0.5</text>
-<rect x="518.9" y="68.6" width="96.6" height="167.4" fill="#5b8dd9" rx="2" />
-<text x="567.2" y="64.6" font-size="11" fill="currentColor" text-anchor="middle">837</text>
+<rect x="518.9" y="67.2" width="96.6" height="168.8" fill="#5b8dd9" rx="2" />
+<text x="567.2" y="63.2" font-size="11" fill="currentColor" text-anchor="middle">844</text>
 <text x="567.2" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 567.2 252.0)">absent</text>
 </svg>

@@ -205,6 +205,23 @@ pub fn beta_of(psych: &PsychVector) -> f64 {
 /// emptiness as "no sky religion to bind to" (ledger #2).
 /// type-audit: bare-ok(identifier-text: species), bare-ok(ratio: return)
 pub fn cyclic_beliefs_of(world: &World, species: &str) -> Vec<(hornvale_religion::Belief, f64)> {
+    let Ok(climate) = crate::climate_of(world) else {
+        return Vec::new();
+    };
+    cyclic_beliefs_from(world, species, &climate)
+}
+
+/// [`cyclic_beliefs_of`], reusing an ALREADY-BUILT climate (down
+/// [`crate::observed_phenomena_as_from`]) instead of re-deriving one. Threaded
+/// through [`explain`] so the census's chorus metric sculpts once per world,
+/// not once per placed people. Byte-identical to `cyclic_beliefs_of` (the
+/// passed climate equals `climate_of(world)`, and this readout draws nothing).
+/// type-audit: bare-ok(identifier-text: species)
+pub(crate) fn cyclic_beliefs_from(
+    world: &World,
+    species: &str,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<(hornvale_religion::Belief, f64)> {
     let Some(flagship) = crate::flagship_of(world, species) else {
         return Vec::new();
     };
@@ -212,7 +229,7 @@ pub fn cyclic_beliefs_of(world: &World, species: &str) -> Vec<(hornvale_religion
     if beliefs.is_empty() {
         return Vec::new();
     }
-    let Ok(phenomena) = crate::observed_phenomena_as(world, species) else {
+    let Ok(phenomena) = crate::observed_phenomena_as_from(world, species, climate) else {
         return Vec::new();
     };
 
@@ -558,8 +575,14 @@ fn explain_moons(
 /// **Unbindable guard (ledger #2):** a culture with no cyclic belief in
 /// [`cyclic_beliefs_of`] explains nothing at all — no synthetic agents,
 /// ever.
-fn explain(world: &World, species: &str, account: &mut Account, params: &AccountParams) {
-    let cyclic = cyclic_beliefs_of(world, species);
+fn explain(
+    world: &World,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    climate: &hornvale_climate::GeneratedClimate,
+) {
+    let cyclic = cyclic_beliefs_from(world, species, climate);
     if cyclic.is_empty() {
         return;
     }
@@ -1061,6 +1084,24 @@ pub fn doctrines_of(world: &World) -> Vec<DoctrineVoice> {
 ///
 /// type-audit: bare-ok(identifier-text: species)
 pub fn account_params_of(world: &World, species: &str) -> Result<AccountParams, BuildError> {
+    let terrain = crate::terrain_of(world)?;
+    let climate = crate::climate_of(world)?;
+    account_params_from(world, species, &terrain, &climate)
+}
+
+/// [`account_params_of`], reusing ALREADY-BUILT terrain/climate down
+/// [`crate::exposure_from`] instead of re-sculpting the globe. Byte-identical
+/// to `account_params_of` (the passed terrain/climate equal
+/// `terrain_of`/`climate_of`, and this readout draws nothing from the seed);
+/// the threaded path [`accounts_from`] feeds every placed people so the
+/// census's chorus metric sculpts once, not per people.
+/// type-audit: bare-ok(identifier-text: species)
+pub(crate) fn account_params_from(
+    world: &World,
+    species: &str,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Result<AccountParams, BuildError> {
     let wc = WorldComponents::assemble()?;
     let perception = wc.perception.get_by_label(species).ok_or_else(|| {
         BuildError::MalformedKind(format!(
@@ -1073,7 +1114,7 @@ pub fn account_params_of(world: &World, species: &str) -> Result<AccountParams, 
         ))
     })?;
 
-    let exposure = crate::exposure_of(world, species)?;
+    let exposure = crate::exposure_from(world, species, terrain, climate)?;
     let holdings: BTreeSet<String> = exposure
         .iter()
         .filter(|(_, class)| {
@@ -1245,13 +1286,28 @@ pub struct ChorusVoice {
 /// param-derivation failure: skip that kind rather than fail the whole
 /// pass (`else { continue }`).
 pub fn accounts_of(world: &World) -> Vec<ChorusVoice> {
+    let (Ok(terrain), Ok(climate)) = (crate::terrain_of(world), crate::climate_of(world)) else {
+        return Vec::new();
+    };
+    accounts_from(world, &terrain, &climate)
+}
+
+/// [`accounts_of`], reusing ALREADY-BUILT terrain/climate so every placed
+/// people's [`account_params_from`] shares one sculpt instead of re-sculpting
+/// the globe per people — the census's chorus metric passes a Lab view's
+/// terrain/climate. Byte-identical to `accounts_of`.
+pub fn accounts_from(
+    world: &World,
+    terrain: &hornvale_terrain::GeneratedTerrain,
+    climate: &hornvale_climate::GeneratedClimate,
+) -> Vec<ChorusVoice> {
     let ground = chorus_ground(world);
     crate::placed_peoples(world)
         .into_iter()
         .filter_map(|(kind, _village)| {
-            let params = account_params_of(world, kind).ok()?;
+            let params = account_params_from(world, kind, terrain, climate).ok()?;
             let mut account = account_of(&ground, &params);
-            explain(world, kind, &mut account, &params);
+            explain(world, kind, &mut account, &params, climate);
             Some(ChorusVoice {
                 kind: kind.to_string(),
                 params,
@@ -1606,7 +1662,8 @@ mod tests {
             "day-length-std is CrossReferential — always Lost before explain runs"
         );
 
-        explain(&world, "goblin", &mut account, &params);
+        let climate = crate::climate_of(&world).unwrap();
+        explain(&world, "goblin", &mut account, &params, &climate);
 
         assert_eq!(
             account.entries[0].disposition,

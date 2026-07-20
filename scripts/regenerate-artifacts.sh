@@ -132,20 +132,22 @@ run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-se
 run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
 
-# OWNER DIRECTIVE (2026-07-13): the full censuses NEVER regenerate on a
-# local box unless Nathan explicitly says so. The sanctioned path is the
-# AWS spot box (`make regen-remote` / scripts/aws-gate/regen-git.sh), which
-# invokes this script with HV_CENSUS=1. Locally the censuses are therefore
-# skipped BY DEFAULT; SKIP_CENSUS=1 (CI's fast probe path) also skips.
-# Cadence: once per campaign, just before the merge to main, with warning
-# given to Nathan first — census/validation coverage deliberately lags
-# (the local gate stays < 5 min; rapid development is the ratified trade).
+# Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
+# skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
+# But since decision 0063 (The Local Census cut the per-world cost ~285 → ~8
+# CPU-s) the sanctioned refresh is LOCAL: run `HV_CENSUS=1 bash
+# scripts/regenerate-artifacts.sh` once per campaign at the pre-merge close —
+# the full ~2000-world census takes ~7 min — keeping the fixtures current with
+# main instead of lagging. `make regen-remote` (the AWS box) is ABANDONED —
+# this box is the single canonical platform (AWS differs on ~0.1% of
+# discrete-count metrics, so it can't be a parallel reference; supersedes the
+# AWS-only mandate of 0046, decision 0063).
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
-    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1)" >&2
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min local)" >&2
     run_release -p hornvale -- lab run studies/the-census.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
 else
-    echo "regenerate-artifacts: censuses SKIPPED — census regeneration is AWS-only (make regen-remote); HV_CENSUS=1 only on explicit owner direction" >&2
+    echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 to refresh; ~7 min local since decision 0063)" >&2
 fi
 
 echo "regenerate-artifacts: type-audit report" >&2

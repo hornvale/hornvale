@@ -73,9 +73,9 @@ shared seed range, and its calibrations assert that the twin is
 structurally indistinguishable from the goblin: at chance on blind
 attribution, within the sampling bound on every distribution. It backs
 [Study 009, the Census of the Meeting](./study-009.md), the Year-2
-capstone. Both live studies are regenerated on the remote box (`make
-regen-remote`, [decision
-0046](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0046-census-regen-is-remote-only.md)), then drift-checked and CI-probed on every build.
+capstone. Both live studies are regenerated locally in ~7 minutes at the
+pre-merge close (`HV_CENSUS=1`, [decision
+0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046), then drift-checked and CI-probed on every build.
 
 Everything else the census family has produced is frozen, not deleted.
 `branches-family` (1,000 seeds, the goblinoid-phylogeny battery —
@@ -107,12 +107,13 @@ few-seconds check on every `cargo test`, but as the worldgen pipeline
 deepened its cost grew to minutes, so it now runs in the heavy tier
 (`make gate-full`) rather than in the commit gate: a worldgen change that
 moves a census surfaces there and in CI's regenerate-and-diff, not on the
-developer's next local test run. The full census fixtures themselves are refreshed once
-per campaign on the remote regeneration box (`make regen-remote`),
-just before the campaign merges to `main` — never on the local machine, whose
-gate stays under five minutes by design. Between those refreshes a moved
-census is *known* (the probe fails) but its committed rows deliberately lag
-until the pre-merge regeneration.
+developer's next local test run. The full census fixtures themselves are
+refreshed once per campaign — locally, in ~7 minutes (`HV_CENSUS=1`), just
+before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
+cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
+(decision 0063). The everyday commit gate still skips censuses to stay under
+five minutes; the pre-merge refresh keeps the committed rows current with
+`main` rather than lagging.
 
 When a census *does* move, the reviewable surface is `make lab-diff
 STUDY=<name>` (wrapping `hornvale lab diff`): a per-metric report of which
