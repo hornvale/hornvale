@@ -170,8 +170,13 @@ fn knows_grows_as_you_walk() {
     );
 }
 
+/// The Vessel Stitch T2: `tell` renamed `write` (G3, total — no alias).
+/// Re-pins `tell_absorbs_a_spoken_common_sentence_into_knowledge`
+/// (provenance: this test replaces it verbatim, verb and response
+/// swapped) and adds the rename's own obligation — `tell` must now fall
+/// through to the ordinary unknown-verb response.
 #[test]
-fn tell_absorbs_a_spoken_common_sentence_into_knowledge() {
+fn write_is_the_verb_and_the_margin_answers() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let volume = hornvale_book::render_volume(&world);
@@ -180,22 +185,172 @@ fn tell_absorbs_a_spoken_common_sentence_into_knowledge() {
         .first()
         .expect("seed 42 renders at least one line");
     let before = s.knowledge().0.len();
-    let out = match s.handle(&format!("tell {line}")) {
+    let out = match s.handle(&format!("write {line}")) {
         Turn::Out(t) => t,
-        _ => panic!("tell must not release"),
+        _ => panic!("write must not release"),
     };
-    assert!(
-        out.contains("fact(s) learned"),
-        "tell reports what it heard"
+    assert_eq!(
+        out, "Written in the margin.",
+        "the closed margin response, regardless of how many facts the sentence carried"
     );
     assert!(
         s.knowledge().0.len() > before,
-        "telling a fact grows knowledge"
+        "writing a fact grows knowledge"
     );
-    match s.handle("tell") {
-        Turn::Out(t) => assert!(t.contains("Tell what?")),
-        _ => panic!("tell with no argument must not release"),
+    match s.handle("write") {
+        Turn::Out(t) => assert!(t.contains("Write what?")),
+        _ => panic!("write with no argument must not release"),
     }
+    // The rename is total: no `tell` alias survives.
+    match s.handle(&format!("tell {line}")) {
+        Turn::Out(t) => assert!(
+            t.contains("No verb 'tell'"),
+            "tell falls through to the unknown-verb response: {t}"
+        ),
+        _ => panic!("tell must not release"),
+    }
+}
+
+/// The Vessel Stitch T2's stitch law (spec §4.1, end to end): a fresh
+/// session's `consult` shows the fallback and the day-0 reckoning's empty
+/// arm; `write`-ing the moon sentence unlocks the initiated line, whose
+/// rendered count is the LEDGER's own value — the mutation arm proves this
+/// is not an echo of what was written: even a WRONG written count still
+/// unlocks the key, but the printed value never moves (heard ≠ true,
+/// printed — spec §1/§8.2).
+#[test]
+fn the_stitch_law_end_to_end() {
+    let world = build_world(
+        Seed(1),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+    )
+    .expect("seed 1 builds");
+    let volume = hornvale_book::render_volume(&world);
+    let planet_line = volume
+        .lines
+        .iter()
+        .find(|l| l.contains(" is a planet"))
+        .expect("seed 1 renders a planet line");
+    assert!(
+        planet_line.contains("with two moons"),
+        "seed 1's planet line carries the two-moon fragment: {planet_line}"
+    );
+
+    let (mut s, _) = Session::start(
+        &world,
+        &PossessOpts {
+            day: WorldTime { day: 0.0 },
+            echo: false,
+        },
+    )
+    .unwrap();
+    let before = match s.handle("consult") {
+        Turn::Out(t) => t,
+        _ => panic!("consult must not release"),
+    };
+    assert!(
+        before.contains("The Book holds more for the initiated."),
+        "nothing written yet: the fallback answers: {before}"
+    );
+    assert!(
+        before.contains("The sky keeps no dates to number."),
+        "day 0's true event count is zero — the empty arm: {before}"
+    );
+
+    match s.handle(&format!("write {planet_line}")) {
+        Turn::Out(t) => assert_eq!(t, "Written in the margin."),
+        _ => panic!("write must not release"),
+    }
+    let after = match s.handle("consult") {
+        Turn::Out(t) => t,
+        _ => panic!("consult must not release"),
+    };
+    assert!(
+        after.contains("— two, as the initiated count."),
+        "the ledger's own moon-count, now unlocked: {after}"
+    );
+    assert!(
+        !after.contains("The Book holds more for the initiated."),
+        "the fallback no longer applies once something has unlocked: {after}"
+    );
+
+    // MUTATION ARM: a fresh session, told a WRONG count, still unlocks the
+    // key — but the printed value is the ledger's, never the heard one.
+    let (mut wrong, _) = Session::start(
+        &world,
+        &PossessOpts {
+            day: WorldTime { day: 0.0 },
+            echo: false,
+        },
+    )
+    .unwrap();
+    let wrong_line = planet_line.replace("with two moons", "with nine moons");
+    match wrong.handle(&format!("write {wrong_line}")) {
+        Turn::Out(t) => assert_eq!(t, "Written in the margin."),
+        _ => panic!("write must not release"),
+    }
+    let consulted = match wrong.handle("consult") {
+        Turn::Out(t) => t,
+        _ => panic!("consult must not release"),
+    };
+    assert!(
+        consulted.contains("— two, as the initiated count."),
+        "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
+    );
+    assert!(
+        !consulted.contains("nine"),
+        "the wrong heard count never appears in what the Book confirms: {consulted}"
+    );
+}
+
+/// The Vessel Stitch T2's day law (spec §4.2): `consult`'s heading tracks
+/// the session's own day, monotone with play — day 0 at the start, the
+/// session's actual (truncated) day after `wait`.
+#[test]
+fn the_day_law() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    match s.handle("consult") {
+        Turn::Out(t) => assert!(
+            t.starts_with("The Reckoning, at day 0."),
+            "day-0 heading: {t}"
+        ),
+        _ => panic!("consult must not release"),
+    }
+    s.handle("wait 90");
+    match s.handle("consult") {
+        Turn::Out(t) => assert!(
+            t.starts_with("The Reckoning, at day 90."),
+            "the heading advances to the session's own day: {t}"
+        ),
+        _ => panic!("consult must not release"),
+    }
+}
+
+/// The Vessel Stitch T2's purity law (spec §4.3): `consult` commits
+/// nothing — the session's owned ledger is byte-identical before and
+/// after, and `consult` never touches `Knowledge` either (only `write`
+/// and walking do).
+#[test]
+fn the_purity_law() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let ledger_before = s.session_ledger_json();
+    let knowledge_before = s.knowledge().clone();
+    s.handle("consult");
+    assert_eq!(
+        s.session_ledger_json(),
+        ledger_before,
+        "consult must not commit anything to the ledger"
+    );
+    assert_eq!(
+        *s.knowledge(),
+        knowledge_before,
+        "consult must not mutate Knowledge"
+    );
 }
 
 #[test]
