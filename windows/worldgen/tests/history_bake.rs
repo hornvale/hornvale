@@ -44,7 +44,15 @@ fn peoples() -> Vec<KindId> {
 ///
 /// The `seed` argument is unused (the world is fixed; only the bake `Seed`
 /// varies between runs), and is kept so callers read `fixture(42)`.
-fn fixture(_seed: u64) -> (Geosphere, CellMap<f64>, Vec<EraClimate>, CellMap<bool>) {
+fn fixture(
+    _seed: u64,
+) -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
     let geo = Geosphere::new(1); // 42 cells
 
     // Refuge cluster: cell 0, its neighbours, and their neighbours (two rings)
@@ -78,36 +86,41 @@ fn fixture(_seed: u64) -> (Geosphere, CellMap<f64>, Vec<EraClimate>, CellMap<boo
     // glacial cycles.
     let eras: Vec<EraClimate> = (0..8).map(|i| era(i as f64 * 250.0, i % 2 == 1)).collect();
 
-    (geo, capacity, eras, refugia)
+    // River proximity is uniformly zero here (Task 5b): the fixture tests the
+    // era-swing displacement mechanism, not the freshwater bias, so the river
+    // weighting is a deliberate no-op and the displacement gate is unchanged.
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+
+    (geo, capacity, river_prox, eras, refugia)
 }
 
 #[test]
 fn same_seed_bakes_byte_identical_history() {
-    let (geo, cap, eras, refugia) = fixture(42);
+    let (geo, cap, river, eras, refugia) = fixture(42);
     let people = peoples();
     let cfg = BakeConfig::default_millennia();
-    let a = bake(Seed(42), &geo, &cap, &eras, &refugia, &people, &cfg);
-    let b = bake(Seed(42), &geo, &cap, &eras, &refugia, &people, &cfg);
+    let a = bake(Seed(42), &geo, &cap, &river, &eras, &refugia, &people, &cfg);
+    let b = bake(Seed(42), &geo, &cap, &river, &eras, &refugia, &people, &cfg);
     assert_eq!(a.records, b.records, "same seed must bake byte-identical");
 }
 
 #[test]
 fn different_seeds_diverge() {
-    let (geo, cap, eras, refugia) = fixture(42);
+    let (geo, cap, river, eras, refugia) = fixture(42);
     let people = peoples();
     let cfg = BakeConfig::default_millennia();
-    let a = bake(Seed(42), &geo, &cap, &eras, &refugia, &people, &cfg);
-    let b = bake(Seed(43), &geo, &cap, &eras, &refugia, &people, &cfg);
+    let a = bake(Seed(42), &geo, &cap, &river, &eras, &refugia, &people, &cfg);
+    let b = bake(Seed(43), &geo, &cap, &river, &eras, &refugia, &people, &cfg);
     assert_ne!(a.records, b.records, "different seeds must diverge");
 }
 
 #[test]
 fn the_workload_fires_displacement_at_volume() {
     // measure-don't-narrate: the phenomenon the campaign exists on MUST fire.
-    let (geo, cap, eras, refugia) = fixture(42);
+    let (geo, cap, river, eras, refugia) = fixture(42);
     let people = peoples();
     let cfg = BakeConfig::default_millennia();
-    let h = bake(Seed(42), &geo, &cap, &eras, &refugia, &people, &cfg);
+    let h = bake(Seed(42), &geo, &cap, &river, &eras, &refugia, &people, &cfg);
     let c = census(&h);
     assert!(c.fled + c.resettled > 50, "displacement inert: {c:?}");
     assert!(

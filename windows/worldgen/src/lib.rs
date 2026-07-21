@@ -3584,12 +3584,29 @@ fn build_to(
     // `tests/history_placement.rs`.
     let capacity =
         hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+    // River proximity, exposed as a DISTINCT bake weighting factor (Task 5b):
+    // the same field `carrying_inputs_of` folds into K, passed separately so
+    // the bake's site-picking paths (genesis, daughter founding, migration)
+    // can bias toward fresh water directly — restoring The Confluence's
+    // near-river condensation, which the epoch (Task 5a) diluted when
+    // daughter/climate spreading chose cells without regard to rivers.
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(&world, &terrain)?;
     let cfg = history_bake::BakeConfig::default_millennia();
     let eras = bake_eras(&world, &terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
-    let history =
-        history_bake::bake(seed, geo, &capacity, &eras, &paleo.refugia, &peoples, &cfg);
+    let history = history_bake::bake(
+        seed,
+        geo,
+        &capacity,
+        &river_prox,
+        &eras,
+        &paleo.refugia,
+        &peoples,
+        &cfg,
+    );
     emit_history(&mut world, &history)?;
 
     // Pair each alive settlement `emit_history` just committed (tagged

@@ -68,6 +68,26 @@ const GENESIS_SITES_MAX: u32 = 4;
 const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.
 const DAUGHTER_POP: f64 = 8.0;
+/// How strongly river proximity sharpens site selection (Task 5b). Genesis
+/// candidate ranking and daughter founding — the two paths that OPEN new
+/// occupations — score a cell by `capacity * (1.0 + RIVER_SITE_WEIGHT *
+/// river_proximity)` (proximity in `[0, 1]`, ~1 on a river, ~0 far from one),
+/// so a river-adjacent cell outbids an equally-fertile one away from water.
+///
+/// This restores The Confluence's shipped property — settlements condensing
+/// near fresh water — which the epoch (Task 5a) diluted: 5a's daughters
+/// settled the first vacant neighbour (ignoring both capacity AND rivers) and
+/// its migrations picked by refugia/CellId alone, so occupations spread off
+/// the river network the base capacity spikes on. The dominant restoring
+/// lever is re-ranking daughter founding by capacity at all: `capacity`
+/// already folds the Confluence freshwater term (which rides
+/// `river_proximity`), so preferring high-capacity neighbours pulls the
+/// occupied set toward rivers on its own. `RIVER_SITE_WEIGHT` is the
+/// additional, explicit river bias on top — a modest value already saturates
+/// the near-river fraction because capacity carries most of the signal, so
+/// this stays deliberately small. A save-format constant: changing it
+/// re-places every world.
+const RIVER_SITE_WEIGHT: f64 = 2.0;
 
 /// Configuration for a deep-history bake: the span of years to simulate and
 /// the epoch step. Years are bare `f64` (absolute, no wall-clock).
@@ -182,6 +202,10 @@ struct Bake<'a> {
     geo: &'a Geosphere,
     /// Per-cell base carrying capacity.
     capacity: &'a CellMap<f64>,
+    /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
+    /// ~0 far from one). Biases all three site-picking paths toward water so
+    /// settlements condense near rivers (Task 5b, restoring The Confluence).
+    river_prox: &'a CellMap<f64>,
     /// Cells habitable through the glacial maximum (migration preference).
     refugia: &'a CellMap<bool>,
     /// Every occupation record, in commit order.
@@ -196,6 +220,14 @@ struct Bake<'a> {
     stream: Stream,
     /// The running event tally.
     tally: BakeCensus,
+}
+
+/// The river-proximity suitability multiplier for a cell (Task 5b): a cell on
+/// a river (`prox` ≈ 1) is `1.0 + RIVER_SITE_WEIGHT` times as attractive as one
+/// far from water (`prox` ≈ 0). Full precision; used to bias all three
+/// site-picking paths toward fresh water.
+fn river_factor(prox: f64) -> f64 {
+    1.0 + RIVER_SITE_WEIGHT * prox
 }
 
 /// The tech horizon for an (offset-adjusted) absolute `year`. Callers pass
@@ -275,11 +307,16 @@ impl<'a> Bake<'a> {
                 }
             }
             if !candidates.is_empty() {
-                // Refugial first, then lowest CellId — total & deterministic.
+                // Refugial first (survival through the glacial maximum is the
+                // point of a migration), then river-adjacent as a tie-break
+                // (Task 5b — bias toward water among otherwise-equal refuges),
+                // then lowest CellId — total & deterministic (`f64::total_cmp`).
                 candidates.sort_by(|a, b| {
                     let ra = *self.refugia.get(*a);
                     let rb = *self.refugia.get(*b);
-                    rb.cmp(&ra).then(a.cmp(b))
+                    let pa = *self.river_prox.get(*a);
+                    let pb = *self.river_prox.get(*b);
+                    rb.cmp(&ra).then(pb.total_cmp(&pa)).then(a.cmp(b))
                 });
                 return Some(candidates[0]);
             }
@@ -498,13 +535,25 @@ impl<'a> Bake<'a> {
 
         if pressure < DAUGHTER_MAX_PRESSURE && self.stream.next_f64() < DAUGHTER_PROB {
             let site = self.communities[idx].site;
-            // A daughter settles the lowest-id vacant habitable direct neighbour.
+            // A daughter settles the vacant habitable direct neighbour of
+            // highest river-weighted capacity (Task 5b) — the dominant source
+            // of new settlements, so this is the main lever that pulls the
+            // occupied set toward fresh water. `RIVER_SITE_WEIGHT` tunes how
+            // hard river proximity outbids raw capacity here. Tie-broken by
+            // lowest CellId — total & deterministic (`f64::total_cmp`).
             let dest = self
                 .geo
                 .neighbors(site)
                 .iter()
                 .copied()
-                .find(|&n| self.vacant_habitable(era, n));
+                .filter(|&n| self.vacant_habitable(era, n))
+                .max_by(|a, b| {
+                    let sa = *self.capacity.get(*a) * river_factor(*self.river_prox.get(*a));
+                    let sb = *self.capacity.get(*b) * river_factor(*self.river_prox.get(*b));
+                    // Higher score wins; among equal score, lower CellId wins
+                    // (treated as "greater" for `max_by`).
+                    sa.total_cmp(&sb).then(b.cmp(a))
+                });
             if let Some(dest) = dest {
                 let (people, lineage, offset) = {
                     let c = &self.communities[idx];
@@ -531,11 +580,17 @@ impl<'a> Bake<'a> {
 ///
 /// See the module docs for the determinism contract and the
 /// displacement-fires invariant.
-/// type-audit: bare-ok(count: capacity), bare-ok(flag: refugia)
+/// type-audit: bare-ok(count: capacity), bare-ok(ratio: river_prox), bare-ok(flag: refugia)
+// The bake reads several independent composition-root fields (geo, capacity,
+// river proximity, era series, refugia, roster, span); each is a distinct
+// world input with no coherent grouping into a single struct, so they stay
+// explicit arguments (Task 5b added `river_prox`).
+#[allow(clippy::too_many_arguments)]
 pub fn bake(
     seed: Seed,
     geo: &Geosphere,
     capacity: &CellMap<f64>,
+    river_prox: &CellMap<f64>,
     eras: &[EraClimate],
     refugia: &CellMap<bool>,
     peoples: &[KindId],
@@ -544,6 +599,7 @@ pub fn bake(
     let mut bake = Bake {
         geo,
         capacity,
+        river_prox,
         refugia,
         records: Vec::new(),
         communities: Vec::new(),
@@ -570,7 +626,15 @@ pub fn bake(
         .cells()
         .filter(|&c| Bake::factor(earliest, c) > 0.0)
         .collect();
-    candidates.sort_by(|a, b| capacity.get(*b).total_cmp(capacity.get(*a)).then(a.cmp(b)));
+    // Rank candidate proto-sites by river-weighted capacity (Task 5b): a
+    // river-adjacent cell outranks an equally-fertile cell far from water, so
+    // the genesis pool — and thus the peoples seeded from it — cluster near
+    // fresh water. Tie-broken by lowest CellId (total, deterministic).
+    candidates.sort_by(|a, b| {
+        let sa = *capacity.get(*a) * river_factor(*river_prox.get(*a));
+        let sb = *capacity.get(*b) * river_factor(*river_prox.get(*b));
+        sb.total_cmp(&sa).then(a.cmp(b))
+    });
     let top: Vec<CellId> = candidates.iter().copied().take(GENESIS_TOP_CELLS).collect();
 
     for &people in peoples {
