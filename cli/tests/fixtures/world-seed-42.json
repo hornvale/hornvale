@@ -247,6 +247,11 @@
         "functional": false,
         "doc": "nodal-regression period of a moon, in standard days — signed: negative for a retrograde orbit, whose nodes precess prograde (eastward) rather than the usual westward regression"
       },
+      "moon-period-ratio": {
+        "name": "moon-period-ratio",
+        "functional": true,
+        "doc": "the detected clean small-integer ratio between two of a world's moons' real periods, when one exists"
+      },
       "moon-period-std": {
         "name": "moon-period-std",
         "functional": false,
@@ -1074,6 +1079,16 @@
         "predicate": "moon-count",
         "object": {
           "Number": 2.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "astronomy"
+      },
+      {
+        "subject": 1,
+        "predicate": "moon-period-ratio",
+        "object": {
+          "Number": 2.0354755
         },
         "place": null,
         "day": 0.0,

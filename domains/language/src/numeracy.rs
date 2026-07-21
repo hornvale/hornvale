@@ -102,6 +102,32 @@ pub fn render_quantity_at_rung(x: f64, rung: NumeracyRung) -> String {
     }
 }
 
+/// Whether `rung`'s vocabulary can name a `numerator:denominator` ratio
+/// precisely (LANG-48 spec §3.4). A `1:1` ratio is naming one quantity
+/// twice, not composing a relationship, so every rung expresses it
+/// (`render_quantity_at_rung(1.0, Subitizing)` is the exact word
+/// `"one"`). A genuine relationship between two DIFFERENT integers
+/// (`2:1`, `3:2`, ...) requires composing two named quantities into a
+/// comparison — `Subitizing`'s four-category vocabulary (one/two/few/
+/// many) cannot do this even when both individual sides happen to be
+/// individually nameable (`render_quantity_at_rung` renders `1.0` and
+/// `2.0` exactly at `Subitizing` too, but naming EACH side is not the
+/// same as naming their RELATIONSHIP). `FullCounting` and `Decimals`
+/// both can.
+/// type-audit: bare-ok(count: numerator), bare-ok(count: denominator), bare-ok(flag: return)
+pub fn expressible_at_rung(numerator: u32, denominator: u32, rung: NumeracyRung) -> bool {
+    if numerator == denominator {
+        // A 1:1 "ratio" is just naming one quantity twice, not composing
+        // a relationship — every rung, including Subitizing, can do this
+        // (render_quantity_at_rung(1.0, Subitizing) == "one" exactly).
+        return true;
+    }
+    match rung {
+        NumeracyRung::Subitizing => false,
+        NumeracyRung::FullCounting | NumeracyRung::Decimals => true,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -156,5 +182,48 @@ mod tests {
         assert_eq!(decimals2, "about 2.0");
         assert_ne!(subitizing2, decimals2);
         assert_ne!(full_counting2, decimals2);
+    }
+
+    #[test]
+    fn a_two_to_one_ratio_is_expressible_at_full_counting_but_not_subitizing() {
+        assert!(!expressible_at_rung(2, 1, NumeracyRung::Subitizing));
+        assert!(expressible_at_rung(2, 1, NumeracyRung::FullCounting));
+        assert!(expressible_at_rung(2, 1, NumeracyRung::Decimals));
+    }
+
+    #[test]
+    fn a_one_to_one_ratio_is_expressible_even_at_subitizing() {
+        // "one" and "one" are both exact words at every rung, including
+        // the floor — Subitizing's own exact-word cases (spec: x == 1.0
+        // renders "one" exactly, not a qualitative degradation).
+        assert!(expressible_at_rung(1, 1, NumeracyRung::Subitizing));
+    }
+
+    #[test]
+    fn expressibility_is_monotonic_in_rung() {
+        // A coarser rung is never MORE expressive than a finer one — Law
+        // 5 (spec §4): if Subitizing can express a ratio, FullCounting
+        // and Decimals must too (never the reverse).
+        for (numerator, denominator) in [(1u32, 1u32), (2, 1), (3, 1), (3, 2), (5, 4)] {
+            if expressible_at_rung(numerator, denominator, NumeracyRung::Subitizing) {
+                assert!(expressible_at_rung(
+                    numerator,
+                    denominator,
+                    NumeracyRung::FullCounting
+                ));
+                assert!(expressible_at_rung(
+                    numerator,
+                    denominator,
+                    NumeracyRung::Decimals
+                ));
+            }
+            if expressible_at_rung(numerator, denominator, NumeracyRung::FullCounting) {
+                assert!(expressible_at_rung(
+                    numerator,
+                    denominator,
+                    NumeracyRung::Decimals
+                ));
+            }
+        }
     }
 }
