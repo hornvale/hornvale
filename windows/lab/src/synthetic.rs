@@ -63,6 +63,9 @@ pub struct SyntheticTerrain {
     /// creatures and hunger stays quiet, exactly as it does for the vessel
     /// tests' `PlantedTerrain`.
     forage: BTreeMap<RoomAddr, f64>,
+    /// Per-room threat (The Dread); rooms without an entry read `0.0` (safe) —
+    /// so a scenario that plants none is danger-free and fear stays quiet.
+    threat: BTreeMap<RoomAddr, f64>,
 }
 
 impl Terrain for SyntheticTerrain {
@@ -84,6 +87,10 @@ impl Terrain for SyntheticTerrain {
     fn forage_value(&self, room: &RoomAddr) -> f64 {
         // `DEFAULT_FORAGE` (1.0) where unplanted, matching `PlantedTerrain`.
         self.forage.get(room).copied().unwrap_or(1.0)
+    }
+    fn threat_value(&self, room: &RoomAddr) -> f64 {
+        // Safe (0.0) where unplanted, matching `PlantedTerrain`.
+        self.threat.get(room).copied().unwrap_or(0.0)
     }
 }
 
@@ -253,6 +260,7 @@ pub fn stranded_from_known_water() -> Scenario {
             temps: BTreeMap::new(),
             calm_after: None,
             forage: BTreeMap::new(),
+            threat: BTreeMap::new(),
         },
     }
 }
@@ -297,6 +305,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
             temps,
             calm_after: None,
             forage: BTreeMap::new(),
+            threat: BTreeMap::new(),
         },
     }
 }
@@ -336,6 +345,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
             temps,
             calm_after: Some((WAVE_BREAKS_DAY, AFTER_WAVE_C)),
             forage: BTreeMap::new(),
+            threat: BTreeMap::new(),
         },
     }
 }
@@ -377,6 +387,45 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
             temps: BTreeMap::new(),
             calm_after: None,
             forage,
+            threat: BTreeMap::new(),
+        },
+    }
+}
+
+/// **A creature cornered by dread** → sustained danger distress (by-cause
+/// danger), the fear analogue of the food desert and heat wave (The Dread). The
+/// creature sits ON its home spring, so thirst stays serviceable (it drinks and
+/// resets, never itself distressing); but its cell and every neighbour are
+/// maximally uncanny (threat `1.0`), so danger — a survival drive — is engaged
+/// with nowhere safer to flee (a local dread-pit, the twin of the heat wave's
+/// thermal pit), and the creature Holds in danger-`Frustrated`. Proves the fifth
+/// drive enters the competition and the by-cause reduction separates fear.
+pub fn a_creature_cornered_by_dread() -> Scenario {
+    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let mut ledger = Ledger::default();
+    let registry = harness_registry();
+    let e = ledger.mint_entity();
+    ledger
+        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .expect("place at spring");
+    // The spring and every neighbour are maximally threatening — no safer step,
+    // so danger has no affordance and the creature Holds (cornered by dread).
+    let mut threat = BTreeMap::new();
+    threat.insert(spring.clone(), 1.0);
+    for n in spring.neighbors() {
+        threat.insert(n, 1.0);
+    }
+    let npc = creature(e, spring.clone(), spring.clone(), "kobold", MILD_NICHE);
+    Scenario {
+        ledger,
+        registry,
+        npcs: vec![npc],
+        terrain: SyntheticTerrain {
+            fresh: [spring].into_iter().collect(),
+            temps: BTreeMap::new(),
+            calm_after: None,
+            forage: BTreeMap::new(),
+            threat,
         },
     }
 }
@@ -441,6 +490,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
             temps: BTreeMap::new(),
             calm_after: None,
             forage: BTreeMap::new(),
+            threat: BTreeMap::new(),
         },
     }
 }

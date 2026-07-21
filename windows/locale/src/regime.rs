@@ -6,7 +6,7 @@ use hornvale_kernel::quantize;
 use serde::Serialize;
 
 /// This campaign's strangeness ceiling (rung "exotic").
-const STRANGENESS_CEILING: f64 = 30.0;
+pub(crate) const STRANGENESS_CEILING: f64 = 30.0;
 
 /// The material a room's ground is made of (substrate slot; proxy-earned only).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

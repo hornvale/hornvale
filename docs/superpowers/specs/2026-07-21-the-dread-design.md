@@ -1,6 +1,8 @@
 # The Dread — danger, the fifth drive
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-dread.md) and
+[retrospective](../../retrospectives/the-dread.md).
 **Date:** 2026-07-21
 **Campaign:** The Dread (Temperament followup #3, third drive: danger/fear)
 **Precedes:** implementation plan → execution → merge

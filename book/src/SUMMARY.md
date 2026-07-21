@@ -204,6 +204,7 @@
 - [The Slumber](./chronicle/the-slumber.md)
 - [The Wakeful Sun](./chronicle/the-wakeful-sun.md)
 - [The Provender](./chronicle/the-provender.md)
+- [The Dread](./chronicle/the-dread.md)
 
 # Appendix: The Frontier
 
