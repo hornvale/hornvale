@@ -218,7 +218,7 @@ const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 /// the extensible future — a general `HazardVector` over a registered
 /// `HazardAxis` basis (the `ResourceVector` parallel) is the reserved
 /// generalization of this concrete struct.
-/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold)
+/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold), bare-ok(ratio: predator)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Hazards {
     /// The UNCANNY — a strange/exotic/cursed place (the strangeness magnitude).
@@ -227,6 +227,10 @@ pub struct Hazards {
     pub heat: f64,
     /// COLD — how far below.
     pub cold: f64,
+    /// PREDATOR — the ambient density of carnivores (The Quarry, the first
+    /// BIOTIC hazard: `worldgen::predator_pressure`, injected into
+    /// `LocaleTerrain`). `0` where no predators range.
+    pub predator: f64,
 }
 
 impl Hazards {
@@ -235,6 +239,7 @@ impl Hazards {
         uncanny: 0.0,
         heat: 0.0,
         cold: 0.0,
+        predator: 0.0,
     };
 }
 
@@ -247,7 +252,7 @@ impl Hazards {
 /// creature can be *fearless* of a hazard, weight `0`); NEGATIVE weights (true
 /// *attraction* — drawn to the hazard) are the reserved approach shore, shared
 /// with The Mettle's reckless pole.
-/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold)
+/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold), bare-ok(ratio: predator)
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ThreatNiche {
     /// Dread of the UNCANNY (`1` mortal, `0` an Ametabolic elemental).
@@ -256,14 +261,22 @@ pub struct ThreatNiche {
     pub heat: f64,
     /// Dread of COLD (high for the heat-adapted).
     pub cold: f64,
+    /// Dread of PREDATORS (The Quarry) — how much the creature fears being
+    /// EATEN: `1 − carnivory` (a herbivore fears them, an obligate apex not at
+    /// all — it IS one). The eater-eaten link: carnivory sets both diet and dread.
+    pub predator: f64,
 }
 
-/// The felt threat of a cell FOR a creature (The Bane): its threat niche dotted
-/// with the cell's hazards — `Σ niche·hazard` over the axes, the fear twin of
-/// `food_value = diet_niche · availability`. `≥ 0` in v1 (the reserved
-/// negative-weight attraction would make this go negative — the approach shore).
+/// The felt threat of a cell FOR a creature (The Bane / The Quarry): its threat
+/// niche dotted with the cell's hazards — `Σ niche·hazard` over the axes, the
+/// fear twin of `food_value = diet_niche · availability`. `≥ 0` in v1 (the
+/// reserved negative-weight attraction would make this go negative — the approach
+/// shore).
 fn threat_value(niche: &ThreatNiche, hazards: &Hazards) -> f64 {
-    niche.uncanny * hazards.uncanny + niche.heat * hazards.heat + niche.cold * hazards.cold
+    niche.uncanny * hazards.uncanny
+        + niche.heat * hazards.heat
+        + niche.cold * hazards.cold
+        + niche.predator * hazards.predator
 }
 
 /// The temperature-niche optimum (°C) below which a creature weights HEAT fully
@@ -286,9 +299,27 @@ const THERMAL_FEAR_SPAN_C: f64 = 40.0;
 /// a construct, an elemental like the xorn — IS eldritch and does not, weight
 /// `0`). v1 weights are `≥ 0` (differential fear; the reserved negative-weight
 /// attraction is the approach shore).
+/// The LATENT scale on the derived PREDATOR dread (The Quarry): the predator
+/// field is a *latent* ambient risk (the ideonomy visibility axis — not a
+/// *visible* hunting predator, which is reserved and acute), so a creature is
+/// merely WARY of predator ground, not panicked. Calibrated so the current
+/// peoples — bold omnivores — shrug the ambient risk off (their predator dread
+/// stays below the danger `act`, keeping worlds byte-identical), while a
+/// VULNERABLE creature (a timid herbivore, `1 − carnivory` near `1` and steady/
+/// coward boldness) still feels it and would flee dense predator territory the
+/// moment it becomes an agent — dormant-but-correct, exactly as The Bane's exotic
+/// threat niches wait for their creatures. Authored.
+const PREDATOR_LATENT_SCALE: f64 = 0.5;
+
+/// The PREDATOR dread also derives from nature — from the creature's DIET niche
+/// (The Quarry, the eater-eaten link): `predator_weight = (1 − carnivory) ×
+/// PREDATOR_LATENT_SCALE`, where carnivory is the `ANIMAL_PREY` diet weight. A
+/// herbivore fears predators (scaled), an omnivore half, an obligate apex not at
+/// all (`0` — it IS one). The defendedness (mass/potency) refinement is reserved.
 fn derive_threat_niche(
     temperature_niche: &ConditionResponse,
     class: MetabolicClass,
+    diet_niche: &ResourceVector,
 ) -> ThreatNiche {
     let optimum = temperature_niche.optimum;
     ThreatNiche {
@@ -299,6 +330,7 @@ fn derive_threat_niche(
         },
         heat: ((HEAT_FEAR_REF_C - optimum) / THERMAL_FEAR_SPAN_C).clamp(0.0, 1.0),
         cold: ((optimum - COLD_FEAR_REF_C) / THERMAL_FEAR_SPAN_C).clamp(0.0, 1.0),
+        predator: ((1.0 - diet_niche.weight(ANIMAL_PREY)) * PREDATOR_LATENT_SCALE).clamp(0.0, 1.0),
     }
 }
 
@@ -471,24 +503,50 @@ pub struct LocaleTerrain<'a> {
     /// The world's calendar, for the real solar wake read (The Slumber Tier-1);
     /// `None` falls back to the fractional-day sun.
     calendar: Option<&'a hornvale_astronomy::Calendar>,
+    /// The world's predator-pressure field (The Quarry — `worldgen::
+    /// predator_pressure`), injected here (a domain/window can't reach up to
+    /// demography); `None` → no PREDATOR hazard (throwaway reads / no field).
+    predator: Option<&'a hornvale_kernel::CellMap<f64>>,
 }
 impl<'a> LocaleTerrain<'a> {
-    /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun — for
-    /// throwaway reads (water/elevation) that never consult the wake cycle.
+    /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
+    /// predator field — for throwaway reads (water/elevation) that never consult
+    /// the wake cycle or the danger drive.
     pub fn new(ctx: &'a LocaleContext) -> Self {
         Self {
             ctx,
             calendar: None,
+            predator: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
     /// the wake cycle) follows the REAL sun — latitude × season × the terminator
-    /// (Tier-1). `None` falls back to the fractional-day sun.
+    /// (Tier-1). `None` falls back to the fractional-day sun. No predator field
+    /// (use [`with_calendar_and_predators`](Self::with_calendar_and_predators) for
+    /// the full drive read).
     pub fn with_calendar(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
     ) -> Self {
-        Self { ctx, calendar }
+        Self {
+            ctx,
+            calendar,
+            predator: None,
+        }
+    }
+    /// Build with the world's `calendar` AND its predator-pressure field (The
+    /// Quarry) — the full drive read, where danger senses carnivore territory.
+    /// type-audit: bare-ok(ratio: predator)
+    pub fn with_calendar_and_predators(
+        ctx: &'a LocaleContext,
+        calendar: Option<&'a hornvale_astronomy::Calendar>,
+        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+    ) -> Self {
+        Self {
+            ctx,
+            calendar,
+            predator,
+        }
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
@@ -533,10 +591,18 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // graded heat/cold); an undescribable/above-grid room reads all-zero
         // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
         let (uncanny, heat, cold) = self.ctx.hazards_at(room).unwrap_or((0.0, 0.0, 0.0));
+        // The PREDATOR axis (The Quarry): the injected carnivore-pressure field,
+        // corner-blended per room; `0` where no field is injected or the room is
+        // above the grid.
+        let predator = self
+            .predator
+            .and_then(|field| self.ctx.blend_at(room, field))
+            .unwrap_or(0.0);
         Hazards {
             uncanny,
             heat,
             cold,
+            predator,
         }
     }
 }
@@ -2692,7 +2758,7 @@ pub fn derive_npcs(
                 .unwrap_or(BOLDNESS_STEADY);
             // The threat niche (The Bane): derived from the temperature niche +
             // metabolic class already on hand — no fresh authoring.
-            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class);
+            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
@@ -4427,7 +4493,11 @@ mod tests {
     /// `threat_value` reduces to the planted uncanny, so the pre-Bane danger
     /// tests stay byte-identical.
     fn mortal_threat_niche() -> ThreatNiche {
-        derive_threat_niche(&DEFAULT_TEMPERATURE_NICHE, MetabolicClass::Endotherm)
+        derive_threat_niche(
+            &DEFAULT_TEMPERATURE_NICHE,
+            MetabolicClass::Endotherm,
+            &default_diet_niche(),
+        )
     }
 
     /// A balanced omnivore diet (forage + prey) — the common hunger-test niche.
@@ -4799,15 +4869,27 @@ mod tests {
             width: 20.0,
             devotion: 0.5,
         };
-        let cold = derive_threat_niche(&cold_adapted, MetabolicClass::Endotherm);
-        let warm = derive_threat_niche(&warm_adapted, MetabolicClass::Endotherm);
+        let cold = derive_threat_niche(
+            &cold_adapted,
+            MetabolicClass::Endotherm,
+            &default_diet_niche(),
+        );
+        let warm = derive_threat_niche(
+            &warm_adapted,
+            MetabolicClass::Endotherm,
+            &default_diet_niche(),
+        );
         // A cold-adapted creature dreads HEAT more than a warm one; the reverse
         // for COLD.
         assert!(cold.heat > warm.heat, "the cold-adapted fear heat more");
         assert!(warm.cold > cold.cold, "the warm-adapted fear cold more");
         // A mortal fears the uncanny; an Ametabolic elemental does not.
         assert_eq!(cold.uncanny, 1.0, "a mortal fears the eldritch");
-        let elemental = derive_threat_niche(&cold_adapted, MetabolicClass::Ametabolic);
+        let elemental = derive_threat_niche(
+            &cold_adapted,
+            MetabolicClass::Ametabolic,
+            &default_diet_niche(),
+        );
         assert_eq!(elemental.uncanny, 0.0, "an elemental IS the eldritch");
     }
 
@@ -4822,6 +4904,7 @@ mod tests {
                 uncanny: 0.0,
                 heat: 0.8,
                 cold: 0.0,
+                predator: 0.0,
             },
         )]);
         let v = view_at(cell.clone());
@@ -4832,6 +4915,7 @@ mod tests {
                 devotion: 0.5,
             },
             MetabolicClass::Endotherm,
+            &default_diet_niche(),
         );
         let warm_adapted = derive_threat_niche(
             &ConditionResponse {
@@ -4840,6 +4924,7 @@ mod tests {
                 devotion: 0.5,
             },
             MetabolicClass::Endotherm,
+            &default_diet_niche(),
         );
         let fears = Danger {
             terrain: &t,
@@ -4863,6 +4948,78 @@ mod tests {
             shrugs.urgency(&v),
             0.0,
             "a fully heat-adapted creature (heat weight 0) feels no heat-dread"
+        );
+    }
+
+    #[test]
+    fn the_predator_weight_derives_from_carnivory() {
+        // THE QUARRY (the eater-eaten link): a herbivore fears predators, an
+        // obligate apex does not — `(1 − carnivory) × latent scale`.
+        let temp = DEFAULT_TEMPERATURE_NICHE;
+        let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
+        let omnivore = ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)]).unwrap();
+        let apex = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
+        let w = |diet: &ResourceVector| {
+            derive_threat_niche(&temp, MetabolicClass::Endotherm, diet).predator
+        };
+        assert!(
+            (w(&herbivore) - PREDATOR_LATENT_SCALE).abs() < 1e-9,
+            "a herbivore fears predators"
+        );
+        assert!(w(&omnivore) < w(&herbivore), "an omnivore fears them less");
+        assert_eq!(
+            w(&apex),
+            0.0,
+            "an obligate apex does not fear predators — it IS one"
+        );
+    }
+
+    #[test]
+    fn a_vulnerable_creature_dreads_predator_ground_an_apex_does_not() {
+        // THE QUARRY, per-kind biotic fear: a HIGH-predator cell dreaded by a
+        // (vulnerable, coward-to-amplify-the-latent) herbivore, ignored by an apex.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazards_map([(
+            cell.clone(),
+            Hazards {
+                uncanny: 0.0,
+                heat: 0.0,
+                cold: 0.0,
+                predator: 1.0,
+            },
+        )]);
+        let v = view_at(cell);
+        let temp = DEFAULT_TEMPERATURE_NICHE;
+        let herbivore = derive_threat_niche(
+            &temp,
+            MetabolicClass::Endotherm,
+            &ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+        );
+        let apex = derive_threat_niche(
+            &temp,
+            MetabolicClass::Endotherm,
+            &ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+        );
+        // A coward (boldness 0 → ×2) to lift the latent-scaled dread above act.
+        let quarry = Danger {
+            terrain: &t,
+            threat_niche: herbivore,
+            boldness: 0.0,
+        };
+        let hunter = Danger {
+            terrain: &t,
+            threat_niche: apex,
+            boldness: 0.0,
+        };
+        assert!(
+            quarry.urgency(&v) > 0.0,
+            "the herbivore dreads predator ground: {}",
+            quarry.urgency(&v)
+        );
+        assert_eq!(
+            hunter.urgency(&v),
+            0.0,
+            "the apex feels no dread of predators — it is one"
         );
     }
 

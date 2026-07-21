@@ -232,6 +232,7 @@ fn creature(
             uncanny: 1.0,
             heat: 0.5,
             cold: 0.5,
+            predator: 1.0,
         },
         label: species.to_string(),
     }

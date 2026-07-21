@@ -816,6 +816,63 @@ pub fn demography_report(
     )
 }
 
+/// The diet-niche `ANIMAL_PREY` weight above which a species counts as a
+/// CARNIVORE for the predator-pressure field (The Quarry) — a prey-dominant
+/// diet. The obligate apexes (dragons, owlbear) sit at `1.0`; a balanced
+/// omnivore at `0.5` is NOT a predator by this threshold. Authored.
+const CARNIVORE_THRESHOLD: f64 = 0.5;
+
+/// The per-cell PREDATOR-PRESSURE field (The Quarry) — the ambient risk a quarry
+/// senses of predator territory: the REALIZED density (the coexistence stack, not
+/// mere carrying capacity) of CARNIVORE species (diet niche `ANIMAL_PREY`-dominant,
+/// see [`CARNIVORE_THRESHOLD`]) summed per cell and normalized to `[0, 1]` by the
+/// field's own maximum. Density, not capacity, is the honest signal: it is
+/// competition-aware (peoples outcompete predators near their settlements, so
+/// settled ground reads LOW even where the land COULD support carnivores) and
+/// home-range-adjusted (an apex spread over a wide range is thin everywhere), so
+/// it concentrates on genuine WILD predator territory rather than lighting up all
+/// fertile land. Derived from [`demography_report`]'s stack (the same fit
+/// settlement genesis uses) over the canonical roster — no seed, byte-identical
+/// across calls. The first BIOTIC hazard — sourced from life, not climate.
+/// type-audit: bare-ok(ratio: return)
+pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let report = demography_report_from(world, &wc, &terrain, &climate)?;
+    // Carnivore tags: the enumeration index into `wc.biosphere` (the same
+    // build-local dense index the stack uses), for prey-dominant diets.
+    let carnivore: std::collections::BTreeSet<u32> = wc
+        .biosphere
+        .iter()
+        .enumerate()
+        .filter(|(_, (_, bio))| {
+            bio.niche.weight(hornvale_kernel::ANIMAL_PREY) > CARNIVORE_THRESHOLD
+        })
+        .map(|(i, _)| i as u32)
+        .collect();
+    // Sum carnivore REALIZED density (the stack) per cell.
+    let carnivore_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+        .stack
+        .density
+        .iter()
+        .filter(|(tag, _)| carnivore.contains(tag))
+        .map(|(_, d)| d)
+        .collect();
+    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        carnivore_density.iter().map(|d| *d.get(cell)).sum::<f64>()
+    });
+    let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
+    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        if max > 0.0 {
+            (*raw.get(cell) / max).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    }))
+}
+
 /// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
 /// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
 /// demography metrics call this. Byte-identical to `demography_report`.
@@ -4977,6 +5034,31 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn predator_pressure_is_deterministic_and_nontrivial() {
+        // THE QUARRY: the carnivore-density field is byte-identical across calls
+        // (no seed, pure over committed facts) and genuinely varies — some cells
+        // carry predator mass (the wild), many carry none (ocean / settled land).
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = predator_pressure(&world).unwrap();
+        let b = predator_pressure(&world).unwrap();
+        let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
+        let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
+        assert_eq!(va, vb, "two calls produce byte-identical fields");
+        assert!(
+            va.iter().any(|v| *v > 0.5),
+            "some cells are dense predator territory"
+        );
+        assert!(va.contains(&0.0), "many cells carry no predators");
+    }
 
     #[test]
     fn deity_name_seed_is_pure_and_entity_id_free() {

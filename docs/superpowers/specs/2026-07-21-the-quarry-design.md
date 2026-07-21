@@ -1,6 +1,10 @@
 # The Quarry — predator-as-hazard, the first biotic fear
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-quarry.md) and
+[retrospective](../../retrospectives/the-quarry.md). Two build refinements:
+realized density (not carrying capacity) for the field, and a `PREDATOR_LATENT_
+SCALE` keeping the current bold peoples dormant (byte-identical) — see the retro.
 **Date:** 2026-07-21
 **Campaign:** The Quarry (predator-as-hazard — PSY-10's first step, deepening The Dread/Bane)
 **Precedes:** implementation plan → execution → merge
