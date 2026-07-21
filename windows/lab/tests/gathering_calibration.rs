@@ -257,40 +257,33 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// peopled species and every cell, exactly as the brief's re-basing
 /// instructs.
 ///
-/// **Not a tight "≈" bound, and looser than before in a second way now.**
-/// Two effects widen the gap between Σ K and committed population: (1)
-/// `condense()`'s threshold still *culls* mass outright at `THRESHOLD =
-/// 10.0` rather than reassigning it (see `condense.rs`'s module doc;
-/// unchanged by this cutover); AND (2) the coexistence stack commits a
-/// `population` fact for only the DOMINANT species at each attractor —
-/// bugbear and kobold are present in every settlement's composition (see
-/// `bugbear_and_kobold_are_present_in_settlement_composition`,
-/// `cli/tests/branches_identity.rs`) and so contribute to Σ K, but their
-/// share of the local capacity is never committed as anyone's population.
-/// Measured (2026-07-16, seed 42): Σ K = 315.8861753551 (the niche K's
-/// saturating, per-species-bounded scale — not the old flat formula's
-/// larger absolute-headcount scale), Σ committed pop = 110, count = 66
-/// settlements — a ratio of ≈0.3482, comfortably inside the same
-/// structural bounds (population within the founder-floor/rounding
-/// allowance above Σ K; population at least a quarter of Σ K) the
-/// pre-cutover guard used, so those bounds are kept as-is rather than
-/// retuned.
-// FLAGGED — GENUINE BREAK under The Living Community epoch (T5c fallout sweep).
-// This guard asserts the DRAFT settlement placer's population semantics:
-// committed population is the instantaneous demography catchment, so it stays
-// AT OR BELOW Σ K (measured ratio ≈0.3482 pre-epoch). History is the sole
-// settlement placer now, and it commits a HISTORY-ACCUMULATED population:
-// SETTLERS_PER_CAPACITY (=100) × capacity, grown over the simulated millennia
-// via daughter-settlement spread. Measured on the epoch (seed 42): Σ K ≈
-// 64.02, Σ committed population ≈ 10029 — population is now ~156× the
-// instantaneous capacity, a STRUCTURAL inversion of this bound, not a moved
-// number to re-pin. The conservation-against-instantaneous-K invariant is
-// superseded by the epoch's population model (see the Task 5 report's
-// CONCERN 1). Per ADR 0016, a failing preregistered calibration is NOT
-// quieted with `#[ignore]` and is NOT loosened to fit; it is left reporting
-// its honest failing measurement until the controller decides the replacement
-// bound (e.g. against SETTLERS_PER_CAPACITY × Σ K plus a growth ceiling). This
-// test therefore fails on purpose — see the T5c report's genuine-break flag.
+/// **Re-derived onto the epoch's population model (T5d).** Under The Living
+/// Community epoch, history is the sole settlement placer and it commits a
+/// HISTORY-ACCUMULATED headcount population — not the draft placer's
+/// instantaneous demography catchment. The old guard compared that headcount
+/// (Σ pop ≈ 10029 at seed 42) against the *dimensionless* suitability Σ K
+/// (≈ 64) directly: a units mismatch, so it failed structurally, ~156× over.
+///
+/// The correctly-unit-ed, principled ceiling comes from the bake's own two
+/// constants. The bake scales dimensionless capacity into headcount by
+/// `SETTLERS_PER_CAPACITY` (= 100), and a community starves out — is removed —
+/// once its `pressure = pop / (SETTLERS_PER_CAPACITY × capacity)` reaches
+/// `COLLAPSE_PRESSURE` (= 2.0). So every SURVIVING community obeys
+/// `pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × capacity`, and summing
+/// over the live settlements — whose per-cell capacities are a subset of the
+/// world's total suitability — gives the aggregate conservation ceiling:
+///
+/// > **Σ pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K**
+///
+/// i.e. 10029 ≤ 2 × 100 × 64.02 ≈ 12804 ✓ (measured ratio ≈ 0.78: mature
+/// communities sit well inside the collapse pressure, as the demography
+/// model intends). This is the draft placer's instantaneous-conservation
+/// invariant carried forward to the history-accumulated regime, NOT a
+/// weakening: it is the strongest bound the collapse rule permits, and it
+/// still catches a runaway (population conjured past the collapse threshold)
+/// or a double-count. The lower guard is positivity — a peopled world never
+/// collapses to zero (asserted above). Per ADR 0016 the ceiling is derived
+/// from the model's constants, not fit to the measurement.
 #[test]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
@@ -359,28 +352,23 @@ fn world_level_population_conserves_against_total_capacity() {
             }
         })
         .sum();
-    let count = settlements.len();
+    // Lower guard: a peopled world never collapses to zero.
     assert!(
         total_pop > 0.0,
         "a peopled seed-42 world has positive population"
     );
-    // Upper bound: committed population may only ever exceed Σ K by the
-    // per-settlement founder-floor/rounding allowance (never conjure mass
-    // beyond that from the field).
+    // The conservation ceiling, in the bake's own headcount units: no live
+    // community exceeds the collapse pressure, and the live settlements'
+    // per-cell capacities are a subset of the world's total suitability Σ K,
+    // so Σ pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K. Derived from
+    // the model's constants (ADR 0016), not fit to the measurement.
+    let ceiling = hornvale_worldgen::history_bake::COLLAPSE_PRESSURE
+        * hornvale_worldgen::SETTLERS_PER_CAPACITY
+        * total_k;
     assert!(
-        total_pop <= total_k + count as f64,
-        "committed population {total_pop} exceeded Σ K {total_k} by more than the \
-         {count}-settlement founder-floor/rounding allowance"
-    );
-    // Lower bound: a generous floor (well under the measured ~0.3482 ratio)
-    // that still catches a catastrophic conservation break — e.g. population
-    // collapsing toward zero — while tolerating the threshold's expected,
-    // already-documented mass culling AND the coexistence stack's
-    // dominant-only population commit (see this test's doc comment).
-    assert!(
-        total_pop >= total_k * 0.25,
-        "committed population {total_pop} fell far below Σ K {total_k} \
-         (ratio {:.4}) — below the threshold-culling floor this guard tolerates",
-        total_pop / total_k
+        total_pop <= ceiling,
+        "committed population {total_pop} exceeded the collapse ceiling {ceiling} \
+         (= COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K, Σ K = {total_k}) — a live \
+         community has aggregate-exceeded the starvation pressure the bake enforces"
     );
 }

@@ -49,8 +49,12 @@ const MIGRATE_SURVIVAL: f64 = 0.9;
 /// Fraction of a raided community's population the raider seizes; the
 /// remainder flees with the community to a new site.
 const RAID_SEIZE: f64 = 0.5;
-/// Pressure at or above which a community starves out (Famine).
-const COLLAPSE_PRESSURE: f64 = 2.0;
+/// Pressure at or above which a community starves out (Famine). `pub` so
+/// the demography calibration (`windows/lab`) can express the aggregate
+/// population-conservation ceiling: no live community exceeds this pressure,
+/// so `Σ pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ capacity`.
+/// type-audit: bare-ok(ratio)
+pub const COLLAPSE_PRESSURE: f64 = 2.0;
 /// Pressure below which a comfortable community may throw off a daughter.
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.

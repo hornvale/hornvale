@@ -520,8 +520,11 @@ const CONDENSATION_THRESHOLD: f64 = 1.7;
 /// (`pressure = population / eff_capacity`). Tuned with the bake's genesis
 /// founding density so seed-42's live settlement count lands in the walkable
 /// band (`windows/worldgen/tests/history_placement.rs`). A save-format
-/// constant: changing it re-places every world.
-const SETTLERS_PER_CAPACITY: f64 = 100.0;
+/// constant: changing it re-places every world. `pub` so the demography
+/// calibration (`windows/lab`) can express the population-conservation
+/// ceiling in the bake's own headcount units (see `COLLAPSE_PRESSURE`).
+/// type-audit: bare-ok(ratio)
+pub const SETTLERS_PER_CAPACITY: f64 = 100.0;
 
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
