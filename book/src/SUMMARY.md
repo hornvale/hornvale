@@ -208,6 +208,7 @@
 - [The Corrigendum](./chronicle/the-corrigendum.md)
 - [The Dread](./chronicle/the-dread.md)
 - [The Freshwater](./chronicle/the-freshwater.md)
+- [The Vantage](./chronicle/the-vantage.md)
 
 # Appendix: The Frontier
 
