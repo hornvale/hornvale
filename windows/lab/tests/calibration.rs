@@ -171,18 +171,22 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // per-axis spatial supply moved settlement composition — (122, 0) -> (114, 0).
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): (114, 0) -> (151, 41). Ambient is no longer extinct; the
-    // physical invariant (no locked world heads a cyclic pantheon) is still
-    // enforced by the panic arm above, not by this measured split.
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
+    // history-first placement re-opens the ambient reading (0 -> 41 locked-
+    // ambient heads — the ambient-extinction movement partially reverses)
+    // and grows the locked-eternal count (114 -> 151).
     assert_eq!(
         (locked_eternal, locked_ambient),
         (151, 41),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): 2 -> 9.
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
+    // 2 -> 9.
     assert_eq!(
         spinning_eternal, 9,
         "spinning-yet-eternal per-people head count drifted"
@@ -365,8 +369,11 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // spatial supply reshuffles coastal-vs-inland condensation (307 -> 404
     // coastal, 693 -> 587 inland; the balance are neither).
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): 404 -> 536 coastal, 587 -> 235 inland (the balance are neither).
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
+    // history-first placement swings the split back toward coastal (404 ->
+    // 536 coastal, 587 -> 235 inland).
     assert_eq!(coastal, 536, "coastal flagship count drifted");
     assert_eq!(inland, 235, "inland flagship count drifted");
 }
@@ -539,8 +546,12 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // spatial supply shifts which seeds field a kobold head (10 -> 9 solar).
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): 9 -> 33 solar, 11 -> 63 lunar.
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
+    // kobold presence rises sharply (see the name-length re-pin above), and
+    // with it the moonless-spinning kobold-head pool (9 -> 33 solar, 11 ->
+    // 63 lunar).
     assert_eq!(
         moonless_solar, 33,
         "moonless-solar kobold head count drifted"
@@ -640,9 +651,13 @@ fn blind_attribution_beats_chance_decisively() {
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // spatial supply shrinks the attributable pool (120 -> 94 correct).
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): the attributable pool re-expands (94 -> 703 correct,
-    // 120 -> 771 total, accuracy 0.912, still decisively above the 0.75 floor).
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
+    // history-first placement grows both species' presence sharply (see the
+    // name-length re-pin above), which reopens attributable pairs on far
+    // more seeds (94/120 -> 703/771; accuracy 0.911, still decisively above
+    // the 0.75 floor asserted above).
     assert_eq!(correct, 703, "blind-attribution count drifted");
     assert_eq!(total, 771, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
@@ -952,9 +967,12 @@ fn name_collision_rate_is_measured_and_pinned() {
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // spatial supply reshuffles rosters, shifting per-culture lexicon reuse
     // (278 -> 304 zero-collision worlds).
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): 304 -> 50 zero, 696 -> 723 nonzero, 0 -> 227 absent (227
-    // worlds now field no measurable collision rate).
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063).
+    // History-first placement widens the absent set sharply (0 -> 227
+    // worlds report no measurable collision rate at all) and redistributes
+    // the rest (304 -> 50 zero-collision, 696 -> 723 nonzero-collision).
     assert_eq!(zero, 50, "zero-collision world count drifted");
     assert_eq!(nonzero, 723, "nonzero-collision world count drifted");
     assert_eq!(absent, 227, "absent name-collision-rate count drifted");
@@ -983,9 +1001,13 @@ fn name_collision_rate_is_measured_and_pinned() {
         // (longer names collide less; inherits origin/main's un-pinned physics).
         // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
         // 0.042_045_556_609_300 -> 0.063_951_743_953_100.
-        // Census regen chase-back (2026-07-21, The Living Community epoch,
-        // commit 2c246ec1): 0.063_951_743_953_100 -> 0.178_726_790_236_740.
-        (mean - 0.178_726_790_236_740).abs() < 1e-6,
+        // The Living Community epoch (history-first placement) re-placed
+        // every world; re-pinned to the regenerated 1000-seed census
+        // (lefford, 0063): 0.063_951_743_953_100 -> 0.178_726_790_236_740_12
+        // (name-collision-rate fell under Demesne's spatial supply; history-
+        // first placement reverses that trend sharply, back above every
+        // prior regen's rate).
+        (mean - 0.178_726_790_236_740_12).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1074,9 +1096,11 @@ fn name_length_distributions_are_measured_and_pinned() {
         // Local-canonical adoption (2026-07-19, The Local Census, decision 0063).
         // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
         // spatial supply drops goblin from 9 seeds (1000 -> 991 present).
-        // Census regen chase-back (2026-07-21, The Living Community epoch,
-        // commit 2c246ec1): 991 -> 771 present, 14.125_926_952_472_248 ->
-        // 13.461_308_710_376_134.
+        //
+        // The Living Community epoch (history-first placement) re-placed
+        // every world; re-pinned to the regenerated 1000-seed census
+        // (lefford, 0063): history-first placement drops goblin presence
+        // sharply (991 -> 771 present; mean 14.126 -> 13.461).
         ("goblin", 771u32, 13.461_308_710_376_134),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
@@ -1086,9 +1110,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // byte-identical).
         // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
         // spatial supply drops kobold from more seeds (156 -> 123 present).
-        // Census regen chase-back (2026-07-21, The Living Community epoch,
-        // commit 2c246ec1): 123 -> 772 present, 10.036_733_166_666_673 ->
-        // 12.748_786_009_455_962.
+        //
+        // The Living Community epoch (history-first placement) re-placed
+        // every world; re-pinned to the regenerated 1000-seed census
+        // (lefford, 0063): unlike goblin, kobold presence RISES (123 -> 772
+        // present) — history seats kobolds in MORE worlds under history-
+        // first placement, the opposite of the Demesne movement; mean drops
+        // 10.037 -> 12.749.
         ("kobold", 772u32, 12.748_786_009_455_962),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
@@ -1167,10 +1195,12 @@ fn null_control_blind_attribution_is_at_chance() {
         indistinguishable as f64 / pairs as f64 > 0.5,
         "expected the null control to be mostly indistinguishable, got {indistinguishable}/{pairs}"
     );
-    // Dormant by design for this perfect vector-clone: `decided` is asserted
-    // to be exactly 0 below, so this branch never runs today. It stays as a
-    // defensive guard that would only activate if a future non-identical
-    // null control ever produced a decided pair.
+    // This guard used to be dormant (decided was pinned at exactly 0 for a
+    // perfect vector-clone null control). The Living Community epoch
+    // (history-first placement) breaks that perfect clone: 64 of 389
+    // attributable solo pairs now decide (see the re-pin below), so this
+    // branch is live — the directional floor (twin picked ~half the time)
+    // is the check that matters now.
     if decided > 0 {
         let rate = picks_twin as f64 / decided as f64;
         assert!(
@@ -1184,12 +1214,17 @@ fn null_control_blind_attribution_is_at_chance() {
     // goblin-vectored species land in identical cells, draw the same head-deity
     // domain and pantheon cyclic-share and size, so no tier of the rule ever
     // separates them — decided (and thus picks_twin) is exactly zero.
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): the null control is no longer PERFECTLY indistinguishable —
-    // 325/389 pairs are indistinguishable (still decisively "mostly", the
-    // directional floor above), and among the 64 decided pairs the twin is
-    // picked 31 times (0.484, at chance, satisfying the twin-pick-rate guard
-    // that now activates). (500, 0, 0) -> (325, 64, 31).
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063).
+    // History-first placement is path-dependent (settlement order affects
+    // which cell each people condenses first), so the goblin-solo and
+    // goblin-twin-solo builds are no longer perfect clones on every seed:
+    // indistinguishable falls (500 -> 325) and a nonzero pool now decides
+    // (0 -> 64), splitting close to chance (31 twin-picks / 64 decided =
+    // 0.484, well inside the ±0.2 directional floor above). The attributable
+    // pool itself also shrank (389 pairs measurable here vs 500 pre-epoch,
+    // since the 1000-seed drift study is now smaller after presence shifts).
     assert_eq!(indistinguishable, 325, "indistinguishable count drifted");
     assert_eq!(decided, 64, "decided count drifted");
     assert_eq!(picks_twin, 31, "twin-pick count drifted");
@@ -1240,31 +1275,24 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // not pantheon structure. Only name-length diverges (the lone structural
     // trace of the two distinct names); its exact pinned SMD is a measurement
     // and lives in the Task-12-owned sibling test below.
-    // Head-deity domain does NOT route through history-derived state, so it
-    // stays byte-identical between the solo builds (TVD exactly 0) regardless
-    // of name salt — the structural-zero still holds here.
+    //
+    // The Living Community epoch (history-first placement) re-placed every
+    // world; re-pinned to the regenerated 1000-seed census (lefford, 0063).
+    // History-first placement is path-dependent (settlement condensation
+    // order affects which cell a people commits first), so the two solo
+    // builds are no longer perfect structural clones: head-deity domain
+    // stays exactly identical (TVD = 0, the naming-independent invariant
+    // still holds for that column), but cult-form and pantheon-size now
+    // diverge by a hair on a small number of seeds — still comfortably
+    // inside the ±0.15/±0.2 directional sampling bound asserted above, so
+    // this is a re-pinned MEASUREMENT, not a broken invariant.
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
-    // Census regen chase-back (2026-07-21, The Living Community epoch, commit
-    // 2c246ec1): cult-form and pantheon-size are NO LONGER exact structural
-    // zeros. The history-first epoch seeds each people's proto-sites from a
-    // KindId-salted genesis stream (`history_bake::bake`, GENESIS.derive(
-    // people.0)), so `goblin-twin` — goblin's vector re-keyed under a fresh
-    // KindId (`WorldComponents::from_stores`) — draws a slightly different
-    // baked history than `goblin`. The pantheon derives from the salient
-    // phenomena the community observes (`religion::genesis`), so cult-form and
-    // size now carry the SAME bounded name-salted noise as everything else —
-    // this IS the "diverging only through name-salted noise" the study asserts.
-    // The coupling is ~50x below the sampling envelope checked above (TVD 0.0026
-    // vs the 0.15 bound; SMD 0.0026 vs the 0.2 bound), so the null control's
-    // scientific claim — solo/twin indistinguishable within the sampling bound —
-    // holds decisively. These are now MEASURED pins (drift-checked to 1e-9), not
-    // structural zeros. (0.0, 0.0) -> (0.0025706940874036105, -0.0026287371601158155).
     assert!(
-        (cult - 0.0025706940874036105).abs() < 1e-9,
+        (cult - 0.002_570_694_087_403_610_5).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     assert!(
-        (size - -0.0026287371601158155).abs() < 1e-9,
+        (size - -0.002_628_737_160_115_815_5).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -1350,10 +1378,13 @@ fn null_control_name_length_smd_is_pinned() {
         // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
         // -0.053_112_830_046_401_69 -> -0.047_266_428_630_096_086; still well
         // inside the ±0.2 sampling bound.
-        // Census regen chase-back (2026-07-21, The Living Community epoch,
-        // commit 2c246ec1): -0.047_266_428_630_096_086 ->
-        // -0.057_530_513_798_518_47; still well inside the ±0.2 sampling bound.
-        (namelen - -0.057_530_513_798_518_47).abs() < 1e-9,
+        //
+        // The Living Community epoch (history-first placement) re-placed
+        // every world; re-pinned to the regenerated 1000-seed census
+        // (lefford, 0063): -0.047_266_428_630_096_086 ->
+        // -0.057_530_513_798_514_59; still well inside the ±0.2 sampling
+        // bound.
+        (namelen - -0.057_530_513_798_514_59).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }
