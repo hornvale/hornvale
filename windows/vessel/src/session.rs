@@ -2,8 +2,8 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, LocaleTerrain, Npc, RESTED,
-    SUSTENANCE, affect_of, agent_position, derive_npcs,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
+    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -93,6 +93,9 @@ impl<'w> Session<'w> {
                 "an agent rested (eased its fatigue) on a day",
             )
             .expect("RESTED registers identically every session");
+        registry
+            .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
+            .expect("EATEN registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
@@ -585,12 +588,14 @@ const RESTLESS_AROUSAL: f64 = 0.4;
 /// *about* — so a reader sees not just *that* it frets but *what for*. The
 /// object/reason is the debuggable "message" a distressed creature emits.
 fn felt_phrase(affect: &Affect) -> String {
-    // Pick the object-appropriate wording (thirst / thermal / fatigue / none).
-    let about = |thirst: &str, thermal: &str, fatigue: &str, none: &str| {
+    // Pick the object-appropriate wording (thirst / thermal / fatigue / hunger
+    // / none).
+    let about = |thirst: &str, thermal: &str, fatigue: &str, hunger: &str, none: &str| {
         match affect.object {
             Some(DriveKind::Thirst) => thirst,
             Some(DriveKind::Thermal) => thermal,
             Some(DriveKind::Fatigue) => fatigue,
+            Some(DriveKind::Hunger) => hunger,
             None => none,
         }
         .to_string()
@@ -605,18 +610,21 @@ fn felt_phrase(affect: &Affect) -> String {
             "drinks its fill",
             "settles into a kinder warmth",
             "settles down to rest",
+            "eats its fill",
             "looks pleased",
         ),
         AffectLabel::Searching => about(
             "casts about for water",
             "casts about for a kinder clime",
             "trudges wearily homeward",
+            "forages for richer ground",
             "wanders, searching",
         ),
         AffectLabel::Frustrated => about(
             "frets, wanting water it cannot reach",
             "shivers, with no warmth within reach",
             "frets, too far from any rest",
+            "frets, famished, with no food in reach",
             "frets, blocked at every turn",
         ),
         AffectLabel::Lost => "looks lost, unsure where to turn".to_string(),
@@ -624,6 +632,7 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up on water",
             "has given up on warmth",
             "has given up, bone-weary",
+            "has given up, starving",
             "has given up",
         ),
     }

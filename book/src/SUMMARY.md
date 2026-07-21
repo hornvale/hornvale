@@ -203,6 +203,7 @@
 - [The Consonance](./chronicle/the-consonance.md)
 - [The Slumber](./chronicle/the-slumber.md)
 - [The Wakeful Sun](./chronicle/the-wakeful-sun.md)
+- [The Provender](./chronicle/the-provender.md)
 
 # Appendix: The Frontier
 

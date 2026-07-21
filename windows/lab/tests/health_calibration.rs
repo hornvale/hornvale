@@ -17,8 +17,8 @@
 //! hand. The null control runs on real generated worlds throughout.
 use hornvale_lab::health::{AffectTrace, HealthReport, health_report, simulate_world};
 use hornvale_lab::synthetic::{
-    a_heat_wave_that_passes, a_stricken_and_a_healthy_people, stranded_from_known_water,
-    stranded_in_a_hot_waste,
+    a_forager_in_a_food_desert, a_heat_wave_that_passes, a_stricken_and_a_healthy_people,
+    stranded_from_known_water, stranded_in_a_hot_waste,
 };
 use hornvale_vessel::liveness::{Affect, AffectLabel, DriveKind};
 
@@ -213,6 +213,29 @@ fn a_stranded_creature_is_scored_chronic_end_to_end() {
         "the distress is entirely thirst (unreachable water)"
     );
     assert_eq!(r.by_cause["thermal"], 0.0);
+}
+
+#[test]
+fn a_forager_in_a_food_desert_starves_by_cause_hunger_end_to_end() {
+    // THE PROVENDER, end to end: a creature on its own spring (thirst always
+    // serviceable) but on barren ground with no richer neighbour crosses into
+    // hunger-distress and Holds — the real sim producing a hunger-attributed
+    // distress run, proving the fourth drive enters the competition and the
+    // by-cause reduction separates it from thirst/thermal/fatigue.
+    let r = health_report(&a_forager_in_a_food_desert().simulate(HARNESS_TICKS));
+    assert!(
+        r.by_cause["hunger"] > 0.0,
+        "the distress is attributed to hunger: {r:?}"
+    );
+    assert_eq!(
+        r.by_cause["thirst"], 0.0,
+        "thirst never distresses — the creature sits on its spring"
+    );
+    assert!(
+        r.prevalence > 0.0,
+        "the food desert produces real distress: {}",
+        r.prevalence
+    );
 }
 
 #[test]

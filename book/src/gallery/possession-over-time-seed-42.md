@@ -42,7 +42,7 @@ Time passes. You sense movement nearby (6 stirred).
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo seems content.
+The hobgoblin of Foenjoavaenoenoanoagoo grows restless.
 > wait 1
 Time passes; the world keeps its shape.
 > look
@@ -58,7 +58,7 @@ hobgoblin of Foenjoavaenoenoanoagoo:
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5)
 
 > wait 90
-Time passes. You sense movement nearby (99 stirred).
+Time passes. You sense movement nearby (123 stirred).
 > look
 [room 694550540, day 97]
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.

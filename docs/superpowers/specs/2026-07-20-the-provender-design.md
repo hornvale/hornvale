@@ -1,6 +1,8 @@
 # The Provender — hunger, the fourth drive
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-20) — see the
+[chronicle](../../../book/src/chronicle/the-provender.md) and
+[retrospective](../../retrospectives/the-provender.md).
 **Date:** 2026-07-20
 **Campaign:** The Provender (Temperament followup #3, second drive: hunger)
 **Precedes:** implementation plan → execution → merge
