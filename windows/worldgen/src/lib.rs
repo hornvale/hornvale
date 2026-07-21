@@ -5673,7 +5673,7 @@ mod tests {
         // (with review) whenever a deliberate bake/carrying-capacity change
         // moves world identity.
         assert_eq!(
-            village.population, 119,
+            village.population, 118,
             "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
@@ -5778,13 +5778,13 @@ mod tests {
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         // The flagship's own pantheon (not the world total — a default world
         // now carries one pantheon per species-flagship, spec §5). The Living
-        // Community epoch moved the flagship to the bake's first alive
-        // occupation cell, whose vantage observes two salient phenomena rather
-        // than one — re-pin 1 -> 2 (measured; a cascade smoke test, the exact
-        // belief count is incidental to "the cascade runs").
+        // Community epoch's final placement puts the flagship on a cell whose
+        // vantage observes one salient phenomenon — re-pin to 1 (measured; a
+        // cascade smoke test, the exact belief count is incidental to "the
+        // cascade runs").
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            2
+            1
         );
     }
 
@@ -6862,15 +6862,18 @@ mod tests {
 
     #[test]
     fn locked_rotation_changes_the_flagship_cascade() {
-        // Seed 1 (not 42 or 7: task A15a's niche cutover moved the
-        // world's dominant coexistence attractor onto a joint mass-weighted
-        // optimum rather than any one species' own independent best cell,
-        // so the seed that happens to coincide across rotation regimes
-        // shifted too — 7 now coincides post-cutover; 1 still separates).
+        // Seed 5 (re-pinned under The Living Community epoch, this merge):
+        // history is the sole settlement placer now, and the deep-history
+        // bake re-placed every world, so the seed that separates the two
+        // rotation regimes' flagship cascades shifted again. Seed 1 (the
+        // prior anchor) now coincides across regimes; a survey of seeds
+        // 1..=25 found seed 5 the nearest that still separates them (and it
+        // also separates the two regimes' pantheon heads — see
+        // `the_pantheon_reorganizes_between_spinning_and_locked`).
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(1);
+        let spinning = generated(5);
         let locked = build_world(
-            Seed(1),
+            Seed(5),
             &SkyPins {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
@@ -7039,15 +7042,16 @@ mod tests {
 
     #[test]
     fn the_pantheon_reorganizes_between_spinning_and_locked() {
-        // Seed 1 (not 42: task A15a's niche cutover moved the world's
-        // dominant coexistence attractor — see below — so the seed that
-        // best illustrates the two regimes' different religions shifted
-        // too; 1 still separates cleanly, matching
-        // `locked_rotation_changes_the_flagship_cascade`).
+        // Seed 5 (re-pinned under The Living Community epoch, this merge):
+        // history is the sole settlement placer now and re-placed every
+        // world, so the seed that best separates the two regimes' pantheon
+        // heads shifted again. Seed 5 is the shared anchor with
+        // `locked_rotation_changes_the_flagship_cascade` (its flagship
+        // cascade AND its pantheon head both separate across regimes there).
         use hornvale_astronomy::RotationPin;
-        let spinning = generated(1);
+        let spinning = generated(5);
         let locked = build_world(
-            Seed(1),
+            Seed(5),
             &SkyPins {
                 rotation: Some(RotationPin::Locked),
                 ..SkyPins::default()
@@ -7062,26 +7066,26 @@ mod tests {
                 .first()
                 .map(|b| b.sentiment)
         };
-        // The head deity reorganizes with the sun's rotation regime, but
-        // task A15a's niche cutover flipped WHICH sentiment the locked
-        // regime yields. Unlike the old flat carrying-capacity field, the
-        // niche-differentiated K (`niche_per_species_k`) multiplies in an
-        // explicit insolation response term, so the coexistence stack's
-        // dominant (highest joint-mass) attractor now correlates with solar
-        // exposure. On a locked world that pulls the flagship toward the
-        // substellar point, where the fixed, ever-present sun dominates
-        // observation — the felt-tide "Ambient" default SEQ-1 established
-        // pre-cutover no longer holds; the locked head is now the
-        // unchanging sun (Eternal).
+        // The head deity reorganizes with the sun's rotation regime. The
+        // A15a niche cutover had pinned the locked head to Eternal (the
+        // fixed sun) at the then-flagship cell; The Living Community epoch's
+        // re-placement REVERSED that — a survey of seeds 1..=25 finds the
+        // locked head is now dominantly the felt-tide "Ambient" default
+        // (24/25 seeds; Eternal survives only at the odd seed 16). The
+        // flagship no longer sits reliably at the substellar point, so the
+        // fixed-sun-heads-the-pantheon illustration no longer generalizes;
+        // re-pin to the measured, dominant Ambient. The essential property —
+        // the pantheon REORGANIZES between the regimes (here Cyclic ->
+        // Ambient) — is unchanged and still asserted below.
         assert_eq!(
             head_sentiment(&locked),
-            Some(hornvale_religion::Sentiment::Eternal),
-            "locked world (post niche-cutover): the fixed sun heads the pantheon"
+            Some(hornvale_religion::Sentiment::Ambient),
+            "locked world (post-epoch): the felt-tide default heads the pantheon"
         );
         assert_ne!(
             head_sentiment(&spinning),
-            Some(hornvale_religion::Sentiment::Eternal),
-            "spinning world: not an eternal head deity"
+            Some(hornvale_religion::Sentiment::Ambient),
+            "spinning world: not an ambient head deity"
         );
         assert_ne!(
             head_sentiment(&spinning),

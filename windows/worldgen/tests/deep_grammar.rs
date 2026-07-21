@@ -32,17 +32,21 @@ fn the_coherence_law() {
     // "<kind>-kind" always Animate; a terrain concept (e.g. "forest")
     // always Inanimate. Measure which cultures are agentive (never force
     // it) — C5 measured PathJourney/CycleReturn/Balance at 1..=3; the DAY
-    // schema draws Agentive at seed 10 hobgoblin
+    // schema draws Agentive at seed 4 bugbear
     // (`explanations.rs::the_day_binds_by_period_match_never_identity`), so
-    // seed 10 joins the sweep specifically to reach it (each of
+    // seed 4 joins the sweep specifically to reach it (each of
     // day_schema_of/noun_class_of independently re-derives a whole Account
     // per call — the re-derivation idiom every readout in this module
     // follows — so a full battery over ALL of 1..=10 costs meaningfully
     // more than this targeted set for no added coverage) — assert at least
     // one Animate-sky culture across the sweep, else panic demanding a
     // wider sweep still.
+    // Re-pointed under The Living Community epoch (this merge): the prior
+    // Agentive anchor (seed 10 hobgoblin) no longer fires Agentive after the
+    // world re-placement, so the sweep now includes seed 4 (bugbear), the
+    // nearest surviving Agentive-day culture.
     let mut any_animate_sky = false;
-    for seed in [1, 2, 3, 10] {
+    for seed in [1, 2, 3, 4, 10] {
         let w = generated(seed);
         for (kind, _village) in placed_peoples(&w) {
             let schema = day_schema_of(&w, kind);
@@ -157,32 +161,25 @@ fn depth_landscape_measured() {
     }
 
     // Pinned exact (measured seeds 1..=3, the shipped four-people roster).
-    // Bugbear never places within this range (a pre-existing measured
-    // finding, unrelated to this campaign — see
-    // `registry-scan-before-generating`/the bugbear placement rate); kobold
-    // places at seed 2 and, since the Confluence's settlement re-baseline
-    // (merge a46749f), also at seed 3.
-    // Re-pinned post-absorption (the Confluence settlement re-baseline +
-    // the Elements percepts, merge a46749f): seed 3 now places a kobold
-    // (row appended below); the other 7 rows are unchanged (re-measured and
-    // verified byte-for-byte identical to the pre-absorption pins).
-    // Re-pinned again (the-demesne T2, `niche_per_species_k`'s axis-dot-
-    // product re-point): seed 3 no longer places a kobold — dropping the
-    // row below. Root cause is the same one `confluence.rs`'s settlement-
-    // count band documents: `ANIMAL_PREY` supply is Stage 2's placeholder
-    // zero, so kobold's 0.45 `ANIMAL_PREY` weight (its niche is
-    // `PLANT_FORAGE 0.55 / ANIMAL_PREY 0.45`) now contributes nothing,
-    // shrinking its K broadly and dropping seed 3's marginal kobold
-    // catchment below `CONDENSATION_THRESHOLD`. The other 7 rows are
-    // unchanged (re-measured and verified byte-for-byte identical).
+    // Re-pinned under The Living Community epoch (history is the sole
+    // settlement placer, this merge): the deep-history bake's genesis seeds
+    // ALL FOUR peoples on every world, so bugbear and kobold now place at
+    // every seed 1..=3 (previously bugbear never placed and kobold only at
+    // seed 2). The landscape is now the full 12-row (4 peoples x 3 seeds)
+    // grid — re-measured and re-pinned exactly below.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
+        (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
+        (1, "kobold", MorphDepth::None, MorphDepth::None),
+        (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
+        (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
+        (3, "kobold", MorphDepth::None, MorphDepth::Affix),
     ];
     assert_eq!(
         measured, expect,

@@ -159,7 +159,24 @@ type Row = (
 /// The FULL measured ladder table (seeds 1..=5 × placed culture × the
 /// epoch pair), pinned exact — the C7 landscape idiom. Predictions are
 /// the exact f64 the API returned (shortest-round-trip literals).
+// Re-pinned under The Living Community epoch (history is the sole
+// settlement placer, this merge): the deep-history bake seeds all four
+// peoples on every world and grows them into large, organized flagship
+// communities. Every placed culture now clears the SOC-1 gate (has
+// doctrine), so every epoch-2 rung is Predictive - the prior folk-only
+// rows (seed 1 hobgoblin, seed 2 kobold, seed 5 hobgoblin) are gone, and
+// bugbear/kobold now place at every seed. The epoch-2 prediction is a
+// closed-form function of the world's day, so a people's co-seeded twin
+// flagships share it exactly.
 const LADDER_TABLE: &[Row] = &[
+    (
+        1,
+        "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36526.1181181615),
+    ),
     (
         1,
         "goblin",
@@ -168,19 +185,29 @@ const LADDER_TABLE: &[Row] = &[
         4010,
         Some(36526.1181181615),
     ),
-    // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): seed 1
-    // hobgoblin flipped from an organized cult to a FOLK flagship (the
-    // recalibrated per-axis supply moved its demography below the SOC-1
-    // gate — the same organized->folk drift the book's seed-1 tests pin),
-    // so it never exceeds Counted no matter how many events it witnesses
-    // (4010). Was: LadderRung::Predictive, Some(36526.1181181615).
     (
         1,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         4010,
-        None,
+        Some(36526.1181181615),
+    ),
+    (
+        1,
+        "kobold",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36526.1181181615),
+    ),
+    (
+        2,
+        "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        81,
+        Some(36611.93610859729),
     ),
     (
         2,
@@ -198,19 +225,21 @@ const LADDER_TABLE: &[Row] = &[
         49,
         Some(36611.93610859729),
     ),
-    // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
-    // seed 2 kobold flipped from an organized cult to a FOLK flagship
-    // (the SOC-1 gate's negative arm) — the moisture model shifted
-    // demography enough to re-form the culture without doctrine, so it
-    // never exceeds Counted no matter how many events it witnesses (81).
-    // Was: LadderRung::Predictive, 81, Some(36611.93610859729).
     (
         2,
         "kobold",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         81,
-        None,
+        Some(36611.93610859729),
+    ),
+    (
+        3,
+        "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        53,
+        Some(36953.336612553074),
     ),
     (
         3,
@@ -220,12 +249,6 @@ const LADDER_TABLE: &[Row] = &[
         32,
         Some(36953.336612553074),
     ),
-    // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
-    // recalibrated per-axis supply flipped seed 3 hobgoblin folk->organized
-    // (its priesthood now records and predicts, at 32) and dropped kobold
-    // from placement entirely at this seed (no row — placed_peoples no longer
-    // returns it, so the placed.len()==rows law drops it too). Was: hobgoblin
-    // Counted/None; kobold Counted/53/None.
     (
         3,
         "hobgoblin",
@@ -233,6 +256,22 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         32,
         Some(36953.336612553074),
+    ),
+    (
+        3,
+        "kobold",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        53,
+        Some(36953.336612553074),
+    ),
+    (
+        4,
+        "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
     ),
     (
         4,
@@ -249,6 +288,22 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Predictive,
         2067,
         Some(36540.36159622378),
+    ),
+    (
+        4,
+        "kobold",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        5,
+        "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36550.4595587471),
     ),
     (
         5,
@@ -258,18 +313,21 @@ const LADDER_TABLE: &[Row] = &[
         304,
         Some(36550.4595587471),
     ),
-    // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
-    // seed 5 hobgoblin flipped from an organized cult to a FOLK flagship
-    // (same SOC-1 negative arm as seed 2 kobold above), so it never
-    // exceeds Counted no matter how many events it witnesses (304).
-    // Was: LadderRung::Predictive, 304, Some(36550.4595587471).
     (
         5,
         "hobgoblin",
         LadderRung::Unknown,
-        LadderRung::Counted,
+        LadderRung::Predictive,
         304,
-        None,
+        Some(36550.4595587471),
+    ),
+    (
+        5,
+        "kobold",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36550.4595587471),
     ),
 ];
 
