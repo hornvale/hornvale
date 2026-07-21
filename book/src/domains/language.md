@@ -318,7 +318,26 @@ is Few and Many's own numeral rung asked a new question: not just how a
 number renders, but whether a rung's vocabulary can name a *relationship*
 between two numbers at all — proven as a standing capability, not yet
 wired into any spoken account. See
-[The Consonance](../chronicle/the-consonance.md).
+[The Consonance](../chronicle/the-consonance.md). And since The
+Corrigendum, a taught prediction can finally be *wrong*. The Diachronic
+Book's priesthood used to teach the true future outright — an omniscient
+lookup with the eclipse's own answer already in hand; now it extrapolates
+from what it has actually witnessed, the way a real priesthood would have
+to, and the world's own structure (an eclipse's timing beats gently
+against the calendar year, the mechanism behind the real saros cycle) is
+enough to make that extrapolation genuinely miss. A single miss is
+forgiven — real revision doesn't fire on one bad guess — but two in a
+row is a live crisis, and the Book's margin quotes it exactly: what was
+taught, and what came instead. Nothing about *revising* needed a new
+mechanism at all: a knowledge-state has always been a fresh derivation
+from everything witnessed by that day, so a later day's fresh derivation
+over more evidence simply teaches better — revision was already latent
+in a project that never lets knowledge be anything but re-derived. A
+culture with an organized priesthood says one thing more, in its own
+doctrinal voice: that it has never been caught (or, once it has, that it
+could be) — echoing, without yet routing through, the very conflict
+machinery The Doctrine built for exactly this shape of claim. See
+[The Corrigendum](../chronicle/the-corrigendum.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
