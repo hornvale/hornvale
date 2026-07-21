@@ -201,6 +201,7 @@
 - [The Kindling](./chronicle/the-kindling.md)
 - [The Sounding](./chronicle/the-sounding.md)
 - [The Consonance](./chronicle/the-consonance.md)
+- [The Slumber](./chronicle/the-slumber.md)
 
 # Appendix: The Frontier
 
