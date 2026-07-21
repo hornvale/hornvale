@@ -305,7 +305,20 @@ only "more than one," while a full-counting listener keeps the nearest
 whole count, the same codec read from two directions rather than two
 independently authored mechanisms. Proven against the Book's own existing
 day-length sentences, unwired into any live exchange yet — see
-[Few and Many](../chronicle/few-and-many.md).
+[Few and Many](../chronicle/few-and-many.md). And since The Consonance,
+one explained fact is finally *about* two others at once: when a world's
+moons happen to sit close to a clean small-integer period ratio, the
+single best-matching pair surfaces as its own fact, gated by a sky-reading
+depth pushed above plain moon-counting (below it, the culture's account
+carries an honest, present record of what lies beyond its own capability,
+never a silent omission), and explained through the same weighted
+causal-schema library every other fact already draws from — no schema
+built for the occasion. Whether the relationship can be *said* precisely
+is Few and Many's own numeral rung asked a new question: not just how a
+number renders, but whether a rung's vocabulary can name a *relationship*
+between two numbers at all — proven as a standing capability, not yet
+wired into any spoken account. See
+[The Consonance](../chronicle/the-consonance.md).
 
 **The full model card.** The articulation-vector table above types the
 species' *envelope* — six authored capacities per people. Everything this
