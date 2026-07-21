@@ -42,6 +42,8 @@ use crate::phoneme::{
     Manner, Segment, espeak_word, ipa, romanize, tone_mark_ipa, tone_mark_roman, tone_of,
 };
 use crate::phonology::Phonology;
+use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
 /// What kind of name is being drawn; selects the morphology rules and the
@@ -174,11 +176,11 @@ impl<'a> Namer<'a> {
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed
-            .derive("language")
-            .derive(&self.species)
-            .derive("name")
-            .derive(kind.label())
-            .derive(&salt.to_string())
+            .derive_typed(streams::ROOT)
+            .derive_typed(StreamLabel::dynamic(&self.species))
+            .derive_typed(streams::NAME)
+            .derive_typed(StreamLabel::dynamic(kind.label()))
+            .derive_typed(StreamLabel::dynamic(&salt.to_string()))
             .stream();
         self.build_name(kind, morph, &mut stream)
     }
@@ -220,12 +222,12 @@ impl<'a> Namer<'a> {
     ) -> (GeneratedName, String) {
         let mut stream = self
             .seed
-            .derive("language")
-            .derive(&self.species)
-            .derive("name")
-            .derive(kind.label())
-            .derive("v2")
-            .derive(&salt.to_string())
+            .derive_typed(streams::ROOT)
+            .derive_typed(StreamLabel::dynamic(&self.species))
+            .derive_typed(streams::NAME)
+            .derive_typed(StreamLabel::dynamic(kind.label()))
+            .derive_typed(streams::V2)
+            .derive_typed(StreamLabel::dynamic(&salt.to_string()))
             .stream();
 
         let candidates: Vec<&str> = site
