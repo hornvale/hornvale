@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **STATUS: SHIPPED 2026-07-21 — registry MAP-68.** Renderer merged as a correct FOUNDATION (all 5 tasks, whole-branch review clean, Orrery deployed); the aesthetic tuning is a deferred follow-up (owner decision). Completes the Orrery view-remake program.
+
 **Goal:** Rework the flat map's Pixel-art style into a 16-bit RPG overworld look — a procedural renderer producing a higher-resolution texture with a tight palette, ordered dithering, crafted coastlines, and landform outlines.
 
 **Architecture:** A new pure renderer `overworldRGBA(region, dim)` computes an RGBA buffer at `dim×dim` (≈384², decoupled from the coarse 65×65 region grid): each output pixel maps to its nearest region node for biome/ocean/elevation, then palette + dither + coastline + outline are applied per output pixel. A `DataTexture` wrapper feeds it to the map plane's `'pixel'` style. All deterministic — ordered (Bayer) dither, no `Math.random`.
