@@ -206,6 +206,12 @@
 - [The Provender](./chronicle/the-provender.md)
 - [The Cartographer](./chronicle/the-cartographer.md)
 - [The Corrigendum](./chronicle/the-corrigendum.md)
+- [The Dread](./chronicle/the-dread.md)
+- [The Freshwater](./chronicle/the-freshwater.md)
+- [The Vantage](./chronicle/the-vantage.md)
+- [The Belonging](./chronicle/the-belonging.md)
+- [The Disposition](./chronicle/the-disposition.md)
+- [The Mettle](./chronicle/the-mettle.md)
 
 # Appendix: The Frontier
 

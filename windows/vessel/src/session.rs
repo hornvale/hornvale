@@ -589,13 +589,21 @@ const RESTLESS_AROUSAL: f64 = 0.4;
 /// object/reason is the debuggable "message" a distressed creature emits.
 fn felt_phrase(affect: &Affect) -> String {
     // Pick the object-appropriate wording (thirst / thermal / fatigue / hunger
-    // / none).
-    let about = |thirst: &str, thermal: &str, fatigue: &str, hunger: &str, none: &str| {
+    // / danger / social / none).
+    let about = |thirst: &str,
+                 thermal: &str,
+                 fatigue: &str,
+                 hunger: &str,
+                 danger: &str,
+                 social: &str,
+                 none: &str| {
         match affect.object {
             Some(DriveKind::Thirst) => thirst,
             Some(DriveKind::Thermal) => thermal,
             Some(DriveKind::Fatigue) => fatigue,
             Some(DriveKind::Hunger) => hunger,
+            Some(DriveKind::Danger) => danger,
+            Some(DriveKind::Social) => social,
             None => none,
         }
         .to_string()
@@ -611,6 +619,8 @@ fn felt_phrase(affect: &Affect) -> String {
             "settles into a kinder warmth",
             "settles down to rest",
             "eats its fill",
+            "reaches safer ground",
+            "makes for home and its people",
             "looks pleased",
         ),
         AffectLabel::Searching => about(
@@ -618,6 +628,8 @@ fn felt_phrase(affect: &Affect) -> String {
             "casts about for a kinder clime",
             "trudges wearily homeward",
             "forages for richer ground",
+            "edges away from the uncanny ground",
+            "drifts homeward, missing its people",
             "wanders, searching",
         ),
         AffectLabel::Frustrated => about(
@@ -625,6 +637,8 @@ fn felt_phrase(affect: &Affect) -> String {
             "shivers, with no warmth within reach",
             "frets, too far from any rest",
             "frets, famished, with no food in reach",
+            "recoils, hemmed in by dread on every side",
+            "frets, cut off from home and its people",
             "frets, blocked at every turn",
         ),
         AffectLabel::Lost => "looks lost, unsure where to turn".to_string(),
@@ -633,6 +647,8 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up on warmth",
             "has given up, bone-weary",
             "has given up, starving",
+            "has given up, cowering",
+            "has given up on ever getting home",
             "has given up",
         ),
     }

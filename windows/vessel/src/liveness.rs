@@ -16,7 +16,7 @@ use hornvale_species::{ActivityCycle, MetabolicClass};
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -66,6 +66,14 @@ pub struct Npc {
     /// branched on a diet type. Threaded from the species' authored
     /// `biosphere_registry` at derivation, beside the metabolic class.
     pub niche: ResourceVector,
+    /// The species' `PsychVector.threat_response` (flee 0 ↔ stand 1), read at
+    /// CREATURE scope as its boldness (The Mettle): scales the Danger drive's
+    /// felt threat — `× 2·(1 − boldness)`, centered on `0.5` (steady/inert), so
+    /// a coward (`< 0.5`) fears more and a bold creature (`> 0.5`) fears less.
+    /// The banked third psychology dial, threaded from `psyche_registry` at
+    /// derivation like `deliberation_latency`/`time_horizon` (default `0.5` — a
+    /// steady, byte-identical baseline — for a species without a psyche entry).
+    pub boldness: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -260,6 +268,20 @@ pub trait Terrain {
     fn forage_value(&self, _room: &RoomAddr) -> f64 {
         DEFAULT_FORAGE
     }
+
+    /// The cell's THREAT in `[0, 1]` (The Dread) — the hazard a creature senses
+    /// and flees: `0` is safe, `1` is deadly. The DEFAULT is `0.0` (safe) — so
+    /// planted/synthetic test terrains are threat-free and danger stays silent
+    /// unless a scenario plants a hazard; a live `LocaleTerrain` OVERRIDES it
+    /// with the real climate's threat field (`threat_at`: the uncanny —
+    /// strangeness — plus a lethal-temperature backstop). A slow field (the
+    /// uncanny does not shift by the hour), so it takes no `day`. v1 is
+    /// niche-less: every metabolising creature fears it uniformly; the per-kind
+    /// threat niche (with negative-weight *attraction*) is a reserved seam.
+    /// type-audit: bare-ok(ratio: return)
+    fn threat_value(&self, _room: &RoomAddr) -> f64 {
+        0.0
+    }
 }
 
 /// The default cell productivity (`Terrain::forage_value`) for a terrain that
@@ -410,6 +432,12 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // an undescribable/above-grid room reads 0 (no food), the never-fed
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
         self.ctx.productivity_at(room).unwrap_or(0.0)
+    }
+    fn threat_value(&self, room: &RoomAddr) -> f64 {
+        // The real climate's threat field (The Dread: the uncanny + lethal
+        // extremes); an undescribable/above-grid room reads 0 (safe) — the
+        // never-feared fallback, the dual of `forage_value`'s never-fed 0.
+        self.ctx.threat_at(room).unwrap_or(0.0)
     }
 }
 
@@ -747,6 +775,14 @@ pub enum DriveKind {
     /// existing tie-break; among the two survival drives thirst wins ties
     /// (ordered first — dying of thirst outranks dying of hunger).
     Hunger,
+    /// The danger (fear) FLOW drive — The Dread. A SURVIVAL drive (ceiling 1.0),
+    /// ordered LAST so it perturbs no existing tie-break; a present threat still
+    /// dominates naturally through urgency × serviceability, no priority table.
+    Danger,
+    /// The social (affiliation) FLOW drive — The Belonging. A COMFORT drive
+    /// (ceiling below survival), ordered LAST so it perturbs no existing
+    /// tie-break — a lonely creature yields to every survival need and to sleep.
+    Social,
 }
 
 /// The per-NPC behavioural commitment mode — the errand an NPC is on
@@ -1393,6 +1429,226 @@ impl<'a> Drive for Hunger<'a> {
     }
 }
 
+/// The urgency at/above which a present threat WAKES a sleeping creature (The
+/// Dread) — a hazard this close overrides the wake-gate, like dying of thirst.
+/// Authored, matching thirst's [`SURVIVAL_OVERRIDE`] posture.
+const DANGER_OVERRIDE: f64 = 0.5;
+
+/// The threat seek threshold: at/above this the danger drive engages (flees).
+/// Lower than the sustenance drives' `act` (0.85) — fear is reactive and
+/// prompt, so even a moderate threat is felt and acted on, not endured. One
+/// authored judgment call.
+const DANGER_ACT: f64 = 0.3;
+
+/// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
+/// drive (like [`Thermal`]) that senses the threat at the cell it occupies and
+/// FLEES down the threat gradient. Where hunger climbs *toward* a resource,
+/// danger flees *from* a hazard; where thermal minimizes temperature deviation,
+/// danger minimizes threat. It carries no internal stock and no discharge event
+/// (fear is not "reset" — it lifts when the threat is gone), so it commits no
+/// fact and adds no `Action` (fleeing is a plain `MoveTo`). Its ceiling is
+/// SURVIVAL (a lethal hazard outranks comfort), and a present threat wakes a
+/// sleeping creature. Its serviceability is SIGNED (unclamped) — a step into
+/// worse danger scores NEGATIVE, so danger reshapes the other drives' paths
+/// (a thirsty creature routes around a hazard). v1 is niche-less (every
+/// creature fears the hazard uniformly); the per-kind threat niche is reserved.
+/// Its felt threat is scaled by the creature's `boldness` (The Mettle) — a bold
+/// creature fears less, so its weaker veto lets it cross ground a timid one
+/// flees.
+/// type-audit: bare-ok(ratio: boldness)
+pub struct Danger<'a> {
+    /// The threat field this drive senses (the cell it stands in and the three
+    /// neighbours it may flee to) — like [`Thermal`]'s terrain.
+    pub terrain: &'a dyn Terrain,
+    /// The creature's boldness (the banked `threat_response` at creature scope,
+    /// The Mettle): scales the felt threat by `2·(1 − boldness)`, centered on
+    /// `0.5` (steady/inert). Below `0.5` a coward fears more; above, a bold
+    /// creature fears less; toward `1` it is fearless.
+    pub boldness: f64,
+}
+
+/// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
+/// dial is centered on (The Mettle). `PsychVector.threat_response` uses `0.5` as
+/// its flee/stand midpoint, and the goblin (and every psyche-less beast) sits
+/// here, so this baseline keeps them byte-identical.
+const BOLDNESS_STEADY: f64 = 0.5;
+
+impl<'a> Danger<'a> {
+    /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
+    /// at steady `0.5`, `×0` at fearless `1`. Floored at `0` so v1 never inverts
+    /// to the reserved reckless/approach shore.
+    fn mettle_factor(&self) -> f64 {
+        (2.0 * (1.0 - self.boldness)).max(0.0)
+    }
+}
+
+impl<'a> Drive for Danger<'a> {
+    fn urgency(&self, view: &Perceived) -> f64 {
+        // Fear is ANTICIPATORY: a creature dreads the dangerous ground it is on
+        // AND the dangerous ground within one step (the potential-field reading —
+        // the drive must be ACTIVE while adjacent to a hazard for its signed
+        // serviceability to veto a step INTO it). So the base threat is the
+        // greatest over the current cell and its neighbours; the creature's
+        // boldness (The Mettle) then scales how much it FEELS it. Clamped [0, 1].
+        let here = self.terrain.threat_value(&view.position);
+        let base = view
+            .position
+            .neighbors()
+            .iter()
+            .map(|n| self.terrain.threat_value(n))
+            .fold(here, f64::max);
+        (base * self.mettle_factor()).clamp(0.0, 1.0)
+    }
+    fn act_threshold(&self) -> f64 {
+        DANGER_ACT
+    }
+    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+        // Flee: step to the safest neighbour, or `None` when boxed in by threat
+        // on every side (cornered → Frustrated). A flow drive needs no plan (no
+        // A*), so `budget` is unused.
+        flee_step(&view.position, self.terrain).map(Action::MoveTo)
+    }
+    fn kind(&self) -> DriveKind {
+        DriveKind::Danger
+    }
+    fn urgency_ceiling(&self) -> f64 {
+        // Survival: a lethal hazard reaches full urgency (like thirst/hunger).
+        1.0
+    }
+    fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
+        // SIGNED (unclamped, unlike thermal): the DROP in threat at the
+        // neighbour it would step to — positive toward safety, NEGATIVE into
+        // worse danger, so a move that serves another drive but raises threat is
+        // penalised and the arbitration routes around the hazard. No consume —
+        // Drink/Rest/Eat do not ease fear.
+        match action {
+            Action::MoveTo(n) => {
+                self.terrain.threat_value(&view.position) - self.terrain.threat_value(n)
+            }
+            Action::Drink | Action::Rest | Action::Eat => 0.0,
+        }
+    }
+    fn survival_override(&self, urgency: f64) -> bool {
+        // A present threat wakes a sleeping creature (The Slumber's override).
+        urgency >= DANGER_OVERRIDE
+    }
+}
+
+/// The flee gradient step: the neighbour of LOWEST threat, or `None` when no
+/// neighbour is strictly safer than `from` itself (boxed in by threat — the
+/// creature holds, cornered). The sign-flip of [`comfort_step`] /
+/// [`forage_step`]: minimize threat rather than thermal deviation or maximize
+/// food; same three-neighbour scan and `total_cmp`-then-ascending-`RoomAddr`
+/// tie-break.
+fn flee_step(from: &RoomAddr, terrain: &dyn Terrain) -> Option<RoomAddr> {
+    let threat = |room: &RoomAddr| terrain.threat_value(room);
+    let mut best: Option<(RoomAddr, f64)> = None;
+    for n in from.neighbors() {
+        let t = threat(&n);
+        let keep_existing = match &best {
+            // Lower threat wins; ties break to the smaller RoomAddr.
+            Some((ba, bt)) => t.total_cmp(bt).then_with(|| n.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((n, t));
+        }
+    }
+    let (best_room, best_threat) = best.expect("a room has three neighbors");
+    // Only flee when a neighbour is STRICTLY safer than here.
+    if best_threat.total_cmp(&threat(from)).is_lt() {
+        Some(best_room)
+    } else {
+        None
+    }
+}
+
+/// The hop-distance from home at which loneliness saturates to `1.0` (The
+/// Belonging) — a creature this many mesh-hops from its people (while home is
+/// still REACHABLE) feels maximal isolation. Authored, modest so a creature that
+/// strays a little from home already feels the homeward pull.
+const LONELY_SCALE_HOPS: f64 = 20.0;
+
+/// The loneliness seek threshold: at/above this the social drive engages (heads
+/// home). Modest, like thermal's — a creature a little way from home feels the
+/// pull but a comfortable range around home is untroubled. Authored.
+const SOCIAL_ACT: f64 = 0.5;
+
+/// The soft-Maslow ceiling on the social (affiliation) drive's urgency
+/// contribution — COMFORT-tier (below survival, like thermal/fatigue), so a
+/// thirsty/hungry/frightened creature attends to survival first and drifts home
+/// only once those are met. Authored.
+const SOCIAL_CEIL: f64 = 0.6;
+
+/// The loneliness a creature feels given the A* plan home: the plan's hop-length
+/// normalized by [`LONELY_SCALE_HOPS`] and clamped `[0, 1]` — `0` at home
+/// (empty plan) and rising with distance, but `0` again when home is UNREACHABLE
+/// within budget (`None`). Loneliness is the actionable PULL toward home: a
+/// creature within homing range heads home (reading *Searching*/*Eager*), and
+/// one beyond reach feels no actionable pull, so its social drive goes DORMANT
+/// (comfort, unlike survival thirst — an unreachable home is not a distress but
+/// a relocation). This is exactly what keeps a natural world un-lonely (a
+/// reachable home is served → not distress) AND leaves a genuinely stranded
+/// creature's thirst/other distress unmasked (social dormant). Computed ONCE per
+/// drive construction (the plan is reused for the affordance), so the drive's
+/// `urgency` stays O(1).
+fn loneliness_from_plan(plan_home: &Option<Vec<Action>>) -> f64 {
+    match plan_home {
+        Some(p) => (p.len() as f64 / LONELY_SCALE_HOPS).clamp(0.0, 1.0),
+        None => 0.0,
+    }
+}
+
+/// Social affiliation — the sixth drive (The Belonging), the first drive whose
+/// field is OTHER AGENTS: the pull toward one's own kind. Shaped like thermal
+/// comfort (sociality has an optimum — too lonely is felt, and too crowded is
+/// the reserved other pole), it reads a company field proxied in v1 by
+/// PROXIMITY TO HOME (a creature's home is its people). Loneliness rises with
+/// distance from home while home is REACHABLE, and lapses to `0` (dormant) once
+/// home is beyond homing range — social is COMFORT, so an unreachable home is a
+/// relocation, not a distress. The affordance is the first step home. Silent
+/// while asleep. Like thermal/danger it commits no fact and adds no `Action`
+/// (homing is a `MoveTo`). Both the loneliness urgency and the home-step are
+/// precomputed once (from a single `plan_to_room`) and carried here — like
+/// [`Hunger`] holds its folded urgency — so the trait methods are O(1). v1
+/// gregariousness is uniform (every creature mildly gregarious); the per-kind
+/// sociality niche (solitary ↔ eusocial, the sign-flip at solitary) is reserved.
+/// type-audit: bare-ok(ratio: loneliness)
+pub struct Social {
+    /// The precomputed loneliness (`loneliness_from_plan`) in `[0, 1]` — the
+    /// felt isolation, carried here rather than recomputed per call.
+    pub loneliness: f64,
+    /// The precomputed first step of the A* plan home (`None` at home, or when
+    /// home is beyond homing range — either way the drive is dormant then).
+    pub home_step: Option<Action>,
+}
+
+impl Drive for Social {
+    fn urgency(&self, _view: &Perceived) -> f64 {
+        self.loneliness
+    }
+    fn act_threshold(&self) -> f64 {
+        SOCIAL_ACT
+    }
+    fn affordance(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
+        // Head home — the precomputed first step toward one's people.
+        self.home_step.clone()
+    }
+    fn kind(&self) -> DriveKind {
+        DriveKind::Social
+    }
+    fn urgency_ceiling(&self) -> f64 {
+        SOCIAL_CEIL
+    }
+    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
+        // Served by the ONE step toward home (an indicator, like thirst/fatigue).
+        match &self.home_step {
+            Some(a) if a == action => 1.0,
+            _ => 0.0,
+        }
+    }
+}
+
 /// The single-drive (thirst-only) decision — the Stage-0 seam, preserved
 /// byte-for-byte. It is now a thin specialization of [`arbitrate`]: the
 /// action-centric arbitration over the single-element drive set `{Thirst}`
@@ -1406,18 +1662,40 @@ impl<'a> Drive for Hunger<'a> {
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(
-        view,
-        home,
-        &drives,
-        0.0,
-        0.0,
-        false,
-        true,
-        Mode::Idle,
-        budget,
-    )
-    .intent
+    // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
+    // not helpless, awake — exactly the literals the byte-identical seam passed.
+    let disposition = Disposition {
+        latency: 0.0,
+        horizon: 0.0,
+        helpless: false,
+        awake: true,
+    };
+    arbitrate(view, home, &drives, &disposition, Mode::Idle, budget).intent
+}
+
+/// How a creature is disposed to decide right now — the psychology dials that
+/// weight its drives and the momentary states that gate them. The same
+/// perception and drive set yield DIFFERENT decisions through this: it is the
+/// "how this mind decides" bundle [`arbitrate`] reads, distinct from what the
+/// creature perceives (`view`/`drives`), the world frame (`home`/`budget`), and
+/// the hysteresis carry (`incoming: Mode`). Bundling the two dials (endowment,
+/// from the species `PsychVector`) with the two per-tick gates (`helpless`,
+/// `awake`) is the tidy every drive campaign flagged.
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Disposition {
+    /// `deliberation_latency`: slides the arbitration weights from *grab* (0 —
+    /// only the loudest drive counts) to *weigh* (1 — the full weighted sum).
+    pub latency: f64,
+    /// `time_horizon`: slides *myopic* (0 — acts only at `act`) to *foresighted*
+    /// (1 — pre-empts a projectable stock drive by its anticipation lead).
+    pub horizon: f64,
+    /// Learned helplessness — the survival drive has gone unmet so long the
+    /// creature has GIVEN UP (short-circuits arbitration to Hold/Helpless).
+    pub helpless: bool,
+    /// The wake-gate state (The Slumber): while asleep, wake-gated drives fall
+    /// silent (unless survival-critical) and the sleep drive engages.
+    pub awake: bool,
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -1445,24 +1723,21 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake), bare-ok(count: budget)
-// The perceived world, the two psychology dials (latency/horizon), the derived
-// helpless state, the incumbent mode, and the plan budget are each a distinct,
-// individually type-audited input to one decision; bundling them into a
-// `Disposition`/`MindState` struct is a reasonable future tidy, deferred rather
-// than done mid-followup.
-#[allow(clippy::too_many_arguments)]
+/// type-audit: bare-ok(count: budget)
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
     drives: &[&dyn Drive],
-    latency: f64,
-    horizon: f64,
-    helpless: bool,
-    awake: bool,
+    disposition: &Disposition,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
+    let Disposition {
+        latency,
+        horizon,
+        helpless,
+        awake,
+    } = *disposition;
     // Learned helplessness (§7, the sticky scar): the survival drive has gone
     // unmet so long the creature has GIVEN UP — it Holds regardless of any
     // affordance (the behavioural difference: it stops trying, where a merely
@@ -1756,12 +2031,24 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         day,
     };
+    let danger = Danger {
+        terrain,
+        boldness: npc.boldness,
+    };
+    // Affiliation (The Belonging): loneliness + the home-step, precomputed once
+    // from a single plan home (reused, so the drive's urgency is O(1)).
+    let plan_home = plan_to_room(&view.position, &npc.home, PLAN_BUDGET);
+    let social = Social {
+        loneliness: loneliness_from_plan(&plan_home),
+        home_step: plan_home.and_then(|p| p.into_iter().next()),
+    };
     // The metabolism gate (The Kindling): an Ametabolic creature has no
     // homeostatic drives at all — it neither thirsts, thermoregulates, tires
-    // (The Slumber), nor hungers (The Provender), so it reads Content, never
-    // distress. The NICHE gate (The Provender, spec §2): hunger is carried only
-    // by a creature whose diet niche weights SOMETHING — an empty niche means
-    // "no food drive" (no axis, so no source serves it).
+    // (The Slumber), hungers (The Provender), fears (The Dread — a construct
+    // does not flinch), nor pines for company (The Belonging), so it reads
+    // Content, never distress. The NICHE gate (The Provender, spec §2): hunger
+    // is carried only by a creature whose diet niche weights SOMETHING — an
+    // empty niche means "no food drive" (no axis, so no source serves it).
     let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
     let mut drives: Vec<&dyn Drive> = Vec::new();
     if !ametabolic {
@@ -1771,16 +2058,21 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         if !npc.niche.is_zero() {
             drives.push(&hunger);
         }
+        drives.push(&danger);
+        drives.push(&social);
     }
     let helpless = !ametabolic && learned_helplessness(last_drank, day.day);
+    let disposition = Disposition {
+        latency: npc.deliberation_latency,
+        horizon: npc.time_horizon,
+        helpless,
+        awake: is_awake(npc.activity, terrain, &view.position, day),
+    };
     arbitrate(
         &view,
         &npc.home,
         &drives,
-        npc.deliberation_latency,
-        npc.time_horizon,
-        helpless,
-        is_awake(npc.activity, terrain, &view.position, day),
+        &disposition,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -2008,8 +2300,22 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     day: WorldTime { day },
                 };
+                let danger = Danger {
+                    terrain: self.terrain,
+                    boldness: npc.boldness,
+                };
+                // Affiliation (The Belonging): loneliness + home-step, from one
+                // plan home (reused, so urgency is O(1)).
+                let plan_home = plan_to_room(&pos, &npc.home, PLAN_BUDGET);
+                let social = Social {
+                    loneliness: loneliness_from_plan(&plan_home),
+                    home_step: plan_home.and_then(|p| p.into_iter().next()),
+                };
                 // The metabolism gate (The Kindling): Ametabolic → no drives.
                 // The niche gate (The Provender): an empty diet → no hunger.
+                // Danger (The Dread) and social (The Belonging) ride the same
+                // metabolic gate (a construct does not flinch or pine); danger is
+                // niche-less, social's gregariousness uniform in v1.
                 let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
                 let mut drives: Vec<&dyn Drive> = Vec::new();
                 if !ametabolic {
@@ -2019,19 +2325,18 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     if !npc.niche.is_zero() {
                         drives.push(&hunger);
                     }
+                    drives.push(&danger);
+                    drives.push(&social);
                 }
                 let helpless = !ametabolic && learned_helplessness(last_drank, day);
-                let resolution = arbitrate(
-                    &view,
-                    &npc.home,
-                    &drives,
-                    npc.deliberation_latency,
-                    npc.time_horizon,
+                let disposition = Disposition {
+                    latency: npc.deliberation_latency,
+                    horizon: npc.time_horizon,
                     helpless,
-                    is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
-                    mode,
-                    PLAN_BUDGET,
-                );
+                    awake: is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
+                };
+                let resolution =
+                    arbitrate(&view, &npc.home, &drives, &disposition, mode, PLAN_BUDGET);
                 mode = resolution.mode;
                 match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
@@ -2048,6 +2353,10 @@ impl<'a> TickSystem for DriveMovements<'a> {
                             Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
                             Mode::Pursuing(DriveKind::Hunger) => {
                                 "foraged toward richer ground (hunger)"
+                            }
+                            Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
+                            Mode::Pursuing(DriveKind::Social) => {
+                                "drifted homeward, missing its people (belonging)"
                             }
                             Mode::Pursuing(DriveKind::Thirst) if believed.is_some() => {
                                 "went down to the river it knew (thirst)"
@@ -2264,6 +2573,13 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|p| p.time_horizon)
                 .unwrap_or(0.5);
+            // Boldness (The Mettle): the banked `threat_response` read at
+            // creature scope. Default steady/inert for a species without a
+            // psyche entry — the beasts.
+            let boldness = psyche
+                .get_by_label(&species)
+                .map(|p| p.threat_response)
+                .unwrap_or(BOLDNESS_STEADY);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
@@ -2298,6 +2614,7 @@ pub fn derive_npcs(
                 time_horizon,
                 metabolic_class,
                 niche,
+                boldness,
                 label,
             }
         })
@@ -2484,6 +2801,39 @@ mod tests {
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
 
+    /// A thin positional adapter over [`arbitrate`] for the tests (The
+    /// Disposition): it packs the four loose disposition scalars into a
+    /// [`Disposition`] so the many test call sites keep their explicit
+    /// per-argument values without each rebuilding the struct. Production
+    /// callers (`decide`/`affect_of`/the tick) construct `Disposition` directly;
+    /// only the tests, which vary these values case by case, go through this.
+    #[allow(clippy::too_many_arguments)]
+    fn arb(
+        view: &Perceived,
+        home: &RoomAddr,
+        drives: &[&dyn Drive],
+        latency: f64,
+        horizon: f64,
+        helpless: bool,
+        awake: bool,
+        incoming: Mode,
+        budget: usize,
+    ) -> Resolution {
+        arbitrate(
+            view,
+            home,
+            drives,
+            &Disposition {
+                latency,
+                horizon,
+                helpless,
+                awake,
+            },
+            incoming,
+            budget,
+        )
+    }
+
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
     fn commit_agent_at(
         ledger: &mut Ledger,
@@ -2536,6 +2886,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -2570,6 +2921,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -2606,6 +2958,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -2640,6 +2993,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -2671,6 +3025,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -2718,6 +3073,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -2873,6 +3229,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -3391,6 +3748,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3403,6 +3761,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
@@ -3493,6 +3852,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3505,6 +3865,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc],
@@ -3566,6 +3927,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -3647,6 +4009,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -3713,6 +4076,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -3819,6 +4183,10 @@ mod tests {
         /// thermal tests, which plant none, keep their creatures fed and
         /// hunger-inactive (byte-identical to pre-Provender behaviour).
         forage: std::collections::BTreeMap<RoomAddr, f64>,
+        /// Planted per-room threat for the danger-drive tests; rooms without an
+        /// entry read `0.0` (safe) — so the other tests, which plant none, are
+        /// danger-inactive (byte-identical to pre-Dread behaviour).
+        threat: std::collections::BTreeMap<RoomAddr, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
@@ -3830,6 +4198,7 @@ mod tests {
                 fresh: rooms.into_iter().collect(),
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
+                threat: std::collections::BTreeMap::new(),
             }
         }
         /// No fresh water anywhere — just planted elevations (the
@@ -3840,6 +4209,7 @@ mod tests {
                 fresh: std::collections::BTreeSet::new(),
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
+                threat: std::collections::BTreeMap::new(),
             }
         }
         /// Just planted per-room temperatures (the thermal-drive tests, which
@@ -3851,6 +4221,7 @@ mod tests {
                 fresh: std::collections::BTreeSet::new(),
                 temps: temps.into_iter().collect(),
                 forage: std::collections::BTreeMap::new(),
+                threat: std::collections::BTreeMap::new(),
             }
         }
         /// Just planted per-room food productivity (the hunger-drive tests).
@@ -3861,6 +4232,22 @@ mod tests {
                 fresh: std::collections::BTreeSet::new(),
                 temps: std::collections::BTreeMap::new(),
                 forage: forage.into_iter().collect(),
+                threat: std::collections::BTreeMap::new(),
+            }
+        }
+        /// Planted per-room fresh water AND threat (the danger-drive tests,
+        /// which pair a hazard field with a water source to prove routing).
+        /// Rooms without a threat entry read `0.0` (safe).
+        fn hazard(
+            fresh: impl IntoIterator<Item = RoomAddr>,
+            threat: impl IntoIterator<Item = (RoomAddr, f64)>,
+        ) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: fresh.into_iter().collect(),
+                temps: std::collections::BTreeMap::new(),
+                forage: std::collections::BTreeMap::new(),
+                threat: threat.into_iter().collect(),
             }
         }
     }
@@ -3876,6 +4263,9 @@ mod tests {
         }
         fn forage_value(&self, room: &RoomAddr) -> f64 {
             self.forage.get(room).copied().unwrap_or(DEFAULT_FORAGE)
+        }
+        fn threat_value(&self, room: &RoomAddr) -> f64 {
+            self.threat.get(room).copied().unwrap_or(0.0)
         }
     }
 
@@ -4027,6 +4417,362 @@ mod tests {
         );
     }
 
+    /// A `Perceived` view standing at `pos`, with the non-danger drives quiet
+    /// (danger reads only `position` + the terrain it holds).
+    fn view_at(pos: RoomAddr) -> Perceived {
+        Perceived {
+            position: pos,
+            drive: 0.0,
+            fatigue: 0.0,
+            believed_water: None,
+            explore_step: None,
+        }
+    }
+
+    #[test]
+    fn danger_urgency_reads_the_cell_threat_and_defaults_safe() {
+        let scary = raddr(1.0);
+        // A cell on the far side of the world — neither it nor its neighbours
+        // touch the threat, so anticipatory urgency reads 0.
+        let far = raddr(-1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
+        assert_eq!(
+            danger.urgency(&view_at(scary)),
+            0.8,
+            "feels the cell's threat"
+        );
+        assert_eq!(
+            danger.urgency(&view_at(far)),
+            0.0,
+            "a cell far from any threat is safe"
+        );
+    }
+
+    #[test]
+    fn flee_step_picks_the_safest_neighbour_or_none_when_cornered() {
+        let here = raddr(1.0);
+        let ns = here.neighbors();
+        // here is dangerous; one neighbour is safe(r), the others as bad as here.
+        let t = PlantedTerrain::hazard(
+            std::iter::empty(),
+            [
+                (here.clone(), 0.9),
+                (ns[0].clone(), 0.1),
+                (ns[1].clone(), 0.9),
+                (ns[2].clone(), 0.9),
+            ],
+        );
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
+        assert_eq!(
+            danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
+            Some(Action::MoveTo(ns[0].clone())),
+            "flees to the safest neighbour"
+        );
+        // Cornered: here and every neighbour equally dangerous → no safer step.
+        let boxed = PlantedTerrain::hazard(
+            std::iter::empty(),
+            here.neighbors()
+                .into_iter()
+                .chain(std::iter::once(here.clone()))
+                .map(|r| (r, 0.9)),
+        );
+        let danger_boxed = Danger {
+            terrain: &boxed,
+            boldness: BOLDNESS_STEADY,
+        };
+        assert_eq!(
+            danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
+            None,
+            "boxed in by threat everywhere → holds (cornered)"
+        );
+    }
+
+    #[test]
+    fn danger_serviceability_is_signed_penalising_a_step_into_worse_danger() {
+        let here = raddr(1.0);
+        let ns = here.neighbors();
+        let safer = ns[0].clone();
+        let worse = ns[1].clone();
+        let t = PlantedTerrain::hazard(
+            std::iter::empty(),
+            [
+                (here.clone(), 0.5),
+                (safer.clone(), 0.1),
+                (worse.clone(), 0.9),
+            ],
+        );
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
+        let view = view_at(here);
+        // Toward safety: positive (0.5 − 0.1).
+        assert!(
+            danger.serviceability(&Action::MoveTo(safer), &view, PLAN_BUDGET) > 0.0,
+            "a step toward safety is served"
+        );
+        // Into worse danger: NEGATIVE (0.5 − 0.9) — the unclamped modulation.
+        assert!(
+            danger.serviceability(&Action::MoveTo(worse), &view, PLAN_BUDGET) < 0.0,
+            "a step into worse danger is penalised (signed serviceability)"
+        );
+    }
+
+    #[test]
+    fn danger_routes_a_thirsty_creature_around_a_hazard_to_water() {
+        // THE KEYSTONE (the potential-field modulation): water lies past a
+        // dangerous cell; a safe detour neighbour exists. The creature, though
+        // thirsty and knowing the water, does NOT step onto the hazard — danger's
+        // negative serviceability outweighs thirst's pull on that move.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let hazard = ns[0].clone(); // the direct step toward water, but deadly
+        let detour = ns[1].clone(); // a safe alternative step
+        let water = hazard.clone(); // believed water sits on/at the hazard cell
+        let t = PlantedTerrain::hazard([water.clone()], [(hazard.clone(), 1.0)]);
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        let view = Perceived {
+            position: home.clone(),
+            drive: 0.9, // very thirsty
+            fatigue: 0.0,
+            believed_water: Some(water.clone()),
+            explore_step: Some(detour.clone()),
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &danger];
+        let res = arb(
+            &view,
+            &home,
+            &drives,
+            1.0, // weigh (both drives counted)
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        // Whatever it does, it must NOT step onto the deadly hazard cell.
+        assert_ne!(
+            res.intent,
+            Intent::Do(Action::MoveTo(hazard.clone())),
+            "a thirsty creature refuses to cross a lethal hazard even toward water"
+        );
+    }
+
+    #[test]
+    fn danger_urgency_is_clamped_and_a_flow_drive_carries_no_state() {
+        // A flow drive: urgency is purely the cell field, no fold, clamped [0,1].
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 1.5)]);
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
+        assert_eq!(
+            danger.urgency(&view_at(cell)),
+            1.0,
+            "threat urgency clamps at 1.0"
+        );
+    }
+
+    #[test]
+    fn boldness_scales_the_felt_threat_across_the_mettle_axis() {
+        // THE METTLE: `effective = base × 2(1 − boldness)`, centered on 0.5.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.4)]);
+        let v = view_at(cell);
+        let feel = |boldness: f64| {
+            Danger {
+                terrain: &t,
+                boldness,
+            }
+            .urgency(&v)
+        };
+        // Steady (0.5) → ×1 (unchanged, the inert baseline).
+        assert_eq!(feel(0.5), 0.4, "steady feels the threat as it is");
+        // Bold (0.8) → ×0.4.
+        assert!(
+            (feel(0.8) - 0.4 * 0.4).abs() < 1e-9,
+            "a bold creature fears less"
+        );
+        // Fearless (1.0) → ×0.
+        assert_eq!(feel(1.0), 0.0, "the fearless feel nothing");
+        // Coward (0.0) → ×2, clamped at 1.0.
+        assert_eq!(
+            feel(0.0),
+            (0.4_f64 * 2.0).min(1.0),
+            "a coward fears more (clamped)"
+        );
+        // The monotone axis: coward > steady > bold > fearless.
+        assert!(feel(0.0) > feel(0.5) && feel(0.5) > feel(0.8) && feel(0.8) > feel(1.0));
+    }
+
+    #[test]
+    fn loneliness_is_zero_at_home_rises_with_distance_and_lapses_when_unreachable() {
+        // The three regimes of the social pull (The Belonging).
+        assert_eq!(
+            loneliness_from_plan(&Some(vec![])),
+            0.0,
+            "at home (empty plan) → not lonely"
+        );
+        let ten: Vec<Action> = std::iter::repeat_n(Action::Drink, 10).collect();
+        assert_eq!(
+            loneliness_from_plan(&Some(ten)),
+            10.0 / LONELY_SCALE_HOPS,
+            "loneliness rises with the hop-distance home"
+        );
+        assert_eq!(
+            loneliness_from_plan(&None),
+            0.0,
+            "home beyond reach → DORMANT (0), not distress — social is comfort, \
+             an unreachable home is a relocation"
+        );
+    }
+
+    #[test]
+    fn social_affordance_and_serviceability_are_the_home_step() {
+        let home = raddr(1.0);
+        let step = home.neighbors()[0].clone();
+        let social = Social {
+            loneliness: 0.9,
+            home_step: Some(Action::MoveTo(step.clone())),
+        };
+        let view = view_at(home.neighbors()[1].clone());
+        assert_eq!(
+            social.affordance(&view, PLAN_BUDGET),
+            Some(Action::MoveTo(step.clone())),
+            "the affordance is the precomputed step home"
+        );
+        assert_eq!(
+            social.serviceability(&Action::MoveTo(step), &view, PLAN_BUDGET),
+            1.0,
+            "the home-step is served"
+        );
+        assert_eq!(
+            social.serviceability(&Action::Drink, &view, PLAN_BUDGET),
+            0.0,
+            "nothing else eases loneliness"
+        );
+    }
+
+    #[test]
+    fn a_lonely_creature_yields_to_thirst_but_homes_when_sated() {
+        // COMFORT-tier: a thirsty AND lonely creature attends thirst first
+        // (survival > comfort); sated, it heads home.
+        let home = raddr(1.0);
+        let pos = home.neighbors()[2].clone(); // one hop from home
+        let water = home.neighbors()[1].clone();
+        // The real home-step from `pos` (a genuine neighbour of `pos`).
+        let plan = plan_to_room(&pos, &home, PLAN_BUDGET);
+        let step = plan.clone().and_then(|p| p.into_iter().next()).unwrap();
+        let social = Social {
+            loneliness: 0.9,
+            home_step: Some(step.clone()),
+        };
+        let thirst = Thirst { params: SUSTENANCE };
+        let drives: [&dyn Drive; 2] = [&thirst, &social];
+        // Thirsty (drive past act) and knows nearby water: thirst wins.
+        let thirsty = Perceived {
+            position: pos.clone(),
+            drive: 0.95,
+            fatigue: 0.0,
+            believed_water: Some(water.clone()),
+            explore_step: None,
+        };
+        let r = arb(
+            &thirsty,
+            &home,
+            &drives,
+            1.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            r.affect.object,
+            Some(DriveKind::Thirst),
+            "survival thirst outranks comfort loneliness: {:?}",
+            r.affect
+        );
+        // Sated (thirst below act): only social active → heads home.
+        let sated = Perceived {
+            position: pos.clone(),
+            drive: 0.0,
+            fatigue: 0.0,
+            believed_water: None,
+            explore_step: None,
+        };
+        let r2 = arb(
+            &sated,
+            &home,
+            &drives,
+            1.0,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+        assert_eq!(
+            r2.intent,
+            Intent::Do(step),
+            "sated, the lonely creature heads home: {:?}",
+            r2.affect
+        );
+        assert_eq!(r2.affect.object, Some(DriveKind::Social));
+    }
+
+    #[test]
+    fn an_ametabolic_creature_is_never_lonely() {
+        // THE METABOLISM GATE, social edge (The Belonging): an Ametabolic
+        // creature carries no social drive — placed far from home it still reads
+        // Content, where a metabolizer would head home.
+        let home = raddr(1.0);
+        let away = raddr(-1.0); // far side of the world (home reachable within budget)
+        let terrain = PlantedTerrain::fresh_only(std::iter::empty());
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r
+        };
+        commit_agent_at(&mut ledger, &reg, e, &away, 0.0);
+        let base = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "xorn".to_string(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Ametabolic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            label: "xorn".to_string(),
+        };
+        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        assert_eq!(
+            a.label,
+            AffectLabel::Content,
+            "a construct far from home is not lonely: {a:?}"
+        );
+    }
+
     #[test]
     fn is_water_delegates_to_terrain_is_fresh_water() {
         // `raddr(seed)` feeds `RoomAddr::containing([seed, 0.0, 0.0], 6)`, which
@@ -4123,6 +4869,7 @@ mod tests {
                 time_horizon: 0.0,
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: default_diet_niche(),
+                boldness: 0.5,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -4192,6 +4939,7 @@ mod tests {
             fresh: [water.clone()].into_iter().collect(),
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
@@ -4206,6 +4954,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -4478,7 +5227,7 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
-            arbitrate(
+            arb(
                 view,
                 &home,
                 &drives,
@@ -4619,7 +5368,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(
+                arb(
                     v,
                     &home,
                     &drives,
@@ -4671,7 +5420,7 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let intent = arbitrate(
+        let intent = arb(
             &view,
             &home,
             &drives,
@@ -4728,7 +5477,7 @@ mod tests {
             intent: grab,
             mode: gm,
             ..
-        } = arbitrate(
+        } = arb(
             &view,
             &home,
             &drives,
@@ -4739,7 +5488,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let weigh = arbitrate(
+        let weigh = arb(
             &view,
             &home,
             &drives,
@@ -4802,7 +5551,7 @@ mod tests {
         };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &mild,
                 &home,
                 &mild_drives,
@@ -4829,7 +5578,7 @@ mod tests {
         let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &dying,
                 &home,
                 &dying_drives,
@@ -4877,7 +5626,7 @@ mod tests {
         };
         // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
         // no active drive, already home → Idle Hold, nothing engaged.
-        let myopic = arbitrate(
+        let myopic = arb(
             &view,
             &home,
             &drives,
@@ -4892,7 +5641,7 @@ mod tests {
         assert_eq!(myopic.affect.object, None, "no drive is engaged yet");
         // Foresighted (horizon 1): thirst active (0.70 ≥ act_eff 0.55) → already
         // beelining to known water, Eager, object Thirst.
-        let foresighted = arbitrate(
+        let foresighted = arb(
             &view,
             &home,
             &drives,
@@ -4994,7 +5743,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let trying = arbitrate(
+        let trying = arb(
             &view,
             &home,
             &drives,
@@ -5009,7 +5758,7 @@ mod tests {
             matches!(trying.intent, Intent::Do(_)),
             "a creature still trying acts toward the water"
         );
-        let given_up = arbitrate(
+        let given_up = arb(
             &view,
             &home,
             &drives,
@@ -5054,6 +5803,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
@@ -5063,6 +5813,7 @@ mod tests {
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             ..base.clone()
         };
         let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
@@ -5071,6 +5822,51 @@ mod tests {
             AffectLabel::Content,
             "a metabolizer is not content, parched in the heat: {b:?}"
         );
+    }
+
+    #[test]
+    fn an_ametabolic_creature_does_not_flinch_at_a_hazard() {
+        // THE METABOLISM GATE, danger edge (The Dread): an Ametabolic creature
+        // (a construct) carries no danger drive — surrounded by lethal threat it
+        // still reads Content, where a metabolizer recoils.
+        let home = raddr(1.0);
+        // Home and every neighbour maximally threatening (cornered by dread).
+        let terrain = PlantedTerrain::hazard(
+            std::iter::empty(),
+            home.neighbors()
+                .into_iter()
+                .chain(std::iter::once(home.clone()))
+                .map(|r| (r, 1.0)),
+        );
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let base = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "xorn".to_string(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Ametabolic,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            label: "xorn".to_string(),
+        };
+        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
+        let meta = Npc {
+            metabolic_class: MetabolicClass::Endotherm,
+            ..base.clone()
+        };
+        let b = affect_of(&ledger, &meta, WorldTime { day: 0.5 }, &terrain);
+        assert_eq!(
+            b.object,
+            Some(DriveKind::Danger),
+            "a metabolizer cornered by dread fears it: {b:?}"
+        );
+        assert_ne!(b.label, AffectLabel::Content, "and is not content: {b:?}");
     }
 
     #[test]
@@ -5097,7 +5893,7 @@ mod tests {
             explore_step: None,
         };
         // Awake: it seeks water.
-        let awake = arbitrate(
+        let awake = arb(
             &view,
             &home,
             &drives,
@@ -5110,7 +5906,7 @@ mod tests {
         );
         assert_eq!(awake.affect.object, Some(DriveKind::Thirst));
         // Asleep: the wake-gate silences thirst; it rests instead.
-        let asleep = arbitrate(
+        let asleep = arb(
             &view,
             &home,
             &drives,
@@ -5132,7 +5928,7 @@ mod tests {
             drive: 0.95,
             ..view.clone()
         };
-        let survival = arbitrate(
+        let survival = arb(
             &dying,
             &home,
             &drives,
@@ -5241,7 +6037,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let m1 = arbitrate(
+        let m1 = arb(
             &low,
             &home,
             &drives,
@@ -5269,7 +6065,7 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(
+            arb(
                 &high,
                 &home,
                 &drives,
@@ -5286,7 +6082,7 @@ mod tests {
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(
+            let m = arb(
                 &high,
                 &home,
                 &drives,
@@ -5341,7 +6137,7 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let a = arbitrate(
+        let a = arb(
             &view,
             &home,
             &drives,
@@ -5352,7 +6148,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let b = arbitrate(
+        let b = arb(
             &view,
             &home,
             &drives,

@@ -17,8 +17,9 @@
 //! hand. The null control runs on real generated worlds throughout.
 use hornvale_lab::health::{AffectTrace, HealthReport, health_report, simulate_world};
 use hornvale_lab::synthetic::{
-    a_forager_in_a_food_desert, a_heat_wave_that_passes, a_stricken_and_a_healthy_people,
-    stranded_from_known_water, stranded_in_a_hot_waste,
+    a_creature_cornered_by_dread, a_forager_in_a_food_desert, a_heat_wave_that_passes,
+    a_stricken_and_a_healthy_people, dread_pit_steady_vs_bold, stranded_from_known_water,
+    stranded_in_a_hot_waste,
 };
 use hornvale_vessel::liveness::{Affect, AffectLabel, DriveKind};
 
@@ -235,6 +236,59 @@ fn a_forager_in_a_food_desert_starves_by_cause_hunger_end_to_end() {
         r.prevalence > 0.0,
         "the food desert produces real distress: {}",
         r.prevalence
+    );
+}
+
+#[test]
+fn a_creature_cornered_by_dread_fears_by_cause_danger_end_to_end() {
+    // THE DREAD, end to end: a creature on its own spring (thirst always
+    // serviceable) but cornered by threat on every side crosses into
+    // danger-distress and Holds — the real sim producing a fear-attributed
+    // distress run, proving the fifth drive enters the competition and the
+    // by-cause reduction separates it from thirst/thermal/fatigue/hunger.
+    let r = health_report(&a_creature_cornered_by_dread().simulate(HARNESS_TICKS));
+    assert!(
+        r.by_cause["danger"] > 0.0,
+        "the distress is attributed to danger: {r:?}"
+    );
+    assert_eq!(
+        r.by_cause["thirst"], 0.0,
+        "thirst never distresses — the creature sits on its spring"
+    );
+    assert!(
+        r.prevalence > 0.0,
+        "the dread-pit produces real distress: {}",
+        r.prevalence
+    );
+}
+
+#[test]
+fn boldness_dampens_the_dread_end_to_end() {
+    // THE METTLE, end to end: two creatures in identical dread-pits, differing
+    // ONLY in boldness. The steady one (0.5) feels the full dread and distresses;
+    // the bold one (0.9) scales it below its act threshold and does not register
+    // the pit as actionable fear at all — the dial's behavioural effect on the
+    // real sim.
+    let traces = dread_pit_steady_vs_bold().simulate(HARNESS_TICKS);
+    let danger_distress = |t: &AffectTrace| {
+        t.affects
+            .iter()
+            .filter(|a| a.valence < 0.0 && a.object == Some(DriveKind::Danger))
+            .count()
+    };
+    let steady = danger_distress(&traces[0]);
+    let bold = danger_distress(&traces[1]);
+    assert!(
+        steady > 0,
+        "the steady creature feels the dread and distresses ({steady} ticks)"
+    );
+    assert!(
+        bold < steady,
+        "the bold creature fears less: bold {bold} < steady {steady}"
+    );
+    assert_eq!(
+        bold, 0,
+        "the bold creature's scaled dread falls below act — no danger distress"
     );
 }
 
