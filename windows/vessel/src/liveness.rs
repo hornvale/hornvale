@@ -3365,6 +3365,7 @@ mod tests {
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
             boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: label.into(),
         }
     }
