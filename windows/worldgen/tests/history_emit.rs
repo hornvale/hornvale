@@ -162,6 +162,58 @@ fn territories_group_alive_occupations_by_people() {
 }
 
 #[test]
+fn end_of_life_facts_are_day_stamped_at_ended_not_founded() {
+    let mut w = test_world();
+    let mut ruin = base_record(1, "goblin", 0, 100.0);
+    ruin.ended = Some(900.0);
+    ruin.cause = Some(CauseOfEnd::Burned);
+    let h = History::new(vec![ruin], 1000.0);
+    emit_history(&mut w, &h).unwrap();
+
+    let ruins = ruins_of_people(&w, KindId("goblin"));
+    assert_eq!(ruins.len(), 1);
+    let ruin_id = ruins[0];
+
+    // End-of-life facts are stamped at `ended` (900.0), not `founded`
+    // (100.0) — the day each of these actually became true.
+    let is_ruin = w
+        .ledger
+        .facts_about(ruin_id)
+        .find(|f| f.predicate == IS_RUIN)
+        .expect("IS_RUIN must be committed for a dead occupation");
+    assert_eq!(is_ruin.day, Some(900.0));
+
+    let occ_ended = w
+        .ledger
+        .facts_about(ruin_id)
+        .find(|f| f.predicate == hornvale_history::OCC_ENDED)
+        .expect("OCC_ENDED must be committed for a dead occupation");
+    assert_eq!(occ_ended.day, Some(900.0));
+
+    let occ_cause = w
+        .ledger
+        .facts_about(ruin_id)
+        .find(|f| f.predicate == hornvale_history::OCC_CAUSE)
+        .expect("OCC_CAUSE must be committed for a dead occupation");
+    assert_eq!(occ_cause.day, Some(900.0));
+
+    // Founding facts stay stamped at `founded` (100.0).
+    let occ_founded = w
+        .ledger
+        .facts_about(ruin_id)
+        .find(|f| f.predicate == hornvale_history::OCC_FOUNDED)
+        .expect("OCC_FOUNDED must be committed");
+    assert_eq!(occ_founded.day, Some(100.0));
+
+    let occ_site = w
+        .ledger
+        .facts_about(ruin_id)
+        .find(|f| f.predicate == hornvale_history::OCC_SITE)
+        .expect("OCC_SITE must be committed");
+    assert_eq!(occ_site.day, Some(100.0));
+}
+
+#[test]
 fn emit_is_deterministic() {
     let mut a = test_world();
     let mut b = test_world();

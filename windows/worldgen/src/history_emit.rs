@@ -16,9 +16,11 @@ use hornvale_history::record::{CauseOfEnd, Ended, Founding, Function, Notability
 use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Build one fact about occupation entity `subject`, day-stamped at the
-/// occupation's founding (the day every one of its facts becomes knowable),
-/// self-placed (an occupation is its own place, mirroring
+/// Build one fact about occupation entity `subject`, day-stamped at `day` —
+/// the day this particular fact became true (founding facts pass
+/// `record.founded`; end-of-life facts pass `record.ended`, since `Fact.day`
+/// means "the day this fact was observed" and an occupation isn't ended
+/// until it ends) — self-placed (an occupation is its own place, mirroring
 /// `hornvale_settlement::genesis`'s pattern), provenanced to the deep-history
 /// bake stream.
 fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
@@ -118,42 +120,59 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
 
     for (record, &id) in h.records.iter().zip(minted.iter()) {
         let day = record.founded;
-        let mut commit = |predicate: &str, object: Value| -> Result<(), BuildError> {
+        // End-of-life facts (`OCC_ENDED`, `OCC_CAUSE`, `OCC_ENDED_BY`,
+        // `IS_RUIN`) describe events that became true at `record.ended`, not
+        // at founding — `Fact.day` means "the day this fact was observed"
+        // (see `kernel/src/ledger.rs`), so an as-of-day-N query must not see
+        // an occupation as already-ended on its founding day. A still-alive
+        // record never commits these, so the `unwrap_or` fallback is inert.
+        let end_day = record.ended.unwrap_or(record.founded);
+        let mut commit_on = |predicate: &str, object: Value, day: f64| -> Result<(), BuildError> {
             world
                 .ledger
                 .commit(fact(id, predicate, object, day), &world.registry)?;
             Ok(())
         };
 
-        commit(hornvale_history::IS_OCCUPATION, Value::Flag(true))?;
-        commit(
+        commit_on(hornvale_history::IS_OCCUPATION, Value::Flag(true), day)?;
+        commit_on(
             hornvale_history::OCC_PEOPLE,
             Value::Text(record.people.0.to_string()),
+            day,
         )?;
-        commit(
+        commit_on(
             hornvale_history::OCC_SITE,
             Value::Number(f64::from(record.site.0)),
+            day,
         )?;
-        commit(hornvale_history::OCC_FOUNDED, Value::Number(record.founded))?;
+        commit_on(
+            hornvale_history::OCC_FOUNDED,
+            Value::Number(record.founded),
+            day,
+        )?;
         if let Some(ended) = record.ended {
-            commit(hornvale_history::OCC_ENDED, Value::Number(ended))?;
+            commit_on(hornvale_history::OCC_ENDED, Value::Number(ended), end_day)?;
         }
-        commit(
+        commit_on(
             hornvale_history::OCC_PEAK,
             Value::Number(f64::from(record.peak_population)),
+            day,
         )?;
-        commit(
+        commit_on(
             hornvale_history::OCC_TECH,
             Value::Text(tech_label(record.tech).to_string()),
+            day,
         )?;
-        commit(
+        commit_on(
             hornvale_history::OCC_FUNCTION,
             Value::Text(function_label(record.function).to_string()),
+            day,
         )?;
         if let Some(cause) = record.cause {
-            commit(
+            commit_on(
                 hornvale_history::OCC_CAUSE,
                 Value::Text(cause_label(cause).to_string()),
+                end_day,
             )?;
         }
         // `ended_by` only means something once an occupation has actually
@@ -168,7 +187,7 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
                         .expect("ended-by names a community minted earlier in this history"),
                 ),
             };
-            commit(hornvale_history::OCC_ENDED_BY, ended_by)?;
+            commit_on(hornvale_history::OCC_ENDED_BY, ended_by, end_day)?;
         }
         let founded_from = match record.founded_from {
             Founding::Genesis(cell) => Value::Number(f64::from(cell.0)),
@@ -178,24 +197,27 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
                     .expect("founded-from names a community minted earlier in this history"),
             ),
         };
-        commit(hornvale_history::OCC_FOUNDED_FROM, founded_from)?;
-        commit(
+        commit_on(hornvale_history::OCC_FOUNDED_FROM, founded_from, day)?;
+        commit_on(
             hornvale_history::OCC_NOTABILITY,
             Value::Text(notability_label(record.notability).to_string()),
+            day,
         )?;
 
         if record.is_alive() {
-            commit(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true))?;
-            commit(
+            commit_on(hornvale_settlement::IS_SETTLEMENT, Value::Flag(true), day)?;
+            commit_on(
                 hornvale_settlement::POPULATION,
                 Value::Number(f64::from(record.peak_population)),
+                day,
             )?;
-            commit(
+            commit_on(
                 hornvale_settlement::CELL_ID,
                 Value::Number(f64::from(record.site.0)),
+                day,
             )?;
         } else {
-            commit(hornvale_history::IS_RUIN, Value::Flag(true))?;
+            commit_on(hornvale_history::IS_RUIN, Value::Flag(true), end_day)?;
         }
     }
     Ok(())
