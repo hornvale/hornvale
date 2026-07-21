@@ -11,7 +11,7 @@
 //! and re-joins any trailing clauses with `"; "` before restoring it.
 #![warn(missing_docs)]
 
-use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
+use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
@@ -1015,9 +1015,17 @@ fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Op
 /// `"The moons cross"` for the moons, singular/plural read off the
 /// `moon-count` fact's own ground value (always numeric; the moons entry is
 /// only ever wrapped in [`Disposition::Explained`] while `Kept`, so this is
-/// the true committed count, never a substitution). `None` for any other
-/// predicate — `explain` in `windows/worldgen::chorus` only ever wraps
-/// `day-length-std` and `moon-count`.
+/// the true committed count, never a substitution); `"The moons keep their
+/// measure"` for the LANG-48 period ratio (the-consonance × C5 merge —
+/// `explain_moon_ratio` binds the same causal schemas the moons entry does,
+/// so a `Kept` ratio the folk explain needs its own head or its because-
+/// clause vanishes AND the doctrine Contested counter-annotation that
+/// quotes it has nothing to say). A proportion is inherently between two
+/// moons, so it is always plural (the object — the measured ratio — is not
+/// inspected: the head states THAT the moons keep a measure, never the
+/// value). `None` for any other predicate — `explain` in
+/// `windows/worldgen::chorus` only ever wraps `day-length-std`,
+/// `moon-count`, and `moon-period-ratio`.
 fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
     if predicate == DAY_LENGTH_STD {
         return Some(("The day returns".to_string(), false));
@@ -1033,6 +1041,9 @@ fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
             "The moon crosses"
         };
         return Some((head.to_string(), plural));
+    }
+    if predicate == MOON_PERIOD_RATIO {
+        return Some(("The moons keep their measure".to_string(), true));
     }
     None
 }
@@ -1224,57 +1235,102 @@ fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -
     }
 }
 
-/// C6 (The Doctrine), the exoteric formula (the plan's Surfaces table):
-/// what a `RevealedClaim` entry's doctrine emic line asserts INSTEAD of the
-/// ordinary construction fragment — the priesthood professes counted
-/// knowledge of the moons without disclosing the count itself (the
-/// esoteric/exoteric split, ledger #5 — the actual value is a followup
-/// scope, not this artifact's). Only [`MOON_COUNT`] carries a defined
-/// formula: at the floor, `sky_capability` is the only
-/// [`AccountParams`] field the four deltas ever touch, and `moon-count` is
-/// the only [`hornvale_language::account::Requirement::SkyGraded`]
-/// predicate in the observability table (`day-length-std` is
-/// `CrossReferential`, always lost regardless of capability, so it can
-/// never become a doctrine-only `Kept`) — `None` for any other predicate.
-fn revealed_claim_line(predicate: &str, object: &Value) -> Option<String> {
-    if predicate != MOON_COUNT {
-        return None;
-    }
-    let Value::Number(n) = object else {
-        return None;
-    };
-    Some(if (*n as u64) == 1 {
-        "The moon is counted and known to the priesthood.".to_string()
-    } else {
-        "The moons are counted and known to the priesthood.".to_string()
-    })
+/// Which closed [`revealed_claim_line`] surface a doctrine emic line used —
+/// the round-trip recovery key ([`parse_revealed_claim`] reads it off the
+/// exact text, [`rerender_revealed_claim`] inverts it). [`MOON_COUNT`]
+/// carries a plurality (its count's own singular/plural agreement);
+/// [`MOON_PERIOD_RATIO`] is a single invariant surface — a proportion
+/// between two moons' cycles carries no count to agree in number with, so
+/// its exoteric formula never varies. Was a bare `plural: bool` through C6
+/// (the-consonance / the-living-community merge generalized it once a
+/// SECOND predicate — the LANG-48 period ratio — began reaching
+/// `RevealedClaim`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RevealedClaimSurface {
+    /// The [`MOON_COUNT`] formula's singular surface ("The moon is
+    /// counted and known to the priesthood.").
+    MoonCountSingular,
+    /// The [`MOON_COUNT`] formula's plural surface ("The moons are
+    /// counted and known to the priesthood.").
+    MoonCountPlural,
+    /// The [`MOON_PERIOD_RATIO`] formula — a single invariant proportion
+    /// surface, no plurality.
+    MoonPeriodRatio,
 }
 
-/// [`revealed_claim_line`]'s closed inverse table — the only two strings
-/// that construction direction ever emits, paired with the plurality each
-/// carries.
-const REVEALED_CLAIM_LINES: &[(&str, bool)] = &[
-    ("The moon is counted and known to the priesthood.", false),
-    ("The moons are counted and known to the priesthood.", true),
+/// C6 (The Doctrine), the exoteric formula (the plan's Surfaces table):
+/// what a `RevealedClaim` entry's doctrine emic line asserts INSTEAD of the
+/// ordinary construction fragment — the priesthood professes reckoned
+/// knowledge (a count, or a proportion) without disclosing the value itself
+/// (the esoteric/exoteric split, ledger #5 — the disclosed value lives in
+/// [`esoteric_lines`], gated behind an initiated reader). Two predicates
+/// carry a defined formula, both [`hornvale_language::account::Requirement::SkyGraded`]
+/// (the only requirement class that can leave a fact doctrine-only `Kept`
+/// while the folk lose it): [`MOON_COUNT`] (a count → singular/plural
+/// surface) and [`MOON_PERIOD_RATIO`] (LANG-48, a proportion → one
+/// invariant surface). `day-length-std` is `CrossReferential`, always lost
+/// regardless of capability, so it can never become a doctrine-only `Kept`
+/// — `None` for it and any other predicate.
+fn revealed_claim_line(predicate: &str, object: &Value) -> Option<String> {
+    match predicate {
+        MOON_COUNT => {
+            let Value::Number(n) = object else {
+                return None;
+            };
+            Some(rerender_revealed_claim(if (*n as u64) == 1 {
+                RevealedClaimSurface::MoonCountSingular
+            } else {
+                RevealedClaimSurface::MoonCountPlural
+            }))
+        }
+        // The proportion never discloses its value: the exoteric surface is
+        // invariant, so the object is not inspected here (the actual ratio
+        // is the initiated's alone — `esoteric_lines`).
+        MOON_PERIOD_RATIO => Some(rerender_revealed_claim(
+            RevealedClaimSurface::MoonPeriodRatio,
+        )),
+        _ => None,
+    }
+}
+
+/// [`revealed_claim_line`]'s closed inverse table — the only strings that
+/// construction direction ever emits, paired with the [`RevealedClaimSurface`]
+/// each carries. The single source of truth for every closed exoteric
+/// surface (both directions read it, and `revealed_claim_line` itself emits
+/// through it).
+const REVEALED_CLAIM_LINES: &[(&str, RevealedClaimSurface)] = &[
+    (
+        "The moon is counted and known to the priesthood.",
+        RevealedClaimSurface::MoonCountSingular,
+    ),
+    (
+        "The moons are counted and known to the priesthood.",
+        RevealedClaimSurface::MoonCountPlural,
+    ),
+    (
+        "The proportion between the moons' cycles is measured and known to the priesthood.",
+        RevealedClaimSurface::MoonPeriodRatio,
+    ),
 ];
 
-/// Recover a `RevealedClaim` line's plurality from its exact closed text,
-/// or `None` if `line` matches neither row.
-fn parse_revealed_claim(line: &str) -> Option<bool> {
+/// Recover a `RevealedClaim` line's [`RevealedClaimSurface`] from its exact
+/// closed text, or `None` if `line` matches no row.
+fn parse_revealed_claim(line: &str) -> Option<RevealedClaimSurface> {
     REVEALED_CLAIM_LINES
         .iter()
         .find(|(text, _)| *text == line)
-        .map(|(_, plural)| *plural)
+        .map(|(_, surface)| *surface)
 }
 
-/// [`parse_revealed_claim`]'s inverse: the closed text for `plural`. Total
-/// over `bool` (the table carries exactly one row per plurality).
-fn rerender_revealed_claim(plural: bool) -> String {
+/// [`parse_revealed_claim`]'s inverse: the closed text for `surface`. Total
+/// over [`RevealedClaimSurface`] (the table carries exactly one row per
+/// surface).
+fn rerender_revealed_claim(surface: RevealedClaimSurface) -> String {
     REVEALED_CLAIM_LINES
         .iter()
-        .find(|(_, p)| *p == plural)
+        .find(|(_, s)| *s == surface)
         .map(|(text, _)| (*text).to_string())
-        .expect("REVEALED_CLAIM_LINES carries a row for both plurality values")
+        .expect("REVEALED_CLAIM_LINES carries a row for every surface")
 }
 
 /// The disclosure law's counter-annotation prefix (the plan's Surfaces
@@ -1459,9 +1515,9 @@ fn doctrine_section(
 /// exported; `windows/book` cannot import it, layering runs the other way,
 /// same posture as `chorus_ground`'s own doc comment). Only [`IS_A`]
 /// subjects are searched — every predicate [`esoteric_lines`] can ever see
-/// a `RevealedClaim` for (moon-count, star-class, day-length-std today)
-/// is asserted on an `is-a`-classified subject, the same scope
-/// `render_volume`'s construction table reads.
+/// a `RevealedClaim` for (moon-count and moon-period-ratio today, both
+/// world-level sky facts) is asserted on an `is-a`-classified subject, the
+/// same scope `render_volume`'s construction table reads.
 ///
 /// [`IS_A`]: hornvale_kernel::world::IS_A
 fn entity_named(world: &World, name: &str) -> Option<EntityId> {
@@ -1482,13 +1538,17 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 /// to `reader` — the `(subject, predicate)` keys of every fact they may be
 /// shown the doctrine's disclosed value for — is entitled to. For every
 /// organized culture's doctrine [`ConflictState::RevealedClaim`] entry
-/// whose key is in `reader`, emits `"— ⟨cardinal⟩, as the initiated
-/// count."`, with the cardinal read from the LEDGER's own committed value
-/// for that subject/predicate — never the account entry's cached copy —
-/// so the line's number can only ever trace back to the one committed
-/// truth (the mutation-verified law: `the_esoteric_law_mutation_verified`
-/// drives this directly). An empty `reader` yields an empty `Vec` — the
-/// committed exoteric edition discloses nothing.
+/// whose key is in `reader`, emits one initiated line — the count's
+/// cardinal (`"⟨subject⟩ has ⟨cardinal⟩ moons, as the initiated count."`)
+/// or the ratio's measured proportion (`"The cycles of ⟨subject⟩'s moons
+/// keep a proportion of ⟨quantity⟩ to one, as the initiated measure."`),
+/// one surface per `RevealedClaim`-reachable predicate — with the value
+/// read from the LEDGER's own committed fact for that subject/predicate,
+/// never the account entry's cached copy, so the line's number can only
+/// ever trace back to the one committed truth (the mutation-verified law:
+/// `the_esoteric_law_mutation_verified` drives this directly). An empty
+/// `reader` yields an empty `Vec` — the committed exoteric edition
+/// discloses nothing.
 ///
 /// More than one organized culture can independently reveal the SAME
 /// ground fact (the ground truth is world-global, `chorus_ground`, run
@@ -1496,13 +1556,14 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 /// the reader sees each revealed fact's initiated line exactly once
 /// regardless of how many priesthoods reveal it.
 ///
-/// A key whose entity cannot be resolved back to an `is-a` subject, or
-/// whose ledger value is not [`Value::Number`], is silently skipped: no
-/// [`RevealedClaim`] predicate reaching this function today is anything
-/// but a moon-count-shaped cardinal (see [`revealed_claim_line`]'s doc),
-/// and this function's own reach is the reader's disclosure surface, not
-/// the doctrine emic's — the vanishing-realizable panic
-/// ([`doctrine_section`]) already guards the emic's own formula table.
+/// A key whose entity cannot be resolved back to an `is-a` subject, whose
+/// ledger value is not [`Value::Number`], or whose predicate carries no
+/// disclosure arm here, is silently skipped: every [`RevealedClaim`]
+/// predicate reaching this function today is a world-level sky scalar (a
+/// count or a proportion — see [`revealed_claim_line`]'s doc), and this
+/// function's own reach is the reader's disclosure surface, not the
+/// doctrine emic's — the vanishing-realizable panic ([`doctrine_section`])
+/// already guards the emic's own formula table.
 ///
 /// [`RevealedClaim`]: ConflictState::RevealedClaim
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
@@ -1544,22 +1605,38 @@ pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec
                 continue;
             };
             // The Book Polish (2026-07-20): name the subject and agree in
-            // number, mirroring `revealed_claim_line`'s own singular/plural
-            // split — the bare em-dash continuation this replaced read fine
-            // inside the vessel's turn-by-turn flow (the player just wrote
-            // about the moons) but floated with no antecedent in the CLI's
-            // static `--initiate` dump, which has no surrounding context at
-            // all. Narrow to MOON_COUNT exactly as `revealed_claim_line`
-            // is (the only predicate that reaches `RevealedClaim` today);
-            // widening either narrowing is a shared future task, not this
-            // campaign's.
-            let count = *n as u64;
-            let moon_word = if count == 1 { "moon" } else { "moons" };
-            lines.push(format!(
-                "{} has {} {moon_word}, as the initiated count.",
-                entry.fact.subject,
-                cardinal(count)
-            ));
+            // number, mirroring `revealed_claim_line`'s own surface split —
+            // the bare em-dash continuation this replaced read fine inside
+            // the vessel's turn-by-turn flow (the player just wrote about
+            // the moons) but floated with no antecedent in the CLI's static
+            // `--initiate` dump, which has no surrounding context at all.
+            // One disclosure surface per `RevealedClaim`-reachable predicate
+            // (the-living-community merge added the LANG-48 ratio arm): a
+            // count discloses its cardinal, a proportion its measured value
+            // (through `quantity`, the book's own float-prose helper — the
+            // exoteric formula withheld the value, this is the initiated's
+            // alone). A predicate with no arm here is silently skipped: the
+            // emic's own vanishing-realizable panic (`doctrine_section`)
+            // already fails loud for an un-authored surface.
+            let line = match predicate.as_str() {
+                MOON_COUNT => {
+                    let count = *n as u64;
+                    let moon_word = if count == 1 { "moon" } else { "moons" };
+                    format!(
+                        "{} has {} {moon_word}, as the initiated count.",
+                        entry.fact.subject,
+                        cardinal(count)
+                    )
+                }
+                MOON_PERIOD_RATIO => format!(
+                    "The cycles of {}'s moons keep a proportion of {} to one, \
+                     as the initiated measure.",
+                    entry.fact.subject,
+                    quantity(*n)
+                ),
+                _ => continue,
+            };
+            lines.push(line);
             seen.insert(key);
         }
     }
@@ -2036,7 +2113,6 @@ pub struct ParsedExplanation {
 /// support — `ParsedLine` itself derives neither `Clone` nor `Debug` nor
 /// `PartialEq` (T3's original design), and no caller in this module needs
 /// this enum to carry any of them either.
-/// type-audit: bare-ok(flag: RevealedClaim.plural)
 pub enum ChorusLine {
     /// An ordinary classification clause plus its chorus-surface dress.
     Clause(ParsedLine, ChorusDress),
@@ -2044,8 +2120,9 @@ pub enum ChorusLine {
     Explanation(ParsedExplanation),
     /// C6 (The Doctrine): the `RevealedClaim` exoteric formula.
     RevealedClaim {
-        /// Whether this line used the plural ("moons") surface form.
-        plural: bool,
+        /// Which closed exoteric surface this line used (the round-trip
+        /// recovery key — see [`RevealedClaimSurface`]).
+        surface: RevealedClaimSurface,
     },
     /// C6 (The Doctrine): the disclosure law's counter-annotation — wraps
     /// the recovered folk sentence it quotes, re-parsed recursively (in
@@ -2146,13 +2223,15 @@ const AGENTIVE_LEXEMES: &[LexemeId] = &[
 
 /// The count-aware head clauses [`parse_explanation`] tries, paired with
 /// the plurality each carries — the exact inverse of [`explanation_head`].
-/// None of the three is a prefix of another (`"The day returns"`, `"The
-/// moon crosses"`, `"The moons cross"` all diverge by the 9th character),
-/// so trying them in any order is safe.
+/// No head is a prefix of another (`"The day returns"`, `"The moon
+/// crosses"`, `"The moons cross"` all diverge by the 9th character; `"The
+/// moons keep their measure"` diverges from `"The moons cross"` at the
+/// 10th), so trying them in any order is safe.
 const EXPLANATION_HEADS: &[(&str, bool)] = &[
     ("The day returns", false),
     ("The moon crosses", false),
     ("The moons cross", true),
+    ("The moons keep their measure", true),
 ];
 
 /// Invert one explanation line's body (the text after its head clause) into
@@ -2438,8 +2517,8 @@ pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, L
     if let Some(reckoning) = parse_reckoning_line(line) {
         return Ok(ChorusLine::Reckoning(reckoning));
     }
-    if let Some(plural) = parse_revealed_claim(line) {
-        return Ok(ChorusLine::RevealedClaim { plural });
+    if let Some(surface) = parse_revealed_claim(line) {
+        return Ok(ChorusLine::RevealedClaim { surface });
     }
     if let Some(rest) = line.strip_prefix(COUNTER_PREFIX) {
         let inner = parse_chorus_line(rest, ctx)?;
@@ -2487,7 +2566,7 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
             line
         }
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
-        ChorusLine::RevealedClaim { plural } => rerender_revealed_claim(*plural),
+        ChorusLine::RevealedClaim { surface } => rerender_revealed_claim(*surface),
         ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
         ChorusLine::Reckoning(reckoning) => rerender_reckoning_line(reckoning),
     }
@@ -4034,7 +4113,7 @@ mod tests {
     /// `every_chorus_line_round_trips`): every doctrine `emic` +
     /// `annotations` + `margin` line, across seeds 1..=5, round-trips
     /// byte-identically through `parse_chorus_line` + `rerender_chorus_line`
-    /// — the `RevealedClaim` formula inverts to (its plurality), and a
+    /// — the `RevealedClaim` formula inverts to (its closed surface), and a
     /// counter-annotation inverts by stripping the fixed prefix and
     /// re-parsing the embedded folk sentence recursively (exercised
     /// directly here too, since no real seed carries one — see
