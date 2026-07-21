@@ -215,6 +215,7 @@
 - [The Bane](./chronicle/the-bane.md)
 - [The Massing](./chronicle/the-massing.md)
 - [The Given Word](./chronicle/the-given-word.md)
+- [The Diorama](./chronicle/the-diorama.md)
 
 # Appendix: The Frontier
 

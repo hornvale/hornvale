@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **STATUS: SHIPPED 2026-07-21 — registry MAP-67.** All 4 tasks merged, whole-branch review clean, Orrery deployed.
+
 **Goal:** Give the Orrery's map rung a **Voxel-2.5D** style — the region as a flat heightfield of voxel blocks under a fixed-isometric orthographic camera — selectable via a map style switch, with the current flat pixel-art map kept as the other style.
 
 **Architecture:** Reuse The Massing's voxel block/wall core (`worldMesh.ts` `buildVoxelBlocks`/`quantizeBands`/`VOXEL_CLIFF_DARKEN`) re-instantiated on a **flat planar grid** (cell → `(x, z)` position, `y` = banded elevation height) instead of a cube-sphere. `mapView` gains a `MapStyle` switch that swaps both the mounted mesh (voxel heightfield vs today's textured plane) and the camera pose (fixed isometric vs top-down). A HUD control (mirroring The Massing's globe-style dropdown) selects it.
