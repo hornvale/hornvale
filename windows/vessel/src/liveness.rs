@@ -224,6 +224,28 @@ pub trait Terrain {
     /// never-chosen-downhill convention).
     /// type-audit: waiver(temperature-convention: return)
     fn temperature(&self, room: &RoomAddr, day: WorldTime) -> f64;
+
+    /// The sun's altitude above the horizon at `room` on `day`, in degrees
+    /// (positive = up, negative = below), or `None` on a world with NO day/night
+    /// cycle (tidally locked). The wake read (`is_awake`, The Slumber Tier-1)
+    /// reads it. The DEFAULT is a latitude-independent fractional-day sun — the
+    /// Tier-0 coarse cycle (noon peak, dawn/dusk at the horizon, midnight
+    /// trough) — which the planted/synthetic test terrains inherit; a live
+    /// `LocaleTerrain` OVERRIDES it with the real astronomy altitude (latitude ×
+    /// season × the terminator).
+    /// type-audit: waiver(altitude-convention: return)
+    fn solar_altitude(&self, _room: &RoomAddr, day: WorldTime) -> Option<f64> {
+        fractional_day_sun(day)
+    }
+}
+
+/// The Tier-0 coarse solar cycle — a latitude-independent fractional-day sun:
+/// 90° at noon (frac 0.5), 0° at dawn/dusk (0.25 / 0.75), −90° at midnight. The
+/// `Terrain::solar_altitude` default, and `LocaleTerrain`'s fallback when a
+/// world carries no calendar.
+fn fractional_day_sun(day: WorldTime) -> Option<f64> {
+    let frac = day.day - day.day.floor();
+    Some(90.0 * hornvale_kernel::math::cos(std::f64::consts::TAU * (frac - 0.5)))
 }
 
 /// Water-truth (L0): a room is water iff its terrain reports it as FRESH
@@ -298,11 +320,27 @@ pub fn nearest_water(from: &RoomAddr, terrain: &dyn Terrain, budget: usize) -> O
 pub struct LocaleTerrain<'a> {
     /// The locale context whose fields are read.
     pub ctx: &'a LocaleContext,
+    /// The world's calendar, for the real solar wake read (The Slumber Tier-1);
+    /// `None` falls back to the fractional-day sun.
+    calendar: Option<&'a hornvale_astronomy::Calendar>,
 }
 impl<'a> LocaleTerrain<'a> {
-    /// Build the adapter over `ctx`.
+    /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun — for
+    /// throwaway reads (water/elevation) that never consult the wake cycle.
     pub fn new(ctx: &'a LocaleContext) -> Self {
-        Self { ctx }
+        Self {
+            ctx,
+            calendar: None,
+        }
+    }
+    /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
+    /// the wake cycle) follows the REAL sun — latitude × season × the terminator
+    /// (Tier-1). `None` falls back to the fractional-day sun.
+    pub fn with_calendar(
+        ctx: &'a LocaleContext,
+        calendar: Option<&'a hornvale_astronomy::Calendar>,
+    ) -> Self {
+        Self { ctx, calendar }
     }
 }
 impl<'a> Terrain for LocaleTerrain<'a> {
@@ -324,6 +362,17 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // swing while the render path stays byte-identical. INFINITY for an
         // undescribable room (never chosen as a comfort target).
         self.ctx.temperature_at(room, day).unwrap_or(f64::INFINITY)
+    }
+    fn solar_altitude(&self, room: &RoomAddr, day: WorldTime) -> Option<f64> {
+        // The real sun where the world carries a calendar (latitude from the
+        // room's centroid; `None` on a locked world → no cycle); else the
+        // fractional-day fallback.
+        match self.calendar {
+            Some(cal) => hornvale_astronomy::StdDays::new(day.day)
+                .ok()
+                .and_then(|t| cal.solar_altitude_at(t, room.coord().latitude)),
+            None => fractional_day_sun(day),
+        }
     }
 }
 
@@ -956,20 +1005,10 @@ fn comfort_step(
 /// type-audit: bare-ok(identifier-text)
 pub const RESTED: &str = "rested";
 
-/// The fraction of the day a DIURNAL creature is awake — `[AWAKE_START,
-/// AWAKE_END)` of the day (a fractional-day window, the authored simplification
-/// standing in for a true solar terminator; spec §1). Nocturnal is the
-/// complement; crepuscular the twilight edges.
-// NOTE: the fractional-day wake window and `is_awake` below are the Stage-2b
-// PLACEHOLDER for Process C — `is_awake` is not yet wired into the live tick
-// (that's Stage 2b, which swaps this body for the real solar read via the
-// astronomy daylight model). Exercised by unit tests today; `allow(dead_code)`
-// until the live wiring lands.
-const AWAKE_START: f64 = 0.25;
-/// The end of the diurnal wake window (see [`AWAKE_START`]).
-const AWAKE_END: f64 = 0.75;
-/// The half-width of a crepuscular creature's dawn/dusk wake bands.
-const CREP_HALFWIDTH: f64 = 0.1;
+/// The solar-altitude band (degrees around the horizon) a CREPUSCULAR creature
+/// is awake in — dawn and dusk, when the sun is near the horizon (civil
+/// twilight). Diurnal wakes above it, nocturnal below (The Slumber Tier-1).
+const TWILIGHT_DEG: f64 = 6.0;
 
 /// Fatigue (Process S, sleep-debt) gained per day AWAKE since the last rest (The
 /// Slumber v2). Gentle: it stays low under normal nightly sleep (Process C, the
@@ -1020,28 +1059,42 @@ pub fn waking_offset(activity: ActivityCycle) -> f64 {
 /// sleeping creature JUMPS through its off-phase in one `Rest` rather than
 /// spinning (The Slumber, spec §4). A bounded scan (at most ~1.5 days, one full
 /// cycle plus margin) at [`WAKE_SCAN_STEP`]; deterministic (compute-path only).
-fn next_awake_day(activity: ActivityCycle, day: f64) -> f64 {
+fn next_awake_day(
+    activity: ActivityCycle,
+    terrain: &dyn Terrain,
+    room: &RoomAddr,
+    day: f64,
+) -> f64 {
     let limit = day + 1.5;
     let mut t = day + WAKE_SCAN_STEP;
     while t < limit {
-        if is_awake(activity, t) {
+        if is_awake(activity, terrain, room, WorldTime { day: t }) {
             return t;
         }
         t += WAKE_SCAN_STEP;
     }
-    day + 1.0 // fallback: a creature always wakes within a day (unreachable here)
+    // No waking within a cycle (e.g. polar night for a diurnal creature): sleep
+    // on to the next day; the survival override still wakes a dying creature.
+    day + 1.0
 }
 
 /// (true solar altitude is deferred).
-fn is_awake(activity: ActivityCycle, day: f64) -> bool {
-    let frac = day - day.floor();
-    let in_day = (AWAKE_START..AWAKE_END).contains(&frac);
-    match activity {
-        ActivityCycle::Diurnal => in_day,
-        ActivityCycle::Nocturnal => !in_day,
-        ActivityCycle::Crepuscular => {
-            (frac - AWAKE_START).abs() < CREP_HALFWIDTH || (frac - AWAKE_END).abs() < CREP_HALFWIDTH
-        }
+fn is_awake(
+    activity: ActivityCycle,
+    terrain: &dyn Terrain,
+    room: &RoomAddr,
+    day: WorldTime,
+) -> bool {
+    match terrain.solar_altitude(room, day) {
+        // No day/night cycle (a tidally locked world): the solar zeitgeber is
+        // absent, so the wake-gate cannot fire — the creature is effectively
+        // always awake and rests on fatigue alone (spec §1, the locked branch).
+        None => true,
+        Some(alt) => match activity {
+            ActivityCycle::Diurnal => alt > 0.0,
+            ActivityCycle::Nocturnal => alt < 0.0,
+            ActivityCycle::Crepuscular => alt.abs() < TWILIGHT_DEG,
+        },
     }
 }
 
@@ -1469,7 +1522,7 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         npc.deliberation_latency,
         npc.time_horizon,
         helpless,
-        is_awake(npc.activity, day.day),
+        is_awake(npc.activity, terrain, &view.position, day),
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1674,7 +1727,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     npc.deliberation_latency,
                     npc.time_horizon,
                     helpless,
-                    is_awake(npc.activity, day),
+                    is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
                     mode,
                     PLAN_BUDGET,
                 );
@@ -1721,7 +1774,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         last_rested = day;
                         // Sleep through the off-phase in one jump to the next
                         // waking, rather than re-resting every step (The Slumber).
-                        day = next_awake_day(npc.activity, day);
+                        day = next_awake_day(npc.activity, self.terrain, &pos, day);
                         if day > self.to.day {
                             break;
                         }
@@ -4564,17 +4617,22 @@ mod tests {
     }
 
     #[test]
-    fn is_awake_follows_the_activity_cycle() {
+    fn is_awake_follows_the_sun_and_the_activity_cycle() {
         use ActivityCycle::*;
-        // Midday (frac 0.5): diurnal awake, nocturnal asleep. Midnight (0.0):
-        // the reverse.
-        assert!(is_awake(Diurnal, 3.5));
-        assert!(!is_awake(Nocturnal, 3.5));
-        assert!(!is_awake(Diurnal, 3.0));
-        assert!(is_awake(Nocturnal, 3.0));
-        // Crepuscular: awake at the twilight edges, asleep at midday.
-        assert!(is_awake(Crepuscular, 3.0 + AWAKE_START));
-        assert!(!is_awake(Crepuscular, 3.5));
+        // The default (fractional-day) solar sun: up at noon, at the horizon at
+        // dawn/dusk, down at midnight — the coarse cycle planted terrain uses.
+        let t = PlantedTerrain::thermal([]);
+        let r = raddr(1.0);
+        let at = |d: f64| WorldTime { day: d };
+        // Noon (sun up): diurnal awake, nocturnal asleep. Midnight: the reverse.
+        assert!(is_awake(Diurnal, &t, &r, at(3.5)));
+        assert!(!is_awake(Nocturnal, &t, &r, at(3.5)));
+        assert!(!is_awake(Diurnal, &t, &r, at(3.0)));
+        assert!(is_awake(Nocturnal, &t, &r, at(3.0)));
+        // Crepuscular: awake when the sun is near the horizon (dawn ~frac 0.25),
+        // asleep at noon.
+        assert!(is_awake(Crepuscular, &t, &r, at(3.25)));
+        assert!(!is_awake(Crepuscular, &t, &r, at(3.5)));
     }
 
     #[test]

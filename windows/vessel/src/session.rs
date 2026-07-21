@@ -59,6 +59,9 @@ pub struct Session<'w> {
     registry: ConceptRegistry,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
+    /// The world's calendar, built once at `start`, so the NPC wake cycle reads
+    /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
+    calendar: Option<hornvale_astronomy::Calendar>,
 }
 
 impl<'w> Session<'w> {
@@ -94,6 +97,11 @@ impl<'w> Session<'w> {
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
         let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
+        // Build the world's calendar once, for the NPC wake cycle's real-sun
+        // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
+        let calendar = hornvale_worldgen::sky_of(world)
+            .ok()
+            .and_then(|sky| sky.calendar().cloned());
         let mut session = Session {
             world,
             ctx,
@@ -106,6 +114,7 @@ impl<'w> Session<'w> {
             ledger,
             registry,
             npcs,
+            calendar,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -319,7 +328,7 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::new(&self.ctx);
+        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
@@ -487,7 +496,7 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
-        let terrain = LocaleTerrain::new(&self.ctx);
+        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
         here.iter()
             .map(|npc| {
                 let affect = affect_of(&self.ledger, npc, self.day, &terrain);

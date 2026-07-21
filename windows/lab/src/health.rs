@@ -113,7 +113,11 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         None => return Vec::new(),
     };
     let npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
-    let terrain = LocaleTerrain::new(&ctx);
+    // The world's calendar, so the wake cycle reads the real sun (Tier-1).
+    let calendar = hornvale_worldgen::sky_of(world)
+        .ok()
+        .and_then(|sky| sky.calendar().cloned());
+    let terrain = LocaleTerrain::with_calendar(&ctx, calendar.as_ref());
     let traces = run_simulation(&ledger, &registry, &npcs, &terrain, HEALTH_TICKS);
     npcs.into_iter()
         .zip(traces)
