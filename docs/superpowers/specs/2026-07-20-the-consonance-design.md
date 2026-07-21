@@ -8,6 +8,34 @@ witnessed quantities" — a new mechanism spanning `domains/astronomy`,
 causal-schema library, fully shipped by The Explanations) and LANG-44 (the
 numeracy rung, shipped by Few and Many).
 
+**Post-implementation erratum (2026-07-20, at close):** two claims below
+were found wrong during implementation, independently re-verified by task
+reviewers and the final whole-branch review; the shipped code is correct,
+this spec's prose is what's stale. Left the body text below as the
+historical planning record rather than silently rewritten.
+
+1. **The real admitted schema set for `FactShape::CyclicEvent` is FOUR
+   schemas, not three.** Every place below reading "`Agentive`,
+   `PathJourney`, `Balance`" should read "`Agentive`, `PathJourney`,
+   `Balance`, `CycleReturn`" — confirmed directly against
+   `schema_table()` in `domains/language/src/schemas.rs`. This was a gap
+   in the controller's own research before this spec was written, not a
+   deviation the implementation introduced; every test built against the
+   real four-member set.
+2. **§3.4's proposed mechanism for `expressible_at_rung` (reusing
+   `render_quantity_at_rung`'s own classification) is unsound and was not
+   built as written.** `render_quantity_at_rung` renders both `1.0` and
+   `2.0` as *exact* words at `Subitizing`, so "degrades to a qualitative
+   bucket" never fires for a `2:1` ratio's own integers — the spec's own
+   rule would have wrongly called `2:1` nameable at the floor. The
+   shipped predicate instead asks directly whether a rung's grammar can
+   compose two named quantities into a relationship (true at `1:1`
+   everywhere — naming one quantity twice, not a relationship — false at
+   `Subitizing` for any other ratio, true at `FullCounting`/`Decimals`),
+   which is what §3.4's prose actually argues for even though its
+   proposed IMPLEMENTATION doesn't deliver it. Confirmed correct
+   (monotonic, no counterexample exists) by the Task 5 review.
+
 ---
 
 ## 1. What this is
