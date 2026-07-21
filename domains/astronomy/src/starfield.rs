@@ -24,7 +24,7 @@ pub struct FieldStar {
 /// declination (sphere-uniform), right ascension (uniform), and magnitude
 /// class (1–5, dim-heavy).
 pub fn starfield(astronomy_seed: Seed) -> Vec<FieldStar> {
-    let mut stream = astronomy_seed.derive(streams::STARFIELD).stream();
+    let mut stream = astronomy_seed.derive_typed(streams::STARFIELD).stream();
     let count = stream.range_u32(100, 300);
 
     (0..count)

@@ -51,7 +51,7 @@ pub fn generate_wanderers(
     pins: &SkyPins,
 ) -> Vec<Wanderer> {
     let count_roll = astronomy_seed
-        .derive(streams::WANDERER_COUNT)
+        .derive_typed(streams::WANDERER_COUNT)
         .stream()
         .range_u32(1, 100);
     let drawn_count = match count_roll {
@@ -64,7 +64,7 @@ pub fn generate_wanderers(
     let count = pins.wanderers.unwrap_or(drawn_count);
 
     let mut wanderers: Vec<Wanderer> = Vec::new();
-    let mut stream = astronomy_seed.derive(streams::WANDERERS).stream();
+    let mut stream = astronomy_seed.derive_typed(streams::WANDERERS).stream();
 
     for _ in 0..count {
         let region_roll = stream.range_u32(1, 100);

@@ -89,7 +89,7 @@ pub fn generate_forcing(
     moons: &[crate::moons::Moon],
     pins: &SkyPins,
 ) -> OrbitalForcing {
-    let mut s = astronomy_seed.derive(streams::FORCING).stream();
+    let mut s = astronomy_seed.derive_typed(streams::FORCING).stream();
     // Fixed draw order — never reorder.
     let base_wobble = s.next_f64() * 2.5; // 0–2.5° base wobble
     let obliquity_phase = s.next_f64() * TAU;
@@ -107,7 +107,7 @@ pub fn generate_forcing(
     // Per-body genesis phase offsets (SKY-4): drawn unconditionally — a phase
     // offset is not "forcing", it only moves day 0 off the grand alignment
     // that falls out of every phase being a bare `(t/period).fract()`.
-    let mut p = astronomy_seed.derive(streams::PHASE_OFFSETS).stream();
+    let mut p = astronomy_seed.derive_typed(streams::PHASE_OFFSETS).stream();
     let year_phase_offset = p.next_f64();
     let day_phase_offset = p.next_f64();
     let moon_phase_offsets: Vec<f64> = (0..moons.len()).map(|_| p.next_f64()).collect();

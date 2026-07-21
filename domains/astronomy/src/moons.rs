@@ -191,7 +191,7 @@ pub fn generate_moons(
         Some(pin) => (pin.want(), pin.min()),
         None => {
             let roll = astronomy_seed
-                .derive(streams::MOON_COUNT)
+                .derive_typed(streams::MOON_COUNT)
                 .stream()
                 .range_u32(1, 100);
             let drawn_count = match roll {
@@ -206,7 +206,7 @@ pub fn generate_moons(
 
     let hill = hill_radius_mm(star, anchor);
     let max_distance = (0.4 * hill).min(900.0);
-    let mut stream = astronomy_seed.derive(streams::MOONS).stream();
+    let mut stream = astronomy_seed.derive_typed(streams::MOONS).stream();
     let mut moons: Vec<Moon> = Vec::new();
     let mut notes: Vec<String> = Vec::new();
 
@@ -270,7 +270,9 @@ pub fn generate_moons(
     // drops 0.10 → 0.02 (the ceiling stays 0.85): cubing already suppresses
     // the low end, so the old linear-era floor would have overridden the
     // cubed value for a wide swath of close-in fracs.
-    let mut formations = astronomy_seed.derive(streams::MOON_FORMATION).stream();
+    let mut formations = astronomy_seed
+        .derive_typed(streams::MOON_FORMATION)
+        .stream();
     for moon in &mut moons {
         let p_capture = capture_probability(moon.distance.0, max_distance);
         moon.formation = if formations.next_f64() < p_capture {
@@ -296,7 +298,9 @@ pub fn generate_moons(
     // all-impact world's eclipses are NOT byte-identical even though its
     // inclinations are. The epoch is total, not partial — see the astronomy
     // model card's "The epoch, corrected" section.
-    let mut inclinations = astronomy_seed.derive(streams::MOON_INCLINATIONS).stream();
+    let mut inclinations = astronomy_seed
+        .derive_typed(streams::MOON_INCLINATIONS)
+        .stream();
     for moon in &mut moons {
         let roll = inclinations.next_f64();
         moon.inclination_deg = match moon.formation {
@@ -310,7 +314,7 @@ pub fn generate_moons(
     // Eclipse Seasons: node longitudes draw from their own stream, after
     // the inclinations, so every pre-node draw is byte-identical and the
     // draws are index-stable.
-    let mut nodes = astronomy_seed.derive(streams::MOON_NODES).stream();
+    let mut nodes = astronomy_seed.derive_typed(streams::MOON_NODES).stream();
     for moon in &mut moons {
         moon.node_longitude_deg = nodes.next_f64() * 360.0;
     }
@@ -324,7 +328,7 @@ pub fn generate_moons(
     // happened to draw `Capture`, so flipping moon 0's formation would
     // silently shift every later moon's density. Same index-stability
     // discipline as SKY-6 and this campaign's own inclination epoch.
-    let mut densities = astronomy_seed.derive(streams::MOON_DENSITY).stream();
+    let mut densities = astronomy_seed.derive_typed(streams::MOON_DENSITY).stream();
     for moon in &mut moons {
         let roll = densities.next_f64();
         moon.density = match moon.formation {
@@ -348,7 +352,7 @@ pub fn generate_moons(
     // formation is known, for the same index-stability reason as density
     // above — one draw per moon in both branches.
     let planet_age_gyr = planet_age(star).0;
-    let mut ages = astronomy_seed.derive(streams::MOON_AGE).stream();
+    let mut ages = astronomy_seed.derive_typed(streams::MOON_AGE).stream();
     for moon in &mut moons {
         let roll = ages.next_f64();
         moon.age = match moon.formation {
