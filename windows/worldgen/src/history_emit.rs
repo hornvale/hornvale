@@ -223,6 +223,31 @@ pub fn emit_history(world: &mut World, h: &History) -> Result<(), BuildError> {
     Ok(())
 }
 
+/// Commit the world-level "now" fact: the bake's `end_year`, on `subject`
+/// (the world entity, mirroring how astronomy/terrain commit their own
+/// world-scalar genesis facts — see `domains/astronomy/src/facts.rs::fact`).
+/// Day-stamped 0.0 like those other world constants: `history-now` is an
+/// eternal fact about this world's scenario (fixed by `BakeConfig`), not an
+/// event that becomes true partway through the timeline, so it belongs with
+/// the other genesis-day scalars rather than at `end_year` itself. Reads back
+/// via `windows/almanac::history::present_day`, which now trusts this fact
+/// instead of approximating the present as the latest occupation event.
+/// type-audit: bare-ok(count: now)
+pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), BuildError> {
+    world.ledger.commit(
+        Fact {
+            subject,
+            predicate: hornvale_history::HISTORY_NOW.to_string(),
+            object: Value::Number(now),
+            place: None,
+            day: Some(0.0),
+            provenance: hornvale_history::streams::BAKE.to_string(),
+        },
+        &world.registry,
+    )?;
+    Ok(())
+}
+
 /// The dominant people per region: every cell an alive occupation (a
 /// committed `is-settlement`) sits on, grouped by that occupation's people.
 /// Reads purely off the ledger — the present-as-query the campaign's

@@ -17,6 +17,18 @@ pub mod streams;
 
 use hornvale_kernel::{ConceptRegistry, RegistryError};
 
+/// Predicate: the world-level "now" — the standard day the deep-history
+/// bake's present sits at (`windows/worldgen::history_bake::BakeConfig`'s
+/// `end_year`), committed once per world (on the world entity) by the
+/// composition root right after the bake commits. `present_day` (in
+/// `windows/almanac`) reads this back directly instead of approximating the
+/// present as the latest committed occupation event — the approximation
+/// undercounted every ruin's age and tenure by the bake's post-history
+/// stretch (T7 review gap; the bake's last occupation event predates
+/// `end_year` because history is a stochastic walk, not a schedule that
+/// lands exactly on the boundary).
+/// type-audit: bare-ok(identifier-text)
+pub const HISTORY_NOW: &str = "history-now";
 /// Predicate marking an entity as one occupation record (one span of a
 /// people occupying a site).
 /// type-audit: bare-ok(identifier-text)
@@ -63,10 +75,15 @@ pub const OCC_NOTABILITY: &str = "occ-notability";
 /// type-audit: bare-ok(identifier-text)
 pub const IS_RUIN: &str = "is-ruin";
 
-/// Register history's contribution to the concept registry: one predicate
-/// per `OccupationRecord` field, plus the `is-occupation`/`is-ruin` marker
-/// predicates.
+/// Register history's contribution to the concept registry: the world-level
+/// `history-now` scalar, one predicate per `OccupationRecord` field, plus the
+/// `is-occupation`/`is-ruin` marker predicates.
 pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryError> {
+    registry.register_predicate(
+        HISTORY_NOW,
+        true,
+        "the standard day the world's present sits at (the bake's end year)",
+    )?;
     registry.register_predicate(IS_OCCUPATION, true, "subject is an occupation record")?;
     registry.register_predicate(OCC_PEOPLE, true, "the people occupying the site")?;
     registry.register_predicate(OCC_SITE, true, "the Geosphere cell the occupation sits on")?;

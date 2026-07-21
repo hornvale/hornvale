@@ -90,7 +90,7 @@ pub use chorus::{
 pub use components::WorldComponents;
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
-    GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, goblinoid_overlap,
+    GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
     goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
 };
 pub use settlement_pins::SettlementPins;
@@ -3614,6 +3614,11 @@ fn build_to(
         &cfg,
     );
     emit_history(&mut world, &history)?;
+    // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
+    // present isn't the latest occupation event (a stochastic bake rarely
+    // lands its last draw exactly on the boundary) — it's this fixed
+    // scenario constant. `present_day` (windows/almanac) reads it back.
+    history_emit::emit_now(&mut world, world_entity, cfg.end_year)?;
 
     // Pair each alive settlement `emit_history` just committed (tagged
     // `is-settlement` + `occ-people` + `cell-id` + `population`) back to its

@@ -265,6 +265,18 @@ fn number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
 /// numbers).
 /// type-audit: bare-ok(count: return)
 fn present_day(world: &World) -> f64 {
+    if let Some(now) = world.ledger.find(hornvale_history::HISTORY_NOW).next()
+        && let Value::Number(n) = &now.object
+    {
+        return *n;
+    }
+    // Fallback for a world with no committed `history-now` fact (a save from
+    // before T8, or a synthetic Lab world that never ran the composition-root
+    // bake): approximate the present as the latest committed occupation
+    // event. This UNDERSTATES every ruin's age and tenure by the bake's
+    // post-history stretch (the true present is `BakeConfig::end_year`, not
+    // the last stochastic draw), which is exactly the gap committing
+    // `history-now` fixes — see `windows/worldgen::history_emit::emit_now`.
     let founded = world.ledger.find(hornvale_history::OCC_FOUNDED);
     let ended = world.ledger.find(hornvale_history::OCC_ENDED);
     founded
