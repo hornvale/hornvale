@@ -285,6 +285,53 @@ impl LocaleContext {
             .sum();
         Some(sum / denom as f64)
     }
+
+    /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
+    /// net-primary-productivity proxy over the climate, the food-value field
+    /// the drive layer's hunger drive reads (The Provender). Blends the three
+    /// corner cells' annual-mean temperature and moisture by the SAME integer
+    /// barycentric weights [`describe`](Self::describe) uses, then takes the
+    /// Liebig minimum of a triangular temperature response and moisture — the
+    /// same NPP proxy demography's carrying-capacity uses, computed here from
+    /// this context's own climate rather than depending up into demography (a
+    /// sibling consumer, not required to match it bit-for-bit; it grades cells
+    /// for a hungry forager, it does not set population). Full precision — a
+    /// compute-path read, never a serialization boundary, so NOT quantized.
+    /// `None` for a room the canonical grid does not cover (the caller supplies
+    /// the never-fed fallback). Time-independent (standing biomass is a slow,
+    /// annual field), so it takes no observation time.
+    /// type-audit: pending(wave-2: return)
+    pub fn productivity_at(&self, addr: &RoomAddr) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights(geo, &self.index)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+            sum / denom as f64
+        };
+        let temp = blend(&|c| self.climate.mean_temperature_at(c).get());
+        let moisture = blend(&|c| self.climate.moisture_at(c));
+        Some(miami_npp(temp, moisture))
+    }
+}
+
+/// The optimum temperature (°C) of the Miami NPP proxy's triangular
+/// temperature response — mirrors demography's carrying-capacity model (a
+/// sibling consumer of the same proxy; see [`LocaleContext::productivity_at`]).
+const NPP_TEMP_OPTIMUM_C: f64 = 20.0;
+
+/// The temperature tolerance (°C) either side of [`NPP_TEMP_OPTIMUM_C`] over
+/// which the triangular temperature response falls to zero.
+const NPP_TEMP_TOLERANCE_C: f64 = 30.0;
+
+/// The Miami-model net-primary-productivity proxy in `[0, 1]`: the Liebig
+/// minimum of a triangular temperature response about [`NPP_TEMP_OPTIMUM_C`]
+/// and the (clamped) moisture. The food-value field's material-productivity
+/// term (The Provender).
+fn miami_npp(temperature_c: f64, moisture: f64) -> f64 {
+    let temp_response =
+        (1.0 - (temperature_c - NPP_TEMP_OPTIMUM_C).abs() / NPP_TEMP_TOLERANCE_C).clamp(0.0, 1.0);
+    temp_response.min(moisture.clamp(0.0, 1.0))
 }
 
 /// Stable biome name for the `locale/room/v2` schema (owned here, not Debug).

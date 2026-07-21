@@ -13,8 +13,8 @@
 use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, LocaleTerrain, Npc,
-    SUSTENANCE, Terrain, affect_of, derive_npcs,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
+    RESTED, SUSTENANCE, Terrain, affect_of, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -82,8 +82,13 @@ pub fn run_simulation(
             Err(_) => break,
         };
         day += 1.0;
-        let now = WorldTime { day };
+        // Sample each creature at a representative WAKING moment of the day just
+        // simulated — not midnight, where a diurnal creature is asleep (The
+        // Slumber): distress is a waking state, so the metric reads it while up.
         for (i, npc) in npcs.iter().enumerate() {
+            let now = WorldTime {
+                day: (day - 1.0) + waking_offset(npc.activity),
+            };
             traces[i].push(affect_of(&ledger, npc, now, terrain));
         }
     }
@@ -102,12 +107,18 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     // the clone, never at genesis (spec §3; same as `Session::start`).
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
+    let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
+    let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     let home = match hornvale_settlement::all_settlements(world).first() {
         Some(v) => v.id,
         None => return Vec::new(),
     };
     let npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
-    let terrain = LocaleTerrain::new(&ctx);
+    // The world's calendar, so the wake cycle reads the real sun (Tier-1).
+    let calendar = hornvale_worldgen::sky_of(world)
+        .ok()
+        .and_then(|sky| sky.calendar().cloned());
+    let terrain = LocaleTerrain::with_calendar(&ctx, calendar.as_ref());
     let traces = run_simulation(&ledger, &registry, &npcs, &terrain, HEALTH_TICKS);
     npcs.into_iter()
         .zip(traces)
@@ -148,6 +159,8 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
     // by-cause: distress ticks attributed to the pursued drive's kind.
     let mut cause_thirst = 0usize;
     let mut cause_thermal = 0usize;
+    let mut cause_fatigue = 0usize;
+    let mut cause_hunger = 0usize;
     // by-species: (distress ticks, total ticks) per species.
     let mut species_stats: BTreeMap<String, (usize, usize)> = BTreeMap::new();
 
@@ -168,6 +181,8 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
                 match a.object {
                     Some(DriveKind::Thirst) => cause_thirst += 1,
                     Some(DriveKind::Thermal) => cause_thermal += 1,
+                    Some(DriveKind::Fatigue) => cause_fatigue += 1,
+                    Some(DriveKind::Hunger) => cause_hunger += 1,
                     None => {}
                 }
             } else {
@@ -189,6 +204,8 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
     let by_cause: BTreeMap<String, f64> = [
         ("thirst".to_string(), frac(cause_thirst, distress_ticks)),
         ("thermal".to_string(), frac(cause_thermal, distress_ticks)),
+        ("fatigue".to_string(), frac(cause_fatigue, distress_ticks)),
+        ("hunger".to_string(), frac(cause_hunger, distress_ticks)),
     ]
     .into_iter()
     .collect();

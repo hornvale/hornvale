@@ -32,9 +32,12 @@
 
 use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
-use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, WorldTime};
+use hornvale_kernel::{
+    ANIMAL_PREY, ConceptRegistry, EntityId, Ledger, PLANT_FORAGE, ResourceVector, RoomAddr,
+    WorldTime,
+};
 use hornvale_species::{ActivityCycle, MetabolicClass};
-use hornvale_vessel::liveness::{AGENT_AT, DRANK, Npc, Terrain, place_agent};
+use hornvale_vessel::liveness::{AGENT_AT, DRANK, EATEN, Npc, RESTED, Terrain, place_agent};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A hand-planted terrain field for the harness — the pub sibling of the
@@ -55,6 +58,11 @@ pub struct SyntheticTerrain {
     fresh: BTreeSet<RoomAddr>,
     temps: BTreeMap<RoomAddr, f64>,
     calm_after: Option<(f64, f64)>,
+    /// Per-room food productivity (The Provender); rooms without an entry read
+    /// `DEFAULT_FORAGE` (fed) — so a scenario that plants none feeds its
+    /// creatures and hunger stays quiet, exactly as it does for the vessel
+    /// tests' `PlantedTerrain`.
+    forage: BTreeMap<RoomAddr, f64>,
 }
 
 impl Terrain for SyntheticTerrain {
@@ -72,6 +80,10 @@ impl Terrain for SyntheticTerrain {
                 _ => hot,
             },
         }
+    }
+    fn forage_value(&self, room: &RoomAddr) -> f64 {
+        // `DEFAULT_FORAGE` (1.0) where unplanted, matching `PlantedTerrain`.
+        self.forage.get(room).copied().unwrap_or(1.0)
     }
 }
 
@@ -121,6 +133,8 @@ fn harness_registry() -> ConceptRegistry {
     let mut registry = ConceptRegistry::default();
     let _ = registry.register_predicate(AGENT_AT, false, "an agent's position on a day");
     let _ = registry.register_predicate(DRANK, false, "an agent satisfied its sustenance goal");
+    let _ = registry.register_predicate(RESTED, false, "an agent rested on a day");
+    let _ = registry.register_predicate(EATEN, false, "an agent ate on a day");
     registry
 }
 
@@ -190,6 +204,11 @@ fn creature(
         deliberation_latency: 0.5,
         time_horizon: 0.0,
         metabolic_class: MetabolicClass::Endotherm,
+        // A balanced omnivore fed by the harness terrain's default productivity
+        // (The Provender), so hunger stays quiet — these scenarios probe
+        // thirst/thermal distress, not starvation.
+        niche: ResourceVector::new(&[(PLANT_FORAGE, 0.5), (ANIMAL_PREY, 0.5)])
+            .expect("the omnivore niche is valid"),
         label: species.to_string(),
     }
 }
@@ -233,6 +252,7 @@ pub fn stranded_from_known_water() -> Scenario {
             fresh: [spring].into_iter().collect(),
             temps: BTreeMap::new(),
             calm_after: None,
+            forage: BTreeMap::new(),
         },
     }
 }
@@ -276,6 +296,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
             fresh: [spring].into_iter().collect(),
             temps,
             calm_after: None,
+            forage: BTreeMap::new(),
         },
     }
 }
@@ -314,6 +335,48 @@ pub fn a_heat_wave_that_passes() -> Scenario {
             fresh: [spring].into_iter().collect(),
             temps,
             calm_after: Some((WAVE_BREAKS_DAY, AFTER_WAVE_C)),
+            forage: BTreeMap::new(),
+        },
+    }
+}
+
+/// **A forager in a food desert** → sustained hunger distress (by-cause
+/// hunger), the hunger analogue of [`stranded_from_known_water`]. The creature
+/// sits ON its home spring, so thirst stays serviceable (it drinks and resets,
+/// never itself distressing — the same isolation the heat-wave scenario uses);
+/// but its cell and every neighbour are barren (food-value `0`), so once hunger
+/// crosses its `act` there is no cell rich enough to eat and no richer
+/// neighbour to forage toward: hunger — a survival drive — Holds unserviced and
+/// the creature starves, distress attributed to hunger, produced end-to-end by
+/// the real sim (The Provender). Proves hunger enters the drive competition and
+/// the by-cause reduction separates it.
+pub fn a_forager_in_a_food_desert() -> Scenario {
+    let spring = RoomAddr::containing([1.0, 0.0, 0.0], 6);
+    let mut ledger = Ledger::default();
+    let registry = harness_registry();
+    let e = ledger.mint_entity();
+    // Seed the water belief and position (stands in the spring on day 0).
+    ledger
+        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .expect("place at spring");
+    // The spring and its three neighbours are all barren — no cell feeds the
+    // creature and no neighbour is richer, so hunger has no affordance and it
+    // Holds (a local food pit, the hunger twin of the heat-wave's thermal pit).
+    let mut forage = BTreeMap::new();
+    forage.insert(spring.clone(), 0.0);
+    for n in spring.neighbors() {
+        forage.insert(n, 0.0);
+    }
+    let npc = creature(e, spring.clone(), spring.clone(), "kobold", MILD_NICHE);
+    Scenario {
+        ledger,
+        registry,
+        npcs: vec![npc],
+        terrain: SyntheticTerrain {
+            fresh: [spring].into_iter().collect(),
+            temps: BTreeMap::new(),
+            calm_after: None,
+            forage,
         },
     }
 }
@@ -377,6 +440,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
             fresh: [spring, healthy_spring].into_iter().collect(),
             temps: BTreeMap::new(),
             calm_after: None,
+            forage: BTreeMap::new(),
         },
     }
 }
