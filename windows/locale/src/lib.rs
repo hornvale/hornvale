@@ -315,19 +315,19 @@ impl LocaleContext {
     }
 
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees
-    /// (The Dread). Two terms, taken at their maximum: the **uncanny** (a placed
-    /// exotic site's normalized strangeness magnitude — the "cursed ground" a
-    /// creature instinctively shuns, the v1 threat in a world with no predator
-    /// agents yet), and a **lethal** backstop (an annual-mean temperature beyond
-    /// any creature's survivable band — the deep ice or the molten waste). Reads
-    /// the dominant corner cell's placed regime (like [`describe`](Self::describe)
-    /// picks its biome) and a corner-blended mean temperature. Full precision — a
-    /// compute-path read, never a serialization boundary, so NOT quantized.
-    /// `None` for a room the canonical grid does not cover (the caller supplies
-    /// the safe fallback). Time-independent (the uncanny is a slow field), so it
+    /// (The Dread, split per-axis by The Bane) as `(uncanny, heat, cold)`, each
+    /// in `[0, 1]`: the **uncanny** (a placed exotic site's normalized strangeness
+    /// — the "cursed ground"), and **heat**/**cold** — how far the cell's
+    /// annual-mean temperature is *above* a hot-danger threshold / *below* a
+    /// cold-danger one, graded up to the lethal extreme (the deep ice, the molten
+    /// waste). Reads the dominant corner cell's placed regime (like
+    /// [`describe`](Self::describe) picks its biome) and a corner-blended mean
+    /// temperature. Full precision — a compute-path read, never a serialization
+    /// boundary, so NOT quantized. `None` for a room the canonical grid does not
+    /// cover (the caller supplies the safe fallback). Time-independent, so it
     /// takes no observation time.
     /// type-audit: pending(wave-2: return)
-    pub fn threat_at(&self, addr: &RoomAddr) -> Option<f64> {
+    pub fn hazards_at(&self, addr: &RoomAddr) -> Option<(f64, f64, f64)> {
         let geo = self.climate.geosphere();
         let weights = addr.corner_weights(geo, &self.index)?;
         // The dominant corner cell (max weight, tie-break lowest CellId) — the
@@ -344,31 +344,36 @@ impl LocaleContext {
             .regime_at(best.0)
             .map(|n| n.strangeness() / crate::regime::STRANGENESS_CEILING)
             .unwrap_or(0.0);
-        // The lethal backstop: an annual-mean temperature past any niche.
+        // Graded heat/cold: 0 within the safe band, rising to 1 at the lethal
+        // extreme.
         let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
         let temp: f64 = weights
             .iter()
             .map(|&(c, w)| w as f64 * self.climate.mean_temperature_at(c).get())
             .sum::<f64>()
             / denom as f64;
-        let lethal = if (LETHAL_COLD_C..=LETHAL_HEAT_C).contains(&temp) {
-            0.0
-        } else {
-            1.0
-        };
-        Some(uncanny.max(lethal).clamp(0.0, 1.0))
+        let heat = ((temp - HOT_DANGER_C) / (LETHAL_HEAT_C - HOT_DANGER_C)).clamp(0.0, 1.0);
+        let cold = ((COLD_DANGER_C - temp) / (COLD_DANGER_C - LETHAL_COLD_C)).clamp(0.0, 1.0);
+        Some((uncanny.clamp(0.0, 1.0), heat, cold))
     }
 }
 
-/// The coldest annual-mean temperature (°C) any creature survives — below it a
-/// cell is a lethal frozen waste and reads maximal threat (The Dread's habitability
-/// backstop). Set well past the coldest species niche (the woolly mammoth's deep
-/// tundra), so it marks genuine lethality, not mere discomfort (thermal's job).
+/// The annual-mean temperature (°C) at/below which a cell's COLD becomes a hazard
+/// (The Bane) — graded from here down to [`LETHAL_COLD_C`]. Above the coldest
+/// species niche, so ordinary cold is thermal discomfort (thermal's job), not
+/// dread.
+const COLD_DANGER_C: f64 = -20.0;
+
+/// The annual-mean temperature (°C) at/above which a cell's HEAT becomes a hazard
+/// (The Bane) — graded from here up to [`LETHAL_HEAT_C`].
+const HOT_DANGER_C: f64 = 40.0;
+
+/// The coldest annual-mean temperature (°C) any creature survives — a lethal
+/// frozen waste, where COLD hazard saturates to `1` (The Bane).
 const LETHAL_COLD_C: f64 = -40.0;
 
-/// The hottest annual-mean temperature (°C) any creature survives — above it a
-/// cell is a lethal molten waste (The Dread's habitability backstop). Set past
-/// the warmest species niche.
+/// The hottest annual-mean temperature (°C) any creature survives — a lethal
+/// molten waste, where HEAT hazard saturates to `1`.
 const LETHAL_HEAT_C: f64 = 60.0;
 
 /// The optimum temperature (°C) of the Miami NPP proxy's triangular

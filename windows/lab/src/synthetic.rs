@@ -37,7 +37,9 @@ use hornvale_kernel::{
     WorldTime,
 };
 use hornvale_species::{ActivityCycle, MetabolicClass};
-use hornvale_vessel::liveness::{AGENT_AT, DRANK, EATEN, Npc, RESTED, Terrain, place_agent};
+use hornvale_vessel::liveness::{
+    AGENT_AT, DRANK, EATEN, Hazards, Npc, RESTED, Terrain, ThreatNiche, place_agent,
+};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A hand-planted terrain field for the harness — the pub sibling of the
@@ -88,9 +90,13 @@ impl Terrain for SyntheticTerrain {
         // `DEFAULT_FORAGE` (1.0) where unplanted, matching `PlantedTerrain`.
         self.forage.get(room).copied().unwrap_or(1.0)
     }
-    fn threat_value(&self, room: &RoomAddr) -> f64 {
-        // Safe (0.0) where unplanted, matching `PlantedTerrain`.
-        self.threat.get(room).copied().unwrap_or(0.0)
+    fn hazards(&self, room: &RoomAddr) -> Hazards {
+        // The planted scalar maps to the UNCANNY axis (The Bane) — a mortal
+        // niche weights UNCANNY `1`, so the dread scenarios read as before.
+        Hazards {
+            uncanny: self.threat.get(room).copied().unwrap_or(0.0),
+            ..Hazards::ZERO
+        }
     }
 }
 
@@ -219,6 +225,14 @@ fn creature(
         // Steady boldness (The Mettle) — the inert baseline; a scenario probing
         // the dial overrides it via struct-update (`Npc { boldness, ..creature }`).
         boldness: 0.5,
+        // A mortal threat niche (The Bane): dreads the uncanny (weight 1, the
+        // axis the dread scenarios plant), neutral heat/cold. A scenario probing
+        // thermal fear overrides it via struct-update.
+        threat_niche: ThreatNiche {
+            uncanny: 1.0,
+            heat: 0.5,
+            cold: 0.5,
+        },
         label: species.to_string(),
     }
 }
