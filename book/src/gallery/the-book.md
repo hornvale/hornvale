@@ -59,9 +59,11 @@ The sky keeps no dates to number.
 
 Among the Vavako, the sky has darkened, now and again.
 The priesthood of the Vavako numbers the darkenings: 4010.
-The next darkening, it teaches, comes on day 36526.
+The next darkening, it teaches, comes on day 36531.
+The Vavako's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Babako, the sky has darkened, now and again.
 
+*In truth, the Vavako's priesthood taught the darkening would come on day 36528; it came on day 36522 instead.*
 *In truth, the darkenings of the first hundred years number 6472.*
 
 ## Volume 2: Waobwoe
@@ -155,12 +157,16 @@ The sky keeps no dates to number.
 
 Among the Maetmea, the sky has darkened, now and again.
 The priesthood of the Maetmea numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36611.
+The next darkening, it teaches, comes on day 36337.
+The Maetmea's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Waedwea, the sky has darkened, now and again.
 The priesthood of the Waedwea numbers the darkenings: 49.
-The next darkening, it teaches, comes on day 36611.
+The next darkening, it teaches, comes on day 36337.
+The Waedwea's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Ngkoshngta, the sky has darkened, now and again.
 
+*In truth, the Maetmea's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
+*In truth, the Waedwea's priesthood taught the darkening would come on day 35328; it came on day 35609 instead.*
 *In truth, the darkenings of the first hundred years number 81.*
 
 ## Volume 3: Zhqea
@@ -235,9 +241,13 @@ The sky keeps no dates to number.
 
 Among the Sdeozqae, the sky has darkened, now and again.
 The priesthood of the Sdeozqae numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36953.
+The next darkening, it teaches, comes on day 36125.
+The Sdeozqae's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 Among the Shteozqae, the sky has darkened, now and again.
 The priesthood of the Shteozqae numbers the darkenings: 32.
-The next darkening, it teaches, comes on day 36953.
+The next darkening, it teaches, comes on day 36125.
+The Shteozqae's own priesthood taught wrongly, and could be shown wrong by any who kept their own count.
 
+*In truth, the Sdeozqae's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
+*In truth, the Shteozqae's priesthood taught the darkening would come on day 35583; it came on day 35030 instead.*
 *In truth, the darkenings of the first hundred years number 53.*

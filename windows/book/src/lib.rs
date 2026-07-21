@@ -752,6 +752,10 @@ fn reckoning_epoch(
             if let Some(crisis) = crisis {
                 margin.push(reckoning_crisis_margin_line(autonym, crisis));
             }
+
+            if let Some(doctrine_line) = reckoning_doctrine_line(autonym, true, crisis.is_some()) {
+                lines.push(doctrine_line);
+            }
         }
     }
 
@@ -827,6 +831,30 @@ fn reckoning_crisis_margin_line(
         crisis.last_predicted.trunc() as u64,
         crisis.last_actual.trunc() as u64
     )
+}
+
+/// One further Reckoning line for an organized culture at `Predictive`
+/// rung (spec Task 2), thematically echoing LANG-39's own "Galileo cell"
+/// framing WITHOUT routing through `ConflictState`/`conflict_of` (decision
+/// ledger #3) -- `None` for a folk-only culture, matching every other
+/// doctrine-gated render path's existing convention. `has_doctrine` is
+/// always `true` at every real call site in this file today (a
+/// `Predictive`-rung culture always has a doctrine, by `ladder_of`'s own
+/// gate), so the `false` arm is unreachable through any live world -- kept
+/// and tested anyway (see the tests above), the same defensive posture
+/// `reckoning_culture_lines`'s own `Unknown` arm already keeps.
+fn reckoning_doctrine_line(autonym: &str, has_doctrine: bool, crisis_live: bool) -> Option<String> {
+    if !has_doctrine {
+        return None;
+    }
+    Some(if crisis_live {
+        format!(
+            "The {autonym}'s own priesthood taught wrongly, and could be shown wrong by any \
+             who kept their own count."
+        )
+    } else {
+        format!("None among the {autonym} have shown the priesthood's teaching false.")
+    })
 }
 
 /// Read through a C5 `Explained` wrapper to what the four-filter account
@@ -2038,7 +2066,7 @@ pub enum ChorusLine {
 /// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
-/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day)
+/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day), bare-ok(prose: Doctrine.autonym), bare-ok(flag: Doctrine.crisis_live)
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReckoningLine {
     /// `"The sky keeps no dates to number."` — the empty arm.
@@ -2082,6 +2110,19 @@ pub enum ReckoningLine {
         /// The actual day the event occurred, as rendered
         /// (integer-truncated).
         actual_day: u64,
+    },
+    /// `"None among the ⟨autonym⟩ have shown the priesthood's teaching
+    /// false."` (`crisis_live: false`) or `"The ⟨autonym⟩'s own priesthood
+    /// taught wrongly, and could be shown wrong by any who kept their own
+    /// count."` (`crisis_live: true`) — the-corrigendum T4's doctrine-voice
+    /// acknowledgment, thematic-only and NOT routed through
+    /// `ConflictState`/`conflict_of` (decision ledger #3).
+    Doctrine {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+        /// Whether this culture carried a live prediction crisis at the
+        /// time the line was rendered.
+        crisis_live: bool,
     },
 }
 
@@ -2309,6 +2350,32 @@ fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
             actual_day,
         });
     }
+    if let Some(autonym) = line
+        .strip_prefix("None among the ")
+        .and_then(|r| r.strip_suffix(" have shown the priesthood's teaching false."))
+    {
+        if autonym.is_empty() {
+            return None;
+        }
+        return Some(ReckoningLine::Doctrine {
+            autonym: autonym.to_string(),
+            crisis_live: false,
+        });
+    }
+    if let Some(autonym) = line.strip_prefix("The ").and_then(|r| {
+        r.strip_suffix(
+            "'s own priesthood taught wrongly, and could be shown wrong by any who kept their \
+             own count.",
+        )
+    }) {
+        if autonym.is_empty() {
+            return None;
+        }
+        return Some(ReckoningLine::Doctrine {
+            autonym: autonym.to_string(),
+            crisis_live: true,
+        });
+    }
     None
 }
 
@@ -2341,6 +2408,11 @@ fn rerender_reckoning_line(line: &ReckoningLine) -> String {
             "In truth, the {autonym}'s priesthood taught the darkening would come on day \
              {taught_day}; it came on day {actual_day} instead."
         ),
+        ReckoningLine::Doctrine {
+            autonym,
+            crisis_live,
+        } => reckoning_doctrine_line(autonym, true, *crisis_live)
+            .expect("has_doctrine is always true here, so this always returns Some"),
     }
 }
 
@@ -4360,6 +4432,12 @@ mod tests {
                 // (T2's own re-pin was worldgen-only). Matches
                 // LADDER_TABLE's seed 1 goblin row exactly.
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
+                // The Corrigendum T4: the doctrine-voice line -- Vavako's
+                // priesthood carries a live prediction crisis (see the
+                // margin below), so it renders the "taught wrongly" arm.
+                "The Vavako's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Babako, the sky has darkened, now and again.".to_string(),
             ],
             "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
@@ -4403,9 +4481,18 @@ mod tests {
                 // goblin/hobgoblin row exactly (same underlying shared
                 // witness history, hence the identical taught day).
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
+                // The Corrigendum T4: both organized priesthoods carry the
+                // same live prediction crisis (see the margin below), so
+                // both render the "taught wrongly" arm.
+                "The Maetmea's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Waedwea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Waedwea's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Ngkoshngta, the sky has darkened, now and again.".to_string(),
             ]
         );
@@ -4447,9 +4534,18 @@ mod tests {
                 // 36953 to 36125, matching LADDER_TABLE's seed 3
                 // goblin/hobgoblin row exactly.
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
+                // The Corrigendum T4: both organized priesthoods carry the
+                // same live prediction crisis (see the margin below), so
+                // both render the "taught wrongly" arm.
+                "The Sdeozqae's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Shteozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shteozqae numbers the darkenings: 32.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Shteozqae's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
             ],
             "seed 3 post-Demesne: goblin (Sdeozqae) and hobgoblin (Shteozqae) are both \
              organized and each number 32; kobold no longer places at this seed"
@@ -4737,6 +4833,29 @@ mod tests {
             }
         );
         assert_eq!(rerender_chorus_line(&chorus_line), synthetic);
+
+        // Synthetic: The Corrigendum T4's doctrine line has a
+        // `crisis_live: false` arm ("None among the ⟨autonym⟩ have shown
+        // the priesthood's teaching false.") that is unreached live within
+        // seeds 1..=3 -- every organized Predictive-rung culture at these
+        // seeds carries a live prediction crisis (see
+        // `the_reckoning_renders_the_epoch_pair`) -- so it is exercised
+        // synthetically here too, through the same public round-trip pair.
+        let synthetic_doctrine =
+            "None among the Vavako have shown the priesthood's teaching false.";
+        let chorus_line = parse_chorus_line(synthetic_doctrine, &ctx)
+            .unwrap_or_else(|e| panic!("the doctrine crisis_live=false line must invert: {e:?}"));
+        let ChorusLine::Reckoning(reckoning) = &chorus_line else {
+            panic!("the doctrine crisis_live=false line must invert to ChorusLine::Reckoning");
+        };
+        assert_eq!(
+            *reckoning,
+            ReckoningLine::Doctrine {
+                autonym: "Vavako".to_string(),
+                crisis_live: false,
+            }
+        );
+        assert_eq!(rerender_chorus_line(&chorus_line), synthetic_doctrine);
     }
 
     /// C8 T2: the honest omit-the-prediction arm (`Predictive` with
@@ -4792,6 +4911,39 @@ mod tests {
             reckoning_crisis_margin_line("Vavako", crisis),
             "In truth, the Vavako's priesthood taught the darkening would come on day 41200; \
              it came on day 40850 instead."
+        );
+    }
+
+    /// The Corrigendum T4: a folk-only culture (no doctrine) never has a
+    /// doctrine-voice line, regardless of `crisis_live` — mirrors every
+    /// other doctrine-gated render path's `None` convention.
+    #[test]
+    fn the_doctrine_line_is_none_for_a_folk_only_culture() {
+        assert_eq!(reckoning_doctrine_line("Vavako", false, false), None);
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", false, true),
+            None,
+            "a folk-only culture never has a doctrine to have taught anything wrongly"
+        );
+    }
+
+    /// The Corrigendum T4: [`reckoning_doctrine_line`]'s own format, driven
+    /// synthetically (world-free, mirrors the pattern above) — the
+    /// thematic-only doctrine-voice acknowledgment, NOT routed through
+    /// `ConflictState`/`conflict_of` (decision ledger #3).
+    #[test]
+    fn the_doctrine_line_names_the_crisis_when_one_is_live() {
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", true, false),
+            Some("None among the Vavako have shown the priesthood's teaching false.".to_string())
+        );
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", true, true),
+            Some(
+                "The Vavako's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string()
+            )
         );
     }
 

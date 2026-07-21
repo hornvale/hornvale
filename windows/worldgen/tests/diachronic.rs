@@ -458,4 +458,8 @@ fn a_crisis_fires_on_a_real_generated_sky() {
         crisis.last_predicted != crisis.last_actual,
         "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
     );
+    assert!(
+        doctrine_of(&generated(seed), &kind).is_some(),
+        "seed {seed} {kind}: a Predictive-rung culture with a crisis must hold a doctrine"
+    );
 }
