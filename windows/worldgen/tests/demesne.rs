@@ -187,9 +187,13 @@ const MIN_SETTLEMENTS_FOR_DOMINANCE: u32 = 2;
 /// pipeline) read `{goblin, hobgoblin}` — **2** kinds; bugbear and kobold
 /// dominate zero attractors. Union of the two sets: **4** distinct kinds.
 const BASELINE_DOMINANT_KINDS_42: usize = 2;
-/// BASELINE peopled-by kind count at seed 42 (see
-/// [`BASELINE_DOMINANT_KINDS_42`]'s doc for the measurement).
-const BASELINE_PEOPLED_KINDS_42: usize = 2;
+/// BASELINE peopled-by kind count at seed 42. The Living Community epoch made
+/// the deep-history bake the settlement provider: it seeds EVERY goblinoid
+/// people its own proto-communities (they persist by lineage, not by winning
+/// local coexistence dominance), so all four peoples are peopled-by kinds now
+/// — re-pinned 2 -> 4 (measured on the epoch; this is a placement-provider
+/// change, orthogonal to T2's per-axis supply thesis).
+const BASELINE_PEOPLED_KINDS_42: usize = 4;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 

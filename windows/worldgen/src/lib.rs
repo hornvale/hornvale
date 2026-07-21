@@ -5648,9 +5648,16 @@ mod tests {
         // MEASURED on the fully-merged tree (all three), not any branch's alone.
         // Re-pin here (with review) whenever a deliberate terrain/carrying-
         // capacity/moisture change moves world identity.
+        // The Living Community epoch: history is the settlement provider now,
+        // so `village_info`'s flagship (first `is-settlement` = first alive
+        // occupation in the bake's records order) carries the OCCUPATION's peak
+        // population, not the demography attractor's rendered headcount. Re-pin
+        // 2 -> 119 (measured on the epoch); still a MEASURED value, re-pinned
+        // (with review) whenever a deliberate bake/carrying-capacity change
+        // moves world identity.
         assert_eq!(
-            village.population, 2,
-            "the world's largest attractor headcount is pinned at this seed (Confluence freshwater + Rains moisture epoch + Demesne per-axis supply, merged — the Demesne per-axis supply dominates the flagship count)"
+            village.population, 119,
+            "the flagship occupation's peak population is pinned at this seed (deep-history bake — SETTLERS_PER_CAPACITY x carrying-capacity, grown over the millennia)"
         );
         // The cascade still runs on the flagship.
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
@@ -5753,10 +5760,14 @@ mod tests {
         let village = hornvale_settlement::village_info(&world).expect("village");
         assert!(!hornvale_culture::castes_of(&world, village.id).is_empty());
         // The flagship's own pantheon (not the world total — a default world
-        // now carries one pantheon per species-flagship, spec §5).
+        // now carries one pantheon per species-flagship, spec §5). The Living
+        // Community epoch moved the flagship to the bake's first alive
+        // occupation cell, whose vantage observes two salient phenomena rather
+        // than one — re-pin 1 -> 2 (measured; a cascade smoke test, the exact
+        // belief count is incidental to "the cascade runs").
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            2
         );
     }
 
