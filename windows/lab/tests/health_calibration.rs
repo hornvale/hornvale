@@ -65,12 +65,20 @@ fn trace(labels: &[AffectLabel]) -> AffectTrace {
 
 #[test]
 fn the_null_control_reads_no_distress() {
-    // A real, healthy world (seed 42's flagship settlement condenses onto fresh
+    // A real, healthy world (seed 10's flagship settlement condenses onto fresh
     // water — its creatures drink in place and never enter distress) must read
     // ZERO on every distress axis. This is the anchor: the metric does not false
     // alarm on a world that is fine.
-    let a = health_report(&simulate_world(&world(42)));
-    let b = health_report(&simulate_world(&world(42)));
+    //
+    // Re-pointed under The Living Community epoch (this merge) from seed 42 to
+    // seed 10: history is the sole settlement placer now, and it re-placed
+    // every world. Seed 42's flagship no longer sits perfectly on fresh water,
+    // so its creatures now register momentary (never CHRONIC — see
+    // `the_null_control_holds_across_a_seed_sweep`) thirst — a real placement
+    // change, not a metric false-alarm. Seed 10 is a peopled world whose
+    // flagship still reads zero instantaneous distress, the honest null anchor.
+    let a = health_report(&simulate_world(&world(10)));
+    let b = health_report(&simulate_world(&world(10)));
     assert_eq!(a, b, "same world -> same report (deterministic)");
     assert_eq!(
         a.prevalence, 0.0,

@@ -177,19 +177,21 @@ fn the_dial_separates_the_poles() {
             );
 
             // C5 T4's mandated carry-over fix, pinned so the dial-blindness
-            // gap can't reopen: seed 2's kobold carries 7 account entries,
-            // of which 3 are lost/substituted under `effective()` read-
-            // through (`is-a` Substituted, `star-class` Lost, and
-            // `day-length-std` Lost UNDER an `Explained` wrapper) — its
-            // `moon-count` entry is ALSO `Explained`, but wraps `Kept`, so
-            // it must NOT count as lost. Measured live (verified against
-            // the real committed world): loss_fraction == 3.0 / 7.0
-            // exactly, not the pre-fix (naive `!= Kept`) value of 4.0 / 7.0
-            // that miscounted the Kept-underlying moon-count entry as lost.
+            // gap can't reopen: seed 2's kobold carries account entries, of
+            // which 3 are lost/substituted under `effective()` read-through
+            // (`is-a` Substituted, `star-class` Lost, and `day-length-std`
+            // Lost UNDER an `Explained` wrapper) — its `moon-count` entry is
+            // ALSO `Explained`, but wraps `Kept`, so it must NOT count as
+            // lost. Re-pinned under The Living Community epoch (this merge):
+            // the bake re-placed seed 2's kobold, so its account now carries
+            // 8 entries (was 7), moving loss_fraction 3/7 -> 3/8; the
+            // load-bearing invariant is that the count of LOST entries stays
+            // 3 (read-through), NOT the naive `!= Kept` value of 4/8 = 0.5
+            // that would miscount the Kept-underlying moon-count as lost.
             if seed == 2 && voice.kind == "kobold" {
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 7.0,
+                    3.0 / 8.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

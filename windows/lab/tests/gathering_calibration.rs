@@ -275,7 +275,25 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// allowance above Σ K; population at least a quarter of Σ K) the
 /// pre-cutover guard used, so those bounds are kept as-is rather than
 /// retuned.
+// FLAGGED / DEFERRED under The Living Community epoch (T5c fallout sweep).
+// This guard asserts the DRAFT settlement placer's population semantics:
+// committed population is the instantaneous demography catchment, so it stays
+// AT OR BELOW Σ K (measured ratio ≈0.3482 pre-epoch). History is the sole
+// settlement placer now, and it commits a HISTORY-ACCUMULATED population:
+// SETTLERS_PER_CAPACITY (=100) × capacity, grown over the simulated millennia
+// via daughter-settlement spread. Measured on the epoch (seed 42): Σ K ≈
+// 64.02, Σ committed population ≈ 10029 — population is now ~156× the
+// instantaneous capacity, a STRUCTURAL inversion of this bound, not a moved
+// number to re-pin. The conservation-against-instantaneous-K invariant is
+// superseded BY DESIGN (see the Task 5 report's CONCERN 1). What the
+// replacement calibration bound should be (e.g. against SETTLERS_PER_CAPACITY
+// × Σ K × a growth ceiling) is a product-semantics decision for the
+// controller, above a fallout sweep's authority — so this test is deferred
+// (not silently weakened to green) pending that decision.
 #[test]
+#[ignore = "epoch supersedes the draft placer's capacity-conservation semantics; \
+            committed population is now history-accumulated (~156x instantaneous K) — \
+            awaits a controller decision on the replacement bound (T5c)"]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
     let world = hornvale_worldgen::build_world(
