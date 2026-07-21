@@ -627,6 +627,46 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// The BAND's water belief for `npc` (The Tidings): the nearest-to-`npc.home`
+/// water room known to `npc` OR to any agent in `band` co-located with it at
+/// `t` (same current room), ties by ascending `RoomAddr`; `None` when the whole
+/// co-located band is ignorant. A monotonic set-union over the members'
+/// `believed_water`, re-ranked by `npc`'s own nearest-to-home metric — the SAME
+/// metric `believed_water` uses, so a shared belief is a value `believed_water`
+/// could itself have returned from a richer perception history. Order-
+/// independent by construction (a `BTreeSet` union + a deterministic `min`);
+/// no RNG. With an empty band (or one where only `npc` is co-located) it equals
+/// `believed_water(npc)`. BELIEF == FOLD (UNI-20): stores nothing.
+/// type-audit: bare-ok(count: budget)
+pub fn shared_believed_water(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let here = agent_position(frozen, npc, t);
+    let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    // npc's own belief always counts (npc may or may not appear in `band`).
+    if let Some(w) = believed_water(frozen, npc, t, terrain, budget) {
+        pool.insert(w);
+    }
+    // every co-located band member contributes what IT knows of water.
+    for other in band {
+        if agent_position(frozen, other, t) == here
+            && let Some(w) = believed_water(frozen, other, t, terrain, budget)
+        {
+            pool.insert(w);
+        }
+    }
+    // re-rank the pooled rooms by nearness to npc's OWN home (ties: ascending RoomAddr).
+    pool.into_iter()
+        .filter_map(|r| plan_to_room(&npc.home, &r, budget).map(|p| (p.len(), r)))
+        .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
+        .map(|(_, r)| r)
+}
+
 /// What the agent perceives of the world — the `view` the decision reads. Splits
 /// SELF-knowledge (position, drive — always true) from world-BELIEF
 /// (`believed_water` — a cache that may be absent/ignorant) and immediate
@@ -3092,6 +3132,159 @@ mod tests {
             believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
             got,
             "the tie resolves identically after reload"
+        );
+    }
+
+    /// Build an `Npc` with the same authored field values every belief test
+    /// uses, varying only what these tests vary: entity, home, resource, and
+    /// label. Mirrors the `Npc` literal repeated across the `believed_water`
+    /// tests above — factored here only to keep the four-band-member Tidings
+    /// tests below from repeating it four times over.
+    fn shared_belief_npc(entity: EntityId, home: RoomAddr, resource: RoomAddr, label: &str) -> Npc {
+        Npc {
+            entity,
+            home,
+            resource,
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            label: label.into(),
+        }
+    }
+
+    #[test]
+    fn shared_belief_fills_an_ignorant_colocated_creature() {
+        // Two creatures share a room ("here"); `knower` has stood at `water`,
+        // `lost` never has. Both homed at `here`.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // Alone, `lost` is ignorant.
+        assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
+        // Co-located with `knower`, it learns the water.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            Some(water.clone())
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_order_independent() {
+        // Same setup as `shared_belief_fills_an_ignorant_colocated_creature`;
+        // permuting the band must not change the result.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let ab = [knower.clone(), lost.clone()];
+        let ba = [lost.clone(), knower.clone()];
+        let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
+        assert_eq!(result, Some(water));
+        assert_eq!(
+            result,
+            shared_believed_water(&ledger, &lost, &ba, now, &t, 10_000),
+            "permuting the band must not change the pooled belief"
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_a_noop_when_alone_or_band_empty() {
+        // A lone knower's shared belief equals its own belief; an empty band,
+        // and a band whose only co-located member is `knower` itself, are
+        // both no-ops (the strict-generalization contract).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let solo = believed_water(&ledger, &knower, now, &t, 10_000);
+        assert_eq!(solo, Some(water));
+
+        assert_eq!(
+            shared_believed_water(&ledger, &knower, &[], now, &t, 10_000),
+            solo,
+            "an empty band changes nothing"
+        );
+        assert_eq!(
+            shared_believed_water(
+                &ledger,
+                &knower,
+                std::slice::from_ref(&knower),
+                now,
+                &t,
+                10_000
+            ),
+            solo,
+            "a band of only itself changes nothing"
+        );
+    }
+
+    #[test]
+    fn shared_belief_ignores_a_knower_in_a_different_room() {
+        // `knower` knows water but currently stands in a DIFFERENT room than
+        // `lost` -> no share.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let water = neighbors[0].clone();
+        let elsewhere = neighbors[1].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower has stood at water (knows it) but its LATEST position is
+        // `elsewhere`, not `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &elsewhere, 1.0);
+        // lost stands at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // sanity: knower does know water when consulted directly...
+        assert_eq!(
+            believed_water(&ledger, &knower, now, &t, 10_000),
+            Some(water)
+        );
+        // ...but lost gains nothing, since knower is in a different room.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            None
         );
     }
 
