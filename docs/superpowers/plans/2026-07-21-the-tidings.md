@@ -335,81 +335,97 @@ git commit -m "feat(vessel,lab): affect_of samples shared belief over the band (
 
 ### Task 4: The harness band scenario + the paired health result
 
-Demonstrate and MEASURE the law: a co-located band (stricken + knowledgeable in the SAME room) has lower aggregate distress than the same creatures NOT co-located (the existing `a_stricken_and_a_healthy_people`, whose creatures sit on distinct springs, is the natural null — no flag needed).
+Demonstrate and MEASURE the law with a MATCHED PAIR that isolates co-location as the only variable: the same stricken creature and the same knowledgeable neighbour, run once **co-located** (sharing fires) and once **apart** (no sharing). Co-located, the band's aggregate distress drops.
+
+**The affect mechanism you MUST design around (confirmed against `liveness.rs:1966-2005` during Task 3):**
+- The health metric counts only DISTRESS labels — `Frustrated`/`Lost`/`Helpless` (`health.rs::is_distress`). `Searching` and `Eager` are NOT distress.
+- An **ignorant** creature (no `believed_water`) reads **`Searching`**, never distress: `affect_of` always has an exploration step available, so it is never "blocked." **So an ignorant creature is USELESS as the distressed subject — it will not register in the health metric.**
+- **`Frustrated`** arises only when the creature KNOWS a water (`believed_water = Some`) but cannot reach it within budget (blocked → Hold). This is the distress the demo needs.
+- Therefore the stricken creature must KNOW a FAR, UNREACHABLE water (→ chronic `Frustrated`), and sharing must supply a NEARER, REACHABLE one so it flips to `Eager`/`Searching`.
+
+**Reachability facts (from `synthetic.rs:230` + the mesh):**
+- `water_and_a_far_exile()` returns `(spring, exile)` at antipodal points — `spring` is UNREACHABLE from `exile` (this is exactly what makes the existing `stranded_from_known_water`/`a_stricken_and_a_healthy_people` chronically `Frustrated`).
+- A 1-hop neighbour `exile.neighbors()[0]` is REACHABLE from `exile` and reachable within a single tick's walk (`MAX_STEPS = 10_000`). This is the "near" water.
+- A `Frustrated` creature that KNOWS a water does NOT fall back to exploration — it commits and Holds — so the stricken will NOT wander onto the near water on its own; it stays `Frustrated` until told.
+- Belief is a per-tick fold (not stored). Sharing SEEDS the belief at tick start; because the near water is 1 hop away, the stricken walks to it and DRINKS within that same tick, so it thereafter knows the near water from its own visit history — co-location is only needed to seed the first tick.
 
 **Files:**
-- Modify: `windows/lab/src/synthetic.rs` (add `a_band_that_shares_water`, near `a_stricken_and_a_healthy_people` at `:502`)
+- Modify: `windows/lab/src/synthetic.rs` (add a private `a_stranded_pair` builder + `pub fn a_band_that_shares_water`, near `a_stricken_and_a_healthy_people` at `:502`)
 - Test: `#[cfg(test)]` in `windows/lab/src/synthetic.rs` (or the lab's health test module)
 
 **Interfaces:**
-- Consumes: `Scenario`, `creature`, `place_agent`, `SyntheticTerrain`, `health_report`, `HealthReport` (all existing in `windows/lab`).
-- Produces: `pub fn a_band_that_shares_water() -> Scenario` — a stricken (lost, ignorant) creature and a knowledgeable one placed in the SAME room, the knower having a water-visit history.
+- Consumes: `Scenario`, `creature`, `place_agent`, `SyntheticTerrain`, `water_and_a_far_exile`, `health_report`, `HealthReport`, `RoomAddr::neighbors` (all existing in `windows/lab`/kernel).
+- Produces: `pub fn a_band_that_shares_water() -> Scenario` — the co-located treatment; plus a private `fn a_stranded_pair(colocated: bool) -> Scenario` the test also calls with `false` for the matched null.
 
 - [ ] **Step 1: Write the failing test**
 
 ```rust
 #[test]
-fn a_shared_band_is_healthier_than_a_separated_one() {
-    // Treatment: stricken + knower co-located → sharing relieves the stricken one.
-    let shared = a_band_that_shares_water().simulate(HEALTH_TICKS);
-    // Null: the same distress WITHOUT co-location (creatures on distinct springs).
-    let separated = a_stricken_and_a_healthy_people().simulate(HEALTH_TICKS);
-    let h_shared = health_report(&shared);
-    let h_separated = health_report(&separated);
+fn a_colocated_band_is_healthier_than_the_same_band_apart() {
+    // Matched pair: identical stricken + knower; the ONLY difference is whether
+    // the knower stands with the stricken (sharing) or apart (no sharing).
+    let shared = health_report(&a_stranded_pair(true).simulate(HEALTH_TICKS));   // co-located
+    let apart = health_report(&a_stranded_pair(false).simulate(HEALTH_TICKS));   // separated null
     assert!(
-        h_shared.prevalence < h_separated.prevalence,
-        "co-located sharing lowers band distress: {} < {}",
-        h_shared.prevalence, h_separated.prevalence
+        shared.prevalence < apart.prevalence,
+        "co-located sharing heals the stricken creature: {} < {}",
+        shared.prevalence, apart.prevalence
     );
-    assert!(h_shared.chronicity <= h_separated.chronicity, "sharing never worsens chronicity");
+    assert!(shared.chronicity <= apart.chronicity, "sharing never worsens chronicity");
 }
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cargo test -p hornvale-lab a_shared_band 2>&1 | tail -20`
-Expected: FAIL — `cannot find function a_band_that_shares_water`.
+Run: `cargo test -p hornvale-lab a_colocated_band 2>&1 | tail -20`
+Expected: FAIL — `cannot find function a_stranded_pair`.
 
-- [ ] **Step 3: Implement the scenario**
+- [ ] **Step 3: Implement the matched-pair builder + the public treatment**
 
-Add near `synthetic.rs:502`. Model on `a_stricken_and_a_healthy_people`, but place BOTH creatures in the stricken creature's current room (co-located), and give the knower a genuine water-visit history so its `believed_water` is `Some`:
+Add near `synthetic.rs:502`. The `colocated` flag changes ONLY the knower's current room (with the stricken at `exile`, or apart at the near water):
 
 ```rust
-/// **A band that shares water** (The Tidings) → collective error-correction. A
-/// stricken creature (stranded from any water IT has seen → chronic thirst) is
-/// co-located with a knowledgeable band-mate that has stood at a reachable
-/// spring. Run together, the knower's belief circulates: the stricken creature
-/// adopts the shared water, its thirst becomes serviceable, and the band's
-/// aggregate distress falls below the same creatures run apart
-/// (`a_stricken_and_a_healthy_people`, the separated null).
-pub fn a_band_that_shares_water() -> Scenario {
+/// A stranded pair (The Tidings). The **stricken** creature has stood at a far,
+/// unreachable `spring` and is now marooned at `exile` — it KNOWS water it cannot
+/// reach, so it reads chronic `Frustrated`. The **knower** has stood at a `near`
+/// water one hop from `exile` (reachable). When `colocated`, the knower stands
+/// with the stricken at `exile`, so the belief-share law seeds the stricken with
+/// the near water; it walks there within the tick, drinks, and is relieved. When
+/// apart, the knower sits on its own near water and the stricken stays `Frustrated`
+/// — the matched null. Co-location is the ONLY difference between the two.
+fn a_stranded_pair(colocated: bool) -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
+    let near = exile.neighbors()[0].clone(); // one hop from exile → reachable
     let mut ledger = Ledger::default();
     let registry = harness_registry();
 
-    // The knower: stood at the spring, then walked to `exile` — it KNOWS water.
-    let knower = ledger.mint_entity();
-    ledger.commit(place_agent(knower, &spring, WorldTime { day: 0.0 }), &registry)
-        .expect("knower at spring");
-    ledger.commit(place_agent(knower, &exile, WorldTime { day: 0.5 }), &registry)
-        .expect("knower to exile");
-
-    // The stricken: only ever at `exile` (co-located with the knower), never at water.
+    // The stricken: stood at the far spring, then marooned at exile. Knows spring
+    // (unreachable) → chronic Frustrated. Homed at exile.
     let stricken = ledger.mint_entity();
+    ledger.commit(place_agent(stricken, &spring, WorldTime { day: 0.0 }), &registry)
+        .expect("stricken once at spring");
     ledger.commit(place_agent(stricken, &exile, WorldTime { day: 0.5 }), &registry)
-        .expect("stricken at exile");
+        .expect("stricken marooned at exile");
 
-    // Both homed at `exile` so the shared water is reachable/rankable from home.
+    // The knower: stood at the near water (so it KNOWS a reachable source), then
+    // either joins the stricken at exile (colocated) or stays on the near water.
+    let knower = ledger.mint_entity();
+    ledger.commit(place_agent(knower, &near, WorldTime { day: 0.0 }), &registry)
+        .expect("knower at near water");
+    let knower_now = if colocated { exile.clone() } else { near.clone() };
+    ledger.commit(place_agent(knower, &knower_now, WorldTime { day: 0.5 }), &registry)
+        .expect("knower placed");
+
     let npcs = vec![
-        creature(knower, exile.clone(), spring.clone(), "goblin", MILD_NICHE),
         creature(stricken, exile.clone(), spring.clone(), "kobold", MILD_NICHE),
+        creature(knower, knower_now.clone(), near.clone(), "goblin", MILD_NICHE),
     ];
     Scenario {
         ledger,
         registry,
         npcs,
         terrain: SyntheticTerrain {
-            fresh: [spring].into_iter().collect(),
+            fresh: [spring, near].into_iter().collect(),
             temps: BTreeMap::new(),
             calm_after: None,
             forage: BTreeMap::new(),
@@ -417,26 +433,33 @@ pub fn a_band_that_shares_water() -> Scenario {
         },
     }
 }
+
+/// The co-located treatment (The Tidings headline result): a band whose
+/// knowledgeable member heals its stranded one by circulating a reachable water.
+/// Its matched null is `a_stranded_pair(false)` — the same pair standing apart.
+pub fn a_band_that_shares_water() -> Scenario {
+    a_stranded_pair(true)
+}
 ```
 
-Note: confirm `water_and_a_far_exile()` yields a `spring` reachable from `exile` within `PLAN_BUDGET` (it is used the same way by `a_stricken_and_a_healthy_people`). If the exile is beyond budget, the shared belief would be `Some` but unservable — pick a nearer exile so the relief actually fires; the test's `prevalence <` assertion is the guard.
+- [ ] **Step 4: Run the test — and VERIFY the signal is real (do not fake it)**
 
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `cargo test -p hornvale-lab a_shared_band 2>&1 | tail -20`
+Run: `cargo test -p hornvale-lab a_colocated_band 2>&1 | tail -20`
 Expected: PASS.
 
-- [ ] **Step 5: Add the order-independence / monotone-improvement null-control**
+If it does NOT pass, the construction — not the assertion — is wrong; iterate on it. Confirm the two halves independently before trusting the pass: the null (`a_stranded_pair(false)`) MUST show the stricken chronically `Frustrated` (non-zero `prevalence` and `by_cause["thirst"] > 0`), and the treatment MUST relieve it (near-zero `prevalence`). If you cannot make the null distressed AND the treatment relieved with a deterministic construction, STOP and reply `BLOCKED:` with what you observed — never weaken the assertion to make a hollow test pass. (Common fixes: the day-0.5 placement must make each creature's LATEST position correct at tick start; `near` must actually be fresh water and one hop; the stricken must not itself know `near`.)
+
+- [ ] **Step 5: Add the monotone-improvement null-control (the ratchet)**
 
 ```rust
 #[test]
 fn sharing_never_increases_band_distress() {
-    // v1 shares only TRUE beliefs → the ratchet: a shared band is never worse
-    // than the separated null, on every health-family axis that can only improve.
-    let shared = health_report(&a_band_that_shares_water().simulate(HEALTH_TICKS));
-    let separated = health_report(&a_stricken_and_a_healthy_people().simulate(HEALTH_TICKS));
-    assert!(shared.prevalence <= separated.prevalence);
-    assert!(shared.chronicity <= separated.chronicity);
+    // v1 shares only TRUE beliefs → sharing can only help: the co-located band is
+    // never worse than the same band apart, on prevalence or chronicity.
+    let shared = health_report(&a_stranded_pair(true).simulate(HEALTH_TICKS));
+    let apart = health_report(&a_stranded_pair(false).simulate(HEALTH_TICKS));
+    assert!(shared.prevalence <= apart.prevalence);
+    assert!(shared.chronicity <= apart.chronicity);
 }
 ```
 
