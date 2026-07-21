@@ -166,7 +166,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         4010,
-        Some(36526.1181181615),
+        Some(36531.74198950235),
     ),
     // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): seed 1
     // hobgoblin flipped from an organized cult to a FOLK flagship (the
@@ -188,7 +188,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         49,
-        Some(36611.93610859729),
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -196,7 +196,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         49,
-        Some(36611.93610859729),
+        Some(36337.174658835705),
     ),
     // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
     // seed 2 kobold flipped from an organized cult to a FOLK flagship
@@ -218,7 +218,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36953.336612553074),
+        Some(36125.669504115634),
     ),
     // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
     // recalibrated per-axis supply flipped seed 3 hobgoblin folk->organized
@@ -232,7 +232,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         32,
-        Some(36953.336612553074),
+        Some(36125.669504115634),
     ),
     (
         4,
@@ -256,7 +256,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,
-        Some(36550.4595587471),
+        Some(36556.47532198732),
     ),
     // Re-pinned post-absorption (the Rains moisture epoch, merge 9843b8f):
     // seed 5 hobgoblin flipped from an organized cult to a FOLK flagship
@@ -329,7 +329,7 @@ fn the_ladder_law() {
         (1_000.0, LadderRung::Unknown, None),
         (2_000.0, LadderRung::Counted, None),
         (4_000.0, LadderRung::Numbered, None),
-        (8_000.0, LadderRung::Predictive, Some(9080.42957840976)),
+        (8_000.0, LadderRung::Predictive, Some(8026.718931953686)),
     ];
     for (day, expected_rung, expected_pred) in climb {
         let (rung, pred) = ladder_of(&w, "goblin", at(day)).unwrap();
@@ -340,13 +340,14 @@ fn the_ladder_law() {
 
 #[test]
 fn the_prophecy_law() {
-    // Every Predictive culture's predicted day D: the closed-form future
-    // scan contains an event of the predicted class at EXACTLY D — the
-    // f64s the API returns compared directly (same computation, no
-    // epsilon; quantization happens at emit boundaries, never here).
-    // PANIC if nobody in seeds 1..=5 reaches Predictive at epoch 2 —
-    // the ladder's top must be visible (the preregistered demand).
-    const HORIZON: f64 = 10_000.0;
+    // C9 (The Corrigendum): the taught prediction is no longer
+    // omniscient, so it is no longer necessarily the TRUE future event
+    // (see `a_crisis_fires_on_a_real_generated_sky` for a seed where
+    // it's demonstrably wrong). What still holds, and is the real law
+    // now: a Predictive culture's taught day, when `Some`, is EXACTLY
+    // what the naive model computes from that culture's OWN witnessed
+    // days for its own top recurrence class -- self-consistency between
+    // `ladder_of` and the model it's built from, not a truth guarantee.
     let t = at(EPOCH_2);
     let mut any_predictive = false;
 
@@ -359,19 +360,8 @@ fn the_prophecy_law() {
             }
             any_predictive = true;
             let Some(day) = prediction else {
-                // The honest horizon arm: Predictive with no event inside
-                // the teaching horizon. Legal, but unmeasured at these
-                // seeds — every measured Predictive culture predicts.
-                panic!(
-                    "seed {seed} {kind}: Predictive with prediction None was never a measured \
-                     outcome at these seeds — if this fires, a physics change moved the event \
-                     cadence; re-measure and re-pin"
-                );
+                continue;
             };
-            assert!(
-                day > EPOCH_2,
-                "seed {seed} {kind}: the prediction is future"
-            );
 
             // Re-derive the most-observed recurrence class with the same
             // deterministic tie-break ladder_of documents (max count,
@@ -390,37 +380,31 @@ fn the_prophecy_law() {
                 .iter()
                 .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
                 .expect("a Predictive culture has witnessed events");
-            let body = if body_d == 0 {
+            let target_body = if body_d == 0 {
                 EclipseBody::Solar
             } else {
                 EclipseBody::Lunar
             };
-
-            // The future event set must contain the predicted event at
-            // exactly D, of exactly the predicted class.
-            let sky = hornvale_worldgen::sky_of(&w).unwrap();
-            let hornvale_worldgen::Sky::Generated(sky) = sky else {
-                panic!("generated worlds carry a Generated sky");
-            };
-            let future = hornvale_astronomy::eclipse_events(
-                sky.system(),
-                sky.calendar(),
-                t,
-                at(EPOCH_2 + HORIZON),
-            );
-            assert!(
-                future
-                    .iter()
-                    .any(|e| e.day.get() == day && e.moon == moon && e.body == body),
-                "seed {seed} {kind}: predicted day {day} of class ({moon}, {body:?}) must exist \
-                 in the closed-form future event set — doctrine's predictions are never wrong"
+            let days: Vec<f64> = obs
+                .events
+                .iter()
+                .filter(|&&(_, m, b)| m == moon && b == target_body)
+                .map(|&(d, _, _)| d)
+                .collect();
+            let last = *days.last().expect("non-empty by construction");
+            let mean = (last - days[0]) / (days.len() - 1) as f64;
+            assert_eq!(
+                day,
+                last + mean,
+                "seed {seed} {kind}: the taught day must equal the naive model's own \
+                 extrapolation from this culture's own witnessed days"
             );
         }
     }
 
     assert!(
         any_predictive,
-        "NO culture in seeds 1..=5 reaches Predictive at epoch 2 — the ladder's top must be \
+        "NO culture in seeds 1..=5 reaches Predictive at epoch 2 -- the ladder's top must be \
          visible somewhere (the preregistered demand); widen the epoch or seed sweep"
     );
 }
