@@ -89,7 +89,7 @@ pub fn run_simulation(
             let now = WorldTime {
                 day: (day - 1.0) + waking_offset(npc.activity),
             };
-            traces[i].push(affect_of(&ledger, npc, now, terrain));
+            traces[i].push(affect_of(&ledger, npc, npcs, now, terrain));
         }
     }
     traces

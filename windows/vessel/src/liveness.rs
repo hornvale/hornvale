@@ -2021,15 +2021,24 @@ pub fn arbitrate(
 /// (belief and last-drank are folded from history; exploration starts fresh, no
 /// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
 /// the health metric's continuous loop). The narration seam
-/// (`Session::needs`) reads a creature's `Affect` through this.
-pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terrain) -> Affect {
+/// (`Session::needs`) reads a creature's `Affect` through this. `band` is the
+/// same cohort the paired `DriveMovements` moves (The Tidings band-consistency
+/// invariant) — a sampled felt state must reflect the belief the creature
+/// acted on, not a poorer solo one.
+pub fn affect_of(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    day: WorldTime,
+    terrain: &dyn Terrain,
+) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
         .find(DRANK)
         .filter(|f| f.subject == npc.entity)
         .filter_map(|f| f.day)
         .fold(0.0_f64, f64::max);
-    let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
         npc.entity,
@@ -5037,7 +5046,7 @@ mod tests {
             boldness: 0.5,
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             a.label,
             AffectLabel::Content,
@@ -6079,7 +6088,7 @@ mod tests {
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
-        let a = affect_of(&ledger, &base, WorldTime { day: 100.0 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 100.0 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
         let meta = Npc {
@@ -6088,7 +6097,7 @@ mod tests {
             boldness: 0.5,
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 100.0 }, &terrain);
         assert_ne!(
             b.label,
             AffectLabel::Content,
@@ -6126,13 +6135,13 @@ mod tests {
             boldness: 0.5,
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 0.5 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             b.object,
             Some(DriveKind::Danger),
@@ -6436,6 +6445,61 @@ mod tests {
             a.intent,
             Intent::Do(Action::MoveTo(smaller)),
             "an equal-utility tie resolves to the smaller RoomAddr"
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_feels_relief() {
+        // THE TIDINGS, WIRED INTO THE SAMPLER: same co-located knower/lost
+        // scenario as `shared_belief_fills_an_ignorant_colocated_creature`,
+        // read through `affect_of` at a moment well past the thirst act
+        // threshold (chronic, not yet at the learned-helplessness onset).
+        // Alone, `lost` is ignorant: its own `believed_water` is `None`, but
+        // it is never truly stuck — a mesh room always has 3 neighbours, so
+        // an ignorant thirsty creature always has an exploration gradient to
+        // follow (Searching: normal seeking, valence 0.0 — not yet relief).
+        // With the band, `shared_believed_water` hands it
+        // `knower`'s known, reachable source: the SAME arbitration now
+        // beelines to a KNOWN target, reading Eager (valence 0.5) instead —
+        // the measurable relief the shared belief buys it. Mutation-verify:
+        // an `affect_of` that dropped `band` (or passed it through empty)
+        // would read `Searching` in BOTH calls; this reds without the wiring.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        // Day 10: well past thirst's act threshold (chronic), well before the
+        // 15-day learned-helplessness onset (which, being a pure function of
+        // `last_drank`/day, would be identical alone or in-band and so could
+        // never distinguish them).
+        let now = WorldTime { day: 10.0 };
+
+        let alone = affect_of(&ledger, &lost, &[], now, &t);
+        let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
+
+        assert_eq!(
+            alone.label,
+            AffectLabel::Searching,
+            "alone and ignorant, {lost:?} follows a gradient, unrelieved: {alone:?}"
+        );
+        assert_eq!(
+            in_band.label,
+            AffectLabel::Eager,
+            "co-located with a knower, the shared belief relieves it: {in_band:?}"
+        );
+        assert!(
+            in_band.valence > alone.valence,
+            "the shared belief must make the felt state MORE positive, not just different"
         );
     }
 }
