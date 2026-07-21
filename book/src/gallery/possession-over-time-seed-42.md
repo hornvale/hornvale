@@ -13,54 +13,54 @@ settlement's real, measured outcome. The world still moves only
 inside a possess session; a freshly built world commits none of this.)*
 
 ```text
-[room 750518284, day 0]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > look
-[room 750518284, day 0]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > npcs
 3 NPC(s) derived this session:
-  [357] bugbear of Vngoashdvoashqvaoqoa
-  [358] kobold of Roqrrarorrorrorog
-  [359] bugbear of Vngoashvngaoshvngaoshdoodoa
+  [245] bugbear of Qvooshtvoagootao
+  [246] kobold of Xatxoratrro
+  [247] bugbear of Shngaodvaashqoa
 > needs
-The bugbear of Vngoashdvoashqvaoqoa seems content.
+The bugbear of Qvooshtvoagootao seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
-[room 750518284, day 5]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 5]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashdvoashqvaoqoa casts about for water.
+The bugbear of Qvooshtvoagootao grows restless.
 > wait 1
-Time passes. You sense movement nearby (3 stirred).
+Time passes. You sense movement nearby (2 stirred).
 > look
-[room 750518284, day 6]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 6]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashdvoashqvaoqoa seems content.
+The bugbear of Qvooshtvoagootao seems content.
 > wait 1
 Time passes; the world keeps its shape.
 > look
-[room 750518284, day 7]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 7]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
+Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashdvoashqvaoqoa seems content.
+The bugbear of Qvooshtvoagootao seems content.
 > why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (45 stirred).
+Time passes. You sense movement nearby (36 stirred).
 > look
-[room 750518284, day 97]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
-Ways on: NE, NW, S.
+[room 738918402, day 97]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > needs
-The bugbear of Vngoashdvoashqvaoqoa grows restless.
+The bugbear of Qvooshtvoagootao seems content.
 > release
 You let go.
 ```

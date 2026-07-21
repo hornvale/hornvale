@@ -4,39 +4,42 @@
 the same world in your browser — same crates, same bytes.)*
 
 ```text
-[room 750518284, day 0]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > look
-[room 750518284, day 0]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
-Ways on: NE, NW, S.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: SE, N, SW.
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
 Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 > whoami
-A bugbear of Vngoashdvoashqvaoqoa (agent 9947299063136102849), day 0, room 750518284.
+A bugbear of Qvooshtvoagootao (agent 7225590595188407000), day 0, room 738918402.
 > go n
-No way n from here.
+[room 739115010, day 0]
+You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Ways on: NE, NW, S.
 > go ne
-[room 750518380, day 0]
-You stand in tropical rainforest — a stream gully sun-warmed on a rise — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+[room 739115106, day 0]
+You stand in tropical seasonal forest — a liana tangle damp on a rise — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: N, SW, SE.
 > back
-[room 750518284, day 0]
-You stand in tropical rainforest — buttressed canopy shaded in a hollow — in the lands of Vngoashdvoashqvaoqoa. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+[room 739115010, day 0]
+You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (44 stirred).
+Time passes. You sense movement nearby (34 stirred).
 > examine sky
-Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
+Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 > knows
-4 things seen:
-  room/750518284 = {"schema":"locale/room/v2","id":750518284,"face":12,"path…
-  room/750518380 = {"schema":"locale/room/v2","id":750518380,"face":12,"path…
-  settlement/7/name = Vngoashdvoashqvaoqoa
-  settlement/7/population = 119
+5 things seen:
+  room/738918402 = {"schema":"locale/room/v2","id":738918402,"face":2,"path"…
+  room/739115010 = {"schema":"locale/room/v2","id":739115010,"face":2,"path"…
+  room/739115106 = {"schema":"locale/room/v2","id":739115106,"face":2,"path"…
+  settlement/7/name = Qvooshtvoagootao
+  settlement/7/population = 118
 > release
 You let go.
 ```
