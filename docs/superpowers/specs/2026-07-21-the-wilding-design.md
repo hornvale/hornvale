@@ -1,6 +1,6 @@
 # The Wilding — agentify the wild
 
-**Status:** spec (G3 review)
+**Status:** shipped (2026-07-21)
 **Date:** 2026-07-21
 **Campaign:** The Wilding (derive beast NPCs — waking The Quarry)
 **Precedes:** implementation plan → execution → merge

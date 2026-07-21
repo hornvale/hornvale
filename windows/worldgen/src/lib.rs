@@ -964,6 +964,73 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
     }))
 }
 
+/// The `k` densest WILD concentrations (The Wilding) — the herds and lairs of
+/// distinct MOBILE BEAST species, as `(species label, unit-sphere position)`.
+/// From [`demography_report`]'s coexistence-stack settlements (the per-cell
+/// density condensations), keeps those whose DOMINANT species is a mobile beast —
+/// *not* a people (no `psyche_registry` entry — the peoples carry one) and *not*
+/// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
+/// flees) — then takes the densest concentration of each DISTINCT species (a herd
+/// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
+/// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
+/// the demography — the vessel mints wild NPCs from these without ever reaching
+/// into the stack.
+/// type-audit: bare-ok(count: k), bare-ok(identifier-text: return)
+pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let report = demography_report_from(world, &wc, &terrain, &climate)?;
+    // The dense-index → species-label map (the same ascending-`KindId` order the
+    // stack's `dominant` tag indexes into).
+    let labels: Vec<String> = wc
+        .biosphere
+        .iter()
+        .map(|(kind, _)| kind.0.to_string())
+        .collect();
+    let psyche = hornvale_species::psyche_registry();
+    let biosphere = hornvale_species::biosphere_registry();
+    let is_mobile_beast = |label: &str| -> bool {
+        // A mobile beast: a species the peoples' `psyche_registry` does not carry
+        // (not a people) and not a rooted `Autotroph` (a plant is placed, never
+        // agentified).
+        psyche.get_by_label(label).is_none()
+            && biosphere.get_by_label(label).is_some_and(|b| {
+                !matches!(
+                    b.metabolic_class,
+                    hornvale_species::MetabolicClass::Autotroph
+                )
+            })
+    };
+    // Each mobile beast's DENSEST home — the stack settlement where its local
+    // abundance (its composition fraction × the catchment biomass) peaks. So a
+    // charismatic beast present but never *dominant* (an apex over a wide range,
+    // a herd sharing its patch) still gets a home, not only the cell-dominators.
+    let mut best: std::collections::BTreeMap<String, ([f64; 3], f64)> =
+        std::collections::BTreeMap::new();
+    for s in &report.stack_settlements {
+        for (sid, frac) in &s.composition {
+            let Some(label) = labels.get(*sid as usize) else {
+                continue;
+            };
+            if !is_mobile_beast(label) {
+                continue;
+            }
+            let abundance = frac * s.mass_total;
+            let entry = best.entry(label.clone()).or_insert((s.position, f64::MIN));
+            if abundance > entry.1 {
+                *entry = (s.position, abundance);
+            }
+        }
+    }
+    // Top `k` distinct beasts by peak local abundance (label tie-break).
+    let mut wild: Vec<(String, [f64; 3], f64)> =
+        best.into_iter().map(|(l, (p, a))| (l, p, a)).collect();
+    wild.sort_by(|a, b| b.2.total_cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
+    wild.truncate(k);
+    Ok(wild.into_iter().map(|(l, p, _)| (l, p)).collect())
+}
+
 /// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
 /// `terrain()`/`climate()`) instead of re-sculpting the globe — the census's
 /// demography metrics call this. Byte-identical to `demography_report`.
@@ -5286,6 +5353,32 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wild_concentrations_are_deterministic_beasts() {
+        // THE WILDING: the wild concentrations are byte-identical across calls,
+        // and they name BEASTS (not the peoples) at real positions.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = wild_concentrations(&world, 5).unwrap();
+        let b = wild_concentrations(&world, 5).unwrap();
+        assert_eq!(a, b, "deterministic");
+        assert!(!a.is_empty(), "the wild is populated: {a:?}");
+        let psyche = hornvale_species::psyche_registry();
+        for (species, _pos) in &a {
+            assert!(
+                psyche.get_by_label(species).is_none(),
+                "{species} is a beast, not a people"
+            );
+        }
+        eprintln!("WILD {:?}", a.iter().map(|(s, _)| s).collect::<Vec<_>>());
+    }
 
     #[test]
     fn predator_pressure_is_deterministic_and_nontrivial() {

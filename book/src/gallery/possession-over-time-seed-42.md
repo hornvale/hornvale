@@ -21,10 +21,14 @@ Ways on: SE, N, SW.
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
-3 NPC(s) derived this session:
+7 NPC(s) derived this session:
   [245] bugbear of Qvooshtvoagootao
   [246] kobold of Xatxoratrro
   [247] bugbear of Shngaodvaashqoa
+  [248] a wild rust-monster
+  [249] a wild otyugh
+  [250] a wild xorn
+  [251] a wild giant-elk
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5
@@ -36,7 +40,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (5 stirred).
+Time passes. You sense movement nearby (28 stirred).
 > look
 [room 738918402, day 6]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -44,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (3 stirred).
+Time passes. You sense movement nearby (27 stirred).
 > look
 [room 738918402, day 7]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
@@ -54,7 +58,7 @@ The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (84 stirred).
+Time passes. You sense movement nearby (1267 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

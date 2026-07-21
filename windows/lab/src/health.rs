@@ -27,6 +27,10 @@ const HEALTH_TICKS: usize = 40;
 /// the session's own small constant, spec §4).
 const HEALTH_NPCS: usize = 6;
 
+/// Wild beast agents derived per world (The Wilding) — the fauna's contribution
+/// to the population-health sample.
+const HEALTH_WILD: usize = 4;
+
 /// Consecutive distress ticks that count as CHRONIC (persistently stuck, the
 /// learned-helplessness / bug-alarm signal, spec §8) rather than a transient
 /// spike a healthy mind recovers from.
@@ -113,7 +117,15 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
         Some(v) => v.id,
         None => return Vec::new(),
     };
-    let npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
+    let mut npcs = derive_npcs(world, &ctx, &mut ledger, HEALTH_NPCS, home);
+    // The Wilding: the world's health includes its fauna — append a few wild
+    // beast agents, so a herbivore's live predator-fear is measured too.
+    npcs.extend(hornvale_vessel::liveness::derive_wild_npcs(
+        world,
+        &ctx,
+        &mut ledger,
+        HEALTH_WILD,
+    ));
     // The world's calendar, so the wake cycle reads the real sun (Tier-1).
     let calendar = hornvale_worldgen::sky_of(world)
         .ok()

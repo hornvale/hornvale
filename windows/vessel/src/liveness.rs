@@ -2801,6 +2801,92 @@ pub fn derive_npcs(
         .collect()
 }
 
+/// Derive up to `k` WILD NPCs (The Wilding) — beast agents, one per distinct
+/// mobile-beast concentration (`worldgen::wild_concentrations`: a herd, a lair).
+/// A wild NPC is the same `Npc` a settlement produces — its home is the
+/// concentration's cell, its traits its biosphere's, its psyche the DEFAULT
+/// (beasts carry no `psyche_registry` entry, so the `.unwrap_or` fallbacks apply,
+/// exactly as they already do for a settlement of a non-peopled species). The
+/// threat niche derives (The Bane/Quarry) with LIVE predator dread, so a
+/// herbivore beast finally FEARS predator ground — The Quarry, waking. Appended
+/// to the peopled `derive_npcs` output; genesis untouched (the session's ledger
+/// clone only, like `derive_npcs`).
+/// type-audit: bare-ok(count: k)
+pub fn derive_wild_npcs(
+    world: &World,
+    ctx: &LocaleContext,
+    ledger: &mut Ledger,
+    k: usize,
+) -> Vec<Npc> {
+    let concentrations = hornvale_worldgen::wild_concentrations(world, k).unwrap_or_default();
+    let biosphere = hornvale_species::biosphere_registry();
+    let psyche = hornvale_species::psyche_registry();
+    concentrations
+        .into_iter()
+        .map(|(species, position)| {
+            let home = RoomAddr::containing(position, walk_depth(ctx));
+            let resource = nearest_water(&home, &LocaleTerrain::new(ctx), PLAN_BUDGET)
+                .unwrap_or_else(|| home.clone());
+            let activity = species_activity(world, &species);
+            let temperature_niche = biosphere
+                .get_by_label(&species)
+                .map(|t| t.condition_niche.temperature)
+                .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+            let metabolic_class = biosphere
+                .get_by_label(&species)
+                .map(|t| t.metabolic_class)
+                .unwrap_or(MetabolicClass::Endotherm);
+            let niche = biosphere
+                .get_by_label(&species)
+                .map(|t| t.niche.clone())
+                .unwrap_or_else(default_diet_niche);
+            let deliberation_latency = psyche
+                .get_by_label(&species)
+                .map(|p| p.deliberation_latency)
+                .unwrap_or(0.5);
+            let time_horizon = psyche
+                .get_by_label(&species)
+                .map(|p| p.time_horizon)
+                .unwrap_or(0.5);
+            let boldness = psyche
+                .get_by_label(&species)
+                .map(|p| p.threat_response)
+                .unwrap_or(BOLDNESS_STEADY);
+            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class, &niche);
+            let entity = ledger.mint_entity();
+            let label = format!("a wild {species}");
+            ledger
+                .commit(
+                    Fact {
+                        subject: entity,
+                        predicate: hornvale_kernel::NAME.to_string(),
+                        object: Value::Text(label.clone()),
+                        place: None,
+                        day: None,
+                        provenance: "the-wilding".to_string(),
+                    },
+                    &world.registry,
+                )
+                .expect("a freshly minted wild NPC's first NAME fact always commits");
+            Npc {
+                entity,
+                home,
+                resource,
+                species,
+                activity,
+                temperature_niche,
+                deliberation_latency,
+                time_horizon,
+                metabolic_class,
+                niche,
+                boldness,
+                threat_niche,
+                label,
+            }
+        })
+        .collect()
+}
+
 /// The diet-niche fallback for a species missing from the biosphere registry
 /// (defensive — `species` always resolves to at least the registered `goblin`
 /// default). A balanced omnivore, so an unknown species can feed on ordinary
@@ -3319,6 +3405,76 @@ mod tests {
                 n.resource
             );
         }
+    }
+
+    #[test]
+    fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
+        // THE WILDING: the wild roster is minted from the world's beast
+        // concentrations, NOT its peoples. A beast is, by construction, a
+        // species absent from the psyche registry (`wild_concentrations`'s
+        // `is_mobile_beast`), so every wild NPC takes the DEFAULT psyche dials —
+        // steady boldness, mid latency/horizon — while its threat niche is
+        // still derived from its biosphere nature (so a herbivore fears
+        // predators). This is the peopled `derive_npcs` path's mirror for fauna.
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut ledger = world.ledger.clone();
+        let wild = derive_wild_npcs(&world, &ctx, &mut ledger, 4);
+        assert!(
+            !wild.is_empty() && wild.len() <= 4,
+            "seed 42 mints between 1 and 4 wild beasts, got {}",
+            wild.len()
+        );
+        let psyche = hornvale_species::psyche_registry();
+        for n in &wild {
+            assert!(
+                n.label.starts_with("a wild "),
+                "a wild NPC reads as a beast: {}",
+                n.label
+            );
+            assert!(
+                psyche.get_by_label(&n.species).is_none(),
+                "a wild species is a beast, absent from the psyche registry: {}",
+                n.species
+            );
+            // Beast → defaulted psyche (no registry entry to read).
+            assert_eq!(
+                n.boldness, BOLDNESS_STEADY,
+                "{} takes steady boldness",
+                n.species
+            );
+            assert_eq!(
+                n.deliberation_latency, 0.5,
+                "{} takes mid latency",
+                n.species
+            );
+            assert_eq!(n.time_horizon, 0.5, "{} takes mid horizon", n.species);
+            assert!(
+                (0.0..=1.0).contains(&n.threat_niche.predator),
+                "{}'s predator threat weight is a valid ratio: {}",
+                n.species,
+                n.threat_niche.predator
+            );
+        }
+        // At least one is a vulnerable herbivore that meaningfully fears
+        // predator ground — The Quarry's threat niche, live for fauna.
+        assert!(
+            wild.iter().any(|n| n.threat_niche.predator > 0.3),
+            "seed 42's wild roster includes a predator-fearing herbivore"
+        );
+        // Deterministic: the same world mints the same beast roster.
+        let mut ledger2 = world.ledger.clone();
+        let wild2 = derive_wild_npcs(&world, &ctx, &mut ledger2, 4);
+        let species: Vec<&str> = wild.iter().map(|n| n.species.as_str()).collect();
+        let species2: Vec<&str> = wild2.iter().map(|n| n.species.as_str()).collect();
+        assert_eq!(species, species2, "the wild roster is deterministic");
     }
 
     #[test]

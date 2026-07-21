@@ -32,6 +32,7 @@ fn the_walker_battery_holds_the_four_invariants() {
         &PossessOpts {
             day: at,
             echo: false,
+            wild_agents: true,
         },
     )
     .unwrap();

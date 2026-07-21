@@ -21,6 +21,7 @@ fn opts() -> PossessOpts {
     PossessOpts {
         day: WorldTime { day: 0.0 },
         echo: false,
+        wild_agents: true,
     }
 }
 
@@ -244,6 +245,7 @@ fn the_stitch_law_end_to_end() {
         &PossessOpts {
             day: WorldTime { day: 0.0 },
             echo: false,
+            wild_agents: true,
         },
     )
     .unwrap();
@@ -287,6 +289,7 @@ fn the_stitch_law_end_to_end() {
         &PossessOpts {
             day: WorldTime { day: 0.0 },
             echo: false,
+            wild_agents: true,
         },
     )
     .unwrap();
@@ -367,6 +370,7 @@ fn run_drives_a_script_deterministically() {
         PossessOpts {
             day: WorldTime { day: 0.0 },
             echo: true,
+            wild_agents: true,
         },
         std::io::Cursor::new(script),
         &mut out_a,
@@ -377,6 +381,7 @@ fn run_drives_a_script_deterministically() {
         PossessOpts {
             day: WorldTime { day: 0.0 },
             echo: true,
+            wild_agents: true,
         },
         std::io::Cursor::new(script),
         &mut out_b,
