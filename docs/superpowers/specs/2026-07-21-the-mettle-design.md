@@ -1,6 +1,9 @@
 # The Mettle — boldness, the risk-appetite dial
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-mettle.md) and
+[retrospective](../../retrospectives/the-mettle.md). Byte-identical (zero
+artifact drift; goblin baseline + seed-42 hobgoblin unchanged).
 **Date:** 2026-07-21
 **Campaign:** The Mettle (the boldness psychology dial — PSY-11, deepening The Dread)
 **Precedes:** implementation plan → execution → merge

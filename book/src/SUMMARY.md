@@ -211,6 +211,7 @@
 - [The Vantage](./chronicle/the-vantage.md)
 - [The Belonging](./chronicle/the-belonging.md)
 - [The Disposition](./chronicle/the-disposition.md)
+- [The Mettle](./chronicle/the-mettle.md)
 
 # Appendix: The Frontier
 

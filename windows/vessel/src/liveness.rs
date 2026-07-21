@@ -16,7 +16,7 @@ use hornvale_species::{ActivityCycle, MetabolicClass};
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -66,6 +66,14 @@ pub struct Npc {
     /// branched on a diet type. Threaded from the species' authored
     /// `biosphere_registry` at derivation, beside the metabolic class.
     pub niche: ResourceVector,
+    /// The species' `PsychVector.threat_response` (flee 0 ↔ stand 1), read at
+    /// CREATURE scope as its boldness (The Mettle): scales the Danger drive's
+    /// felt threat — `× 2·(1 − boldness)`, centered on `0.5` (steady/inert), so
+    /// a coward (`< 0.5`) fears more and a bold creature (`> 0.5`) fears less.
+    /// The banked third psychology dial, threaded from `psyche_registry` at
+    /// derivation like `deliberation_latency`/`time_horizon` (default `0.5` — a
+    /// steady, byte-identical baseline — for a species without a psyche entry).
+    pub boldness: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -1444,11 +1452,34 @@ const DANGER_ACT: f64 = 0.3;
 /// worse danger scores NEGATIVE, so danger reshapes the other drives' paths
 /// (a thirsty creature routes around a hazard). v1 is niche-less (every
 /// creature fears the hazard uniformly); the per-kind threat niche is reserved.
-/// type-audit: bare-ok(return)
+/// Its felt threat is scaled by the creature's `boldness` (The Mettle) — a bold
+/// creature fears less, so its weaker veto lets it cross ground a timid one
+/// flees.
+/// type-audit: bare-ok(ratio: boldness)
 pub struct Danger<'a> {
     /// The threat field this drive senses (the cell it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
     pub terrain: &'a dyn Terrain,
+    /// The creature's boldness (the banked `threat_response` at creature scope,
+    /// The Mettle): scales the felt threat by `2·(1 − boldness)`, centered on
+    /// `0.5` (steady/inert). Below `0.5` a coward fears more; above, a bold
+    /// creature fears less; toward `1` it is fearless.
+    pub boldness: f64,
+}
+
+/// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
+/// dial is centered on (The Mettle). `PsychVector.threat_response` uses `0.5` as
+/// its flee/stand midpoint, and the goblin (and every psyche-less beast) sits
+/// here, so this baseline keeps them byte-identical.
+const BOLDNESS_STEADY: f64 = 0.5;
+
+impl<'a> Danger<'a> {
+    /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
+    /// at steady `0.5`, `×0` at fearless `1`. Floored at `0` so v1 never inverts
+    /// to the reserved reckless/approach shore.
+    fn mettle_factor(&self) -> f64 {
+        (2.0 * (1.0 - self.boldness)).max(0.0)
+    }
 }
 
 impl<'a> Drive for Danger<'a> {
@@ -1456,15 +1487,17 @@ impl<'a> Drive for Danger<'a> {
         // Fear is ANTICIPATORY: a creature dreads the dangerous ground it is on
         // AND the dangerous ground within one step (the potential-field reading —
         // the drive must be ACTIVE while adjacent to a hazard for its signed
-        // serviceability to veto a step INTO it). So urgency is the greatest
-        // threat over the current cell and its neighbours, clamped to [0, 1].
+        // serviceability to veto a step INTO it). So the base threat is the
+        // greatest over the current cell and its neighbours; the creature's
+        // boldness (The Mettle) then scales how much it FEELS it. Clamped [0, 1].
         let here = self.terrain.threat_value(&view.position);
-        view.position
+        let base = view
+            .position
             .neighbors()
             .iter()
             .map(|n| self.terrain.threat_value(n))
-            .fold(here, f64::max)
-            .clamp(0.0, 1.0)
+            .fold(here, f64::max);
+        (base * self.mettle_factor()).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
@@ -1998,7 +2031,10 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         day,
     };
-    let danger = Danger { terrain };
+    let danger = Danger {
+        terrain,
+        boldness: npc.boldness,
+    };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
     let plan_home = plan_to_room(&view.position, &npc.home, PLAN_BUDGET);
@@ -2266,6 +2302,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 };
                 let danger = Danger {
                     terrain: self.terrain,
+                    boldness: npc.boldness,
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -2536,6 +2573,13 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|p| p.time_horizon)
                 .unwrap_or(0.5);
+            // Boldness (The Mettle): the banked `threat_response` read at
+            // creature scope. Default steady/inert for a species without a
+            // psyche entry — the beasts.
+            let boldness = psyche
+                .get_by_label(&species)
+                .map(|p| p.threat_response)
+                .unwrap_or(BOLDNESS_STEADY);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
@@ -2570,6 +2614,7 @@ pub fn derive_npcs(
                 time_horizon,
                 metabolic_class,
                 niche,
+                boldness,
                 label,
             }
         })
@@ -2841,6 +2886,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -2875,6 +2921,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -2911,6 +2958,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -2945,6 +2993,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -2976,6 +3025,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -3023,6 +3073,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -3178,6 +3229,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -3696,6 +3748,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3799,6 +3852,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3873,6 +3927,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -3954,6 +4009,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -4020,6 +4076,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -4379,7 +4436,10 @@ mod tests {
         // touch the threat, so anticipatory urgency reads 0.
         let far = raddr(-1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.urgency(&view_at(scary)),
             0.8,
@@ -4406,7 +4466,10 @@ mod tests {
                 (ns[2].clone(), 0.9),
             ],
         );
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
@@ -4420,7 +4483,10 @@ mod tests {
                 .chain(std::iter::once(here.clone()))
                 .map(|r| (r, 0.9)),
         );
-        let danger_boxed = Danger { terrain: &boxed };
+        let danger_boxed = Danger {
+            terrain: &boxed,
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
             None,
@@ -4442,7 +4508,10 @@ mod tests {
                 (worse.clone(), 0.9),
             ],
         );
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
         assert!(
@@ -4468,7 +4537,10 @@ mod tests {
         let detour = ns[1].clone(); // a safe alternative step
         let water = hazard.clone(); // believed water sits on/at the hazard cell
         let t = PlantedTerrain::hazard([water.clone()], [(hazard.clone(), 1.0)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
         let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
             position: home.clone(),
@@ -4502,12 +4574,47 @@ mod tests {
         // A flow drive: urgency is purely the cell field, no fold, clamped [0,1].
         let cell = raddr(1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 1.5)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.urgency(&view_at(cell)),
             1.0,
             "threat urgency clamps at 1.0"
         );
+    }
+
+    #[test]
+    fn boldness_scales_the_felt_threat_across_the_mettle_axis() {
+        // THE METTLE: `effective = base × 2(1 − boldness)`, centered on 0.5.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.4)]);
+        let v = view_at(cell);
+        let feel = |boldness: f64| {
+            Danger {
+                terrain: &t,
+                boldness,
+            }
+            .urgency(&v)
+        };
+        // Steady (0.5) → ×1 (unchanged, the inert baseline).
+        assert_eq!(feel(0.5), 0.4, "steady feels the threat as it is");
+        // Bold (0.8) → ×0.4.
+        assert!(
+            (feel(0.8) - 0.4 * 0.4).abs() < 1e-9,
+            "a bold creature fears less"
+        );
+        // Fearless (1.0) → ×0.
+        assert_eq!(feel(1.0), 0.0, "the fearless feel nothing");
+        // Coward (0.0) → ×2, clamped at 1.0.
+        assert_eq!(
+            feel(0.0),
+            (0.4_f64 * 2.0).min(1.0),
+            "a coward fears more (clamped)"
+        );
+        // The monotone axis: coward > steady > bold > fearless.
+        assert!(feel(0.0) > feel(0.5) && feel(0.5) > feel(0.8) && feel(0.8) > feel(1.0));
     }
 
     #[test]
@@ -4655,6 +4762,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
@@ -4761,6 +4869,7 @@ mod tests {
                 time_horizon: 0.0,
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: default_diet_niche(),
+                boldness: 0.5,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -4845,6 +4954,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -5693,6 +5803,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
@@ -5702,6 +5813,7 @@ mod tests {
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
             ..base.clone()
         };
         let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
@@ -5739,6 +5851,7 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
