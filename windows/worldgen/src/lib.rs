@@ -76,6 +76,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod chorus;
 pub mod components;
+pub mod history_bake;
 pub mod schedule;
 pub mod settlement_pins;
 pub use chorus::{
