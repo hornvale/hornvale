@@ -45,10 +45,17 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
         &pins(None),
     )
     .unwrap();
+    // The Living Community epoch: the deep-history bake seeds every people its
+    // own proto-communities (GENESIS_TOP_CELLS is kept above the total genesis
+    // count so no people is starved of sites), so ALL FOUR goblinoid peoples
+    // hold their own flagships in the shared default world — fulfilling this
+    // test's name. Under the retired demography condensation placer, bugbear
+    // and kobold were outcompeted at every attractor and held no flagship;
+    // history places by lineage, not local dominance, so each people persists.
     let mut flagship_ids = std::collections::BTreeSet::new();
-    for species in ["goblin", "hobgoblin"] {
+    for species in ["goblin", "hobgoblin", "bugbear", "kobold"] {
         let flagship = flagship_of(&world, species)
-            .unwrap_or_else(|| panic!("{species} must dominate at least one attractor"));
+            .unwrap_or_else(|| panic!("{species} must hold at least one settlement"));
         assert!(
             flagship_ids.insert(flagship.id),
             "{species}'s flagship entity id must be distinct from every other people's"
@@ -60,21 +67,6 @@ fn default_world_carries_all_four_peoples_with_their_own_flagships() {
         assert!(
             !hornvale_religion::beliefs_held_by(&world, flagship.id).is_empty(),
             "{species}'s flagship must hold its own pantheon"
-        );
-    }
-    // bugbear and kobold place NO flagship in the shared default world at
-    // this seed: both are present (nonzero density) in the coexistence
-    // stack almost everywhere, but neither is ever the LOCAL dominant, so
-    // neither triggers a `peopled-by` fact. This is the intended drift of
-    // the niche cutover, not an omission -- contrast with
-    // `every_registry_people_can_flagship_when_pinned_alone` below, where
-    // each of these same two peoples DOES flagship once placed without
-    // competing dominance.
-    for species in ["bugbear", "kobold"] {
-        assert!(
-            flagship_of(&world, species).is_none(),
-            "{species} is outcompeted at every attractor in the shared default world \
-             and so should hold no flagship"
         );
     }
 }
