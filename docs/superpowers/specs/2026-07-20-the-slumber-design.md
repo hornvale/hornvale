@@ -1,10 +1,14 @@
 # The Slumber — the rest drive & the wake cycle (the first oscillator)
 
-**Status:** spec v2 — reframed through ideonomy (the two-process model + a
-general chronobiology engine). Supersedes the fractional-day-window v1.
+**Status:** SHIPPED (2026-07-20, chronicle: the-slumber) — the Tier-0
+(fractional-day) wake cycle + Process-S fatigue landed; **Tier-1 solar masking
+is the registered immediate followup** (the reserved `is_awake` body-swap — see
+Deferred). "Tiers refine": the fractional-day window is the coarse truth (active
+by day/night), solar refines it (latitude / season / terminator) without
+contradiction. Reframed through ideonomy (the two-process model + a general
+chronobiology engine); supersedes the v1 window framing.
 **Date:** 2026-07-20
 **Campaign:** The Slumber (Temperament followup #3, first drive: fatigue/rest)
-**Precedes:** implementation plan → execution → merge
 
 ## Problem
 
@@ -35,9 +39,20 @@ the A* engine. The general engine is the registered followup (§6).
 
 ## Design
 
-### 1. Process C — the wake oscillator (solar masking)
+### 1. Process C — the wake oscillator
 
-A creature's wake state is read from the **real sun**, not a fixed clock:
+**SHIPPED as Tier 0** — `is_awake(activity, day)` reads a fractional-day window
+per `ActivityCycle` (diurnal awake through the light half, nocturnal the
+complement, crepuscular the twilight edges). A sleeping creature jumps through
+its off-phase to dawn (`next_awake_day`), and rest is taken **in place** (a
+creature sleeps where it is — `Fatigue`'s `home` is a reserved rest-QUALITY
+hook), so explorers bed down in the field and a stranded creature is never
+fatigue-blocked. The health metric samples each creature at a representative
+WAKING moment (`waking_offset`, mid-morning — before the diurnal thermal peak):
+distress is a waking state.
+
+**Tier 1 (solar masking) — the registered followup, the reserved body-swap.**
+A creature's wake state read from the **real sun**, not a fixed window:
 `is_awake(activity, cell, day)` combines the astronomy **daylight model**
 (day-length as a function of latitude × season, driven by the drawn obliquity)
 with the **diurnal phase** (where in the rotation `day` falls). The sun is *up*
