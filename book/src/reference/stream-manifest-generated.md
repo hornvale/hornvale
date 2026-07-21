@@ -37,6 +37,16 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 *(no seed-derivation streams)*
 
+### hornvale-history
+
+| Label | Meaning |
+|---|---|
+| `history` | root stream for history: reserved for the deep-history bake (Task 3, run at the composition root). No draw is made against it directly. |
+| `residue` | flesh::residue_of's deterministic flavor draws (Task 2). |
+| `structures` | flesh::structures_of's dwelling-count variance draws (Task 2). |
+| `history/bake` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order (Task 3, run at the composition root). |
+| `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset (Task 3). Further derives a per-people sub-stream `history/genesis/<people-kind>` via `.derive(people.0)`. |
+
 ### hornvale-kernel
 
 | Label | Meaning |

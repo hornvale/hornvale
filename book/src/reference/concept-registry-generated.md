@@ -38,7 +38,9 @@
 | `is-a` | yes | the class an entity belongs to |
 | `is-belief` | yes | subject is a belief |
 | `is-neighbor` | yes | a minted entity is a notable neighbor star |
+| `is-occupation` | yes | subject is an occupation record |
 | `is-place` | yes | subject is a traversable place |
+| `is-ruin` | yes | subject is a ruin (a dead occupation) |
 | `is-settlement` | yes | subject is a settlement |
 | `latitude` | yes | settlement latitude, degrees |
 | `longitude` | yes | settlement longitude, degrees |
@@ -64,6 +66,17 @@
 | `neighbor-ra-deg` | yes | right ascension of a neighbor in degrees |
 | `obliquity-amplitude` | yes | obliquity oscillation amplitude, degrees (moon-coupled) |
 | `obliquity-degrees` | yes | axial tilt of the anchor world, in degrees |
+| `occ-cause` | yes | why the occupation ended, absent while alive |
+| `occ-ended` | yes | the standard day the occupation ended, absent while alive |
+| `occ-ended-by` | yes | how the occupation ended: nature, or another entity's hand |
+| `occ-founded` | yes | the standard day the occupation began |
+| `occ-founded-from` | yes | how the occupation began: genesis, or founded from another community |
+| `occ-function` | yes | what the occupation was for |
+| `occ-notability` | yes | how notable the occupation was |
+| `occ-peak` | yes | the occupation's peak population |
+| `occ-people` | yes | the people occupying the site |
+| `occ-site` | yes | the Geosphere cell the occupation sits on |
+| `occ-tech` | yes | the occupation's technological horizon |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |

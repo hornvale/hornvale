@@ -54,7 +54,16 @@ const COLLAPSE_PRESSURE: f64 = 2.0;
 /// Pressure below which a comfortable community may throw off a daughter.
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
-const DAUGHTER_PROB: f64 = 0.08;
+const DAUGHTER_PROB: f64 = 0.06;
+/// Candidate cells (highest-capacity habitable of the earliest era) the
+/// genesis seeding draws proto-sites from. Kept well above the total genesis
+/// community count so every people finds its own vacant sites rather than
+/// being starved by peoples seeded before it.
+const GENESIS_TOP_CELLS: usize = 64;
+/// Fewest / most proto-sites a single people seeds (drawn per people).
+const GENESIS_SITES_MIN: u32 = 2;
+/// Most proto-sites a single people seeds (inclusive upper bound of the draw).
+const GENESIS_SITES_MAX: u32 = 4;
 /// Starting population of a genesis proto-community.
 const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.
@@ -545,7 +554,14 @@ pub fn bake(
     };
 
     // 1. Seed the ancient world at the earliest era's habitable, highest-
-    //    capacity cells — one alive community per site.
+    //    capacity cells — one alive community per site. The candidate pool
+    //    (`GENESIS_TOP_CELLS`) is kept well above the total genesis community
+    //    count so EVERY people finds its own vacant proto-sites: a small
+    //    shared pool would let the peoples processed first take every cell and
+    //    starve the rest (a world missing a whole people). Each people draws
+    //    from the cells still vacant when its turn comes, retrying past a
+    //    collision rather than wasting the draw, so its `count` sites really
+    //    do open (as long as vacant top cells remain).
     let earliest = eras
         .iter()
         .min_by(|a, b| a.day.total_cmp(&b.day))
@@ -555,24 +571,25 @@ pub fn bake(
         .filter(|&c| Bake::factor(earliest, c) > 0.0)
         .collect();
     candidates.sort_by(|a, b| capacity.get(*b).total_cmp(capacity.get(*a)).then(a.cmp(b)));
-    let top: Vec<CellId> = candidates.iter().copied().take(8).collect();
+    let top: Vec<CellId> = candidates.iter().copied().take(GENESIS_TOP_CELLS).collect();
 
     for &people in peoples {
         let mut pstream = seed
             .derive(hornvale_history::streams::GENESIS)
             .derive(people.0)
             .stream();
-        let count = pstream.range_u32(2, 4);
-        let mut pool = top.clone();
-        for _ in 0..count {
-            if pool.is_empty() {
-                break;
-            }
+        let count = pstream.range_u32(GENESIS_SITES_MIN, GENESIS_SITES_MAX);
+        // Only cells still vacant this people's turn are candidates — prior
+        // peoples' proto-sites are excluded up front, so no draw is wasted.
+        let mut pool: Vec<CellId> = top
+            .iter()
+            .copied()
+            .filter(|c| !bake.node_index.contains_key(c))
+            .collect();
+        let mut opened = 0;
+        while opened < count && !pool.is_empty() {
             let pick = pstream.range_u32(0, pool.len() as u32 - 1) as usize;
             let site = pool.swap_remove(pick);
-            if bake.node_index.contains_key(&site) {
-                continue; // a prior people already holds this site.
-            }
             let offset = pstream.range_u32(0, 300) as f64;
             bake.open(
                 people,
@@ -583,6 +600,7 @@ pub fn bake(
                 None,
                 offset,
             );
+            opened += 1;
         }
     }
 

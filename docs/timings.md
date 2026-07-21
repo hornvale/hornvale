@@ -23,3 +23,5 @@ Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 | 2026-07-14T22:14:35Z | rebaseline | 202.305 | 146.973 | 1.384 | 0.73 | 90b7f96 | sculpting | MacBookPro | 10 |
 | 2026-07-19T17:31:57Z | rebaseline | 216.546 | 800.341 | 10.129 | 3.74 | 7b65382 | the-rains | MacBookPro | 10 |
 | 2026-07-19T17:38:14Z | rebaseline | 256.409 | 836.827 | 10.433 | 3.30 | e198adb | the-rains | MacBookPro | 10 |
+| 2026-07-21T01:32:39Z | rebaseline | 215.415 | 238.161 | 6.334 | 1.13 | a47e10d0 | the-living-community | MacBookPro | 10 |
+| 2026-07-21T01:53:27Z | rebaseline | 234.678 | 257.944 | 8.312 | 1.13 | a47e10d0 | the-living-community | MacBookPro | 10 |

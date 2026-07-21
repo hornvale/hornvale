@@ -1,8 +1,10 @@
 # The Peoples of Seed 42
 
-The land holds 91 settlement(s).
-The chief goblin settlement, Xnotxnotnoenoanoaboo, holds 1 souls amid temperate-forest.
-The chief hobgoblin settlement, Foenjoavaenoenoanoagoo, holds 2 souls amid temperate-forest.
+The land holds 121 settlement(s).
+The chief bugbear settlement, Vngoashdvoashqvaoqoa, holds 119 souls amid tropical-rainforest.
+The chief goblin settlement, Zhfednaknobtoaneonoaboo, holds 109 souls amid temperate-rainforest.
+The chief hobgoblin settlement, Xaefaanoagootoaneo, holds 109 souls amid temperate-rainforest.
+The chief kobold settlement, Xatxoroqrraxokxog, holds 110 souls amid temperate-forest.
 
 ```text
                                                                         
@@ -13,14 +15,14 @@ The chief hobgoblin settlement, Foenjoavaenoenoanoagoo, holds 2 souls amid tempe
                                                                         
                                                                         
                                                                         
-     o           o               o     o  o   o                   o    o
-     oooo                         ooooo        oo      oo  o      ooo   
-    o    o  ooo                                 ooooooooo         o     
-         o     o                                   o ooo                
-         oooo@ o                                                        
                                                                         
-                    o   ooooo                                           
-                    o o   o           oo     o                          
+              oo                       o                oo          oo  
+               o                                        oo         o    
+              o                                                         
+         o    o@                                     o                  
+         o  o                                                           
+                        ooooo                                           
+                                                                        
                                                                         
                                                                         
                                                                         
