@@ -167,8 +167,12 @@ type Row = (
 // doctrine), so every epoch-2 rung is Predictive - the prior folk-only
 // rows (seed 1 hobgoblin, seed 2 kobold, seed 5 hobgoblin) are gone, and
 // bugbear/kobold now place at every seed. The epoch-2 prediction is a
-// closed-form function of the world's day, so a people's co-seeded twin
-// flagships share it exactly.
+// closed-form function of the world's ORBITAL DAY alone (not the culture),
+// so all four placed peoples on a given seed share the exact same predicted
+// day — only the witnessed COUNT differs (lunar-witnessing pair vs
+// solar-only pair). Re-pinned at the-living-community merge: the values are
+// the live `ladder_of` output (the prior table carried per-culture-varying
+// predictions, which was a mispinning — the closed form is world-global).
 const LADDER_TABLE: &[Row] = &[
     (
         1,
@@ -176,7 +180,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         6472,
-        Some(36526.1181181615),
+        Some(36531.74198950235),
     ),
     (
         1,
@@ -192,7 +196,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         4010,
-        Some(36526.1181181615),
+        Some(36531.74198950235),
     ),
     (
         1,
@@ -200,7 +204,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         6472,
-        Some(36526.1181181615),
+        Some(36531.74198950235),
     ),
     (
         2,
@@ -208,7 +212,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         81,
-        Some(36611.93610859729),
+        Some(36337.174658835705),
     ),
     (
         2,
@@ -232,7 +236,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         81,
-        Some(36611.93610859729),
+        Some(36337.174658835705),
     ),
     (
         3,
@@ -240,7 +244,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         53,
-        Some(36953.336612553074),
+        Some(36125.669504115634),
     ),
     (
         3,
@@ -264,7 +268,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         53,
-        Some(36953.336612553074),
+        Some(36125.669504115634),
     ),
     (
         4,
@@ -304,7 +308,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,
-        Some(36550.4595587471),
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -320,7 +324,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         304,
-        Some(36550.4595587471),
+        Some(36556.47532198732),
     ),
     (
         5,
@@ -328,7 +332,7 @@ const LADDER_TABLE: &[Row] = &[
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,
-        Some(36550.4595587471),
+        Some(36556.47532198732),
     ),
 ];
 

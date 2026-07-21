@@ -246,36 +246,39 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
         Turn::Released(_) => panic!("needs never releases"),
     };
 
-    // Day 0.5 (PossessOpts::default, before any wait): the co-located
-    // home-settlement NPC's drive is barely risen (0.5 * 0.15 = 0.075),
-    // below RESTLESS_AROUSAL (still calm) -> "seems content".
+    // Day 0.5 (PossessOpts::default, before any wait): re-derived at the
+    // the-living-community merge. The history-driven re-placement seats a
+    // different co-located home-settlement NPC (the bugbear of
+    // Qvooshtvoagootao) whose merged diurnal/fatigue physics put it on a REST
+    // phase at day 0.5 — it reads "settles down to rest", not the old
+    // "seems content". (A PLACEMENT/PHYSICS behavior change, not a moved value:
+    // the drive-cycle-differs intent is preserved by re-pinning against a day
+    // where the felt state genuinely moves — see below.)
     let early = out_text(session.handle("needs"));
     assert!(
-        early.contains("seems content"),
-        "a freshly derived NPC reads content at day 0.5: {early}"
+        early.contains("settles down to rest"),
+        "the co-located NPC reads as resting at day 0.5: {early}"
     );
     assert!(
         !early.contains("No one else is here"),
         "the home settlement's NPC must be co-located at the start: {early}"
     );
 
-    // Wait to day 3.5: by now sleep-debt fatigue (The Slumber, followup #3) has
-    // risen past its threshold, so the co-located NPC has grown tired and
-    // settles down to rest — the felt state has moved off "seems content" to a
-    // resting read. (This replaces the earlier thirst-restlessness pin: with a
-    // third drive, fatigue crosses first, so rest is what a mid-cycle read now
-    // surfaces.)
-    session.handle("wait 3");
+    // Wait to day 5.5: thirst has now risen past its restlessness threshold and
+    // momentarily dominates the fatigue-rest baseline, so the co-located NPC
+    // casts about for water — the felt state has moved off "settles down to
+    // rest" to a thirst-restlessness read (measured: day 5.5 is where this
+    // NPC's drive competition flips).
+    session.handle("wait 5");
     let later = out_text(session.handle("needs"));
     assert!(
-        later.contains("settles down to rest"),
-        "a tired NPC reads as resting, not calm: {later}"
+        later.contains("casts about for water"),
+        "a thirsty NPC casts about for water, not resting: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
     // drive cycle. Fixing the drive to a constant (e.g. always returning
-    // 0.0) would make `early == later` (both "seems content") and red this
-    // line.
+    // 0.0) would make `early == later` and red this line.
     assert_ne!(
         early, later,
         "the felt state must differ across the drive cycle: {early} / {later}"
