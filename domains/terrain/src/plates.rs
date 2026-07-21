@@ -6,6 +6,7 @@
 
 use crate::pins::TerrainPins;
 use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellMap, Geosphere, Seed, Stream, math};
 
 /// A tectonic plate.
@@ -156,7 +157,8 @@ pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> C
     let plate_fbms: Vec<crate::crust::SphereFbm> = plates
         .iter()
         .map(|plate| {
-            let noise_seed = edge_root.derive(&format!("plate-{}", plate.id));
+            let noise_seed =
+                edge_root.derive_typed(StreamLabel::dynamic(&format!("plate-{}", plate.id)));
             crate::crust::SphereFbm::new(noise_seed, 8.0, 4)
         })
         .collect();

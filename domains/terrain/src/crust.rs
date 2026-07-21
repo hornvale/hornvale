@@ -7,6 +7,7 @@ use crate::pins::TerrainPins;
 use crate::plates::dot;
 use crate::rift::RiftHistory;
 use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, math, noise};
 
 /// Upper bound of `CrustKm`'s validated range, km. One named bound, two
@@ -317,7 +318,8 @@ pub fn draw_terranes(
             // actual (lobed) rim crosses the continental threshold —
             // not a fixed step, since the lobed rim itself varies with
             // direction (see `find_margin_point`'s doc).
-            let lobing_seed = lobing_root.derive(&format!("craton-{}", host.id));
+            let lobing_seed =
+                lobing_root.derive_typed(StreamLabel::dynamic(&format!("craton-{}", host.id)));
             let center = find_margin_point(lobing_seed, host, dir);
             // Margin tangent: perpendicular to the radial direction at `center`.
             let radial = dir;
@@ -991,7 +993,8 @@ impl CrustField {
         let lobing_fbms = cratons
             .iter()
             .map(|c| {
-                let seed = lobing_root.derive(&format!("craton-{}", c.id));
+                let seed =
+                    lobing_root.derive_typed(StreamLabel::dynamic(&format!("craton-{}", c.id)));
                 SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES)
             })
             .collect();
