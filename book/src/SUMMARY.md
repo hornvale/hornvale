@@ -210,6 +210,7 @@
 - [The Freshwater](./chronicle/the-freshwater.md)
 - [The Vantage](./chronicle/the-vantage.md)
 - [The Belonging](./chronicle/the-belonging.md)
+- [The Disposition](./chronicle/the-disposition.md)
 
 # Appendix: The Frontier
 

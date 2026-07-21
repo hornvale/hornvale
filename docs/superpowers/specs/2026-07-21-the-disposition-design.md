@@ -1,6 +1,9 @@
 # The Disposition — consolidating the arbitration signature
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-disposition.md) and
+[retrospective](../../retrospectives/the-disposition.md). Byte-identical (zero
+artifact drift); the ~22 test call sites go through a thin `arb` adapter (retro).
 **Date:** 2026-07-21
 **Campaign:** The Disposition (a pure, byte-identical refactor)
 **Precedes:** implementation plan → execution → merge

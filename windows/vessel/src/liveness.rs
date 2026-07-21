@@ -1629,18 +1629,40 @@ impl Drive for Social {
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(
-        view,
-        home,
-        &drives,
-        0.0,
-        0.0,
-        false,
-        true,
-        Mode::Idle,
-        budget,
-    )
-    .intent
+    // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
+    // not helpless, awake — exactly the literals the byte-identical seam passed.
+    let disposition = Disposition {
+        latency: 0.0,
+        horizon: 0.0,
+        helpless: false,
+        awake: true,
+    };
+    arbitrate(view, home, &drives, &disposition, Mode::Idle, budget).intent
+}
+
+/// How a creature is disposed to decide right now — the psychology dials that
+/// weight its drives and the momentary states that gate them. The same
+/// perception and drive set yield DIFFERENT decisions through this: it is the
+/// "how this mind decides" bundle [`arbitrate`] reads, distinct from what the
+/// creature perceives (`view`/`drives`), the world frame (`home`/`budget`), and
+/// the hysteresis carry (`incoming: Mode`). Bundling the two dials (endowment,
+/// from the species `PsychVector`) with the two per-tick gates (`helpless`,
+/// `awake`) is the tidy every drive campaign flagged.
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Disposition {
+    /// `deliberation_latency`: slides the arbitration weights from *grab* (0 —
+    /// only the loudest drive counts) to *weigh* (1 — the full weighted sum).
+    pub latency: f64,
+    /// `time_horizon`: slides *myopic* (0 — acts only at `act`) to *foresighted*
+    /// (1 — pre-empts a projectable stock drive by its anticipation lead).
+    pub horizon: f64,
+    /// Learned helplessness — the survival drive has gone unmet so long the
+    /// creature has GIVEN UP (short-circuits arbitration to Hold/Helpless).
+    pub helpless: bool,
+    /// The wake-gate state (The Slumber): while asleep, wake-gated drives fall
+    /// silent (unless survival-critical) and the sleep drive engages.
+    pub awake: bool,
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -1668,24 +1690,21 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake), bare-ok(count: budget)
-// The perceived world, the two psychology dials (latency/horizon), the derived
-// helpless state, the incumbent mode, and the plan budget are each a distinct,
-// individually type-audited input to one decision; bundling them into a
-// `Disposition`/`MindState` struct is a reasonable future tidy, deferred rather
-// than done mid-followup.
-#[allow(clippy::too_many_arguments)]
+/// type-audit: bare-ok(count: budget)
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
     drives: &[&dyn Drive],
-    latency: f64,
-    horizon: f64,
-    helpless: bool,
-    awake: bool,
+    disposition: &Disposition,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
+    let Disposition {
+        latency,
+        horizon,
+        helpless,
+        awake,
+    } = *disposition;
     // Learned helplessness (§7, the sticky scar): the survival drive has gone
     // unmet so long the creature has GIVEN UP — it Holds regardless of any
     // affordance (the behavioural difference: it stops trying, where a merely
@@ -2007,14 +2026,17 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         drives.push(&social);
     }
     let helpless = !ametabolic && learned_helplessness(last_drank, day.day);
+    let disposition = Disposition {
+        latency: npc.deliberation_latency,
+        horizon: npc.time_horizon,
+        helpless,
+        awake: is_awake(npc.activity, terrain, &view.position, day),
+    };
     arbitrate(
         &view,
         &npc.home,
         &drives,
-        npc.deliberation_latency,
-        npc.time_horizon,
-        helpless,
-        is_awake(npc.activity, terrain, &view.position, day),
+        &disposition,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -2270,17 +2292,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     drives.push(&social);
                 }
                 let helpless = !ametabolic && learned_helplessness(last_drank, day);
-                let resolution = arbitrate(
-                    &view,
-                    &npc.home,
-                    &drives,
-                    npc.deliberation_latency,
-                    npc.time_horizon,
+                let disposition = Disposition {
+                    latency: npc.deliberation_latency,
+                    horizon: npc.time_horizon,
                     helpless,
-                    is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
-                    mode,
-                    PLAN_BUDGET,
-                );
+                    awake: is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
+                };
+                let resolution =
+                    arbitrate(&view, &npc.home, &drives, &disposition, mode, PLAN_BUDGET);
                 mode = resolution.mode;
                 match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
@@ -2736,6 +2755,39 @@ pub fn plan_to_room(from: &RoomAddr, dest: &RoomAddr, budget: usize) -> Option<V
 mod tests {
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
+
+    /// A thin positional adapter over [`arbitrate`] for the tests (The
+    /// Disposition): it packs the four loose disposition scalars into a
+    /// [`Disposition`] so the many test call sites keep their explicit
+    /// per-argument values without each rebuilding the struct. Production
+    /// callers (`decide`/`affect_of`/the tick) construct `Disposition` directly;
+    /// only the tests, which vary these values case by case, go through this.
+    #[allow(clippy::too_many_arguments)]
+    fn arb(
+        view: &Perceived,
+        home: &RoomAddr,
+        drives: &[&dyn Drive],
+        latency: f64,
+        horizon: f64,
+        helpless: bool,
+        awake: bool,
+        incoming: Mode,
+        budget: usize,
+    ) -> Resolution {
+        arbitrate(
+            view,
+            home,
+            drives,
+            &Disposition {
+                latency,
+                horizon,
+                helpless,
+                awake,
+            },
+            incoming,
+            budget,
+        )
+    }
 
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
     fn commit_agent_at(
@@ -4426,7 +4478,7 @@ mod tests {
             explore_step: Some(detour.clone()),
         };
         let drives: [&dyn Drive; 2] = [&thirst, &danger];
-        let res = arbitrate(
+        let res = arb(
             &view,
             &home,
             &drives,
@@ -4530,7 +4582,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let r = arbitrate(
+        let r = arb(
             &thirsty,
             &home,
             &drives,
@@ -4555,7 +4607,7 @@ mod tests {
             believed_water: None,
             explore_step: None,
         };
-        let r2 = arbitrate(
+        let r2 = arb(
             &sated,
             &home,
             &drives,
@@ -5065,7 +5117,7 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
-            arbitrate(
+            arb(
                 view,
                 &home,
                 &drives,
@@ -5206,7 +5258,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(
+                arb(
                     v,
                     &home,
                     &drives,
@@ -5258,7 +5310,7 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let intent = arbitrate(
+        let intent = arb(
             &view,
             &home,
             &drives,
@@ -5315,7 +5367,7 @@ mod tests {
             intent: grab,
             mode: gm,
             ..
-        } = arbitrate(
+        } = arb(
             &view,
             &home,
             &drives,
@@ -5326,7 +5378,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let weigh = arbitrate(
+        let weigh = arb(
             &view,
             &home,
             &drives,
@@ -5389,7 +5441,7 @@ mod tests {
         };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &mild,
                 &home,
                 &mild_drives,
@@ -5416,7 +5468,7 @@ mod tests {
         let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &dying,
                 &home,
                 &dying_drives,
@@ -5464,7 +5516,7 @@ mod tests {
         };
         // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
         // no active drive, already home → Idle Hold, nothing engaged.
-        let myopic = arbitrate(
+        let myopic = arb(
             &view,
             &home,
             &drives,
@@ -5479,7 +5531,7 @@ mod tests {
         assert_eq!(myopic.affect.object, None, "no drive is engaged yet");
         // Foresighted (horizon 1): thirst active (0.70 ≥ act_eff 0.55) → already
         // beelining to known water, Eager, object Thirst.
-        let foresighted = arbitrate(
+        let foresighted = arb(
             &view,
             &home,
             &drives,
@@ -5581,7 +5633,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let trying = arbitrate(
+        let trying = arb(
             &view,
             &home,
             &drives,
@@ -5596,7 +5648,7 @@ mod tests {
             matches!(trying.intent, Intent::Do(_)),
             "a creature still trying acts toward the water"
         );
-        let given_up = arbitrate(
+        let given_up = arb(
             &view,
             &home,
             &drives,
@@ -5728,7 +5780,7 @@ mod tests {
             explore_step: None,
         };
         // Awake: it seeks water.
-        let awake = arbitrate(
+        let awake = arb(
             &view,
             &home,
             &drives,
@@ -5741,7 +5793,7 @@ mod tests {
         );
         assert_eq!(awake.affect.object, Some(DriveKind::Thirst));
         // Asleep: the wake-gate silences thirst; it rests instead.
-        let asleep = arbitrate(
+        let asleep = arb(
             &view,
             &home,
             &drives,
@@ -5763,7 +5815,7 @@ mod tests {
             drive: 0.95,
             ..view.clone()
         };
-        let survival = arbitrate(
+        let survival = arb(
             &dying,
             &home,
             &drives,
@@ -5872,7 +5924,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let m1 = arbitrate(
+        let m1 = arb(
             &low,
             &home,
             &drives,
@@ -5900,7 +5952,7 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(
+            arb(
                 &high,
                 &home,
                 &drives,
@@ -5917,7 +5969,7 @@ mod tests {
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(
+            let m = arb(
                 &high,
                 &home,
                 &drives,
@@ -5972,7 +6024,7 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let a = arbitrate(
+        let a = arb(
             &view,
             &home,
             &drives,
@@ -5983,7 +6035,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let b = arbitrate(
+        let b = arb(
             &view,
             &home,
             &drives,
