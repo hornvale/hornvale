@@ -77,6 +77,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 pub mod chorus;
 pub mod components;
 pub mod history_bake;
+pub mod history_emit;
 pub mod schedule;
 pub mod settlement_pins;
 pub use chorus::{
@@ -88,6 +89,7 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
+pub use history_emit::{emit_history, ruins_of_people, territories};
 pub use settlement_pins::SettlementPins;
 
 /// Errors from building a world.

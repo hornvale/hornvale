@@ -128,6 +128,22 @@ pub fn census(h: &History) -> BakeCensus {
     h.tally
 }
 
+impl History {
+    /// Build a `History` directly from a record list and its `now` day — the
+    /// hand-built constructor Task 4's tests (and any other non-bake
+    /// producer) use to reach the private `tally` field from outside this
+    /// module. The tally starts at its default (zero): a hand-built history
+    /// was never actually baked, so there is no genuine event count to report.
+    /// type-audit: bare-ok(count: now)
+    pub fn new(records: Vec<OccupationRecord>, now: f64) -> History {
+        History {
+            records,
+            now,
+            tally: BakeCensus::default(),
+        }
+    }
+}
+
 /// One alive (or lately-dead) community's live state during the bake. The
 /// `record` index ties it to its `OccupationRecord`; population is carried in
 /// full `f64` precision.
