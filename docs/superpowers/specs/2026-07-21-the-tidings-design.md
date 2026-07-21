@@ -1,6 +1,20 @@
 # The Tidings — belief-sharing, the band as error-correcting unit
 
-**Status:** spec (brainstorm complete; awaiting G3 review)
+**Status:** SHIPPED (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-tidings.md) and
+[retrospective](../../retrospectives/the-tidings.md). Two decisions landed during
+build: (#8) shared belief is anchored to the receiver's **current position** when
+a peer is co-located, home-anchored (and an exact no-op) when alone — see §1,
+already reflected below; (#9) belief proved **transient** under the per-tick,
+home-anchored fold, so the "band heals a distressed member" result is achievable
+only in a degenerate case (a stationary informant on water the sufferer already
+stands on) — the campaign ships the deterministic **law** plus the honest finding
+that durable healing needs *persistent told-belief* (a future campaign). The
+§2/§3 harness framing below describes the intended demonstration; what shipped is
+that degenerate slice, honestly documented in the chronicle. The public
+`a_band_that_shares_water` wrapper and a dedicated study were **not** shipped
+(no world-metric seam fits a synthetic-scenario comparison — the Task-4 tests are
+the preregistered evidence).
 **Date:** 2026-07-21
 **Campaign:** The Tidings (first social-cognition campaign; realizes
 `SOC-belief-sharing`)
