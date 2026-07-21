@@ -79,6 +79,15 @@ pub fn observability_table() -> BTreeMap<String, Observability> {
         },
     );
     table.insert(
+        hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+        Observability {
+            requirement: Requirement::SkyGraded { threshold: 0.85 },
+            domain: "sky",
+            concept: NeededConcept::Fixed("moon"),
+            shape: FactShape::CyclicEvent,
+        },
+    );
+    table.insert(
         hornvale_kernel::INSTANCE_OF.to_string(),
         Observability {
             requirement: Requirement::Manifest,
@@ -565,6 +574,89 @@ fn explain_moons(
     };
 }
 
+/// Explanation for LANG-48's `moon-period-ratio` fact — structurally
+/// identical to [`explain_moons`] (same locate → admit → prior → select
+/// → bind → mutate shape), reusing every one of its primitives
+/// unchanged: [`admitted`], [`schema_prior`], [`select_schema`],
+/// [`bind_agent`]. The only differences from `explain_moons` are the
+/// predicate and the fact-shape (`FactShape::CyclicEvent`, the shape
+/// `day-length-std` already uses — no change to `schemas.rs`'s admission
+/// lists). Binds the SAME representative agent `explain_moons` already
+/// uses (`cyclic`'s own slowest-ranked belief) rather than attempting to
+/// identify the two specific moons the ratio involves by entity — this
+/// campaign's fact is a single world-level scalar, exactly like
+/// `moon-count`'s own, so it needs no per-moon entity resolution.
+#[allow(clippy::too_many_arguments)]
+fn explain_moon_ratio(
+    world_seed: Seed,
+    species: &str,
+    account: &mut Account,
+    params: &AccountParams,
+    cyclic: &[(hornvale_religion::Belief, f64)],
+    beta: f64,
+    subsistence: Subsistence,
+    sociality: Sociality,
+) {
+    let predicate = hornvale_astronomy::facts::MOON_PERIOD_RATIO;
+    if domain_of(params, predicate) != Some("sky") {
+        return;
+    }
+    let Some(ratio_index) = account
+        .entries
+        .iter()
+        .position(|e| e.fact.predicate == predicate)
+    else {
+        return;
+    };
+    if account.entries[ratio_index].disposition != Disposition::Kept {
+        return;
+    }
+    if cyclic.is_empty() {
+        return;
+    }
+
+    let slowest_rank = cyclic.len() - 1;
+    let (belief, _period) = &cyclic[slowest_rank];
+    let manner = manner_of(slowest_rank, cyclic.len());
+
+    let candidates = admitted(FactShape::CyclicEvent);
+    let prior = schema_prior(subsistence, sociality, &candidates);
+    let mut schema_stream = world_seed
+        .derive("language")
+        .derive(species)
+        .derive("schema")
+        .derive("sky")
+        .derive(fact_shape_key(FactShape::CyclicEvent))
+        .derive(predicate)
+        .stream();
+    let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
+        return;
+    };
+
+    let agent = bind_agent(schema, &belief.deity);
+    let lexeme = if schema == SchemaId::Agentive {
+        let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
+        let mut lexeme_stream = world_seed
+            .derive("language")
+            .derive(species)
+            .derive("lexeme")
+            .derive(predicate)
+            .stream();
+        select_lexeme(lex_candidates, &mut lexeme_stream)
+    } else {
+        None
+    };
+
+    let underlying = account.entries[ratio_index].disposition.clone();
+    account.entries[ratio_index].disposition = Disposition::Explained {
+        underlying: Box::new(underlying),
+        schema,
+        agent,
+        lexeme,
+        manner,
+    };
+}
+
 /// Explanation assembly (C5): wraps `account`'s day and (where kept)
 /// moons entries in [`Disposition::Explained`] where a schema fires and
 /// binds. Called from [`accounts_of`], after [`account_of`] — never from
@@ -624,6 +716,16 @@ fn explain(
         params,
         &cyclic,
         day,
+        beta,
+        subsistence,
+        psych.sociality,
+    );
+    explain_moon_ratio(
+        world.seed,
+        species,
+        account,
+        params,
+        &cyclic,
         beta,
         subsistence,
         psych.sociality,
@@ -1222,10 +1324,11 @@ fn subject_name(world: &World, entity: hornvale_kernel::EntityId) -> String {
 pub fn chorus_ground(world: &World) -> Vec<GroundFact> {
     // The mirror obligation: this order must match
     // `windows/book::render_volume`'s `CONSTRUCTION_ORDER` exactly.
-    const CONSTRUCTION_ORDER: [&str; 3] = [
+    const CONSTRUCTION_ORDER: [&str; 4] = [
         hornvale_astronomy::facts::MOON_COUNT,
         hornvale_astronomy::facts::STAR_CLASS,
         hornvale_astronomy::facts::DAY_LENGTH_STD,
+        hornvale_astronomy::facts::MOON_PERIOD_RATIO,
     ];
 
     let mut ground = Vec::new();
@@ -1474,6 +1577,17 @@ const K_PREDICT: usize = 8;
 /// priesthood's teaching horizon, an honest arm.
 const PREDICTION_HORIZON_STD_DAYS: f64 = 10_000.0;
 
+/// How close a naive prediction must land to its own fit's mean interval
+/// to count as a hit (spec "Hit or miss, and a tolerance") -- 5%, the
+/// same numeric convention as `hornvale_astronomy::resonance::
+/// RATIO_TOLERANCE` without reusing that unrelated constant.
+const PREDICTION_TOLERANCE_FRACTION: f64 = 0.05;
+
+/// How many consecutive retrospective misses constitute a live crisis
+/// (spec "Crisis, not anomaly") -- a single miss is silently absorbed;
+/// only a run counts.
+const CRISIS_MISS_RUN: usize = 2;
+
 /// One culture's witnessed eclipse record by day `at` (C8 §3.1) — pure,
 /// derived, ascending by day (the same order [`hornvale_astronomy::eclipse_events`]
 /// returns). There is no separate "memory" store: the institution's
@@ -1555,13 +1669,93 @@ fn recurrence_key(moon: usize, body: hornvale_astronomy::EclipseBody) -> (usize,
     (moon, discriminant)
 }
 
+/// The mean interval between consecutive entries of an ascending day
+/// sequence of at least two elements -- the naive model's own building
+/// block.
+fn mean_interval(days: &[f64]) -> f64 {
+    let n = days.len();
+    (days[n - 1] - days[0]) / (n - 1) as f64
+}
+
+/// The naive model's own next-day prediction from an ascending witnessed-
+/// day sequence of at least two elements: the last witnessed day plus the
+/// mean interval between witnessed occurrences (spec "A naive model,
+/// replacing the omniscient lookup").
+fn naive_predicted_day(days: &[f64]) -> f64 {
+    days[days.len() - 1] + mean_interval(days)
+}
+
+/// Whether a naive prediction's own day falls beyond the teaching horizon
+/// from `at` -- the honest-omission arm, rebased from the naive value
+/// rather than an omniscient existence check (spec: "the existing
+/// honest-omission arm is preserved, re-based on the new value").
+fn beyond_teaching_horizon(predicted_day: f64, at: f64) -> bool {
+    predicted_day > at + PREDICTION_HORIZON_STD_DAYS
+}
+
+/// Whether the naive model, fit on `days[..i]`, correctly predicted
+/// `days[i]` -- within `PREDICTION_TOLERANCE_FRACTION` of that fit's own
+/// mean interval. `i` must be >= 2 (at least two prior occurrences to fit
+/// a mean interval) -- every call site below satisfies this by
+/// construction.
+fn retrospective_hit(days: &[f64], i: usize) -> bool {
+    let prior = &days[..i];
+    let predicted = naive_predicted_day(prior);
+    let tolerance = PREDICTION_TOLERANCE_FRACTION * mean_interval(prior);
+    (predicted - days[i]).abs() <= tolerance
+}
+
+/// Whether a live crisis exists for an ascending witnessed-day sequence:
+/// the `CRISIS_MISS_RUN` most recent retrospective checks are all misses
+/// (spec "Crisis, not anomaly"). Fewer than `CRISIS_MISS_RUN + 2` entries
+/// means fewer than `CRISIS_MISS_RUN` checks even exist yet -- no crisis.
+fn crisis_live(days: &[f64]) -> bool {
+    let n = days.len();
+    if n < CRISIS_MISS_RUN + 2 {
+        return false;
+    }
+    ((n - CRISIS_MISS_RUN)..n).all(|i| !retrospective_hit(days, i))
+}
+
+/// The most-witnessed recurrence class in an observation set, and its
+/// count -- the same tie-break `ladder_of` has always used (max count,
+/// then the numerically smallest `(moon index, body)` key). `None` for an
+/// empty observation set. Factored out of `ladder_of` so `crisis_of`
+/// (below) shares the identical class-selection logic rather than
+/// re-deriving it.
+fn top_recurrence_class(observations: &Observations) -> Option<((usize, u8), usize)> {
+    let mut class_counts: BTreeMap<(usize, u8), usize> = BTreeMap::new();
+    for &(_, moon, body) in &observations.events {
+        *class_counts.entry(recurrence_key(moon, body)).or_insert(0) += 1;
+    }
+    class_counts
+        .iter()
+        .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
+        .map(|(&key, &count)| (key, count))
+}
+
+/// The ascending witnessed days of one recurrence class, filtered from a
+/// culture's full observation set (already day-ascending per
+/// `observations_of`'s own doc, so filtering to one class preserves
+/// order).
+fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
+    observations
+        .events
+        .iter()
+        .filter(|&&(_, moon, body)| recurrence_key(moon, body) == key)
+        .map(|&(day, _, _)| day)
+        .collect()
+}
+
 /// `species`'s ladder rung by day `at`, plus — at `Predictive` only — the
 /// predicted next event's day of the most-observed recurrence class
 /// (C8 §3.2/§3.3). The organized gate reuses
 /// [`doctrine_of`]`(world, species).is_some()` (SOC-1); a tie among
 /// equally-observed recurrence classes breaks toward the numerically
 /// smallest `(moon index, body)` key — deterministic, no significance
-/// claimed beyond that.
+/// claimed beyond that. The predicted day is the naive model's own
+/// extrapolation (see `naive_predicted_day`), not an omniscient lookup —
+/// it can be, and sometimes is, wrong (see `crisis_of`).
 ///
 /// type-audit: bare-ok(identifier-text: species), bare-ok(diagnostic-value: return)
 pub fn ladder_of(
@@ -1578,17 +1772,8 @@ pub fn ladder_of(
         return Ok((LadderRung::Counted, None));
     }
 
-    let mut class_counts: BTreeMap<(usize, u8), usize> = BTreeMap::new();
-    for &(_, moon, body) in &observations.events {
-        *class_counts.entry(recurrence_key(moon, body)).or_insert(0) += 1;
-    }
-    // `class_counts` is never empty here: `observations.events` is
-    // non-empty (checked above), and every event contributes to exactly
-    // one class.
-    let (&top_key, &top_count) = class_counts
-        .iter()
-        .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
-        .expect("class_counts is non-empty whenever observations.events is");
+    let (top_key, top_count) = top_recurrence_class(&observations)
+        .expect("top_recurrence_class is non-empty whenever observations.events is");
 
     if top_count < K_PREDICT {
         let rung = if observations.events.len() >= K_COUNT {
@@ -1599,34 +1784,159 @@ pub fn ladder_of(
         return Ok((rung, None));
     }
 
-    let sky = crate::sky_of(world)?;
-    let crate::Sky::Generated(sky) = sky else {
-        return Err(BuildError::Pins(
-            "the diachronic prediction requires a Generated sky".to_string(),
-        ));
-    };
-    let horizon_end = hornvale_astronomy::StdDays::new(at.get() + PREDICTION_HORIZON_STD_DAYS)
-        .map_err(|e| BuildError::Pins(e.to_string()))?;
-    let target_body = if top_key.1 == 0 {
-        hornvale_astronomy::EclipseBody::Solar
+    let days = class_days(&observations, top_key);
+    let predicted_day = naive_predicted_day(&days);
+    let prediction = if beyond_teaching_horizon(predicted_day, at.get()) {
+        None
     } else {
-        hornvale_astronomy::EclipseBody::Lunar
+        Some(predicted_day)
     };
-    let prediction =
-        hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), at, horizon_end)
-            .into_iter()
-            .find(|event| {
-                event.day.get() > at.get() && event.moon == top_key.0 && event.body == target_body
-            })
-            .map(|event| event.day.get());
-
     Ok((LadderRung::Predictive, prediction))
+}
+
+/// One culture's predicted-vs-actual crisis state for its own top
+/// recurrence class, at `at` (spec "Crisis, not anomaly") -- `Some`
+/// exactly when a live crisis exists, carrying the most recent missed
+/// retrospective check's own predicted and actual days for the Reckoning
+/// margin to quote verbatim. Requires the same organized-cult gate
+/// `ladder_of` itself checks (SOC-1): a folk-only culture never has a
+/// crisis to report, since nothing was ever predicted for it to miss.
+///
+/// type-audit: bare-ok(identifier-text: species)
+pub fn crisis_of(
+    world: &World,
+    species: &str,
+    at: hornvale_astronomy::StdDays,
+) -> Result<Option<PredictionCrisis>, BuildError> {
+    let observations = observations_of(world, species, at)?;
+    if doctrine_of(world, species).is_none() {
+        return Ok(None);
+    }
+    let Some((top_key, top_count)) = top_recurrence_class(&observations) else {
+        return Ok(None);
+    };
+    if top_count < K_PREDICT {
+        return Ok(None);
+    }
+    let days = class_days(&observations, top_key);
+    if !crisis_live(&days) {
+        return Ok(None);
+    }
+    let n = days.len();
+    Ok(Some(PredictionCrisis {
+        last_predicted: naive_predicted_day(&days[..n - 1]),
+        last_actual: days[n - 1],
+    }))
+}
+
+/// One culture's live prediction crisis (see [`crisis_of`]): the most
+/// recent missed retrospective check's own predicted and actual days, for
+/// the Reckoning margin to quote verbatim.
+/// type-audit: bare-ok(diagnostic-value: last_predicted), bare-ok(diagnostic-value: last_actual)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PredictionCrisis {
+    /// What the naive model, fit on every occurrence before the most
+    /// recent one, predicted for it.
+    pub last_predicted: f64,
+    /// What actually happened.
+    pub last_actual: f64,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use hornvale_language::LossReason;
+
+    /// The naive model's own worked example (spec "Hit or miss, and a
+    /// tolerance"): intervals 30,30,30,30,45 read hit-hit-hit-miss and
+    /// are NOT yet a crisis (only the tail two checks decide that, and
+    /// the tail is hit-then-miss here, not miss-then-miss). Hand-verified
+    /// before committing: prior [0,30] predicts 60 (exact hit); prior
+    /// [0,30,60] predicts 90 (exact hit); prior [0,30,60,90] predicts
+    /// 120 (exact hit); prior [0,30,60,90,120] (mean 30) predicts 150,
+    /// actual is 165, a 15-day miss against a 1.5-day tolerance.
+    #[test]
+    fn the_naive_model_reads_hit_hit_hit_miss_and_no_crisis_yet() {
+        let days = [0.0, 30.0, 60.0, 90.0, 120.0, 165.0];
+        assert!(retrospective_hit(&days, 2), "prior [0,30] -> 60: exact hit");
+        assert!(
+            retrospective_hit(&days, 3),
+            "prior [0,30,60] -> 90: exact hit"
+        );
+        assert!(
+            retrospective_hit(&days, 4),
+            "prior [0,30,60,90] -> 120: exact hit"
+        );
+        assert!(
+            !retrospective_hit(&days, 5),
+            "prior [0,30,60,90,120] (mean 30) predicts 150, actual is 165: a miss"
+        );
+        assert!(
+            !crisis_live(&days),
+            "the two most recent checks are hit(i=4), miss(i=5) -- not both misses"
+        );
+    }
+
+    /// The crisis case (spec "Hit or miss, and a tolerance"): intervals
+    /// 30,30,30,45,60 miss on BOTH of the tail two checks. Hand-verified:
+    /// prior [0,30,60,90] (mean 30) predicts 120, actual is 135, a 15-day
+    /// miss against a 1.5-day tolerance; prior [0,30,60,90,135] (mean
+    /// 33.75) predicts 168.75, actual is 195, a 26.25-day miss against a
+    /// 1.6875-day tolerance.
+    #[test]
+    fn two_consecutive_misses_read_a_live_crisis() {
+        let days = [0.0, 30.0, 60.0, 90.0, 135.0, 195.0];
+        assert!(retrospective_hit(&days, 2), "prior [0,30] -> 60: exact hit");
+        assert!(
+            retrospective_hit(&days, 3),
+            "prior [0,30,60] -> 90: exact hit"
+        );
+        assert!(
+            !retrospective_hit(&days, 4),
+            "prior [0,30,60,90] (mean 30) predicts 120, actual is 135: a miss"
+        );
+        assert!(
+            !retrospective_hit(&days, 5),
+            "prior [0,30,60,90,135] (mean 33.75) predicts 168.75, actual is 195: a miss"
+        );
+        assert!(
+            crisis_live(&days),
+            "the two most recent checks are both misses: a live crisis"
+        );
+    }
+
+    /// Fewer than CRISIS_MISS_RUN + 2 witnessed days means fewer than
+    /// CRISIS_MISS_RUN retrospective checks even exist yet -- never a
+    /// crisis, regardless of how wild the one or two available checks
+    /// would read.
+    #[test]
+    fn too_few_witnessed_days_are_never_a_crisis() {
+        assert!(
+            !crisis_live(&[0.0, 30.0, 1000.0]),
+            "only one check exists (i=2)"
+        );
+        assert!(!crisis_live(&[]), "empty");
+    }
+
+    /// The rebased honest-omission arm (spec Task 1): a naive prediction
+    /// beyond the teaching horizon from `at` is treated exactly like the
+    /// old omniscient-existence check used to be -- omitted, never taught
+    /// as if it were certain.
+    #[test]
+    fn beyond_teaching_horizon_reads_true_past_the_prediction_horizon() {
+        assert!(
+            beyond_teaching_horizon(20_000.0, 5_000.0),
+            "20,000 is beyond 5,000 + 10,000"
+        );
+        assert!(
+            !beyond_teaching_horizon(10_000.0, 5_000.0),
+            "10,000 is within 5,000 + 10,000"
+        );
+        assert!(
+            !beyond_teaching_horizon(15_000.0, 5_000.0),
+            "exactly at the horizon: not beyond it"
+        );
+    }
 
     /// The unbindable guard (ledger #2), driven directly: `explain` is
     /// private, so this lives here rather than in the integration test
@@ -1858,5 +2168,147 @@ mod tests {
             stances: BTreeMap::new(),
             world_carving: None,
         }
+    }
+
+    #[test]
+    fn moon_period_ratio_has_an_observability_row() {
+        let table = observability_table();
+        let row = table
+            .get(hornvale_astronomy::facts::MOON_PERIOD_RATIO)
+            .expect("moon-period-ratio must have an Observability row");
+        assert!(
+            matches!(row.requirement, Requirement::SkyGraded { threshold } if threshold > 0.6),
+            "the ratio's threshold must sit above moon-count's own 0.6 (spec §3.2)"
+        );
+        assert_eq!(row.shape, FactShape::CyclicEvent);
+    }
+
+    #[test]
+    fn moon_period_ratio_flows_into_chorus_ground() {
+        // Hand-built ledger, mirroring this module's own
+        // `unbindable_cultures_stay_plain_lost` test's style: mint one
+        // entity, mark it `is-a` "planet" (any classified subject
+        // qualifies for chorus_ground's own subject walk), commit a
+        // moon-period-ratio fact on it, then confirm chorus_ground
+        // surfaces it — proves CONSTRUCTION_ORDER's new entry works
+        // without needing a full genesis run.
+        let mut world = World::new(Seed(1));
+        hornvale_astronomy::register_concepts(&mut world.registry)
+            .expect("astronomy concepts register on a fresh registry");
+        let subject = world.ledger.mint_entity();
+        world
+            .ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject,
+                    predicate: hornvale_kernel::world::IS_A.to_string(),
+                    object: hornvale_kernel::Value::Text("planet".to_string()),
+                    place: None,
+                    day: None,
+                    provenance: "test fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .unwrap();
+        world
+            .ledger
+            .commit(
+                hornvale_kernel::Fact {
+                    subject,
+                    predicate: hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+                    object: hornvale_kernel::Value::Number(2.0),
+                    place: None,
+                    day: None,
+                    provenance: "test fixture".to_string(),
+                },
+                &world.registry,
+            )
+            .unwrap();
+
+        let ground = chorus_ground(&world);
+        assert!(
+            ground.iter().any(
+                |g| g.predicate == hornvale_astronomy::facts::MOON_PERIOD_RATIO
+                    && g.object == hornvale_kernel::Value::Number(2.0)
+            ),
+            "moon-period-ratio must flow into chorus_ground once committed: {ground:?}"
+        );
+    }
+
+    fn hornvale_worldgen_test_world(seed: u64) -> World {
+        crate::build_world(
+            Seed(seed),
+            &hornvale_astronomy::SkyPins::default(),
+            crate::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &crate::SettlementPins::default(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn moon_period_ratio_is_explained_with_an_admitted_schema() {
+        let world = hornvale_worldgen_test_world(1);
+        let cyclic = cyclic_beliefs_of(&world, "goblin");
+        assert!(
+            !cyclic.is_empty(),
+            "seed 1 must place a goblin culture with a real pantheon"
+        );
+        let _climate = crate::climate_of(&world).unwrap();
+        let flagship = crate::flagship_of(&world, "goblin").expect("goblin must have a flagship");
+        let subsistence = hornvale_culture::subsistence_of(&world, flagship.id)
+            .as_deref()
+            .and_then(subsistence_from_name)
+            .expect("goblin flagship must have a subsistence");
+        let wc = WorldComponents::assemble().expect("component assembly must succeed");
+        let psych = wc
+            .psyche
+            .get_by_label("goblin")
+            .expect("goblin psychology must exist");
+        let beta = beta_of(psych);
+
+        let ground = vec![GroundFact {
+            subject: "Vebe".to_string(),
+            predicate: hornvale_astronomy::facts::MOON_PERIOD_RATIO.to_string(),
+            object: hornvale_kernel::Value::Number(2.0),
+        }];
+        let mut params = observability_table_params();
+        params.holdings.insert("moon".to_string());
+        let mut account = account_of(&ground, &params);
+        assert_eq!(
+            account.entries[0].disposition,
+            Disposition::Kept,
+            "sky_capability=1.0 in observability_table_params() must keep a SkyGraded fact"
+        );
+
+        explain_moon_ratio(
+            world.seed,
+            "goblin",
+            &mut account,
+            &params,
+            &cyclic,
+            beta,
+            subsistence,
+            psych.sociality,
+        );
+
+        let Disposition::Explained { schema, .. } = &account.entries[0].disposition else {
+            panic!(
+                "expected Explained, got {:?}",
+                account.entries[0].disposition
+            );
+        };
+        assert!(
+            matches!(
+                schema,
+                SchemaId::Agentive
+                    | SchemaId::PathJourney
+                    | SchemaId::Balance
+                    | SchemaId::CycleReturn
+            ),
+            "fired schema {schema:?} must be in FactShape::CyclicEvent's real admitted set \
+             (domains/language/src/schemas.rs's own admissions_match_the_preregistered_gates \
+             test: Agentive, PathJourney, Balance, CycleReturn)"
+        );
     }
 }

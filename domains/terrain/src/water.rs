@@ -21,10 +21,39 @@ pub enum WaterKind {
 }
 
 impl WaterKind {
+    /// The four water-kind names in stable index order — the self-describing
+    /// legend for scene emission (mirrors `biome_legend`).
+    pub const LEGEND: [&'static str; 4] = ["ocean", "salt-basin", "river", "dry-land"];
+
     /// Whether this water is drinkable (fresh). Only `River` is fresh this slice.
     /// type-audit: bare-ok(flag: return)
     pub fn is_fresh(self) -> bool {
         matches!(self, WaterKind::River)
+    }
+
+    /// Stable numeric index into `LEGEND`, independent of enum discriminant
+    /// layout (explicit `match`, not `self as u8`, so reordering variants
+    /// can never silently change a committed index).
+    /// type-audit: bare-ok(index: return)
+    pub fn index(self) -> u8 {
+        match self {
+            WaterKind::Ocean => 0,
+            WaterKind::SaltBasin => 1,
+            WaterKind::River => 2,
+            WaterKind::DryLand => 3,
+        }
+    }
+
+    /// Stable name, consistent with `windows/locale`'s `water_kind_name` — the
+    /// one true water-name source for scene emission.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn name(self) -> &'static str {
+        match self {
+            WaterKind::Ocean => "ocean",
+            WaterKind::SaltBasin => "salt-basin",
+            WaterKind::River => "river",
+            WaterKind::DryLand => "dry-land",
+        }
     }
 }
 
@@ -143,6 +172,31 @@ pub fn water_field(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn water_kind_index_name_and_legend_are_stable() {
+        assert_eq!(WaterKind::Ocean.index(), 0);
+        assert_eq!(WaterKind::SaltBasin.index(), 1);
+        assert_eq!(WaterKind::River.index(), 2);
+        assert_eq!(WaterKind::DryLand.index(), 3);
+        assert_eq!(WaterKind::River.name(), "river");
+        assert_eq!(WaterKind::SaltBasin.name(), "salt-basin");
+        assert_eq!(WaterKind::Ocean.name(), "ocean");
+        assert_eq!(WaterKind::DryLand.name(), "dry-land");
+        // LEGEND is the four names in index order — self-describing, like biome_legend.
+        assert_eq!(
+            WaterKind::LEGEND,
+            ["ocean", "salt-basin", "river", "dry-land"]
+        );
+        for k in [
+            WaterKind::Ocean,
+            WaterKind::SaltBasin,
+            WaterKind::River,
+            WaterKind::DryLand,
+        ] {
+            assert_eq!(WaterKind::LEGEND[k.index() as usize], k.name());
+        }
+    }
 
     #[test]
     fn ocean_below_sea_level_is_salt() {

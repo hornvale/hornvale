@@ -285,6 +285,109 @@ impl LocaleContext {
             .sum();
         Some(sum / denom as f64)
     }
+
+    /// The room's material food PRODUCTIVITY in `[0, 1]` — a Miami-model
+    /// net-primary-productivity proxy over the climate, the food-value field
+    /// the drive layer's hunger drive reads (The Provender). Blends the three
+    /// corner cells' annual-mean temperature and moisture by the SAME integer
+    /// barycentric weights [`describe`](Self::describe) uses, then takes the
+    /// Liebig minimum of a triangular temperature response and moisture — the
+    /// same NPP proxy demography's carrying-capacity uses, computed here from
+    /// this context's own climate rather than depending up into demography (a
+    /// sibling consumer, not required to match it bit-for-bit; it grades cells
+    /// for a hungry forager, it does not set population). Full precision — a
+    /// compute-path read, never a serialization boundary, so NOT quantized.
+    /// `None` for a room the canonical grid does not cover (the caller supplies
+    /// the never-fed fallback). Time-independent (standing biomass is a slow,
+    /// annual field), so it takes no observation time.
+    /// type-audit: pending(wave-2: return)
+    pub fn productivity_at(&self, addr: &RoomAddr) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights(geo, &self.index)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let blend = |value: &dyn Fn(CellId) -> f64| -> f64 {
+            let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * value(c)).sum();
+            sum / denom as f64
+        };
+        let temp = blend(&|c| self.climate.mean_temperature_at(c).get());
+        let moisture = blend(&|c| self.climate.moisture_at(c));
+        Some(miami_npp(temp, moisture))
+    }
+
+    /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees
+    /// (The Dread). Two terms, taken at their maximum: the **uncanny** (a placed
+    /// exotic site's normalized strangeness magnitude — the "cursed ground" a
+    /// creature instinctively shuns, the v1 threat in a world with no predator
+    /// agents yet), and a **lethal** backstop (an annual-mean temperature beyond
+    /// any creature's survivable band — the deep ice or the molten waste). Reads
+    /// the dominant corner cell's placed regime (like [`describe`](Self::describe)
+    /// picks its biome) and a corner-blended mean temperature. Full precision — a
+    /// compute-path read, never a serialization boundary, so NOT quantized.
+    /// `None` for a room the canonical grid does not cover (the caller supplies
+    /// the safe fallback). Time-independent (the uncanny is a slow field), so it
+    /// takes no observation time.
+    /// type-audit: pending(wave-2: return)
+    pub fn threat_at(&self, addr: &RoomAddr) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights(geo, &self.index)?;
+        // The dominant corner cell (max weight, tie-break lowest CellId) — the
+        // same pick `describe` uses for the categorical biome/regime.
+        let mut best = weights[0];
+        for &cand in &weights[1..] {
+            if cand.1 > best.1 || (cand.1 == best.1 && cand.0.0 < best.0.0) {
+                best = cand;
+            }
+        }
+        // The uncanny: a placed exotic site's strangeness, normalized to [0,1].
+        let uncanny = self
+            .budget
+            .regime_at(best.0)
+            .map(|n| n.strangeness() / crate::regime::STRANGENESS_CEILING)
+            .unwrap_or(0.0);
+        // The lethal backstop: an annual-mean temperature past any niche.
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let temp: f64 = weights
+            .iter()
+            .map(|&(c, w)| w as f64 * self.climate.mean_temperature_at(c).get())
+            .sum::<f64>()
+            / denom as f64;
+        let lethal = if (LETHAL_COLD_C..=LETHAL_HEAT_C).contains(&temp) {
+            0.0
+        } else {
+            1.0
+        };
+        Some(uncanny.max(lethal).clamp(0.0, 1.0))
+    }
+}
+
+/// The coldest annual-mean temperature (°C) any creature survives — below it a
+/// cell is a lethal frozen waste and reads maximal threat (The Dread's habitability
+/// backstop). Set well past the coldest species niche (the woolly mammoth's deep
+/// tundra), so it marks genuine lethality, not mere discomfort (thermal's job).
+const LETHAL_COLD_C: f64 = -40.0;
+
+/// The hottest annual-mean temperature (°C) any creature survives — above it a
+/// cell is a lethal molten waste (The Dread's habitability backstop). Set past
+/// the warmest species niche.
+const LETHAL_HEAT_C: f64 = 60.0;
+
+/// The optimum temperature (°C) of the Miami NPP proxy's triangular
+/// temperature response — mirrors demography's carrying-capacity model (a
+/// sibling consumer of the same proxy; see [`LocaleContext::productivity_at`]).
+const NPP_TEMP_OPTIMUM_C: f64 = 20.0;
+
+/// The temperature tolerance (°C) either side of [`NPP_TEMP_OPTIMUM_C`] over
+/// which the triangular temperature response falls to zero.
+const NPP_TEMP_TOLERANCE_C: f64 = 30.0;
+
+/// The Miami-model net-primary-productivity proxy in `[0, 1]`: the Liebig
+/// minimum of a triangular temperature response about [`NPP_TEMP_OPTIMUM_C`]
+/// and the (clamped) moisture. The food-value field's material-productivity
+/// term (The Provender).
+fn miami_npp(temperature_c: f64, moisture: f64) -> f64 {
+    let temp_response =
+        (1.0 - (temperature_c - NPP_TEMP_OPTIMUM_C).abs() / NPP_TEMP_TOLERANCE_C).clamp(0.0, 1.0);
+    temp_response.min(moisture.clamp(0.0, 1.0))
 }
 
 /// Stable biome name for the `locale/room/v2` schema (owned here, not Debug).

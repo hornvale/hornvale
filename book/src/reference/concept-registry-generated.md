@@ -56,6 +56,7 @@
 | `moon-mass-lunar` | no | mass of a moon in lunar masses |
 | `moon-node-longitude-degrees` | no | ascending-node ecliptic longitude of a moon at genesis, in degrees |
 | `moon-node-period-days` | no | nodal-regression period of a moon, in standard days — signed: negative for a retrograde orbit, whose nodes precess prograde (eastward) rather than the usual westward regression |
+| `moon-period-ratio` | yes | the detected clean small-integer ratio between two of a world's moons' real periods, when one exists |
 | `moon-period-std` | no | orbital period of a moon, in standard days |
 | `moon-tide-rel` | no | tidal strength of a moon, relative to Luna on Earth |
 | `name` | yes | canonical name of an entity |

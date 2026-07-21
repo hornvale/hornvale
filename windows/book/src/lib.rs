@@ -139,10 +139,10 @@ pub struct DoctrineSection {
 /// when the true event count at `T` is zero, else one run of lines per
 /// placed culture at `Counted`+ (the folk line, then — organized cultures
 /// only — the Numbered line, then — `Predictive` only — the prediction
-/// line). `margin` carries the truth-margin sentence (spec §3.4) exactly
-/// when some culture's held knowledge falls short of the true count —
-/// empty otherwise, the same sparseness convention `ChorusSection::margin`
-/// already follows.
+/// line). `margin` carries zero or more lines: one per placed culture with
+/// a live prediction crisis (`hornvale_worldgen::crisis_of`, placed-culture
+/// order), then — exactly when some culture's held knowledge falls short of
+/// the true count — the world-level shortfall sentence, last.
 /// type-audit: bare-ok(prose: heading), bare-ok(prose: lines), bare-ok(prose: margin)
 pub struct ReckoningEpoch {
     /// `"In the first days"` / `"In the hundredth year"` for the committed
@@ -151,9 +151,11 @@ pub struct ReckoningEpoch {
     /// The empty arm, or one run of lines per placed culture (registry
     /// order) — see the struct doc.
     pub lines: Vec<String>,
-    /// The truth-margin sentence, present iff some culture's held count
-    /// falls short of the true (unwitnessed-included) count — at most one
-    /// line.
+    /// `margin` carries zero or more lines: one per placed culture with a
+    /// live prediction crisis (`hornvale_worldgen::crisis_of`,
+    /// placed-culture order), then — exactly when some culture's held
+    /// knowledge falls short of the true count — the world-level shortfall
+    /// sentence, last.
     pub margin: Vec<String>,
 }
 
@@ -704,6 +706,7 @@ fn reckoning_epoch(
     }
 
     let mut lines = Vec::new();
+    let mut margin = Vec::new();
     let mut falls_short = false;
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some(autonym) = autonyms.get(kind) else {
@@ -738,16 +741,30 @@ fn reckoning_epoch(
         if culture_falls_short(rung, held, true_count as u64) {
             falls_short = true;
         }
+
+        if rung == hornvale_worldgen::LadderRung::Predictive {
+            let crisis = hornvale_worldgen::crisis_of(world, kind, at).unwrap_or_else(|e| {
+                panic!(
+                    "the Reckoning section requires crisis_of to succeed for placed culture \
+                     {kind}: {e}"
+                )
+            });
+            if let Some(crisis) = crisis {
+                margin.push(reckoning_crisis_margin_line(autonym, crisis));
+            }
+
+            if let Some(doctrine_line) = reckoning_doctrine_line(autonym, true, crisis.is_some()) {
+                lines.push(doctrine_line);
+            }
+        }
     }
 
-    let margin = if falls_short {
-        vec![format!(
+    if falls_short {
+        margin.push(format!(
             "In truth, the darkenings {margin_phrase} number {}.",
             cardinal(true_count as u64)
-        )]
-    } else {
-        Vec::new()
-    };
+        ));
+    }
 
     ReckoningEpoch {
         heading: heading.to_string(),
@@ -799,6 +816,45 @@ fn reckoning_culture_lines(
         // rather than stating a falsehood.
     }
     lines
+}
+
+/// One placed culture's Reckoning margin line for a live prediction
+/// crisis (spec Task 1's margin extension) -- pure and world-free, mirrors
+/// [`reckoning_culture_lines`].
+fn reckoning_crisis_margin_line(
+    autonym: &str,
+    crisis: hornvale_worldgen::PredictionCrisis,
+) -> String {
+    format!(
+        "In truth, the {autonym}'s priesthood taught the darkening would come on day {}; it \
+         came on day {} instead.",
+        crisis.last_predicted.trunc() as u64,
+        crisis.last_actual.trunc() as u64
+    )
+}
+
+/// One further Reckoning line for an organized culture at `Predictive`
+/// rung (spec Task 2), thematically echoing LANG-39's own "Galileo cell"
+/// framing WITHOUT routing through `ConflictState`/`conflict_of` (decision
+/// ledger #3) -- `None` for a folk-only culture, matching every other
+/// doctrine-gated render path's existing convention. `has_doctrine` is
+/// always `true` at every real call site in this file today (a
+/// `Predictive`-rung culture always has a doctrine, by `ladder_of`'s own
+/// gate), so the `false` arm is unreachable through any live world -- kept
+/// and tested anyway (see the tests above), the same defensive posture
+/// `reckoning_culture_lines`'s own `Unknown` arm already keeps.
+fn reckoning_doctrine_line(autonym: &str, has_doctrine: bool, crisis_live: bool) -> Option<String> {
+    if !has_doctrine {
+        return None;
+    }
+    Some(if crisis_live {
+        format!(
+            "The {autonym}'s own priesthood taught wrongly, and could be shown wrong by any \
+             who kept their own count."
+        )
+    } else {
+        format!("None among the {autonym} have shown the priesthood's teaching false.")
+    })
 }
 
 /// Read through a C5 `Explained` wrapper to what the four-filter account
@@ -2010,7 +2066,7 @@ pub enum ChorusLine {
 /// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
-/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count)
+/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day), bare-ok(prose: Doctrine.autonym), bare-ok(flag: Doctrine.crisis_live)
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReckoningLine {
     /// `"The sky keeps no dates to number."` — the empty arm.
@@ -2042,6 +2098,31 @@ pub enum ReckoningLine {
         epoch_phrase: String,
         /// The true event count.
         count: u64,
+    },
+    /// `"In truth, the ⟨autonym⟩'s priesthood taught the darkening would
+    /// come on day ⟨taught_day⟩; it came on day ⟨actual_day⟩ instead."` —
+    /// the-corrigendum T3's per-culture crisis margin line.
+    Crisis {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+        /// The taught (predicted) day, as rendered (integer-truncated).
+        taught_day: u64,
+        /// The actual day the event occurred, as rendered
+        /// (integer-truncated).
+        actual_day: u64,
+    },
+    /// `"None among the ⟨autonym⟩ have shown the priesthood's teaching
+    /// false."` (`crisis_live: false`) or `"The ⟨autonym⟩'s own priesthood
+    /// taught wrongly, and could be shown wrong by any who kept their own
+    /// count."` (`crisis_live: true`) — the-corrigendum T4's doctrine-voice
+    /// acknowledgment, thematic-only and NOT routed through
+    /// `ConflictState`/`conflict_of` (decision ledger #3).
+    Doctrine {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+        /// Whether this culture carried a live prediction crisis at the
+        /// time the line was rendered.
+        crisis_live: bool,
     },
 }
 
@@ -2204,7 +2285,8 @@ const RECKONING_MARGIN_PHRASES: &[&str] = &[
 
 /// Invert one Reckoning-of-Years line (C8) against its closed surfaces —
 /// the plan's four new sentence shapes (the empty arm, the folk line, the
-/// Numbered line, the prediction line) plus the truth margin. Tried before
+/// Numbered line, the prediction line) plus the truth margin, plus (the
+/// Corrigendum T3) the per-culture crisis margin line. Tried before
 /// [`parse_chorus_line`]'s existing arms: none of the Reckoning surfaces
 /// can collide with a copula clause, a `RevealedClaim`/counter/explanation
 /// prefix, or the ordinary `"In truth, "` margin dress, so trying this
@@ -2253,6 +2335,47 @@ fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
             });
         }
     }
+    if let Some(rest) = line.strip_prefix("In truth, the ")
+        && let Some((autonym, rest)) =
+            rest.split_once("'s priesthood taught the darkening would come on day ")
+        && !autonym.is_empty()
+        && let Some((taught_word, rest)) = rest.split_once("; it came on day ")
+        && let Some(actual_word) = rest.strip_suffix(" instead.")
+        && let Ok(taught_day) = taught_word.parse::<u64>()
+        && let Ok(actual_day) = actual_word.parse::<u64>()
+    {
+        return Some(ReckoningLine::Crisis {
+            autonym: autonym.to_string(),
+            taught_day,
+            actual_day,
+        });
+    }
+    if let Some(autonym) = line
+        .strip_prefix("None among the ")
+        .and_then(|r| r.strip_suffix(" have shown the priesthood's teaching false."))
+    {
+        if autonym.is_empty() {
+            return None;
+        }
+        return Some(ReckoningLine::Doctrine {
+            autonym: autonym.to_string(),
+            crisis_live: false,
+        });
+    }
+    if let Some(autonym) = line.strip_prefix("The ").and_then(|r| {
+        r.strip_suffix(
+            "'s own priesthood taught wrongly, and could be shown wrong by any who kept their \
+             own count.",
+        )
+    }) {
+        if autonym.is_empty() {
+            return None;
+        }
+        return Some(ReckoningLine::Doctrine {
+            autonym: autonym.to_string(),
+            crisis_live: true,
+        });
+    }
     None
 }
 
@@ -2277,6 +2400,19 @@ fn rerender_reckoning_line(line: &ReckoningLine) -> String {
             "In truth, the darkenings {epoch_phrase} number {}.",
             cardinal(*count)
         ),
+        ReckoningLine::Crisis {
+            autonym,
+            taught_day,
+            actual_day,
+        } => format!(
+            "In truth, the {autonym}'s priesthood taught the darkening would come on day \
+             {taught_day}; it came on day {actual_day} instead."
+        ),
+        ReckoningLine::Doctrine {
+            autonym,
+            crisis_live,
+        } => reckoning_doctrine_line(autonym, true, *crisis_live)
+            .expect("has_doctrine is always true here, so this always returns Some"),
     }
 }
 
@@ -2433,7 +2569,7 @@ mod tests {
     /// Seed 1's real, committed values (verified against the world json):
     /// star class "yellow-white dwarf (F)", two moons, day-length-std
     /// 1.5507196 std days (`quantity` truncates that to "about 1.5"). This
-    /// is the exact volume `hornvale -- book` renders for seed 1 ("Xobo").
+    /// is the exact volume `hornvale -- book` renders for seed 1 ("Vebe").
     /// Modifier order is the construction table's AUTHORED order
     /// (`CONSTRUCTION_ORDER`: moons, then star, then day length — the
     /// G3-approved surface), independent of ledger commit order.
@@ -2448,7 +2584,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); \
+            "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -2495,11 +2631,8 @@ mod tests {
             vol.lines
         );
         assert!(
-            // Bugbear (registry-first) keeps its autonym "Babako"; hobgoblin,
-            // sharing that autonym, re-draws deterministically to "Ddenke"
-            // (the per-world collective-name uniqueness fix, T5d).
-            vol.lines.iter().any(|l| l == "The Ddenke are hobgoblins."),
-            "hobgoblin collective renders its deduplicated name: {:?}",
+            vol.lines.iter().any(|l| l == "The Babako are hobgoblins."),
+            "hobgoblin collective renders as the autonym: {:?}",
             vol.lines
         );
     }
@@ -3006,7 +3139,7 @@ mod tests {
         let probes = tongue_probes(&world);
         assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
         assert_eq!(probes[0].concept, "planet");
-        assert_eq!(probes[0].subject, "Xobo");
+        assert_eq!(probes[0].subject, "Vebe");
     }
 
     /// C4 T1: the probe's SUCCESS path lands the realized line instead of
@@ -3057,17 +3190,6 @@ mod tests {
     /// C4 T4, the null-filter law (spec §4.1): the identity params
     /// reproduce the god's-eye volume byte-identically — the gazetteer IS
     /// the chorus's degenerate case.
-    ///
-    /// FLAGGED / DEFERRED under The Living Community epoch (T5c fallout sweep):
-    /// the epoch seeds all four peoples at seed 1, and TWO of them (bugbear and
-    /// hobgoblin) collide on the generated collective name "Babako". The
-    /// god's-eye `vol.lines` lists both collided peoples (5 lines: two
-    /// "Babako"); the identity-params account keys collectives by subject NAME,
-    /// so it collapses the duplicate "Babako" to one (4 lines). The null-filter
-    /// byte-identity law GENUINELY breaks under a same-name collision — this is
-    /// not a re-pinnable snapshot (it is an equality between two derivations)
-    /// but a real property violation, so it is deferred pending a controller
-    /// decision on whether per-world collective names must be unique.
     #[test]
     fn identity_chorus_reproduces_the_gods_eye_lines() {
         let world = generated(1);
@@ -3100,18 +3222,14 @@ mod tests {
             .expect("goblin voice");
         assert_eq!(goblin.heading, "As the Vavako tell it");
         assert!(
-            goblin.emic.contains(&"Xobo is the earth.".to_string()),
+            goblin.emic.contains(&"Vebe is the earth.".to_string()),
             "planet substituted to the carving: {:?}",
             goblin.emic
         );
-        // Re-pinned under The Living Community epoch (this merge): seed 1 now
-        // places bugbear too, and bugbear/hobgoblin collide on "Babako" (see
-        // the flagged concerns), so goblin's neighbour line for "Babako"
-        // resolves to bugbears.
         assert!(
             goblin
                 .emic
-                .contains(&"The Babako are bugbears — neighbors.".to_string()),
+                .contains(&"The Babako are hobgoblins — neighbors.".to_string()),
             "goblin stance: {:?}",
             goblin.emic
         );
@@ -3119,7 +3237,7 @@ mod tests {
             goblin
                 .margin
                 .iter()
-                .any(|m| m.starts_with("In truth, Xobo is a planet")
+                .any(|m| m.starts_with("In truth, Vebe is a planet")
                     && m.contains("two moons")
                     && m.contains("yellow-white dwarf")),
             "the margin carries what the stack lost: {:?}",
@@ -3208,17 +3326,6 @@ mod tests {
     /// earth"), so the truth text itself (not the substitution target) is
     /// what this test requires to surface, via the margin's "In truth, ⟨
     /// name⟩ is a planet" when the emic line alone lost it.
-    ///
-    /// FLAGGED / DEFERRED under The Living Community epoch (T5c fallout sweep):
-    /// at seed 1 the epoch's four-people roster collides bugbear and hobgoblin
-    /// on the collective name "Babako". The ground truth carries BOTH
-    /// "Babako" is-a "bugbear" and "Babako" is-a "hobgoblin", but a section's
-    /// emic+margin renders only one "Babako" collective (bugbear), so the
-    /// hobgoblin ground-truth kind is unrecoverable. Ground-truth
-    /// recoverability GENUINELY breaks under a same-name collision (not a
-    /// re-pinnable value — a coverage invariant over the ground facts), so it
-    /// is deferred pending the same controller decision on name uniqueness as
-    /// `identity_chorus_reproduces_the_gods_eye_lines`.
     #[test]
     fn emic_union_margin_covers_ground_truth() {
         for seed in [1u64, 2, 3] {
@@ -3485,7 +3592,7 @@ mod tests {
         let vol = render_volume(&world);
         assert!(
             vol.lines.iter().any(|l| l
-                == "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                == "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
                     its day lasts about 1.5 standard days."),
             "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
             vol.lines
@@ -3550,20 +3657,15 @@ mod tests {
             .filter(|s| s.doctrine.is_some())
             .map(|s| s.kind.as_str())
             .collect();
-        // Re-pinned under The Living Community epoch (this merge): the
-        // deep-history bake seeds all four peoples at seed 1 and grows each
-        // flagship large enough to clear the SOC-1 organized gate, so every
-        // placed people now gains a doctrine section (was goblin alone under
-        // The Demesne). Goblin's own doctrine surface is unchanged below.
         assert_eq!(
             organized,
-            vec!["bugbear", "goblin", "hobgoblin", "kobold"],
-            "seed-1: all four placed peoples are organized under the epoch"
+            vec!["goblin"],
+            "seed-1: goblin alone is organized post-Demesne (hobgoblin flipped to folk)"
         );
         assert_eq!(
             peoples.len(),
-            4,
-            "seed-1: the epoch seeds all four peoples, and each is organized"
+            2,
+            "seed-1: both goblin and hobgoblin are placed; only goblin is organized"
         );
 
         let goblin = vol
@@ -3592,37 +3694,27 @@ mod tests {
         );
     }
 
-    /// C6 T3, the disclosure law (both directions), measured over a live
-    /// sweep of seeds 1..=5. Two conflict states drive the law:
-    /// - `Mystery` — folk and doctrine hold the same fact under differing
-    ///   schemas but the fact is NOT folk-verifiable (`day-length-std` is
-    ///   `CrossReferential`, so a differing schema there is always `Mystery`),
-    ///   and its section must carry NO annotation (the folk cannot check the
-    ///   priesthood, so there is nothing to disclose).
-    /// - `Contested` — a folk-verifiable fact (`moon-count`) that folk and
-    ///   doctrine keep under differing schemas, so the section MUST disclose
-    ///   the folk's own competing explanation (the "Galileo cell"
-    ///   counter-annotation).
-    ///
-    /// The Living Community epoch made both directions live at once: it grows
-    /// seed-1 bugbear into an organized culture whose folk and doctrine
-    /// accounts explain `moon-count` under differing schemas — a REAL
-    /// `Contested` entry (before the epoch none existed across the sweep, so
-    /// the Contested direction was formerly driven only by the synthetic
-    /// fixture retained at the end of this test). The sweep now asserts BOTH
-    /// a real `Mystery` and a real `Contested` entry exist, then checks the
-    /// rendered volume discloses exactly the Contested sections (non-empty
-    /// annotations) and leaves the Mystery-only sections bare — the honest
-    /// resolution the C5 F2 tripwire was designed to trigger when a real
-    /// Contested entry finally appeared.
+    /// C6 T3, the disclosure law (both directions). Measured (a full sweep
+    /// over seeds 1..=5, then widened to 1..=40 to double-check, via a
+    /// throwaway probe before writing this test, then deleted): every
+    /// organized culture's `moon-count` entry is either `RevealedClaim`
+    /// (folk capability under the 0.6 threshold, doctrine's +0.25-boosted
+    /// capability over it) or `Harmony` (the one measured case where folk
+    /// ALSO keeps it, seed 2's kobold — same schema both sides, differing
+    /// only in lexeme, which `conflict_of` ignores); every `day-length-std`
+    /// entry is either `Harmony` or `Mystery` (`day-length-std` is
+    /// `CrossReferential`, never folk-verifiable, so a differing schema
+    /// there can only ever be `Mystery`, never `Contested`). **NO real
+    /// `Contested` entry exists across seeds 1..=40** — the C5 F2 lesson's
+    /// negative-result case: rather than a live sweep assertion that would
+    /// vacuously and permanently pass, the disclosure law's `Contested`
+    /// half is driven directly below with a synthetic folk/doctrine pair
+    /// (kobold-style: folk KEEPS the moon count, but the two accounts
+    /// explain it under differing schemas — Task 1's own Contested grid
+    /// case, wired through the real renderer).
     #[test]
     fn the_disclosure_law_both_directions() {
         let mut mystery_seen = false;
-        let mut contested_seen = false;
-        // (seed, kind) of every section whose doctrine carries at least one
-        // real `Contested` entry — the sections that MUST disclose below.
-        // `BTreeSet` keeps the sweep deterministic (no `HashSet`).
-        let mut contested_sections: BTreeSet<(u64, String)> = BTreeSet::new();
         for seed in 1u64..=5 {
             let world = generated(seed);
             for voice in hornvale_worldgen::accounts_of(&world) {
@@ -3645,13 +3737,17 @@ mod tests {
                         hornvale_worldgen::folk_verifiable(&voice.params, &d_entry.fact.predicate);
                     let conflict =
                         conflict_of(&f_entry.disposition, &d_entry.disposition, verifiable);
-                    match conflict {
-                        ConflictState::Contested => {
-                            contested_seen = true;
-                            contested_sections.insert((seed, voice.kind.clone()));
-                        }
-                        ConflictState::Mystery => mystery_seen = true,
-                        _ => {}
+                    assert_ne!(
+                        conflict,
+                        ConflictState::Contested,
+                        "seed {seed} {} {}: no real Contested entry exists across seeds \
+                         1..=5 (measured) — a future worldgen change that introduces one \
+                         should redden this assertion rather than going silently uncovered",
+                        voice.kind,
+                        d_entry.fact.predicate
+                    );
+                    if conflict == ConflictState::Mystery {
+                        mystery_seen = true;
                     }
                 }
             }
@@ -3660,37 +3756,23 @@ mod tests {
             mystery_seen,
             "the sweep should find at least one real Mystery entry (day-length-std)"
         );
-        assert!(
-            contested_seen,
-            "the epoch grows an organized seed-1 bugbear whose folk and doctrine explain \
-             moon-count under differing schemas — a real Contested entry the sweep must find"
-        );
 
-        // Both directions, non-vacuously, against the rendered volume: a
-        // section carrying a real Contested entry MUST disclose it (a non-empty
-        // counter-annotation), and every other doctrine section — including
-        // every Mystery-only one — carries none.
+        // The Mystery-carries-none half, non-vacuously: since no Contested
+        // entry exists (asserted above), every doctrine section's
+        // annotations are empty — including every section that DOES carry
+        // a Mystery entry (mystery_seen, just asserted).
         for seed in 1u64..=5 {
             let world = generated(seed);
             let vol = render_volume(&world);
             for section in &vol.chorus {
                 if let Some(doctrine) = &section.doctrine {
-                    if contested_sections.contains(&(seed, section.kind.clone())) {
-                        assert!(
-                            !doctrine.annotations.is_empty(),
-                            "seed {seed} {}: a real Contested entry's section must DISCLOSE \
-                             via a counter-annotation, not silently drop it",
-                            section.kind,
-                        );
-                    } else {
-                        assert!(
-                            doctrine.annotations.is_empty(),
-                            "seed {seed} {}: a section with no Contested entry (a Mystery-only \
-                             section) must carry no annotation: {:?}",
-                            section.kind,
-                            doctrine.annotations
-                        );
-                    }
+                    assert!(
+                        doctrine.annotations.is_empty(),
+                        "seed {seed} {}: a Mystery entry's section must carry no \
+                         annotation: {:?}",
+                        section.kind,
+                        doctrine.annotations
+                    );
                 }
             }
         }
@@ -3906,28 +3988,19 @@ mod tests {
             .iter()
             .find(|s| s.kind == "goblin")
             .expect("goblin voice");
-        // Re-pinned under The Living Community epoch (this merge) to the seed-1
-        // world's actual folk registers. The deep-history bake now seeds all
-        // four peoples at seed 1, so each folk section lists all three others
-        // (planet name "Vebe" -> "Xobo"). bugbear and hobgoblin drew the same
-        // autonym "Babako"; the T5d per-world collective-name uniqueness fix
-        // keeps bugbear's (registry-first) and re-draws hobgoblin's to
-        // "Ddenke", so every section now lists all four peoples distinctly.
         assert_eq!(
             goblin.emic,
             vec![
-                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Ddenke are hobgoblins — neighbors.".to_string(),
-                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
-                "Xobo is the earth.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -3941,18 +4014,16 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
-                "The Ddenke are hobgoblins — ourselves.".to_string(),
-                "The Ngngoashzhoo are kobolds — rivals.".to_string(),
-                "Xobo is the earth.".to_string(),
+                "The Babako are hobgoblins — ourselves.".to_string(),
+                "Vebe is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4196,43 +4267,43 @@ mod tests {
 
         // The initiated reader: exactly one line, for exactly this key.
         let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
-        reader.insert(("Xobo".to_string(), MOON_COUNT.to_string()));
+        reader.insert(("Vebe".to_string(), MOON_COUNT.to_string()));
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
             // The Book Polish (2026-07-20): re-pinned with its subject
             // (was the bare "— two, as the initiated count.").
-            vec!["Xobo has two moons, as the initiated count.".to_string()],
+            vec!["Vebe has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
         // Mutation-verify: the "two" comes from the LEDGER's own value, not
         // some other source — independently read the ledger's committed
-        // moon-count for Xobo and confirm it (not a different number)
+        // moon-count for Vebe and confirm it (not a different number)
         // reproduces the line, then confirm a WRONG value's rendering
         // would NOT match what `esoteric_lines` actually produced (the
         // "verify the mechanism by asserting a WRONG expected value
         // fails" arm this test's own doc calls out).
-        let vebe = entity_named(&world, "Xobo").expect("Xobo resolves to an entity");
+        let vebe = entity_named(&world, "Vebe").expect("Vebe resolves to an entity");
         let ledger_value = match world.ledger.value_of(vebe, MOON_COUNT) {
             Some(Value::Number(n)) => *n as u64,
-            other => panic!("Xobo's ledger moon-count must be a Value::Number: {other:?}"),
+            other => panic!("Vebe's ledger moon-count must be a Value::Number: {other:?}"),
         };
         assert_eq!(
             ledger_value, 2,
-            "Xobo's committed moon-count is two at seed 1"
+            "Vebe's committed moon-count is two at seed 1"
         );
         let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
             format!(
-                "Xobo has {} {moon_word}, as the initiated count.",
+                "Vebe has {} {moon_word}, as the initiated count.",
                 cardinal(ledger_value)
             ),
             "the line's cardinal must equal the ledger's own value"
         );
         let wrong = format!(
-            "Xobo has {} {moon_word}, as the initiated count.",
+            "Vebe has {} {moon_word}, as the initiated count.",
             cardinal(ledger_value + 1)
         );
         assert_ne!(
@@ -4284,9 +4355,8 @@ mod tests {
             .collect();
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
-            // The Book Polish (2026-07-20): re-pinned with its subject; The
-            // Living Community epoch re-derived the planet name Vebe -> Xobo.
-            initiated_extra.contains(&"Xobo has two moons, as the initiated count.".to_string()),
+            // The Book Polish (2026-07-20): re-pinned with its subject.
+            initiated_extra.contains(&"Vebe has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -4347,98 +4417,156 @@ mod tests {
         }
 
         let seed1 = render_volume(&generated(1));
-        // Re-pinned under The Living Community epoch (this merge): the
-        // deep-history bake seeds all four peoples at seed 1 and each clears
-        // the SOC-1 organized gate, so every people renders the full
-        // priesthood arm (qualitative + cardinal + prediction). NOTE: bugbear
-        // and hobgoblin drew the same autonym "Babako" this seed; the T5d
-        // per-world collective-name uniqueness fix keeps bugbear's and
-        // re-draws hobgoblin's to "Ddenke", so the four peoples number the
-        // darkenings under four distinct names (bugbear 6472, goblin 4010,
-        // hobgoblin/Ddenke 4010, kobold 6472).
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
-                "Among the Babako, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Babako numbers the darkenings: 6472.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed (was
+                // the bare, unattributed "The sky has darkened, now and
+                // again." for both entries below).
                 "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
-                "Among the Ddenke, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ddenke numbers the darkenings: 4010.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
-                "Among the Ngngoashzhoo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngngoashzhoo numbers the darkenings: 6472.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36526 to 36531 -- the prophecy law's model changed, and
+                // this book-side pin was never re-pinned alongside
+                // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`
+                // (T2's own re-pin was worldgen-only). Matches
+                // LADDER_TABLE's seed 1 goblin row exactly.
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                // The Corrigendum T4: the doctrine-voice line -- Vavako's
+                // priesthood carries a live prediction crisis (see the
+                // margin below), so it renders the "taught wrongly" arm.
+                "The Vavako's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
+                "Among the Babako, the sky has darkened, now and again.".to_string(),
             ],
-            "seed 1: all four peoples are organized and number the darkenings"
+            "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
+             (Babako) is now folk-only, so it contributes only the attributed qualitative \
+             arm with no cardinal or prediction"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 6472.".to_string()],
+            vec![
+                // The Corrigendum T3: the naive model's own prior teaching
+                // (day 36528) missed the actual event (day 36522) -- a
+                // live crisis, proven also at
+                // `windows/worldgen/tests/diachronic.rs::
+                // a_crisis_fires_on_a_real_generated_sky` (seed 1, goblin).
+                "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 6472.".to_string(),
+            ],
             "seed 1: goblin holds 4010 (all-solar; below the 0.6 threshold, so it never \
              witnesses the lunar class), which falls short of the true count (6472, \
-             unwitnessed lunar events included)"
+             unwitnessed lunar events included); its priesthood also carries a live \
+             prediction crisis from an earlier teaching cycle"
         );
 
-        // Re-pinned under The Living Community epoch (this merge): seed 2 now
-        // places and organizes all four peoples, so each renders a full
-        // priesthood arm (bugbear Baodboa 81, goblin Maetmea 49, hobgoblin
-        // Waedwea 49, kobold Ngkoshngta 81).
+        // Re-pinned post-absorption (the Rains moisture epoch, merge
+        // 9843b8f): seed 2 kobold flipped from an organized cult to a FOLK
+        // flagship (the SOC-1 gate's negative arm — see
+        // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`), so it now
+        // renders the folk line ONLY — no cardinal, no prediction line —
+        // the same shape as seed 3's folk-only cultures below.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
             vec![
-                "Among the Baodboa, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Baodboa numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed.
                 "Among the Maetmea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Maetmea numbers the darkenings: 49.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36611 to 36337, matching LADDER_TABLE's seed 2
+                // goblin/hobgoblin row exactly (same underlying shared
+                // witness history, hence the identical taught day).
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                // The Corrigendum T4: both organized priesthoods carry the
+                // same live prediction crisis (see the margin below), so
+                // both render the "taught wrongly" arm.
+                "The Maetmea's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Waedwea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Waedwea's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Ngkoshngta, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Ngkoshngta numbers the darkenings: 81.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 81.".to_string()],
-            "seed 2: the true count is still 81; goblin/hobgoblin hold only 49, so the margin \
-             fires from their shortfall"
+            vec![
+                // The Corrigendum T3: both organized cultures share the
+                // same witness history, so both carry the identical
+                // prior-teaching crisis.
+                "In truth, the Maetmea's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
+                "In truth, the Waedwea's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 81.".to_string(),
+            ],
+            "seed 2: the true count is still 81 (kobold witnesses that many events even as \
+             folk memory only, unwitnessed by doctrine); goblin/hobgoblin hold only 49 and \
+             kobold now holds no cardinal at all — the margin fires from either shortfall, \
+             plus both organized priesthoods carry a live prediction crisis"
         );
 
-        // Re-pinned under The Living Community epoch (this merge): seed 3 now
-        // places and organizes all four peoples (bugbear Doozqao 53, goblin
-        // Sdeozqae 32, hobgoblin Shteozqae 32, kobold Jjajjjo 53).
+        // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
+        // recalibrated seed-3 layout flipped hobgoblin (Shteozqae) folk→
+        // organized (its priesthood now numbers the darkenings) and dropped
+        // kobold from placement entirely (no chorus/reckoning line at all).
+        // So seed 3 now renders TWO priesthood arms, both at 32.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                "Among the Doozqao, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Doozqao numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                // The Book Polish (2026-07-20): re-pinned attributed — this
+                // is the exact stutter the campaign fixes: the last two
+                // lines below were byte-identical bare strings before.
                 "Among the Sdeozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36953 to 36125, matching LADDER_TABLE's seed 3
+                // goblin/hobgoblin row exactly.
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                // The Corrigendum T4: both organized priesthoods carry the
+                // same live prediction crisis (see the margin below), so
+                // both render the "taught wrongly" arm.
+                "The Sdeozqae's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Shteozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shteozqae numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
-                "Among the Jjajjjo, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Jjajjjo numbers the darkenings: 53.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Shteozqae's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
             ],
-            "seed 3: all four peoples are organized; goblin/hobgoblin number 32, \
-             bugbear/kobold number 53"
+            "seed 3 post-Demesne: goblin (Sdeozqae) and hobgoblin (Shteozqae) are both \
+             organized and each number 32; kobold no longer places at this seed"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 53.".to_string()],
-            "seed 3: goblin/hobgoblin hold 32 (all-solar, below the lunar threshold), which \
-             falls short of the true count (53, unwitnessed lunar events included)"
+            vec![
+                // The Corrigendum T3: both organized cultures share the
+                // same witness history, so both carry the identical
+                // prior-teaching crisis.
+                "In truth, the Sdeozqae's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the Shteozqae's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 53.".to_string(),
+            ],
+            "seed 3: both organized cultures hold 32 (all-solar, below the lunar threshold), \
+             which falls short of the true count (53, unwitnessed lunar events included), \
+             and both carry a live prediction crisis"
         );
     }
 
@@ -4446,8 +4574,9 @@ mod tests {
     /// is the CLI `--at` path's own implementation (one function, two
     /// callers) — it must equal `reckoning_epochs`'s per-epoch output for
     /// the same day, not just resemble it. Checked against seed 1's fixed
-    /// pair (day 0's empty arm, day 36525's six-line/one-margin epoch,
-    /// both pinned above in `the_reckoning_renders_the_epoch_pair`) by
+    /// pair (day 0's empty arm, day 36525's four-line/two-margin epoch —
+    /// the Corrigendum T3 added the crisis line to the margin — both
+    /// pinned above in `the_reckoning_renders_the_epoch_pair`) by
     /// comparing `lines` exactly (the substantive per-culture registers —
     /// identical regardless of caller) while `heading` and the margin's
     /// leading phrase are lens-parameterized closed strings, not part of
@@ -4486,9 +4615,19 @@ mod tests {
         );
         assert_eq!(
             day100.margin,
-            vec!["In truth, the darkenings by day 36525 number 6472.".to_string()],
+            vec![
+                // The Corrigendum T3: the crisis line's own text has no
+                // epoch phrase at all (unlike the shortfall line below), so
+                // it is byte-identical to the fixed pair's own margin line
+                // pinned in `the_reckoning_renders_the_epoch_pair`.
+                "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the darkenings by day 36525 number 6472.".to_string(),
+            ],
             "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
-             fixed pair's margin, phrased through reckoning_at's own ad hoc lens"
+             fixed pair's margin, phrased through reckoning_at's own ad hoc lens; the crisis \
+             line is unaffected by the lens (it carries no epoch phrase)"
         );
 
         let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
@@ -4512,48 +4651,31 @@ mod tests {
     fn the_additivity_law() {
         let vol = render_volume(&generated(1));
 
-        // Re-pinned under The Living Community epoch (this merge): seed 1 now
-        // places all four peoples (planet "Vebe" -> "Xobo"). bugbear and
-        // hobgoblin drew the same autonym "Babako"; the T5d per-world
-        // collective-name uniqueness fix re-draws hobgoblin's to "Ddenke", so
-        // the god's-eye gazetteer lists four distinct collective names.
         assert_eq!(
             vol.lines,
             vec![
-                "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
+                "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
                  lasts about 1.5 standard days."
                     .to_string(),
-                "The Babako are bugbears.".to_string(),
                 "The Vavako are goblins.".to_string(),
-                "The Ddenke are hobgoblins.".to_string(),
-                "The Ngngoashzhoo are kobolds.".to_string(),
+                "The Babako are hobgoblins.".to_string(),
             ]
         );
         assert_eq!(
             vol.tongue_lines,
             vec![
-                "Nxaabo Babako Boxa. (in the bugbear tongue: \"The Babako are bugbears.\")"
-                    .to_string(),
-                "Nxaabo Xobo Xobo. (in the bugbear tongue: \"Xobo is the earth.\")".to_string(),
                 "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
-                "Saa Wovewe Xobo. (in the goblin tongue: \"Xobo is the earth.\")".to_string(),
-                "Ddenke Babo Be Bo. (in the hobgoblin tongue: \"The Ddenke are hobgoblins.\")"
+                "Saa Wovewe Vebe. (in the goblin tongue: \"Vebe is the earth.\")".to_string(),
+                "Babako Babo Be Bo. (in the hobgoblin tongue: \"The Babako are hobgoblins.\")"
                     .to_string(),
-                "Xobo Vebe Be Bo. (in the hobgoblin tongue: \"Xobo is the earth.\")".to_string(),
-                "Ngngoashzhoo Ngngoo Shshoosshaa. (in the kobold tongue: \"The Ngngoashzhoo are \
-                 kobolds.\")"
-                    .to_string(),
-                "Xobo Ngngoo Ngngoongngoa. (in the kobold tongue: \"Xobo is the earth.\")"
-                    .to_string(),
+                "Vebe Vebe Be Bo. (in the hobgoblin tongue: \"Vebe is the earth.\")".to_string(),
             ]
         );
         assert_eq!(
             vol.tongue_gaps,
             vec![
-                "bugbear: gap — planet (no entry in this lexicon)".to_string(),
                 "goblin: gap — planet (no entry in this lexicon)".to_string(),
                 "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
-                "kobold: gap — planet (no entry in this lexicon)".to_string(),
             ]
         );
 
@@ -4565,18 +4687,16 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
-                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Ddenke are hobgoblins — neighbors.".to_string(),
-                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
-                "Xobo is the earth.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4588,16 +4708,14 @@ mod tests {
         );
         assert_eq!(
             goblin_doctrine.tongue_taught_line,
-            "Saa Wovewe Xobo. (\"Xobo is the earth — as it is taught.\")"
+            "Saa Wovewe Vebe. (\"Vebe is the earth — as it is taught.\")"
         );
         assert_eq!(
             goblin_doctrine.emic,
             vec![
-                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Ddenke are hobgoblins — neighbors.".to_string(),
-                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
-                "Xobo is the earth.".to_string(),
+                "The Babako are hobgoblins — neighbors.".to_string(),
+                "Vebe is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 "The moons cross because Soevvae strides the sky, slowly.".to_string(),
                 "The day returns because Wowako strides the sky, briskly.".to_string(),
@@ -4607,7 +4725,7 @@ mod tests {
         assert_eq!(
             goblin_doctrine.margin,
             vec![
-                "In truth, Xobo is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                "In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts \
                  about 1.5 standard days."
                     .to_string()
             ]
@@ -4621,28 +4739,31 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
-                "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
-                "The Ddenke are hobgoblins — ourselves.".to_string(),
-                "The Ngngoashzhoo are kobolds — rivals.".to_string(),
-                "Xobo is the earth.".to_string(),
+                "The Babako are hobgoblins — ourselves.".to_string(),
+                "Vebe is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
         );
-        // Re-pinned under The Living Community epoch (this merge): the
-        // deep-history bake grows seed-1 hobgoblin large enough to clear the
-        // SOC-1 organized gate again, so it now carries a doctrine section.
+        // The Demesne (BIO-35 Stage 1) recalibration shrank seed-1 hobgoblin
+        // below the organized rung: it is now a FOLK-only voice — no
+        // priesthood/doctrine section — matching the regenerated
+        // `book/src/gallery/the-book.md` (the Babako section ends at its folk
+        // margin, straight into the Reckoning). Goblin (above) is unchanged
+        // and still carries the doctrine that witnesses the additivity law.
         assert!(
-            hobgoblin.doctrine.is_some(),
-            "under the epoch, seed-1 hobgoblin is organized and gains a doctrine section"
+            hobgoblin.doctrine.is_none(),
+            "post-Demesne, seed-1 hobgoblin is folk-only (organized→folk flip); \
+             unexpected doctrine heading: {:?}",
+            hobgoblin.doctrine.as_ref().map(|d| &d.heading)
         );
     }
 
@@ -4712,6 +4833,29 @@ mod tests {
             }
         );
         assert_eq!(rerender_chorus_line(&chorus_line), synthetic);
+
+        // Synthetic: The Corrigendum T4's doctrine line has a
+        // `crisis_live: false` arm ("None among the ⟨autonym⟩ have shown
+        // the priesthood's teaching false.") that is unreached live within
+        // seeds 1..=3 -- every organized Predictive-rung culture at these
+        // seeds carries a live prediction crisis (see
+        // `the_reckoning_renders_the_epoch_pair`) -- so it is exercised
+        // synthetically here too, through the same public round-trip pair.
+        let synthetic_doctrine =
+            "None among the Vavako have shown the priesthood's teaching false.";
+        let chorus_line = parse_chorus_line(synthetic_doctrine, &ctx)
+            .unwrap_or_else(|e| panic!("the doctrine crisis_live=false line must invert: {e:?}"));
+        let ChorusLine::Reckoning(reckoning) = &chorus_line else {
+            panic!("the doctrine crisis_live=false line must invert to ChorusLine::Reckoning");
+        };
+        assert_eq!(
+            *reckoning,
+            ReckoningLine::Doctrine {
+                autonym: "Vavako".to_string(),
+                crisis_live: false,
+            }
+        );
+        assert_eq!(rerender_chorus_line(&chorus_line), synthetic_doctrine);
     }
 
     /// C8 T2: the honest omit-the-prediction arm (`Predictive` with
@@ -4750,6 +4894,56 @@ mod tests {
                 "The next darkening, it teaches, comes on day 9080.".to_string(),
             ],
             "Predictive + Some: the prediction line renders, integer-truncated"
+        );
+    }
+
+    /// The Corrigendum T3: [`reckoning_crisis_margin_line`]'s own format,
+    /// driven synthetically (world-free, mirrors the pattern above) —
+    /// integer-truncated taught/actual days, same convention as the
+    /// prediction line.
+    #[test]
+    fn the_crisis_margin_line_quotes_the_taught_and_true_days() {
+        let crisis = hornvale_worldgen::PredictionCrisis {
+            last_predicted: 41_200.3,
+            last_actual: 40_850.9,
+        };
+        assert_eq!(
+            reckoning_crisis_margin_line("Vavako", crisis),
+            "In truth, the Vavako's priesthood taught the darkening would come on day 41200; \
+             it came on day 40850 instead."
+        );
+    }
+
+    /// The Corrigendum T4: a folk-only culture (no doctrine) never has a
+    /// doctrine-voice line, regardless of `crisis_live` — mirrors every
+    /// other doctrine-gated render path's `None` convention.
+    #[test]
+    fn the_doctrine_line_is_none_for_a_folk_only_culture() {
+        assert_eq!(reckoning_doctrine_line("Vavako", false, false), None);
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", false, true),
+            None,
+            "a folk-only culture never has a doctrine to have taught anything wrongly"
+        );
+    }
+
+    /// The Corrigendum T4: [`reckoning_doctrine_line`]'s own format, driven
+    /// synthetically (world-free, mirrors the pattern above) — the
+    /// thematic-only doctrine-voice acknowledgment, NOT routed through
+    /// `ConflictState`/`conflict_of` (decision ledger #3).
+    #[test]
+    fn the_doctrine_line_names_the_crisis_when_one_is_live() {
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", true, false),
+            Some("None among the Vavako have shown the priesthood's teaching false.".to_string())
+        );
+        assert_eq!(
+            reckoning_doctrine_line("Vavako", true, true),
+            Some(
+                "The Vavako's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string()
+            )
         );
     }
 
@@ -4795,12 +4989,9 @@ mod tests {
             "Unknown: no cardinal held at all, falls short"
         );
 
-        // The live-world half. Re-pinned under The Living Community epoch
-        // (this merge): seed 2's kobold is organized again (Predictive) and
-        // witnesses all 81 true events, so it holds 81 == the true count — the
-        // CLEAN arm (no shortfall from it), the very case the pure predicate
-        // above stands in for. The margin still fires, from goblin/hobgoblin's
-        // shortfall (49 < 81).
+        // The live-world half: seed 2, goblin/hobgoblin fall short of the
+        // true count (49 < 81); kobold — now folk-only, post-epoch — also
+        // falls short despite witnessing every true event (81 == 81).
         let world = generated(2);
         let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
 
@@ -4810,15 +5001,11 @@ mod tests {
         assert_eq!(
             kobold.events.len(),
             81,
-            "kobold witnesses every true event (capability 1.0) and, organized, holds 81 == \
-             the true count — the clean arm, no shortfall from it"
+            "kobold witnesses every true event (capability 1.0), but holds no cardinal \
+             (folk-only, post-epoch) — the margin's folk arm, not the count arm"
         );
         let (kobold_rung, _) = hornvale_worldgen::ladder_of(&world, "kobold", at).unwrap();
-        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Predictive);
-        assert!(
-            !culture_falls_short(kobold_rung, kobold.events.len() as u64, 81),
-            "seed 2 kobold: organized and holds the full count, so it contributes no shortfall"
-        );
+        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Counted);
 
         for kind in ["goblin", "hobgoblin"] {
             let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
@@ -4830,25 +5017,25 @@ mod tests {
             );
         }
 
-        // The epoch's own margin still fires (from goblin/hobgoblin's
-        // shortfall, 49 < 81).
+        // The epoch's own margin fires (from goblin/hobgoblin's shortfall,
+        // and now from kobold's folk arm too).
         let vol = render_volume(&world);
         assert!(!vol.reckoning[1].margin.is_empty());
 
-        // seed 3: kobold is organized (Predictive) under the epoch and
-        // witnesses everything (cap 1.0), so it too holds the full count — the
-        // clean arm. The margin fires from goblin/hobgoblin's shortfall (they
-        // hold 32, below the true 53).
+        // seed 3: hobgoblin/kobold are folk-only (Counted) — no cardinal
+        // held at all, so they always fall short regardless of what they
+        // witnessed, even where (as kobold does here) the witnessed set
+        // happens to equal the true count.
         let seed3 = generated(3);
         let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
         let (kobold3_rung, _) = hornvale_worldgen::ladder_of(&seed3, "kobold", at3).unwrap();
-        assert_eq!(kobold3_rung, hornvale_worldgen::LadderRung::Predictive);
+        assert_eq!(kobold3_rung, hornvale_worldgen::LadderRung::Counted);
         let kobold3_obs = hornvale_worldgen::observations_of(&seed3, "kobold", at3).unwrap();
         assert_eq!(
             kobold3_obs.events.len(),
             true_event_count(&seed3, at3),
-            "seed 3's kobold witnesses everything (cap 1.0) and, organized, holds the full \
-             count — the clean arm"
+            "seed 3's kobold happens to witness everything (cap 1.0) but still holds no \
+             cardinal (folk-only, no doctrine) — the margin's folk arm, not the count arm"
         );
         let seed3_vol = render_volume(&seed3);
         assert!(!seed3_vol.reckoning[1].margin.is_empty());

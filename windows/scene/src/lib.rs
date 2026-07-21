@@ -101,7 +101,7 @@ pub struct Feature {
 /// the JSON key order and is contract — never reorder. Layers are
 /// row-major, top row first: latitude 90→−90 down, longitude −180→180
 /// across, pixel centers.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(diagnostic-value: snow_fraction), bare-ok(index: precip_regime), bare-ok(diagnostic-value: cloud_fraction), bare-ok(ratio: weather_propensity), bare-ok(index: cloud_type)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(identifier-text: biome_legend), bare-ok(constructor-edge: seed), bare-ok(count: width), bare-ok(count: height), pending(wave-3: sea_level_m), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(diagnostic-value: t_diurnal_amp_c), bare-ok(diagnostic-value: current_east), bare-ok(diagnostic-value: current_north), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(ratio: moisture), bare-ok(flag: locked), bare-ok(diagnostic-value: precip_mm_yr), bare-ok(diagnostic-value: snow_fraction), bare-ok(index: precip_regime), bare-ok(diagnostic-value: cloud_fraction), bare-ok(ratio: weather_propensity), bare-ok(index: cloud_type), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage)
 #[derive(Debug, Serialize)]
 pub struct TilesScene {
     /// Always `scene/tiles/v1`.
@@ -197,6 +197,34 @@ pub struct TilesScene {
     /// Per-tile cloud type at the scene's day (0 none, 1 cumulus, 2 stratus, 3
     /// nimbostratus, 4 cumulonimbus, 5 cirrus) — the weather state's face.
     pub cloud_type: Vec<u8>,
+    /// The water classification per tile, as an index into `water_legend`
+    /// (WaterKind: ocean / salt-basin / river / dry-land). Row-major, matching
+    /// `elevation_m`. Appended per the schema stability contract.
+    pub water: Vec<u8>,
+    /// The water-kind catalog in stable index order — `water`'s values index
+    /// into this. Appended per the schema stability contract.
+    pub water_legend: Vec<String>,
+    /// Flow-accumulation drainage per tile (0 on ocean/dry land); river
+    /// magnitude. Appended per the schema stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub drainage: Vec<f64>,
+    /// Waterfall sites — high-drainage watercourses crossing a scarp.
+    /// Appended per the schema stability contract.
+    pub waterfalls: Vec<WaterfallPoint>,
+}
+
+/// A waterfall site as a point on the lattice (spec §5) — where a
+/// high-drainage watercourse crosses a scarp. lat/lon in degrees, quantized
+/// at emit.
+/// type-audit: pending(wave-3: latitude), pending(wave-3: longitude)
+#[derive(Debug, Clone, Serialize)]
+pub struct WaterfallPoint {
+    /// Latitude, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub latitude: f64,
+    /// Longitude, degrees.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
+    pub longitude: f64,
 }
 
 /// Dot product a · b.
@@ -265,6 +293,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let mut cloud_fraction = Vec::with_capacity(tiles);
     let mut weather_propensity = Vec::with_capacity(tiles);
     let mut cloud_type = Vec::with_capacity(tiles);
+    let mut water = Vec::with_capacity(tiles);
+    let mut drainage = Vec::with_capacity(tiles);
     // `tiles_scene` is a day-independent static document (unlike
     // `temperature_grid`, which takes a day): the cloud-type face is sampled
     // at day 0.0, the same snapshot convention the worldgen almanac's
@@ -278,6 +308,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             let c_cell = climate_index.nearest(climate.geosphere(), latitude, longitude);
             elevation_m.push(terrain.elevation_at(t_cell).get());
             ocean.push(terrain.is_ocean(t_cell));
+            water.push(terrain.water_kind_at(t_cell).index());
+            drainage.push(terrain.drainage_at(t_cell));
             let b = *biomes.get(c_cell);
             let index = catalog
                 .iter()
@@ -318,9 +350,21 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
             .chain(snow_fraction.iter())
             .chain(cloud_fraction.iter())
             .chain(weather_propensity.iter())
+            .chain(drainage.iter())
             .all(|v| v.is_finite()),
         "scene layers must be finite; serde_json would emit null"
     );
+    let waterfalls = terrain
+        .waterfalls()
+        .iter()
+        .map(|&cell| {
+            let c = terrain.geosphere().coord(cell);
+            WaterfallPoint {
+                latitude: c.latitude,
+                longitude: c.longitude,
+            }
+        })
+        .collect();
     Ok(TilesScene {
         schema: TILES_SCHEMA.to_string(),
         seed: world.seed.0,
@@ -349,6 +393,13 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
         cloud_fraction,
         weather_propensity,
         cloud_type,
+        water,
+        water_legend: hornvale_terrain::WaterKind::LEGEND
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+        drainage,
+        waterfalls,
     })
 }
 
@@ -1180,6 +1231,43 @@ mod tests {
                 assert_eq!(scene.current_north[i], 0.0);
             }
         }
+    }
+
+    #[test]
+    fn water_fields_are_sized_legend_matches_and_ocean_has_no_drainage() {
+        // Seed 44 (generated sky, default pins): unlike seed 42 (which has
+        // zero waterfall sites at the canonical globe level — waterfall
+        // sites are sparse, per `waterfalls_exist_across_a_seed_sweep`'s
+        // note in domains/terrain/src/carve.rs), seed 44 carries 4 waterfall
+        // sites, so it exercises every assertion below including the
+        // nonempty-waterfalls one.
+        let scene = tiles_scene(&gen_world_for(44), 32).unwrap();
+        let tiles = scene.width as usize * scene.height as usize;
+        assert_eq!(scene.water.len(), tiles);
+        assert_eq!(
+            scene.water_legend,
+            vec!["ocean", "salt-basin", "river", "dry-land"]
+        );
+        assert_eq!(scene.drainage.len(), scene.water.len());
+        // rivers exist (~6.7% of land on a typical world)
+        assert!(
+            scene
+                .water
+                .iter()
+                .any(|&w| w == hornvale_terrain::WaterKind::River.index())
+        );
+        // ocean tiles carry no drainage
+        for i in 0..scene.water.len() {
+            if scene.ocean[i] {
+                assert_eq!(scene.drainage[i], 0.0);
+            }
+        }
+        // waterfalls exist and serialize
+        assert!(!scene.waterfalls.is_empty());
+        let json = scene_json(&scene);
+        assert!(json.contains("water_legend"));
+        assert!(json.contains("drainage"));
+        assert!(json.contains("waterfalls"));
     }
 
     #[test]

@@ -15,6 +15,7 @@ pub mod night_sky;
 pub mod pins;
 pub mod provider;
 pub mod render;
+pub mod resonance;
 pub mod sky_position;
 pub mod star;
 pub mod starfield;
@@ -399,6 +400,12 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         facts::MOON_DENSITY,
         false,
         "a moon's bulk density in grams per cubic centimeter",
+    )?;
+    registry.register_predicate(
+        facts::MOON_PERIOD_RATIO,
+        true,
+        "the detected clean small-integer ratio between two of a world's \
+         moons' real periods, when one exists",
     )?;
 
     // sun and moon are bodies visible in the sky; star is a fixed night-sky

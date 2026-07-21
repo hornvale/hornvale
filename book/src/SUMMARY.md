@@ -201,6 +201,16 @@
 - [Few and Many](./chronicle/few-and-many.md)
 - [The Kindling](./chronicle/the-kindling.md)
 - [The Sounding](./chronicle/the-sounding.md)
+- [The Consonance](./chronicle/the-consonance.md)
+- [The Slumber](./chronicle/the-slumber.md)
+- [The Wakeful Sun](./chronicle/the-wakeful-sun.md)
+- [The Provender](./chronicle/the-provender.md)
+- [The Cartographer](./chronicle/the-cartographer.md)
+- [The Corrigendum](./chronicle/the-corrigendum.md)
+- [The Dread](./chronicle/the-dread.md)
+- [The Freshwater](./chronicle/the-freshwater.md)
+- [The Vantage](./chronicle/the-vantage.md)
+- [The Belonging](./chronicle/the-belonging.md)
 - [The Living Community](./chronicle/the-living-community.md)
 
 # Appendix: The Frontier

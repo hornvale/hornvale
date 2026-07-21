@@ -2,8 +2,8 @@
 //! verb is read-only; possessing a world never changes it.
 
 use crate::liveness::{
-    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, LocaleTerrain, Npc,
-    SUSTENANCE, affect_of, agent_position, derive_npcs,
+    AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
+    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -59,6 +59,9 @@ pub struct Session<'w> {
     registry: ConceptRegistry,
     /// The NPCs this session derived at `start` (re-derivable, never saved).
     npcs: Vec<Npc>,
+    /// The world's calendar, built once at `start`, so the NPC wake cycle reads
+    /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
+    calendar: Option<hornvale_astronomy::Calendar>,
 }
 
 impl<'w> Session<'w> {
@@ -83,10 +86,25 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(DRANK, false, "an agent satisfied its sustenance goal")
             .expect("DRANK registers identically every session");
+        registry
+            .register_predicate(
+                RESTED,
+                false,
+                "an agent rested (eased its fatigue) on a day",
+            )
+            .expect("RESTED registers identically every session");
+        registry
+            .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
+            .expect("EATEN registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
         let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
+        // Build the world's calendar once, for the NPC wake cycle's real-sun
+        // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
+        let calendar = hornvale_worldgen::sky_of(world)
+            .ok()
+            .and_then(|sky| sky.calendar().cloned());
         let mut session = Session {
             world,
             ctx,
@@ -99,6 +117,7 @@ impl<'w> Session<'w> {
             ledger,
             registry,
             npcs,
+            calendar,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -312,7 +331,7 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::new(&self.ctx);
+        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
@@ -480,7 +499,7 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
-        let terrain = LocaleTerrain::new(&self.ctx);
+        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
         here.iter()
             .map(|npc| {
                 let affect = affect_of(&self.ledger, npc, self.day, &terrain);
@@ -569,11 +588,22 @@ const RESTLESS_AROUSAL: f64 = 0.4;
 /// *about* — so a reader sees not just *that* it frets but *what for*. The
 /// object/reason is the debuggable "message" a distressed creature emits.
 fn felt_phrase(affect: &Affect) -> String {
-    // Pick the object-appropriate wording (thirst / thermal / no object).
-    let about = |thirst: &str, thermal: &str, none: &str| {
+    // Pick the object-appropriate wording (thirst / thermal / fatigue / hunger
+    // / danger / social / none).
+    let about = |thirst: &str,
+                 thermal: &str,
+                 fatigue: &str,
+                 hunger: &str,
+                 danger: &str,
+                 social: &str,
+                 none: &str| {
         match affect.object {
             Some(DriveKind::Thirst) => thirst,
             Some(DriveKind::Thermal) => thermal,
+            Some(DriveKind::Fatigue) => fatigue,
+            Some(DriveKind::Hunger) => hunger,
+            Some(DriveKind::Danger) => danger,
+            Some(DriveKind::Social) => social,
             None => none,
         }
         .to_string()
@@ -587,22 +617,38 @@ fn felt_phrase(affect: &Affect) -> String {
         AffectLabel::Eager => about(
             "drinks its fill",
             "settles into a kinder warmth",
+            "settles down to rest",
+            "eats its fill",
+            "reaches safer ground",
+            "makes for home and its people",
             "looks pleased",
         ),
         AffectLabel::Searching => about(
             "casts about for water",
             "casts about for a kinder clime",
+            "trudges wearily homeward",
+            "forages for richer ground",
+            "edges away from the uncanny ground",
+            "drifts homeward, missing its people",
             "wanders, searching",
         ),
         AffectLabel::Frustrated => about(
             "frets, wanting water it cannot reach",
             "shivers, with no warmth within reach",
+            "frets, too far from any rest",
+            "frets, famished, with no food in reach",
+            "recoils, hemmed in by dread on every side",
+            "frets, cut off from home and its people",
             "frets, blocked at every turn",
         ),
         AffectLabel::Lost => "looks lost, unsure where to turn".to_string(),
         AffectLabel::Helpless => about(
             "has given up on water",
             "has given up on warmth",
+            "has given up, bone-weary",
+            "has given up, starving",
+            "has given up, cowering",
+            "has given up on ever getting home",
             "has given up",
         ),
     }

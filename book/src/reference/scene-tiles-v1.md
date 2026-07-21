@@ -45,17 +45,22 @@ incidental):
 | `weather_propensity` | array of number, one per tile | Climatological storm propensity in [0, 1] (The Firmament) — the slow prior a client animates typed clouds from; see [`hornvale_climate::GeneratedClimate::storm_propensity_at`]. |
 | `cloud_type` | array of integer, one per tile | The cloud type at the scene's day, as a small integer: `0` none, `1` cumulus, `2` stratus, `3` nimbostratus, `4` cumulonimbus, `5` cirrus — the weather state's face; see [`hornvale_climate::GeneratedClimate::cloud_type_at`]. |
 | `locked` | boolean | Whether the world is tidally locked. On a locked world the seasonal temperature is **not** `t_mean_c + t_swing_c·sin(…)` — `t_swing_c` is `0` there — but a *librating substellar* field the client reconstructs from the world's obliquity and the year phase (see below), so a consumer reads this flag to choose its evaluator. |
+| `water` | array of integer, one per tile | The tile's water classification, as an index into `water_legend`: ocean, salt-basin, river, or dry-land. A pure read of the terrain provider — the sim already computes the drainage network and its salt/fresh classification (rivers, endorheic salt basins) when it sculpts the world, so this field ships that existing classification rather than deriving anything new. Static per world: it does not change with the season or the scene's day. |
+| `water_legend` | array of string | The water-kind catalog, in stable index order: `["ocean", "salt-basin", "river", "dry-land"]` — `water`'s values index into this array. Only `river` is drinkable (fresh); `ocean` and `salt-basin` are salt. |
+| `drainage` | array of number, one per tile | Flow-accumulation drainage: a count of upstream land cells whose flow passes through this tile, `0` on ocean and on dry land that accumulates no upstream flow. Higher values trace the river network — the same quantity a river's `water` classification is derived from. |
+| `waterfalls` | array of object | Waterfall (knickpoint) sites: land cells where a high-drainage watercourse crosses a sharp terrain scarp, each given as a `{ "latitude": number, "longitude": number }` point in degrees. Sparse — many worlds carry none, as seed 42 does in the committed example below. Sorted ascending by the underlying cell id, so the order is deterministic but not geographic. |
 
 `elevation_m`, `ocean`, `biome`, `plate`, and `unrest` are the five per-tile
 layers: each is an array of exactly `width × height` entries, in the grid
 order described below, so tile `i`'s elevation, ocean flag, biome, plate,
 and unrest all sit at the same index `i` across their respective arrays.
 `t_mean_c`, `t_swing_c`, `moisture`, the precipitation layers
-(`precip_mm_yr`, `snow_fraction`, `precip_regime`, `cloud_fraction`), and
-the weather layers (`weather_propensity`, `cloud_type`) are further per-tile
-layers of the same shape, appended after `features` (see Stability, below,
-on the append-at-end convention); `season_period_days` and
-`circulation_bands` are document-level, not per-tile.
+(`precip_mm_yr`, `snow_fraction`, `precip_regime`, `cloud_fraction`), the
+weather layers (`weather_propensity`, `cloud_type`), and the water layers
+(`water`, `drainage`, `waterfalls`) are further per-tile layers of the same
+shape, appended after `features` (see Stability, below, on the
+append-at-end convention); `season_period_days`, `circulation_bands`, and
+`water_legend` are document-level, not per-tile.
 `biome_legend` currently holds twenty-two entries, from `ice` and `tundra`
 through the deep-ocean biomes (`hadal-trench`, `abyssal`, and the rest);
 its order is append-only and stable across worlds, so a biome index means
@@ -108,7 +113,11 @@ An excerpt of the committed seed-42 example (arrays elided; see
   "cloud_fraction": [ ... 32768 entries ... ],
   "weather_propensity": [ ... 32768 entries ... ],
   "cloud_type": [ ... 32768 entries ... ],
-  "locked": false
+  "locked": false,
+  "water": [ ... 32768 entries ... ],
+  "water_legend": ["ocean", "salt-basin", "river", "dry-land"],
+  "drainage": [ ... 32768 entries ... ],
+  "waterfalls": []
 }
 ```
 
@@ -234,10 +243,12 @@ discipline as the rest of the world's on-disk formats:
 
 - `biome_legend`'s order is append-only: a biome already in the catalog
   keeps its index forever, so a `biome` value from an old document still
-  means the same thing against a newer legend.
-- Adding a new field, or a new entry to `biome_legend` or `features`,
-  stays within `scene/tiles/v1` — existing consumers that read fields by
-  name are unaffected.
+  means the same thing against a newer legend. `water_legend` follows the
+  same append-only discipline, from the same stable `WaterKind::LEGEND`
+  constant the terrain domain exposes.
+- Adding a new field, or a new entry to `biome_legend`, `water_legend`, or
+  `features`, stays within `scene/tiles/v1` — existing consumers that read
+  fields by name are unaffected.
 - New fields always append **after** every existing field — a round that
   adds fields lands them at the tail of the object, after whatever was
   last before it. Wire order is therefore historical accretion order, not a
