@@ -231,7 +231,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     //
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (goblin 3.058 -> 3.057).
-    assert!((mg - 3.057).abs() < 1e-9, "goblin mean drifted: {mg}");
+    // Census regen (The Living Community epoch, history-first placement,
+    // lefford 0063): re-measured on the regenerated 1000-seed census
+    // (goblin 3.057 -> 3.058).
+    assert!((mg - 3.058).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -240,7 +243,10 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063):
     // this machine is now the reference platform; re-measured 2.486 -> 2.485
     // (a discrete count flips on ~1 seed between the old AWS goldens and local).
-    assert!((mh - 2.485).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // Census regen (The Living Community epoch, history-first placement,
+    // lefford 0063): re-measured on the regenerated 1000-seed census
+    // (hobgoblin 2.485 -> 2.486).
+    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     assert!((mb - 4.481).abs() < 1e-9, "bugbear mean drifted: {mb}");
@@ -338,10 +344,15 @@ fn homophony_count_is_measured_and_pinned() {
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20:
     // spatial supply relocates settlements and shifts each people's naming
     // draws (goblin 2.365 -> 1.939; others below).
-    assert!((mg - 1.939).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.689).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 3.025).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 0.904).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // Census regen (The Living Community epoch, history-first placement,
+    // lefford 0063): re-measured on the regenerated 1000-seed census
+    // (goblin 1.939 -> 1.841, hobgoblin 1.689 -> 1.591, bugbear 3.025 ->
+    // 6.58, kobold 0.904 -> 1.912 — history-first settlement placement
+    // reshapes each daughter's periphery homophony draws).
+    assert!((mg - 1.841).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.591).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 6.58).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 1.912).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
