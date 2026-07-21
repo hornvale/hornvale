@@ -551,19 +551,14 @@ mod tests {
         let out = drive("village\ncastes\nbeliefs\nquit\n");
         assert!(out.contains("population"));
         // Castes are emergent now (Campaign 4b): every settlement grows at
-        // least a worker and a top rung (`structure`'s invariant), but
-        // which higher roles appear depends on its actual environment.
-        // The niche-differentiated-K coexistence-stack cutover (The Niche)
-        // repacked settlement genesis onto a competitive per-species K:
-        // goblin and hobgoblin now win every settlement's dominance at seed
-        // 42 (bugbear and kobold are present in every settlement's
-        // composition but never dominant — see
-        // `bugbear_and_kobold_are_present_in_settlement_composition` in
-        // `cli/tests/branches_identity.rs`), so the constant-sky flagship
-        // (entity 2, village Ngjoangjoeqqeanoagoo) is now peopled by
-        // hobgoblin, and the top rung reported here is hobgoblin's own
-        // word, "warlord".
-        assert!(out.contains("warlord"));
+        // least a worker and a top rung (`structure`'s invariant), but which
+        // higher roles appear depends on its actual environment. Re-pinned
+        // under The Living Community epoch (history is the sole settlement
+        // placer, this merge): the deep-history bake re-placed every world, so
+        // the constant-sky flagship (entity 2, village Shngooshshngoash...) is
+        // now peopled by bugbear, and the roles reported here are bugbear's own
+        // words — "forager, omen-reader, headman", the top rung "headman".
+        assert!(out.contains("headman"));
         assert!(out.contains("1."));
     }
 
@@ -594,9 +589,12 @@ mod tests {
     #[test]
     fn facts_lists_an_entity() {
         let out = drive("facts 2\nquit\n");
-        // The OR tolerates entity-numbering shifts (the world entity is
-        // minted first as of 2b); either subject is a legitimate answer.
-        assert!(out.contains("(settlement)") || out.contains("(terrain)"));
+        // Each fact line is tagged with the domain that asserted it. Under The
+        // Living Community epoch (this merge), entity 2 is the flagship
+        // settlement, whose is-settlement/population/cell-id facts are now
+        // committed by the deep-history bake (tag "(history/bake)") rather than
+        // the settlement domain. The OR tolerates entity-numbering shifts.
+        assert!(out.contains("(history/bake)") || out.contains("(terrain)"));
     }
 
     #[test]
@@ -793,23 +791,15 @@ mod tests {
             .and_then(|s| s.parse().ok())
             .expect("beliefs lists at least one id");
         let recounted = drive_generated(&format!("why {first_id}\n"));
-        // Worldgen walks the canonical kind registries (keyed by `KindId`,
-        // alphabetical) in that order, and commits each species' pantheon in
-        // that same roster order — so the pantheon
-        // committed first, and thus first in `beliefs`' listing, is
-        // whichever DOMINANT species sorts first alphabetically. Under the
-        // niche-differentiated-K coexistence-stack cutover (The Niche),
-        // `culture+religion+species` genesis runs only at a species' own
-        // flagship, and only goblin and hobgoblin win any settlement's
-        // dominance at seed 42 (bugbear and kobold are present in every
-        // settlement's composition but never dominant — see
-        // `bugbear_and_kobold_are_present_in_settlement_composition` in
-        // `cli/tests/branches_identity.rs`), so bugbear commits no pantheon
-        // at all this seed. Of the two peoples that do, goblin sorts first
-        // alphabetically, so its pantheon's holding community is who this
-        // recount hops to.
+        // The first pantheon in `beliefs`' listing is the one worldgen commits
+        // first; the recount hops from that belief's holding community to the
+        // species that peoples it. Re-pinned under The Living Community epoch
+        // (history is the sole settlement placer, this merge): the deep-history
+        // bake re-placed every world and changed which people commits the
+        // generated seed-42 world's first pantheon — it is bugbear now, so the
+        // recount hops through bugbear's eyes.
         assert!(
-            recounted.contains("Seen through goblin eyes:"),
+            recounted.contains("Seen through bugbear eyes:"),
             "the species hop is missing: {recounted}"
         );
         assert!(recounted.contains("night-sky acuity"));
