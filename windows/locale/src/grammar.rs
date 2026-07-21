@@ -5,6 +5,7 @@
 use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
 use hornvale_climate::Biome;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{RoomAddr, Seed};
 
 /// A weighted descriptor pool.
@@ -63,13 +64,13 @@ pub(crate) fn render(
 }
 
 /// Draw one entry from a pool off a per-slot stream; "" if the pool is empty.
-fn draw(room: Seed, label: &str, pool: Pool) -> String {
+fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
     if pool.is_empty() {
         return String::new();
     }
     let weights: Vec<f64> = pool.iter().map(|(w, _)| *w).collect();
     let i = room
-        .derive(label)
+        .derive_typed(label)
         .stream()
         .weighted_index(&weights)
         .unwrap_or(0);

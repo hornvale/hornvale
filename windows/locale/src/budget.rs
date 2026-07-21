@@ -119,7 +119,7 @@ impl StrangenessBudget {
         // integer by a compile-time constant (no libm involved), so it is
         // platform-identical without quantization.
         let budget = ((land.len() as f64) * BUDGET_FRACTION) as usize;
-        let mut stream = seed.derive(LOCALE_PLACE).stream();
+        let mut stream = seed.derive_typed(LOCALE_PLACE).stream();
         let order = permute(&land, &mut stream);
         for c in order {
             if sites.len() >= budget {

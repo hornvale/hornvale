@@ -155,13 +155,14 @@ pub fn cloud_type(state: WeatherState, cirrus: bool) -> CloudType {
 /// seed-free.
 /// type-audit: bare-ok(constructor-edge: seed)
 pub fn weather_seed(seed: Seed) -> Seed {
-    seed.derive(WEATHER_PHASE)
+    seed.derive_typed(WEATHER_PHASE)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::seed::StreamLabel;
 
     // Propensity tracks the fields — EACH driver in isolation. Holding the other
     // three fixed, raising any one driver must raise propensity; so dropping any
@@ -244,7 +245,7 @@ mod tests {
     // phase. The delta-ratio measures the actual smoothness the design claims.
     #[test]
     fn weather_is_temporally_smooth() {
-        let seed = Seed(42).derive(WEATHER_PHASE_TEST);
+        let seed = Seed(42).derive_typed(WEATHER_PHASE_TEST);
         for &(lon, lat) in &[(12.0_f64, 34.0_f64), (100.0, -20.0), (-50.0, 5.0)] {
             let mut adjacent = 0.0_f64;
             let mut far = 0.0_f64;
@@ -275,7 +276,7 @@ mod tests {
     // least three distinct states across a year.
     #[test]
     fn weather_varies_over_a_season() {
-        let seed = Seed(42).derive(WEATHER_PHASE_TEST);
+        let seed = Seed(42).derive_typed(WEATHER_PHASE_TEST);
         let (lon, lat) = (12.0, 34.0);
         let p = 0.55;
         let mut states = std::collections::BTreeSet::new();
@@ -318,7 +319,7 @@ mod tests {
     // Determinism: same (seed, place, day) -> same phase, exactly, on rebuild.
     #[test]
     fn weather_phase_is_deterministic() {
-        let seed = Seed(7).derive(WEATHER_PHASE_TEST);
+        let seed = Seed(7).derive_typed(WEATHER_PHASE_TEST);
         let a = weather_phase(seed, 100.0, -20.0, 173.0);
         let b = weather_phase(seed, 100.0, -20.0, 173.0);
         assert_eq!(
@@ -329,5 +330,6 @@ mod tests {
         assert!((-1.0..=1.0).contains(&a), "phase in range: {a}");
     }
 
-    const WEATHER_PHASE_TEST: &str = "climate/weather/phase/v1";
+    const WEATHER_PHASE_TEST: StreamLabel<'static> =
+        StreamLabel::from_static("climate/weather/phase/v1");
 }

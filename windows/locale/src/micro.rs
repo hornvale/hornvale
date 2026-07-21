@@ -9,7 +9,7 @@ use hornvale_kernel::{Seed, quantize};
 /// Four axes in [-1, 1], each a distinct sub-stream of the room's micro label,
 /// quantized at emit (platform-exact).
 pub(crate) fn micro_field(room_seed: Seed) -> MicroField {
-    let mut s = room_seed.derive(LOCALE_MICRO).stream();
+    let mut s = room_seed.derive_typed(LOCALE_MICRO).stream();
     let mut axis = || quantize(s.next_f64() * 2.0 - 1.0);
     MicroField {
         relief: axis(),
