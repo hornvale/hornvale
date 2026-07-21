@@ -139,10 +139,10 @@ pub struct DoctrineSection {
 /// when the true event count at `T` is zero, else one run of lines per
 /// placed culture at `Counted`+ (the folk line, then — organized cultures
 /// only — the Numbered line, then — `Predictive` only — the prediction
-/// line). `margin` carries the truth-margin sentence (spec §3.4) exactly
-/// when some culture's held knowledge falls short of the true count —
-/// empty otherwise, the same sparseness convention `ChorusSection::margin`
-/// already follows.
+/// line). `margin` carries zero or more lines: one per placed culture with
+/// a live prediction crisis (`hornvale_worldgen::crisis_of`, placed-culture
+/// order), then — exactly when some culture's held knowledge falls short of
+/// the true count — the world-level shortfall sentence, last.
 /// type-audit: bare-ok(prose: heading), bare-ok(prose: lines), bare-ok(prose: margin)
 pub struct ReckoningEpoch {
     /// `"In the first days"` / `"In the hundredth year"` for the committed
@@ -151,9 +151,11 @@ pub struct ReckoningEpoch {
     /// The empty arm, or one run of lines per placed culture (registry
     /// order) — see the struct doc.
     pub lines: Vec<String>,
-    /// The truth-margin sentence, present iff some culture's held count
-    /// falls short of the true (unwitnessed-included) count — at most one
-    /// line.
+    /// `margin` carries zero or more lines: one per placed culture with a
+    /// live prediction crisis (`hornvale_worldgen::crisis_of`,
+    /// placed-culture order), then — exactly when some culture's held
+    /// knowledge falls short of the true count — the world-level shortfall
+    /// sentence, last.
     pub margin: Vec<String>,
 }
 
@@ -704,6 +706,7 @@ fn reckoning_epoch(
     }
 
     let mut lines = Vec::new();
+    let mut margin = Vec::new();
     let mut falls_short = false;
     for (kind, _village) in hornvale_worldgen::placed_peoples(world) {
         let Some(autonym) = autonyms.get(kind) else {
@@ -738,16 +741,26 @@ fn reckoning_epoch(
         if culture_falls_short(rung, held, true_count as u64) {
             falls_short = true;
         }
+
+        if rung == hornvale_worldgen::LadderRung::Predictive {
+            let crisis = hornvale_worldgen::crisis_of(world, kind, at).unwrap_or_else(|e| {
+                panic!(
+                    "the Reckoning section requires crisis_of to succeed for placed culture \
+                     {kind}: {e}"
+                )
+            });
+            if let Some(crisis) = crisis {
+                margin.push(reckoning_crisis_margin_line(autonym, crisis));
+            }
+        }
     }
 
-    let margin = if falls_short {
-        vec![format!(
+    if falls_short {
+        margin.push(format!(
             "In truth, the darkenings {margin_phrase} number {}.",
             cardinal(true_count as u64)
-        )]
-    } else {
-        Vec::new()
-    };
+        ));
+    }
 
     ReckoningEpoch {
         heading: heading.to_string(),
@@ -799,6 +812,21 @@ fn reckoning_culture_lines(
         // rather than stating a falsehood.
     }
     lines
+}
+
+/// One placed culture's Reckoning margin line for a live prediction
+/// crisis (spec Task 1's margin extension) -- pure and world-free, mirrors
+/// [`reckoning_culture_lines`].
+fn reckoning_crisis_margin_line(
+    autonym: &str,
+    crisis: hornvale_worldgen::PredictionCrisis,
+) -> String {
+    format!(
+        "In truth, the {autonym}'s priesthood taught the darkening would come on day {}; it \
+         came on day {} instead.",
+        crisis.last_predicted.trunc() as u64,
+        crisis.last_actual.trunc() as u64
+    )
 }
 
 /// Read through a C5 `Explained` wrapper to what the four-filter account
@@ -2010,7 +2038,7 @@ pub enum ChorusLine {
 /// `hornvale_worldgen::{observations_of, ladder_of}`, not a `chorus_ground`
 /// classification, so [`emic_union_margin_covers_ground_truth`]'s ground-
 /// truth walk has nothing here to check.
-/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count)
+/// type-audit: bare-ok(prose: FolkCounted.autonym), bare-ok(prose: Numbered.autonym), bare-ok(diagnostic-value: Numbered.count), bare-ok(diagnostic-value: Prediction.day), bare-ok(prose: Margin.epoch_phrase), bare-ok(diagnostic-value: Margin.count), bare-ok(prose: Crisis.autonym), bare-ok(diagnostic-value: Crisis.taught_day), bare-ok(diagnostic-value: Crisis.actual_day)
 #[derive(Clone, Debug, PartialEq)]
 pub enum ReckoningLine {
     /// `"The sky keeps no dates to number."` — the empty arm.
@@ -2042,6 +2070,18 @@ pub enum ReckoningLine {
         epoch_phrase: String,
         /// The true event count.
         count: u64,
+    },
+    /// `"In truth, the ⟨autonym⟩'s priesthood taught the darkening would
+    /// come on day ⟨taught_day⟩; it came on day ⟨actual_day⟩ instead."` —
+    /// the-corrigendum T3's per-culture crisis margin line.
+    Crisis {
+        /// The culture's autonym, as it appeared in the line.
+        autonym: String,
+        /// The taught (predicted) day, as rendered (integer-truncated).
+        taught_day: u64,
+        /// The actual day the event occurred, as rendered
+        /// (integer-truncated).
+        actual_day: u64,
     },
 }
 
@@ -2204,7 +2244,8 @@ const RECKONING_MARGIN_PHRASES: &[&str] = &[
 
 /// Invert one Reckoning-of-Years line (C8) against its closed surfaces —
 /// the plan's four new sentence shapes (the empty arm, the folk line, the
-/// Numbered line, the prediction line) plus the truth margin. Tried before
+/// Numbered line, the prediction line) plus the truth margin, plus (the
+/// Corrigendum T3) the per-culture crisis margin line. Tried before
 /// [`parse_chorus_line`]'s existing arms: none of the Reckoning surfaces
 /// can collide with a copula clause, a `RevealedClaim`/counter/explanation
 /// prefix, or the ordinary `"In truth, "` margin dress, so trying this
@@ -2253,6 +2294,21 @@ fn parse_reckoning_line(line: &str) -> Option<ReckoningLine> {
             });
         }
     }
+    if let Some(rest) = line.strip_prefix("In truth, the ")
+        && let Some((autonym, rest)) =
+            rest.split_once("'s priesthood taught the darkening would come on day ")
+        && !autonym.is_empty()
+        && let Some((taught_word, rest)) = rest.split_once("; it came on day ")
+        && let Some(actual_word) = rest.strip_suffix(" instead.")
+        && let Ok(taught_day) = taught_word.parse::<u64>()
+        && let Ok(actual_day) = actual_word.parse::<u64>()
+    {
+        return Some(ReckoningLine::Crisis {
+            autonym: autonym.to_string(),
+            taught_day,
+            actual_day,
+        });
+    }
     None
 }
 
@@ -2276,6 +2332,14 @@ fn rerender_reckoning_line(line: &ReckoningLine) -> String {
         } => format!(
             "In truth, the darkenings {epoch_phrase} number {}.",
             cardinal(*count)
+        ),
+        ReckoningLine::Crisis {
+            autonym,
+            taught_day,
+            actual_day,
+        } => format!(
+            "In truth, the {autonym}'s priesthood taught the darkening would come on day \
+             {taught_day}; it came on day {actual_day} instead."
         ),
     }
 }
@@ -4289,7 +4353,13 @@ mod tests {
                 // again." for both entries below).
                 "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
-                "The next darkening, it teaches, comes on day 36526.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36526 to 36531 -- the prophecy law's model changed, and
+                // this book-side pin was never re-pinned alongside
+                // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`
+                // (T2's own re-pin was worldgen-only). Matches
+                // LADDER_TABLE's seed 1 goblin row exactly.
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
                 "Among the Babako, the sky has darkened, now and again.".to_string(),
             ],
             "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
@@ -4298,10 +4368,21 @@ mod tests {
         );
         assert_eq!(
             seed1.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 6472.".to_string()],
+            vec![
+                // The Corrigendum T3: the naive model's own prior teaching
+                // (day 36528) missed the actual event (day 36522) -- a
+                // live crisis, proven also at
+                // `windows/worldgen/tests/diachronic.rs::
+                // a_crisis_fires_on_a_real_generated_sky` (seed 1, goblin).
+                "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 6472.".to_string(),
+            ],
             "seed 1: goblin holds 4010 (all-solar; below the 0.6 threshold, so it never \
              witnesses the lunar class), which falls short of the true count (6472, \
-             unwitnessed lunar events included)"
+             unwitnessed lunar events included); its priesthood also carries a live \
+             prediction crisis from an earlier teaching cycle"
         );
 
         // Re-pinned post-absorption (the Rains moisture epoch, merge
@@ -4317,19 +4398,35 @@ mod tests {
                 // The Book Polish (2026-07-20): re-pinned attributed.
                 "Among the Maetmea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Maetmea numbers the darkenings: 49.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36611 to 36337, matching LADDER_TABLE's seed 2
+                // goblin/hobgoblin row exactly (same underlying shared
+                // witness history, hence the identical taught day).
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
                 "Among the Waedwea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Waedwea numbers the darkenings: 49.".to_string(),
-                "The next darkening, it teaches, comes on day 36611.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
                 "Among the Ngkoshngta, the sky has darkened, now and again.".to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 81.".to_string()],
+            vec![
+                // The Corrigendum T3: both organized cultures share the
+                // same witness history, so both carry the identical
+                // prior-teaching crisis.
+                "In truth, the Maetmea's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
+                "In truth, the Waedwea's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 81.".to_string(),
+            ],
             "seed 2: the true count is still 81 (kobold witnesses that many events even as \
              folk memory only, unwitnessed by doctrine); goblin/hobgoblin hold only 49 and \
-             kobold now holds no cardinal at all — the margin fires from either shortfall"
+             kobold now holds no cardinal at all — the margin fires from either shortfall, \
+             plus both organized priesthoods carry a live prediction crisis"
         );
 
         // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
@@ -4346,19 +4443,34 @@ mod tests {
                 // lines below were byte-identical bare strings before.
                 "Among the Sdeozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                // The Corrigendum (the naive model, T1/T3): re-pinned from
+                // 36953 to 36125, matching LADDER_TABLE's seed 3
+                // goblin/hobgoblin row exactly.
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "Among the Shteozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Shteozqae numbers the darkenings: 32.".to_string(),
-                "The next darkening, it teaches, comes on day 36953.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
             ],
             "seed 3 post-Demesne: goblin (Sdeozqae) and hobgoblin (Shteozqae) are both \
              organized and each number 32; kobold no longer places at this seed"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
-            vec!["In truth, the darkenings of the first hundred years number 53.".to_string()],
+            vec![
+                // The Corrigendum T3: both organized cultures share the
+                // same witness history, so both carry the identical
+                // prior-teaching crisis.
+                "In truth, the Sdeozqae's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the Shteozqae's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the darkenings of the first hundred years number 53.".to_string(),
+            ],
             "seed 3: both organized cultures hold 32 (all-solar, below the lunar threshold), \
-             which falls short of the true count (53, unwitnessed lunar events included)"
+             which falls short of the true count (53, unwitnessed lunar events included), \
+             and both carry a live prediction crisis"
         );
     }
 
@@ -4366,8 +4478,9 @@ mod tests {
     /// is the CLI `--at` path's own implementation (one function, two
     /// callers) — it must equal `reckoning_epochs`'s per-epoch output for
     /// the same day, not just resemble it. Checked against seed 1's fixed
-    /// pair (day 0's empty arm, day 36525's six-line/one-margin epoch,
-    /// both pinned above in `the_reckoning_renders_the_epoch_pair`) by
+    /// pair (day 0's empty arm, day 36525's four-line/two-margin epoch —
+    /// the Corrigendum T3 added the crisis line to the margin — both
+    /// pinned above in `the_reckoning_renders_the_epoch_pair`) by
     /// comparing `lines` exactly (the substantive per-culture registers —
     /// identical regardless of caller) while `heading` and the margin's
     /// leading phrase are lens-parameterized closed strings, not part of
@@ -4406,9 +4519,19 @@ mod tests {
         );
         assert_eq!(
             day100.margin,
-            vec!["In truth, the darkenings by day 36525 number 6472.".to_string()],
+            vec![
+                // The Corrigendum T3: the crisis line's own text has no
+                // epoch phrase at all (unlike the shortfall line below), so
+                // it is byte-identical to the fixed pair's own margin line
+                // pinned in `the_reckoning_renders_the_epoch_pair`.
+                "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the darkenings by day 36525 number 6472.".to_string(),
+            ],
             "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
-             fixed pair's margin, phrased through reckoning_at's own ad hoc lens"
+             fixed pair's margin, phrased through reckoning_at's own ad hoc lens; the crisis \
+             line is unaffected by the lens (it carries no epoch phrase)"
         );
 
         let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
@@ -4652,6 +4775,23 @@ mod tests {
                 "The next darkening, it teaches, comes on day 9080.".to_string(),
             ],
             "Predictive + Some: the prediction line renders, integer-truncated"
+        );
+    }
+
+    /// The Corrigendum T3: [`reckoning_crisis_margin_line`]'s own format,
+    /// driven synthetically (world-free, mirrors the pattern above) —
+    /// integer-truncated taught/actual days, same convention as the
+    /// prediction line.
+    #[test]
+    fn the_crisis_margin_line_quotes_the_taught_and_true_days() {
+        let crisis = hornvale_worldgen::PredictionCrisis {
+            last_predicted: 41_200.3,
+            last_actual: 40_850.9,
+        };
+        assert_eq!(
+            reckoning_crisis_margin_line("Vavako", crisis),
+            "In truth, the Vavako's priesthood taught the darkening would come on day 41200; \
+             it came on day 40850 instead."
         );
     }
 

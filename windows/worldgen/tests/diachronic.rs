@@ -5,7 +5,8 @@
 
 use hornvale_astronomy::{EclipseBody, StdDays};
 use hornvale_worldgen::{
-    LadderRung, SettlementPins, SkyChoice, doctrine_of, ladder_of, observations_of, placed_peoples,
+    LadderRung, SettlementPins, SkyChoice, crisis_of, doctrine_of, ladder_of, observations_of,
+    placed_peoples,
 };
 
 /// Build a world with the shipped four-people component set, generated
@@ -423,4 +424,38 @@ fn diachronic_is_deterministic() {
         let ladder_b = format!("{:?}", ladder_of(&w, kind, t).unwrap());
         assert_eq!(ladder_a, ladder_b, "{kind}: ladder_of must be pure");
     }
+}
+
+#[test]
+fn a_crisis_fires_on_a_real_generated_sky() {
+    // C9 (The Corrigendum) T1/T3: prove the naive model's crisis
+    // detection fires on at least one live seed, not only on synthetic
+    // data. If none of 1..=200 shows one, WIDEN the search range and
+    // document the range that was needed -- never weaken
+    // PREDICTION_TOLERANCE_FRACTION or CRISIS_MISS_RUN just to force a
+    // hit; those are the spec's own considered values (decision ledger
+    // #2).
+    let mut found = None;
+    for seed in 1..=200u64 {
+        let w = generated(seed);
+        for (kind, _) in placed_peoples(&w) {
+            if let Some(crisis) = crisis_of(&w, kind, at(EPOCH_2)).unwrap() {
+                found = Some((seed, kind.to_string(), crisis));
+                break;
+            }
+        }
+        if found.is_some() {
+            break;
+        }
+    }
+    let (seed, kind, crisis) = found.unwrap_or_else(|| {
+        panic!(
+            "no seed in 1..=200 exhibited a live prediction crisis by day {EPOCH_2} -- widen \
+            the search range rather than shipping this mechanism unexercised"
+        )
+    });
+    assert!(
+        crisis.last_predicted != crisis.last_actual,
+        "seed {seed} {kind}: a crisis's own last predicted/actual days must differ"
+    );
 }
