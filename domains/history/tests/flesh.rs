@@ -68,6 +68,25 @@ fn a_regional_seat_leaves_a_reliquary_even_when_old() {
 }
 
 #[test]
+fn a_young_migrated_goblin_hamlet_leaves_a_doll() {
+    // Nathan's call, 2026-07-21, archaeological-realism: climate abandonment
+    // (the real world's dominant end) is not the clean sweep an "orderly
+    // departure" once modelled. A young, hamlet-scale people who walk away
+    // from a failing cell leave modest personal residue behind — the
+    // abandoned clearing with a lost doll is precisely the vision.
+    let mut occ = burned_goblin_village();
+    occ.cause = Some(CauseOfEnd::Migrated);
+    occ.ended_by = Ended::Nature; // an orderly climate departure, no antagonist
+    let r = residue_of(&occ, 2000.0, Seed(7)); // died 1980, now 2000 -> 20y old
+    assert!(r.items.contains(&ResidueItem::Doll));
+
+    // An older migrated ruin has weathered to nothing — the belongings a
+    // hamlet leaves in the grass do not outlast the centuries.
+    let old = residue_of(&occ, 50_000.0, Seed(7));
+    assert!(old.items.is_empty());
+}
+
+#[test]
 fn structures_are_deterministic_and_gated_by_function() {
     let occ = burned_goblin_village();
     let a = structures_of(&occ, Seed(7));

@@ -35,11 +35,13 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-worldgen",
 ]
 
 [[package]]

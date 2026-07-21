@@ -105,6 +105,31 @@ run -p hornvale -- possess --world "$wsky" --script scripts/possession-over-time
 } > book/src/gallery/possession-over-time-seed-42.md
 rm -f "$possess_ot_tmp"
 
+# The legibility surface (living-community, T7): a real seed-42 site read back
+# off the ledger as prose — its stratigraphy of occupation layers plus the
+# derived flesh in the present-day grass. Cell 36918 is a genuine abandoned
+# clearing on this world: a bugbear lineage that clung to the same ground
+# across five generations, dwindling as the ice crept down, until the last few
+# walked away and left a child's doll behind. The framing line below is
+# hand-authored (the render replaces the file body, so re-emit it here); the
+# fenced block is the `history` verb's exact, drift-checked output.
+echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
+{
+    printf '# An Abandoned Clearing — Seed 42\n\n'
+    printf 'A site read back out of the ledger by the `history` verb: the stratigraphy\n'
+    printf 'of every people that ever settled one cell, oldest layer deepest, and the\n'
+    printf 'derived flesh — the structures they raised, the residue in the grass\n'
+    printf 'today. Nothing here replays the deep-history bake; it is all a\n'
+    printf '*present-as-query* over committed occupation facts, with the flesh\n'
+    printf '(structures, residue) derived on demand and never committed. This is a\n'
+    printf 'real clearing on the world of seed 42 — cell 36918 — where a bugbear\n'
+    printf 'lineage returned five times over two centuries, smaller each time, as the\n'
+    printf 'glaciers advanced, until the ice won and a doll was left in the grass.\n\n'
+    printf '```text\n'
+    run -p hornvale -- history --world "$wsky" --site 36918
+    printf '```\n'
+} > book/src/gallery/history-seed-42.md
+
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
     > book/src/gallery/elevation-seed-42.md

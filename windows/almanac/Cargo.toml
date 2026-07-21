@@ -7,6 +7,7 @@ description = "Hornvale almanac window: generated world documents."
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
+hornvale-history = { path = "../../domains/history" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-climate = { path = "../../domains/climate" }
 hornvale-terrain = { path = "../../domains/terrain" }
@@ -14,3 +15,10 @@ hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-species = { path = "../../domains/species" }
+
+[dev-dependencies]
+# Dev-only: the site-render acceptance test commits a hand-built occupation
+# skeleton via the composition root's `emit_history`. This is a dev-dependency
+# CYCLE (worldgen depends on almanac normally); Cargo permits cycles that pass
+# through a dev-dependency, and it never enters almanac's own build graph.
+hornvale-worldgen = { path = "../worldgen" }

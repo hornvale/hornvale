@@ -142,8 +142,23 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed) -> Residue {
                 }
             }
             CauseOfEnd::Migrated => {
-                // An orderly departure takes its belongings; nothing
-                // personal remains.
+                // Climate abandonment is the real world's dominant end
+                // (a cell the paleoclimate turned hostile, walked away from
+                // over a generation). Real archaeology is abandonment-
+                // driven: people who leave slowly do not take everything.
+                // A young, hamlet-scale departure leaves modest personal
+                // residue — a child's doll left in the grass, a worked pot
+                // otherwise; older migrated ruins weather to nothing.
+                // (Nathan's call, 2026-07-21, archaeological-realism.)
+                if age < YOUNG_RUIN_AGE {
+                    if hamlet_scale {
+                        items.push(ResidueItem::Doll);
+                    } else {
+                        items.push(ResidueItem::Tool);
+                    }
+                }
+                // Beyond YOUNG_RUIN_AGE, an orderly departure's remnants
+                // have long since weathered away — nothing personal remains.
             }
         }
     }

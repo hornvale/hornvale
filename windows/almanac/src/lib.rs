@@ -2,6 +2,8 @@
 //! depend on domains (they present them); domains never depend on windows.
 #![warn(missing_docs)]
 
+pub mod history;
+
 use hornvale_astronomy::SkyReport;
 use hornvale_climate::ClimateReport;
 use hornvale_kernel::Phenomenon;
