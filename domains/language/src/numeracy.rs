@@ -4,7 +4,9 @@
 //! `docs/superpowers/specs/2026-07-20-few-and-many-design.md`.
 #![warn(missing_docs)]
 
+use crate::streams;
 use hornvale_kernel::Seed;
+use hornvale_kernel::seed::StreamLabel;
 
 /// A tongue's numeral-system rung: how far its counting words go past the
 /// near-universal subitizing floor. Ordered least to most precise
@@ -54,10 +56,10 @@ fn rung_from_bucket(bucket: usize) -> NumeracyRung {
 /// type-audit: bare-ok(identifier-text)
 pub fn numeracy_rung(seed: &Seed, species: &str) -> NumeracyRung {
     let mut stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("grammar")
-        .derive("numeracy-rung")
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::NUMERACY_RUNG)
         .stream();
     rung_from_bucket(
         stream

@@ -213,6 +213,8 @@
 - [The Disposition](./chronicle/the-disposition.md)
 - [The Mettle](./chronicle/the-mettle.md)
 - [The Bane](./chronicle/the-bane.md)
+- [The Massing](./chronicle/the-massing.md)
+- [The Given Word](./chronicle/the-given-word.md)
 - [The Quarry](./chronicle/the-quarry.md)
 
 # Appendix: The Frontier

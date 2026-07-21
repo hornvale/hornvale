@@ -61,6 +61,9 @@ pub mod register;
 /// gate, the β-sharpened schema draw, and the closed agentive lexeme
 /// tables.
 pub mod schemas;
+/// Seed-derivation labels for this crate (PROC-17): the centralized
+/// `StreamLabel` constants every draw site derives through.
+pub mod streams;
 
 pub use account::{
     Account, AccountEntry, AccountParams, Disposition, GroundFact, LossReason, NeededConcept,

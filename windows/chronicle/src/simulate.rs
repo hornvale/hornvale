@@ -12,6 +12,7 @@
 
 use crate::config::{DeliveryMode, EventKind, NodeId, RoleHandle, SoundingConfig};
 use crate::generate::seed_world;
+use crate::streams;
 use crate::world::{BioEntry, Community, Ruin, World};
 use std::collections::BTreeMap;
 
@@ -36,8 +37,8 @@ pub fn run_with(config: &SoundingConfig, mode: DeliveryMode) -> World {
     let founding_cap = (config.communities as usize).saturating_mul(3).max(1);
 
     let mut pending: BTreeMap<u32, Vec<(NodeId, f64)>> = BTreeMap::new();
-    let mut ev = config.seed.derive("chronicle/events").stream();
-    let mut deliver_ev = config.seed.derive("chronicle/deliver").stream();
+    let mut ev = config.seed.derive(streams::EVENTS).stream();
+    let mut deliver_ev = config.seed.derive(streams::DELIVER).stream();
 
     for epoch in 0..config.epochs {
         let n = world.communities.len();

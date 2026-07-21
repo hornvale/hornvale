@@ -162,6 +162,7 @@ pub fn weather_seed(seed: Seed) -> Seed {
 mod tests {
     use super::*;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::seed::StreamLabel;
 
     // Propensity tracks the fields — EACH driver in isolation. Holding the other
     // three fixed, raising any one driver must raise propensity; so dropping any
@@ -329,5 +330,6 @@ mod tests {
         assert!((-1.0..=1.0).contains(&a), "phase in range: {a}");
     }
 
-    const WEATHER_PHASE_TEST: &str = "climate/weather/phase/v1";
+    const WEATHER_PHASE_TEST: StreamLabel<'static> =
+        StreamLabel::from_static("climate/weather/phase/v1");
 }

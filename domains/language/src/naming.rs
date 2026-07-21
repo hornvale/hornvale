@@ -14,7 +14,7 @@
 //! `MorphOptions::honorifics` is set by the composition root (status basis
 //! `Rank` → `true`), prefixed with a short bound honorific affix. Every
 //! draw is rooted at
-//! `seed.derive("language").derive(species).derive("name").derive(kind_label).derive(&salt.to_string()).stream()`
+//! `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::NAME).derive(StreamLabel::dynamic(kind_label)).derive(StreamLabel::dynamic(&salt.to_string())).stream()`
 //! so a name is a pure, single deterministic function of `(seed, species,
 //! kind, salt)` — no re-draw, no dependence on any other name. Uniqueness is
 //! not guaranteed here: the phonology name space is vast enough that
@@ -26,7 +26,7 @@
 //!
 //! [`Namer::glossed_name`] (The Words, Task 9) is a second, later epoch of
 //! the same `name` (retired but never deleted — old saves still read it):
-//! rooted one leg deeper (`…derive(kind_label).derive("v2").derive(&salt)`),
+//! rooted one leg deeper (`…derive(StreamLabel::dynamic(kind_label)).derive(streams::V2).derive(StreamLabel::dynamic(&salt))`),
 //! it compounds 1-2 of a [`SiteConcepts`] site's actual lexicon words
 //! instead of always drawing a bare stem, so a name becomes a small true
 //! story about the entity it names, with a gloss to match. It stays exactly
@@ -42,6 +42,8 @@ use crate::phoneme::{
     Manner, Segment, espeak_word, ipa, romanize, tone_mark_ipa, tone_mark_roman, tone_of,
 };
 use crate::phonology::Phonology;
+use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
 /// What kind of name is being drawn; selects the morphology rules and the
@@ -174,11 +176,11 @@ impl<'a> Namer<'a> {
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed
-            .derive("language")
-            .derive(&self.species)
-            .derive("name")
-            .derive(kind.label())
-            .derive(&salt.to_string())
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(&self.species))
+            .derive(streams::NAME)
+            .derive(StreamLabel::dynamic(kind.label()))
+            .derive(StreamLabel::dynamic(&salt.to_string()))
             .stream();
         self.build_name(kind, morph, &mut stream)
     }
@@ -220,12 +222,12 @@ impl<'a> Namer<'a> {
     ) -> (GeneratedName, String) {
         let mut stream = self
             .seed
-            .derive("language")
-            .derive(&self.species)
-            .derive("name")
-            .derive(kind.label())
-            .derive("v2")
-            .derive(&salt.to_string())
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(&self.species))
+            .derive(streams::NAME)
+            .derive(StreamLabel::dynamic(kind.label()))
+            .derive(streams::V2)
+            .derive(StreamLabel::dynamic(&salt.to_string()))
             .stream();
 
         let candidates: Vec<&str> = site

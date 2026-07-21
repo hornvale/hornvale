@@ -50,9 +50,9 @@ fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
 /// under `terrain/coast-render` — no `Stream` is ever consumed.
 fn coast_noise(noise_seed: Seed, p: [f64; 3]) -> f64 {
     let slices = [
-        (noise_seed.derive("slice-0"), p[0], p[1]),
-        (noise_seed.derive("slice-1"), p[1], p[2]),
-        (noise_seed.derive("slice-2"), p[2], p[0]),
+        (noise_seed.derive(streams::CRUST_SLICE_0), p[0], p[1]),
+        (noise_seed.derive(streams::CRUST_SLICE_1), p[1], p[2]),
+        (noise_seed.derive(streams::CRUST_SLICE_2), p[2], p[0]),
     ];
     let mean = slices
         .iter()

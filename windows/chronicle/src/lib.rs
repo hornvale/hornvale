@@ -10,12 +10,14 @@ mod simulate;
 mod world;
 
 pub mod measure;
+pub mod streams;
 pub mod sweep;
 
 pub use config::{
     DeliveryMode, EdgeKind, EventKind, NodeId, RoleHandle, SoundingConfig, SpeciesId,
 };
 pub use simulate::{run, run_with};
+pub use streams::stream_labels;
 pub use world::{
     BioEntry, Census, Community, Edge, Ruin, SpeciesStub, World, biography_digest, census,
 };

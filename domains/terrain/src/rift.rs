@@ -16,6 +16,7 @@
 use crate::crust::{CONTACT_FACTOR, Craton, assemble_cratons, sphere_fbm01};
 use crate::plates::{cross, dot, norm, normalize};
 use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, math};
 
 /// Slack added to `crust::CONTACT_FACTOR` when deciding whether two
@@ -176,8 +177,8 @@ pub fn draw_rift(terrain_seed: Seed, cratons: &[Craton]) -> RiftHistory {
             } else {
                 (cratons[j].id, cratons[i].id)
             };
-            let noise_seed = rift_root.derive(&format!("seam-{a}-{b}"));
-            let cren_seed = noise_seed.derive("crenulation");
+            let noise_seed = rift_root.derive(StreamLabel::dynamic(&format!("seam-{a}-{b}")));
+            let cren_seed = noise_seed.derive(streams::RIFT_CRENULATION);
             seams.push(Seam {
                 a,
                 b,
