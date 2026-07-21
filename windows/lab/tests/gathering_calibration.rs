@@ -275,7 +275,7 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// allowance above Σ K; population at least a quarter of Σ K) the
 /// pre-cutover guard used, so those bounds are kept as-is rather than
 /// retuned.
-// FLAGGED / DEFERRED under The Living Community epoch (T5c fallout sweep).
+// FLAGGED — GENUINE BREAK under The Living Community epoch (T5c fallout sweep).
 // This guard asserts the DRAFT settlement placer's population semantics:
 // committed population is the instantaneous demography catchment, so it stays
 // AT OR BELOW Σ K (measured ratio ≈0.3482 pre-epoch). History is the sole
@@ -285,15 +285,13 @@ fn rank_size_slope_is_observed_not_tuned() {
 // 64.02, Σ committed population ≈ 10029 — population is now ~156× the
 // instantaneous capacity, a STRUCTURAL inversion of this bound, not a moved
 // number to re-pin. The conservation-against-instantaneous-K invariant is
-// superseded BY DESIGN (see the Task 5 report's CONCERN 1). What the
-// replacement calibration bound should be (e.g. against SETTLERS_PER_CAPACITY
-// × Σ K × a growth ceiling) is a product-semantics decision for the
-// controller, above a fallout sweep's authority — so this test is deferred
-// (not silently weakened to green) pending that decision.
+// superseded by the epoch's population model (see the Task 5 report's
+// CONCERN 1). Per ADR 0016, a failing preregistered calibration is NOT
+// quieted with `#[ignore]` and is NOT loosened to fit; it is left reporting
+// its honest failing measurement until the controller decides the replacement
+// bound (e.g. against SETTLERS_PER_CAPACITY × Σ K plus a growth ceiling). This
+// test therefore fails on purpose — see the T5c report's genuine-break flag.
 #[test]
-#[ignore = "epoch supersedes the draft placer's capacity-conservation semantics; \
-            committed population is now history-accumulated (~156x instantaneous K) — \
-            awaits a controller decision on the replacement bound (T5c)"]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
     let world = hornvale_worldgen::build_world(
