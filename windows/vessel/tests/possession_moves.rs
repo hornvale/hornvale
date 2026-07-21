@@ -259,19 +259,17 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
         "the home settlement's NPC must be co-located at the start: {early}"
     );
 
-    // Wait to day 3.5: short of the seek crossing for any species (with
-    // `time_horizon` anticipation — The Temperament followup #4 — a foresighted
-    // creature's effective threshold is `act − rise·horizon·HORIZON_DAYS`, which
-    // for the most foresighted species still crosses only past day 4, so at day
-    // 3.5 every NPC is still away from its resource and co-located, not yet
-    // seeking), but the drive has risen (3.5 * 0.15 = 0.525) past
-    // RESTLESS_AROUSAL, so the affect read (spec §7) now reads the rising edge —
-    // "grows restless", not "seems content" anymore.
+    // Wait to day 3.5: by now sleep-debt fatigue (The Slumber, followup #3) has
+    // risen past its threshold, so the co-located NPC has grown tired and
+    // settles down to rest — the felt state has moved off "seems content" to a
+    // resting read. (This replaces the earlier thirst-restlessness pin: with a
+    // third drive, fatigue crosses first, so rest is what a mid-cycle read now
+    // surfaces.)
     session.handle("wait 3");
     let later = out_text(session.handle("needs"));
     assert!(
-        later.contains("grows restless"),
-        "a risen drive reads as restless, not calm: {later}"
+        later.contains("settles down to rest"),
+        "a tired NPC reads as resting, not calm: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
