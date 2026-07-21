@@ -59,7 +59,7 @@ mod tests {
 
     #[test]
     fn starfield_is_deterministic() {
-        let seed = Seed(42).derive("astronomy");
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let a = starfield(seed);
         let b = starfield(seed);
         assert_eq!(a, b);
@@ -67,14 +67,14 @@ mod tests {
 
     #[test]
     fn starfield_count_is_in_range() {
-        let seed = Seed(42).derive("astronomy");
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let stars = starfield(seed);
         assert!((100..=300).contains(&stars.len()));
     }
 
     #[test]
     fn star_positions_are_valid() {
-        let seed = Seed(42).derive("astronomy");
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let stars = starfield(seed);
         for star in &stars {
             assert!(
@@ -96,7 +96,7 @@ mod tests {
         // Partition declination into six 30° bands and assert each is nonempty.
         // With sphere-uniform sampling and ≥100 stars, equatorial bands hold
         // most stars; polar bands ~3+ in expectation.
-        let seed = Seed(42).derive("astronomy");
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let stars = starfield(seed);
 
         let mut bands = [0; 6];
@@ -130,7 +130,7 @@ mod tests {
         let system_a = generate(world_seed, &SkyPins::default()).expect("first generation failed");
 
         // Second generation: with a starfield call before it.
-        let _stars = starfield(world_seed.derive("astronomy"));
+        let _stars = starfield(world_seed.derive_typed(streams::ROOT));
         let system_b = generate(world_seed, &SkyPins::default()).expect("second generation failed");
 
         assert_eq!(system_a, system_b, "genesis was affected by starfield call");

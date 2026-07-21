@@ -6,6 +6,7 @@
 //! through `pins::parse_pin`).
 
 use crate::anchor::Rotation;
+use crate::streams;
 use crate::system::GenesisOutcome;
 use hornvale_kernel::{EntityId, Fact, LedgerError, Value, World};
 
@@ -587,7 +588,7 @@ pub fn genesis(
     // derivation genesis itself performs (`system::generate`), so the
     // catalog `figures` clusters over is exactly the one the almanac and
     // lab metrics see.
-    let astronomy_seed = world.seed.derive(crate::streams::ROOT);
+    let astronomy_seed = world.seed.derive_typed(streams::ROOT);
     let figs = crate::figures::figures(astronomy_seed, system);
     world.ledger.commit(
         fact(subject, FIGURE_COUNT, Value::Number(figs.len() as f64)),
@@ -1143,7 +1144,7 @@ mod tests {
     fn genesis_commits_a_figure_count_fact_matching_figures_len_across_a_seed_sweep() {
         for seed in 0..16u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let expected = crate::figures::figures(astronomy_seed, &outcome.system).len();
 
             let mut w = world_with(seed);
@@ -1170,7 +1171,7 @@ mod tests {
         let mut found = false;
         for seed in 0..64u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let figs = crate::figures::figures(astronomy_seed, &outcome.system);
             if figs.len() < 2 {
                 continue;
@@ -1221,7 +1222,7 @@ mod tests {
     fn figure_on_ecliptic_flag_tracks_whether_any_figure_qualifies() {
         for seed in 0..16u64 {
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let figs = crate::figures::figures(astronomy_seed, &outcome.system);
             let any_on_ecliptic = figs.iter().any(|f| f.on_ecliptic);
 

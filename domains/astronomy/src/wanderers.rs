@@ -152,21 +152,21 @@ mod tests {
 
     #[test]
     fn wanderers_are_deterministic_and_bounded() {
-        let star = generate_star(Seed(42).derive(crate::streams::ROOT));
+        let star = generate_star(Seed(42).derive_typed(crate::streams::ROOT));
         let anchor = generate_anchor(
-            Seed(42).derive(crate::streams::ROOT),
+            Seed(42).derive_typed(crate::streams::ROOT),
             &star,
             &SkyPins::default(),
         )
         .unwrap();
         let a = generate_wanderers(
-            Seed(42).derive(crate::streams::ROOT),
+            Seed(42).derive_typed(crate::streams::ROOT),
             &star,
             &anchor,
             &SkyPins::default(),
         );
         let b = generate_wanderers(
-            Seed(42).derive(crate::streams::ROOT),
+            Seed(42).derive_typed(crate::streams::ROOT),
             &star,
             &anchor,
             &SkyPins::default(),
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn kepler_holds_and_periods_are_monotone_in_axis() {
         for seed in 0..64u64 {
-            let s = Seed(seed).derive(crate::streams::ROOT);
+            let s = Seed(seed).derive_typed(crate::streams::ROOT);
             let star = generate_star(s);
             let anchor = generate_anchor(s, &star, &SkyPins::default()).unwrap();
             let ws = generate_wanderers(s, &star, &anchor, &SkyPins::default());
@@ -211,9 +211,9 @@ mod tests {
 
     #[test]
     fn wanderer_count_pin_is_honored_for_every_legal_value() {
-        let star = generate_star(Seed(42).derive(crate::streams::ROOT));
+        let star = generate_star(Seed(42).derive_typed(crate::streams::ROOT));
         let anchor = generate_anchor(
-            Seed(42).derive(crate::streams::ROOT),
+            Seed(42).derive_typed(crate::streams::ROOT),
             &star,
             &SkyPins::default(),
         )
@@ -223,8 +223,12 @@ mod tests {
                 wanderers: Some(count),
                 ..SkyPins::default()
             };
-            let wanderers =
-                generate_wanderers(Seed(42).derive(crate::streams::ROOT), &star, &anchor, &pins);
+            let wanderers = generate_wanderers(
+                Seed(42).derive_typed(crate::streams::ROOT),
+                &star,
+                &anchor,
+                &pins,
+            );
             assert_eq!(wanderers.len() as u32, count);
         }
     }
@@ -232,7 +236,7 @@ mod tests {
     #[test]
     fn no_wanderer_crowds_the_anchor() {
         for seed in 0..64u64 {
-            let s = Seed(seed).derive(crate::streams::ROOT);
+            let s = Seed(seed).derive_typed(crate::streams::ROOT);
             let star = generate_star(s);
             let anchor = generate_anchor(s, &star, &SkyPins::default()).unwrap();
             for w in generate_wanderers(s, &star, &anchor, &SkyPins::default()) {

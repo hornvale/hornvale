@@ -4558,7 +4558,7 @@ pub fn night_sky_lines(
     // Figures (night-sky stage 3): a single count/ecliptic summary line,
     // never rendered for a sky with no figures at all. `world.seed` derives
     // the same astronomy seed `system::generate` and the lab metrics use.
-    let astronomy_seed = world.seed.derive(ASTRONOMY_STREAM_ROOT);
+    let astronomy_seed = world.seed.derive_typed(ASTRONOMY_STREAM_ROOT);
     let figs = figures(astronomy_seed, system);
     let figure_lines = if figs.is_empty() {
         Vec::new()

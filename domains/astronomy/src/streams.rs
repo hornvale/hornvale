@@ -1,8 +1,10 @@
 //! Seed-derivation labels for astronomy (permanent contracts, spec §3).
 
+use hornvale_kernel::seed::StreamLabel;
+
 /// Root stream label for astronomy.
-/// type-audit: bare-ok(identifier-text)
-pub const ROOT: &str = "astronomy";
+/// type-audit: bare-ok(identifier-text: return)
+pub const ROOT: StreamLabel<'static> = StreamLabel::from_static("astronomy");
 /// Star mass draw.
 /// type-audit: bare-ok(identifier-text)
 pub const STAR_MASS: &str = "star-mass";
@@ -87,8 +89,8 @@ mod tests {
     /// added here but omitted from `stream_labels()` in `lib.rs`, so the
     /// generated stream-manifest page silently under-documented a frozen
     /// save-format contract, and nothing caught it).
+    /// ROOT is a StreamLabel, so it's handled separately below.
     const ALL_LABELS: &[&str] = &[
-        ROOT,
         STAR_MASS,
         ANCHOR_MASS,
         ROTATION,
@@ -123,12 +125,17 @@ mod tests {
             .into_iter()
             .map(|(label, _)| label)
             .collect();
+        // Check ROOT separately (it's a StreamLabel, not &str)
+        let root_str = ROOT.as_str();
+        assert!(
+            published.contains(root_str),
+            "stream label constant ROOT (qualified {root_str:?}) is missing from \
+             stream_labels() — publish it or the generated stream-manifest page silently \
+             under-documents a frozen save-format contract"
+        );
+        // Check all other labels
         for &label in ALL_LABELS {
-            let qualified = if label == ROOT {
-                label.to_string()
-            } else {
-                format!("astronomy/{label}")
-            };
+            let qualified = format!("astronomy/{label}");
             assert!(
                 published.contains(qualified.as_str()),
                 "stream label constant {label:?} (qualified {qualified:?}) is missing from \
@@ -138,7 +145,7 @@ mod tests {
         }
         assert_eq!(
             published.len(),
-            ALL_LABELS.len(),
+            ALL_LABELS.len() + 1, // +1 for ROOT
             "stream_labels() and ALL_LABELS have diverged in count — update ALL_LABELS in \
              streams.rs to match"
         );

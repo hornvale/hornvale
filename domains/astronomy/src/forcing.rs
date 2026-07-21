@@ -191,7 +191,7 @@ mod tests {
         use crate::pins::SkyPins;
         use crate::star::generate_star;
         use hornvale_kernel::Seed;
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let star = generate_star(seed);
         let anchor = generate_anchor(seed, &star, &SkyPins::default()).unwrap();
         let a = generate_forcing(seed, &anchor, &[], &SkyPins::default());
@@ -209,7 +209,7 @@ mod tests {
         use crate::pins::{MoonsPin, SkyPins};
         use crate::star::generate_star;
         use hornvale_kernel::Seed;
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let star = generate_star(seed);
         let anchor = generate_anchor(seed, &star, &SkyPins::default()).unwrap();
         let mooned = SkyPins {

@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn positions_are_on_the_sphere_and_deterministic() {
-        let seed = Seed(7).derive("astronomy");
+        let seed = Seed(7).derive_typed(streams::ROOT);
         let a = generate_neighbors(seed, &SkyPins::default());
         let b = generate_neighbors(seed, &SkyPins::default());
         assert_eq!(a, b);

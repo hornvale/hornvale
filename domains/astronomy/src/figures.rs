@@ -9,6 +9,8 @@
 
 use crate::sky_position::{EquatorialCoord, ecliptic_of};
 use crate::starfield::starfield;
+#[allow(unused_imports)]
+use crate::streams;
 use crate::system::StarSystem;
 use hornvale_kernel::Seed;
 use hornvale_kernel::math;
@@ -290,7 +292,7 @@ mod tests {
     #[test]
     fn figures_are_deterministic() {
         let seed = Seed(42);
-        let astronomy_seed = seed.derive("astronomy");
+        let astronomy_seed = seed.derive_typed(streams::ROOT);
         let outcome = generate(seed, &SkyPins::default()).unwrap();
         let a = figures(astronomy_seed, &outcome.system);
         let b = figures(astronomy_seed, &outcome.system);
@@ -300,7 +302,7 @@ mod tests {
     #[test]
     fn every_figure_meets_the_minimum_member_count() {
         for seed in 0..32u64 {
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             for figure in figures(astronomy_seed, &outcome.system) {
                 assert!(
@@ -316,7 +318,7 @@ mod tests {
     #[test]
     fn describe_has_no_digits_and_names_a_region() {
         for seed in 0..32u64 {
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             for figure in figures(astronomy_seed, &outcome.system) {
                 let text = describe(&figure);
@@ -373,7 +375,7 @@ mod tests {
     #[test]
     fn on_ecliptic_matches_an_independent_recomputation_across_seeds() {
         for seed in 0..32u64 {
-            let astronomy_seed = Seed(seed).derive("astronomy");
+            let astronomy_seed = Seed(seed).derive_typed(streams::ROOT);
             let outcome = generate(Seed(seed), &SkyPins::default()).unwrap();
             let obliquity_mean = outcome.system.forcing.obliquity_mean;
             for figure in figures(astronomy_seed, &outcome.system) {

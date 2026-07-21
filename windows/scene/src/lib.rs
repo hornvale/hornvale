@@ -921,7 +921,7 @@ pub fn neighbors_scene(world: &World) -> Result<NeighborsScene, SceneError> {
             dec_deg: n.declination,
         })
         .collect();
-    let astronomy_seed = world.seed.derive(hornvale_astronomy::streams::ROOT);
+    let astronomy_seed = world.seed.derive_typed(hornvale_astronomy::streams::ROOT);
     let stars = hornvale_astronomy::starfield(astronomy_seed)
         .into_iter()
         .map(|s| FieldStarElem {
