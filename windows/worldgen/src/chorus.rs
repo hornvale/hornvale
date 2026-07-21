@@ -413,11 +413,11 @@ fn day_schema_draw(
     let candidates = admitted(FactShape::CyclicEvent);
     let prior = schema_prior(subsistence, sociality, &candidates);
     let mut schema_stream = world_seed
-        .derive_typed(language_streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::SCHEMA)
-        .derive_typed(streams::SKY)
-        .derive_typed(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
+        .derive(language_streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::SCHEMA)
+        .derive(streams::SKY)
+        .derive(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
         .stream();
     let schema = select_schema(&prior, beta, &mut schema_stream)?;
     Some((schema, rank))
@@ -470,10 +470,10 @@ fn explain_day(
     let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
-            .derive_typed(language_streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(species))
-            .derive_typed(streams::LEXEME)
-            .derive_typed(StreamLabel::dynamic(predicate))
+            .derive(language_streams::ROOT)
+            .derive(StreamLabel::dynamic(species))
+            .derive(streams::LEXEME)
+            .derive(StreamLabel::dynamic(predicate))
             .stream();
         select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
@@ -543,11 +543,11 @@ fn explain_moons(
     let candidates = admitted(FactShape::Count);
     let prior = schema_prior(subsistence, sociality, &candidates);
     let mut schema_stream = world_seed
-        .derive_typed(language_streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::SCHEMA)
-        .derive_typed(streams::SKY)
-        .derive_typed(StreamLabel::dynamic(fact_shape_key(FactShape::Count)))
+        .derive(language_streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::SCHEMA)
+        .derive(streams::SKY)
+        .derive(StreamLabel::dynamic(fact_shape_key(FactShape::Count)))
         .stream();
     let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
         return;
@@ -557,10 +557,10 @@ fn explain_moons(
     let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
-            .derive_typed(language_streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(species))
-            .derive_typed(streams::LEXEME)
-            .derive_typed(StreamLabel::dynamic(predicate))
+            .derive(language_streams::ROOT)
+            .derive(StreamLabel::dynamic(species))
+            .derive(streams::LEXEME)
+            .derive(StreamLabel::dynamic(predicate))
             .stream();
         select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
@@ -625,12 +625,12 @@ fn explain_moon_ratio(
     let candidates = admitted(FactShape::CyclicEvent);
     let prior = schema_prior(subsistence, sociality, &candidates);
     let mut schema_stream = world_seed
-        .derive_typed(language_streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::SCHEMA)
-        .derive_typed(streams::SKY)
-        .derive_typed(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
-        .derive_typed(StreamLabel::dynamic(predicate))
+        .derive(language_streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::SCHEMA)
+        .derive(streams::SKY)
+        .derive(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
+        .derive(StreamLabel::dynamic(predicate))
         .stream();
     let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
         return;
@@ -640,10 +640,10 @@ fn explain_moon_ratio(
     let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
-            .derive_typed(language_streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(species))
-            .derive_typed(streams::LEXEME)
-            .derive_typed(StreamLabel::dynamic(predicate))
+            .derive(language_streams::ROOT)
+            .derive(StreamLabel::dynamic(species))
+            .derive(streams::LEXEME)
+            .derive(StreamLabel::dynamic(predicate))
             .stream();
         select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
@@ -920,11 +920,11 @@ fn doctrine_explain_day(
     let candidates = admitted(FactShape::CyclicEvent);
     let prior = doctrine_schema_prior(subsistence, sociality, &candidates);
     let mut schema_stream = world_seed
-        .derive_typed(language_streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::DOCTRINE_SCHEMA)
-        .derive_typed(streams::SKY)
-        .derive_typed(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
+        .derive(language_streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::DOCTRINE_SCHEMA)
+        .derive(streams::SKY)
+        .derive(StreamLabel::dynamic(fact_shape_key(FactShape::CyclicEvent)))
         .stream();
     let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
         return;
@@ -934,10 +934,10 @@ fn doctrine_explain_day(
     let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
-            .derive_typed(language_streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(species))
-            .derive_typed(streams::DOCTRINE_LEXEME)
-            .derive_typed(StreamLabel::dynamic(predicate))
+            .derive(language_streams::ROOT)
+            .derive(StreamLabel::dynamic(species))
+            .derive(streams::DOCTRINE_LEXEME)
+            .derive(StreamLabel::dynamic(predicate))
             .stream();
         select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {
@@ -1007,11 +1007,11 @@ fn doctrine_explain_moons(
     let candidates = admitted(FactShape::Count);
     let prior = doctrine_schema_prior(subsistence, sociality, &candidates);
     let mut schema_stream = world_seed
-        .derive_typed(language_streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::DOCTRINE_SCHEMA)
-        .derive_typed(streams::SKY)
-        .derive_typed(StreamLabel::dynamic(fact_shape_key(FactShape::Count)))
+        .derive(language_streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::DOCTRINE_SCHEMA)
+        .derive(streams::SKY)
+        .derive(StreamLabel::dynamic(fact_shape_key(FactShape::Count)))
         .stream();
     let Some(schema) = select_schema(&prior, beta, &mut schema_stream) else {
         return;
@@ -1021,10 +1021,10 @@ fn doctrine_explain_moons(
     let lexeme = if schema == SchemaId::Agentive {
         let lex_candidates = lexemes_for(SchemaId::Agentive, sub_frame_of(subsistence));
         let mut lexeme_stream = world_seed
-            .derive_typed(language_streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(species))
-            .derive_typed(streams::DOCTRINE_LEXEME)
-            .derive_typed(StreamLabel::dynamic(predicate))
+            .derive(language_streams::ROOT)
+            .derive(StreamLabel::dynamic(species))
+            .derive(streams::DOCTRINE_LEXEME)
+            .derive(StreamLabel::dynamic(predicate))
             .stream();
         select_lexeme(lex_candidates, &mut lexeme_stream)
     } else {

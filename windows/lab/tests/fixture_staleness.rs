@@ -55,7 +55,7 @@ fn window_start(csv: &str, span: u64) -> Option<u64> {
     if span < MIN_SPAN_FOR_WINDOW {
         return None;
     }
-    let mut stream = Seed(0).derive_typed(StreamLabel::dynamic(csv)).stream();
+    let mut stream = Seed(0).derive(StreamLabel::dynamic(csv)).stream();
     let hi = u32::try_from(span - 3).expect("census spans fit in u32");
     Some(u64::from(stream.range_u32(3, hi)))
 }

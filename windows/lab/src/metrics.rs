@@ -781,7 +781,7 @@ pub fn registry() -> Vec<Metric> {
             doc: "Number of star figures the reference observer's sky holds",
             summary: SummaryKind::Categorical,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
-                let astronomy_seed = v.world.seed.derive_typed(ASTRONOMY_STREAM_ROOT);
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 MetricValue::Text(
                     hornvale_astronomy::figures(astronomy_seed, &v.system)
                         .len()
@@ -794,7 +794,7 @@ pub fn registry() -> Vec<Metric> {
             doc: "Member count of the largest star figure (0 if none)",
             summary: SummaryKind::Categorical,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
-                let astronomy_seed = v.world.seed.derive_typed(ASTRONOMY_STREAM_ROOT);
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let largest = hornvale_astronomy::figures(astronomy_seed, &v.system)
                     .iter()
                     .map(|f| f.member_count)
@@ -808,7 +808,7 @@ pub fn registry() -> Vec<Metric> {
             doc: "Number of star figures standing on the ecliptic (the sun's road)",
             summary: SummaryKind::Categorical,
             extract: Extractor::Astronomy(|v: &AstronomyView| {
-                let astronomy_seed = v.world.seed.derive_typed(ASTRONOMY_STREAM_ROOT);
+                let astronomy_seed = v.world.seed.derive(ASTRONOMY_STREAM_ROOT);
                 let count = hornvale_astronomy::figures(astronomy_seed, &v.system)
                     .iter()
                     .filter(|f| f.on_ecliptic)

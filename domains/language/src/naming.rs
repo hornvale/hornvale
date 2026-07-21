@@ -176,11 +176,11 @@ impl<'a> Namer<'a> {
     pub fn name(&self, kind: NameKind, salt: u64, morph: &MorphOptions) -> GeneratedName {
         let mut stream = self
             .seed
-            .derive_typed(streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(&self.species))
-            .derive_typed(streams::NAME)
-            .derive_typed(StreamLabel::dynamic(kind.label()))
-            .derive_typed(StreamLabel::dynamic(&salt.to_string()))
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(&self.species))
+            .derive(streams::NAME)
+            .derive(StreamLabel::dynamic(kind.label()))
+            .derive(StreamLabel::dynamic(&salt.to_string()))
             .stream();
         self.build_name(kind, morph, &mut stream)
     }
@@ -222,12 +222,12 @@ impl<'a> Namer<'a> {
     ) -> (GeneratedName, String) {
         let mut stream = self
             .seed
-            .derive_typed(streams::ROOT)
-            .derive_typed(StreamLabel::dynamic(&self.species))
-            .derive_typed(streams::NAME)
-            .derive_typed(StreamLabel::dynamic(kind.label()))
-            .derive_typed(streams::V2)
-            .derive_typed(StreamLabel::dynamic(&salt.to_string()))
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(&self.species))
+            .derive(streams::NAME)
+            .derive(StreamLabel::dynamic(kind.label()))
+            .derive(streams::V2)
+            .derive(StreamLabel::dynamic(&salt.to_string()))
             .stream();
 
         let candidates: Vec<&str> = site

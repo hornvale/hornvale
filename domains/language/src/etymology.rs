@@ -161,10 +161,10 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
     let mut stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::LEXICON)
-        .derive_typed(streams::CASCADE)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::CASCADE)
         .stream();
     let count = stream.range_u32(CASCADE_LEN_RANGE.0, CASCADE_LEN_RANGE.1);
     let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
@@ -181,11 +181,11 @@ const PROTO_ROOT_SYLLABLE_RANGE: (u32, u32) = (1, 2);
 /// type-audit: bare-ok(identifier-text)
 pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> Vec<Segment> {
     let mut stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::LEXICON)
-        .derive_typed(streams::PROTO_ROOT)
-        .derive_typed(StreamLabel::dynamic(concept))
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::PROTO_ROOT)
+        .derive(StreamLabel::dynamic(concept))
         .stream();
     let namer = Namer::new(seed, species, ph);
     let syllables = namer.draw_syllables(
@@ -335,17 +335,17 @@ fn draw_candidate(
     let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
     let max = PROTO_ROOT_SYLLABLE_RANGE.1 + tier;
     let base = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(family))
-        .derive_typed(streams::LEXICON)
-        .derive_typed(streams::PROTO_ROOT)
-        .derive_typed(StreamLabel::dynamic(ROOT_EPOCH))
-        .derive_typed(StreamLabel::dynamic(concept));
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(family))
+        .derive(streams::LEXICON)
+        .derive(streams::PROTO_ROOT)
+        .derive(StreamLabel::dynamic(ROOT_EPOCH))
+        .derive(StreamLabel::dynamic(concept));
     let mut stream = if probe == 0 {
         base.stream()
     } else {
-        base.derive_typed(streams::PROBE)
-            .derive_typed(StreamLabel::dynamic(&probe.to_string()))
+        base.derive(streams::PROBE)
+            .derive(StreamLabel::dynamic(&probe.to_string()))
             .stream()
     };
     let namer = Namer::new(seed, family, ph);

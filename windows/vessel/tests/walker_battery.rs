@@ -35,7 +35,7 @@ fn the_walker_battery_holds_the_four_invariants() {
         },
     )
     .unwrap();
-    let mut stream = world.seed.derive_typed(VESSEL_WALK).stream();
+    let mut stream = world.seed.derive(VESSEL_WALK).stream();
 
     for step in 0..WALK_STEPS {
         let here = session.agent().position.pack().unwrap().0;

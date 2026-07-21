@@ -86,10 +86,8 @@ fn draw_class(roll: u32) -> NeighborClass {
 /// Generate the notable neighbors, brightest first. The neighbor pin forces
 /// the first star's class; the rest are drawn.
 pub fn generate_neighbors(astronomy_seed: Seed, pins: &SkyPins) -> Vec<Neighbor> {
-    let mut stream = astronomy_seed.derive_typed(streams::NEIGHBORS).stream();
-    let mut positions = astronomy_seed
-        .derive_typed(streams::NEIGHBOR_POSITIONS)
-        .stream();
+    let mut stream = astronomy_seed.derive(streams::NEIGHBORS).stream();
+    let mut positions = astronomy_seed.derive(streams::NEIGHBOR_POSITIONS).stream();
     let count = stream.range_u32(2, 5);
     let mut neighbors: Vec<Neighbor> = (0..count)
         .map(|index| {
@@ -161,7 +159,7 @@ mod tests {
 
     #[test]
     fn positions_are_on_the_sphere_and_deterministic() {
-        let seed = Seed(7).derive_typed(streams::ROOT);
+        let seed = Seed(7).derive(streams::ROOT);
         let a = generate_neighbors(seed, &SkyPins::default());
         let b = generate_neighbors(seed, &SkyPins::default());
         assert_eq!(a, b);

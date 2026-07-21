@@ -41,7 +41,7 @@ fn main() {
         // Rebuild the same CrustField `generate` assembles internally
         // (same seed derivation, same craton draw), then read every cell
         // through all three craton-sweeping readers.
-        let terrain_seed = world_seed.derive_typed(streams::ROOT);
+        let terrain_seed = world_seed.derive(streams::ROOT);
         let mut notes = Vec::new();
         let ocean_target = resolve_ocean_fraction(terrain_seed, &pins, &mut notes);
         let cratons = draw_cratons(terrain_seed, &pins, ocean_target, &mut notes);

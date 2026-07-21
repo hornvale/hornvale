@@ -61,7 +61,7 @@ pub fn planet_age(star: &Star) -> Gyr {
 
 /// Generate the star from the astronomy domain seed.
 pub fn generate_star(astronomy_seed: Seed) -> Star {
-    let mut stream = astronomy_seed.derive_typed(streams::STAR_MASS).stream();
+    let mut stream = astronomy_seed.derive(streams::STAR_MASS).stream();
     let mass = SolarMasses(0.6 + stream.next_f64() * 0.8);
     let luminosity = SolarLuminosities(math::powf(mass.0, 3.5));
     let sqrt_l = luminosity.0.sqrt();
@@ -74,13 +74,8 @@ pub fn generate_star(astronomy_seed: Seed) -> Star {
     }
     .to_string();
     let ceiling = t_ms_of_mass(mass.0).min(T_MAX.0);
-    let age = Gyr((0.05
-        + astronomy_seed
-            .derive_typed(streams::STAR_AGE)
-            .stream()
-            .next_f64()
-            * 0.90)
-        * ceiling);
+    let age =
+        Gyr((0.05 + astronomy_seed.derive(streams::STAR_AGE).stream().next_f64() * 0.90) * ceiling);
     Star {
         mass,
         luminosity,

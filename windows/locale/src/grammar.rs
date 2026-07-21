@@ -70,7 +70,7 @@ fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
     }
     let weights: Vec<f64> = pool.iter().map(|(w, _)| *w).collect();
     let i = room
-        .derive_typed(label)
+        .derive(label)
         .stream()
         .weighted_index(&weights)
         .unwrap_or(0);

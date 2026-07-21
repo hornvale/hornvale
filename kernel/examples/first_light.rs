@@ -34,7 +34,7 @@ fn main() -> std::io::Result<()> {
 /// mapping the unit interval onto an ink-to-parchment ramp.
 fn write_noise_png(path: &Path) -> std::io::Result<()> {
     let size = IMAGE_SIZE;
-    let terrain = SEED.derive_typed(StreamLabel::dynamic("terrain"));
+    let terrain = SEED.derive(StreamLabel::dynamic("terrain"));
     let mut rgb = Vec::with_capacity((size * size * 3) as usize);
     for row in 0..size {
         // PNG rows run top-down; the BMP predecessor stored bottom-up with
@@ -90,8 +90,8 @@ fn render_world_document() -> String {
 
     let candidates = ["Zaggrak", "Bolnar", "Mokru", "Ishtor"];
     let mut stream = SEED
-        .derive_typed(StreamLabel::dynamic("settlement"))
-        .derive_typed(StreamLabel::dynamic("name"))
+        .derive(StreamLabel::dynamic("settlement"))
+        .derive(StreamLabel::dynamic("name"))
         .stream();
     let name_fact = |n: &&str| Fact {
         subject: village,

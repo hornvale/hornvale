@@ -3067,8 +3067,8 @@ struct LanguageDeityNamer<'a, 'b, 'c> {
 /// entity id, so deity names are invariant to entity mint order — the fix
 /// for the `/v2` naming epoch (spec §8).
 fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
-    base.derive_typed(StreamLabel::dynamic(kind))
-        .derive_typed(StreamLabel::dynamic(&rank.to_string()))
+    base.derive(StreamLabel::dynamic(kind))
+        .derive(StreamLabel::dynamic(&rank.to_string()))
         .stream()
         .next_u64()
 }
@@ -3080,8 +3080,8 @@ fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
 /// seed from outside this crate) can never diverge.
 fn deity_base_seed(world_seed: &Seed, species: &str) -> Seed {
     world_seed
-        .derive_typed(streams::RELIGION_DEITY_V2)
-        .derive_typed(StreamLabel::dynamic(species))
+        .derive(streams::RELIGION_DEITY_V2)
+        .derive(StreamLabel::dynamic(species))
 }
 
 /// Public entry point onto [`deity_name_seed`] for consumers outside this
@@ -4562,7 +4562,7 @@ pub fn night_sky_lines(
     // Figures (night-sky stage 3): a single count/ecliptic summary line,
     // never rendered for a sky with no figures at all. `world.seed` derives
     // the same astronomy seed `system::generate` and the lab metrics use.
-    let astronomy_seed = world.seed.derive_typed(ASTRONOMY_STREAM_ROOT);
+    let astronomy_seed = world.seed.derive(ASTRONOMY_STREAM_ROOT);
     let figs = figures(astronomy_seed, system);
     let figure_lines = if figs.is_empty() {
         Vec::new()
@@ -4986,8 +4986,8 @@ mod tests {
     fn deity_name_seed_is_pure_and_entity_id_free() {
         use hornvale_kernel::Seed;
         let base = Seed(42)
-            .derive_typed(streams::RELIGION_DEITY_V2)
-            .derive_typed(StreamLabel::dynamic("goblin"));
+            .derive(streams::RELIGION_DEITY_V2)
+            .derive(StreamLabel::dynamic("goblin"));
         // Same species-seed + kind + rank -> same name seed, no entity id involved.
         assert_eq!(
             deity_name_seed(base, "celestial-body", 0),

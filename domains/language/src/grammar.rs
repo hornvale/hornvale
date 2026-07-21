@@ -120,18 +120,18 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     let namer = Namer::new(seed, species, ph);
 
     let mut order_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::CONSTITUENT_ORDER)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::CONSTITUENT_ORDER)
         .stream();
     let order = order_from_roll(order_stream.range_u32(1, 100));
 
     let mut copula_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::COPULA)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::COPULA)
         .stream();
     let (copula_segments, copula) = if copula_stream.range_u32(1, 100) <= 60 {
         let (segments, roman) = draw_copula_form(&mut copula_stream, &namer);
@@ -141,10 +141,10 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     };
 
     let mut articles_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::ARTICLES)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::ARTICLES)
         .stream();
     let articles = articles_stream.range_u32(1, 100) <= 30;
 

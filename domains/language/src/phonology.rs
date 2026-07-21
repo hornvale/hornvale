@@ -147,7 +147,7 @@ fn draw_tone_inventory(phonology_seed: &Seed, tonality: f64) -> Vec<Tone> {
         1 => {}
         n if n >= MAX_TONE_COUNT => tones.extend(CONTRASTIVE_TONES),
         _ => {
-            let mut s = phonology_seed.derive_typed(streams::TONES).stream();
+            let mut s = phonology_seed.derive(streams::TONES).stream();
             if let Some(t) = s.pick(&CONTRASTIVE_TONES) {
                 tones.push(*t);
             }
@@ -518,16 +518,16 @@ fn draw_phonotactics(
 /// [`crate::phoneme::canonical_segments`] permitted by `env`, with
 /// high-sonority consonants down-weighted when `env.voice_loudness` is
 /// low) and syllable phonotactic templates. Every draw comes from
-/// `seed.derive_typed(streams::ROOT)
-/// .derive_typed(StreamLabel::dynamic(species)).derive_typed(streams::PHONOLOGY)`,
+/// `seed.derive(streams::ROOT)
+/// .derive(StreamLabel::dynamic(species)).derive(streams::PHONOLOGY)`,
 /// split into an `"inventory"` sub-stream and a `"phonotactics"` sub-stream
 /// so adding a new draw to one never perturbs the other.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
     let phonology_seed = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::PHONOLOGY);
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::PHONOLOGY);
 
     // The drawn tone inventory (spec §5). Atonal species get `{Neutral}`, so
     // only Neutral vowels are admitted below and the phonology is byte-identical
@@ -539,7 +539,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
         .filter(|s| permits(env, s))
         .collect();
 
-    let mut inventory_stream = phonology_seed.derive_typed(streams::INVENTORY).stream();
+    let mut inventory_stream = phonology_seed.derive(streams::INVENTORY).stream();
     let mut inventory: Vec<Segment> = Vec::new();
     for seg in &candidates {
         let keep = match seg {
@@ -557,7 +557,7 @@ pub fn draw_phonology(seed: &Seed, species: &str, env: &Envelope) -> Phonology {
     }
     ensure_minimum_consonants(&candidates, &mut inventory);
 
-    let mut phonotactics_stream = phonology_seed.derive_typed(streams::PHONOTACTICS).stream();
+    let mut phonotactics_stream = phonology_seed.derive(streams::PHONOTACTICS).stream();
     let (onsets, nuclei, codas) = draw_phonotactics(&mut phonotactics_stream, &inventory);
 
     let mut ph = Phonology {

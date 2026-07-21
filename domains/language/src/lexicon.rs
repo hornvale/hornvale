@@ -84,16 +84,16 @@ pub enum Headedness {
 const HEADEDNESS_OPTIONS: [Headedness; 2] = [Headedness::HeadFirst, Headedness::HeadLast];
 
 /// Draw a species' compound-joining order, from
-/// `seed.derive_typed(streams::ROOT)
-/// .derive_typed(StreamLabel::dynamic(species)).derive_typed(streams::LEXICON)
-/// .derive_typed(streams::HEADEDNESS)`.
+/// `seed.derive(streams::ROOT)
+/// .derive(StreamLabel::dynamic(species)).derive(streams::LEXICON)
+/// .derive(streams::HEADEDNESS)`.
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_headedness(seed: &Seed, species: &str) -> Headedness {
     let mut stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::LEXICON)
-        .derive_typed(streams::HEADEDNESS)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::HEADEDNESS)
         .stream();
     *stream
         .pick(&HEADEDNESS_OPTIONS)

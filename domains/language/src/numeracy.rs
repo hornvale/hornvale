@@ -56,10 +56,10 @@ fn rung_from_bucket(bucket: usize) -> NumeracyRung {
 /// type-audit: bare-ok(identifier-text)
 pub fn numeracy_rung(seed: &Seed, species: &str) -> NumeracyRung {
     let mut stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::NUMERACY_RUNG)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::NUMERACY_RUNG)
         .stream();
     rung_from_bucket(
         stream

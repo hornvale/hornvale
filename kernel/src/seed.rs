@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Seed(pub u64);
 
-/// A seed-derivation leg — the only way to call [`Seed::derive_typed`].
+/// A seed-derivation leg — the only way to call [`Seed::derive`].
 /// Wraps a string so a bare `&str`, and therefore a typo'd inline
 /// literal, cannot silently compile where a leg was expected. Zero-cost:
 /// borrows, never allocates.
@@ -59,32 +59,22 @@ fn splitmix64(state: &mut u64) -> u64 {
 }
 
 impl Seed {
-    /// Derive a child seed for `label`. FNV-1a over the label, mixed with
-    /// the parent, then scrambled. Stable forever: changing this breaks
-    /// every saved world.
-    /// type-audit: bare-ok(identifier-text)
-    pub fn derive(&self, label: &str) -> Seed {
-        let mut h = FNV_OFFSET ^ self.0;
-        for byte in label.as_bytes() {
-            h ^= u64::from(*byte);
-            h = h.wrapping_mul(FNV_PRIME);
-        }
-        Seed(splitmix64(&mut h))
-    }
-
     /// A fresh deterministic random stream rooted at this seed.
     pub fn stream(&self) -> Stream {
         Stream { state: self.0 }
     }
 
-    /// Derive a child seed for a typed `label` — the type-safe successor
-    /// to [`Seed::derive`] (temporary name during the PROC-17 migration;
-    /// the final task in that plan renames this to `derive` once every
-    /// call site in the workspace has migrated and the old `&str`
-    /// signature is deleted). Byte-identical to `derive(label.as_str())`
-    /// — this wraps the exact same hash computation, never a new one.
-    pub fn derive_typed(&self, label: StreamLabel<'_>) -> Seed {
-        self.derive(label.as_str())
+    /// Derive a child seed for a typed `label`. FNV-1a over the label's
+    /// bytes, mixed with the parent, then scrambled. Stable forever:
+    /// changing this breaks every saved world.
+    pub fn derive(&self, label: StreamLabel<'_>) -> Seed {
+        let bytes = label.as_str();
+        let mut h = FNV_OFFSET ^ self.0;
+        for byte in bytes.as_bytes() {
+            h ^= u64::from(*byte);
+            h = h.wrapping_mul(FNV_PRIME);
+        }
+        Seed(splitmix64(&mut h))
     }
 }
 
@@ -158,35 +148,35 @@ mod tests {
     #[test]
     fn derive_is_deterministic() {
         assert_eq!(
-            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
-            Seed(42).derive_typed(StreamLabel::dynamic("astronomy"))
+            Seed(42).derive(StreamLabel::dynamic("astronomy")),
+            Seed(42).derive(StreamLabel::dynamic("astronomy"))
         );
     }
 
     #[test]
     fn derive_differs_by_label() {
         assert_ne!(
-            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
-            Seed(42).derive_typed(StreamLabel::dynamic("climate"))
+            Seed(42).derive(StreamLabel::dynamic("astronomy")),
+            Seed(42).derive(StreamLabel::dynamic("climate"))
         );
     }
 
     #[test]
     fn derive_differs_by_parent() {
         assert_ne!(
-            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
-            Seed(43).derive_typed(StreamLabel::dynamic("astronomy"))
+            Seed(42).derive(StreamLabel::dynamic("astronomy")),
+            Seed(43).derive(StreamLabel::dynamic("astronomy"))
         );
     }
 
     #[test]
     fn derive_chains_compose() {
         let a = Seed(7)
-            .derive_typed(StreamLabel::dynamic("settlement"))
-            .derive_typed(StreamLabel::dynamic("name"));
+            .derive(StreamLabel::dynamic("settlement"))
+            .derive(StreamLabel::dynamic("name"));
         let b = Seed(7)
-            .derive_typed(StreamLabel::dynamic("settlement"))
-            .derive_typed(StreamLabel::dynamic("name"));
+            .derive(StreamLabel::dynamic("settlement"))
+            .derive(StreamLabel::dynamic("name"));
         assert_eq!(a, b);
     }
 
@@ -271,26 +261,37 @@ mod tests {
 
     #[test]
     fn seed_serializes_roundtrip() {
-        let s = Seed(42).derive_typed(StreamLabel::dynamic("x"));
+        let s = Seed(42).derive(StreamLabel::dynamic("x"));
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(serde_json::from_str::<Seed>(&json).unwrap(), s);
     }
 
     #[test]
-    fn derive_typed_matches_derive_for_the_same_bytes() {
+    fn derive_is_deterministic_for_a_typed_label() {
         let seed = Seed(42);
-        let via_str = seed.derive("astronomy");
-        let via_typed = seed.derive_typed(StreamLabel::from_static("astronomy"));
-        assert_eq!(via_str, via_typed);
+        assert_eq!(
+            seed.derive(StreamLabel::from_static("astronomy")),
+            seed.derive(StreamLabel::from_static("astronomy"))
+        );
     }
 
     #[test]
-    fn derive_typed_dynamic_matches_derive_for_the_same_bytes() {
+    fn derive_differs_by_typed_label() {
+        let seed = Seed(42);
+        assert_ne!(
+            seed.derive(StreamLabel::from_static("astronomy")),
+            seed.derive(StreamLabel::from_static("climate"))
+        );
+    }
+
+    #[test]
+    fn derive_dynamic_and_static_agree_on_the_same_bytes() {
         let seed = Seed(7);
-        let label = String::from("goblin");
-        let via_str = seed.derive(&label);
-        let via_typed = seed.derive_typed(StreamLabel::dynamic(&label));
-        assert_eq!(via_str, via_typed);
+        let owned = String::from("goblin");
+        assert_eq!(
+            seed.derive(StreamLabel::dynamic(&owned)),
+            seed.derive(StreamLabel::dynamic("goblin"))
+        );
     }
 
     #[test]

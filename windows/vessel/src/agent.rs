@@ -60,7 +60,7 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
     let id = AgentId(
         position
             .seed(world.seed)
-            .derive_typed(VESSEL_AGENT)
+            .derive(VESSEL_AGENT)
             .stream()
             .next_u64(),
     );

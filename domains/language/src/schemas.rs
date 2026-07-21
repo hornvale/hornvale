@@ -622,7 +622,7 @@ mod tests {
             if select_schema(
                 &weights,
                 1.0,
-                &mut Seed(1).derive_typed(StreamLabel::dynamic(&label)).stream(),
+                &mut Seed(1).derive(StreamLabel::dynamic(&label)).stream(),
             ) == Some(SchemaId::Agentive)
             {
                 wins_beta_1 += 1;
@@ -630,7 +630,7 @@ mod tests {
             if select_schema(
                 &weights,
                 8.0,
-                &mut Seed(1).derive_typed(StreamLabel::dynamic(&label)).stream(),
+                &mut Seed(1).derive(StreamLabel::dynamic(&label)).stream(),
             ) == Some(SchemaId::Agentive)
             {
                 wins_beta_8 += 1;

@@ -44,9 +44,9 @@ fn octave_seed(seed: Seed, octave: u32) -> Seed {
     if octave == 0 {
         seed
     } else if (octave as usize) < OCTAVE_LABELS.len() {
-        seed.derive_typed(OCTAVE_LABELS[octave as usize])
+        seed.derive(OCTAVE_LABELS[octave as usize])
     } else {
-        seed.derive_typed(StreamLabel::dynamic(&format!("octave-{octave}")))
+        seed.derive(StreamLabel::dynamic(&format!("octave-{octave}")))
     }
 }
 

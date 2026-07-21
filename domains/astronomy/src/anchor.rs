@@ -51,7 +51,7 @@ pub fn generate_anchor(
 ) -> Result<Anchor, GenesisError> {
     let mass = EarthMasses(
         0.5 + astronomy_seed
-            .derive_typed(streams::ANCHOR_MASS)
+            .derive(streams::ANCHOR_MASS)
             .stream()
             .next_f64()
             * 1.5,
@@ -71,7 +71,7 @@ pub fn generate_anchor(
             Some(StdDays(h / 24.0))
         }
         Some(RotationPin::Normal) | None => {
-            let mut stream = astronomy_seed.derive_typed(streams::ROTATION).stream();
+            let mut stream = astronomy_seed.derive(streams::ROTATION).stream();
             let lock_roll = stream.next_f64();
             let locked = pins.rotation.is_none() && lock_roll < 0.05;
             if locked {
@@ -100,7 +100,7 @@ pub fn generate_anchor(
                 // coin flip).
                 None => {
                     astronomy_seed
-                        .derive_typed(streams::SPIN_DIRECTION)
+                        .derive(streams::SPIN_DIRECTION)
                         .stream()
                         .next_f64()
                         < 0.1
@@ -153,11 +153,7 @@ pub fn generate_anchor(
         }
         None => {
             let orbit = Au(inner.0
-                + astronomy_seed
-                    .derive_typed(streams::ORBIT)
-                    .stream()
-                    .next_f64()
-                    * (outer.0 - inner.0));
+                + astronomy_seed.derive(streams::ORBIT).stream().next_f64() * (outer.0 - inner.0));
             (orbit, year_from_orbit(orbit, star.mass))
         }
     };
@@ -174,7 +170,7 @@ pub fn generate_anchor(
         }
         None => Degrees(
             astronomy_seed
-                .derive_typed(streams::OBLIQUITY)
+                .derive(streams::OBLIQUITY)
                 .stream()
                 .next_f64()
                 * 35.0,

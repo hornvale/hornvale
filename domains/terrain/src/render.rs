@@ -50,9 +50,9 @@ fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
 /// under `terrain/coast-render` — no `Stream` is ever consumed.
 fn coast_noise(noise_seed: Seed, p: [f64; 3]) -> f64 {
     let slices = [
-        (noise_seed.derive_typed(streams::CRUST_SLICE_0), p[0], p[1]),
-        (noise_seed.derive_typed(streams::CRUST_SLICE_1), p[1], p[2]),
-        (noise_seed.derive_typed(streams::CRUST_SLICE_2), p[2], p[0]),
+        (noise_seed.derive(streams::CRUST_SLICE_0), p[0], p[1]),
+        (noise_seed.derive(streams::CRUST_SLICE_1), p[1], p[2]),
+        (noise_seed.derive(streams::CRUST_SLICE_2), p[2], p[0]),
     ];
     let mean = slices
         .iter()
@@ -172,8 +172,8 @@ fn elevation_pixels(geo: &Geosphere, globe: &TectonicGlobe, world_seed: Seed) ->
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);
     let noise_seed = world_seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(streams::COAST_RENDER);
+        .derive(streams::ROOT)
+        .derive(streams::COAST_RENDER);
     rasterize(width, height, |latitude, longitude| {
         let elevation = refined_elevation(geo, &index, globe, noise_seed, latitude, longitude);
         color(elevation, globe.sea_level.get())
@@ -460,8 +460,8 @@ mod tests {
                 .globe;
             let index = NearestCellIndex::new(&geo);
             let noise_seed = Seed(seed)
-                .derive_typed(crate::streams::ROOT)
-                .derive_typed(crate::streams::COAST_RENDER);
+                .derive(crate::streams::ROOT)
+                .derive(crate::streams::COAST_RENDER);
             let (width, height) = (128u32, 64u32);
             for py in 0..height {
                 let latitude = 90.0 - (f64::from(py) + 0.5) / f64::from(height) * 180.0;

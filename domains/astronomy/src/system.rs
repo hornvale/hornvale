@@ -41,7 +41,7 @@ pub struct GenesisOutcome {
 /// the astronomy domain seed internally. Returns the system and any notes
 /// about degradations that occurred.
 pub fn generate(world_seed: Seed, pins: &SkyPins) -> Result<GenesisOutcome, GenesisError> {
-    let astronomy_seed = world_seed.derive_typed(streams::ROOT);
+    let astronomy_seed = world_seed.derive(streams::ROOT);
     let star = generate_star(astronomy_seed);
     let anchor = generate_anchor(astronomy_seed, &star, pins)?;
     let (moons, notes) = generate_moons(astronomy_seed, &star, &anchor, pins)?;

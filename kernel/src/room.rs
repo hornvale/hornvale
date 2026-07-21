@@ -566,12 +566,12 @@ impl RoomAddr {
     /// never the float position, so all room content is platform-exact.
     pub fn seed(&self, world: Seed) -> Seed {
         let mut s = world
-            .derive_typed(ROOM_FACE)
-            .derive_typed(StreamLabel::dynamic(&self.face.to_string()));
+            .derive(ROOM_FACE)
+            .derive(StreamLabel::dynamic(&self.face.to_string()));
         for &d in &self.path {
             s = s
-                .derive_typed(ROOM_CHILD)
-                .derive_typed(StreamLabel::dynamic(&d.to_string()));
+                .derive(ROOM_CHILD)
+                .derive(StreamLabel::dynamic(&d.to_string()));
         }
         s
     }

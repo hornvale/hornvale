@@ -148,7 +148,7 @@ pub fn replay_event_count(
     if intervene && local.len() > 1 {
         local[1].alive = false; // the player intervention
     }
-    let mut ev = config.seed.derive_typed(streams::REPLAY).stream();
+    let mut ev = config.seed.derive(streams::REPLAY).stream();
     let mut appended = 0usize;
     for _epoch in config.epochs..config.epochs.saturating_add(delta_epochs) {
         let m = local.len();

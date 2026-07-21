@@ -150,11 +150,11 @@ fn depth_from_bucket(bucket: usize) -> MorphDepth {
 /// type-audit: bare-ok(identifier-text)
 pub fn morph_depths(seed: &Seed, species: &str) -> (MorphDepth, MorphDepth, ClassPosition) {
     let mut evidential_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::DEPTH)
-        .derive_typed(streams::EVIDENTIAL)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::EVIDENTIAL)
         .stream();
     let evidential_depth = depth_from_bucket(
         evidential_stream
@@ -163,11 +163,11 @@ pub fn morph_depths(seed: &Seed, species: &str) -> (MorphDepth, MorphDepth, Clas
     );
 
     let mut noun_class_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::DEPTH)
-        .derive_typed(streams::NOUN_CLASS)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::NOUN_CLASS)
         .stream();
     let noun_class_depth = depth_from_bucket(
         noun_class_stream
@@ -176,10 +176,10 @@ pub fn morph_depths(seed: &Seed, species: &str) -> (MorphDepth, MorphDepth, Clas
     );
 
     let mut position_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::CLASS_POSITION)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::CLASS_POSITION)
         .stream();
     let class_position = if position_stream.range_u32(1, 100) <= CLASS_POSITION_SUFFIX_CHANCE {
         ClassPosition::Suffix
@@ -198,7 +198,7 @@ const EVIDENTIAL_VALUES: [&str; 3] = ["witnessed", "taught", "inferred"];
 const CLASS_VALUES: [&str; 2] = ["animate", "inanimate"];
 
 /// Draw one axis-value's one-syllable proto-form for `family`, from
-/// `seed.derive_typed(streams::ROOT).derive_typed(streams::FAMILY_LEG).derive_typed(StreamLabel::dynamic(family)).derive_typed(streams::MORPH).derive_typed(StreamLabel::dynamic(axis)).derive_typed(StreamLabel::dynamic(value))`
+/// `seed.derive(streams::ROOT).derive(streams::FAMILY_LEG).derive(StreamLabel::dynamic(family)).derive(streams::MORPH).derive(StreamLabel::dynamic(axis)).derive(StreamLabel::dynamic(value))`
 /// — the same syllable-fill mechanism
 /// [`crate::grammar::draw_copula_form`](../grammar/fn.draw_copula_form.html)
 /// (and, further back, [`crate::etymology::proto_root`]) use: one template
@@ -215,12 +215,12 @@ pub(crate) fn draw_morph_proto(
     proto_ph: &Phonology,
 ) -> Vec<Segment> {
     let mut stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(streams::FAMILY_LEG)
-        .derive_typed(StreamLabel::dynamic(family))
-        .derive_typed(streams::MORPH)
-        .derive_typed(StreamLabel::dynamic(axis))
-        .derive_typed(StreamLabel::dynamic(value))
+        .derive(streams::ROOT)
+        .derive(streams::FAMILY_LEG)
+        .derive(StreamLabel::dynamic(family))
+        .derive(streams::MORPH)
+        .derive(StreamLabel::dynamic(axis))
+        .derive(StreamLabel::dynamic(value))
         .stream();
     let namer = Namer::new(seed, family, proto_ph);
     let syllables = namer.draw_syllables(&mut stream, 1, 1, false);

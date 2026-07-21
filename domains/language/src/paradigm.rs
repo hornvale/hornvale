@@ -75,11 +75,11 @@ fn depth_from_bucket(bucket: usize) -> MorphDepth {
 /// type-audit: bare-ok(identifier-text)
 pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     let mut number_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::DEPTH)
-        .derive_typed(streams::NUMBER)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::NUMBER)
         .stream();
     let number_depth = depth_from_bucket(
         number_stream
@@ -88,11 +88,11 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     );
 
     let mut tense_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::DEPTH)
-        .derive_typed(streams::TENSE)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::DEPTH)
+        .derive(streams::TENSE)
         .stream();
     let tense_depth = depth_from_bucket(
         tense_stream
@@ -101,10 +101,10 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     );
 
     let mut number_pos_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::NUMBER_POSITION)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::NUMBER_POSITION)
         .stream();
     let number_position = if number_pos_stream.range_u32(1, 100) <= NUMBER_POSITION_SUFFIX_CHANCE {
         ClassPosition::Suffix
@@ -113,10 +113,10 @@ pub fn paradigm_depths(seed: &Seed, species: &str) -> ParadigmDepths {
     };
 
     let mut tense_pos_stream = seed
-        .derive_typed(streams::ROOT)
-        .derive_typed(StreamLabel::dynamic(species))
-        .derive_typed(streams::GRAMMAR)
-        .derive_typed(streams::TENSE_POSITION)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::GRAMMAR)
+        .derive(streams::TENSE_POSITION)
         .stream();
     let tense_position = if tense_pos_stream.range_u32(1, 100) <= TENSE_POSITION_SUFFIX_CHANCE {
         ClassPosition::Suffix

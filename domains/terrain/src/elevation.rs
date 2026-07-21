@@ -308,7 +308,7 @@ fn dome_m(position: [f64; 3], strength_m: f64, at: [f64; 3]) -> f64 {
 /// Draw 3–8 hotspots from the hotspots stream: count first, then position
 /// (two draws) and strength (1000–3000 m) per hotspot, sequentially.
 fn draw_hotspots(terrain_seed: Seed) -> Vec<Hotspot> {
-    let mut stream = terrain_seed.derive_typed(streams::HOTSPOTS).stream();
+    let mut stream = terrain_seed.derive(streams::HOTSPOTS).stream();
     let count = stream.range_u32(3, 8);
     (0..count)
         .map(|_| {
@@ -524,8 +524,8 @@ pub fn generate_elevation(
     continental: &CellMap<bool>,
     induration: &CellMap<f64>,
 ) -> CellMap<ReferenceElevation> {
-    let arc_gate_seed = terrain_seed.derive_typed(streams::ARC_GATE);
-    let relief_seed = terrain_seed.derive_typed(streams::RELIEF);
+    let arc_gate_seed = terrain_seed.derive(streams::ARC_GATE);
+    let relief_seed = terrain_seed.derive(streams::RELIEF);
     assemble_elevation(
         geo,
         plates,
@@ -564,7 +564,7 @@ pub fn resolve_ocean_fraction(
     let drawn = 0.5
         + 0.25
             * terrain_seed
-                .derive_typed(streams::OCEAN_FRACTION)
+                .derive(streams::OCEAN_FRACTION)
                 .stream()
                 .next_f64();
     let target = pins.ocean_fraction.unwrap_or(drawn);
@@ -764,7 +764,7 @@ mod tests {
     fn collision_uplift_towers_over_the_interior_and_decays_inland() {
         let geo = Geosphere::new(3);
         let plates = hemisphere_plates(0.0);
-        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let (crust, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
@@ -782,13 +782,9 @@ mod tests {
             &[],
             &crust,
             &continental,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::ARC_GATE),
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
             &induration,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::RELIEF),
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
         // f64::MIN (not NEG_INFINITY, which the validating constructor
         // rejects) as a sentinel below every real elevation.
@@ -824,7 +820,7 @@ mod tests {
             ..TerrainPins::default()
         };
         for seed in [1u64, 7, 42] {
-            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
+            let terrain_seed = Seed(seed).derive(streams::ROOT);
             let plates = generate_plates(terrain_seed, &pins, &mut Vec::new());
             let plate_of = assign_plates(&geo, terrain_seed, &plates);
             let ocean_target = resolve_ocean_fraction(terrain_seed, &pins, &mut Vec::new());
@@ -871,7 +867,7 @@ mod tests {
     fn unrest_is_high_on_young_convergent_boundaries_and_dies_inland() {
         let geo = Geosphere::new(3);
         let plates = hemisphere_plates(0.0);
-        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let (_, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
@@ -905,7 +901,7 @@ mod tests {
         let geo = Geosphere::new(3);
         let young = hemisphere_plates(0.0);
         let old = hemisphere_plates(1.0);
-        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &young);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &young);
         let (_, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &young, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
@@ -1125,7 +1121,7 @@ mod tests {
         // since `Hotspot`/`contribution_m` are gone.
         let geo = Geosphere::new(3);
         let plates = hemisphere_plates(0.0);
-        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
         let (crust, continental) = all_continental_crust(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);
@@ -1146,13 +1142,9 @@ mod tests {
             &seamounts,
             &crust,
             &continental,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::ARC_GATE),
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
             &induration,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::RELIEF),
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
         let baseline = assemble_elevation(
             &geo,
@@ -1163,13 +1155,9 @@ mod tests {
             &[],
             &crust,
             &continental,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::ARC_GATE),
+            Seed(1).derive(streams::ROOT).derive(streams::ARC_GATE),
             &induration,
-            Seed(1)
-                .derive_typed(streams::ROOT)
-                .derive_typed(streams::RELIEF),
+            Seed(1).derive(streams::ROOT).derive(streams::RELIEF),
         );
         for cell in geo.cells() {
             let position = geo.position(cell);
@@ -1185,7 +1173,7 @@ mod tests {
 
     #[test]
     fn trails_are_age_ordered_chains_upstream_of_plate_motion() {
-        let seed = Seed(42).derive_typed(crate::streams::ROOT);
+        let seed = Seed(42).derive(crate::streams::ROOT);
         let geo = Geosphere::new(4);
         let pins = crate::pins::TerrainPins::default();
         let mut notes = Vec::new();
