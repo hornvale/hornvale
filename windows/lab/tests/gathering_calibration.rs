@@ -270,14 +270,19 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// once its `pressure = pop / (SETTLERS_PER_CAPACITY × capacity)` reaches
 /// `COLLAPSE_PRESSURE` (= 2.0). So every SURVIVING community obeys
 /// `pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × capacity`, and summing
-/// over the live settlements — whose per-cell capacities are a subset of the
-/// world's total suitability — gives the aggregate conservation ceiling:
+/// over the live settlements gives the aggregate conservation ceiling:
 ///
 /// > **Σ pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K**
 ///
 /// i.e. 10029 ≤ 2 × 100 × 64.02 ≈ 12804 ✓ (measured ratio ≈ 0.78: mature
 /// communities sit well inside the collapse pressure, as the demography
-/// model intends). This is the draft placer's instantaneous-conservation
+/// model intends). Caveat on Σ K: `total_k` here is the niche-differentiated
+/// `per_species_k` sum, used as a generous *proxy* for the base suitability
+/// the bake's collapse rule is actually defined on — numerically close over
+/// this world's live cells (so the ≈0.78 margin holds), though the two
+/// capacity fields are not the identical quantity; a future re-pin on a world
+/// where they diverge should sum the base suitability directly. This is the
+/// draft placer's instantaneous-conservation
 /// invariant carried forward to the history-accumulated regime, NOT a
 /// weakening: it is the strongest bound the collapse rule permits, and it
 /// still catches a runaway (population conjured past the collapse threshold)

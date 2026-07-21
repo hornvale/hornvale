@@ -5722,7 +5722,7 @@ mod tests {
         // so `village_info`'s flagship (first `is-settlement` = first alive
         // occupation in the bake's records order) carries the OCCUPATION's peak
         // population, not the demography attractor's rendered headcount. Re-pin
-        // 2 -> 119 (measured on the epoch); still a MEASURED value, re-pinned
+        // 2 -> 118 (measured on the epoch); still a MEASURED value, re-pinned
         // (with review) whenever a deliberate bake/carrying-capacity change
         // moves world identity.
         assert_eq!(
