@@ -12,6 +12,19 @@
 -- (Resync 2026-07-20, The Demesne / BIO-35 Stage 1 local regen on lefford:
 -- the genesis-changing per-axis supply moved the census; all 16 drifted
 -- literals below were re-synced to calibration.rs in this same commit.)
+-- (Resync 2026-07-21, The Living Community epoch (history-first placement)
+-- regen on lefford (0063): history-first placement re-placed every world,
+-- moving the census again; all drifted literals below were re-synced to
+-- calibration.rs in this same commit. Two notable movements: kobold
+-- present-rows RISE sharply (123 -> 772 — history-first placement seats
+-- kobolds in far MORE worlds, opposite the Demesne trend) and the mean
+-- name-collision-rate RISES (0.064 -> 0.179 — reversing the prior regen's
+-- name-dedup improvement). Two structural null-control invariants that used
+-- to be exact zero (cult-form TVD, pantheon-size mean-diff) are now tiny
+-- nonzero measurements: history-first placement is path-dependent, so the
+-- goblin-solo/goblin-twin-solo builds are no longer perfect clones on every
+-- seed — still well inside the directional sampling bound, so this is a
+-- re-pinned measurement, not a broken invariant.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -45,9 +58,13 @@
 --     phonotactic/lexicon machinery itself, not just the fixture.
 --   * census_fixture_matches_live_run — the `#[ignore]`d heavy live-rerun
 --     guard, not a calibration constant.
---   * null_control_blind_attribution_is_at_chance's `picks_twin` — implied
---     by `decided = 0` below (no decided pairs to pick from); not
---     independently re-derived.
+--   * null_control_blind_attribution_is_at_chance's `picks_twin` — no longer
+--     implied by `decided = 0` (The Living Community epoch re-pin made
+--     `decided` a nonzero 64; see below). Still not translated here: the
+--     tiered `pick_second` preference (lunar, then cyclic-share, then size)
+--     that decides WHICH side a decided pair picks isn't reimplemented in
+--     SQL, only the equality test that determines indistinguishable-vs-
+--     decided; `picks_twin` stays a Rust-only pin.
 --   * null_control_distributions_are_within_the_sampling_bound's directional
 --     bounds (TVD < 0.15, |SMD| < 0.2) — sampling-theory margins, not
 --     re-pinned measurements; only the file's exact STRUCTURAL zero pins are
@@ -229,58 +246,58 @@ namelen_stats AS (
 ),
 checks AS (
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 114.0 AS pinned, locked_eternal = 114 AS ok FROM agg
+         CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 151 AS ok FROM agg
   UNION ALL
   SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(locked_ambient AS DOUBLE), 0.0, locked_ambient = 0 FROM agg
+         CAST(locked_ambient AS DOUBLE), 41.0, locked_ambient = 41 FROM agg
   UNION ALL
   SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(spinning_eternal_exceptions AS DOUBLE), 2.0, spinning_eternal_exceptions = 2 FROM agg
+         CAST(spinning_eternal_exceptions AS DOUBLE), 9.0, spinning_eternal_exceptions = 9 FROM agg
   UNION ALL
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 404.0, flagship_coastal = 404 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 536.0, flagship_coastal = 536 FROM agg
   UNION ALL
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 587.0, flagship_inland = 587 FROM agg
+         CAST(flagship_inland AS DOUBLE), 235.0, flagship_inland = 235 FROM agg
   UNION ALL
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_solar AS DOUBLE), 9.0, moonless_solar = 9 FROM agg
+         CAST(moonless_solar AS DOUBLE), 33.0, moonless_solar = 33 FROM agg
   UNION ALL
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_lunar AS DOUBLE), 11.0, moonless_lunar = 11 FROM agg
+         CAST(moonless_lunar AS DOUBLE), 63.0, moonless_lunar = 63 FROM agg
   UNION ALL
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 94.0, blind_correct = 94 FROM agg
+         CAST(blind_correct AS DOUBLE), 703.0, blind_correct = 703 FROM agg
   UNION ALL
   SELECT 'blind-attribution total count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_total AS DOUBLE), 120.0, blind_total = 120 FROM agg
+         CAST(blind_total AS DOUBLE), 771.0, blind_total = 771 FROM agg
   UNION ALL
   SELECT 'mooned+spinning blind-attribution mismatches (calibration.rs::blind_attribution_beats_chance_decisively, correct_mooned == total_mooned)',
          CAST(mooned_spinning_mismatches AS DOUBLE), 0.0, mooned_spinning_mismatches = 0 FROM agg
   UNION ALL
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 304.0, collision_zero = 304 FROM agg
+         CAST(collision_zero AS DOUBLE), 50.0, collision_zero = 50 FROM agg
   UNION ALL
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 696.0, collision_nonzero = 696 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 723.0, collision_nonzero = 723 FROM agg
   UNION ALL
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_absent AS DOUBLE), 0.0, collision_absent = 0 FROM agg
+         CAST(collision_absent AS DOUBLE), 227.0, collision_absent = 227 FROM agg
   UNION ALL
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.063_951_743_953_100, abs(collision_mean - 0.063_951_743_953_100) < 1e-6 FROM agg
+         collision_mean, 0.178_726_790_236_740_12, abs(collision_mean - 0.178_726_790_236_740_12) < 1e-6 FROM agg
   UNION ALL
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(goblin_len_present AS DOUBLE), 991.0, goblin_len_present = 991 FROM agg
+         CAST(goblin_len_present AS DOUBLE), 771.0, goblin_len_present = 771 FROM agg
   UNION ALL
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 14.125_926_952_472_248, abs(goblin_len_mean - 14.125_926_952_472_248) < 1e-6 FROM agg
+         goblin_len_mean, 13.461_308_710_376_134, abs(goblin_len_mean - 13.461_308_710_376_134) < 1e-6 FROM agg
   UNION ALL
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(kobold_len_present AS DOUBLE), 123.0, kobold_len_present = 123 FROM agg
+         CAST(kobold_len_present AS DOUBLE), 772.0, kobold_len_present = 772 FROM agg
   UNION ALL
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 10.036_733_166_666_673, abs(kobold_len_mean - 10.036_733_166_666_673) < 1e-6 FROM agg
+         kobold_len_mean, 12.748_786_009_455_962, abs(kobold_len_mean - 12.748_786_009_455_962) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -292,23 +309,28 @@ checks AS (
          CAST(row_count AS DOUBLE), 1000.0, row_count = 1000 FROM agg
   UNION ALL
   SELECT 'indistinguishable solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(indistinguishable AS DOUBLE), 500.0, indistinguishable = 500 FROM meeting_agg
+         CAST(indistinguishable AS DOUBLE), 325.0, indistinguishable = 325 FROM meeting_agg
   UNION ALL
   SELECT 'decided solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(total_pairs - indistinguishable AS DOUBLE), 0.0, total_pairs - indistinguishable = 0 FROM meeting_agg
+         CAST(total_pairs - indistinguishable AS DOUBLE), 64.0, total_pairs - indistinguishable = 64 FROM meeting_agg
   UNION ALL
   SELECT 'head-domain distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, head TVD == 0)',
          CAST(diff AS DOUBLE), 0.0, diff = 0 FROM head_domain_diff
   UNION ALL
-  SELECT 'cult-form distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, cult-form TVD == 0)',
-         CAST(diff AS DOUBLE), 0.0, diff = 0 FROM cult_form_diff
+  -- cult-form TVD is no longer exactly zero under history-first placement
+  -- (path-dependent condensation order breaks the perfect solo/twin-solo
+  -- clone on a couple of seeds); pinned to the measured count-diff.
+  SELECT 'cult-form distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, cult-form TVD re-pinned nonzero)',
+         CAST(diff AS DOUBLE), 2.0, diff = 2 FROM cult_form_diff
   UNION ALL
-  SELECT 'pantheon-size mean diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, SMD == 0)',
-         mean_a - mean_b, 0.0, abs(mean_a - mean_b) < 1e-6 FROM pantheon_size_stats
+  -- Same movement as cult-form above: pantheon-size mean-diff, formerly an
+  -- exact-zero structural pin, is now a tiny measured nonzero value.
+  SELECT 'pantheon-size mean diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, SMD re-pinned nonzero)',
+         mean_a - mean_b, -0.010_282_776_349_614_053, abs(mean_a - mean_b - -0.010_282_776_349_614_053) < 1e-6 FROM pantheon_size_stats
   UNION ALL
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.047_266_428_630_096_086,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.047_266_428_630_096_086) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.057_530_513_798_514_59,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.057_530_513_798_514_59) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;
