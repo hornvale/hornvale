@@ -590,6 +590,12 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
 /// move, so co-location (and therefore relief) is stable for the entire run.
 /// When apart, the knower stands at a different room entirely, is never
 /// co-located with the stricken, and the stricken is never relieved.
+///
+/// Test-only: its sole callers are the tests below (the `a_band_that_shares_water`
+/// public wrapper that once re-exported it for non-test callers was removed as
+/// dead surface — The Tidings task 5), so it is `#[cfg(test)]`-gated rather
+/// than left to warn as dead code in the library build.
+#[cfg(test)]
 fn a_stranded_pair(colocated: bool) -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
     // A room away from exile, where the apart-case knower is safely parked —
@@ -656,13 +662,6 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
             threat: BTreeMap::new(),
         },
     }
-}
-
-/// The co-located treatment (The Tidings headline result): a band whose
-/// knowledgeable member heals its stranded one by circulating a reachable water.
-/// Its matched null is `a_stranded_pair(false)` — the same pair standing apart.
-pub fn a_band_that_shares_water() -> Scenario {
-    a_stranded_pair(true)
 }
 
 #[cfg(test)]
