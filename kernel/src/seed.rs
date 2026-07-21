@@ -157,23 +157,36 @@ mod tests {
 
     #[test]
     fn derive_is_deterministic() {
-        assert_eq!(Seed(42).derive("astronomy"), Seed(42).derive("astronomy"));
+        assert_eq!(
+            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
+            Seed(42).derive_typed(StreamLabel::dynamic("astronomy"))
+        );
     }
 
     #[test]
     fn derive_differs_by_label() {
-        assert_ne!(Seed(42).derive("astronomy"), Seed(42).derive("climate"));
+        assert_ne!(
+            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
+            Seed(42).derive_typed(StreamLabel::dynamic("climate"))
+        );
     }
 
     #[test]
     fn derive_differs_by_parent() {
-        assert_ne!(Seed(42).derive("astronomy"), Seed(43).derive("astronomy"));
+        assert_ne!(
+            Seed(42).derive_typed(StreamLabel::dynamic("astronomy")),
+            Seed(43).derive_typed(StreamLabel::dynamic("astronomy"))
+        );
     }
 
     #[test]
     fn derive_chains_compose() {
-        let a = Seed(7).derive("settlement").derive("name");
-        let b = Seed(7).derive("settlement").derive("name");
+        let a = Seed(7)
+            .derive_typed(StreamLabel::dynamic("settlement"))
+            .derive_typed(StreamLabel::dynamic("name"));
+        let b = Seed(7)
+            .derive_typed(StreamLabel::dynamic("settlement"))
+            .derive_typed(StreamLabel::dynamic("name"));
         assert_eq!(a, b);
     }
 
@@ -258,7 +271,7 @@ mod tests {
 
     #[test]
     fn seed_serializes_roundtrip() {
-        let s = Seed(42).derive("x");
+        let s = Seed(42).derive_typed(StreamLabel::dynamic("x"));
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(serde_json::from_str::<Seed>(&json).unwrap(), s);
     }

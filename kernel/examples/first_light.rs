@@ -9,6 +9,7 @@
 //!
 //! Run from the workspace root: `cargo run -p hornvale-kernel --example first_light`
 
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     EntityId, Fact, Ledger, ObserverContext, PhenomenaSource, Phenomenon, Seed, Value, Venue,
     World, WorldTime, choose_consistent, fbm_2d, observe,
@@ -33,7 +34,7 @@ fn main() -> std::io::Result<()> {
 /// mapping the unit interval onto an ink-to-parchment ramp.
 fn write_noise_png(path: &Path) -> std::io::Result<()> {
     let size = IMAGE_SIZE;
-    let terrain = SEED.derive("terrain");
+    let terrain = SEED.derive_typed(StreamLabel::dynamic("terrain"));
     let mut rgb = Vec::with_capacity((size * size * 3) as usize);
     for row in 0..size {
         // PNG rows run top-down; the BMP predecessor stored bottom-up with
@@ -88,7 +89,10 @@ fn render_world_document() -> String {
     let village = world.ledger.mint_entity();
 
     let candidates = ["Zaggrak", "Bolnar", "Mokru", "Ishtor"];
-    let mut stream = SEED.derive("settlement").derive("name").stream();
+    let mut stream = SEED
+        .derive_typed(StreamLabel::dynamic("settlement"))
+        .derive_typed(StreamLabel::dynamic("name"))
+        .stream();
     let name_fact = |n: &&str| Fact {
         subject: village,
         predicate: "name".to_string(),

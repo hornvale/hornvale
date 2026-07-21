@@ -1,6 +1,7 @@
 //! Cross-module determinism: the constitutional test (spec §6).
 //! A mini-genesis run twice from the same seed must be byte-identical.
 
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConstantField, EntityId, Fact, Field, ObserverContext, PhenomenaSource, Phenomenon, Position,
     Seed, Value, Venue, World, WorldTime, choose_consistent, fbm_2d, observe,
@@ -34,7 +35,12 @@ fn mini_genesis(seed: Seed) -> String {
 
     // Terrain-ish: a place with a field-derived character.
     let vale = world.ledger.mint_entity();
-    let roughness = fbm_2d(seed.derive("terrain"), 0.5, 0.5, 3);
+    let roughness = fbm_2d(
+        seed.derive_typed(StreamLabel::dynamic("terrain")),
+        0.5,
+        0.5,
+        3,
+    );
     let biome = ConstantField("temperate forest".to_string())
         .sample(Position { x: 0.0, y: 0.0 }, WorldTime { day: 0.0 });
     assert!((0.0..1.0).contains(&roughness));
@@ -43,7 +49,10 @@ fn mini_genesis(seed: Seed) -> String {
     // Settlement-ish: a named village, name refined against the ledger.
     let village = world.ledger.mint_entity();
     let candidates = ["Zaggrak", "Bolnar", "Mokru", "Ishtor"];
-    let mut stream = seed.derive("settlement").derive("name").stream();
+    let mut stream = seed
+        .derive_typed(StreamLabel::dynamic("settlement"))
+        .derive_typed(StreamLabel::dynamic("name"))
+        .stream();
     let idx = choose_consistent(
         &mut stream,
         &world.ledger,

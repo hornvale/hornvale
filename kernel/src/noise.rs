@@ -1,7 +1,7 @@
 //! Coherent noise with random access: deterministic, evaluable at any
 //! point without evaluating neighbors, locally coherent.
 
-use crate::seed::Seed;
+use crate::seed::{Seed, StreamLabel};
 
 /// Hash a lattice point to [0, 1). Stable forever (save-format contract).
 fn lattice(seed: Seed, xi: i64, yi: i64) -> f64 {
@@ -45,23 +45,23 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
 /// (fbm is called per octave per slice per field sample). Octave counts
 /// beyond the table fall back to `format!` with the same label scheme,
 /// preserving exact semantics for any count.
-const OCTAVE_LABELS: [&str; 16] = [
-    "octave-0",
-    "octave-1",
-    "octave-2",
-    "octave-3",
-    "octave-4",
-    "octave-5",
-    "octave-6",
-    "octave-7",
-    "octave-8",
-    "octave-9",
-    "octave-10",
-    "octave-11",
-    "octave-12",
-    "octave-13",
-    "octave-14",
-    "octave-15",
+const OCTAVE_LABELS: [StreamLabel<'static>; 16] = [
+    StreamLabel::from_static("octave-0"),
+    StreamLabel::from_static("octave-1"),
+    StreamLabel::from_static("octave-2"),
+    StreamLabel::from_static("octave-3"),
+    StreamLabel::from_static("octave-4"),
+    StreamLabel::from_static("octave-5"),
+    StreamLabel::from_static("octave-6"),
+    StreamLabel::from_static("octave-7"),
+    StreamLabel::from_static("octave-8"),
+    StreamLabel::from_static("octave-9"),
+    StreamLabel::from_static("octave-10"),
+    StreamLabel::from_static("octave-11"),
+    StreamLabel::from_static("octave-12"),
+    StreamLabel::from_static("octave-13"),
+    StreamLabel::from_static("octave-14"),
+    StreamLabel::from_static("octave-15"),
 ];
 
 /// Derive octave `n`'s seed from a base `seed`, exactly as `fbm_2d` always
@@ -72,9 +72,9 @@ fn octave_seed(seed: Seed, octave: u32) -> Seed {
     if octave == 0 {
         seed
     } else if (octave as usize) < OCTAVE_LABELS.len() {
-        seed.derive(OCTAVE_LABELS[octave as usize])
+        seed.derive_typed(OCTAVE_LABELS[octave as usize])
     } else {
-        seed.derive(&format!("octave-{octave}"))
+        seed.derive_typed(StreamLabel::dynamic(&format!("octave-{octave}")))
     }
 }
 
