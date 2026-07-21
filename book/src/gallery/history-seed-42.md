@@ -43,5 +43,5 @@ The last of them — at its height a mere three souls.
 In the grass today
 ------------------
 At its height a mere three souls, the last bugbears here raised two huts and a granary.
-They did not take everything. In the grass a searcher finds a child's rag doll, ragged but whole, where a doorway once stood.
+Of all that, nothing legible remains: the ground has taken it back.
 ```

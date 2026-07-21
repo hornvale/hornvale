@@ -33,6 +33,7 @@
 | `held-by` | no | a community holding a belief |
 | `high-god` | yes | the presiding deity of a ranked pantheon |
 | `highest-elevation-m` | yes | highest globe cell elevation in meters |
+| `history-now` | yes | the standard day the world's present sits at (the bake's end year) |
 | `insolation-rel` | yes | insolation at the anchor relative to Earth (derived L/a²) |
 | `instance-of` | no | the kind an entity is an instance of; the latest fact is its current kind |
 | `is-a` | yes | the class an entity belongs to |

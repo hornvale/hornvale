@@ -147,6 +147,11 @@
         "functional": true,
         "doc": "highest globe cell elevation in meters"
       },
+      "history-now": {
+        "name": "history-now",
+        "functional": true,
+        "doc": "the standard day the world's present sits at (the bake's end year)"
+      },
       "insolation-rel": {
         "name": "insolation-rel",
         "functional": true,
@@ -24212,6 +24217,16 @@
         },
         "place": 186,
         "day": 1975.0,
+        "provenance": "history/bake"
+      },
+      {
+        "subject": 1,
+        "predicate": "history-now",
+        "object": {
+          "Number": 2000.0
+        },
+        "place": null,
+        "day": 0.0,
         "provenance": "history/bake"
       },
       {
