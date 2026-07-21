@@ -1,6 +1,10 @@
 # The Bane — the threat niche, per-kind fear
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-bane.md) and
+[retrospective](../../retrospectives/the-bane.md). Byte-identical (zero gallery
+drift; the niche derived from existing data). The thermal-fear harness was
+covered by a unit test rather than a scenario — see the retro.
 **Date:** 2026-07-21
 **Campaign:** The Bane (the threat niche — PSY-11, deepening The Dread + The Mettle)
 **Precedes:** implementation plan → execution → merge

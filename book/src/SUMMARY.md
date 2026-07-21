@@ -212,6 +212,7 @@
 - [The Belonging](./chronicle/the-belonging.md)
 - [The Disposition](./chronicle/the-disposition.md)
 - [The Mettle](./chronicle/the-mettle.md)
+- [The Bane](./chronicle/the-bane.md)
 
 # Appendix: The Frontier
 
