@@ -5,7 +5,7 @@
 Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.
 The Babako are bugbears.
 The Vavako are goblins.
-The Babako are hobgoblins.
+The Ddenke are hobgoblins.
 The Ngngoashzhoo are kobolds.
 
 ### Tongues
@@ -14,7 +14,7 @@ Nxaabo Babako Boxa. (in the bugbear tongue: "The Babako are bugbears.")
 Nxaabo Xobo Xobo. (in the bugbear tongue: "Xobo is the earth.")
 Saa Wowe Vavako. (in the goblin tongue: "The Vavako are goblins.")
 Saa Wovewe Xobo. (in the goblin tongue: "Xobo is the earth.")
-Babako Babo Be Bo. (in the hobgoblin tongue: "The Babako are hobgoblins.")
+Ddenke Babo Be Bo. (in the hobgoblin tongue: "The Ddenke are hobgoblins.")
 Xobo Vebe Be Bo. (in the hobgoblin tongue: "Xobo is the earth.")
 Ngngoashzhoo Ngngoo Shshoosshaa. (in the kobold tongue: "The Ngngoashzhoo are kobolds.")
 Xobo Ngngoo Ngngoongngoa. (in the kobold tongue: "Xobo is the earth.")
@@ -30,6 +30,7 @@ kobold: gap — planet (no entry in this lexicon)
 
 The Babako are bugbears — ourselves.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — rivals.
 The Ngngoashzhoo are kobolds — rivals.
 Xobo is the earth with two moons.
 The moons cross because they are Babo's kin.
@@ -43,6 +44,7 @@ Nxaabo Xobo Xobo. ("Xobo is the earth — as it is taught.")
 
 The Babako are bugbears — ourselves.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — rivals.
 The Ngngoashzhoo are kobolds — rivals.
 Xobo is the earth with two moons.
 The moons cross because Babo walks the sky, slowly.
@@ -56,6 +58,7 @@ The day returns, as all things return.
 
 The Babako are bugbears — neighbors.
 The Vavako are goblins — ourselves.
+The Ddenke are hobgoblins — neighbors.
 The Ngngoashzhoo are kobolds — neighbors.
 Xobo is the earth.
 The day returns because the sky must be crossed.
@@ -68,6 +71,7 @@ Saa Wovewe Xobo. ("Xobo is the earth — as it is taught.")
 
 The Babako are bugbears — neighbors.
 The Vavako are goblins — ourselves.
+The Ddenke are hobgoblins — neighbors.
 The Ngngoashzhoo are kobolds — neighbors.
 Xobo is the earth.
 The moons are counted and known to the priesthood.
@@ -76,22 +80,24 @@ The day returns because Wowako strides the sky, briskly.
 
 *In truth, Xobo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-#### As the Babako tell it
+#### As the Ddenke tell it
 
 The Babako are bugbears — rivals.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — ourselves.
 The Ngngoashzhoo are kobolds — rivals.
 Xobo is the earth.
 The day returns, as all things return.
 
 *In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
 
-##### As the priesthood of the Babako teach it
+##### As the priesthood of the Ddenke teach it
 
 Xobo Vebe Bo Bo. ("Xobo is the earth — as it is taught.")
 
 The Babako are bugbears — rivals.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — ourselves.
 The Ngngoashzhoo are kobolds — rivals.
 Xobo is the earth.
 The moons are counted and known to the priesthood.
@@ -107,6 +113,7 @@ The moons cross because they answer Ngoongoo.
 The day returns to keep the balance.
 The Babako are bugbears — rivals.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — rivals.
 The Ngngoashzhoo are kobolds — ourselves.
 
 *In truth, Xobo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -120,6 +127,7 @@ The moons cross because Ngoongoo strides the sky, slowly.
 The day returns to keep the balance.
 The Babako are bugbears — rivals.
 The Vavako are goblins — rivals.
+The Ddenke are hobgoblins — rivals.
 The Ngngoashzhoo are kobolds — ourselves.
 
 — though the folk say The moons cross because they answer Ngoongoo.
@@ -140,8 +148,8 @@ The next darkening, it teaches, comes on day 36526.
 Among the Vavako, the sky has darkened, now and again.
 The priesthood of the Vavako numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36526.
-Among the Babako, the sky has darkened, now and again.
-The priesthood of the Babako numbers the darkenings: 4010.
+Among the Ddenke, the sky has darkened, now and again.
+The priesthood of the Ddenke numbers the darkenings: 4010.
 The next darkening, it teaches, comes on day 36526.
 Among the Ngngoashzhoo, the sky has darkened, now and again.
 The priesthood of the Ngngoashzhoo numbers the darkenings: 6472.

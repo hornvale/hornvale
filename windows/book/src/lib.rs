@@ -2495,8 +2495,11 @@ mod tests {
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Babako are hobgoblins."),
-            "hobgoblin collective renders as the autonym: {:?}",
+            // Bugbear (registry-first) keeps its autonym "Babako"; hobgoblin,
+            // sharing that autonym, re-draws deterministically to "Ddenke"
+            // (the per-world collective-name uniqueness fix, T5d).
+            vol.lines.iter().any(|l| l == "The Ddenke are hobgoblins."),
+            "hobgoblin collective renders its deduplicated name: {:?}",
             vol.lines
         );
     }
@@ -3066,8 +3069,6 @@ mod tests {
     /// but a real property violation, so it is deferred pending a controller
     /// decision on whether per-world collective names must be unique.
     #[test]
-    #[ignore = "epoch's seed-1 name collision (bugbear & hobgoblin both \"Babako\") breaks the \
-                null-filter byte-identity law; awaits a controller decision on name uniqueness (T5c)"]
     fn identity_chorus_reproduces_the_gods_eye_lines() {
         let world = generated(1);
         let vol = render_volume(&world);
@@ -3219,9 +3220,6 @@ mod tests {
     /// is deferred pending the same controller decision on name uniqueness as
     /// `identity_chorus_reproduces_the_gods_eye_lines`.
     #[test]
-    #[ignore = "epoch's seed-1 name collision (bugbear & hobgoblin both \"Babako\") makes a \
-                colliding people's ground-truth kind unrecoverable; awaits a controller \
-                decision on name uniqueness (T5c)"]
     fn emic_union_margin_covers_ground_truth() {
         for seed in [1u64, 2, 3] {
             let world = generated(seed);
@@ -3594,43 +3592,37 @@ mod tests {
         );
     }
 
-    /// C6 T3, the disclosure law (both directions). Measured (a full sweep
-    /// over seeds 1..=5, then widened to 1..=40 to double-check, via a
-    /// throwaway probe before writing this test, then deleted): every
-    /// organized culture's `moon-count` entry is either `RevealedClaim`
-    /// (folk capability under the 0.6 threshold, doctrine's +0.25-boosted
-    /// capability over it) or `Harmony` (the one measured case where folk
-    /// ALSO keeps it, seed 2's kobold — same schema both sides, differing
-    /// only in lexeme, which `conflict_of` ignores); every `day-length-std`
-    /// entry is either `Harmony` or `Mystery` (`day-length-std` is
-    /// `CrossReferential`, never folk-verifiable, so a differing schema
-    /// there can only ever be `Mystery`, never `Contested`). **NO real
-    /// `Contested` entry exists across seeds 1..=40** — the C5 F2 lesson's
-    /// negative-result case: rather than a live sweep assertion that would
-    /// vacuously and permanently pass, the disclosure law's `Contested`
-    /// half is driven directly below with a synthetic folk/doctrine pair
-    /// (kobold-style: folk KEEPS the moon count, but the two accounts
-    /// explain it under differing schemas — Task 1's own Contested grid
-    /// case, wired through the real renderer).
+    /// C6 T3, the disclosure law (both directions), measured over a live
+    /// sweep of seeds 1..=5. Two conflict states drive the law:
+    /// - `Mystery` — folk and doctrine hold the same fact under differing
+    ///   schemas but the fact is NOT folk-verifiable (`day-length-std` is
+    ///   `CrossReferential`, so a differing schema there is always `Mystery`),
+    ///   and its section must carry NO annotation (the folk cannot check the
+    ///   priesthood, so there is nothing to disclose).
+    /// - `Contested` — a folk-verifiable fact (`moon-count`) that folk and
+    ///   doctrine keep under differing schemas, so the section MUST disclose
+    ///   the folk's own competing explanation (the "Galileo cell"
+    ///   counter-annotation).
     ///
-    /// FLAGGED / DEFERRED under The Living Community epoch (T5c fallout sweep):
-    /// the guarded tripwire below (`assert_ne!(conflict, Contested)`, "NO real
-    /// Contested entry exists across seeds 1..=5") FIRED — the epoch now grows
+    /// The Living Community epoch made both directions live at once: it grows
     /// seed-1 bugbear into an organized culture whose folk and doctrine
-    /// accounts explain moon-count under differing schemas, i.e. a REAL
-    /// Contested entry now exists. This is exactly the tripwire doing its job
-    /// (the comment says a future change introducing a real Contested "should
-    /// redden this assertion rather than going silently uncovered"). The honest
-    /// resolution is to restructure this test to exercise the disclosure law
-    /// against the real Contested entry instead of the synthetic pair — a
-    /// redesign beyond a mechanical re-pin, so it is deferred for the
-    /// controller. (See the flagged seed-1 name-collision concerns.)
+    /// accounts explain `moon-count` under differing schemas — a REAL
+    /// `Contested` entry (before the epoch none existed across the sweep, so
+    /// the Contested direction was formerly driven only by the synthetic
+    /// fixture retained at the end of this test). The sweep now asserts BOTH
+    /// a real `Mystery` and a real `Contested` entry exist, then checks the
+    /// rendered volume discloses exactly the Contested sections (non-empty
+    /// annotations) and leaves the Mystery-only sections bare — the honest
+    /// resolution the C5 F2 tripwire was designed to trigger when a real
+    /// Contested entry finally appeared.
     #[test]
-    #[ignore = "epoch surfaces a REAL Contested moon-count entry at seed 1 (bugbear, now \
-                organized), firing this test's own no-real-Contested tripwire as designed; \
-                needs a restructure to the real entry, not a re-pin (T5c)"]
     fn the_disclosure_law_both_directions() {
         let mut mystery_seen = false;
+        let mut contested_seen = false;
+        // (seed, kind) of every section whose doctrine carries at least one
+        // real `Contested` entry — the sections that MUST disclose below.
+        // `BTreeSet` keeps the sweep deterministic (no `HashSet`).
+        let mut contested_sections: BTreeSet<(u64, String)> = BTreeSet::new();
         for seed in 1u64..=5 {
             let world = generated(seed);
             for voice in hornvale_worldgen::accounts_of(&world) {
@@ -3653,17 +3645,13 @@ mod tests {
                         hornvale_worldgen::folk_verifiable(&voice.params, &d_entry.fact.predicate);
                     let conflict =
                         conflict_of(&f_entry.disposition, &d_entry.disposition, verifiable);
-                    assert_ne!(
-                        conflict,
-                        ConflictState::Contested,
-                        "seed {seed} {} {}: no real Contested entry exists across seeds \
-                         1..=5 (measured) — a future worldgen change that introduces one \
-                         should redden this assertion rather than going silently uncovered",
-                        voice.kind,
-                        d_entry.fact.predicate
-                    );
-                    if conflict == ConflictState::Mystery {
-                        mystery_seen = true;
+                    match conflict {
+                        ConflictState::Contested => {
+                            contested_seen = true;
+                            contested_sections.insert((seed, voice.kind.clone()));
+                        }
+                        ConflictState::Mystery => mystery_seen = true,
+                        _ => {}
                     }
                 }
             }
@@ -3672,23 +3660,37 @@ mod tests {
             mystery_seen,
             "the sweep should find at least one real Mystery entry (day-length-std)"
         );
+        assert!(
+            contested_seen,
+            "the epoch grows an organized seed-1 bugbear whose folk and doctrine explain \
+             moon-count under differing schemas — a real Contested entry the sweep must find"
+        );
 
-        // The Mystery-carries-none half, non-vacuously: since no Contested
-        // entry exists (asserted above), every doctrine section's
-        // annotations are empty — including every section that DOES carry
-        // a Mystery entry (mystery_seen, just asserted).
+        // Both directions, non-vacuously, against the rendered volume: a
+        // section carrying a real Contested entry MUST disclose it (a non-empty
+        // counter-annotation), and every other doctrine section — including
+        // every Mystery-only one — carries none.
         for seed in 1u64..=5 {
             let world = generated(seed);
             let vol = render_volume(&world);
             for section in &vol.chorus {
                 if let Some(doctrine) = &section.doctrine {
-                    assert!(
-                        doctrine.annotations.is_empty(),
-                        "seed {seed} {}: a Mystery entry's section must carry no \
-                         annotation: {:?}",
-                        section.kind,
-                        doctrine.annotations
-                    );
+                    if contested_sections.contains(&(seed, section.kind.clone())) {
+                        assert!(
+                            !doctrine.annotations.is_empty(),
+                            "seed {seed} {}: a real Contested entry's section must DISCLOSE \
+                             via a counter-annotation, not silently drop it",
+                            section.kind,
+                        );
+                    } else {
+                        assert!(
+                            doctrine.annotations.is_empty(),
+                            "seed {seed} {}: a section with no Contested entry (a Mystery-only \
+                             section) must carry no annotation: {:?}",
+                            section.kind,
+                            doctrine.annotations
+                        );
+                    }
                 }
             }
         }
@@ -3907,17 +3909,16 @@ mod tests {
         // Re-pinned under The Living Community epoch (this merge) to the seed-1
         // world's actual folk registers. The deep-history bake now seeds all
         // four peoples at seed 1, so each folk section lists all three others
-        // (planet name "Vebe" -> "Xobo"). NOTE: bugbear and hobgoblin collide
-        // on the generated collective name "Babako" this seed (see the flagged
-        // `identity_chorus`/`emic_union_margin` concerns), so a section's
-        // "Babako" line resolves to bugbear — hobgoblin's own self-line is
-        // subsumed. These snapshots document the current rendering; the
-        // collision itself is flagged for a controller decision, not blessed.
+        // (planet name "Vebe" -> "Xobo"). bugbear and hobgoblin drew the same
+        // autonym "Babako"; the T5d per-world collective-name uniqueness fix
+        // keeps bugbear's (registry-first) and re-draws hobgoblin's to
+        // "Ddenke", so every section now lists all four peoples distinctly.
         assert_eq!(
             goblin.emic,
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
                 "Xobo is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -3942,6 +3943,7 @@ mod tests {
             vec![
                 "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
+                "The Ddenke are hobgoblins — ourselves.".to_string(),
                 "The Ngngoashzhoo are kobolds — rivals.".to_string(),
                 "Xobo is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
@@ -4349,9 +4351,11 @@ mod tests {
         // deep-history bake seeds all four peoples at seed 1 and each clears
         // the SOC-1 organized gate, so every people renders the full
         // priesthood arm (qualitative + cardinal + prediction). NOTE: bugbear
-        // and hobgoblin collide on the name "Babako" this seed (flagged
-        // separately), so "Among the Babako..." appears twice — once per
-        // colliding people (6472 and 4010).
+        // and hobgoblin drew the same autonym "Babako" this seed; the T5d
+        // per-world collective-name uniqueness fix keeps bugbear's and
+        // re-draws hobgoblin's to "Ddenke", so the four peoples number the
+        // darkenings under four distinct names (bugbear 6472, goblin 4010,
+        // hobgoblin/Ddenke 4010, kobold 6472).
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
@@ -4361,8 +4365,8 @@ mod tests {
                 "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36526.".to_string(),
-                "Among the Babako, the sky has darkened, now and again.".to_string(),
-                "The priesthood of the Babako numbers the darkenings: 4010.".to_string(),
+                "Among the Ddenke, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ddenke numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36526.".to_string(),
                 "Among the Ngngoashzhoo, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Ngngoashzhoo numbers the darkenings: 6472.".to_string(),
@@ -4510,8 +4514,9 @@ mod tests {
 
         // Re-pinned under The Living Community epoch (this merge): seed 1 now
         // places all four peoples (planet "Vebe" -> "Xobo"). bugbear and
-        // hobgoblin collide on "Babako" this seed (flagged separately), so the
-        // god's-eye gazetteer lists two "Babako" lines.
+        // hobgoblin drew the same autonym "Babako"; the T5d per-world
+        // collective-name uniqueness fix re-draws hobgoblin's to "Ddenke", so
+        // the god's-eye gazetteer lists four distinct collective names.
         assert_eq!(
             vol.lines,
             vec![
@@ -4520,7 +4525,7 @@ mod tests {
                     .to_string(),
                 "The Babako are bugbears.".to_string(),
                 "The Vavako are goblins.".to_string(),
-                "The Babako are hobgoblins.".to_string(),
+                "The Ddenke are hobgoblins.".to_string(),
                 "The Ngngoashzhoo are kobolds.".to_string(),
             ]
         );
@@ -4532,7 +4537,7 @@ mod tests {
                 "Nxaabo Xobo Xobo. (in the bugbear tongue: \"Xobo is the earth.\")".to_string(),
                 "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
                 "Saa Wovewe Xobo. (in the goblin tongue: \"Xobo is the earth.\")".to_string(),
-                "Babako Babo Be Bo. (in the hobgoblin tongue: \"The Babako are hobgoblins.\")"
+                "Ddenke Babo Be Bo. (in the hobgoblin tongue: \"The Ddenke are hobgoblins.\")"
                     .to_string(),
                 "Xobo Vebe Be Bo. (in the hobgoblin tongue: \"Xobo is the earth.\")".to_string(),
                 "Ngngoashzhoo Ngngoo Shshoosshaa. (in the kobold tongue: \"The Ngngoashzhoo are \
@@ -4562,6 +4567,7 @@ mod tests {
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
                 "Xobo is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
@@ -4589,6 +4595,7 @@ mod tests {
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
                 "Xobo is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
@@ -4616,6 +4623,7 @@ mod tests {
             vec![
                 "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
+                "The Ddenke are hobgoblins — ourselves.".to_string(),
                 "The Ngngoashzhoo are kobolds — rivals.".to_string(),
                 "Xobo is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),

@@ -4078,6 +4078,24 @@ fn build_to(
         // PROC-15 coverage gap, not a build failure. Task 1's `person`
         // concept is universal-stratum (every lexicon resolves it today),
         // so this branch is not exercised by any current seed.
+        // Collective names must be unique WITHIN a world. The account layer
+        // keys collectives by subject NAME, so two peoples that render the
+        // same autonym (bugbear and hobgoblin both draw "Babako" at seed 1,
+        // sharing a proto-language) collapse into one — which breaks the
+        // null-filter byte-identity law, ground-truth recoverability, and the
+        // disclosure tripwire. Only the composition root sees the whole
+        // peoples roster (the language domain names one people at a time), so
+        // uniqueness is enforced here. On a collision we re-draw
+        // deterministically from that same people's own namer — a bare stem
+        // in its language, advancing the salt until the stem is unused. This
+        // stays byte-identical (same world -> same names): `placed_peoples`
+        // is registry-ordered (alphabetical), the `BTreeSet` is deterministic,
+        // and `Namer::name` is a pure function of (seed, species, kind, salt)
+        // — no `HashMap`, no RNG. The first holder of a name keeps its
+        // autonym; only later collisions re-draw (hobgoblin, sorting after
+        // bugbear, yields to it).
+        let mut used_collective_names: std::collections::BTreeSet<String> =
+            std::collections::BTreeSet::new();
         for kind in placed_peoples(&world) {
             let collective =
                 mint_instance_of_kind(&mut world, wc, kind.0, None, "the people as a roster kind")?;
@@ -4090,14 +4108,38 @@ fn build_to(
                     }
                     hornvale_language::LexEntry::Gap { .. } => None,
                 });
-            if let Some(autonym) = autonym {
+            if let Some(mut name) = autonym {
+                if used_collective_names.contains(&name) {
+                    // Deterministic disambiguation: advance the salt through
+                    // this people's namer until the rendered stem is unused.
+                    // `NameKind::Settlement` is a bare stem (no honorifics, no
+                    // reduplication) — the closest morphology to a noun
+                    // autonym — so the disambiguated collective still reads as
+                    // a word in that people's own language.
+                    let namer = namers
+                        .get(kind.0)
+                        .expect("a Namer was built for every placed species");
+                    let morph = hornvale_language::MorphOptions { honorifics: false };
+                    let mut salt = 0u64;
+                    loop {
+                        let candidate = namer
+                            .name(hornvale_language::NameKind::Settlement, salt, &morph)
+                            .roman;
+                        salt += 1;
+                        if !used_collective_names.contains(&candidate) {
+                            name = candidate;
+                            break;
+                        }
+                    }
+                }
+                used_collective_names.insert(name.clone());
                 world
                     .ledger
                     .commit(
                         Fact {
                             subject: collective,
                             predicate: hornvale_kernel::NAME.into(),
-                            object: Value::Text(autonym),
+                            object: Value::Text(name),
                             place: None,
                             day: None,
                             provenance: "the people's own word for 'person'".into(),
