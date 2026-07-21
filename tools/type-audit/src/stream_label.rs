@@ -19,11 +19,11 @@
 //!
 //! `#[cfg(test)] mod { … }` blocks are exempt too, matching the precedent
 //! [`crate::extract`] already sets for the tag-audit check: a test
-//! comparing `derive_typed(StreamLabel::from_static("x"))` against
-//! `derive("x")` for parity, or a `_TEST` const kept as a deliberately
-//! independent literal copy to catch drift, is testing *behavior*, not
-//! declaring a save-format-relevant label — it has no "real declared
-//! constant" to point at instead.
+//! comparing `derive(StreamLabel::from_static("x"))` against
+//! `derive(StreamLabel::dynamic("x"))` for parity, or a `_TEST` const kept
+//! as a deliberately independent literal copy to catch drift, is testing
+//! *behavior*, not declaring a save-format-relevant label — it has no
+//! "real declared constant" to point at instead.
 
 use crate::extract::has_cfg_test;
 use proc_macro2::{TokenStream, TokenTree};
