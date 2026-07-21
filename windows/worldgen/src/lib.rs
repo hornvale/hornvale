@@ -16,6 +16,7 @@ use hornvale_climate::{
     SeafloorFeature, UniformClimate, diurnal_waveform,
 };
 use hornvale_kernel::math;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
     ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
@@ -78,6 +79,7 @@ pub mod chorus;
 pub mod components;
 pub mod schedule;
 pub mod settlement_pins;
+pub mod streams;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -3065,8 +3067,8 @@ struct LanguageDeityNamer<'a, 'b, 'c> {
 /// entity id, so deity names are invariant to entity mint order — the fix
 /// for the `/v2` naming epoch (spec §8).
 fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
-    base.derive(kind)
-        .derive(&rank.to_string())
+    base.derive_typed(StreamLabel::dynamic(kind))
+        .derive_typed(StreamLabel::dynamic(&rank.to_string()))
         .stream()
         .next_u64()
 }
@@ -3077,7 +3079,9 @@ fn deity_name_seed(base: Seed, kind: &str, rank: usize) -> u64 {
 /// [`LanguageDeityNamer`]) and [`deity_name_seed_for`] (re-deriving the same
 /// seed from outside this crate) can never diverge.
 fn deity_base_seed(world_seed: &Seed, species: &str) -> Seed {
-    world_seed.derive("religion/deity/v2").derive(species)
+    world_seed
+        .derive_typed(streams::RELIGION_DEITY_V2)
+        .derive_typed(StreamLabel::dynamic(species))
 }
 
 /// Public entry point onto [`deity_name_seed`] for consumers outside this
@@ -4981,7 +4985,9 @@ mod tests {
     #[test]
     fn deity_name_seed_is_pure_and_entity_id_free() {
         use hornvale_kernel::Seed;
-        let base = Seed(42).derive("religion/deity/v2").derive("goblin");
+        let base = Seed(42)
+            .derive_typed(streams::RELIGION_DEITY_V2)
+            .derive_typed(StreamLabel::dynamic("goblin"));
         // Same species-seed + kind + rank -> same name seed, no entity id involved.
         assert_eq!(
             deity_name_seed(base, "celestial-body", 0),
