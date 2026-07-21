@@ -125,16 +125,17 @@ Expected: FAIL — `cannot find function shared_believed_water`.
 Insert after `believed_water` (after `liveness.rs:628`):
 
 ```rust
-/// The BAND's water belief for `npc` (The Tidings): the nearest-to-`npc.home`
-/// water room known to `npc` OR to any agent in `band` co-located with it at
-/// `t` (same current room), ties by ascending `RoomAddr`; `None` when the whole
-/// co-located band is ignorant. A monotonic set-union over the members'
-/// `believed_water`, re-ranked by `npc`'s own nearest-to-home metric — the SAME
-/// metric `believed_water` uses, so a shared belief is a value `believed_water`
-/// could itself have returned from a richer perception history. Order-
-/// independent by construction (a `BTreeSet` union + a deterministic `min`);
-/// no RNG. With an empty band (or one where only `npc` is co-located) it equals
-/// `believed_water(npc)`. BELIEF == FOLD (UNI-20): stores nothing.
+/// The BAND's water belief for `npc` (The Tidings; anchoring split per
+/// decision #8). With NO co-located peer, returns `believed_water(npc)`
+/// verbatim — the home-anchored nearest water it remembers — an exact no-op
+/// (this is what keeps the live one-per-settlement population byte-identical).
+/// With a co-located peer, pools `npc`'s and every co-located peer's
+/// `believed_water` and returns the one nearest to `npc`'s CURRENT position
+/// (ties: ascending `RoomAddr`), `None` if the pool is empty. Current-position
+/// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
+/// a stranded creature adopt a here-reachable water its home-anchored memory
+/// could never admit. Order-independent by construction (`BTreeSet` union +
+/// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
 /// type-audit: bare-ok(count: budget)
 pub fn shared_believed_water(
     frozen: &Ledger,
@@ -144,23 +145,30 @@ pub fn shared_believed_water(
     terrain: &dyn Terrain,
     budget: usize,
 ) -> Option<RoomAddr> {
+    let own = believed_water(frozen, npc, t, terrain, budget);
     let here = agent_position(frozen, npc, t);
     let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
-    // npc's own belief always counts (npc may or may not appear in `band`).
-    if let Some(w) = believed_water(frozen, npc, t, terrain, budget) {
-        pool.insert(w);
-    }
-    // every co-located band member contributes what IT knows of water.
+    let mut has_peer = false;
+    // Co-located OTHERS (never npc itself) contribute what they know of water.
     for other in band {
-        if agent_position(frozen, other, t) == here
-            && let Some(w) = believed_water(frozen, other, t, terrain, budget)
-        {
-            pool.insert(w);
+        if other.entity != npc.entity && agent_position(frozen, other, t) == here {
+            has_peer = true;
+            if let Some(w) = believed_water(frozen, other, t, terrain, budget) {
+                pool.insert(w);
+            }
         }
     }
-    // re-rank the pooled rooms by nearness to npc's OWN home (ties: ascending RoomAddr).
+    // ALONE: home-anchored memory, unchanged — the byte-identical no-op.
+    if !has_peer {
+        return own;
+    }
+    // CO-LOCATED: rank the pooled beliefs (npc's + peers') by nearness to npc's
+    // CURRENT position (ties: ascending RoomAddr) — act on what's reachable HERE.
+    if let Some(w) = own {
+        pool.insert(w);
+    }
     pool.into_iter()
-        .filter_map(|r| plan_to_room(&npc.home, &r, budget).map(|p| (p.len(), r)))
+        .filter_map(|r| plan_to_room(&here, &r, budget).map(|p| (p.len(), r)))
         .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
         .map(|(_, r)| r)
 }
@@ -385,30 +393,35 @@ Expected: FAIL — `cannot find function a_stranded_pair`.
 Add near `synthetic.rs:502`. The `colocated` flag changes ONLY the knower's current room (with the stricken at `exile`, or apart at the near water):
 
 ```rust
-/// A stranded pair (The Tidings). The **stricken** creature has stood at a far,
-/// unreachable `spring` and is now marooned at `exile` — it KNOWS water it cannot
-/// reach, so it reads chronic `Frustrated`. The **knower** has stood at a `near`
-/// water one hop from `exile` (reachable). When `colocated`, the knower stands
-/// with the stricken at `exile`, so the belief-share law seeds the stricken with
-/// the near water; it walks there within the tick, drinks, and is relieved. When
-/// apart, the knower sits on its own near water and the stricken stays `Frustrated`
-/// — the matched null. Co-location is the ONLY difference between the two.
+/// A stranded pair (The Tidings; decision #8). The **stricken** creature is
+/// HOMED at `spring` (so its home-anchored `believed_water` genuinely holds
+/// `spring`) but is marooned far away at `exile`, from which `spring` is
+/// unreachable — so alone it reads chronic `Frustrated` (it KNOWS water it
+/// cannot reach). The **knower** is homed at `exile` and has stood at a `near`
+/// water one hop from `exile` (reachable-from-`exile`), so it believes `near`.
+/// When `colocated`, the knower stands with the stricken at `exile`; the share
+/// law (current-position-anchored for co-located agents) pools `near` into the
+/// stricken's belief, `near` is reachable from `exile`, so the stricken walks
+/// there within the tick, drinks, and is relieved. When apart, the knower sits
+/// on `near` and the stricken stays `Frustrated`. The knower's HOME is `exile`
+/// in BOTH cases — only its current position (and thus co-location) differs.
 fn a_stranded_pair(colocated: bool) -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
-    let near = exile.neighbors()[0].clone(); // one hop from exile → reachable
+    let near = exile.neighbors()[0].clone(); // one hop from exile → reachable-from-exile
     let mut ledger = Ledger::default();
     let registry = harness_registry();
 
-    // The stricken: stood at the far spring, then marooned at exile. Knows spring
-    // (unreachable) → chronic Frustrated. Homed at exile.
+    // The stricken: homed at spring, stood there, then marooned at exile. Its
+    // home-anchored belief = spring (unreachable from exile) → chronic Frustrated.
     let stricken = ledger.mint_entity();
     ledger.commit(place_agent(stricken, &spring, WorldTime { day: 0.0 }), &registry)
         .expect("stricken once at spring");
     ledger.commit(place_agent(stricken, &exile, WorldTime { day: 0.5 }), &registry)
         .expect("stricken marooned at exile");
 
-    // The knower: stood at the near water (so it KNOWS a reachable source), then
-    // either joins the stricken at exile (colocated) or stays on the near water.
+    // The knower: homed at exile, stood at the near water (so it KNOWS a source
+    // reachable from exile). It then either joins the stricken at exile
+    // (colocated) or stays on the near water (apart). Home is exile either way.
     let knower = ledger.mint_entity();
     ledger.commit(place_agent(knower, &near, WorldTime { day: 0.0 }), &registry)
         .expect("knower at near water");
@@ -417,8 +430,8 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
         .expect("knower placed");
 
     let npcs = vec![
-        creature(stricken, exile.clone(), spring.clone(), "kobold", MILD_NICHE),
-        creature(knower, knower_now.clone(), near.clone(), "goblin", MILD_NICHE),
+        creature(stricken, spring.clone(), spring.clone(), "kobold", MILD_NICHE),
+        creature(knower, exile.clone(), near.clone(), "goblin", MILD_NICHE),
     ];
     Scenario {
         ledger,

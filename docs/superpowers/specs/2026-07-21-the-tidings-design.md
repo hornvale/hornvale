@@ -61,29 +61,43 @@ Three findings shape the design.
 
 A **band** is a set of co-located agents — v1: agents sharing the same room
 (`position`); a wider share-radius is reserved. For a located-belief kind (v1:
-believed water), each agent's belief after reconciliation is a pure re-derivation
-over an **extended candidate set**:
+believed water), each agent's belief after reconciliation is a pure re-derivation:
 
 ```
-shared_belief(agent, band) =
-    argmin_{ r in known(agent, band) } planned_hops(agent.home, r)     # ties: ascending RoomAddr
-where  known(agent, band) = { a.believed_water : a in band, a.believed_water = Some(_) }
+shared_belief(agent, band):
+    peers = { a in band : a != agent, a.position == agent.position }   # co-located others
+    if peers is empty:                                                 # ALONE
+        return believed_water(agent)                                   # unchanged home-anchored memory
+    pool  = { believed_water(a) : a in {agent} ∪ peers } \ {None}
+    return argmin_{ r in pool } planned_hops(agent.position, r)        # ties: ascending RoomAddr
 ```
 
-i.e. the band pools the water rooms its members know of, and **each agent
-re-ranks that pooled set by its own nearest-to-home metric** — the exact metric
-`believed_water` already uses (`liveness.rs:624-627`). This is one function,
-generic over the located belief; v1 instantiates it for water only (G3
-decision #3).
+Two anchoring regimes, and the split is the load-bearing design choice
+(G3-supplement decision #8):
 
-Its two effects fall straight out of the set-union:
+- **Alone → home-anchored memory, unchanged.** With no co-located peer the
+  function returns `believed_water(agent)` verbatim — the home-anchored nearest
+  water it remembers (`liveness.rs:604,624-627`). This is an exact no-op, which
+  is *why* the live one-per-settlement population stays byte-identical: a live
+  NPC is never co-located, so it always takes this branch.
+- **Co-located → current-position-anchored hearsay.** Only when a peer is
+  present does the band pool its members' beliefs and rank/admit them by
+  reachability **from the creature's current position**, not its home. This is
+  the semantics of being *told*: "there is water near *here*," not "near your
+  distant home." It is what lets a **stranded** creature be rescued (see below);
+  home-anchored memory alone could never supply a here-and-now-reachable water,
+  because a water near a far-flung position is unreachable from home and so is
+  filtered out of `believed_water`.
 
-- an **ignorant** agent (`None`) adopts the band's nearest-to-*its*-home known
-  water — **the motivating case**: the lost creature learns "the water is
-  north," its thirst becomes serviceable, its affect lifts from lost/Frustrated
-  toward Searching/Eager;
-- a **knowing** agent may learn of a **nearer** water it had not itself seen and
-  re-rank to it — a strict improvement.
+Its effects:
+
+- an **ignorant** agent (`None`) with a knowledgeable co-located peer adopts the
+  band's nearest-to-*here* known water — its thirst becomes serviceable and its
+  affect lifts (`Searching`/`Lost` → `Eager`);
+- a **stranded** agent — one that *knows* a home-anchored water it cannot reach
+  from where it is now (`Frustrated`) — adopts a peer's here-reachable water and
+  is **relieved** (`Frustrated` → `Eager`). This is the measurable band result
+  (§3), and it is achievable *only* under current-position anchoring.
 
 **Why union-fill, not a sticky register (G2 decision #2a):** in v1 every belief
 is *true* — a real water room the sharer actually perceived; there is no
