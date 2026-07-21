@@ -965,13 +965,10 @@ pub const RESTED: &str = "rested";
 // (that's Stage 2b, which swaps this body for the real solar read via the
 // astronomy daylight model). Exercised by unit tests today; `allow(dead_code)`
 // until the live wiring lands.
-#[allow(dead_code)]
 const AWAKE_START: f64 = 0.25;
 /// The end of the diurnal wake window (see [`AWAKE_START`]).
-#[allow(dead_code)]
 const AWAKE_END: f64 = 0.75;
 /// The half-width of a crepuscular creature's dawn/dusk wake bands.
-#[allow(dead_code)]
 const CREP_HALFWIDTH: f64 = 0.1;
 
 /// Fatigue (Process S, sleep-debt) gained per day AWAKE since the last rest (The
@@ -995,8 +992,27 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// `ActivityCycle` and the time of day (the fractional part of `day`; The
 /// Slumber, spec §1). Diurnal is awake through the day window, nocturnal the
 /// complement, crepuscular the twilight edges. A fractional-day approximation
+/// The resolution at which the tick scans for the next wake transition (days).
+/// Fine enough to catch a crepuscular creature's narrow dawn/dusk bands.
+const WAKE_SCAN_STEP: f64 = 0.05;
+
+/// The next day after `day` at which a creature of `activity` wakes — so a
+/// sleeping creature JUMPS through its off-phase in one `Rest` rather than
+/// spinning (The Slumber, spec §4). A bounded scan (at most ~1.5 days, one full
+/// cycle plus margin) at [`WAKE_SCAN_STEP`]; deterministic (compute-path only).
+fn next_awake_day(activity: ActivityCycle, day: f64) -> f64 {
+    let limit = day + 1.5;
+    let mut t = day + WAKE_SCAN_STEP;
+    while t < limit {
+        if is_awake(activity, t) {
+            return t;
+        }
+        t += WAKE_SCAN_STEP;
+    }
+    day + 1.0 // fallback: a creature always wakes within a day (unreachable here)
+}
+
 /// (true solar altitude is deferred).
-#[allow(dead_code)] // Stage 2b wires this into the live tick (solar body-swap).
 fn is_awake(activity: ActivityCycle, day: f64) -> bool {
     let frac = day - day.floor();
     let in_day = (AWAKE_START..AWAKE_END).contains(&frac);
@@ -1023,13 +1039,16 @@ pub fn fatigue_at(ledger: &Ledger, entity: EntityId, t: WorldTime) -> f64 {
 }
 
 /// The rest (fatigue) drive, Drive #3 (The Slumber). A STOCK drive like thirst:
-/// urgency accrues over time and is reset by a discrete `Rest`. Its affordance
-/// is to be at `home` (the rest-place) and rest — `Rest` when already there,
-/// else the first step of the plan home — so a tired creature beelines home to
-/// sleep, exactly as thirst beelines to water.
+/// urgency accrues over time and is reset by a discrete `Rest`. A creature
+/// sleeps **where it is** — its affordance is always `Rest` — so an explorer
+/// beds down in the field at nightfall rather than trekking home, and a creature
+/// stranded from home can still rest (it is never *fatigue*-blocked). `home` is
+/// retained as a reserved hook for a future rest-QUALITY refinement (a safe,
+/// familiar den restoring more than an exposed camp).
 /// type-audit: bare-ok(return)
 pub struct Fatigue {
-    /// The creature's home — where it rests.
+    /// The creature's home — reserved for a future rest-quality refinement
+    /// (unused by the affordance today: rest is in place).
     pub home: RoomAddr,
 }
 
@@ -1040,12 +1059,9 @@ impl Drive for Fatigue {
     fn act_threshold(&self) -> f64 {
         FATIGUE_ACT
     }
-    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
-        if view.position == self.home {
-            Some(Action::Rest)
-        } else {
-            plan_to_room(&view.position, &self.home, budget).and_then(|pl| pl.into_iter().next())
-        }
+    fn affordance(&self, _view: &Perceived, _budget: usize) -> Option<Action> {
+        // Sleep where you are — rest is always available (The Slumber v2).
+        Some(Action::Rest)
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Fatigue
@@ -1053,11 +1069,10 @@ impl Drive for Fatigue {
     fn urgency_ceiling(&self) -> f64 {
         FATIGUE_CEIL
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
-        // A stock drive serves exactly the one step its affordance would take
-        // (a step home, or `Rest` at home).
-        match self.affordance(view, budget) {
-            Some(a) if &a == action => 1.0,
+    fn serviceability(&self, action: &Action, _view: &Perceived, _budget: usize) -> f64 {
+        // Served by resting in place; nothing else eases fatigue.
+        match action {
+            Action::Rest => 1.0,
             _ => 0.0,
         }
     }
@@ -1434,7 +1449,7 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         npc.deliberation_latency,
         npc.time_horizon,
         helpless,
-        true,
+        is_awake(npc.activity, day.day),
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1639,7 +1654,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     npc.deliberation_latency,
                     npc.time_horizon,
                     helpless,
-                    true,
+                    is_awake(npc.activity, day),
                     mode,
                     PLAN_BUDGET,
                 );
@@ -1684,6 +1699,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
                             "slept at home (fatigue eased)",
                         ));
                         last_rested = day;
+                        // Sleep through the off-phase in one jump to the next
+                        // waking, rather than re-resting every step (The Slumber).
+                        day = next_awake_day(npc.activity, day);
+                        if day > self.to.day {
+                            break;
+                        }
                     }
                     Intent::Hold => {
                         // Idle (or unreachable): jump to the next act-crossing
@@ -4552,31 +4573,23 @@ mod tests {
     }
 
     #[test]
-    fn the_fatigue_drive_seeks_home_to_rest() {
-        // A tired creature rests where it is if home, else steps toward home —
-        // the same shape as thirst seeking water.
+    fn the_fatigue_drive_rests_in_place_wherever_the_creature_is() {
+        // A creature sleeps where it is (The Slumber v2): rest is always the
+        // affordance, home or away — so an explorer beds down in the field and a
+        // stranded creature is never fatigue-blocked.
         let home = raddr(1.0);
         let away = home.neighbors()[0].clone();
         let rest = Fatigue { home: home.clone() };
-        let at_home = Perceived {
-            position: home.clone(),
-            drive: 0.0,
-            fatigue: 1.0,
-            believed_water: None,
-            explore_step: None,
-        };
-        assert_eq!(rest.affordance(&at_home, PLAN_BUDGET), Some(Action::Rest));
-        let elsewhere = Perceived {
-            position: away.clone(),
-            drive: 0.0,
-            fatigue: 1.0,
-            believed_water: None,
-            explore_step: None,
-        };
-        assert!(matches!(
-            rest.affordance(&elsewhere, PLAN_BUDGET),
-            Some(Action::MoveTo(_))
-        ));
+        for pos in [home.clone(), away.clone()] {
+            let view = Perceived {
+                position: pos,
+                drive: 0.0,
+                fatigue: 1.0,
+                believed_water: None,
+                explore_step: None,
+            };
+            assert_eq!(rest.affordance(&view, PLAN_BUDGET), Some(Action::Rest));
+        }
     }
 
     #[test]
