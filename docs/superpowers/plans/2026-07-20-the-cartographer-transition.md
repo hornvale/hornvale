@@ -219,4 +219,4 @@ export function wheelHandoff(view, deltaY, distance, minDistance, maxDistance): 
 ---
 
 ## After Stage 4
-Whole-branch code review (most-capable model), then **G6** (chronicle telling the pivot arc, retrospective, MAP-61 repoint, keystone refreeze if any, memory), then merge + orrery deploy.
+Whole-branch code review (most-capable model), then **G6** (chronicle telling the pivot arc, retrospective, MAP-62 repoint, keystone refreeze if any, memory), then merge + orrery deploy.

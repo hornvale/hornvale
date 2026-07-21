@@ -6,7 +6,7 @@ keystone — *cartographic generalization, salience-budgeted symbols* — stands
 what changes is **where** the pixel-art idiom lives. This spec is the campaign's
 governing design from here.
 
-**Campaign:** The Cartographer · **Registry:** MAP-61 · **Repo:** Orrery
+**Campaign:** The Cartographer · **Registry:** MAP-62 · **Repo:** Orrery
 (client-only; no sim/wasm change) · **Autopilot** engaged (G3/G6 hard stops).
 
 ---
@@ -178,7 +178,7 @@ per-rung state records (`trueScaleOn`, captions, view buttons) extend to include
 
 ## 11. DoD / registry
 
-- **MAP-61** repointed to this transition design; the superseded symbols-on-globe
+- **MAP-62** repointed to this transition design; the superseded symbols-on-globe
   spec is cross-linked as its first iteration.
 - Chronicle `book/src/chronicle/the-cartographer.md` tells the whole arc —
   including the pivot (pixel-on-sphere fought the medium; the flat tier is where

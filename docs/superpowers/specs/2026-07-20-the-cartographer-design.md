@@ -1,7 +1,7 @@
 # The Cartographer — Design
 
 **Campaign:** The Cartographer (working name)
-**Registry:** MAP-61 (new) — realizes the "mark-owning cartographic
+**Registry:** MAP-62 (new) — realizes the "mark-owning cartographic
 renderer / legibility fork" MAP-60 (The Idioms) reserved.
 **Repos:** Orrery (`~/Projects/hornvale/orrery`) — client-side only.
 Governing docs (this spec, plan, chronicle, retro) in hornvale.
@@ -284,7 +284,7 @@ one (ledger #5). Cel / engraving / watercolor filters stay as-is.
 
 ## 11. DoD / registry
 
-- New registry row **MAP-61** (this campaign); MAP-60 note repointed to name
+- New registry row **MAP-62** (this campaign); MAP-60 note repointed to name
   it as the realization of the reserved legibility fork.
 - Chronicle `book/src/chronicle/the-cartographer.md` + SUMMARY wiring;
   retrospective `docs/retrospectives/the-cartographer.md`.
