@@ -122,6 +122,18 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             streams::STRUCTURES,
             "flesh::structures_of's dwelling-count variance draws (Task 2).",
         ),
+        (
+            streams::BAKE,
+            "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse \
+             draws, taken sequentially from one stream in commit order (Task 3, run at \
+             the composition root).",
+        ),
+        (
+            streams::GENESIS,
+            "the deep-history bake's genesis draws: proto-community count, site picks, \
+             and tech-advance offset (Task 3). Further derives a per-people sub-stream \
+             `history/genesis/<people-kind>` via `.derive(people.0)`.",
+        ),
     ]
 }
 

@@ -22,3 +22,18 @@ pub const RESIDUE: &str = "residue";
 /// (Task 2).
 /// type-audit: bare-ok(identifier-text)
 pub const STRUCTURES: &str = "structures";
+/// Root stream label for the deep-history bake's epoch dynamics (Task 3):
+/// grow/found/migrate/raid/collapse draws, taken sequentially from one
+/// stream in commit order at the composition root
+/// (`windows/worldgen::history_bake::bake`).
+/// type-audit: bare-ok(identifier-text)
+pub const BAKE: &str = "history/bake";
+/// Root stream label for the deep-history bake's genesis draws (Task 3):
+/// how many proto-communities a people seeds with, which sites they take,
+/// and their tech-advance offset. The bake further derives a per-people
+/// sub-stream `history/genesis/<people-kind>` from this label (the
+/// `.derive(people.0)` pattern), one per entry in the bake's `peoples`
+/// list, so each people's genesis draws are independent of draw order
+/// across peoples.
+/// type-audit: bare-ok(identifier-text)
+pub const GENESIS: &str = "history/genesis";

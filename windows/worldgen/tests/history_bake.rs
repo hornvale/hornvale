@@ -114,4 +114,18 @@ fn the_workload_fires_displacement_at_volume() {
         c.collapsed > 0 && c.alive_at_now > 0,
         "expected some collapses and some survivors: {c:?}"
     );
+    // measure-don't-narrate: `fled` and `raided` are incremented in lockstep
+    // (every raid closes with a flee), so their sum above overstates the
+    // independent signal. Pin the causal MECHANISM directly: migration fires
+    // (the era mask is genuinely displacing communities), raids fire, and
+    // every flee is the raid's consequence, not a floor.
+    assert!(
+        c.migrated > 0,
+        "no migration — the era mask isn't displacing anyone: {c:?}"
+    );
+    assert!(c.raided > 0, "no raids fired: {c:?}");
+    assert_eq!(
+        c.fled, c.raided,
+        "flee must be the consequence of a raid: {c:?}"
+    );
 }

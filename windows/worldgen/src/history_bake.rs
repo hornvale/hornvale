@@ -524,7 +524,7 @@ pub fn bake(
         communities: Vec::new(),
         node_index: BTreeMap::new(),
         next_id: 1,
-        stream: seed.derive("history/bake").stream(),
+        stream: seed.derive(hornvale_history::streams::BAKE).stream(),
         tally: BakeCensus::default(),
     };
 
@@ -542,7 +542,10 @@ pub fn bake(
     let top: Vec<CellId> = candidates.iter().copied().take(8).collect();
 
     for &people in peoples {
-        let mut pstream = seed.derive("history/genesis").derive(people.0).stream();
+        let mut pstream = seed
+            .derive(hornvale_history::streams::GENESIS)
+            .derive(people.0)
+            .stream();
         let count = pstream.range_u32(2, 4);
         let mut pool = top.clone();
         for _ in 0..count {

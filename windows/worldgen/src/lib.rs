@@ -87,6 +87,7 @@ pub use chorus::{
     tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use settlement_pins::SettlementPins;
 
 /// Errors from building a world.
