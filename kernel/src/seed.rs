@@ -10,6 +10,43 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Seed(pub u64);
 
+/// A seed-derivation leg — the only way to call [`Seed::derive_typed`].
+/// Wraps a string so a bare `&str`, and therefore a typo'd inline
+/// literal, cannot silently compile where a leg was expected. Zero-cost:
+/// borrows, never allocates.
+/// type-audit: bare-ok(identifier-text: return)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StreamLabel<'a>(&'a str);
+
+impl StreamLabel<'static> {
+    /// A permanent, save-format-contract leg. Called ONLY inside a
+    /// crate's own `streams.rs` — never at an ad hoc use site (a
+    /// `tools/type-audit` check enforces this — see PROC-17's own plan,
+    /// Task 11).
+    /// type-audit: bare-ok(identifier-text: s)
+    pub const fn from_static(s: &'static str) -> Self {
+        StreamLabel(s)
+    }
+}
+
+impl<'a> StreamLabel<'a> {
+    /// A runtime-computed leg — a species name, a settlement's cell id, a
+    /// salt. Legitimately dynamic, never centralizable.
+    /// type-audit: bare-ok(identifier-text: s)
+    pub fn dynamic(s: &'a str) -> Self {
+        StreamLabel(s)
+    }
+
+    /// The wrapped string. `pub` because `stream_labels()` in every OTHER
+    /// crate needs it to build the `Vec<(&'static str, &'static str)>`
+    /// the manifest reads — that return type does not change; only how
+    /// each crate builds it does.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn as_str(&self) -> &'a str {
+        self.0
+    }
+}
+
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
@@ -38,6 +75,16 @@ impl Seed {
     /// A fresh deterministic random stream rooted at this seed.
     pub fn stream(&self) -> Stream {
         Stream { state: self.0 }
+    }
+
+    /// Derive a child seed for a typed `label` — the type-safe successor
+    /// to [`Seed::derive`] (temporary name during the PROC-17 migration;
+    /// the final task in that plan renames this to `derive` once every
+    /// call site in the workspace has migrated and the old `&str`
+    /// signature is deleted). Byte-identical to `derive(label.as_str())`
+    /// — this wraps the exact same hash computation, never a new one.
+    pub fn derive_typed(&self, label: StreamLabel<'_>) -> Seed {
+        self.derive(label.as_str())
     }
 }
 
@@ -214,5 +261,28 @@ mod tests {
         let s = Seed(42).derive("x");
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(serde_json::from_str::<Seed>(&json).unwrap(), s);
+    }
+
+    #[test]
+    fn derive_typed_matches_derive_for_the_same_bytes() {
+        let seed = Seed(42);
+        let via_str = seed.derive("astronomy");
+        let via_typed = seed.derive_typed(StreamLabel::from_static("astronomy"));
+        assert_eq!(via_str, via_typed);
+    }
+
+    #[test]
+    fn derive_typed_dynamic_matches_derive_for_the_same_bytes() {
+        let seed = Seed(7);
+        let label = String::from("goblin");
+        let via_str = seed.derive(&label);
+        let via_typed = seed.derive_typed(StreamLabel::dynamic(&label));
+        assert_eq!(via_str, via_typed);
+    }
+
+    #[test]
+    fn stream_label_as_str_round_trips() {
+        let label = StreamLabel::from_static("terrain");
+        assert_eq!(label.as_str(), "terrain");
     }
 }
