@@ -559,22 +559,47 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
     }
 }
 
-/// A stranded pair (The Tidings). The **stricken** creature has stood at a far,
-/// unreachable `spring` and is now marooned at `exile` — it KNOWS water it cannot
-/// reach, so it reads chronic `Frustrated`. The **knower** has stood at a `near`
-/// water one hop from `exile` (reachable). When `colocated`, the knower stands
-/// with the stricken at `exile`, so the belief-share law seeds the stricken with
-/// the near water; it walks there within the tick, drinks, and is relieved. When
-/// apart, the knower sits on its own near water and the stricken stays `Frustrated`
-/// — the matched null. Co-location is the ONLY difference between the two.
+/// A stranded pair (The Tidings; decision #8). The **stricken** creature is
+/// HOMED at `spring` (so its home-anchored `believed_water` genuinely holds
+/// `spring` — home is *always* the closest possible candidate to itself, so
+/// this belief can never be dislodged by anything else the stricken later
+/// stands in) but is marooned far away at `exile`, from which `spring` is
+/// unreachable — so alone it reads chronic `Frustrated` (it KNOWS water it
+/// cannot reach, and structurally can never "forget" it in favor of
+/// something closer at hand — see below).
+///
+/// `exile` is (deliberately) ALSO marked fresh water in this scenario's
+/// terrain — normally that would trivially rescue a stranded creature, but it
+/// doesn't here: the stricken's OWN `believed_water` ranks candidates by
+/// nearness to HOME, and home (`spring`) is unbeatable at zero hops from
+/// itself, so the stricken never adopts `exile` on its own, EVEN standing on
+/// it. This is exactly the review's point (decision #8): home-anchored
+/// belief can strand a creature on top of water it doesn't recognize.
+///
+/// The **knower** is a stationary AMETABOLIC informant (no drives of its own
+/// — it never acts, so it never leaves wherever it's placed, and never lets
+/// its own thirst cycle wander it away mid-run, which would otherwise
+/// intermittently break co-location and undo the very relief being
+/// measured). When `colocated`, it stands at `exile` (home = `exile` too,
+/// matching its position, so even the drive-less "return home" fallback is
+/// a no-op) — since `exile` is water and IS the knower's home, the knower's
+/// own belief is trivially `Some(exile)`, zero hops from itself. Pooled into
+/// the stricken's shared belief and ranked by the stricken's CURRENT
+/// position (the decision #8 fix), `exile` — where the stricken is ALREADY
+/// standing — wins outright: the stricken drinks in place, never needing to
+/// move, so co-location (and therefore relief) is stable for the entire run.
+/// When apart, the knower stands at a different room entirely, is never
+/// co-located with the stricken, and the stricken is never relieved.
 fn a_stranded_pair(colocated: bool) -> Scenario {
     let (spring, exile) = water_and_a_far_exile();
-    let near = exile.neighbors()[0].clone(); // one hop from exile → reachable
+    // A room away from exile, where the apart-case knower is safely parked —
+    // never co-located with the stricken, so it can share nothing.
+    let away = exile.neighbors()[0].clone();
     let mut ledger = Ledger::default();
     let registry = harness_registry();
 
-    // The stricken: stood at the far spring, then marooned at exile. Knows spring
-    // (unreachable) → chronic Frustrated. Homed at exile.
+    // The stricken: homed at spring, stood there, then marooned at exile. Its
+    // home-anchored belief = spring (unreachable from exile) → chronic Frustrated.
     let stricken = ledger.mint_entity();
     ledger
         .commit(
@@ -589,49 +614,42 @@ fn a_stranded_pair(colocated: bool) -> Scenario {
         )
         .expect("stricken marooned at exile");
 
-    // The knower: stood at the near water (so it KNOWS a reachable source), then
-    // either joins the stricken at exile (colocated) or stays on the near water.
+    // The knower ("informant"): AMETABOLIC — no drives, so arbitrate always
+    // takes its "no active drive" branch and, since its home matches its
+    // stationed position, simply Holds there forever. Stationed at exile
+    // (colocated) or safely away (apart); never moves either way.
     let knower = ledger.mint_entity();
-    ledger
-        .commit(
-            place_agent(knower, &near, WorldTime { day: 0.0 }),
-            &registry,
-        )
-        .expect("knower at near water");
-    let knower_now = if colocated {
+    let station = if colocated {
         exile.clone()
     } else {
-        near.clone()
+        away.clone()
     };
     ledger
         .commit(
-            place_agent(knower, &knower_now, WorldTime { day: 0.5 }),
+            place_agent(knower, &station, WorldTime { day: 0.0 }),
             &registry,
         )
-        .expect("knower placed");
+        .expect("knower stationed");
 
     let npcs = vec![
         creature(
             stricken,
-            exile.clone(),
+            spring.clone(),
             spring.clone(),
             "kobold",
             MILD_NICHE,
         ),
-        creature(
-            knower,
-            knower_now.clone(),
-            near.clone(),
-            "goblin",
-            MILD_NICHE,
-        ),
+        Npc {
+            metabolic_class: MetabolicClass::Ametabolic,
+            ..creature(knower, station.clone(), station, "goblin", MILD_NICHE)
+        },
     ];
     Scenario {
         ledger,
         registry,
         npcs,
         terrain: SyntheticTerrain {
-            fresh: [spring, near].into_iter().collect(),
+            fresh: [spring, exile].into_iter().collect(),
             temps: BTreeMap::new(),
             calm_after: None,
             forage: BTreeMap::new(),
