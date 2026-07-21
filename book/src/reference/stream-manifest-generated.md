@@ -57,7 +57,8 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `residue` | flesh::residue_of's deterministic flavor draws (Task 2). |
 | `structures` | flesh::structures_of's dwelling-count variance draws (Task 2). |
 | `history/bake` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order (Task 3, run at the composition root). |
-| `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset (Task 3). Further derives a per-people sub-stream `history/genesis/<people-kind>` via `.derive(people.0)`. |
+| `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset (Task 3). Further derives a per-people sub-stream `history/genesis/<people-kind>` via `StreamLabel::dynamic(people.0)`. |
+| `history/flesh` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed). |
 
 ### hornvale-kernel
 
