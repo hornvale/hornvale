@@ -12,7 +12,9 @@ use crate::etymology::{Daughter, Derivation, assign_proto_roots, draw_cascade, e
 use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
+use crate::streams;
 use hornvale_kernel::Seed;
+use hornvale_kernel::seed::StreamLabel;
 use std::collections::BTreeMap;
 
 /// How well a culture has come to know a concept — gates whether
@@ -82,14 +84,16 @@ pub enum Headedness {
 const HEADEDNESS_OPTIONS: [Headedness; 2] = [Headedness::HeadFirst, Headedness::HeadLast];
 
 /// Draw a species' compound-joining order, from
-/// `seed.derive("language").derive(species).derive("lexicon").derive("headedness")`.
+/// `seed.derive_typed(streams::ROOT)
+/// .derive_typed(StreamLabel::dynamic(species)).derive_typed(streams::LEXICON)
+/// .derive_typed(streams::HEADEDNESS)`.
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_headedness(seed: &Seed, species: &str) -> Headedness {
     let mut stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("lexicon")
-        .derive("headedness")
+        .derive_typed(streams::ROOT)
+        .derive_typed(StreamLabel::dynamic(species))
+        .derive_typed(streams::LEXICON)
+        .derive_typed(streams::HEADEDNESS)
         .stream();
     *stream
         .pick(&HEADEDNESS_OPTIONS)

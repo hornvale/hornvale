@@ -26,6 +26,8 @@ use crate::morphology::{
 use crate::naming::{Namer, render_views, segments_of};
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
+use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
 /// The six constituent orders of a subject–copula–complement clause
@@ -118,18 +120,18 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     let namer = Namer::new(seed, species, ph);
 
     let mut order_stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("grammar")
-        .derive("constituent-order")
+        .derive_typed(streams::ROOT)
+        .derive_typed(StreamLabel::dynamic(species))
+        .derive_typed(streams::GRAMMAR)
+        .derive_typed(streams::CONSTITUENT_ORDER)
         .stream();
     let order = order_from_roll(order_stream.range_u32(1, 100));
 
     let mut copula_stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("grammar")
-        .derive("copula")
+        .derive_typed(streams::ROOT)
+        .derive_typed(StreamLabel::dynamic(species))
+        .derive_typed(streams::GRAMMAR)
+        .derive_typed(streams::COPULA)
         .stream();
     let (copula_segments, copula) = if copula_stream.range_u32(1, 100) <= 60 {
         let (segments, roman) = draw_copula_form(&mut copula_stream, &namer);
@@ -139,10 +141,10 @@ pub fn tongue_grammar(seed: &Seed, species: &str, ph: &Phonology) -> TongueGramm
     };
 
     let mut articles_stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("grammar")
-        .derive("articles")
+        .derive_typed(streams::ROOT)
+        .derive_typed(StreamLabel::dynamic(species))
+        .derive_typed(streams::GRAMMAR)
+        .derive_typed(streams::ARTICLES)
         .stream();
     let articles = articles_stream.range_u32(1, 100) <= 30;
 
