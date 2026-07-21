@@ -34,7 +34,7 @@ Time passes; the world keeps its shape.
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo settles down to rest.
+The hobgoblin of Foenjoavaenoenoanoagoo casts about for water.
 > wait 1
 Time passes. You sense movement nearby (6 stirred).
 > look
@@ -42,9 +42,9 @@ Time passes. You sense movement nearby (6 stirred).
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo settles down to rest.
+The hobgoblin of Foenjoavaenoenoanoagoo seems content.
 > wait 1
-Time passes. You sense movement nearby (3 stirred).
+Time passes; the world keeps its shape.
 > look
 [room 694550540, day 7]
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
@@ -54,12 +54,11 @@ The hobgoblin of Foenjoavaenoenoanoagoo settles down to rest.
 > why hobgoblin
 hobgoblin of Foenjoavaenoenoanoagoo:
 - canonical name of an entity: hobgoblin of Foenjoavaenoenoanoagoo (asserted by the-quickening)
+- an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5)
 - an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5)
-- an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5.3)
-- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 6)
 
 > wait 90
-Time passes. You sense movement nearby (93 stirred).
+Time passes. You sense movement nearby (99 stirred).
 > look
 [room 694550540, day 97]
 You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
