@@ -218,6 +218,7 @@
 - [The Given Word](./chronicle/the-given-word.md)
 - [The Diorama](./chronicle/the-diorama.md)
 - [The Living Community](./chronicle/the-living-community.md)
+- [The Quarry](./chronicle/the-quarry.md)
 
 # Appendix: The Frontier
 

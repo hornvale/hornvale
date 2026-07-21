@@ -314,6 +314,22 @@ impl LocaleContext {
         Some(miami_npp(temp, moisture))
     }
 
+    /// Corner-blend an externally-supplied per-cell `field` (over the canonical
+    /// geosphere) at `addr` — the integer-barycentric read `productivity_at`/
+    /// `hazards_at` use, generalized so a caller can sample a field this context
+    /// does not itself hold. The Quarry injects `worldgen::predator_pressure`
+    /// (the carnivore-pressure field) and reads it here per room. Full precision
+    /// (a compute-path read, not quantized). `None` for a room the canonical grid
+    /// does not cover.
+    /// type-audit: bare-ok(ratio: field), bare-ok(ratio: return)
+    pub fn blend_at(&self, addr: &RoomAddr, field: &hornvale_kernel::CellMap<f64>) -> Option<f64> {
+        let geo = self.climate.geosphere();
+        let weights = addr.corner_weights(geo, &self.index)?;
+        let denom: u64 = weights.iter().map(|&(_, w)| w).sum();
+        let sum: f64 = weights.iter().map(|&(c, w)| w as f64 * *field.get(c)).sum();
+        Some(sum / denom as f64)
+    }
+
     /// The room's THREAT in `[0, 1]` — the hazard field the danger drive flees
     /// (The Dread, split per-axis by The Bane) as `(uncanny, heat, cold)`, each
     /// in `[0, 1]`: the **uncanny** (a placed exotic site's normalized strangeness
