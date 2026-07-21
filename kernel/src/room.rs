@@ -8,6 +8,7 @@ use crate::GeoCoord;
 use crate::Seed;
 use crate::geosphere::{base_data, normalize, slerp_mid};
 use crate::math;
+use crate::seed::StreamLabel;
 use crate::streams::{ROOM_CHILD, ROOM_FACE};
 use crate::{CellId, Geosphere, NearestCellIndex};
 use std::collections::{BTreeMap, BTreeSet};
@@ -564,9 +565,13 @@ impl RoomAddr {
     /// Deterministic per-room seed, derived from the integer address only —
     /// never the float position, so all room content is platform-exact.
     pub fn seed(&self, world: Seed) -> Seed {
-        let mut s = world.derive(ROOM_FACE).derive(&self.face.to_string());
+        let mut s = world
+            .derive_typed(ROOM_FACE)
+            .derive_typed(StreamLabel::dynamic(&self.face.to_string()));
         for &d in &self.path {
-            s = s.derive(ROOM_CHILD).derive(&d.to_string());
+            s = s
+                .derive_typed(ROOM_CHILD)
+                .derive_typed(StreamLabel::dynamic(&d.to_string()));
         }
         s
     }
