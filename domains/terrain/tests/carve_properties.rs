@@ -70,7 +70,7 @@ fn rebuild(seed: u64, geo: &Geosphere) -> Rebuilt {
     let outcome = generate(Seed(seed), geo, &TerrainPins::default())
         .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
     let g = &outcome.globe;
-    let terrain_seed = Seed(seed).derive(hornvale_terrain::streams::ROOT);
+    let terrain_seed = Seed(seed).derive_typed(hornvale_terrain::streams::ROOT);
     let mut notes = Vec::new();
     let ocean_target =
         elevation::resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut notes);

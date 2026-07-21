@@ -161,7 +161,7 @@ pub struct RiftHistory {
 /// doc and the pin-isolation discipline it cites.
 pub fn draw_rift(terrain_seed: Seed, cratons: &[Craton]) -> RiftHistory {
     let assembly = assemble_cratons(cratons);
-    let rift_root = terrain_seed.derive(streams::RIFT);
+    let rift_root = terrain_seed.derive_typed(streams::RIFT);
     let mut seams = Vec::new();
     for i in 0..cratons.len() {
         for j in (i + 1)..cratons.len() {
@@ -177,7 +177,7 @@ pub fn draw_rift(terrain_seed: Seed, cratons: &[Craton]) -> RiftHistory {
                 (cratons[j].id, cratons[i].id)
             };
             let noise_seed = rift_root.derive(&format!("seam-{a}-{b}"));
-            let cren_seed = noise_seed.derive("crenulation");
+            let cren_seed = noise_seed.derive_typed(streams::RIFT_CRENULATION);
             seams.push(Seam {
                 a,
                 b,
@@ -480,7 +480,7 @@ mod tests {
     }
 
     fn draw_test_cratons(seed_val: u64) -> Vec<Craton> {
-        let terrain_seed = Seed(seed_val).derive(streams::ROOT);
+        let terrain_seed = Seed(seed_val).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(terrain_seed);
         crate::crust::draw_cratons(
             terrain_seed,
@@ -502,7 +502,7 @@ mod tests {
             age: 0.5,
         };
         let cratons = vec![craton.clone()];
-        let terrain_seed = Seed(5).derive(streams::ROOT);
+        let terrain_seed = Seed(5).derive_typed(streams::ROOT);
         let rift = draw_rift(terrain_seed, &cratons);
         assert!(rift.seams.is_empty(), "a lone craton must not seam");
         for p in [
@@ -518,7 +518,7 @@ mod tests {
         // own envelope near 1, the neighbor's near 0) — comfortably past
         // `CLIP_TAPER`'s taper band, so the clip saturates to 1.0.
         let cratons = draw_test_cratons(42);
-        let terrain_seed = Seed(42).derive(streams::ROOT);
+        let terrain_seed = Seed(42).derive_typed(streams::ROOT);
         let rift = draw_rift(terrain_seed, &cratons);
         let seam = rift
             .seams
@@ -598,7 +598,7 @@ mod tests {
             age: 0.0,
         };
         let cratons = vec![a, b];
-        let terrain_seed = Seed(1).derive(streams::ROOT);
+        let terrain_seed = Seed(1).derive_typed(streams::ROOT);
         let rift = draw_rift(terrain_seed, &cratons);
         assert_eq!(rift.seams.len(), 1, "the pair must seam exactly once");
         let seam = &rift.seams[0];
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn rift_draws_one_scalar_and_derives_seams_per_pair() {
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let cratons = draw_test_cratons(42);
         let rift = draw_rift(seed, &cratons);
         assert!((SPREAD_MIN..=SPREAD_MAX).contains(&rift.spreading_rate));
@@ -678,7 +678,7 @@ mod tests {
     fn seam_count_and_spreading_rate_are_stable_across_seeds() {
         for seed_val in [1u64, 7, 42, 99] {
             let cratons = draw_test_cratons(seed_val);
-            let terrain_seed = Seed(seed_val).derive(streams::ROOT);
+            let terrain_seed = Seed(seed_val).derive_typed(streams::ROOT);
             let a = draw_rift(terrain_seed, &cratons);
             let b = draw_rift(terrain_seed, &cratons);
             assert_eq!(a, b, "seed {seed_val}: draw_rift is not deterministic");
@@ -688,7 +688,7 @@ mod tests {
     #[test]
     fn seam_side_is_shared_and_signed() {
         let cratons = draw_test_cratons(42);
-        let terrain_seed = Seed(42).derive(crate::streams::ROOT);
+        let terrain_seed = Seed(42).derive_typed(crate::streams::ROOT);
         let rift = draw_rift(terrain_seed, &cratons);
         let seam = rift
             .seams
@@ -705,7 +705,7 @@ mod tests {
     #[test]
     fn seam_sign_flips_and_zero_set_moves_with_noise_seed() {
         let cratons = draw_test_cratons(42);
-        let terrain_seed = Seed(42).derive(crate::streams::ROOT);
+        let terrain_seed = Seed(42).derive_typed(crate::streams::ROOT);
         let rift = draw_rift(terrain_seed, &cratons);
         assert!(
             rift.seams.len() >= 2,

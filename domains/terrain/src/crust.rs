@@ -97,9 +97,9 @@ impl SphereFbm {
     pub(crate) fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
         Self {
             slices: [
-                noise::Fbm::new(seed.derive("slice-0"), octaves),
-                noise::Fbm::new(seed.derive("slice-1"), octaves),
-                noise::Fbm::new(seed.derive("slice-2"), octaves),
+                noise::Fbm::new(seed.derive_typed(streams::CRUST_SLICE_0), octaves),
+                noise::Fbm::new(seed.derive_typed(streams::CRUST_SLICE_1), octaves),
+                noise::Fbm::new(seed.derive_typed(streams::CRUST_SLICE_2), octaves),
             ],
             frequency,
         }
@@ -291,8 +291,10 @@ pub fn draw_terranes(
     if cratons.is_empty() {
         return Vec::new();
     }
-    let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
-    let mut stream = terrain_seed.derive(streams::TERRANES).stream();
+    let lobing_root = terrain_seed
+        .derive_typed(streams::CRATONS)
+        .derive_typed(streams::LOBING);
+    let mut stream = terrain_seed.derive_typed(streams::TERRANES).stream();
     let count = stream.range_u32(TERRANE_COUNT_MIN, TERRANE_COUNT_MAX);
     (0..count)
         .map(|_| {
@@ -375,7 +377,7 @@ pub const MICRO_RADIUS_RAD: (f64, f64) = (0.026, 0.052);
 /// carries no separate thickness field (unlike `Terrane`) — thickness is
 /// always this age-derived peak, for majors and microcontinents alike.
 pub fn draw_microcontinents(terrain_seed: Seed, cratons: &[Craton]) -> Vec<Craton> {
-    let mut stream = terrain_seed.derive(streams::MICROCONTINENTS).stream();
+    let mut stream = terrain_seed.derive_typed(streams::MICROCONTINENTS).stream();
     let next_id = cratons.len() as u32;
     (0..MICRO_COUNT_MAX)
         .map(|_| {
@@ -605,7 +607,7 @@ fn draw_cratons_unrepelled(
     ocean_target: f64,
     notes: &mut Vec<String>,
 ) -> Vec<Craton> {
-    let mut stream = terrain_seed.derive(streams::CRATONS).stream();
+    let mut stream = terrain_seed.derive_typed(streams::CRATONS).stream();
     let u = stream.next_f64();
     let margin = 0.05 + 0.10 * u;
     let budget = (1.0 - ocean_target) * (1.0 + margin);
@@ -983,7 +985,9 @@ impl CrustField {
         rift: Option<RiftHistory>,
         major_count: usize,
     ) -> CrustField {
-        let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
+        let lobing_root = terrain_seed
+            .derive_typed(streams::CRATONS)
+            .derive_typed(streams::LOBING);
         let lobing_fbms = cratons
             .iter()
             .map(|c| {
@@ -1150,6 +1154,7 @@ impl hornvale_kernel::Field<f64> for CrustField {
 mod tests {
     use super::*;
     use crate::streams;
+    use hornvale_kernel::seed::StreamLabel;
     use hornvale_kernel::{Geosphere, NearestCellIndex};
 
     /// The default-pins ocean-fraction target for a given terrain seed —
@@ -1192,7 +1197,7 @@ mod tests {
 
     #[test]
     fn envelope_is_one_at_center_zero_far_and_monotone_on_average() {
-        let seed = Seed(42).derive("test-craton");
+        let seed = Seed(42).derive_typed(StreamLabel::dynamic("test-craton"));
         let center = [0.0, 0.0, 1.0];
         assert!((lobed_envelope(seed, center, center, 0.3) - 1.0).abs() < 1e-9);
         // Far beyond any possible lobed rim (rim <= 1.5 * radius).
@@ -1221,7 +1226,7 @@ mod tests {
         // Swept across seeds (not just one) so the assertion isn't riding
         // on a single lucky/unlucky draw.
         for seed_val in [1u64, 7, 42, 99] {
-            let seed = Seed(seed_val).derive("test-craton");
+            let seed = Seed(seed_val).derive_typed(StreamLabel::dynamic("test-craton"));
             let center = [0.0, 0.0, 1.0];
             let values: Vec<f64> = (0..64)
                 .map(|i| {
@@ -1247,7 +1252,7 @@ mod tests {
     #[test]
     fn craton_draws_are_sequential_and_in_range() {
         for seed in 0..16u64 {
-            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let cratons = draw_cratons(
                 terrain_seed,
@@ -1294,7 +1299,7 @@ mod tests {
             min
         };
         for seed in 0..8u64 {
-            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let mut notes = Vec::new();
             let pre = draw_cratons_unrepelled(
@@ -1344,7 +1349,7 @@ mod tests {
         // unrepelled path exactly (that pin wants clustering, not
         // separation).
         for seed in 0..8u64 {
-            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let pins = TerrainPins {
                 supercontinent: Some(true),
@@ -1362,7 +1367,7 @@ mod tests {
 
     #[test]
     fn assembly_is_identity_for_single_craton_and_sutures_multis() {
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let mut notes = Vec::new();
         let pins = TerrainPins::default();
         let ocean_target = default_ocean_target(seed);
@@ -1399,7 +1404,7 @@ mod tests {
         // byte-identical, since there is nothing left to draw from.
         // Swept across seeds so the assertion isn't riding on one draw.
         for seed_val in [1u64, 7, 42] {
-            let terrain_seed = Seed(seed_val).derive(streams::ROOT);
+            let terrain_seed = Seed(seed_val).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let cratons = draw_cratons(
                 terrain_seed,
@@ -1415,7 +1420,7 @@ mod tests {
 
     #[test]
     fn continents_pin_overrides_without_perturbing_shared_cratons() {
-        let seed = Seed(42).derive(streams::ROOT);
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let drawn = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
         let pinned = draw_cratons(
@@ -1477,7 +1482,7 @@ mod tests {
         // the (pre-existing) repulsion skip; the suture is now a
         // genesis-stage consequence of `assemble_cratons` (see
         // `pinned_supercontinent_is_sutured` in tests/tectonic_properties.rs).
-        let seed = Seed(42).derive(streams::ROOT);
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let scattered = draw_cratons(seed, &TerrainPins::default(), ocean_target, &mut Vec::new());
         let pinned = draw_cratons(
@@ -1527,7 +1532,7 @@ mod tests {
 
     #[test]
     fn crust_field_is_pure_and_bounded() {
-        let seed = Seed(42).derive(streams::ROOT);
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
@@ -1545,7 +1550,7 @@ mod tests {
     #[test]
     fn crust_field_agrees_at_vertices_shared_across_levels() {
         // Icosphere levels nest: every level-4 vertex is a level-5 vertex.
-        let seed = Seed(7).derive(streams::ROOT);
+        let seed = Seed(7).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
@@ -1577,7 +1582,7 @@ mod tests {
 
     #[test]
     fn kernel_field_sampling_matches_direct_evaluation() {
-        let seed = Seed(42).derive(streams::ROOT);
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let ocean_target = default_ocean_target(seed);
         let field = CrustField::new(
             seed,
@@ -1600,7 +1605,7 @@ mod tests {
 
     #[test]
     fn terranes_are_drawn_on_continental_margins_and_thicken_crust() {
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let mut notes = Vec::new();
         let pins = crate::pins::TerrainPins::default();
         let plates = crate::plates::generate_plates(seed, &pins, &mut notes);
@@ -1630,9 +1635,9 @@ mod tests {
         }
         // Determinism.
         let again = draw_terranes(
-            Seed(42).derive(crate::streams::ROOT),
+            Seed(42).derive_typed(crate::streams::ROOT),
             &draw_cratons(
-                Seed(42).derive(crate::streams::ROOT),
+                Seed(42).derive_typed(crate::streams::ROOT),
                 &pins,
                 ocean_target,
                 &mut Vec::new(),
@@ -1644,7 +1649,7 @@ mod tests {
 
     #[test]
     fn microcontinents_are_small_oceanic_and_deterministic() {
-        let seed = Seed(7).derive(crate::streams::ROOT);
+        let seed = Seed(7).derive_typed(crate::streams::ROOT);
         let pins = crate::pins::TerrainPins::default();
         let mut notes = Vec::new();
         let ocean_target = default_ocean_target(seed);
@@ -1678,7 +1683,7 @@ mod tests {
         // maximum terrane count, all at maximum thickness, all centered
         // on the craton's own peak — 45 + 6 * 12 = 117 km unclamped. The
         // sum must saturate at CrustKm's validated ceiling, not panic.
-        let seed = Seed(42).derive(crate::streams::ROOT);
+        let seed = Seed(42).derive_typed(crate::streams::ROOT);
         let center = [0.0, 0.0, 1.0];
         let craton = Craton {
             id: 0,
@@ -1708,7 +1713,7 @@ mod tests {
         // 0.6 rad cap area (1 - cos 0.6)/2 ~= 8.73% of the sphere times the
         // best-case (young, peak 45 km) continental fraction ~0.415 ~= 3.63%.
         for seed in 1..=8u64 {
-            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let pins = TerrainPins {
                 continents: Some(1),
@@ -1724,7 +1729,7 @@ mod tests {
         // Default draws (8-14 cratons): supply sits near the land budget,
         // an order of magnitude above the single-craton ceiling.
         for seed in 0..16u64 {
-            let terrain_seed = Seed(seed).derive(streams::ROOT);
+            let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
             let ocean_target = default_ocean_target(terrain_seed);
             let cratons = draw_cratons(
                 terrain_seed,
@@ -1742,7 +1747,7 @@ mod tests {
 
     #[test]
     fn empty_rift_is_byte_identical_to_v3_field() {
-        let seed = Seed(42).derive(streams::ROOT);
+        let seed = Seed(42).derive_typed(streams::ROOT);
         let pins = TerrainPins::default();
         let ocean_target = default_ocean_target(seed);
         let cratons = draw_cratons(seed, &pins, ocean_target, &mut Vec::new());
@@ -1794,7 +1799,7 @@ mod tests {
             age: 0.0,
         };
         let cratons = vec![a.clone(), b.clone()];
-        let terrain_seed = Seed(1).derive(streams::ROOT);
+        let terrain_seed = Seed(1).derive_typed(streams::ROOT);
         let rift = crate::rift::draw_rift(terrain_seed, &cratons);
         assert!(
             !rift.seams.is_empty(),

@@ -89,7 +89,7 @@ pub fn generate_plates(
     notes: &mut Vec<String>,
 ) -> Vec<Plate> {
     let drawn_count = terrain_seed
-        .derive(streams::PLATE_COUNT)
+        .derive_typed(streams::PLATE_COUNT)
         .stream()
         .range_u32(PLATE_COUNT_MIN, PLATE_COUNT_MAX);
     let count = pins.plates.unwrap_or(drawn_count);
@@ -97,10 +97,10 @@ pub fn generate_plates(
         notes.push(format!("pinned plates {n} (seed draws {drawn_count})"));
     }
 
-    let mut seed_stream = terrain_seed.derive(streams::PLATE_SEEDS).stream();
+    let mut seed_stream = terrain_seed.derive_typed(streams::PLATE_SEEDS).stream();
     let positions: Vec<[f64; 3]> = (0..count).map(|_| unit_vector(&mut seed_stream)).collect();
 
-    let mut motion_stream = terrain_seed.derive(streams::PLATE_MOTION).stream();
+    let mut motion_stream = terrain_seed.derive_typed(streams::PLATE_MOTION).stream();
     let motions: Vec<([f64; 3], f64)> = (0..count)
         .map(|_| {
             let axis = unit_vector(&mut motion_stream);
@@ -109,7 +109,7 @@ pub fn generate_plates(
         })
         .collect();
 
-    let mut maturity_stream = terrain_seed.derive(streams::MATURITY).stream();
+    let mut maturity_stream = terrain_seed.derive_typed(streams::MATURITY).stream();
     let maturities: Vec<f64> = (0..count).map(|_| maturity_stream.next_f64()).collect();
 
     /// Heavy-tail shape: weight = 1 / (1 - TAIL * u), u uniform — range
@@ -118,7 +118,7 @@ pub fn generate_plates(
     /// plate-size-gini median overshot its 0.45-0.75 band at 0.767, so the
     /// tail's giants are trimmed while the heavy-tail shape is kept.
     const WEIGHT_TAIL: f64 = 0.92;
-    let mut weight_stream = terrain_seed.derive(streams::PLATE_WEIGHTS).stream();
+    let mut weight_stream = terrain_seed.derive_typed(streams::PLATE_WEIGHTS).stream();
     let weights: Vec<f64> = (0..count)
         .map(|_| 1.0 / (1.0 - WEIGHT_TAIL * weight_stream.next_f64()))
         .collect();
@@ -148,7 +148,7 @@ const EDGE_AMP: f64 = 0.06;
 /// draws, so any grid level samples the same boundaries.
 /// type-audit: bare-ok(index)
 pub fn assign_plates(geo: &Geosphere, terrain_seed: Seed, plates: &[Plate]) -> CellMap<u32> {
-    let edge_root = terrain_seed.derive(crate::streams::PLATE_EDGE);
+    let edge_root = terrain_seed.derive_typed(crate::streams::PLATE_EDGE);
     // Precompute one edge-noise sampler per plate: its seed depends only on
     // the plate id, not the cell, so the `format!`, the `derive`, and the
     // slice/octave-seed derivations run once per plate instead of once per
@@ -209,7 +209,7 @@ mod tests {
     fn plate_count_stays_in_the_drawn_range_and_pins_override() {
         for seed in 0..32u64 {
             let plates = generate_plates(
-                Seed(seed).derive(streams::ROOT),
+                Seed(seed).derive_typed(streams::ROOT),
                 &TerrainPins::default(),
                 &mut Vec::new(),
             );
@@ -227,7 +227,7 @@ mod tests {
             ..TerrainPins::default()
         };
         assert_eq!(
-            generate_plates(Seed(42).derive(streams::ROOT), &pins, &mut Vec::new()).len(),
+            generate_plates(Seed(42).derive_typed(streams::ROOT), &pins, &mut Vec::new()).len(),
             12
         );
     }
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn every_cell_joins_exactly_one_plate() {
         let geo = Geosphere::new(2);
-        let terrain_seed = Seed(42).derive(streams::ROOT);
+        let terrain_seed = Seed(42).derive_typed(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let assignment = assign_plates(&geo, terrain_seed, &plates);
         assert_eq!(assignment.len(), geo.cell_count());
@@ -248,7 +248,7 @@ mod tests {
     fn velocities_are_tangent_to_the_sphere() {
         let geo = Geosphere::new(2);
         let plates = generate_plates(
-            Seed(7).derive(streams::ROOT),
+            Seed(7).derive_typed(streams::ROOT),
             &TerrainPins::default(),
             &mut Vec::new(),
         );
@@ -266,7 +266,7 @@ mod tests {
         let mut ginis = Vec::new();
         for seed in 0..12u64 {
             let plates = generate_plates(
-                Seed(seed).derive(streams::ROOT),
+                Seed(seed).derive_typed(streams::ROOT),
                 &TerrainPins::default(),
                 &mut Vec::new(),
             );
@@ -274,7 +274,7 @@ mod tests {
                 // True range of 1 / (1 - 0.92 u), u in [0, 1): [1, 12.5).
                 assert!((1.0..12.5).contains(&p.weight), "weight {}", p.weight);
             }
-            let assignment = assign_plates(&geo, Seed(seed).derive(streams::ROOT), &plates);
+            let assignment = assign_plates(&geo, Seed(seed).derive_typed(streams::ROOT), &plates);
             let mut counts = vec![0usize; plates.len()];
             for (_, plate) in assignment.iter() {
                 counts[*plate as usize] += 1;
@@ -321,7 +321,7 @@ mod tests {
         // varied latitudes.
         let geo = Geosphere::new(4);
         let plates = two_test_plates();
-        let assignment = assign_plates(&geo, Seed(42).derive(streams::ROOT), &plates);
+        let assignment = assign_plates(&geo, Seed(42).derive_typed(streams::ROOT), &plates);
         let mut boundary_lats = Vec::new();
         for cell in geo.cells() {
             let mine = *assignment.get(cell);

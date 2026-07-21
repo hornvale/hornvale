@@ -30,8 +30,8 @@ fn pin_isolation_holds_at_the_globe_level() {
     let drawn = 0.5
         + 0.25
             * Seed(42)
-                .derive(streams::ROOT)
-                .derive(streams::OCEAN_FRACTION)
+                .derive_typed(streams::ROOT)
+                .derive_typed(streams::OCEAN_FRACTION)
                 .stream()
                 .next_f64();
     let pins = TerrainPins {
@@ -111,8 +111,8 @@ fn pin_isolation_extends_to_new_streams() {
     let drawn_ocean = 0.5
         + 0.25
             * Seed(42)
-                .derive(streams::ROOT)
-                .derive(streams::OCEAN_FRACTION)
+                .derive_typed(streams::ROOT)
+                .derive_typed(streams::OCEAN_FRACTION)
                 .stream()
                 .next_f64();
     let ocean_pin = TerrainPins {
@@ -283,7 +283,7 @@ fn boundary_classification_agrees_from_both_sides_across_seeds() {
     use hornvale_terrain::plates::{assign_plates, generate_plates};
     let geo = Geosphere::new(3);
     for seed in 0..16u64 {
-        let terrain_seed = Seed(seed).derive(streams::ROOT);
+        let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
         let plates = generate_plates(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let plate_of = assign_plates(&geo, terrain_seed, &plates);
         let ocean_target =
@@ -453,7 +453,7 @@ fn default_worlds_never_trip_the_supply_fallback() {
     // population (seeds 0..999, `studies/the-census.study.json`) — the
     // exact population whose byte-identity this guard proves.
     for seed in 0..1000u64 {
-        let terrain_seed = Seed(seed).derive(streams::ROOT);
+        let terrain_seed = Seed(seed).derive_typed(streams::ROOT);
         let ocean_target =
             resolve_ocean_fraction(terrain_seed, &TerrainPins::default(), &mut Vec::new());
         let cratons = draw_cratons(
@@ -632,7 +632,7 @@ fn the_clip_reshapes_real_coastlines_on_seed_42() {
     let g = &generate(Seed(42), &geo, &TerrainPins::default())
         .unwrap()
         .globe;
-    let terrain_seed = Seed(42).derive(streams::ROOT);
+    let terrain_seed = Seed(42).derive_typed(streams::ROOT);
     let all = [g.cratons.clone(), g.microcontinents.clone()].concat();
     let clipped = CrustField::new_with_rift(
         terrain_seed,

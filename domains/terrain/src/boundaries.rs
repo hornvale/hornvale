@@ -217,7 +217,7 @@ mod tests {
     fn hemisphere_plates_produce_an_equatorial_boundary_of_every_regime() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
         let continental = all_continental(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         assert!(boundaries.iter().any(|(_, c)| c.is_some()));
@@ -242,7 +242,7 @@ mod tests {
     fn classification_agrees_from_both_sides() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
         for a in geo.cells() {
             for &b in geo.neighbors(a) {
                 let (pa, pb) = (*plate_of.get(a), *plate_of.get(b));
@@ -278,7 +278,7 @@ mod tests {
         // Same two plates, same geometry: continental flags decide the kind.
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
         // Scan for the first adjacent cross-plate cell pair whose contact is
         // convergent (both-continental classifies as a collision) — the
         // hemisphere plates also produce divergent and transform contacts,
@@ -343,7 +343,7 @@ mod tests {
     fn distances_start_at_zero_attribute_a_source_and_grow_by_at_most_one() {
         let geo = Geosphere::new(2);
         let plates = hemisphere_plates(0.5);
-        let plate_of = assign_plates(&geo, Seed(1).derive(streams::ROOT), &plates);
+        let plate_of = assign_plates(&geo, Seed(1).derive_typed(streams::ROOT), &plates);
         let continental = all_continental(&geo);
         let boundaries = boundary_field(&geo, &plate_of, &plates, &continental);
         let distances = boundary_distance(&geo, &plate_of, &boundaries);

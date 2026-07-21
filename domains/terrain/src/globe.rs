@@ -185,7 +185,7 @@ pub fn generate(
     pins: &TerrainPins,
 ) -> Result<GenesisOutcome, GenesisError> {
     pins::validate(pins)?;
-    let terrain_seed = world_seed.derive(streams::ROOT);
+    let terrain_seed = world_seed.derive_typed(streams::ROOT);
     let mut notes = Vec::new();
     let plate_list = plates::generate_plates(terrain_seed, pins, &mut notes);
     // Task 9 iteration 3': the ocean-fraction target is resolved once,
@@ -451,7 +451,7 @@ pub fn generate(
     // buffer, then the real buffer is assembled and swapped in. The noise
     // seed here is hash-noise only (`streams::LITHOLOGY`) — never consumed
     // as a `Stream`, so this is not a new draw-order contract.
-    let lithology_seed = terrain_seed.derive(streams::LITHOLOGY);
+    let lithology_seed = terrain_seed.derive_typed(streams::LITHOLOGY);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
