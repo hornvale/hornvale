@@ -43,7 +43,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 ### hornvale-climate
 
-*(no seed-derivation streams)*
+| Label | Meaning |
+|---|---|
+| `climate/weather/phase/v1` | drifting weather-phase noise seed (The Firmament) |
 
 ### hornvale-culture
 
