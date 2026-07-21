@@ -37,9 +37,10 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
 }
 
 /// Derive octave `n`'s seed from a base `seed`, exactly as `fbm_2d` always
-/// has: the seed directly for octave 0, else `seed.derive("octave-{n}")`
-/// (via the `OCTAVE_LABELS` table when in range). Isolated so the sampler
-/// and the free function share one definition and cannot drift.
+/// has: the seed directly for octave 0, else `seed.derive(streams::OCTAVE_LABELS[n])`
+/// (via the `OCTAVE_LABELS` table when in range, else
+/// `seed.derive(StreamLabel::dynamic(&format!("octave-{n}")))`). Isolated so
+/// the sampler and the free function share one definition and cannot drift.
 fn octave_seed(seed: Seed, octave: u32) -> Seed {
     if octave == 0 {
         seed

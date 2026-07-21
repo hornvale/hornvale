@@ -14,7 +14,7 @@
 //! `MorphOptions::honorifics` is set by the composition root (status basis
 //! `Rank` → `true`), prefixed with a short bound honorific affix. Every
 //! draw is rooted at
-//! `seed.derive("language").derive(species).derive("name").derive(kind_label).derive(&salt.to_string()).stream()`
+//! `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::NAME).derive(StreamLabel::dynamic(kind_label)).derive(StreamLabel::dynamic(&salt.to_string())).stream()`
 //! so a name is a pure, single deterministic function of `(seed, species,
 //! kind, salt)` — no re-draw, no dependence on any other name. Uniqueness is
 //! not guaranteed here: the phonology name space is vast enough that
@@ -26,7 +26,7 @@
 //!
 //! [`Namer::glossed_name`] (The Words, Task 9) is a second, later epoch of
 //! the same `name` (retired but never deleted — old saves still read it):
-//! rooted one leg deeper (`…derive(kind_label).derive("v2").derive(&salt)`),
+//! rooted one leg deeper (`…derive(StreamLabel::dynamic(kind_label)).derive(streams::V2).derive(StreamLabel::dynamic(&salt))`),
 //! it compounds 1-2 of a [`SiteConcepts`] site's actual lexicon words
 //! instead of always drawing a bare stem, so a name becomes a small true
 //! story about the entity it names, with a gloss to match. It stays exactly

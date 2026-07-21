@@ -157,7 +157,7 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
 }
 
 /// Draw a 2–4 rule cascade for `species`, from
-/// `seed.derive("language").derive(species).derive("lexicon").derive("cascade")`.
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE)`.
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
     let mut stream = seed
@@ -175,7 +175,7 @@ pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
 const PROTO_ROOT_SYLLABLE_RANGE: (u32, u32) = (1, 2);
 
 /// Draw a proto-root for `concept` under `species`'s phonology `ph`, from
-/// `seed.derive("language").derive(species).derive("lexicon").derive("root").derive(concept)`.
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::PROTO_ROOT).derive(StreamLabel::dynamic(concept))`.
 /// 1–2 syllables, filled from `ph`'s phonotactic templates by the same
 /// mechanism [`crate::naming::Namer`] uses to build names.
 /// type-audit: bare-ok(identifier-text)
