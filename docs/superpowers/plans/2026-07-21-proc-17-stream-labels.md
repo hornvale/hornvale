@@ -1225,6 +1225,386 @@ git commit -m "refactor(kernel): migrate noise.rs OCTAVE_LABELS + remaining test
 
 ---
 
+## Remediation: Tasks 10b–10e (inserted mid-execution)
+
+Task 10's own review found that this plan's original research — built from a
+`grep '\.derive("'` search for INLINE STRING LITERALS — never caught call
+sites already passing an *existing, pre-declared* `&str` constant (e.g.
+`.derive(streams::STAR_MASS)`). Every crate below has one or more constants
+that were declared in a `streams.rs` file long before this campaign, are
+real, permanent save-format labels, and are called via `.derive(CONST)` —
+structurally invisible to that grep. `Seed::derive(&self, label: &str)`
+still exists today (Tasks 1–10 are all additive/consuming, not destructive),
+so none of this has broken anything yet — but Task 12 (the contract step)
+deletes that method, and every one of these call sites would stop compiling
+if Task 12 ran before this remediation lands. `kernel/src/seed.rs`'s own 3
+remaining hits (`derive_typed`'s internal delegation at line 87, and its own
+two tests at lines 282/291) are NOT a gap — they are Task 1's and Task 12's
+own intentional design, already correctly scoped.
+
+Four new tasks close every real remaining gap, in the same style as Tasks
+2–10 (retype the constant, migrate its call sites, run that crate's own
+test suite unchanged, prove byte-identity).
+
+---
+
+### Task 10b: kernel's own remaining gap — `room.rs` + `kernel/src/streams.rs`
+
+**Files:**
+- Modify: `kernel/src/streams.rs` (retype `ROOM_FACE`, `ROOM_CHILD`)
+- Modify: `kernel/src/room.rs` (2 sites: lines 567, 569)
+
+**Interfaces:**
+- Consumes: `StreamLabel`, `Seed::derive_typed` (Task 1).
+
+- [ ] **Step 1: Retype `kernel/src/streams.rs`'s two constants**
+
+Add `use crate::seed::StreamLabel;` after the module doc comment. Change:
+
+```rust
+/// Root label for a room's base face.
+/// type-audit: bare-ok(identifier-text)
+pub const ROOM_FACE: &str = "room/face";
+/// Label for a room's child descent.
+/// type-audit: bare-ok(identifier-text)
+pub const ROOM_CHILD: &str = "room/child";
+```
+
+to:
+
+```rust
+/// Root label for a room's base face.
+/// type-audit: bare-ok(identifier-text: return)
+pub const ROOM_FACE: StreamLabel<'static> = StreamLabel::from_static("room/face");
+/// Label for a room's child descent.
+/// type-audit: bare-ok(identifier-text: return)
+pub const ROOM_CHILD: StreamLabel<'static> = StreamLabel::from_static("room/child");
+```
+
+This file's own `stream_labels()` function already calls these constants by
+name in a `vec![(ROOM_FACE, "..."), (ROOM_CHILD, "...")]` literal — since
+`stream_labels()`'s return type must stay `Vec<(&'static str, &'static
+str)>` (Global Constraint), change that vec to `vec![(ROOM_FACE.as_str(),
+"room base face"), (ROOM_CHILD.as_str(), "room child descent")]`.
+
+- [ ] **Step 2: Migrate `room.rs`'s two sites**
+
+Read `kernel/src/room.rs` around lines 567/569 first — the exact
+surrounding code (`world.derive(ROOM_FACE).derive(&self.face.to_string())`
+and `s = s.derive(ROOM_CHILD).derive(&d.to_string())`) — then replace
+`.derive(ROOM_FACE)` → `.derive_typed(ROOM_FACE)`, `.derive(ROOM_CHILD)` →
+`.derive_typed(ROOM_CHILD)`, and the two `.derive(&self.face.to_string())`
+/ `.derive(&d.to_string())` calls (runtime-formatted values, dynamic) →
+`.derive_typed(StreamLabel::dynamic(&self.face.to_string()))` /
+`.derive_typed(StreamLabel::dynamic(&d.to_string()))`. Add `use
+crate::seed::StreamLabel;` if `room.rs` doesn't already have it in scope.
+
+- [ ] **Step 3: Run kernel's full test suite and the workspace build**
+
+Run: `cargo test -p hornvale-kernel 2>&1 | tail -40`
+Run: `cargo build --workspace 2>&1 | tail -30`
+Expected: PASS / clean — unchanged test counts (proves byte-identity; no
+string value changed, only where each is referenced from).
+
+- [ ] **Step 4: `cargo fmt`, clippy, type-audit**
+
+Run: `cargo fmt -p hornvale-kernel`
+Run: `cargo clippy -p hornvale-kernel --all-targets -- -D warnings`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add kernel/src/streams.rs kernel/src/room.rs docs/audits/type-audit-report.md
+git commit -m "refactor(kernel): migrate room.rs + streams.rs ROOM_FACE/ROOM_CHILD -- proc-17 T10b"
+```
+
+---
+
+### Task 10c: migrate `domains/astronomy`'s remaining 21 constants
+
+**Files:**
+- Modify: `domains/astronomy/src/streams.rs` (retype all 21 remaining
+  constants — every one except `ROOT`, already done in Task 2)
+- Modify: `domains/astronomy/src/anchor.rs` (5 sites: lines 54, 74, 103,
+  156, 173 — `ANCHOR_MASS`, `ROTATION`, `SPIN_DIRECTION`, `ORBIT`,
+  `OBLIQUITY`)
+- Modify: `domains/astronomy/src/wanderers.rs` (2 sites: lines 54, 67 —
+  `WANDERER_COUNT`, `WANDERERS`)
+- Modify: `domains/astronomy/src/neighborhood.rs` (2 sites: lines 89, 90 —
+  `NEIGHBORS`, `NEIGHBOR_POSITIONS`)
+- Modify: `domains/astronomy/src/star.rs` (2 sites: lines 64, 78 —
+  `STAR_MASS`, `STAR_AGE`)
+- Modify: `domains/astronomy/src/starfield.rs` (1 site: line 27 —
+  `STARFIELD`)
+- Modify: `domains/astronomy/src/forcing.rs` (2 sites: lines 92, 110 —
+  `FORCING`, `PHASE_OFFSETS`)
+- Modify: `domains/astronomy/src/moons.rs` (7 sites: lines 194, 209, 273,
+  299, 313, 327, 351 — `MOON_COUNT`, `MOONS`, `MOON_FORMATION`,
+  `MOON_INCLINATIONS`, `MOON_NODES`, `MOON_DENSITY`, `MOON_AGE`)
+
+**Interfaces:**
+- Consumes: `StreamLabel`, `Seed::derive_typed` (Task 1). `domains/
+  astronomy/src/streams.rs::ROOT` is already `StreamLabel`-typed (Task 2)
+  — this task retypes every OTHER constant in that same file.
+
+If this task's scope proves too large for one reviewable diff once you
+are into it (7 files, 19 call sites, 21 constants), split it at a natural
+seam — e.g. `{anchor, star, orbit-adjacent}` vs `{moons, wanderers,
+neighborhood, starfield, forcing}` — and report that split rather than
+forcing one oversized commit.
+
+- [ ] **Step 1: Retype all 21 remaining constants in `domains/astronomy/src/streams.rs`**
+
+The file already has `use hornvale_kernel::seed::StreamLabel;` (added in
+Task 2) and `ROOT` already `StreamLabel`-typed. For each of these 21
+constants, change `pub const NAME: &str = "value";` to `pub const NAME:
+StreamLabel<'static> = StreamLabel::from_static("value");`, and update
+each one's own `type-audit: bare-ok(identifier-text)` tag to `type-audit:
+bare-ok(identifier-text: return)` — preserve every existing doc comment
+unchanged, only the type/value expression and the tag change:
+
+```
+STAR_MASS = "star-mass"
+ANCHOR_MASS = "anchor-mass"
+ROTATION = "rotation"
+ORBIT = "orbit"
+OBLIQUITY = "obliquity"
+MOON_COUNT = "moon-count"
+MOONS = "moons"
+NEIGHBORS = "neighbors"
+FORCING = "forcing"
+PHASE_OFFSETS = "phase-offsets"
+NEIGHBOR_POSITIONS = "neighbor-positions"
+SPIN_DIRECTION = "spin-direction"
+MOON_INCLINATIONS = "moon-inclinations"
+WANDERER_COUNT = "wanderer-count"
+WANDERERS = "wanderers"
+STARFIELD = "starfield"
+MOON_NODES = "moon-nodes"
+STAR_AGE = "star-age"
+MOON_FORMATION = "moon-formation"
+MOON_DENSITY = "moon-density"
+MOON_AGE = "moon-age"
+```
+
+(These 21 values were read directly from the committed file — do not
+retype them from memory; open `domains/astronomy/src/streams.rs` and
+confirm each one matches exactly before editing.)
+
+- [ ] **Step 2: Check whether any OTHER crate directly references these 21 constants**
+
+Task 2's own review found astronomy's `ROOT` had unexpected callers in
+`windows/scene` and `windows/lab` — do the same thorough sweep here. Run:
+
+```bash
+grep -rn 'streams::\(STAR_MASS\|ANCHOR_MASS\|ROTATION\|ORBIT\|OBLIQUITY\|MOON_COUNT\|MOONS\|NEIGHBORS\|FORCING\|PHASE_OFFSETS\|NEIGHBOR_POSITIONS\|SPIN_DIRECTION\|MOON_INCLINATIONS\|WANDERER_COUNT\|WANDERERS\|STARFIELD\|MOON_NODES\|STAR_AGE\|MOON_FORMATION\|MOON_DENSITY\|MOON_AGE\)\b' --include=*.rs domains/ windows/ cli/ kernel/ | grep -v domains/astronomy
+```
+
+Fix every real hit the same minimal way (`.derive(` → `.derive_typed(`,
+nothing else) in this same task.
+
+- [ ] **Step 3: Migrate the 19 call sites listed in Files, above**
+
+For each, replace `.derive(streams::CONST)` with
+`.derive_typed(streams::CONST)` — the constant reference itself never
+changes, only the method name. `moons.rs`'s `.derive(streams::MOON_COUNT)`
+sits inside a chain also touching `.derive(...)` on OTHER already-`ROOT`-
+migrated code from Task 2 — confirm you are not re-touching anything Task
+2 already migrated, only the NEW constants this task retypes.
+
+- [ ] **Step 4: Run astronomy's full test suite, the cross-crate hits from Step 2, and the workspace build**
+
+Run: `cargo test -p hornvale-astronomy 2>&1 | tail -80`
+Run any crate Step 2 found real hits in (e.g. `cargo test -p hornvale-scene -p hornvale-lab -p hornvale-worldgen 2>&1 | tail -60` if applicable)
+Run: `cargo build --workspace 2>&1 | tail -30`
+Expected: PASS / clean, unchanged counts throughout.
+
+- [ ] **Step 5: `cargo fmt`, clippy, type-audit**
+
+Run: `cargo fmt -p hornvale-astronomy`
+Run: `cargo clippy -p hornvale-astronomy --all-targets -- -D warnings`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add domains/astronomy/src/streams.rs domains/astronomy/src/anchor.rs domains/astronomy/src/wanderers.rs domains/astronomy/src/neighborhood.rs domains/astronomy/src/star.rs domains/astronomy/src/starfield.rs domains/astronomy/src/forcing.rs domains/astronomy/src/moons.rs docs/audits/type-audit-report.md
+# plus any file Step 2's cross-crate sweep touched
+git commit -m "refactor(astronomy): migrate remaining 21 constants -- proc-17 T10c"
+```
+
+---
+
+### Task 10d: the remaining dynamic-only legs — `terrain`, `lab`, `language`
+
+**Files:**
+- Modify: `domains/terrain/src/rift.rs` (1 site: line 179)
+- Modify: `domains/terrain/src/plates.rs` (1 site: line 159)
+- Modify: `domains/terrain/src/crust.rs` (2 sites: lines 320, 994)
+- Modify: `windows/lab/tests/fixture_staleness.rs` (1 site: line 57)
+- Modify: `domains/language/src/schemas.rs` (2 sites: lines 621, 626)
+
+**Interfaces:**
+- Consumes: `StreamLabel`, `Seed::derive_typed` (Task 1). None of these
+  sites need a new constant — every one is a genuinely dynamic,
+  runtime-formatted value.
+
+- [ ] **Step 1: Migrate terrain's 4 sites**
+
+`use hornvale_kernel::seed::StreamLabel;` should already be present in
+`crust.rs`/`rift.rs` (Task 3); add it to `plates.rs` if not already
+there. `rift.rs:179`: `rift_root.derive(&format!("seam-{a}-{b}"))` →
+`rift_root.derive_typed(StreamLabel::dynamic(&format!("seam-{a}-{b}")))`.
+`plates.rs:159`: `edge_root.derive(&format!("plate-{}", plate.id))` →
+`edge_root.derive_typed(StreamLabel::dynamic(&format!("plate-{}",
+plate.id)))`. `crust.rs:320` and `:994`:
+`lobing_root.derive(&format!("craton-{}", host.id))` /
+`lobing_root.derive(&format!("craton-{}", c.id))` →
+`lobing_root.derive_typed(StreamLabel::dynamic(&format!("craton-{}",
+host.id)))` / the `c.id` equivalent.
+
+- [ ] **Step 2: Migrate `windows/lab/tests/fixture_staleness.rs`'s site**
+
+Add `use hornvale_kernel::seed::StreamLabel;`. Line 57:
+`Seed(0).derive(csv).stream()` (`csv: &str` is a fixture/window
+identifier parameter, not file content — genuinely dynamic) →
+`Seed(0).derive_typed(StreamLabel::dynamic(csv)).stream()`.
+
+- [ ] **Step 3: Migrate `domains/language/src/schemas.rs`'s two sites**
+
+Add `use hornvale_kernel::seed::StreamLabel;` if not already present.
+Lines 621 and 626: `Seed(1).derive(&label).stream()` (`label` is a
+`String` built via `format!("test/schemas/beta-sweep/{i}")` inside a
+test) → `Seed(1).derive_typed(StreamLabel::dynamic(&label)).stream()`, at
+both sites.
+
+- [ ] **Step 4: Run the affected crates' test suites and the workspace build**
+
+Run: `cargo test -p hornvale-terrain -p hornvale-lab -p hornvale-language 2>&1 | tail -100`
+Run: `cargo build --workspace 2>&1 | tail -30`
+Expected: PASS / clean, unchanged counts.
+
+- [ ] **Step 5: `cargo fmt`, clippy, type-audit**
+
+Run: `cargo fmt -p hornvale-terrain -p hornvale-lab -p hornvale-language`
+Run: `cargo clippy -p hornvale-terrain -p hornvale-lab -p hornvale-language --all-targets -- -D warnings`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add domains/terrain/src/rift.rs domains/terrain/src/plates.rs domains/terrain/src/crust.rs windows/lab/tests/fixture_staleness.rs domains/language/src/schemas.rs docs/audits/type-audit-report.md
+git commit -m "refactor: migrate remaining dynamic-only .derive() legs (terrain/lab/language) -- proc-17 T10d"
+```
+
+---
+
+### Task 10e: remaining small-crate constants — `climate`, `locale`, `vessel`
+
+**Files:**
+- Modify: `domains/climate/src/streams.rs` (retype `WEATHER_PHASE`)
+- Modify: `domains/climate/src/weather.rs` (retype the local test-only
+  `WEATHER_PHASE_TEST` const at line 332; migrate its 3 call sites —
+  lines 247, 278, 321 — plus `WEATHER_PHASE`'s own production call site
+  at line 158)
+- Modify: `windows/locale/src/streams.rs` (retype `LOCALE_MICRO`,
+  `LOCALE_VARIETY`, `LOCALE_SUBSTRATE_DETAIL`, `LOCALE_PLACE`)
+- Modify: `windows/locale/src/micro.rs` (1 site: line 12 — `LOCALE_MICRO`)
+- Modify: `windows/locale/src/budget.rs` (1 site: line 122 —
+  `LOCALE_PLACE`)
+- Modify: `windows/locale/src/grammar.rs` (the `draw()` helper's own
+  `label: &str` parameter, line ~66, and its internal `.derive(label)`
+  call at line 72 — `LOCALE_VARIETY`/`LOCALE_SUBSTRATE_DETAIL` are passed
+  INTO this function by their callers, not derived directly)
+- Modify: `windows/vessel/src/streams.rs` (retype `VESSEL_AGENT`,
+  `VESSEL_WALK`)
+- Modify: `windows/vessel/src/agent.rs` (1 site: line 63 —
+  `VESSEL_AGENT`)
+- Modify: `windows/vessel/tests/walker_battery.rs` (1 site: line 38 —
+  `VESSEL_WALK`)
+
+**Interfaces:**
+- Consumes: `StreamLabel`, `Seed::derive_typed` (Task 1).
+
+- [ ] **Step 1: `domains/climate`**
+
+In `streams.rs`, add `use hornvale_kernel::seed::StreamLabel;` and change
+`pub const WEATHER_PHASE: &str = "climate/weather/phase/v1";` to `pub
+const WEATHER_PHASE: StreamLabel<'static> =
+StreamLabel::from_static("climate/weather/phase/v1");` (update its
+`bare-ok(identifier-text)` tag to `bare-ok(identifier-text: return)`). In
+`weather.rs`, add the same import; change line 332's `const
+WEATHER_PHASE_TEST: &str = "climate/weather/phase/v1";` to `const
+WEATHER_PHASE_TEST: StreamLabel<'static> =
+StreamLabel::from_static("climate/weather/phase/v1");`; migrate line
+158's `seed.derive(WEATHER_PHASE)` → `seed.derive_typed(WEATHER_PHASE)`
+and lines 247/278/321's `Seed(...).derive(WEATHER_PHASE_TEST)` →
+`Seed(...).derive_typed(WEATHER_PHASE_TEST)`.
+
+- [ ] **Step 2: `windows/locale`**
+
+In `streams.rs`, add `use hornvale_kernel::seed::StreamLabel;`; retype
+all 4 constants the same way (`pub const LOCALE_MICRO: StreamLabel<'static>
+= StreamLabel::from_static("locale/regime/micro");` etc. for
+`LOCALE_VARIETY`, `LOCALE_SUBSTRATE_DETAIL`, `LOCALE_PLACE`, preserving
+each literal value exactly); update `stream_labels()`'s own `vec![...]`
+to call `.as_str()` on each (its return type stays `Vec<(&'static str,
+&'static str)>`, unchanged). In `micro.rs`: `room_seed.derive(LOCALE_MICRO)`
+→ `room_seed.derive_typed(LOCALE_MICRO)`. In `budget.rs`:
+`seed.derive(LOCALE_PLACE)` → `seed.derive_typed(LOCALE_PLACE)`. In
+`grammar.rs`: change `fn draw(room: Seed, label: &str, pool: Pool) ->
+String` to `fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) ->
+String` (its two callers passing `LOCALE_VARIETY`/`LOCALE_SUBSTRATE_DETAIL`
+need no change — both are already `StreamLabel<'static>` after Step 2's
+own retyping, which coerces fine to `StreamLabel<'_>`); change the
+function body's `room.derive(label)` to `room.derive_typed(label)`.
+
+- [ ] **Step 3: `windows/vessel`**
+
+In `streams.rs`, add `use hornvale_kernel::seed::StreamLabel;`; retype
+`VESSEL_AGENT`/`VESSEL_WALK` the same way, preserving their literal
+values (`"vessel/agent"`, `"vessel/walk"`); update `stream_labels()`'s
+`vec![...]` to call `.as_str()` on each. In `agent.rs`:
+`.derive(VESSEL_AGENT)` → `.derive_typed(VESSEL_AGENT)`. In
+`tests/walker_battery.rs`: `world.seed.derive(VESSEL_WALK)` →
+`world.seed.derive_typed(VESSEL_WALK)`.
+
+- [ ] **Step 4: Run all three crates' test suites and the workspace build**
+
+Run: `cargo test -p hornvale-climate -p hornvale-locale -p hornvale-vessel 2>&1 | tail -100`
+Run: `cargo build --workspace 2>&1 | tail -30`
+Expected: PASS / clean, unchanged counts.
+
+- [ ] **Step 5: `cargo fmt`, clippy, type-audit**
+
+Run: `cargo fmt -p hornvale-climate -p hornvale-locale -p hornvale-vessel`
+Run: `cargo clippy -p hornvale-climate -p hornvale-locale -p hornvale-vessel --all-targets -- -D warnings`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+Run: `cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md`
+
+- [ ] **Step 6: Confirm the workspace-wide sweep is now genuinely clean**
+
+Run: `grep -rn '\.derive(' --include=*.rs domains/ windows/ cli/ kernel/ | grep -v '\.derive_typed(' | grep -v '//' | grep -v '^\s*\*'`
+Expected: exactly the 3 lines from `kernel/src/seed.rs` (Task 1's/Task
+12's own intentional delegation + comparison tests) and, optionally, the
+4-5 stale doc-comment lines already known and accepted as non-blocking
+(Tasks 5/6/10). If anything ELSE appears, that is a real remaining gap —
+do not proceed to Task 11/12 until it's understood and either fixed here
+or explicitly re-scoped.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add domains/climate/src/streams.rs domains/climate/src/weather.rs windows/locale/src/streams.rs windows/locale/src/micro.rs windows/locale/src/budget.rs windows/locale/src/grammar.rs windows/vessel/src/streams.rs windows/vessel/src/agent.rs windows/vessel/tests/walker_battery.rs docs/audits/type-audit-report.md
+git commit -m "refactor: migrate remaining climate/locale/vessel constants -- proc-17 T10e"
+```
+
+---
+
 ### Task 11: a `tools/type-audit` check for inline `StreamLabel::from_static` literals
 
 **Files:**
@@ -1316,9 +1696,16 @@ git commit -m "feat(type-audit): flag StreamLabel::from_static(literal) calls ou
 
 ### Task 12: the contract step — delete `derive(&str)`, rename `derive_typed` → `derive`
 
-**Do not start this task until Tasks 1-11 have all landed with clean
+**Do not start this task until Tasks 1-11 (INCLUDING the mid-execution
+remediation Tasks 10b, 10c, 10d, 10e) have all landed with clean
 reviews.** This is the one task in the whole plan that touches every
-crate at once — every migration must already be complete.
+crate at once — every migration must already be complete. Task 10's own
+review found the original Tasks 1-11 scope, by itself, was NOT
+sufficient (built from a grep for inline literals, which missed every
+call site already passing a pre-declared `&str` constant) — Step 1's own
+grep below is the real, load-bearing check; do not skip it or assume the
+task list above is exhaustive just because every numbered task shows
+complete.
 
 **Files:**
 - Modify: `kernel/src/seed.rs`
