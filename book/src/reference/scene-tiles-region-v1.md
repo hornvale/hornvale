@@ -88,7 +88,7 @@ kind:
 
 | Layer | Sampling | Why |
 |---|---|---|
-| `ocean`, `biome`, `plate` | nearest-cell | categorical — there is no such thing as interpolating a category |
+| `ocean`, `biome`, `plate`, `water`, `drainage` | nearest-cell | categorical, or (for `drainage`) coupled to the categorical `water` classification rather than smoothly continuous |
 | `elevation_m`, `unrest`, `t_mean_c`, `t_swing_c`, `moisture` | barycentric over the local cell triangle | continuous — a smooth surface across the tile is more honest than a stair-step of cell values |
 
 Barycentric interpolation is entirely **producer-internal**: the document
@@ -130,6 +130,10 @@ fields, in this order (field order is part of the contract):
 | `t_mean_c` | array of number, `(N+1)²` | Annual-mean temperature per node, °C — **barycentric**. |
 | `t_swing_c` | array of number, `(N+1)²` | Hemisphere-signed seasonal half-swing per node, °C — **barycentric**. |
 | `moisture` | array of number, `(N+1)²` | Dimensionless moisture index per node, [0, 1] — **barycentric**. |
+| `water` | array of integer, `(N+1)²` | Water classification per node, into `water_legend` (WaterKind: ocean / salt-basin / river / dry-land) — **nearest-cell**, a pure read of the terrain provider's existing drainage/salt-fresh classification. |
+| `water_legend` | array of string | The water-kind catalog, in v1's stable append-only order — `["ocean", "salt-basin", "river", "dry-land"]`; `water`'s values index into it. |
+| `drainage` | array of number, `(N+1)²` | Flow-accumulation drainage per node — a count of upstream land cells, `0` on ocean and non-accumulating dry land — **nearest-cell**. |
+| `waterfalls` | array of object | Waterfall (knickpoint) sites within this tile's footprint, each `{ "latitude": number, "longitude": number }` in degrees. Sparse — most regional tiles carry none, as the committed example below does. |
 
 `features` are omitted from this schema: a regional tile is a footprint of
 the surface, not a settlement census, and a settlement's global lat/lon
@@ -221,8 +225,9 @@ discipline as `scene/tiles/v1` and the rest of the world's on-disk formats:
   `scripts/regenerate-artifacts.sh`; drift from the committed file shows up
   in the author's `git status` on regeneration. Like its sibling
   `scene-tiles-seed-42.json`, it is **excluded from CI's cross-platform
-  strict diff**: its nearest-cell `biome`/`ocean`/`plate` classifications
-  ride worldgen values whose last-ULP results are host-libm-local, so
+  strict diff**: its nearest-cell `biome`/`ocean`/`plate`/`water`
+  classifications ride worldgen values whose last-ULP results are
+  host-libm-local, so
   byte-identity holds per-platform but not necessarily between the CI runner
   and a committed macOS file. Same-platform determinism (same machine, same
   address → byte-identical) is enforced instead by the producer's unit

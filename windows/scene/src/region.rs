@@ -5,7 +5,7 @@
 //! layers stay nearest-cell. The projection here is the normative one, shared
 //! byte-for-byte with the orrery's `cubeSphere.ts` and the reference page.
 
-use crate::SceneError;
+use crate::{SceneError, WaterfallPoint};
 use hornvale_kernel::{CellId, Geosphere, NearestCellIndex, World};
 use serde::Serialize;
 
@@ -33,6 +33,44 @@ const FACES: [[[f64; 3]; 3]; 6] = [
 /// [-1, 1]. `offset ∈ [0, 1]` walks a tile's edge.
 fn param(index: u32, offset: f64, level: u32) -> f64 {
     -1.0 + 2.0 * (f64::from(index) + offset) / (1u64 << level) as f64
+}
+
+/// The inverse of `face_unit`: which face a unit sphere position belongs to
+/// (the standard cube-map assignment — the face whose normal has the
+/// largest dot product with `p`) and its `(a, b)` parameters on that face.
+/// Exact for points not exactly on a face seam (measure zero); each `FACES`
+/// row is an orthonormal `(n, u, v)` triple, so `p·n = 1/|q|` and
+/// `p·u = a·(p·n)` where `q = n + a·u + b·v` is `face_unit`'s pre-normalized
+/// vector — dividing recovers `a` (and `b` likewise) exactly.
+/// Transcendental-free (dot products and one division), so cross-platform
+/// byte-identical.
+fn locate_on_cube(p: [f64; 3]) -> (usize, f64, f64) {
+    let dot = |x: [f64; 3], y: [f64; 3]| x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+    let (face, _) = FACES
+        .iter()
+        .enumerate()
+        .map(|(f, [n, _, _])| (f, dot(p, *n)))
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .expect("FACES is nonempty");
+    let [n, u, v] = FACES[face];
+    let pn = dot(p, n);
+    (face, dot(p, u) / pn, dot(p, v) / pn)
+}
+
+/// Whether unit-sphere position `p` falls inside tile `addr`'s footprint —
+/// exact cube-face-and-parameter-box containment (§ its face plus its
+/// `(a, b)` range at `addr.level`/`addr.ix`/`addr.iy`), not a lat/lon
+/// approximation (which would distort near the poles and the antimeridian).
+fn tile_contains(addr: &RegionAddr, p: [f64; 3]) -> bool {
+    let (face, a, b) = locate_on_cube(p);
+    if face != addr.face as usize {
+        return false;
+    }
+    let a_lo = param(addr.ix, 0.0, addr.level);
+    let a_hi = param(addr.ix, 1.0, addr.level);
+    let b_lo = param(addr.iy, 0.0, addr.level);
+    let b_hi = param(addr.iy, 1.0, addr.level);
+    (a_lo..=a_hi).contains(&a) && (b_lo..=b_hi).contains(&b)
 }
 
 /// The unit vector for face parameters `(a, b)`: `normalize(n + a·u + b·v)`.
@@ -189,7 +227,7 @@ fn interp(
 /// JSON key order and is contract. Per-node layers are `(samples+1)²`,
 /// row-major (`i = row·(samples+1) + col`). Continuous layers are barycentric;
 /// discrete layers (`ocean`, `biome`, `plate`) are nearest-cell.
-/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture)
+/// type-audit: bare-ok(identifier-text: schema), bare-ok(constructor-edge: seed), bare-ok(index: face), bare-ok(count: level), bare-ok(index: ix), bare-ok(index: iy), bare-ok(count: samples), pending(wave-3: sea_level_m), bare-ok(diagnostic-value: season_period_days), bare-ok(count: circulation_bands), bare-ok(identifier-text: biome_legend), waiver(elevation-convention: elevation_m), bare-ok(flag: ocean), bare-ok(index: biome), bare-ok(index: plate), bare-ok(ratio: unrest), bare-ok(diagnostic-value: t_mean_c), bare-ok(diagnostic-value: t_swing_c), bare-ok(ratio: moisture), bare-ok(index: water), bare-ok(identifier-text: water_legend), bare-ok(diagnostic-value: drainage)
 #[derive(Debug, Serialize)]
 pub struct RegionScene {
     /// Always `scene/tiles-region/v1`.
@@ -238,6 +276,22 @@ pub struct RegionScene {
     /// Moisture index per node, [0,1] (barycentric).
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
     pub moisture: Vec<f64>,
+    /// The water classification per node, as an index into `water_legend`
+    /// (WaterKind: ocean / salt-basin / river / dry-land) (nearest-cell).
+    /// Appended per the schema stability contract.
+    pub water: Vec<u8>,
+    /// The water-kind catalog in stable index order — `water`'s values index
+    /// into this. Appended per the schema stability contract.
+    pub water_legend: Vec<String>,
+    /// Flow-accumulation drainage per node (0 on ocean/dry land); river
+    /// magnitude (nearest-cell, coupled to `water`). Appended per the schema
+    /// stability contract.
+    #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::vec_f64_field")]
+    pub drainage: Vec<f64>,
+    /// Waterfall sites within this tile's footprint — high-drainage
+    /// watercourses crossing a scarp. Appended per the schema stability
+    /// contract.
+    pub waterfalls: Vec<WaterfallPoint>,
 }
 
 /// Build the `scene/tiles-region/v1` scene for one tile address. Deterministic:
@@ -277,6 +331,8 @@ pub fn tiles_region_scene(
     let mut t_mean_c = Vec::with_capacity(units.len());
     let mut t_swing_c = Vec::with_capacity(units.len());
     let mut moisture = Vec::with_capacity(units.len());
+    let mut water = Vec::with_capacity(units.len());
+    let mut drainage = Vec::with_capacity(units.len());
     for s in &units {
         let tg = terrain.geosphere();
         let cg = climate.geosphere();
@@ -284,6 +340,8 @@ pub fn tiles_region_scene(
         let t_cell = t_index.nearest_to_position(tg, *s);
         let c_cell = c_index.nearest_to_position(cg, *s);
         ocean.push(terrain.is_ocean(t_cell));
+        water.push(terrain.water_kind_at(t_cell).index());
+        drainage.push(terrain.drainage_at(t_cell));
         let b = *biomes.get(c_cell);
         biome.push(
             catalog
@@ -306,6 +364,18 @@ pub fn tiles_region_scene(
         // back into the declared `[0, 1]` domain.
         moisture.push(interp(cg, &c_index, *s, |c| climate.moisture_at(c)).clamp(0.0, 1.0));
     }
+    let waterfalls = terrain
+        .waterfalls()
+        .iter()
+        .filter(|&&cell| tile_contains(&addr, terrain.geosphere().position(cell)))
+        .map(|&cell| {
+            let c = terrain.geosphere().coord(cell);
+            WaterfallPoint {
+                latitude: c.latitude,
+                longitude: c.longitude,
+            }
+        })
+        .collect();
     Ok(RegionScene {
         schema: "scene/tiles-region/v1".to_string(),
         seed: world.seed.0,
@@ -326,6 +396,13 @@ pub fn tiles_region_scene(
         t_mean_c,
         t_swing_c,
         moisture,
+        water,
+        water_legend: hornvale_terrain::WaterKind::LEGEND
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
+        drainage,
+        waterfalls,
     })
 }
 
@@ -500,15 +577,70 @@ mod tests {
     use hornvale_kernel::Seed;
     use hornvale_worldgen::{SkyChoice, build_world, climate_of};
 
-    fn gen42() -> hornvale_kernel::World {
+    fn gen_seed(seed: u64) -> hornvale_kernel::World {
         build_world(
-            Seed(42),
+            Seed(seed),
             &Default::default(),
             SkyChoice::Generated,
             &Default::default(),
             &Default::default(),
         )
-        .expect("seed 42 builds")
+        .unwrap_or_else(|e| panic!("seed {seed} builds: {e}"))
+    }
+
+    fn gen42() -> hornvale_kernel::World {
+        gen_seed(42)
+    }
+
+    #[test]
+    fn water_fields_are_sized_legend_matches_and_ocean_has_no_drainage() {
+        // Seed 44 (like the tiles_scene sibling test) reliably carries river
+        // cells. Anchor the region tile on a known river cell's position so
+        // the tile actually exercises a River node rather than hoping a
+        // fixed address happens to land on one (rivers are sparse
+        // per-region). The tile is chosen wide (level 3) and densely
+        // sampled (64 quads/edge, ~19.6 km/sample — finer than the ~110 km
+        // geosphere cell spacing) so nearest-cell sampling reliably finds
+        // river cells inside the tile's footprint.
+        let w = gen_seed(44);
+        let terrain = hornvale_worldgen::terrain_of(&w).unwrap();
+        let river_cell = terrain
+            .geosphere()
+            .cells()
+            .find(|&c| terrain.water_kind_at(c) == hornvale_terrain::WaterKind::River)
+            .expect("seed 44 has river cells (see the tiles_scene sibling test)");
+        let pos = terrain.geosphere().position(river_cell);
+        let level = 3;
+        let (face, a, b) = locate_on_cube(pos);
+        let n = 1u64 << level;
+        let ix = (((a + 1.0) * 0.5 * n as f64) as u64).min(n - 1) as u32;
+        let iy = (((b + 1.0) * 0.5 * n as f64) as u64).min(n - 1) as u32;
+        let samples = 64;
+        let scene = tiles_region_scene(&w, face as u32, level, ix, iy, samples).unwrap();
+        let nodes = (samples as usize + 1).pow(2);
+
+        assert_eq!(scene.water.len(), nodes);
+        assert_eq!(scene.drainage.len(), nodes);
+        assert_eq!(
+            scene.water_legend,
+            vec!["ocean", "salt-basin", "river", "dry-land"]
+        );
+        for i in 0..nodes {
+            if scene.ocean[i] {
+                assert_eq!(scene.drainage[i], 0.0);
+            }
+        }
+        assert!(
+            scene
+                .water
+                .iter()
+                .any(|&wtr| wtr == hornvale_terrain::WaterKind::River.index()),
+            "expected at least one river node in the tile anchored on a known river cell"
+        );
+        let json = region_json(&scene);
+        assert!(json.contains("water_legend"));
+        assert!(json.contains("drainage"));
+        assert!(json.contains("waterfalls"));
     }
 
     #[test]
