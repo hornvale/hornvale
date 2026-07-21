@@ -207,6 +207,7 @@
 - [The Cartographer](./chronicle/the-cartographer.md)
 - [The Corrigendum](./chronicle/the-corrigendum.md)
 - [The Dread](./chronicle/the-dread.md)
+- [The Freshwater](./chronicle/the-freshwater.md)
 
 # Appendix: The Frontier
 
