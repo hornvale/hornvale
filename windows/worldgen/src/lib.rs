@@ -332,7 +332,7 @@ fn settlement_descriptor_facts(
         object,
         place: Some(id),
         day: Some(0.0),
-        provenance: hornvale_history::streams::BAKE.to_string(),
+        provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     };
     world.ledger.commit(
         fact(hornvale_kernel::NAME, Value::Text(name.to_string())),

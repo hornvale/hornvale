@@ -126,30 +126,35 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
 pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
     vec![
         (
-            streams::ROOT,
+            streams::ROOT.as_str(),
             "root stream for history: reserved for the deep-history bake \
              (Task 3, run at the composition root). No draw is made \
              against it directly.",
         ),
         (
-            streams::RESIDUE,
+            streams::RESIDUE.as_str(),
             "flesh::residue_of's deterministic flavor draws (Task 2).",
         ),
         (
-            streams::STRUCTURES,
+            streams::STRUCTURES.as_str(),
             "flesh::structures_of's dwelling-count variance draws (Task 2).",
         ),
         (
-            streams::BAKE,
+            streams::BAKE.as_str(),
             "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse \
              draws, taken sequentially from one stream in commit order (Task 3, run at \
              the composition root).",
         ),
         (
-            streams::GENESIS,
+            streams::GENESIS.as_str(),
             "the deep-history bake's genesis draws: proto-community count, site picks, \
              and tech-advance offset (Task 3). Further derives a per-people sub-stream \
-             `history/genesis/<people-kind>` via `.derive(people.0)`.",
+             `history/genesis/<people-kind>` via `StreamLabel::dynamic(people.0)`.",
+        ),
+        (
+            streams::FLESH.as_str(),
+            "the per-occupation flesh seed the legibility surface derives before \
+             expanding residue/structures on demand (never committed).",
         ),
     ]
 }

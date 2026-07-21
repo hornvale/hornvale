@@ -24,6 +24,7 @@ use hornvale_history::flesh::{
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
 };
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, Value, World};
 
 /// Render a site's stratigraphy stack plus a derived flesh sample, as prose.
@@ -574,8 +575,8 @@ fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
 fn flesh_seed(world: &World, entity: EntityId) -> Seed {
     world
         .seed
-        .derive("history/flesh")
-        .derive(&entity.0.get().to_string())
+        .derive(hornvale_history::streams::FLESH)
+        .derive(StreamLabel::dynamic(&entity.0.get().to_string()))
 }
 
 /// A prose list of the structures a community raised, folded by kind ("four

@@ -30,7 +30,7 @@ fn fact(subject: EntityId, predicate: &str, object: Value, day: f64) -> Fact {
         object,
         place: Some(subject),
         day: Some(day),
-        provenance: hornvale_history::streams::BAKE.to_string(),
+        provenance: hornvale_history::streams::BAKE.as_str().to_string(),
     }
 }
 
@@ -241,7 +241,7 @@ pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), Bu
             object: Value::Number(now),
             place: None,
             day: Some(0.0),
-            provenance: hornvale_history::streams::BAKE.to_string(),
+            provenance: hornvale_history::streams::BAKE.as_str().to_string(),
         },
         &world.registry,
     )?;

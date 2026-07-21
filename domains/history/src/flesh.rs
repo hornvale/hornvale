@@ -5,13 +5,14 @@
 //! a *total function of its arguments*: no world, no global state, no
 //! replay. The deep-history bake (Task 3, run at the composition root)
 //! derives the `seed` these functions receive once per occupation, via
-//! `world.seed.derive("history/flesh").derive(&occ.community.0.to_string())`;
+//! `world.seed.derive(streams::FLESH).derive(StreamLabel::dynamic(&id))`;
 //! these functions never derive that top-level label themselves — they
 //! only derive their own sub-labels from whatever seed they're handed.
 
 use crate::record::{CauseOfEnd, Function, Notability, OccupationRecord, TechHorizon};
 use crate::streams;
 use hornvale_kernel::Seed;
+use hornvale_kernel::seed::StreamLabel;
 
 /// A lazily-expandable handle to the individual a role in an occupation's
 /// history implies (a founder, the chieftain who led a flight, ...). The
@@ -263,7 +264,10 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed) -> Residue {
     // extra scatter of worked stone behind, on a coin-flip rooted in this
     // occupation's own seed (never global state).
     if !hamlet_scale {
-        let mut stream = seed.derive(streams::RESIDUE).derive(occ.people.0).stream();
+        let mut stream = seed
+            .derive(streams::RESIDUE)
+            .derive(StreamLabel::dynamic(occ.people.0))
+            .stream();
         if stream.range_u32(0, 1) == 1 {
             items.push(ResidueItem::WorkedStone);
         }

@@ -31,6 +31,7 @@
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
 };
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, CellMap, EntityId, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
 use std::collections::{BTreeMap, BTreeSet};
@@ -644,7 +645,7 @@ pub fn bake(
     for &people in peoples {
         let mut pstream = seed
             .derive(hornvale_history::streams::GENESIS)
-            .derive(people.0)
+            .derive(StreamLabel::dynamic(people.0))
             .stream();
         let count = pstream.range_u32(GENESIS_SITES_MIN, GENESIS_SITES_MAX);
         // Only cells still vacant this people's turn are candidates — prior
