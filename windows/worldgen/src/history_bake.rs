@@ -54,7 +54,7 @@ const COLLAPSE_PRESSURE: f64 = 2.0;
 /// Pressure below which a comfortable community may throw off a daughter.
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
-const DAUGHTER_PROB: f64 = 0.15;
+const DAUGHTER_PROB: f64 = 0.08;
 /// Starting population of a genesis proto-community.
 const GENESIS_POP: f64 = 10.0;
 /// Starting population of a daughter community.

@@ -241,6 +241,11 @@ pub const DOMAINS: &[&dyn Domain] = &[
     &hornvale_religion::Religion,
     &hornvale_language::Language,
     &hornvale_paleoclimate::Paleoclimate,
+    // The Living Community: the deep-history bake commits occupation facts
+    // (`is-occupation`, `occ-*`, `is-ruin`) and draws under the `history/*`
+    // seed labels, so its predicates must be registered and its stream labels
+    // published into the manifest before genesis emits them.
+    &hornvale_history::History,
 ];
 
 /// Register every domain's concepts. `NAME_GLOSS` itself is kernel-core
@@ -280,6 +285,71 @@ fn scenario_fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
         day: Some(0.0),
         provenance: "scenario".to_string(),
     }
+}
+
+/// One history-emitted settlement paired back to the naming pass's build-local
+/// species tag. The deep-history bake places the world and `emit_history`
+/// commits each alive occupation as an `is-settlement`; the culture, religion,
+/// and peoples stages read these instead of the retired demography
+/// `StackSettlement` scatter. The `tag` is `species_set`'s 0-based position of
+/// this settlement's people — a build-local dense index, never serialized (a
+/// people's durable identity is its `KindId` label / `occ-people` fact).
+struct HistoryPlacement {
+    /// The settlement entity `emit_history` minted (an alive occupation).
+    id: EntityId,
+    /// Build-local `species_set` index of this settlement's people.
+    tag: usize,
+    /// The Geosphere cell the settlement sits on.
+    cell: hornvale_kernel::CellId,
+    /// The settlement's committed population (the occupation's peak).
+    population: u32,
+}
+
+/// Commit the present-frame descriptive facts a settlement carries beyond its
+/// structural (`is-settlement`/`population`/`cell-id`) skeleton: its name,
+/// place tag, biome, and coordinates. `emit_history` mints the settlement
+/// entity and commits the structural facts; the composition root's naming pass
+/// adds these onto the SAME entity, so history stays the sole placer (the
+/// retired `settlement::genesis` used to mint them together with placement).
+/// Provenanced to the bake; day-stamped at the present frame (0.0), matching
+/// the old settlement-genesis convention for descriptors.
+fn settlement_descriptor_facts(
+    world: &mut World,
+    id: EntityId,
+    name: &str,
+    biome: &str,
+    latitude: f64,
+    longitude: f64,
+) -> Result<(), BuildError> {
+    let fact = |predicate: &str, object: Value| Fact {
+        subject: id,
+        predicate: predicate.to_string(),
+        object,
+        place: Some(id),
+        day: Some(0.0),
+        provenance: hornvale_history::streams::BAKE.to_string(),
+    };
+    world.ledger.commit(
+        fact(hornvale_kernel::NAME, Value::Text(name.to_string())),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(hornvale_settlement::IS_PLACE, Value::Flag(true)),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(hornvale_settlement::BIOME, Value::Text(biome.to_string())),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(hornvale_settlement::LATITUDE, Value::Number(latitude)),
+        &world.registry,
+    )?;
+    world.ledger.commit(
+        fact(hornvale_settlement::LONGITUDE, Value::Number(longitude)),
+        &world.registry,
+    )?;
+    Ok(())
 }
 
 /// A `name-gloss` fact for `subject` — kernel-core (see
@@ -443,6 +513,15 @@ const MOISTURE_FLOOR_WEIGHT: f64 = 0.2;
 /// [`demography_report`]'s Lab accessor and the genesis path share the one
 /// definition — they must never diverge.
 const CONDENSATION_THRESHOLD: f64 = 1.7;
+
+/// Settlers a maximal-suitability cell supports: the scale that turns
+/// `demography::carrying_capacity`'s dimensionless suitability (~[0, 1.7])
+/// into the headcount capacity the deep-history bake reasons in
+/// (`pressure = population / eff_capacity`). Tuned with the bake's genesis
+/// founding density so seed-42's live settlement count lands in the walkable
+/// band (`windows/worldgen/tests/history_placement.rs`). A save-format
+/// constant: changing it re-places every world.
+const SETTLERS_PER_CAPACITY: f64 = 100.0;
 
 /// The bare per-cell carrying-capacity inputs, shared across species (spec
 /// §2): the same terrain/climate reads the retired suitability scatter used.
@@ -1355,6 +1434,122 @@ pub fn paleoclimate_from(
         present_sea_level,
         &eras,
     ))
+}
+
+/// The habitability series the deep-history bake replays. The bake's live
+/// mask needs a full habitability field for EVERY era (a cell's effective
+/// capacity is `capacity * factor(era)`, and `factor` reads both the era's
+/// ice and its habitable mask) — but `paleoclimate_of` fills only the
+/// glacial-maximum era's habitable field (every other era's is a discarded
+/// placeholder, since `strata::extract` reads habitable at the peak alone).
+/// This builds the series the bake actually needs:
+///
+/// - **Per-era habitability** is the cheap snowline diagnostic, not a full
+///   climate rebuild: land above the era's own sea level whose absolute
+///   temperature (that era's mean field plus its albedo-cooling offset) sits
+///   at or above the freezing snowline. That is precisely the mask whose
+///   swing drives displacement — a colder era pushes the snowline equatorward
+///   and turns high-latitude cells hostile, forcing migration — and it costs
+///   one mean-temperature field per era (no moisture/biome work), the same
+///   order the coarse ice diagnostic already pays.
+/// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
+///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
+///   `era_for` marches the glacial cycles forward across the simulated
+///   millennia rather than seeing every era stamped in deep-negative time.
+///
+/// On the constant sky (no orbital forcing) there is no deep time: a single
+/// present-era mask is returned and the bake sees a stable world (displacement
+/// then arises only from crowding, never a mask swing).
+///
+/// The `ice` field is left empty on every era: the snowline is already folded
+/// into `habitable` (an iced cell reads below-freezing, hence not habitable),
+/// so `factor` gates purely on habitability and never double-counts ice.
+fn bake_eras(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    cfg: &history_bake::BakeConfig,
+) -> Result<Vec<EraClimate>, BuildError> {
+    let sky = sky_of(world)?;
+    let geo = terrain.geosphere();
+    let elevation = terrain.globe().elevation.clone();
+    let present_sea_level = terrain.sea_level();
+    let (insolation, _obliquity_deg, regime, _year_length_std, _year_phase_offset) =
+        stellar_inputs(&sky);
+    let freeze = Temperature::new(FREEZE_C).expect("FREEZE_C is finite");
+
+    // A cell is livable this era iff it is land above the era's sea level and
+    // its absolute temperature is at or above the snowline.
+    let livable_mask = |sea_level: ReferenceElevation,
+                        offset: hornvale_kernel::TempAnomaly|
+     -> hornvale_kernel::CellMap<bool> {
+        let mean = hornvale_climate::temperature::mean_temperature(
+            geo, &elevation, sea_level, insolation, &regime,
+        );
+        hornvale_kernel::CellMap::from_fn(geo, |c| {
+            let elev = *elevation.get(c);
+            elev >= sea_level && (*mean.get(c) + offset).get() >= freeze.get()
+        })
+    };
+
+    // No forcing to replay (constant sky) → one present-era mask, no swing.
+    let Some(system) = sky.system() else {
+        let habitable = livable_mask(
+            present_sea_level,
+            hornvale_kernel::TempAnomaly::from_offset_c(0.0),
+        );
+        return Ok(vec![EraClimate {
+            day: cfg.start_year,
+            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+            habitable,
+            sea_level: present_sea_level,
+            ice_fraction: 0.0,
+        }]);
+    };
+    let forcing = &system.forcing;
+
+    // Fine ice integration across the deep-time window — the identical
+    // sampling `paleoclimate_from` performs (oldest → present), so the era
+    // temperature offsets and eustatic sea levels the bake replays are the
+    // same states the strata are extracted from.
+    let n_steps = (DEEP_TIME_WINDOW_DAYS / ICE_STEP_DAYS).round() as usize;
+    let mut samples: Vec<(f64, f64)> = Vec::with_capacity(n_steps + 1);
+    for k in (0..=n_steps).rev() {
+        let t = -(k as f64) * ICE_STEP_DAYS;
+        let g = caloric_summer_index(
+            forcing.obliquity_at(t),
+            forcing.obliquity_mean,
+            forcing.eccentricity_at(t),
+            forcing.precession_at(t),
+        );
+        samples.push((t, g));
+    }
+    let history = integrate_ice(&samples);
+
+    let mut eras: Vec<EraClimate> = Vec::with_capacity(CLIMATE_ERAS);
+    for e in 0..CLIMATE_ERAS {
+        let era_day = -DEEP_TIME_WINDOW_DAYS
+            + (e as f64) * DEEP_TIME_WINDOW_DAYS / (CLIMATE_ERAS as f64 - 1.0);
+        let state = history
+            .iter()
+            .min_by(|a, b| (a.day - era_day).abs().total_cmp(&(b.day - era_day).abs()))
+            .expect("history is non-empty");
+        let sea_level =
+            ReferenceElevation::new(present_sea_level.get() + state.sea_level_change.get())
+                .expect("present sea level plus a finite eustatic change is finite");
+        let habitable = livable_mask(sea_level, state.temp_offset);
+        // Re-base the deep-time era onto the bake window (oldest → start,
+        // present → end), preserving order so `era_for` advances monotonically.
+        let bake_day = cfg.start_year
+            + (e as f64) * (cfg.end_year - cfg.start_year) / (CLIMATE_ERAS as f64 - 1.0);
+        eras.push(EraClimate {
+            day: bake_day,
+            ice: hornvale_kernel::CellMap::from_fn(geo, |_| false),
+            habitable,
+            sea_level,
+            ice_fraction: 0.0,
+        });
+    }
+    Ok(eras)
 }
 
 /// Headline biome/habitability lines for the almanac's Land section.
@@ -3308,15 +3503,13 @@ fn build_to(
     // field, condense settlements off it (demography), and commit each as its
     // own place entity.
     #[allow(clippy::type_complexity)]
-    let (terrain, climate, ids, placed, placements, lexicons, species_set, phonologies) = stage(
+    let (terrain, climate, placements, lexicons, species_set, phonologies) = stage(
         "climate+settlements",
         || -> Result<
             (
                 GeneratedTerrain,
                 GeneratedClimate,
-                Vec<EntityId>,
-                Vec<hornvale_settlement::PlacedSettlement>,
-                Vec<hornvale_demography::StackSettlement>,
+                Vec<HistoryPlacement>,
                 std::collections::BTreeMap<&str, hornvale_language::Lexicon>,
                 Vec<&'static str>,
                 std::collections::BTreeMap<&str, hornvale_language::Phonology>,
@@ -3357,86 +3550,92 @@ fn build_to(
         }
     };
 
-    // Task A15a: settlement genesis is cut over onto the coexistence stack's
-    // niche-differentiated K (`niche_per_species_k`, The Niche) rather than
-    // the flat, psychology-only path `hornvale_demography::report` built its
-    // K from. This mirrors the SAME pipeline `demography_report_with_beta`
-    // (the Lab's shadow accessor) already builds, pinned to the frozen
-    // `BETA`/`FLOOR` constants, so worldgen and the Lab can never diverge.
-    // The peopled-only `species_set` above keeps the settlement stack
-    // peopled-only — no fauna kind ever reaches this pipeline, so no
-    // fauna-peopled settlement is possible (the full 16-species habitat
-    // stack, fauna included, is a separate observable for a later task).
+    // The epoch (The Living Community): the deep-history bake, not demography
+    // stack-condensation, is now the settlement provider. The bake seeds an
+    // ancient world, marches epochs across the paleoclimate era-variance, and
+    // resolves the whole occupation skeleton; `emit_history` commits it — an
+    // occupation still alive at `now` becomes an `is-settlement` (with its
+    // `population`/`cell-id`), a dead one an `is-ruin`. The retired
+    // `coexist::pack`/`condense_stack` placer is gone from genesis; the same
+    // niche-differentiated stack still lives in `demography_report` for the
+    // Lab's coexistence-stack readout, which this rewire leaves untouched.
     //
-    // `placements` is now ONE [`hornvale_demography::StackSettlement`] per
-    // attractor — peopled by whichever species locally DOMINATES it
-    // (`.dominant`), with every present-but-not-dominant species still
-    // readable off `.composition` — replacing the interim `condense_tagged`
-    // path (task A14: one settlement PER SPECIES, tag-per-settlement).
-    let sky = sky_of(&world)?;
-    let (insolation_scalar, obliquity_deg, regime, _year, _year_phase_offset) = stellar_inputs(&sky);
-    // Biosphere per placed species, sourced from the roster-derived component
-    // set (ECS c3) in `species_set` order — the mass/niche the packer input
-    // and `niche_per_species_k` read now come from `wc.biosphere`, not `def`,
-    // preserving the exact `enumerate()` tag order (the build-local dense
-    // index; the `tag as u32` contract is unchanged).
-    let species_biosphere: Vec<&hornvale_species::BiosphereTraits> = species_set
-        .iter()
-        .map(|&name| {
-            wc.biosphere
-                .get(&KindId(name))
-                .expect("every placed kind has a biosphere component")
-        })
-        .collect();
-    let per_species_k = niche_per_species_k(
+    // The bake reads three composition-root fields: the shared base carrying
+    // capacity (`carrying_inputs_of` → `demography::carrying_capacity`, the
+    // Confluence's freshwater-near-rivers term riding it), the paleoclimate
+    // habitability series it replays (`bake_eras` — per-era snowline masks,
+    // day-axis re-based onto the bake window), and the refugia mask
+    // (`PaleoRecord.refugia`, habitable through the glacial maximum — the
+    // migration preference). The peopled roster is `species_set` in its
+    // `KindId` order. Same seed + pins ⇒ byte-identical `History` ⇒
+    // byte-identical committed skeleton (the bake draws only under the
+    // isolated `history/genesis/<people>` and `history/bake` streams).
+    let suitability = hornvale_demography::carrying_capacity(
         geo,
-        &terrain,
-        &climate,
-        obliquity_deg,
-        insolation_scalar,
-        &regime,
-        &species_biosphere,
+        &carrying_inputs_of(geo, &terrain, &climate),
     );
-    // `tag as u32` here is the same build-local dense index documented on
-    // `niche_per_species_k` — never serialized, never identity.
-    let species: Vec<(u32, hornvale_kernel::Mass, hornvale_kernel::ResourceVector)> =
-        species_biosphere
-            .iter()
-            .enumerate()
-            .map(|(tag, bio)| (tag as u32, bio.mass, bio.niche.clone()))
+    // `carrying_capacity` is a dimensionless suitability (~[0, 1.7]); the bake
+    // reasons in headcounts (`pressure = population / eff_capacity`, genesis
+    // pop 10). Scale the suitability into a per-cell headcount capacity so a
+    // maximal-suitability cell supports ~a few hundred settlers and genesis
+    // communities start comfortable rather than instantly over-pressure.
+    // Tuned (with the genesis founding density below) to land seed-42's live
+    // settlement count in the walkable band — the quality gate in
+    // `tests/history_placement.rs`.
+    let capacity =
+        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+    let paleo = paleoclimate_from(&world, &terrain)?;
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let eras = bake_eras(&world, &terrain, &cfg)?;
+    let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    let history =
+        history_bake::bake(seed, geo, &capacity, &eras, &paleo.refugia, &peoples, &cfg);
+    emit_history(&mut world, &history)?;
+
+    // Pair each alive settlement `emit_history` just committed (tagged
+    // `is-settlement` + `occ-people` + `cell-id` + `population`) back to its
+    // build-local `species_set` tag, for the naming/culture/religion passes
+    // below. Collect owned data first so the immutable ledger borrow is
+    // released before those passes commit again. Commit order (records order,
+    // alive filtered) is deterministic, so this vec is stable across builds.
+    let placements: Vec<HistoryPlacement> = {
+        let raw: Vec<(EntityId, String, hornvale_kernel::CellId, u32)> = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .map(|id| {
+                let people = world
+                    .ledger
+                    .text_of(id, hornvale_history::OCC_PEOPLE)
+                    .expect("a history settlement carries occ-people")
+                    .to_string();
+                let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+                    Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                    _ => unreachable!("a history settlement carries a numeric cell-id"),
+                };
+                let population = match world.ledger.value_of(id, hornvale_settlement::POPULATION)
+                {
+                    Some(Value::Number(n)) => *n as u32,
+                    _ => unreachable!("a history settlement carries a numeric population"),
+                };
+                (id, people, cell, population)
+            })
             .collect();
-    let stack = hornvale_demography::coexist::pack(
-        geo,
-        &per_species_k,
-        &species,
-        hornvale_demography::BETA,
-        hornvale_demography::FLOOR,
-    );
-    let mass_map: std::collections::BTreeMap<u32, hornvale_kernel::Mass> =
-        species.iter().map(|(id, m, _)| (*id, *m)).collect();
-    let placements = hornvale_demography::stack_condense::condense_stack(
-        geo,
-        &stack,
-        &mass_map,
-        CONDENSATION_THRESHOLD,
-    );
-    // the-confluence T3 (save-format surface, spec §6): re-pointing the
-    // freshwater term at `river_proximity` and re-fitting
-    // `CONDENSATION_THRESHOLD` changes WHICH cells clear condensation (and
-    // therefore WHICH cells this pass places settlements on) — but this is
-    // a **derived-formula change**, not a stream-label epoch. Everything
-    // upstream of `condense_stack` (`carrying_inputs_of`,
-    // `carrying_capacity`, `coexist::pack`) is a pure, seed-free function of
-    // terrain/climate — `hornvale_demography` never imports `Seed`/`Stream`
-    // at all — and every name drawn below is salted by the settlement's own
-    // cell id (see the comment above `phonologies`), not by settlement COUNT
-    // or ORDER, so a shifted settlement set perturbs no OTHER draw's inputs.
-    // `settlement::stream_labels()` already documents `settlement/placement`/
-    // `settlement/population` as drawing nothing from the seed (retired
-    // pre-the-gathering); that remains true unchanged here. No new stream
-    // label, no draw-order shift — same seed + pins still yields a
-    // byte-identical world (`windows/worldgen/tests/confluence.rs`,
-    // `seed_42_is_byte_identical_across_two_builds_after_the_confluence`).
+        raw.into_iter()
+            .map(|(id, people, cell, population)| {
+                let tag = species_set
+                    .iter()
+                    .position(|&n| n == people)
+                    .expect("occ-people is one of the seeded peoples");
+                HistoryPlacement {
+                    id,
+                    tag,
+                    cell,
+                    population,
+                }
+            })
+            .collect()
+    };
 
     // Each placed species' phonology, drawn once from the world seed and
     // its authored articulation vector, and a `Namer` built over it. Every
@@ -3466,36 +3665,20 @@ fn build_to(
     let mut lexicons: std::collections::BTreeMap<&str, hornvale_language::Lexicon> =
         std::collections::BTreeMap::new();
     for (tag, &name) in species_set.iter().enumerate() {
-        // "Settled" now means PRESENT, not merely dominant: species `tag` is
-        // settled at every stack settlement whose composition lists it with
-        // a strictly positive density fraction, even at a settlement where
-        // another species out-densities it and so becomes the settlement's
-        // `dominant` (and thus its peopling species, below).
+        // Each occupation is single-people (history places one community per
+        // site), so a species is "settled" at exactly the cells its own alive
+        // occupations sit on — the `people`-tagged settlements this build
+        // emitted. `exposure_of_impl` alone owns the "coexisting counts only
+        // once the querying species has settled" rule; `coexisting_now` spans
+        // every people that placed any alive settlement this build.
         let settled_now: Vec<hornvale_kernel::CellId> = placements
             .iter()
-            .filter(|s| {
-                s.composition
-                    .iter()
-                    .any(|(id, frac)| *id as usize == tag && *frac > 0.0)
-            })
+            .filter(|s| s.tag == tag)
             .map(|s| s.cell)
             .collect();
-        // `exposure_of_impl` alone owns the "coexisting counts only once the
-        // querying species has settled" rule. `coexisting_now` spans every
-        // species appearing in ANY settlement's composition (present, not
-        // necessarily dominant) — the same presence test as `settled_now`
-        // above, just unfiltered by `tag`.
-        let coexisting_now: std::collections::BTreeSet<String> = species_set
+        let coexisting_now: std::collections::BTreeSet<String> = placements
             .iter()
-            .enumerate()
-            .filter(|(i, _)| {
-                placements.iter().any(|s| {
-                    s.composition
-                        .iter()
-                        .any(|(id, frac)| *id as usize == *i && *frac > 0.0)
-                })
-            })
-            .map(|(_, n)| n.to_string())
+            .map(|s| species_set[s.tag].to_string())
             .collect();
         let exposures = exposure_of_impl(
             &world,
@@ -3531,21 +3714,31 @@ fn build_to(
         );
     }
 
-    let mut placed: Vec<hornvale_settlement::PlacedSettlement> =
-        Vec::with_capacity(placements.len());
-    let mut glosses: Vec<String> = Vec::with_capacity(placements.len());
-    // Build the phenomena sources ONCE for the whole settlement pass, reusing
-    // the climate this stage already derived (`climate`) rather than
-    // re-deriving it per settlement. `world` is not mutated until
-    // `settlement::genesis` below, so every per-settlement observation sees
-    // identical sources: byte-identical to a per-settlement rebuild, but with
-    // ZERO extra climate derivations (the Stage-2 perf regression was one full
-    // climate+terrain rebuild per settlement — ~60 at seed 42).
+    // Enrich each history-emitted settlement entity with its descriptive
+    // facts (name, place tag, biome, coordinates). `emit_history` already
+    // committed the structural skeleton (`is-settlement`, `population`,
+    // `cell-id`, and the occupation facts); the naming pass adds the
+    // descriptors onto the SAME entities so history stays the sole placer (the
+    // retired `settlement::genesis` used to mint these together with
+    // placement). Names are pure functions of seed+species+kind+cell-salt
+    // (pin-isolated), so a shifted settlement set perturbs no other draw.
+    // Build the phenomena sources ONCE for the whole pass, reusing this
+    // stage's climate (no per-settlement climate rebuild — the Stage-2 perf
+    // guard). Observations are gathered under one immutable ledger borrow,
+    // then committed in a second pass (the borrow must end before `commit`).
     let boxed_sources = phenomena_sources_from(&world, &climate)?;
     let sources: Vec<&dyn PhenomenaSource> = boxed_sources.iter().map(|s| s.as_ref()).collect();
+    struct SettlementDescriptor {
+        id: EntityId,
+        name: String,
+        biome: String,
+        latitude: f64,
+        longitude: f64,
+        gloss: String,
+    }
+    let mut descriptors: Vec<SettlementDescriptor> = Vec::with_capacity(placements.len());
     for s in &placements {
-        let tag = s.dominant;
-        let name = species_set[tag as usize];
+        let name = species_set[s.tag];
         let coord = geo.coord(s.cell);
         let salt = u64::from(s.cell.0);
         let namer = namers
@@ -3565,10 +3758,10 @@ fn build_to(
         // committed gloss is truthful to the sky this settlement actually
         // lives under (spec §9.3), and per-settlement skies widen the
         // descriptor space. Still a pure function of the entity's own
-        // (cell, facts): pin-isolated by construction (spec §8). The
-        // settlement entity doesn't exist yet, so `world_entity` stands in
-        // as the (unread) `place` id while the real coordinate does the
-        // culling — see `observed_phenomena_from`.
+        // (cell, facts): pin-isolated by construction (spec §8). The place id
+        // is unread by the observer — the coordinate does the culling — so
+        // `world_entity` still stands in for it (the settlement entity now
+        // exists, but observation never reads it) — see `observed_phenomena_from`.
         let seen =
             observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
@@ -3584,52 +3777,33 @@ fn build_to(
             &site,
             lexicon,
         );
-        // Population is the DOMINANT species' rendered headcount at this
-        // settlement (not `mass_total`, which is the whole settlement's
-        // biomass across every present species): `Count(n)` reads straight
-        // through; `Lone` becomes `1` — a settlement still houses at least
-        // one person, preserving the "no zero-population settlement"
-        // invariant `condense`'s own floor used to guarantee via
-        // `Condensation`; `Colony(x)` (reserved, not yet fired by any
-        // Stage-A species) rounds to whole people under the same floor.
-        let population = s
-            .rendered
-            .iter()
-            .find(|(id, _)| *id == tag)
-            .map(|(_, render)| match render {
-                hornvale_demography::stack_condense::HeadcountRender::Count(n) => *n,
-                hornvale_demography::stack_condense::HeadcountRender::Lone => 1,
-                hornvale_demography::stack_condense::HeadcountRender::Colony(x) => {
-                    x.round().max(1.0) as u32
-                }
-            })
-            .expect(
-                "the dominant species is present (by construction) in its own \
-                 settlement's rendered vec",
-            );
-        placed.push(hornvale_settlement::PlacedSettlement {
-            cell: s.cell.0,
+        descriptors.push(SettlementDescriptor {
+            id: s.id,
+            name: generated.roman,
+            biome: climate.biome_at(s.cell).name().to_string(),
             latitude: coord.latitude,
             longitude: coord.longitude,
-            biome: climate.biome_at(s.cell).name().to_string(),
-            name: generated.roman,
-            population,
+            gloss,
         });
-        glosses.push(gloss);
     }
-    let ids = hornvale_settlement::genesis(&mut world, &placed)?;
-    for (id, gloss) in ids.iter().zip(glosses.iter()) {
-        if !gloss.is_empty() {
+    for d in descriptors {
+        settlement_descriptor_facts(
+            &mut world,
+            d.id,
+            &d.name,
+            &d.biome,
+            d.latitude,
+            d.longitude,
+        )?;
+        if !d.gloss.is_empty() {
             world
                 .ledger
-                .commit(name_gloss_fact(*id, gloss), &world.registry)?;
+                .commit(name_gloss_fact(d.id, &d.gloss), &world.registry)?;
         }
     }
             Ok((
                 terrain,
                 climate,
-                ids,
-                placed,
                 placements,
                 lexicons,
                 species_set,
@@ -3709,10 +3883,10 @@ fn build_to(
             boxed_sp_sources.iter().map(|s| s.as_ref()).collect();
         // Per-species flagship culture and religion.
         for (tag, &name) in species_set.iter().enumerate() {
-            let Some(pos) = placements.iter().position(|s| s.dominant as usize == tag) else {
+            let Some(pos) = placements.iter().position(|s| s.tag == tag) else {
                 continue; // a species may place nothing on a hostile world
             };
-            let flagship = ids[pos];
+            let flagship = placements[pos].id;
             let fcell = placements[pos].cell;
             let coastal = geo.neighbors(fcell).iter().any(|n| terrain.is_ocean(*n));
             let moisture = climate.moisture_at(fcell);
@@ -3723,7 +3897,7 @@ fn build_to(
             let env = hornvale_culture::EnvSummary {
                 subsistence,
                 surplus,
-                population: placed[pos].population,
+                population: placements[pos].population,
                 threat,
             };
             // Mind + speech sourced from the world's component set (ECS c3):
@@ -3809,8 +3983,8 @@ fn build_to(
         // main, so the new, Y2-1-only entities are appended last rather than
         // interleaved. Then the peopled-by link for every settlement.
         species_genesis(&mut world, wc)?;
-        for (id, s) in ids.iter().zip(placements.iter()) {
-            hornvale_species::people(&mut world, *id, species_set[s.dominant as usize])?;
+        for s in &placements {
+            hornvale_species::people(&mut world, s.id, species_set[s.tag])?;
         }
         Ok(())
     })?;
