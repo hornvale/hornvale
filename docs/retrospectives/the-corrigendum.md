@@ -16,7 +16,7 @@ the close learned that the code does not record.
   campaign leans on doesn't exist there yet. Both findings changed the
   actual recommendation mid-conversation (from "sounds buildable" to
   "this is really two more campaigns"), and Nathan's own final call
-  (split it out, captured as MAP-62) came from seeing the real substrate,
+  (split it out, captured as MAP-63) came from seeing the real substrate,
   not from a scope guess. Worth generalizing: a scope question that
   arrives after G3 deserves the same "check before designing" discipline
   the brainstorming skill already mandates before G3 — nothing about
@@ -96,7 +96,7 @@ the close learned that the code does not record.
   Lab-measurable conflict entry rather than book-rendered prose) —
   captured; the render-only version this campaign ships is deliberately
   the smaller first step.
-- **MAP-62** (the seasonal-return prediction ladder, climate's own
+- **MAP-63** (the seasonal-return prediction ladder, climate's own
   analog) — captured mid-campaign from a direct scope question; real, but
   two campaigns' worth of new ground (seasonal-weather physics, and
   climate's first-ever fact-commit infrastructure), not a task.
