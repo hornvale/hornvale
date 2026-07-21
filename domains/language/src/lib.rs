@@ -497,6 +497,10 @@ pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
             "language/<species>/doctrine-lexeme/<fact-key>",
             "C6's institutional lexeme draw (The Doctrine, render-time, `schemas::select_lexeme` again): the uniform pick among a fired doctrine schema's gate-surviving verb candidates for one explained fact — a sibling stream to `lexeme/<fact-key>` above, salted the same way (the ground fact's predicate)",
         ),
+        (
+            "language/<species>/schema/sky/<shape>/<predicate>",
+            "The Consonance: schema selection for a fact sharing FactShape::CyclicEvent with another predicate (moon-period-ratio vs day-length-std) — the extra predicate leg keeps their streams distinct",
+        ),
     ]
 }
 

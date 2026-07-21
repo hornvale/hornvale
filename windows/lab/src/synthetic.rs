@@ -33,7 +33,7 @@
 use crate::health::{AffectTrace, run_simulation};
 use hornvale_kernel::ecology::ConditionResponse;
 use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, WorldTime};
-use hornvale_species::ActivityCycle;
+use hornvale_species::{ActivityCycle, MetabolicClass};
 use hornvale_vessel::liveness::{AGENT_AT, DRANK, Npc, Terrain, place_agent};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -145,6 +145,21 @@ const COOL_NICHE: ConditionResponse = ConditionResponse {
 /// unlivable.
 const BLISTERING_C: f64 = 60.0;
 
+/// A heat-adapted niche: comfortable across a wide band up to ~65 °C, so a hot
+/// waste registers NO thermal discomfort — isolating The Kindling's *thirst*
+/// coupling (adaptation sets comfort, not evaporation: a heat-adapted creature
+/// still dehydrates faster in heat).
+const HEAT_TOLERANT_NICHE: ConditionResponse = ConditionResponse {
+    optimum: 45.0,
+    width: 20.0,
+    devotion: 0.5,
+};
+
+/// A hot-but-livable waste temperature (°C) — inside `HEAT_TOLERANT_NICHE` (so
+/// thermal stays quiet) yet well above thermoneutral, so an endotherm's thirst
+/// couples (roughly double rate).
+const HOT_WASTE_C: f64 = 45.0;
+
 /// The day a passing heat wave breaks — chosen so the spike is unmistakable
 /// (several days of distress) yet recovers BEFORE the chronic threshold, so the
 /// signature is spike-recover (transient, resilient), distinct from the
@@ -174,6 +189,7 @@ fn creature(
         temperature_niche: niche,
         deliberation_latency: 0.5,
         time_horizon: 0.0,
+        metabolic_class: MetabolicClass::Endotherm,
         label: species.to_string(),
     }
 }
@@ -216,6 +232,49 @@ pub fn stranded_from_known_water() -> Scenario {
         terrain: SyntheticTerrain {
             fresh: [spring].into_iter().collect(),
             temps: BTreeMap::new(),
+            calm_after: None,
+        },
+    }
+}
+
+/// **Stranded in a hot waste** → the same stranding as
+/// [`stranded_from_known_water`], but the exile cell is hot-but-livable
+/// (`HOT_WASTE_C`, inside a heat-adapted niche so thermal stays quiet). The
+/// Kindling's heat coupling quickens the endotherm's dehydration, so it crosses
+/// into thirst-distress SOONER than the temperate stranding — the coupling,
+/// end to end through the real sim, isolated from any thermal effect.
+pub fn stranded_in_a_hot_waste() -> Scenario {
+    let (spring, exile) = water_and_a_far_exile();
+    let mut ledger = Ledger::default();
+    let registry = harness_registry();
+    let e = ledger.mint_entity();
+    ledger
+        .commit(place_agent(e, &spring, WorldTime { day: 0.0 }), &registry)
+        .expect("place at spring");
+    ledger
+        .commit(place_agent(e, &exile, WorldTime { day: 0.5 }), &registry)
+        .expect("place in exile");
+    // The exile and its neighbours are hot-but-livable — the creature senses no
+    // discomfort (heat-adapted), but its thirst couples to the heat.
+    let mut temps = BTreeMap::new();
+    temps.insert(exile.clone(), HOT_WASTE_C);
+    for n in exile.neighbors() {
+        temps.insert(n, HOT_WASTE_C);
+    }
+    let npc = creature(
+        e,
+        spring.clone(),
+        spring.clone(),
+        "kobold",
+        HEAT_TOLERANT_NICHE,
+    );
+    Scenario {
+        ledger,
+        registry,
+        npcs: vec![npc],
+        terrain: SyntheticTerrain {
+            fresh: [spring].into_iter().collect(),
+            temps,
             calm_after: None,
         },
     }

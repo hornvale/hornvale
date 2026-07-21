@@ -212,6 +212,12 @@ pub const MOON_AGE_GYR: &str = "moon-age-gyr";
 /// 1.6).
 /// type-audit: bare-ok(identifier-text)
 pub const MOON_DENSITY: &str = "moon-density";
+/// The detected clean small-integer ratio between two of a world's moons'
+/// real periods (LANG-48), when one exists — the ACTUAL measured ratio,
+/// not the idealized rational it matched. Absent when no pair of moons'
+/// periods sits within tolerance of a low-order rational.
+/// type-audit: bare-ok(identifier-text)
+pub const MOON_PERIOD_RATIO: &str = "moon-period-ratio";
 
 fn fact(subject: EntityId, predicate: &str, object: Value) -> Fact {
     Fact {
@@ -309,6 +315,14 @@ pub fn genesis(
         ),
         &world.registry,
     )?;
+    if let Some(found) = crate::resonance::detect_moon_period_ratio(
+        &system.moons.iter().map(|m| m.period).collect::<Vec<_>>(),
+    ) {
+        world.ledger.commit(
+            fact(subject, MOON_PERIOD_RATIO, Value::Number(found.ratio)),
+            &world.registry,
+        )?;
+    }
     world.ledger.commit(
         fact(
             subject,
@@ -1381,6 +1395,70 @@ mod tests {
             found,
             "BLOCKED: no seed in 0..64 drew a captured moon — the capture-text \
              assertion is untested"
+        );
+    }
+
+    #[test]
+    fn moon_period_ratio_is_committed_when_a_clean_pair_exists() {
+        // Detection itself is already proven by resonance.rs's own tests
+        // (Task 1); this proves ONLY the wiring: when
+        // detect_moon_period_ratio finds a match for a real generated
+        // world's actual moon periods, genesis commits exactly that
+        // value under MOON_PERIOD_RATIO. Search a fixed seed range for
+        // at least one world with a real clean pair.
+        let mut verified = false;
+        for seed in 1u64..=200 {
+            let outcome = crate::system::generate(Seed(seed), &SkyPins::default()).unwrap();
+            if outcome.system.moons.len() < 2 {
+                continue;
+            }
+            let periods: Vec<_> = outcome.system.moons.iter().map(|m| m.period).collect();
+            let Some(expected) = crate::resonance::detect_moon_period_ratio(&periods) else {
+                continue;
+            };
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+            assert_eq!(
+                w.ledger.value_of(subject, MOON_PERIOD_RATIO),
+                Some(&Value::Number(hornvale_kernel::quantize(expected.ratio))),
+                "seed {seed}: genesis must commit exactly detect_moon_period_ratio's own value \
+                 (quantized on commit, like every numeric object)"
+            );
+            verified = true;
+            break;
+        }
+        assert!(
+            verified,
+            "no seed in 1..=200 produced a clean moon-period ratio — \
+             widen the search range or check RATIO_TOLERANCE"
+        );
+    }
+
+    #[test]
+    fn moon_period_ratio_is_absent_when_no_clean_pair_exists() {
+        let mut verified = false;
+        for seed in 1u64..=200 {
+            let outcome = crate::system::generate(Seed(seed), &SkyPins::default()).unwrap();
+            let periods: Vec<_> = outcome.system.moons.iter().map(|m| m.period).collect();
+            if crate::resonance::detect_moon_period_ratio(&periods).is_some() {
+                continue;
+            }
+            let mut w = world_with(seed);
+            let subject = w.ledger.mint_entity();
+            genesis(&mut w, subject, &outcome).unwrap();
+            assert!(
+                w.ledger.value_of(subject, MOON_PERIOD_RATIO).is_none(),
+                "seed {seed}: genesis must not commit moon-period-ratio \
+                 when no clean pair exists"
+            );
+            verified = true;
+            break;
+        }
+        assert!(
+            verified,
+            "no seed in 1..=200 lacked a clean moon-period ratio — every \
+             seed matched, which would mean RATIO_TOLERANCE is too loose"
         );
     }
 }

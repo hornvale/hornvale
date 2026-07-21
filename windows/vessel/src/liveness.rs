@@ -11,7 +11,7 @@ use hornvale_kernel::{
     World, WorldTime, astar,
 };
 use hornvale_locale::LocaleContext;
-use hornvale_species::ActivityCycle;
+use hornvale_species::{ActivityCycle, MetabolicClass};
 
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
@@ -52,6 +52,13 @@ pub struct Npc {
     /// `0` is myopic (acts only once the need bites). Threaded from
     /// `psyche_registry` at derivation, beside `deliberation_latency`.
     pub time_horizon: f64,
+    /// The species' `MetabolicClass` (The Kindling): gates which homeostatic
+    /// drives the creature has and how its thirst couples to temperature. An
+    /// `Ametabolic` creature (construct/undead/elemental) has no homeostatic
+    /// drives at all; a metabolizing one's thirst rate couples to ambient heat
+    /// per class (`rise_at`). Threaded from `biosphere_registry` at derivation,
+    /// beside the niche.
+    pub metabolic_class: MetabolicClass,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -325,18 +332,155 @@ impl<'a> Terrain for LocaleTerrain<'a> {
 /// type-audit: bare-ok(identifier-text)
 pub const DRANK: &str = "drank";
 
-/// The drive at `t`: time since the last drink, a fold over committed `drank`
-/// events. Rises `p.rise`/day since `last_drank_day` (0 before any drink),
-/// clamped [0,1]. DRIVE == FOLD, now over `drank` — drinking is a PLANNED
-/// action (The Foresight), not automatic proximity (The Wanting).
+/// Ambient temperature (°C) at or below which no heat coupling applies — an
+/// endotherm's thermoneutral zone, and the reference an ectotherm's realized
+/// rate is measured from (The Kindling, spec §3). One authored judgment call.
+const THERMONEUTRAL_C: f64 = 25.0;
+
+/// The temperature span (°C) over which the heat coupling reaches full strength
+/// — one `HEAT_SCALE_C` above thermoneutral applies the class's full
+/// multiplier. Authored.
+const HEAT_SCALE_C: f64 = 20.0;
+
+/// Endotherm heat coupling: the extra dehydration fraction at one
+/// `HEAT_SCALE_C` above thermoneutral (sweating). `1.0` → thirst rises twice as
+/// fast at `THERMONEUTRAL_C + HEAT_SCALE_C` (≈45 °C). Heat-only (asymmetric):
+/// an endotherm thermoregulates, so cold does not slow its water need below
+/// base. Authored.
+const ENDOTHERM_HEAT_K: f64 = 1.0;
+
+/// Ectotherm coupling: the realized rate TRACKS ambient (CAP-1), symmetric
+/// about thermoneutral — `1.5` makes a hot ectotherm dehydrate 2.5× at ≈45 °C
+/// and a cold one torpid. Stronger than the endotherm's, because a
+/// cold-blooded creature's whole metabolism follows the climate. Authored.
+const ECTOTHERM_K: f64 = 1.5;
+
+/// The floor on the ectotherm rate multiplier: a torpid (deeply cold)
+/// ectotherm's metabolism slows but never stops — it still needs SOME water.
+/// Authored.
+const ECTOTHERM_FLOOR: f64 = 0.2;
+
+/// The per-day thirst (dehydration) RATE at ambient temperature `temp` (°C) for
+/// a creature of metabolic `class` — The Kindling's coupling of heat to the
+/// survival drive (spec §3). Endotherms sweat (base below thermoneutral,
+/// accelerating above — heat-only); ectotherms track ambient (CAP-1's
+/// principle: symmetric, floored); autotrophs are flat (a deferred seam). An
+/// unreadable cell (non-finite temperature — undescribable/unplanted) couples
+/// as neutral (base rate), mirroring the thermal drive's `is_finite` guard.
+fn rise_at(temp: f64, class: MetabolicClass, p: &DriveParams) -> f64 {
+    let base = p.rise;
+    if !temp.is_finite() {
+        return base;
+    }
+    match class {
+        MetabolicClass::Endotherm => {
+            let excess = (temp - THERMONEUTRAL_C).max(0.0);
+            base * (1.0 + ENDOTHERM_HEAT_K * excess / HEAT_SCALE_C)
+        }
+        MetabolicClass::Ectotherm => {
+            let factor = 1.0 + ECTOTHERM_K * (temp - THERMONEUTRAL_C) / HEAT_SCALE_C;
+            base * factor.max(ECTOTHERM_FLOOR)
+        }
+        // Autotroph: a deferred seam (transpiration is its own later work).
+        // Ametabolic: never reaches here (no thirst drive); arm kept total.
+        MetabolicClass::Autotroph | MetabolicClass::Ametabolic => base,
+    }
+}
+
+/// The committed `agent-at` sightings of `entity` at or before day `upto`, as
+/// `(arrival_day, room)` sorted ascending — the occupancy timeline the thirst
+/// integral reads.
+fn agent_sightings(ledger: &Ledger, entity: EntityId, upto: f64) -> Vec<(f64, RoomAddr)> {
+    let mut v: Vec<(f64, RoomAddr)> = ledger
+        .find(AGENT_AT)
+        .filter(|f| f.subject == entity)
+        .filter_map(|f| {
+            let d = f.day?;
+            if d > upto {
+                return None;
+            }
+            match &f.object {
+                Value::Text(s) => Some((d, room_from_text(s))),
+                _ => None,
+            }
+        })
+        .collect();
+    v.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    v
+}
+
+/// The thirst drive as a PATH INTEGRAL of the dehydration rate over the
+/// creature's occupancy since its last drink (The Kindling, spec §3/§4): for
+/// each segment during which it stood at one cell, `rise_at(temp(cell,
+/// segment_start), class) × segment_length`, summed and clamped `[0, 1]`.
+/// Position at any day is the latest sighting arriving at or before it, else
+/// `home`; temperature is sampled once per segment at its start (so a held cell
+/// couples at a fixed rate — the Hold-jump stays closed-form). DRIVE == FOLD:
+/// pure over the committed occupancy + terrain, so the tick (which folds
+/// `frozen + out`) and `affect_of` (which folds the final ledger) compute it
+/// identically. `sightings` must be ascending and ≤ `t`.
+#[allow(clippy::too_many_arguments)]
+fn integrate_thirst(
+    sightings: &[(f64, RoomAddr)],
+    home: &RoomAddr,
+    last_drank: f64,
+    t: f64,
+    terrain: &dyn Terrain,
+    class: MetabolicClass,
+    p: &DriveParams,
+) -> f64 {
+    if t <= last_drank {
+        return 0.0;
+    }
+    // Segment boundaries: last_drank, each sighting arrival strictly inside
+    // (last_drank, t), then t.
+    let mut bounds: Vec<f64> = vec![last_drank];
+    for (d, _) in sightings {
+        if *d > last_drank && *d < t {
+            bounds.push(*d);
+        }
+    }
+    bounds.push(t);
+    bounds.dedup();
+    let mut total = 0.0_f64;
+    for w in bounds.windows(2) {
+        let (s, e) = (w[0], w[1]);
+        // Position governing the segment starting at `s`: the latest sighting
+        // arriving at or before `s`, else home.
+        let pos = sightings
+            .iter()
+            .rev()
+            .find(|(d, _)| *d <= s)
+            .map(|(_, r)| r)
+            .unwrap_or(home);
+        let rate = rise_at(terrain.temperature(pos, WorldTime { day: s }), class, p);
+        total += rate * (e - s);
+    }
+    total.clamp(0.0, 1.0)
+}
+
+/// The drive at `t`: the temperature-coupled thirst path integral (The
+/// Kindling) over `entity`'s committed occupancy since its last drink, at its
+/// metabolic `class`. Reduces to the old flat `rise × elapsed` at a
+/// thermoneutral (or unreadable) climate. DRIVE == FOLD — over `drank` (the
+/// reset) and `agent-at` (the occupancy).
 /// type-audit: bare-ok(ratio: return)
-pub fn drive_at(ledger: &Ledger, entity: EntityId, t: WorldTime, p: &DriveParams) -> f64 {
+pub fn drive_at(
+    ledger: &Ledger,
+    entity: EntityId,
+    home: &RoomAddr,
+    t: WorldTime,
+    p: &DriveParams,
+    terrain: &dyn Terrain,
+    class: MetabolicClass,
+) -> f64 {
     let last_drank = ledger
         .find(DRANK)
         .filter(|f| f.subject == entity)
         .filter_map(|f| f.day)
         .fold(0.0_f64, f64::max);
-    (p.rise * (t.day - last_drank)).clamp(0.0, 1.0)
+    let sightings = agent_sightings(ledger, entity, t.day);
+    integrate_thirst(&sightings, home, last_drank, t.day, terrain, class, p)
 }
 
 /// Belief (L1): the agent's nearest KNOWN water — a pure fold over its committed
@@ -1065,7 +1209,15 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         .filter_map(|f| f.day)
         .fold(0.0_f64, f64::max);
     let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
-    let drive = (SUSTENANCE.rise * (day.day - last_drank)).clamp(0.0, 1.0);
+    let drive = drive_at(
+        frozen,
+        npc.entity,
+        &npc.home,
+        day,
+        &SUSTENANCE,
+        terrain,
+        npc.metabolic_class,
+    );
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
     let view = Perceived {
@@ -1080,14 +1232,23 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         day,
     };
-    let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+    // The metabolism gate (The Kindling): an Ametabolic creature has no
+    // homeostatic drives at all — it neither thirsts nor thermoregulates, so it
+    // reads Content, never distress. Metabolizers carry thirst + thermal.
+    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let drives: Vec<&dyn Drive> = if ametabolic {
+        Vec::new()
+    } else {
+        vec![&thirst, &thermal]
+    };
+    let helpless = !ametabolic && learned_helplessness(last_drank, day.day);
     arbitrate(
         &view,
         &npc.home,
         &drives,
         npc.deliberation_latency,
         npc.time_horizon,
-        learned_helplessness(last_drank, day.day),
+        helpless,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -1174,7 +1335,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
         "drive-movements"
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
-        let mut out = Vec::new();
+        let mut out: Vec<Fact> = Vec::new();
         for npc in &self.npcs {
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
@@ -1206,7 +1367,31 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 if is_water(&pos, self.terrain) {
                     believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
                 }
-                let drive = (self.params.rise * (day - last_drank)).clamp(0.0, 1.0);
+                // The temperature-coupled thirst integral (The Kindling),
+                // re-derived over the committed history so far (`frozen` + this
+                // tick's own emitted `out` moves), so the tick's drive matches
+                // `affect_of`'s exactly — one shared fold, no manual alignment.
+                let mut sightings = agent_sightings(frozen, npc.entity, day);
+                for f in &out {
+                    if f.subject == npc.entity
+                        && f.predicate == AGENT_AT
+                        && let Value::Text(s) = &f.object
+                        && let Some(d) = f.day
+                        && d <= day
+                    {
+                        sightings.push((d, room_from_text(s)));
+                    }
+                }
+                sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+                let drive = integrate_thirst(
+                    &sightings,
+                    &npc.home,
+                    last_drank,
+                    day,
+                    self.terrain,
+                    npc.metabolic_class,
+                    &self.params,
+                );
                 let explore_step = lowest_unvisited_neighbor(&pos, &visited, self.terrain);
                 let view = Perceived {
                     position: pos.clone(),
@@ -1228,14 +1413,21 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     day: WorldTime { day },
                 };
-                let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+                // The metabolism gate (The Kindling): Ametabolic → no drives.
+                let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+                let drives: Vec<&dyn Drive> = if ametabolic {
+                    Vec::new()
+                } else {
+                    vec![&thirst, &thermal]
+                };
+                let helpless = !ametabolic && learned_helplessness(last_drank, day);
                 let resolution = arbitrate(
                     &view,
                     &npc.home,
                     &drives,
                     npc.deliberation_latency,
                     npc.time_horizon,
-                    learned_helplessness(last_drank, day),
+                    helpless,
                     mode,
                     PLAN_BUDGET,
                 );
@@ -1280,22 +1472,28 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         // next_act every iteration — without this check, that
                         // spins to `MAX_STEPS` for nothing).
                         //
-                        // A degenerate `rise == 0.0` makes `next_act` NaN
-                        // (`act / rise` == `0.0 / 0.0`). Every NaN comparison
-                        // is `false`, so leaving `day` untouched here (rather
-                        // than assigning the NaN) keeps `drive` well-defined
-                        // on the NEXT iteration (`rise * (day - last_drank)`
-                        // with a finite `day` stays exactly 0.0, not NaN).
-                        // Without this guard a NaN `day` makes `drive` itself
-                        // NaN next iteration, which flips `decide`'s thirst
-                        // check (`NaN >= act` is `false`) into the
-                        // plan-home branch — re-running a budgeted A* search
+                        // Held at a fixed cell, thirst rises linearly at that
+                        // cell's COUPLED rate (The Kindling: temperature is
+                        // sampled once per occupancy segment, so a held cell has
+                        // a constant rate and the jump stays closed-form): the
+                        // next crossing is `day + (act − drive) / rate_here`.
+                        //
+                        // A degenerate `rate == 0.0` makes `next_act` NaN or
+                        // infinite. Every NaN comparison is `false`, so leaving
+                        // `day` untouched (rather than assigning it) keeps
+                        // `drive` well-defined next iteration. Without this guard
+                        // a NaN `day` makes `drive` NaN, flipping the thirst
+                        // check into the plan-home branch — a budgeted A* search
                         // every remaining iteration up to `MAX_STEPS`, an
-                        // O(MAX_STEPS * PLAN_BUDGET) blowup measured at ~60s
-                        // for this test (the-surmise T3 review) instead of
-                        // the intended O(MAX_STEPS) cheap spin. `steps >=
+                        // O(MAX_STEPS * PLAN_BUDGET) blowup (the-surmise T3
+                        // review) instead of the intended cheap spin. `steps >=
                         // MAX_STEPS` alone still bounds the loop.
-                        let next_act = last_drank + self.params.act / self.params.rise;
+                        let rate_here = rise_at(
+                            self.terrain.temperature(&pos, WorldTime { day }),
+                            npc.metabolic_class,
+                            &self.params,
+                        );
+                        let next_act = day + (self.params.act - drive) / rate_here;
                         if !next_act.is_finite() {
                             continue;
                         }
@@ -1423,6 +1621,10 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|t| t.condition_niche.temperature)
                 .unwrap_or(DEFAULT_TEMPERATURE_NICHE);
+            let metabolic_class = biosphere
+                .get_by_label(&species)
+                .map(|t| t.metabolic_class)
+                .unwrap_or(MetabolicClass::Endotherm);
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -1463,6 +1665,7 @@ pub fn derive_npcs(
                 temperature_niche,
                 deliberation_latency,
                 time_horizon,
+                metabolic_class,
                 label,
             }
         })
@@ -1683,6 +1886,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -1715,6 +1919,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -1749,6 +1954,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -1781,6 +1987,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -1810,6 +2017,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -1855,6 +2063,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -2004,6 +2213,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -2125,12 +2335,26 @@ mod tests {
     fn drive_folds_drank_events_rising_since_the_last_drink() {
         // drive = rise * (t - last_drank_day), clamped [0,1]; last_drank = latest DRANK day.
         let p = SUSTENANCE;
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([]);
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
         let e = ledger.mint_entity();
         // no drank yet: rises from day 0
-        assert!((drive_at(&ledger, e, WorldTime { day: 2.0 }, &p) - (p.rise * 2.0)).abs() < 1e-9);
+        assert!(
+            (drive_at(
+                &ledger,
+                e,
+                &home,
+                WorldTime { day: 2.0 },
+                &p,
+                &terrain,
+                MetabolicClass::Endotherm
+            ) - (p.rise * 2.0))
+                .abs()
+                < 1e-9
+        );
         // drank on day 5 -> resets; by day 6 it has risen rise*1
         ledger
             .commit(
@@ -2145,12 +2369,26 @@ mod tests {
                 &reg,
             )
             .unwrap();
-        assert!((drive_at(&ledger, e, WorldTime { day: 6.0 }, &p) - (p.rise * 1.0)).abs() < 1e-9);
+        assert!(
+            (drive_at(
+                &ledger,
+                e,
+                &home,
+                WorldTime { day: 6.0 },
+                &p,
+                &terrain,
+                MetabolicClass::Endotherm
+            ) - (p.rise * 1.0))
+                .abs()
+                < 1e-9
+        );
     }
 
     #[test]
     fn drive_at_clamps_at_one_and_ignores_other_entities_drank_events() {
         let p = SUSTENANCE;
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([]);
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
@@ -2170,7 +2408,84 @@ mod tests {
                 &reg,
             )
             .unwrap();
-        assert_eq!(drive_at(&ledger, e, WorldTime { day: 1_000.0 }, &p), 1.0);
+        assert_eq!(
+            drive_at(
+                &ledger,
+                e,
+                &home,
+                WorldTime { day: 1_000.0 },
+                &p,
+                &terrain,
+                MetabolicClass::Endotherm
+            ),
+            1.0
+        );
+    }
+
+    #[test]
+    fn rise_at_couples_heat_to_thirst_per_metabolic_class() {
+        use MetabolicClass::*;
+        let p = SUSTENANCE;
+        let base = p.rise;
+        // Endotherm — heat-only (sweating): base at/below thermoneutral,
+        // accelerating above.
+        assert!((rise_at(THERMONEUTRAL_C, Endotherm, &p) - base).abs() < 1e-12);
+        assert!(
+            (rise_at(0.0, Endotherm, &p) - base).abs() < 1e-12,
+            "cold does not slow an endotherm"
+        );
+        assert!(
+            (rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Endotherm, &p)
+                - base * (1.0 + ENDOTHERM_HEAT_K))
+                .abs()
+                < 1e-12,
+            "one scale above thermoneutral applies the full multiplier"
+        );
+        // Ectotherm — symmetric (rate tracks ambient, CAP-1), floored.
+        assert!(
+            rise_at(THERMONEUTRAL_C + HEAT_SCALE_C, Ectotherm, &p)
+                > rise_at(THERMONEUTRAL_C, Ectotherm, &p),
+            "heat speeds an ectotherm"
+        );
+        assert!(
+            rise_at(-100.0, Ectotherm, &p) < base,
+            "deep cold slows an ectotherm below base (torpor)"
+        );
+        assert!(
+            (rise_at(-100.0, Ectotherm, &p) - base * ECTOTHERM_FLOOR).abs() < 1e-12,
+            "but never below the floor"
+        );
+        // Autotroph flat; an unreadable cell couples as neutral.
+        assert!((rise_at(80.0, Autotroph, &p) - base).abs() < 1e-12);
+        assert!((rise_at(f64::INFINITY, Endotherm, &p) - base).abs() < 1e-12);
+    }
+
+    #[test]
+    fn thirst_integrates_faster_over_a_hot_occupancy() {
+        // The path integral (The Kindling): the same elapsed time accrues more
+        // thirst in a hot cell than a temperate one.
+        let p = SUSTENANCE;
+        let home = raddr(1.0);
+        let hot = PlantedTerrain::thermal([(home.clone(), 45.0)]); // 2× rate (endotherm)
+        let temperate = PlantedTerrain::thermal([(home.clone(), 20.0)]); // < thermoneutral → base
+        let d_hot = integrate_thirst(&[], &home, 0.0, 3.0, &hot, MetabolicClass::Endotherm, &p);
+        let d_temp = integrate_thirst(
+            &[],
+            &home,
+            0.0,
+            3.0,
+            &temperate,
+            MetabolicClass::Endotherm,
+            &p,
+        );
+        assert!(
+            d_hot > d_temp,
+            "the desert dehydrates faster: {d_hot} vs {d_temp}"
+        );
+        // A temperate (sub-thermoneutral) cell recovers the old flat model.
+        assert!((d_temp - p.rise * 3.0).abs() < 1e-9);
+        // And the desert is exactly the doubled rate here.
+        assert!((d_hot - p.rise * 2.0 * 3.0).abs() < 1e-9);
     }
 
     #[test]
@@ -2178,6 +2493,8 @@ mod tests {
         // Fold determinism: same ledger + t -> same value; and serialize->reload of
         // the ledger yields the identical drive (the DRIVE == FOLD contract).
         let p = SUSTENANCE;
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([]);
         let mut ledger = Ledger::default();
         let mut reg = hornvale_kernel::ConceptRegistry::default();
         reg.register_predicate(DRANK, false, "drank").unwrap();
@@ -2198,13 +2515,37 @@ mod tests {
                 .unwrap();
         }
         let t = WorldTime { day: 12.3 };
-        let a = drive_at(&ledger, e, t, &p);
-        let b = drive_at(&ledger, e, t, &p);
+        let a = drive_at(
+            &ledger,
+            e,
+            &home,
+            t,
+            &p,
+            &terrain,
+            MetabolicClass::Endotherm,
+        );
+        let b = drive_at(
+            &ledger,
+            e,
+            &home,
+            t,
+            &p,
+            &terrain,
+            MetabolicClass::Endotherm,
+        );
         assert_eq!(a, b);
         let json = serde_json::to_string(&ledger).unwrap();
         let reloaded: Ledger = serde_json::from_str(&json).unwrap();
         assert_eq!(
-            drive_at(&reloaded, e, t, &p),
+            drive_at(
+                &reloaded,
+                e,
+                &home,
+                t,
+                &p,
+                &terrain,
+                MetabolicClass::Endotherm
+            ),
             a,
             "drive re-derives identically after reload"
         );
@@ -2370,6 +2711,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -2461,6 +2803,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -2529,6 +2872,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -2606,6 +2950,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -2668,6 +3013,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -2902,6 +3248,7 @@ mod tests {
                 temperature_niche: test_niche(),
                 deliberation_latency: 0.5,
                 time_horizon: 0.0,
+                metabolic_class: MetabolicClass::Endotherm,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -2980,6 +3327,7 @@ mod tests {
             temperature_niche: test_niche(),
             deliberation_latency: 0.5,
             time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -3767,6 +4115,44 @@ mod tests {
         assert!(
             given_up.affect.valence < 0.0,
             "helplessness is negative valence"
+        );
+    }
+
+    #[test]
+    fn an_ametabolic_creature_has_no_drives_and_never_distresses() {
+        // THE METABOLISM GATE (The Kindling): an Ametabolic creature
+        // (construct/undead/elemental) has no homeostatic drives, so even
+        // parched-long in a blistering cell it reads Content — never thirst,
+        // never distress. A metabolizer in the same spot is wrecked.
+        let home = raddr(1.0);
+        let terrain = PlantedTerrain::thermal([(home.clone(), 80.0)]); // blistering, no water
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let base = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "xorn".to_string(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Ametabolic,
+            label: "xorn".to_string(),
+        };
+        // Day 100: a metabolizer would be long parched and roasting.
+        let a = affect_of(&ledger, &base, WorldTime { day: 100.0 }, &terrain);
+        assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
+        assert_eq!(a.object, None, "no drive is engaged");
+        let meta = Npc {
+            metabolic_class: MetabolicClass::Endotherm,
+            ..base.clone()
+        };
+        let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
+        assert_ne!(
+            b.label,
+            AffectLabel::Content,
+            "a metabolizer is not content, parched in the heat: {b:?}"
         );
     }
 
