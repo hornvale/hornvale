@@ -595,7 +595,7 @@ world.
 #### As the Vavako tell it
 
 The Vavako are goblins — ourselves.
-The Babako are hobgoblins — neighbors.
+The Ddenke are hobgoblins — neighbors.
 Vebe is the earth.
 
 *In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day lasts about 1.5 standard days.*
@@ -633,7 +633,7 @@ fn goblin_section_speaks_and_margins_seed_1() {
     assert_eq!(goblin.heading, "As the Vavako tell it");
     assert!(goblin.emic.contains(&"Vebe is the earth.".to_string()),
         "planet substituted to the carving: {:?}", goblin.emic);
-    assert!(goblin.emic.contains(&"The Babako are hobgoblins — neighbors.".to_string()),
+    assert!(goblin.emic.contains(&"The Ddenke are hobgoblins — neighbors.".to_string()),
         "goblin stance: {:?}", goblin.emic);
     assert!(goblin.margin.iter().any(|m| m.starts_with("In truth, Vebe is a planet")
         && m.contains("two moons") && m.contains("yellow-white dwarf")),

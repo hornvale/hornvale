@@ -1,7 +1,8 @@
 //! Coherent noise with random access: deterministic, evaluable at any
 //! point without evaluating neighbors, locally coherent.
 
-use crate::seed::Seed;
+use crate::seed::{Seed, StreamLabel};
+use crate::streams::OCTAVE_LABELS;
 
 /// Hash a lattice point to [0, 1). Stable forever (save-format contract).
 fn lattice(seed: Seed, xi: i64, yi: i64) -> f64 {
@@ -35,46 +36,18 @@ pub fn value_noise_2d(seed: Seed, x: f64, y: f64) -> f64 {
     top + (bot - top) * ty
 }
 
-/// Static per-octave derivation labels for `fbm_2d`'s common octave
-/// range, indexed by octave number (index 0 is a placeholder — octave 0
-/// uses the seed directly and never derives). Byte-for-byte the labels
-/// `format!("octave-{n}")` produces, so the derived seeds — and every
-/// noise value — are bit-identical; the table only removes the per-call
-/// `format!` (a heap-allocated `String` per octave per sample), which a
-/// Task 6 profiling pass measured at ~52% of whole-world generation time
-/// (fbm is called per octave per slice per field sample). Octave counts
-/// beyond the table fall back to `format!` with the same label scheme,
-/// preserving exact semantics for any count.
-const OCTAVE_LABELS: [&str; 16] = [
-    "octave-0",
-    "octave-1",
-    "octave-2",
-    "octave-3",
-    "octave-4",
-    "octave-5",
-    "octave-6",
-    "octave-7",
-    "octave-8",
-    "octave-9",
-    "octave-10",
-    "octave-11",
-    "octave-12",
-    "octave-13",
-    "octave-14",
-    "octave-15",
-];
-
 /// Derive octave `n`'s seed from a base `seed`, exactly as `fbm_2d` always
-/// has: the seed directly for octave 0, else `seed.derive("octave-{n}")`
-/// (via the `OCTAVE_LABELS` table when in range). Isolated so the sampler
-/// and the free function share one definition and cannot drift.
+/// has: the seed directly for octave 0, else `seed.derive(streams::OCTAVE_LABELS[n])`
+/// (via the `OCTAVE_LABELS` table when in range, else
+/// `seed.derive(StreamLabel::dynamic(&format!("octave-{n}")))`). Isolated so
+/// the sampler and the free function share one definition and cannot drift.
 fn octave_seed(seed: Seed, octave: u32) -> Seed {
     if octave == 0 {
         seed
     } else if (octave as usize) < OCTAVE_LABELS.len() {
         seed.derive(OCTAVE_LABELS[octave as usize])
     } else {
-        seed.derive(&format!("octave-{octave}"))
+        seed.derive(StreamLabel::dynamic(&format!("octave-{octave}")))
     }
 }
 

@@ -7,6 +7,7 @@ pub mod audit;
 pub mod extract;
 pub mod primitives;
 pub mod report;
+pub mod stream_label;
 pub mod tag;
 pub mod walk;
 
@@ -21,6 +22,12 @@ pub fn run(args: &[String]) -> i32 {
                 let mut lines: Vec<String> = Vec::new();
                 for c in &crates {
                     for f in audit::audit_items(&c.items) {
+                        lines.push(format!(
+                            "{}:{}: {} ({})",
+                            c.crate_name, f.line, f.message, f.item
+                        ));
+                    }
+                    for f in audit::stream_label_findings(&c.stream_label_violations) {
                         lines.push(format!(
                             "{}:{}: {} ({})",
                             c.crate_name, f.line, f.message, f.item

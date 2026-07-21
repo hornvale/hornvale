@@ -62,6 +62,10 @@ pub struct Session<'w> {
     /// The world's calendar, built once at `start`, so the NPC wake cycle reads
     /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
     calendar: Option<hornvale_astronomy::Calendar>,
+    /// The world's predator-pressure field (The Quarry), computed once at
+    /// `start`, so the danger drive senses carnivore territory; `None` if the
+    /// demography fit fails.
+    predator: Option<hornvale_kernel::CellMap<f64>>,
 }
 
 impl<'w> Session<'w> {
@@ -105,6 +109,10 @@ impl<'w> Session<'w> {
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
             .and_then(|sky| sky.calendar().cloned());
+        // Compute the predator-pressure field once (The Quarry), so the danger
+        // drive senses carnivore territory. A demography fit — bounded to session
+        // start; `None` on failure (danger simply loses its PREDATOR axis).
+        let predator = hornvale_worldgen::predator_pressure(world).ok();
         let mut session = Session {
             world,
             ctx,
@@ -118,6 +126,7 @@ impl<'w> Session<'w> {
             registry,
             npcs,
             calendar,
+            predator,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -331,7 +340,11 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
+        let terrain = LocaleTerrain::with_calendar_and_predators(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+        );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
@@ -499,7 +512,11 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
-        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
+        let terrain = LocaleTerrain::with_calendar_and_predators(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+        );
         here.iter()
             .map(|npc| {
                 let affect = affect_of(&self.ledger, npc, &self.npcs, self.day, &terrain);

@@ -200,7 +200,9 @@ fn push_type_item(
     }
 }
 
-fn has_cfg_test(attrs: &[syn::Attribute]) -> bool {
+/// True for a `#[cfg(test)]` attribute — shared with [`crate::stream_label`],
+/// so both checks agree on what counts as test-only code.
+pub(crate) fn has_cfg_test(attrs: &[syn::Attribute]) -> bool {
     attrs.iter().any(|a| {
         a.path().is_ident("cfg")
             && a.parse_args::<syn::Meta>()

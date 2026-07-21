@@ -7,6 +7,7 @@ use crate::pins::TerrainPins;
 use crate::plates::dot;
 use crate::rift::RiftHistory;
 use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, math, noise};
 
 /// Upper bound of `CrustKm`'s validated range, km. One named bound, two
@@ -97,9 +98,9 @@ impl SphereFbm {
     pub(crate) fn new(seed: Seed, frequency: f64, octaves: u32) -> Self {
         Self {
             slices: [
-                noise::Fbm::new(seed.derive("slice-0"), octaves),
-                noise::Fbm::new(seed.derive("slice-1"), octaves),
-                noise::Fbm::new(seed.derive("slice-2"), octaves),
+                noise::Fbm::new(seed.derive(streams::CRUST_SLICE_0), octaves),
+                noise::Fbm::new(seed.derive(streams::CRUST_SLICE_1), octaves),
+                noise::Fbm::new(seed.derive(streams::CRUST_SLICE_2), octaves),
             ],
             frequency,
         }
@@ -291,7 +292,9 @@ pub fn draw_terranes(
     if cratons.is_empty() {
         return Vec::new();
     }
-    let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
+    let lobing_root = terrain_seed
+        .derive(streams::CRATONS)
+        .derive(streams::LOBING);
     let mut stream = terrain_seed.derive(streams::TERRANES).stream();
     let count = stream.range_u32(TERRANE_COUNT_MIN, TERRANE_COUNT_MAX);
     (0..count)
@@ -315,7 +318,8 @@ pub fn draw_terranes(
             // actual (lobed) rim crosses the continental threshold —
             // not a fixed step, since the lobed rim itself varies with
             // direction (see `find_margin_point`'s doc).
-            let lobing_seed = lobing_root.derive(&format!("craton-{}", host.id));
+            let lobing_seed =
+                lobing_root.derive(StreamLabel::dynamic(&format!("craton-{}", host.id)));
             let center = find_margin_point(lobing_seed, host, dir);
             // Margin tangent: perpendicular to the radial direction at `center`.
             let radial = dir;
@@ -983,11 +987,13 @@ impl CrustField {
         rift: Option<RiftHistory>,
         major_count: usize,
     ) -> CrustField {
-        let lobing_root = terrain_seed.derive(streams::CRATONS).derive("lobing");
+        let lobing_root = terrain_seed
+            .derive(streams::CRATONS)
+            .derive(streams::LOBING);
         let lobing_fbms = cratons
             .iter()
             .map(|c| {
-                let seed = lobing_root.derive(&format!("craton-{}", c.id));
+                let seed = lobing_root.derive(StreamLabel::dynamic(&format!("craton-{}", c.id)));
                 SphereFbm::new(seed, LOBE_FREQ, LOBE_OCTAVES)
             })
             .collect();
@@ -1150,6 +1156,7 @@ impl hornvale_kernel::Field<f64> for CrustField {
 mod tests {
     use super::*;
     use crate::streams;
+    use hornvale_kernel::seed::StreamLabel;
     use hornvale_kernel::{Geosphere, NearestCellIndex};
 
     /// The default-pins ocean-fraction target for a given terrain seed —
@@ -1192,7 +1199,7 @@ mod tests {
 
     #[test]
     fn envelope_is_one_at_center_zero_far_and_monotone_on_average() {
-        let seed = Seed(42).derive("test-craton");
+        let seed = Seed(42).derive(StreamLabel::dynamic("test-craton"));
         let center = [0.0, 0.0, 1.0];
         assert!((lobed_envelope(seed, center, center, 0.3) - 1.0).abs() < 1e-9);
         // Far beyond any possible lobed rim (rim <= 1.5 * radius).
@@ -1221,7 +1228,7 @@ mod tests {
         // Swept across seeds (not just one) so the assertion isn't riding
         // on a single lucky/unlucky draw.
         for seed_val in [1u64, 7, 42, 99] {
-            let seed = Seed(seed_val).derive("test-craton");
+            let seed = Seed(seed_val).derive(StreamLabel::dynamic("test-craton"));
             let center = [0.0, 0.0, 1.0];
             let values: Vec<f64> = (0..64)
                 .map(|i| {

@@ -148,7 +148,7 @@ Illustrative shape (surface values derived at build time; exact constructions
 fixed at plan time):
 
 > **As the Vavako tell it.** Vebe is the earth, with two moons. The Vavako
-> are goblins. The Babako are hobgoblins.
+> are goblins. The Ddenke are hobgoblins.
 > *— yet in truth: a planet; orbiting a yellow-white dwarf (F); its day
 > lasts about 1.5 standard days.*
 

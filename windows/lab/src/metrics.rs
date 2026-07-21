@@ -4617,29 +4617,30 @@ mod tests {
     /// `beliefs_of().first()` would give every species goblin's answer.
     #[test]
     fn each_peoples_belief_kind_is_its_own_not_the_first_minted() {
-        let v = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        // Re-pointed under The Living Community epoch (this merge) from seed 42
+        // to seed 8: the deep-history bake now seeds all four peoples together,
+        // so at most seeds every placed people shares the same head sentiment
+        // (all "cyclic" at seed 42) — which cannot discriminate a species-aware
+        // reader from a first-minted reader. Seed 8 is the nearest seed whose
+        // placed roster splits: bugbear's flagship head is "ambient" while
+        // goblin's is "eternal", so the two readings MUST differ if (and only
+        // if) the metric honours its species argument.
+        let v = FullView::build(Seed(8), &SkyPins::default()).unwrap();
         let goblin = species_head_sentiment(&v, "goblin");
-        let hobgoblin = species_head_sentiment(&v, "hobgoblin");
+        let bugbear = species_head_sentiment(&v, "bugbear");
         assert!(
-            goblin.is_some() && hobgoblin.is_some(),
-            "seed 42 places both peoples"
+            goblin.is_some() && bugbear.is_some(),
+            "seed 8 places both peoples"
         );
         // The reading must depend on the species argument, not ignore it. A
         // species-ignoring implementation (reading `beliefs_of().first()`)
-        // would return goblin's answer for every people, collapsing all four
-        // readings to one value. Assert the argument actually discriminates:
-        // goblin and bugbear must not read alike, because bugbear places no
-        // flagship on seed 42 and goblin does.
-        let bugbear = species_head_sentiment(&v, "bugbear");
+        // would return the world's first-minted answer for every people,
+        // collapsing all four readings to one value. Assert the argument
+        // actually discriminates: goblin ("eternal") and bugbear ("ambient")
+        // read differently.
         assert_ne!(
             goblin, bugbear,
             "the reading discriminates on the species asked for, not the world's first belief"
-        );
-        assert!(
-            bugbear.is_none(),
-            "bugbear places no flagship on seed 42 — Absent is the honest reading, \
-             and it is exactly the fact SKY-25, the terminator battery, and the \
-             frozen-sky calibration all got wrong"
         );
     }
 
@@ -4704,12 +4705,19 @@ mod tests {
             rotation: Some(hornvale_astronomy::pins::RotationPin::Locked),
             ..SkyPins::default()
         };
+        // Re-pinned under The Living Community epoch (this merge): the
+        // deep-history bake re-placed every world and seeds all four peoples,
+        // so the species that commits the world's FIRST pantheon changed — the
+        // first-minted belief now reads a felt-tide head (source_kind "tide"),
+        // not the sun. Goblin's OWN head, however, is still the motionless sun
+        // ("eternal"), the property this test actually checks: the epoch moved
+        // which species mints first, not goblin's own perception.
         let view = FullView::build(Seed(42), &pins).unwrap();
         let first = beliefs_of(view.world())
             .into_iter()
             .next()
             .expect("locked world has beliefs");
-        assert_eq!(first.source_kind, "celestial-body");
+        assert_eq!(first.source_kind, "tide");
         let built = BuiltView::Full(view);
         let value = extract_from(&built, "belief-kind-goblin");
         assert_eq!(value, MetricValue::Text("eternal".to_string()));
@@ -4899,10 +4907,12 @@ mod tests {
         // `hornvale_species::psyche_registry`) and still places, so it still
         // commits honorific-bearing epithets — this metric is per-species
         // and does not depend on which OTHER Rank-status people (goblin)
-        // also places. kobold is the roster's ONLY Knowledge-status
-        // people, so the "false" (plain glossed word) branch has no live
-        // seed-42 witness anymore; what remains true and checkable is that
-        // a non-flagshipping species reads `Absent`, not a stale `false`.
+        // also places. Re-pinned under The Living Community epoch (history is
+        // the sole settlement placer, this merge): the deep-history bake seeds
+        // all four peoples, so kobold flagships at seed 42 again, restoring the
+        // live Knowledge-status witness The Niche's dominant-only placement had
+        // lost. kobold is the roster's only Knowledge-status people, so it
+        // commits plain glossed words -> false (the honorific-free branch).
         let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
         assert_eq!(
             epithet_honorific(&view, "hobgoblin"),
@@ -4911,10 +4921,9 @@ mod tests {
         );
         assert_eq!(
             epithet_honorific(&view, "kobold"),
-            MetricValue::Absent,
-            "kobold never flagships under the niche-differentiated-K \
-             coexistence stack at seed 42, so it commits no epithets to \
-             detect — Absent, not a stale true/false"
+            MetricValue::Flag(false),
+            "kobold (Knowledge-status) flagships under the epoch and commits \
+             plain glossed epithets, the honorific-free 'false' branch"
         );
     }
 
@@ -5272,7 +5281,19 @@ mod tests {
     }
 
     #[test]
-    fn solo_goblin_and_twin_share_placement_and_head_domain_at_seed_42() {
+    fn solo_goblin_and_twin_share_head_domain_at_seed_42() {
+        // Superseded under The Living Community epoch (this merge): the draft
+        // demography attractor placed by vectors alone, so identical-vector
+        // peoples with no competitor landed in the SAME cell (the old spec-§3
+        // assertion). History is the sole settlement placer now, and its
+        // genesis seeds each people's site from a per-people (identity-labelled)
+        // draw stream so co-placed peoples don't collide — which necessarily
+        // makes a solo world's placement depend on the people's identity too.
+        // Measured: solo goblin and goblin-twin now land in DIFFERENT cells
+        // (28487 vs 17567). The same-cell claim is retired; what survives, and
+        // is asserted below, is that identical vectors still yield the SAME
+        // head-deity domain (the religion cascade is vector-pure) while the
+        // independent name stream still yields DIFFERENT names.
         let g = FullView::build_with_components(
             Seed(42),
             &SkyPins::default(),
@@ -5287,22 +5308,9 @@ mod tests {
         .unwrap();
         let gf = flagship_of(g.world(), "goblin").unwrap();
         let tf = flagship_of(t.world(), "goblin-twin").unwrap();
-        // Identical vectors + no competitor ⇒ identical cell (spec §3).
-        let gcell = g
-            .world()
-            .ledger
-            .value_of(gf.id, hornvale_settlement::CELL_ID)
-            .cloned();
-        let tcell = t
-            .world()
-            .ledger
-            .value_of(tf.id, hornvale_settlement::CELL_ID)
-            .cloned();
-        assert_eq!(
-            gcell, tcell,
-            "solo goblin and twin must land in the same cell"
-        );
-        // Same cell, same sky, same perception ⇒ same head-deity domain.
+        // Identical vectors ⇒ same head-deity domain (the religion cascade is
+        // a pure function of the vectors, independent of the identity-seeded
+        // placement cell).
         let reg = registry();
         let dom = |built: &BuiltView, name: &str| match reg
             .iter()
@@ -5737,16 +5745,21 @@ mod tests {
     }
 
     #[test]
-    fn seed_1_sky_calibration_is_absent_on_the_tied_pair() {
-        // Goblin and hobgoblin both lose every sky fact (both below the
-        // 0.6 SkyGraded threshold): their sky distortions tie at 1.0, so
-        // no strictly-comparable pair exists — this Absent IS the tie
-        // rule's test.
+    fn seed_1_sky_calibration_is_negative_one_across_the_full_roster() {
+        // Re-pinned under The Living Community epoch (this merge): the
+        // deep-history bake now seeds all four peoples at seed 1, not just
+        // goblin/hobgoblin. kobold (sky_capability 1.0) keeps the moons
+        // where the others lose them, so strictly-comparable discordant
+        // pairs exist and the sky-calibration tau is exactly -1.0 (no longer
+        // the old two-people all-tied Absent). The tie-EXCLUSION rule the old
+        // Absent illustrated is still covered by `seed_2_sky_calibration_is_
+        // exactly_negative_one` (the goblin/hobgoblin tie is excluded there)
+        // and by the direct-helper degenerate tests.
         let view = FullView::build(Seed(1), &SkyPins::default()).unwrap();
         assert_eq!(
             extract(&view, "chorus-sky-calibration"),
-            MetricValue::Absent,
-            "seed 1's only pair (goblin/hobgoblin) ties on sky distortion at 1.0"
+            MetricValue::Number(-1.0),
+            "seed 1 (full four-people roster): strict discordant pairs give tau = -1.0"
         );
         for name in [
             "chorus-distortion",
@@ -5794,24 +5807,29 @@ mod tests {
     }
 
     #[test]
-    fn seed_2_distinctiveness_exceeds_seed_1() {
-        // Kobold's knowledge divergence on the moons (it keeps what goblin
-        // and hobgoblin lose) stacks on top of the stance asymmetry already
-        // present at seed 1, so the mean pairwise distinctiveness must
-        // strictly increase.
+    fn seed_8_distinctiveness_exceeds_seed_1() {
+        // Re-pointed under The Living Community epoch (this merge): the bake
+        // now seeds the same four-people roster at every placing seed, so the
+        // old "seed 2 adds kobold on top of seed 1" comparison is void —
+        // kobold places at both, and distinctiveness is identical across most
+        // seeds. What still moves it is the sky regime: at seed 8 the placed
+        // peoples' heads split (bugbear "ambient" vs the rest "eternal"),
+        // adding head-sentiment divergence on top of the stance asymmetry
+        // present at seed 1 (all "cyclic"), so the mean pairwise
+        // distinctiveness strictly increases from seed 1 to seed 8.
         let seed1 = FullView::build(Seed(1), &SkyPins::default()).unwrap();
-        let seed2 = FullView::build(Seed(2), &SkyPins::default()).unwrap();
+        let seed8 = FullView::build(Seed(8), &SkyPins::default()).unwrap();
         let d1 = match extract(&seed1, "chorus-distinctiveness") {
             MetricValue::Number(n) => n,
             other => panic!("seed 1: expected Number, got {other:?}"),
         };
-        let d2 = match extract(&seed2, "chorus-distinctiveness") {
+        let d8 = match extract(&seed8, "chorus-distinctiveness") {
             MetricValue::Number(n) => n,
-            other => panic!("seed 2: expected Number, got {other:?}"),
+            other => panic!("seed 8: expected Number, got {other:?}"),
         };
         assert!(
-            d2 > d1,
-            "seed 2 distinctiveness ({d2}) should exceed seed 1's ({d1})"
+            d8 > d1,
+            "seed 8 distinctiveness ({d8}) should exceed seed 1's ({d1})"
         );
     }
 

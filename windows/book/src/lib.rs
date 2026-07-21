@@ -11,7 +11,7 @@
 //! and re-joins any trailing clauses with `"; "` before restoring it.
 #![warn(missing_docs)]
 
-use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, STAR_CLASS};
+use hornvale_astronomy::facts::{DAY_LENGTH_STD, MOON_COUNT, MOON_PERIOD_RATIO, STAR_CLASS};
 use hornvale_kernel::{EntityId, Value, World};
 use hornvale_language::account::{Account, AccountEntry, AccountParams, Disposition, Stance};
 use hornvale_language::clause::{
@@ -1015,9 +1015,17 @@ fn render_world_margin(group: &[&AccountEntry], is_a_entry: &AccountEntry) -> Op
 /// `"The moons cross"` for the moons, singular/plural read off the
 /// `moon-count` fact's own ground value (always numeric; the moons entry is
 /// only ever wrapped in [`Disposition::Explained`] while `Kept`, so this is
-/// the true committed count, never a substitution). `None` for any other
-/// predicate — `explain` in `windows/worldgen::chorus` only ever wraps
-/// `day-length-std` and `moon-count`.
+/// the true committed count, never a substitution); `"The moons keep their
+/// measure"` for the LANG-48 period ratio (the-consonance × C5 merge —
+/// `explain_moon_ratio` binds the same causal schemas the moons entry does,
+/// so a `Kept` ratio the folk explain needs its own head or its because-
+/// clause vanishes AND the doctrine Contested counter-annotation that
+/// quotes it has nothing to say). A proportion is inherently between two
+/// moons, so it is always plural (the object — the measured ratio — is not
+/// inspected: the head states THAT the moons keep a measure, never the
+/// value). `None` for any other predicate — `explain` in
+/// `windows/worldgen::chorus` only ever wraps `day-length-std`,
+/// `moon-count`, and `moon-period-ratio`.
 fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
     if predicate == DAY_LENGTH_STD {
         return Some(("The day returns".to_string(), false));
@@ -1033,6 +1041,9 @@ fn explanation_head(predicate: &str, object: &Value) -> Option<(String, bool)> {
             "The moon crosses"
         };
         return Some((head.to_string(), plural));
+    }
+    if predicate == MOON_PERIOD_RATIO {
+        return Some(("The moons keep their measure".to_string(), true));
     }
     None
 }
@@ -1224,57 +1235,102 @@ fn voice_section(kind: &str, autonym: &str, account: &Account, _world: &World) -
     }
 }
 
-/// C6 (The Doctrine), the exoteric formula (the plan's Surfaces table):
-/// what a `RevealedClaim` entry's doctrine emic line asserts INSTEAD of the
-/// ordinary construction fragment — the priesthood professes counted
-/// knowledge of the moons without disclosing the count itself (the
-/// esoteric/exoteric split, ledger #5 — the actual value is a followup
-/// scope, not this artifact's). Only [`MOON_COUNT`] carries a defined
-/// formula: at the floor, `sky_capability` is the only
-/// [`AccountParams`] field the four deltas ever touch, and `moon-count` is
-/// the only [`hornvale_language::account::Requirement::SkyGraded`]
-/// predicate in the observability table (`day-length-std` is
-/// `CrossReferential`, always lost regardless of capability, so it can
-/// never become a doctrine-only `Kept`) — `None` for any other predicate.
-fn revealed_claim_line(predicate: &str, object: &Value) -> Option<String> {
-    if predicate != MOON_COUNT {
-        return None;
-    }
-    let Value::Number(n) = object else {
-        return None;
-    };
-    Some(if (*n as u64) == 1 {
-        "The moon is counted and known to the priesthood.".to_string()
-    } else {
-        "The moons are counted and known to the priesthood.".to_string()
-    })
+/// Which closed [`revealed_claim_line`] surface a doctrine emic line used —
+/// the round-trip recovery key ([`parse_revealed_claim`] reads it off the
+/// exact text, [`rerender_revealed_claim`] inverts it). [`MOON_COUNT`]
+/// carries a plurality (its count's own singular/plural agreement);
+/// [`MOON_PERIOD_RATIO`] is a single invariant surface — a proportion
+/// between two moons' cycles carries no count to agree in number with, so
+/// its exoteric formula never varies. Was a bare `plural: bool` through C6
+/// (the-consonance / the-living-community merge generalized it once a
+/// SECOND predicate — the LANG-48 period ratio — began reaching
+/// `RevealedClaim`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RevealedClaimSurface {
+    /// The [`MOON_COUNT`] formula's singular surface ("The moon is
+    /// counted and known to the priesthood.").
+    MoonCountSingular,
+    /// The [`MOON_COUNT`] formula's plural surface ("The moons are
+    /// counted and known to the priesthood.").
+    MoonCountPlural,
+    /// The [`MOON_PERIOD_RATIO`] formula — a single invariant proportion
+    /// surface, no plurality.
+    MoonPeriodRatio,
 }
 
-/// [`revealed_claim_line`]'s closed inverse table — the only two strings
-/// that construction direction ever emits, paired with the plurality each
-/// carries.
-const REVEALED_CLAIM_LINES: &[(&str, bool)] = &[
-    ("The moon is counted and known to the priesthood.", false),
-    ("The moons are counted and known to the priesthood.", true),
+/// C6 (The Doctrine), the exoteric formula (the plan's Surfaces table):
+/// what a `RevealedClaim` entry's doctrine emic line asserts INSTEAD of the
+/// ordinary construction fragment — the priesthood professes reckoned
+/// knowledge (a count, or a proportion) without disclosing the value itself
+/// (the esoteric/exoteric split, ledger #5 — the disclosed value lives in
+/// [`esoteric_lines`], gated behind an initiated reader). Two predicates
+/// carry a defined formula, both [`hornvale_language::account::Requirement::SkyGraded`]
+/// (the only requirement class that can leave a fact doctrine-only `Kept`
+/// while the folk lose it): [`MOON_COUNT`] (a count → singular/plural
+/// surface) and [`MOON_PERIOD_RATIO`] (LANG-48, a proportion → one
+/// invariant surface). `day-length-std` is `CrossReferential`, always lost
+/// regardless of capability, so it can never become a doctrine-only `Kept`
+/// — `None` for it and any other predicate.
+fn revealed_claim_line(predicate: &str, object: &Value) -> Option<String> {
+    match predicate {
+        MOON_COUNT => {
+            let Value::Number(n) = object else {
+                return None;
+            };
+            Some(rerender_revealed_claim(if (*n as u64) == 1 {
+                RevealedClaimSurface::MoonCountSingular
+            } else {
+                RevealedClaimSurface::MoonCountPlural
+            }))
+        }
+        // The proportion never discloses its value: the exoteric surface is
+        // invariant, so the object is not inspected here (the actual ratio
+        // is the initiated's alone — `esoteric_lines`).
+        MOON_PERIOD_RATIO => Some(rerender_revealed_claim(
+            RevealedClaimSurface::MoonPeriodRatio,
+        )),
+        _ => None,
+    }
+}
+
+/// [`revealed_claim_line`]'s closed inverse table — the only strings that
+/// construction direction ever emits, paired with the [`RevealedClaimSurface`]
+/// each carries. The single source of truth for every closed exoteric
+/// surface (both directions read it, and `revealed_claim_line` itself emits
+/// through it).
+const REVEALED_CLAIM_LINES: &[(&str, RevealedClaimSurface)] = &[
+    (
+        "The moon is counted and known to the priesthood.",
+        RevealedClaimSurface::MoonCountSingular,
+    ),
+    (
+        "The moons are counted and known to the priesthood.",
+        RevealedClaimSurface::MoonCountPlural,
+    ),
+    (
+        "The proportion between the moons' cycles is measured and known to the priesthood.",
+        RevealedClaimSurface::MoonPeriodRatio,
+    ),
 ];
 
-/// Recover a `RevealedClaim` line's plurality from its exact closed text,
-/// or `None` if `line` matches neither row.
-fn parse_revealed_claim(line: &str) -> Option<bool> {
+/// Recover a `RevealedClaim` line's [`RevealedClaimSurface`] from its exact
+/// closed text, or `None` if `line` matches no row.
+fn parse_revealed_claim(line: &str) -> Option<RevealedClaimSurface> {
     REVEALED_CLAIM_LINES
         .iter()
         .find(|(text, _)| *text == line)
-        .map(|(_, plural)| *plural)
+        .map(|(_, surface)| *surface)
 }
 
-/// [`parse_revealed_claim`]'s inverse: the closed text for `plural`. Total
-/// over `bool` (the table carries exactly one row per plurality).
-fn rerender_revealed_claim(plural: bool) -> String {
+/// [`parse_revealed_claim`]'s inverse: the closed text for `surface`. Total
+/// over [`RevealedClaimSurface`] (the table carries exactly one row per
+/// surface).
+fn rerender_revealed_claim(surface: RevealedClaimSurface) -> String {
     REVEALED_CLAIM_LINES
         .iter()
-        .find(|(_, p)| *p == plural)
+        .find(|(_, s)| *s == surface)
         .map(|(text, _)| (*text).to_string())
-        .expect("REVEALED_CLAIM_LINES carries a row for both plurality values")
+        .expect("REVEALED_CLAIM_LINES carries a row for every surface")
 }
 
 /// The disclosure law's counter-annotation prefix (the plan's Surfaces
@@ -1459,9 +1515,9 @@ fn doctrine_section(
 /// exported; `windows/book` cannot import it, layering runs the other way,
 /// same posture as `chorus_ground`'s own doc comment). Only [`IS_A`]
 /// subjects are searched — every predicate [`esoteric_lines`] can ever see
-/// a `RevealedClaim` for (moon-count, star-class, day-length-std today)
-/// is asserted on an `is-a`-classified subject, the same scope
-/// `render_volume`'s construction table reads.
+/// a `RevealedClaim` for (moon-count and moon-period-ratio today, both
+/// world-level sky facts) is asserted on an `is-a`-classified subject, the
+/// same scope `render_volume`'s construction table reads.
 ///
 /// [`IS_A`]: hornvale_kernel::world::IS_A
 fn entity_named(world: &World, name: &str) -> Option<EntityId> {
@@ -1482,13 +1538,17 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 /// to `reader` — the `(subject, predicate)` keys of every fact they may be
 /// shown the doctrine's disclosed value for — is entitled to. For every
 /// organized culture's doctrine [`ConflictState::RevealedClaim`] entry
-/// whose key is in `reader`, emits `"— ⟨cardinal⟩, as the initiated
-/// count."`, with the cardinal read from the LEDGER's own committed value
-/// for that subject/predicate — never the account entry's cached copy —
-/// so the line's number can only ever trace back to the one committed
-/// truth (the mutation-verified law: `the_esoteric_law_mutation_verified`
-/// drives this directly). An empty `reader` yields an empty `Vec` — the
-/// committed exoteric edition discloses nothing.
+/// whose key is in `reader`, emits one initiated line — the count's
+/// cardinal (`"⟨subject⟩ has ⟨cardinal⟩ moons, as the initiated count."`)
+/// or the ratio's measured proportion (`"The cycles of ⟨subject⟩'s moons
+/// keep a proportion of ⟨quantity⟩ to one, as the initiated measure."`),
+/// one surface per `RevealedClaim`-reachable predicate — with the value
+/// read from the LEDGER's own committed fact for that subject/predicate,
+/// never the account entry's cached copy, so the line's number can only
+/// ever trace back to the one committed truth (the mutation-verified law:
+/// `the_esoteric_law_mutation_verified` drives this directly). An empty
+/// `reader` yields an empty `Vec` — the committed exoteric edition
+/// discloses nothing.
 ///
 /// More than one organized culture can independently reveal the SAME
 /// ground fact (the ground truth is world-global, `chorus_ground`, run
@@ -1496,13 +1556,14 @@ fn entity_named(world: &World, name: &str) -> Option<EntityId> {
 /// the reader sees each revealed fact's initiated line exactly once
 /// regardless of how many priesthoods reveal it.
 ///
-/// A key whose entity cannot be resolved back to an `is-a` subject, or
-/// whose ledger value is not [`Value::Number`], is silently skipped: no
-/// [`RevealedClaim`] predicate reaching this function today is anything
-/// but a moon-count-shaped cardinal (see [`revealed_claim_line`]'s doc),
-/// and this function's own reach is the reader's disclosure surface, not
-/// the doctrine emic's — the vanishing-realizable panic
-/// ([`doctrine_section`]) already guards the emic's own formula table.
+/// A key whose entity cannot be resolved back to an `is-a` subject, whose
+/// ledger value is not [`Value::Number`], or whose predicate carries no
+/// disclosure arm here, is silently skipped: every [`RevealedClaim`]
+/// predicate reaching this function today is a world-level sky scalar (a
+/// count or a proportion — see [`revealed_claim_line`]'s doc), and this
+/// function's own reach is the reader's disclosure surface, not the
+/// doctrine emic's — the vanishing-realizable panic ([`doctrine_section`])
+/// already guards the emic's own formula table.
 ///
 /// [`RevealedClaim`]: ConflictState::RevealedClaim
 /// type-audit: bare-ok(identifier-text: reader), bare-ok(prose: return)
@@ -1544,22 +1605,38 @@ pub fn esoteric_lines(world: &World, reader: &BTreeSet<(String, String)>) -> Vec
                 continue;
             };
             // The Book Polish (2026-07-20): name the subject and agree in
-            // number, mirroring `revealed_claim_line`'s own singular/plural
-            // split — the bare em-dash continuation this replaced read fine
-            // inside the vessel's turn-by-turn flow (the player just wrote
-            // about the moons) but floated with no antecedent in the CLI's
-            // static `--initiate` dump, which has no surrounding context at
-            // all. Narrow to MOON_COUNT exactly as `revealed_claim_line`
-            // is (the only predicate that reaches `RevealedClaim` today);
-            // widening either narrowing is a shared future task, not this
-            // campaign's.
-            let count = *n as u64;
-            let moon_word = if count == 1 { "moon" } else { "moons" };
-            lines.push(format!(
-                "{} has {} {moon_word}, as the initiated count.",
-                entry.fact.subject,
-                cardinal(count)
-            ));
+            // number, mirroring `revealed_claim_line`'s own surface split —
+            // the bare em-dash continuation this replaced read fine inside
+            // the vessel's turn-by-turn flow (the player just wrote about
+            // the moons) but floated with no antecedent in the CLI's static
+            // `--initiate` dump, which has no surrounding context at all.
+            // One disclosure surface per `RevealedClaim`-reachable predicate
+            // (the-living-community merge added the LANG-48 ratio arm): a
+            // count discloses its cardinal, a proportion its measured value
+            // (through `quantity`, the book's own float-prose helper — the
+            // exoteric formula withheld the value, this is the initiated's
+            // alone). A predicate with no arm here is silently skipped: the
+            // emic's own vanishing-realizable panic (`doctrine_section`)
+            // already fails loud for an un-authored surface.
+            let line = match predicate.as_str() {
+                MOON_COUNT => {
+                    let count = *n as u64;
+                    let moon_word = if count == 1 { "moon" } else { "moons" };
+                    format!(
+                        "{} has {} {moon_word}, as the initiated count.",
+                        entry.fact.subject,
+                        cardinal(count)
+                    )
+                }
+                MOON_PERIOD_RATIO => format!(
+                    "The cycles of {}'s moons keep a proportion of {} to one, \
+                     as the initiated measure.",
+                    entry.fact.subject,
+                    quantity(*n)
+                ),
+                _ => continue,
+            };
+            lines.push(line);
             seen.insert(key);
         }
     }
@@ -2036,7 +2113,6 @@ pub struct ParsedExplanation {
 /// support — `ParsedLine` itself derives neither `Clone` nor `Debug` nor
 /// `PartialEq` (T3's original design), and no caller in this module needs
 /// this enum to carry any of them either.
-/// type-audit: bare-ok(flag: RevealedClaim.plural)
 pub enum ChorusLine {
     /// An ordinary classification clause plus its chorus-surface dress.
     Clause(ParsedLine, ChorusDress),
@@ -2044,8 +2120,9 @@ pub enum ChorusLine {
     Explanation(ParsedExplanation),
     /// C6 (The Doctrine): the `RevealedClaim` exoteric formula.
     RevealedClaim {
-        /// Whether this line used the plural ("moons") surface form.
-        plural: bool,
+        /// Which closed exoteric surface this line used (the round-trip
+        /// recovery key — see [`RevealedClaimSurface`]).
+        surface: RevealedClaimSurface,
     },
     /// C6 (The Doctrine): the disclosure law's counter-annotation — wraps
     /// the recovered folk sentence it quotes, re-parsed recursively (in
@@ -2146,13 +2223,15 @@ const AGENTIVE_LEXEMES: &[LexemeId] = &[
 
 /// The count-aware head clauses [`parse_explanation`] tries, paired with
 /// the plurality each carries — the exact inverse of [`explanation_head`].
-/// None of the three is a prefix of another (`"The day returns"`, `"The
-/// moon crosses"`, `"The moons cross"` all diverge by the 9th character),
-/// so trying them in any order is safe.
+/// No head is a prefix of another (`"The day returns"`, `"The moon
+/// crosses"`, `"The moons cross"` all diverge by the 9th character; `"The
+/// moons keep their measure"` diverges from `"The moons cross"` at the
+/// 10th), so trying them in any order is safe.
 const EXPLANATION_HEADS: &[(&str, bool)] = &[
     ("The day returns", false),
     ("The moon crosses", false),
     ("The moons cross", true),
+    ("The moons keep their measure", true),
 ];
 
 /// Invert one explanation line's body (the text after its head clause) into
@@ -2438,8 +2517,8 @@ pub fn parse_chorus_line(line: &str, ctx: &ParseContext) -> Result<ChorusLine, L
     if let Some(reckoning) = parse_reckoning_line(line) {
         return Ok(ChorusLine::Reckoning(reckoning));
     }
-    if let Some(plural) = parse_revealed_claim(line) {
-        return Ok(ChorusLine::RevealedClaim { plural });
+    if let Some(surface) = parse_revealed_claim(line) {
+        return Ok(ChorusLine::RevealedClaim { surface });
     }
     if let Some(rest) = line.strip_prefix(COUNTER_PREFIX) {
         let inner = parse_chorus_line(rest, ctx)?;
@@ -2487,7 +2566,7 @@ pub fn rerender_chorus_line(line: &ChorusLine) -> String {
             line
         }
         ChorusLine::Explanation(explanation) => rerender_explanation(explanation),
-        ChorusLine::RevealedClaim { plural } => rerender_revealed_claim(*plural),
+        ChorusLine::RevealedClaim { surface } => rerender_revealed_claim(*surface),
         ChorusLine::Counter(inner) => counter_annotation_line(&rerender_chorus_line(inner)),
         ChorusLine::Reckoning(reckoning) => rerender_reckoning_line(reckoning),
     }
@@ -2569,7 +2648,7 @@ mod tests {
     /// Seed 1's real, committed values (verified against the world json):
     /// star class "yellow-white dwarf (F)", two moons, day-length-std
     /// 1.5507196 std days (`quantity` truncates that to "about 1.5"). This
-    /// is the exact volume `hornvale -- book` renders for seed 1 ("Vebe").
+    /// is the exact volume `hornvale -- book` renders for seed 1 ("Xobo").
     /// Modifier order is the construction table's AUTHORED order
     /// (`CONSTRUCTION_ORDER`: moons, then star, then day length — the
     /// G3-approved surface), independent of ledger commit order.
@@ -2584,7 +2663,7 @@ mod tests {
             .expect("the planet's sentence is present");
         assert_eq!(
             line,
-            "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
+            "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); \
              its day lasts about 1.5 standard days."
         );
     }
@@ -2619,8 +2698,8 @@ mod tests {
 
     /// C2 T5: every placed peopled species' `instance-of` collective
     /// renders as "The ⟨Autonym⟩ are ⟨species⟩." — exact strings, seed 1's
-    /// real committed values (verified against the world json): goblin's
-    /// collective is named "Vavako", hobgoblin's "Babako".
+    /// real committed values (verified against the merged world): goblin's
+    /// collective is named "Vavako", hobgoblin's "Ddenke".
     #[test]
     fn instance_of_collective_renders_the_autonym_are_species() {
         let world = generated(1);
@@ -2631,7 +2710,7 @@ mod tests {
             vol.lines
         );
         assert!(
-            vol.lines.iter().any(|l| l == "The Babako are hobgoblins."),
+            vol.lines.iter().any(|l| l == "The Ddenke are hobgoblins."),
             "hobgoblin collective renders as the autonym: {:?}",
             vol.lines
         );
@@ -3139,7 +3218,7 @@ mod tests {
         let probes = tongue_probes(&world);
         assert_eq!(probes.len(), 1, "seed 1 commits exactly one is-a fact");
         assert_eq!(probes[0].concept, "planet");
-        assert_eq!(probes[0].subject, "Vebe");
+        assert_eq!(probes[0].subject, "Xobo");
     }
 
     /// C4 T1: the probe's SUCCESS path lands the realized line instead of
@@ -3222,14 +3301,14 @@ mod tests {
             .expect("goblin voice");
         assert_eq!(goblin.heading, "As the Vavako tell it");
         assert!(
-            goblin.emic.contains(&"Vebe is the earth.".to_string()),
+            goblin.emic.contains(&"Xobo is the earth.".to_string()),
             "planet substituted to the carving: {:?}",
             goblin.emic
         );
         assert!(
             goblin
                 .emic
-                .contains(&"The Babako are hobgoblins — neighbors.".to_string()),
+                .contains(&"The Ddenke are hobgoblins — neighbors.".to_string()),
             "goblin stance: {:?}",
             goblin.emic
         );
@@ -3237,7 +3316,7 @@ mod tests {
             goblin
                 .margin
                 .iter()
-                .any(|m| m.starts_with("In truth, Vebe is a planet")
+                .any(|m| m.starts_with("In truth, Xobo is a planet")
                     && m.contains("two moons")
                     && m.contains("yellow-white dwarf")),
             "the margin carries what the stack lost: {:?}",
@@ -3592,7 +3671,7 @@ mod tests {
         let vol = render_volume(&world);
         assert!(
             vol.lines.iter().any(|l| l
-                == "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); \
+                == "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); \
                     its day lasts about 1.5 standard days."),
             "the god's-eye planet line stays exactly as C4 shipped it: {:?}",
             vol.lines
@@ -3632,20 +3711,20 @@ mod tests {
         );
     }
 
-    /// C6 T3: on seed 1, GOBLIN ALONE reaches the organized rung and gains a
-    /// doctrine section — of the two placed peoples (goblin, hobgoblin), only
-    /// goblin is organized. This is precedented genesis drift: The Demesne
-    /// (BIO-35 Stage 1) recalibration shrank seed-1 hobgoblin below the
-    /// organized rung, flipping it organized→folk (the same organized↔folk
-    /// flip documented for seeds 2/3 under prior epochs; matches the
-    /// regenerated `book/src/gallery/the-book.md`). Goblin's exact measured
-    /// surface is unchanged (verified against the committed world): heading
-    /// names the priesthood; the emic carries the `RevealedClaim` exoteric
-    /// formula for the moons (folk capability 0.5 loses `moon-count`,
-    /// doctrine's boosted 0.75 clears the 0.6 threshold and keeps it) and a
-    /// day explanation whose bound agent is the doctrine's own measured deity,
-    /// Wowako (folk's own day explanation is agentless `PathJourney`, so this
-    /// is genuinely a doctrine-only causal story, not an echo of folk's).
+    /// C6 T3: on seed 1, all four placed peoples reach the organized rung and
+    /// each gains a doctrine section. This is precedented genesis drift: the
+    /// the-living-community merge (The Demesne per-axis supply + history-driven
+    /// re-placement, crossed with The Slumber's diurnal climate) now seats four
+    /// peoples (bugbear/Babako, goblin/Vavako, hobgoblin/Ddenke,
+    /// kobold/Ngngoashzhoo) at seed 1, all above the organized rung — matching
+    /// the regenerated `book/src/gallery/the-book.md`. Goblin's exact measured
+    /// surface is verified against the merged world: heading names the
+    /// priesthood; the emic carries the `RevealedClaim` exoteric formula for
+    /// the moons (folk capability loses `moon-count`, doctrine's boosted
+    /// capability clears the threshold and keeps it) and a day explanation whose
+    /// bound agent is the doctrine's own measured deity, Wowako (folk's own day
+    /// explanation is agentless `PathJourney`, so this is genuinely a
+    /// doctrine-only causal story, not an echo of folk's).
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -3659,13 +3738,13 @@ mod tests {
             .collect();
         assert_eq!(
             organized,
-            vec!["goblin"],
-            "seed-1: goblin alone is organized post-Demesne (hobgoblin flipped to folk)"
+            vec!["bugbear", "goblin", "hobgoblin", "kobold"],
+            "seed-1: all four placed peoples are organized after the merge re-placement"
         );
         assert_eq!(
             peoples.len(),
-            2,
-            "seed-1: both goblin and hobgoblin are placed; only goblin is organized"
+            4,
+            "seed-1: four peoples are placed, all organized"
         );
 
         let goblin = vol
@@ -3694,33 +3773,38 @@ mod tests {
         );
     }
 
-    /// C6 T3, the disclosure law (both directions). Measured (a full sweep
-    /// over seeds 1..=5, then widened to 1..=40 to double-check, via a
-    /// throwaway probe before writing this test, then deleted): every
-    /// organized culture's `moon-count` entry is either `RevealedClaim`
-    /// (folk capability under the 0.6 threshold, doctrine's +0.25-boosted
-    /// capability over it) or `Harmony` (the one measured case where folk
-    /// ALSO keeps it, seed 2's kobold — same schema both sides, differing
-    /// only in lexeme, which `conflict_of` ignores); every `day-length-std`
-    /// entry is either `Harmony` or `Mystery` (`day-length-std` is
-    /// `CrossReferential`, never folk-verifiable, so a differing schema
-    /// there can only ever be `Mystery`, never `Contested`). **NO real
-    /// `Contested` entry exists across seeds 1..=40** — the C5 F2 lesson's
-    /// negative-result case: rather than a live sweep assertion that would
-    /// vacuously and permanently pass, the disclosure law's `Contested`
-    /// half is driven directly below with a synthetic folk/doctrine pair
-    /// (kobold-style: folk KEEPS the moon count, but the two accounts
-    /// explain it under differing schemas — Task 1's own Contested grid
-    /// case, wired through the real renderer).
+    /// C6 T3, the disclosure law (both directions). Re-derived at the-living-
+    /// community merge: the disclosure law now fires ABUNDANTLY on REAL data.
+    /// The merge's history-driven re-placement seats capable folk cultures
+    /// beside organized ones, so a fact both KEEP but explain under differing
+    /// schemas is `Contested` — `moon-count` at many seeds (folk keeps and
+    /// explains it, doctrine keeps and explains it differently), and — the
+    /// LANG-48 × C6 case — `moon-period-ratio` at seed 4's kobold (folk
+    /// `Explained{CycleReturn}` vs doctrine bare `Kept`). Every `Contested`
+    /// entry renders exactly one counter-annotation (`"— though the folk say
+    /// …"`), quoting the folk voice's own because-clause; a section with no
+    /// `Contested` entry carries none. `day-length-std` is `CrossReferential`,
+    /// never folk-verifiable, so a differing schema there is always `Mystery`,
+    /// never `Contested`. The old measurement — "NO real Contested entry
+    /// exists across seeds 1..=40" — held only before the re-placement widened
+    /// which cultures are organized and capable; it is now falsified by the
+    /// live sweep, which is the stronger evidence (the law firing on real
+    /// worlds, not just the synthetic pair driven directly below).
     #[test]
     fn the_disclosure_law_both_directions() {
+        // The live half: every organized section renders exactly one
+        // counter-annotation per real Contested entry, and the sweep finds
+        // BOTH a real Contested and a real Mystery.
+        let mut contested_seen = false;
         let mut mystery_seen = false;
         for seed in 1u64..=5 {
             let world = generated(seed);
+            let vol = render_volume(&world);
             for voice in hornvale_worldgen::accounts_of(&world) {
                 let Some(doctrine) = hornvale_worldgen::doctrine_of(&world, &voice.kind) else {
                     continue;
                 };
+                let mut contested_here = 0usize;
                 for d_entry in &doctrine.account.entries {
                     if d_entry.fact.predicate == hornvale_kernel::world::IS_A
                         || d_entry.fact.predicate == hornvale_kernel::INSTANCE_OF
@@ -3735,47 +3819,62 @@ mod tests {
                     };
                     let verifiable =
                         hornvale_worldgen::folk_verifiable(&voice.params, &d_entry.fact.predicate);
-                    let conflict =
-                        conflict_of(&f_entry.disposition, &d_entry.disposition, verifiable);
-                    assert_ne!(
-                        conflict,
-                        ConflictState::Contested,
-                        "seed {seed} {} {}: no real Contested entry exists across seeds \
-                         1..=5 (measured) — a future worldgen change that introduces one \
-                         should redden this assertion rather than going silently uncovered",
-                        voice.kind,
-                        d_entry.fact.predicate
-                    );
-                    if conflict == ConflictState::Mystery {
-                        mystery_seen = true;
+                    match conflict_of(&f_entry.disposition, &d_entry.disposition, verifiable) {
+                        ConflictState::Contested => {
+                            contested_here += 1;
+                            contested_seen = true;
+                        }
+                        ConflictState::Mystery => mystery_seen = true,
+                        _ => {}
                     }
                 }
+                let section = vol
+                    .chorus
+                    .iter()
+                    .find(|s| s.kind == voice.kind)
+                    .expect("every organized voice has a chorus section");
+                let rendered = section
+                    .doctrine
+                    .as_ref()
+                    .expect("an organized voice renders a doctrine section");
+                assert_eq!(
+                    rendered.annotations.len(),
+                    contested_here,
+                    "seed {seed} {}: the disclosure law renders exactly one counter-\
+                     annotation per Contested entry: {:?}",
+                    voice.kind,
+                    rendered.annotations
+                );
             }
         }
+        assert!(
+            contested_seen,
+            "the merge's re-placement makes real Contested entries exist across seeds 1..=5"
+        );
         assert!(
             mystery_seen,
             "the sweep should find at least one real Mystery entry (day-length-std)"
         );
 
-        // The Mystery-carries-none half, non-vacuously: since no Contested
-        // entry exists (asserted above), every doctrine section's
-        // annotations are empty — including every section that DOES carry
-        // a Mystery entry (mystery_seen, just asserted).
-        for seed in 1u64..=5 {
-            let world = generated(seed);
-            let vol = render_volume(&world);
-            for section in &vol.chorus {
-                if let Some(doctrine) = &section.doctrine {
-                    assert!(
-                        doctrine.annotations.is_empty(),
-                        "seed {seed} {}: a Mystery entry's section must carry no \
-                         annotation: {:?}",
-                        section.kind,
-                        doctrine.annotations
-                    );
-                }
-            }
-        }
+        // Pin the LANG-48 × C6 case on real data: seed 4's kobold priesthood
+        // keeps the moon-period-ratio (bare) while its folk explain it
+        // (CycleReturn) — a Contested whose counter-annotation quotes the
+        // folk's own ratio because-clause ("The moons keep their measure …").
+        let vol4 = render_volume(&generated(4));
+        let kobold4 = vol4
+            .chorus
+            .iter()
+            .find(|s| s.kind == "kobold")
+            .and_then(|s| s.doctrine.as_ref())
+            .expect("seed 4 kobold is organized");
+        assert!(
+            kobold4.annotations.contains(
+                &"— though the folk say The moons keep their measure, as all things return."
+                    .to_string()
+            ),
+            "the moon-period-ratio Contested renders its counter-annotation: {:?}",
+            kobold4.annotations
+        );
 
         // The Contested half: a synthetic folk/doctrine pair over one
         // subject ("Vebe", is-a "planet" plus a moon-count of two), built
@@ -3975,11 +4074,15 @@ mod tests {
         );
     }
 
-    /// C6 T3, the null-effect law: this campaign adds a NEW field
-    /// (`doctrine`) to `ChorusSection` but must not perturb one byte of the
-    /// pre-existing folk registers — seed 1's goblin and hobgoblin `emic`
-    /// and `margin` vectors, pinned exactly (not just `contains`) against
-    /// their pre-C6 committed strings.
+    /// C6 T3, the null-effect law: adding `doctrine` to `ChorusSection` must
+    /// not perturb one byte of the pre-existing folk registers. Pinned exactly
+    /// (not just `contains`) against seed 1's committed folk strings. Re-pinned
+    /// at the-living-community merge: the history-driven re-placement now seats
+    /// FOUR peoples at seed 1 (bugbear/Babako, goblin/Vavako, hobgoblin/Ddenke,
+    /// kobold/Ngngoashzhoo) and renames the planet Xobo, so the folk emic now
+    /// carries four peoples-lines; the C6 null-effect property (doctrine adds
+    /// nothing to these two registers) is unchanged — only the merged ground
+    /// truth moved.
     #[test]
     fn folk_sections_are_byte_unchanged() {
         let vol = render_volume(&generated(1));
@@ -3991,16 +4094,18 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
+                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Babako are hobgoblins — neighbors.".to_string(),
-                "Vebe is the earth.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
+                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
+                "Xobo is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4014,16 +4119,18 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
+                "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
-                "The Babako are hobgoblins — ourselves.".to_string(),
-                "Vebe is the earth.".to_string(),
+                "The Ddenke are hobgoblins — ourselves.".to_string(),
+                "The Ngngoashzhoo are kobolds — rivals.".to_string(),
+                "Xobo is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4034,7 +4141,7 @@ mod tests {
     /// `every_chorus_line_round_trips`): every doctrine `emic` +
     /// `annotations` + `margin` line, across seeds 1..=5, round-trips
     /// byte-identically through `parse_chorus_line` + `rerender_chorus_line`
-    /// — the `RevealedClaim` formula inverts to (its plurality), and a
+    /// — the `RevealedClaim` formula inverts to (its closed surface), and a
     /// counter-annotation inverts by stripping the fixed prefix and
     /// re-parsing the embedded folk sentence recursively (exercised
     /// directly here too, since no real seed carries one — see
@@ -4230,7 +4337,7 @@ mod tests {
     /// C6 T4, the esoteric law, mutation-verified: an empty reader
     /// discloses nothing (the committed exoteric edition is unaffected —
     /// its `RevealedClaim` formula still renders as usual), while a reader
-    /// holding exactly `("Vebe", "moon-count")` gets exactly one initiated
+    /// holding exactly `("Xobo", "moon-count")` gets exactly one initiated
     /// line, whose cardinal traces to the LEDGER's own committed value
     /// (never any other source) — proven by checking the real ledger
     /// value independently, then demonstrating that the WRONG cardinal
@@ -4267,43 +4374,44 @@ mod tests {
 
         // The initiated reader: exactly one line, for exactly this key.
         let mut reader: BTreeSet<(String, String)> = BTreeSet::new();
-        reader.insert(("Vebe".to_string(), MOON_COUNT.to_string()));
+        reader.insert(("Xobo".to_string(), MOON_COUNT.to_string()));
         let lines = esoteric_lines(&world, &reader);
         assert_eq!(
             lines,
             // The Book Polish (2026-07-20): re-pinned with its subject
-            // (was the bare "— two, as the initiated count.").
-            vec!["Vebe has two moons, as the initiated count.".to_string()],
+            // (was the bare "— two, as the initiated count."). Merge:
+            // planet renamed Vebe -> Xobo.
+            vec!["Xobo has two moons, as the initiated count.".to_string()],
             "exactly one initiated line for the one key in the reader"
         );
 
         // Mutation-verify: the "two" comes from the LEDGER's own value, not
         // some other source — independently read the ledger's committed
-        // moon-count for Vebe and confirm it (not a different number)
+        // moon-count for Xobo and confirm it (not a different number)
         // reproduces the line, then confirm a WRONG value's rendering
         // would NOT match what `esoteric_lines` actually produced (the
         // "verify the mechanism by asserting a WRONG expected value
         // fails" arm this test's own doc calls out).
-        let vebe = entity_named(&world, "Vebe").expect("Vebe resolves to an entity");
-        let ledger_value = match world.ledger.value_of(vebe, MOON_COUNT) {
+        let xobo = entity_named(&world, "Xobo").expect("Xobo resolves to an entity");
+        let ledger_value = match world.ledger.value_of(xobo, MOON_COUNT) {
             Some(Value::Number(n)) => *n as u64,
-            other => panic!("Vebe's ledger moon-count must be a Value::Number: {other:?}"),
+            other => panic!("Xobo's ledger moon-count must be a Value::Number: {other:?}"),
         };
         assert_eq!(
             ledger_value, 2,
-            "Vebe's committed moon-count is two at seed 1"
+            "Xobo's committed moon-count is two at seed 1"
         );
         let moon_word = if ledger_value == 1 { "moon" } else { "moons" };
         assert_eq!(
             lines[0],
             format!(
-                "Vebe has {} {moon_word}, as the initiated count.",
+                "Xobo has {} {moon_word}, as the initiated count.",
                 cardinal(ledger_value)
             ),
             "the line's cardinal must equal the ledger's own value"
         );
         let wrong = format!(
-            "Vebe has {} {moon_word}, as the initiated count.",
+            "Xobo has {} {moon_word}, as the initiated count.",
             cardinal(ledger_value + 1)
         );
         assert_ne!(
@@ -4356,7 +4464,7 @@ mod tests {
         let initiated_extra = esoteric_lines(&world, &reader);
         assert!(
             // The Book Polish (2026-07-20): re-pinned with its subject.
-            initiated_extra.contains(&"Vebe has two moons, as the initiated count.".to_string()),
+            initiated_extra.contains(&"Xobo has two moons, as the initiated count.".to_string()),
             "the moon-count RevealedClaim's initiated line should surface under the \
              omniscient reader: {:?}",
             initiated_extra
@@ -4385,15 +4493,13 @@ mod tests {
     /// preregistered epochs; epoch 1 (day 0) is always the empty arm
     /// (T1's `observations_at_day_zero_are_empty`: every culture is
     /// `Unknown` at day 0). Epoch 2's lines are pinned exact against the
-    /// live measurement (T1's report table, re-derived here through the
-    /// surface): seed 1's goblin alone climbs to `Predictive` (post-Demesne
-    /// its hobgoblin dropped to folk-only — `Counted`, a qualitative
-    /// "darkened, now and again" with no cardinal or prediction); seed 2
-    /// adds kobold, whose higher sky-capability also witnesses the lunar
-    /// class; seed 3's goblin alone is organized (`Predictive`) while
-    /// hobgoblin/kobold are folk-only (`Counted`, no cardinal, no
-    /// prediction) — the ladder's folk cap made visible in the section
-    /// itself, not just T1's unit tests.
+    /// live measurement. Re-pinned at the-living-community merge: the
+    /// history-driven re-placement now seats FOUR peoples at each of seeds
+    /// 1..=3, ALL organized (`Predictive`), so each renders four priesthood
+    /// arms (folk line, cardinal, prediction, taught-wrongly) plus a per-
+    /// culture crisis margin and the world shortfall line. The values below
+    /// are the merged live measurement (they match `book/src/gallery/the-book.md`
+    /// and `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`'s day-numbers).
     #[test]
     fn the_reckoning_renders_the_epoch_pair() {
         for seed in [1u64, 2, 3] {
@@ -4416,74 +4522,78 @@ mod tests {
             assert_eq!(vol.reckoning[1].heading, "In the hundredth year");
         }
 
+        // Merge re-placement: seed 1 seats four organized peoples (Babako,
+        // Vavako, Ddenke, Ngngoashzhoo), each rendering the full priesthood
+        // run. Day-numbers match LADDER_TABLE's seed-1 rows.
         let seed1 = render_volume(&generated(1));
         assert_eq!(
             seed1.reckoning[1].lines,
             vec![
-                // The Book Polish (2026-07-20): re-pinned attributed (was
-                // the bare, unattributed "The sky has darkened, now and
-                // again." for both entries below).
+                "Among the Babako, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Babako numbers the darkenings: 6472.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Babako's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
-                // The Corrigendum (the naive model, T1/T3): re-pinned from
-                // 36526 to 36531 -- the prophecy law's model changed, and
-                // this book-side pin was never re-pinned alongside
-                // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`
-                // (T2's own re-pin was worldgen-only). Matches
-                // LADDER_TABLE's seed 1 goblin row exactly.
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
-                // The Corrigendum T4: the doctrine-voice line -- Vavako's
-                // priesthood carries a live prediction crisis (see the
-                // margin below), so it renders the "taught wrongly" arm.
                 "The Vavako's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
-                "Among the Babako, the sky has darkened, now and again.".to_string(),
+                "Among the Ddenke, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ddenke numbers the darkenings: 4010.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Ddenke's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
+                "Among the Ngngoashzhoo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngngoashzhoo numbers the darkenings: 6472.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Ngngoashzhoo's own priesthood taught wrongly, and could be shown wrong by \
+                 any who kept their own count."
+                    .to_string(),
             ],
-            "seed 1 post-Demesne: goblin (Vavako) is organized and numbers 4010; hobgoblin \
-             (Babako) is now folk-only, so it contributes only the attributed qualitative \
-             arm with no cardinal or prediction"
+            "seed 1: four organized priesthoods; the lunar-witnessing pair numbers 6472, the \
+             solar-only pair 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
-                // The Corrigendum T3: the naive model's own prior teaching
-                // (day 36528) missed the actual event (day 36522) -- a
-                // live crisis, proven also at
-                // `windows/worldgen/tests/diachronic.rs::
-                // a_crisis_fires_on_a_real_generated_sky` (seed 1, goblin).
+                "In truth, the Babako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
                 "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Ddenke's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Ngngoashzhoo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings of the first hundred years number 6472.".to_string(),
             ],
-            "seed 1: goblin holds 4010 (all-solar; below the 0.6 threshold, so it never \
-             witnesses the lunar class), which falls short of the true count (6472, \
-             unwitnessed lunar events included); its priesthood also carries a live \
-             prediction crisis from an earlier teaching cycle"
+            "seed 1: each organized priesthood carries a live prediction crisis, and the true \
+             count (6472) exceeds the solar-only cultures' held count"
         );
 
-        // Re-pinned post-absorption (the Rains moisture epoch, merge
-        // 9843b8f): seed 2 kobold flipped from an organized cult to a FOLK
-        // flagship (the SOC-1 gate's negative arm — see
-        // `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`), so it now
-        // renders the folk line ONLY — no cardinal, no prediction line —
-        // the same shape as seed 3's folk-only cultures below.
+        // Seed 2: four organized peoples (Baodboa, Maetmea, Waedwea,
+        // Ngkoshngta); the lunar-witnessing pair numbers 81, the solar-only
+        // pair 49.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
             vec![
-                // The Book Polish (2026-07-20): re-pinned attributed.
+                "Among the Baodboa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Baodboa numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Baodboa's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Maetmea, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Maetmea numbers the darkenings: 49.".to_string(),
-                // The Corrigendum (the naive model, T1/T3): re-pinned from
-                // 36611 to 36337, matching LADDER_TABLE's seed 2
-                // goblin/hobgoblin row exactly (same underlying shared
-                // witness history, hence the identical taught day).
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
-                // The Corrigendum T4: both organized priesthoods carry the
-                // same live prediction crisis (see the margin below), so
-                // both render the "taught wrongly" arm.
                 "The Maetmea's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
@@ -4494,49 +4604,48 @@ mod tests {
                  who kept their own count."
                     .to_string(),
                 "Among the Ngkoshngta, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Ngkoshngta numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Ngkoshngta's own priesthood taught wrongly, and could be shown wrong by \
+                 any who kept their own count."
+                    .to_string(),
             ]
         );
         assert_eq!(
             seed2.reckoning[1].margin,
             vec![
-                // The Corrigendum T3: both organized cultures share the
-                // same witness history, so both carry the identical
-                // prior-teaching crisis.
+                "In truth, the Baodboa's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
                 "In truth, the Maetmea's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
                 "In truth, the Waedwea's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
+                "In truth, the Ngkoshngta's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
                 "In truth, the darkenings of the first hundred years number 81.".to_string(),
-            ],
-            "seed 2: the true count is still 81 (kobold witnesses that many events even as \
-             folk memory only, unwitnessed by doctrine); goblin/hobgoblin hold only 49 and \
-             kobold now holds no cardinal at all — the margin fires from either shortfall, \
-             plus both organized priesthoods carry a live prediction crisis"
+            ]
         );
 
-        // Re-pinned post-absorption (The Demesne, BIO-35 Stage 1): the
-        // recalibrated seed-3 layout flipped hobgoblin (Shteozqae) folk→
-        // organized (its priesthood now numbers the darkenings) and dropped
-        // kobold from placement entirely (no chorus/reckoning line at all).
-        // So seed 3 now renders TWO priesthood arms, both at 32.
+        // Seed 3: four organized peoples (Doozqao, Sdeozqae, Shteozqae,
+        // Jjajjjo); the lunar-witnessing pair numbers 53, the solar-only
+        // pair 32.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
             vec![
-                // The Book Polish (2026-07-20): re-pinned attributed — this
-                // is the exact stutter the campaign fixes: the last two
-                // lines below were byte-identical bare strings before.
+                "Among the Doozqao, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Doozqao numbers the darkenings: 53.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Doozqao's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Sdeozqae, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Sdeozqae numbers the darkenings: 32.".to_string(),
-                // The Corrigendum (the naive model, T1/T3): re-pinned from
-                // 36953 to 36125, matching LADDER_TABLE's seed 3
-                // goblin/hobgoblin row exactly.
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
-                // The Corrigendum T4: both organized priesthoods carry the
-                // same live prediction crisis (see the margin below), so
-                // both render the "taught wrongly" arm.
                 "The Sdeozqae's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
@@ -4546,27 +4655,33 @@ mod tests {
                 "The Shteozqae's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                "Among the Jjajjjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Jjajjjo numbers the darkenings: 53.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Jjajjjo's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
             ],
-            "seed 3 post-Demesne: goblin (Sdeozqae) and hobgoblin (Shteozqae) are both \
-             organized and each number 32; kobold no longer places at this seed"
+            "seed 3: four organized priesthoods; the lunar-witnessing pair numbers 53, the \
+             solar-only pair 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
-                // The Corrigendum T3: both organized cultures share the
-                // same witness history, so both carry the identical
-                // prior-teaching crisis.
+                "In truth, the Doozqao's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
                 "In truth, the Sdeozqae's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Shteozqae's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
+                "In truth, the Jjajjjo's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
                 "In truth, the darkenings of the first hundred years number 53.".to_string(),
-            ],
-            "seed 3: both organized cultures hold 32 (all-solar, below the lunar threshold), \
-             which falls short of the true count (53, unwitnessed lunar events included), \
-             and both carry a live prediction crisis"
+            ]
         );
     }
 
@@ -4616,18 +4731,29 @@ mod tests {
         assert_eq!(
             day100.margin,
             vec![
-                // The Corrigendum T3: the crisis line's own text has no
+                // The Corrigendum T3: the crisis lines' own text has no
                 // epoch phrase at all (unlike the shortfall line below), so
-                // it is byte-identical to the fixed pair's own margin line
-                // pinned in `the_reckoning_renders_the_epoch_pair`.
+                // they are byte-identical to the fixed pair's own margin
+                // lines pinned in `the_reckoning_renders_the_epoch_pair`.
+                // Merge re-placement: four organized priesthoods now, each
+                // with its own live crisis.
+                "In truth, the Babako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
                 "In truth, the Vavako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Ddenke's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Ngngoashzhoo's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the darkenings by day 36525 number 6472.".to_string(),
             ],
             "same true count (6472, pinned in the_reckoning_renders_the_epoch_pair) as the \
              fixed pair's margin, phrased through reckoning_at's own ad hoc lens; the crisis \
-             line is unaffected by the lens (it carries no epoch phrase)"
+             lines are unaffected by the lens (they carry no epoch phrase)"
         );
 
         let mid = reckoning_at(&world, hornvale_astronomy::StdDays::new(20_000.0).unwrap());
@@ -4654,28 +4780,40 @@ mod tests {
         assert_eq!(
             vol.lines,
             vec![
-                "Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
+                "Xobo is a planet with two moons, orbiting a yellow-white dwarf (F); its day \
                  lasts about 1.5 standard days."
                     .to_string(),
+                "The Babako are bugbears.".to_string(),
                 "The Vavako are goblins.".to_string(),
-                "The Babako are hobgoblins.".to_string(),
+                "The Ddenke are hobgoblins.".to_string(),
+                "The Ngngoashzhoo are kobolds.".to_string(),
             ]
         );
         assert_eq!(
             vol.tongue_lines,
             vec![
-                "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
-                "Saa Wovewe Vebe. (in the goblin tongue: \"Vebe is the earth.\")".to_string(),
-                "Babako Babo Be Bo. (in the hobgoblin tongue: \"The Babako are hobgoblins.\")"
+                "Nxaabo Babako Boxa. (in the bugbear tongue: \"The Babako are bugbears.\")"
                     .to_string(),
-                "Vebe Vebe Be Bo. (in the hobgoblin tongue: \"Vebe is the earth.\")".to_string(),
+                "Nxaabo Xobo Xobo. (in the bugbear tongue: \"Xobo is the earth.\")".to_string(),
+                "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
+                "Saa Wovewe Xobo. (in the goblin tongue: \"Xobo is the earth.\")".to_string(),
+                "Ddenke Babo Be Bo. (in the hobgoblin tongue: \"The Ddenke are hobgoblins.\")"
+                    .to_string(),
+                "Xobo Vebe Be Bo. (in the hobgoblin tongue: \"Xobo is the earth.\")".to_string(),
+                "Ngngoashzhoo Ngngoo Shshoosshaa. (in the kobold tongue: \"The Ngngoashzhoo are \
+                 kobolds.\")"
+                    .to_string(),
+                "Xobo Ngngoo Ngngoongngoa. (in the kobold tongue: \"Xobo is the earth.\")"
+                    .to_string(),
             ]
         );
         assert_eq!(
             vol.tongue_gaps,
             vec![
+                "bugbear: gap — planet (no entry in this lexicon)".to_string(),
                 "goblin: gap — planet (no entry in this lexicon)".to_string(),
                 "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
+                "kobold: gap — planet (no entry in this lexicon)".to_string(),
             ]
         );
 
@@ -4687,16 +4825,18 @@ mod tests {
         assert_eq!(
             goblin.emic,
             vec![
+                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Babako are hobgoblins — neighbors.".to_string(),
-                "Vebe is the earth.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
+                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
+                "Xobo is the earth.".to_string(),
                 "The day returns because the sky must be crossed.".to_string(),
             ]
         );
         assert_eq!(
             goblin.margin,
             vec![
-                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
@@ -4708,14 +4848,16 @@ mod tests {
         );
         assert_eq!(
             goblin_doctrine.tongue_taught_line,
-            "Saa Wovewe Vebe. (\"Vebe is the earth — as it is taught.\")"
+            "Saa Wovewe Xobo. (\"Xobo is the earth — as it is taught.\")"
         );
         assert_eq!(
             goblin_doctrine.emic,
             vec![
+                "The Babako are bugbears — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
-                "The Babako are hobgoblins — neighbors.".to_string(),
-                "Vebe is the earth.".to_string(),
+                "The Ddenke are hobgoblins — neighbors.".to_string(),
+                "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
+                "Xobo is the earth.".to_string(),
                 "The moons are counted and known to the priesthood.".to_string(),
                 "The moons cross because Soevvae strides the sky, slowly.".to_string(),
                 "The day returns because Wowako strides the sky, briskly.".to_string(),
@@ -4725,7 +4867,7 @@ mod tests {
         assert_eq!(
             goblin_doctrine.margin,
             vec![
-                "In truth, Vebe is a planet orbiting a yellow-white dwarf (F); its day lasts \
+                "In truth, Xobo is a planet orbiting a yellow-white dwarf (F); its day lasts \
                  about 1.5 standard days."
                     .to_string()
             ]
@@ -4739,32 +4881,45 @@ mod tests {
         assert_eq!(
             hobgoblin.emic,
             vec![
+                "The Babako are bugbears — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
-                "The Babako are hobgoblins — ourselves.".to_string(),
-                "Vebe is the earth.".to_string(),
+                "The Ddenke are hobgoblins — ourselves.".to_string(),
+                "The Ngngoashzhoo are kobolds — rivals.".to_string(),
+                "Xobo is the earth.".to_string(),
                 "The day returns, as all things return.".to_string(),
             ]
         );
         assert_eq!(
             hobgoblin.margin,
             vec![
-                "In truth, Vebe is a planet with two moons, orbiting a yellow-white dwarf \
+                "In truth, Xobo is a planet with two moons, orbiting a yellow-white dwarf \
                  (F); its day lasts about 1.5 standard days."
                     .to_string()
             ]
         );
-        // The Demesne (BIO-35 Stage 1) recalibration shrank seed-1 hobgoblin
-        // below the organized rung: it is now a FOLK-only voice — no
-        // priesthood/doctrine section — matching the regenerated
-        // `book/src/gallery/the-book.md` (the Babako section ends at its folk
-        // margin, straight into the Reckoning). Goblin (above) is unchanged
-        // and still carries the doctrine that witnesses the additivity law.
-        assert!(
-            hobgoblin.doctrine.is_none(),
-            "post-Demesne, seed-1 hobgoblin is folk-only (organized→folk flip); \
-             unexpected doctrine heading: {:?}",
-            hobgoblin.doctrine.as_ref().map(|d| &d.heading)
+        // Merge re-placement: seed-1 hobgoblin (Ddenke) is now organized too
+        // (all four peoples clear the rung), matching the regenerated
+        // `book/src/gallery/the-book.md`. Its doctrine carries the same
+        // RevealedClaim moon formula the additivity law witnesses.
+        let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
+        assert_eq!(
+            hobgoblin_doctrine.heading,
+            "As the priesthood of the Ddenke teach it"
         );
+        assert_eq!(
+            hobgoblin_doctrine.emic,
+            vec![
+                "The Babako are bugbears — rivals.".to_string(),
+                "The Vavako are goblins — rivals.".to_string(),
+                "The Ddenke are hobgoblins — ourselves.".to_string(),
+                "The Ngngoashzhoo are kobolds — rivals.".to_string(),
+                "Xobo is the earth.".to_string(),
+                "The moons are counted and known to the priesthood.".to_string(),
+                "The moons cross because Kdonbem strides the sky, slowly.".to_string(),
+                "The day returns because Bobako strides the sky, briskly.".to_string(),
+            ]
+        );
+        assert!(hobgoblin_doctrine.annotations.is_empty());
     }
 
     /// C8 T2, the corpus law extended once more (mirrors
@@ -4947,27 +5102,20 @@ mod tests {
         );
     }
 
-    /// C8 T2, the margin law (spec §3.4). Re-pinned post-absorption (the
-    /// Rains moisture epoch, merge 9843b8f): seed 2's kobold — this test's
-    /// original "organized culture whose own witnessed cardinal equals the
-    /// true count contributes no shortfall" example (81 == 81, rung
-    /// `Predictive`) — flipped to a FOLK flagship under the epoch (see
-    /// `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`); a sweep of
-    /// seeds 1..=40 found no placed culture where an organized rung's held
-    /// count equals the true count, so that arm is no longer reachable
-    /// live in the measured landscape. Rather than assert an absence that
-    /// may just be this sweep's ceiling, the per-culture predicate
-    /// ([`culture_falls_short`]) is extracted pure and world-free (mirrors
-    /// [`reckoning_culture_lines`]) so BOTH arms — organized-and-clean
-    /// (no shortfall) and organized-short/folk-always-short — are pinned
-    /// exactly regardless of which the live seeds happen to exhibit. The
-    /// live-world half of the test still measures what seeds 2 and 3
-    /// actually show today: both kobolds are folk-only and fall short
-    /// even though each happens to witness every true event.
+    /// C8 T2, the margin law (spec §3.4). Re-derived at the-living-community
+    /// merge: the history-driven re-placement now seats FOUR organized
+    /// (`Predictive`) peoples at seeds 2 and 3, and both margin arms are
+    /// reachable LIVE. At seed 2 (true count 81) the lunar-witnessing pair
+    /// (bugbear, kobold) hold the full 81 — the CLEAN arm, no shortfall — while
+    /// the solar-only pair (goblin, hobgoblin) hold only 49 (capability gates
+    /// out the lunar class), a shortfall that fires the margin. Seed 3 is the
+    /// same shape at a smaller scale (true 53; clean pair 53, short pair 32).
+    /// The per-culture predicate ([`culture_falls_short`]) is still also
+    /// exercised pure and world-free (mirrors [`reckoning_culture_lines`]) so
+    /// both arms stay pinned regardless of the live landscape.
     #[test]
     fn the_margin_fires_exactly_when_knowledge_falls_short() {
-        // The pure predicate, both arms, driven synthetically — the
-        // authoritative pin now that no live seed exhibits the clean arm.
+        // The pure predicate, both arms, driven synthetically.
         assert!(
             !culture_falls_short(hornvale_worldgen::LadderRung::Predictive, 81, 81),
             "organized (Predictive) and held == true_count: no shortfall from it"
@@ -4989,54 +5137,65 @@ mod tests {
             "Unknown: no cardinal held at all, falls short"
         );
 
-        // The live-world half: seed 2, goblin/hobgoblin fall short of the
-        // true count (49 < 81); kobold — now folk-only, post-epoch — also
-        // falls short despite witnessing every true event (81 == 81).
+        // The live-world half: seed 2 (true 81). The lunar-witnessing pair
+        // (bugbear, kobold) are organized and hold the full count — the clean
+        // arm, no shortfall. The solar-only pair (goblin, hobgoblin) hold only
+        // 49, a shortfall that fires the margin.
         let world = generated(2);
         let at = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
-
         assert_eq!(true_event_count(&world, at), 81);
 
-        let kobold = hornvale_worldgen::observations_of(&world, "kobold", at).unwrap();
-        assert_eq!(
-            kobold.events.len(),
-            81,
-            "kobold witnesses every true event (capability 1.0), but holds no cardinal \
-             (folk-only, post-epoch) — the margin's folk arm, not the count arm"
-        );
-        let (kobold_rung, _) = hornvale_worldgen::ladder_of(&world, "kobold", at).unwrap();
-        assert_eq!(kobold_rung, hornvale_worldgen::LadderRung::Counted);
-
+        for kind in ["bugbear", "kobold"] {
+            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
+            let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
+            assert_eq!(rung, hornvale_worldgen::LadderRung::Predictive);
+            assert_eq!(
+                obs.events.len(),
+                81,
+                "{kind}: organized and witnesses every true event — the clean arm"
+            );
+            assert!(
+                !culture_falls_short(rung, obs.events.len() as u64, 81),
+                "{kind}: organized and held == true_count — no shortfall from it"
+            );
+        }
         for kind in ["goblin", "hobgoblin"] {
+            let (rung, _) = hornvale_worldgen::ladder_of(&world, kind, at).unwrap();
             let obs = hornvale_worldgen::observations_of(&world, kind, at).unwrap();
             assert_eq!(
                 obs.events.len(),
                 49,
-                "{kind}: witnesses only the (universally-public) solar class, missing kobold's \
-                 32 lunar events — a shortfall against the true count"
+                "{kind}: witnesses only the (universally-public) solar class, missing the \
+                 lunar events — a shortfall against the true count"
+            );
+            assert!(
+                culture_falls_short(rung, obs.events.len() as u64, 81),
+                "{kind}: organized but held < true_count — a shortfall"
             );
         }
 
-        // The epoch's own margin fires (from goblin/hobgoblin's shortfall,
-        // and now from kobold's folk arm too).
+        // The epoch's own margin fires (from the solar-only pair's shortfall).
         let vol = render_volume(&world);
         assert!(!vol.reckoning[1].margin.is_empty());
 
-        // seed 3: hobgoblin/kobold are folk-only (Counted) — no cardinal
-        // held at all, so they always fall short regardless of what they
-        // witnessed, even where (as kobold does here) the witnessed set
-        // happens to equal the true count.
+        // seed 3: the same shape at a smaller scale (true 53; the solar-only
+        // pair holds 32, a shortfall that fires the margin).
         let seed3 = generated(3);
         let at3 = hornvale_astronomy::StdDays::new(RECKONING_EPOCH_2_DAY).unwrap();
-        let (kobold3_rung, _) = hornvale_worldgen::ladder_of(&seed3, "kobold", at3).unwrap();
-        assert_eq!(kobold3_rung, hornvale_worldgen::LadderRung::Counted);
-        let kobold3_obs = hornvale_worldgen::observations_of(&seed3, "kobold", at3).unwrap();
-        assert_eq!(
-            kobold3_obs.events.len(),
-            true_event_count(&seed3, at3),
-            "seed 3's kobold happens to witness everything (cap 1.0) but still holds no \
-             cardinal (folk-only, no doctrine) — the margin's folk arm, not the count arm"
-        );
+        assert_eq!(true_event_count(&seed3, at3), 53);
+        for kind in ["goblin", "hobgoblin"] {
+            let (rung, _) = hornvale_worldgen::ladder_of(&seed3, kind, at3).unwrap();
+            let obs = hornvale_worldgen::observations_of(&seed3, kind, at3).unwrap();
+            assert_eq!(
+                obs.events.len(),
+                32,
+                "{kind}: solar-only witness, a shortfall"
+            );
+            assert!(
+                culture_falls_short(rung, obs.events.len() as u64, 53),
+                "{kind}: organized but held < true_count — a shortfall"
+            );
+        }
         let seed3_vol = render_volume(&seed3);
         assert!(!seed3_vol.reckoning[1].margin.is_empty());
     }

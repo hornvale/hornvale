@@ -9,6 +9,7 @@ dependencies = [
  "hornvale-almanac",
  "hornvale-astronomy",
  "hornvale-book",
+ "hornvale-chronicle",
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-explain",
@@ -35,6 +36,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-religion",
  "hornvale-settlement",
@@ -98,6 +100,13 @@ dependencies = [
 
 [[package]]
 name = "hornvale-historiography"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-history"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
@@ -228,6 +237,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-paleoclimate",

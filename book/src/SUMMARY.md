@@ -48,6 +48,7 @@
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
+- [An Abandoned Clearing — Seed 42](./gallery/history-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
@@ -212,6 +213,12 @@
 - [The Belonging](./chronicle/the-belonging.md)
 - [The Disposition](./chronicle/the-disposition.md)
 - [The Mettle](./chronicle/the-mettle.md)
+- [The Bane](./chronicle/the-bane.md)
+- [The Massing](./chronicle/the-massing.md)
+- [The Given Word](./chronicle/the-given-word.md)
+- [The Diorama](./chronicle/the-diorama.md)
+- [The Living Community](./chronicle/the-living-community.md)
+- [The Quarry](./chronicle/the-quarry.md)
 - [The Tidings](./chronicle/the-tidings.md)
 
 # Appendix: The Frontier

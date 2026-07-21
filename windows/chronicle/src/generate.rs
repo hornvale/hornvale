@@ -1,6 +1,7 @@
 //! Derive the four kinds of synthetic state from (seed, config).
 
 use crate::config::{EdgeKind, NodeId, SoundingConfig, SpeciesId};
+use crate::streams;
 use crate::world::{Community, Edge, SpeciesStub, World};
 use std::collections::BTreeMap;
 
@@ -11,7 +12,7 @@ pub(crate) fn seed_world(config: &SoundingConfig) -> World {
     // Species table. Always at least one entry: a `species == 0` config
     // still needs a synthetic species so index 0 (used as the fallback in
     // `seed_world` and `deliver`) is never out of bounds.
-    let mut s = config.seed.derive("chronicle/species").stream();
+    let mut s = config.seed.derive(streams::SPECIES).stream();
     let species_count = config.species.max(1);
     let species: Vec<SpeciesStub> = (0..species_count)
         .map(|_| SpeciesStub {
@@ -21,11 +22,11 @@ pub(crate) fn seed_world(config: &SoundingConfig) -> World {
         .collect();
 
     // Per-node capacity (one node per initial community; foundings reuse nodes).
-    let mut cap = config.seed.derive("chronicle/capacity").stream();
+    let mut cap = config.seed.derive(streams::CAPACITY).stream();
     let capacity: Vec<f64> = (0..z).map(|_| 50.0 + 150.0 * cap.next_f64()).collect();
 
     // Communities: a species, a starting population, its own node.
-    let mut cs = config.seed.derive("chronicle/communities").stream();
+    let mut cs = config.seed.derive(streams::COMMUNITIES).stream();
     let communities: Vec<Community> = (0..z)
         .map(|i| Community {
             species: SpeciesId(if config.species == 0 {
@@ -58,7 +59,7 @@ fn build_graph(config: &SoundingConfig, z: usize) -> BTreeMap<NodeId, Vec<Edge>>
     if z == 0 {
         return g;
     }
-    let mut e = config.seed.derive("chronicle/graph").stream();
+    let mut e = config.seed.derive(streams::GRAPH).stream();
     let deg = config.avg_degree.max(0.0).round() as u32;
     for i in 0..z {
         let mut edges = Vec::new();

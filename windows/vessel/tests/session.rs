@@ -269,8 +269,10 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        // The Book Polish (2026-07-20): re-pinned with its subject.
-        after.contains("Vebe has two moons, as the initiated count."),
+        // The Book Polish (2026-07-20): re-pinned with its subject. The Living
+        // Community epoch (this merge): seed 1's rendered planet name
+        // re-derived Vebe -> Xobo under the epoch's re-placement.
+        after.contains("Xobo has two moons, as the initiated count."),
         "the ledger's own moon-count, now unlocked: {after}"
     );
     assert!(
@@ -298,7 +300,7 @@ fn the_stitch_law_end_to_end() {
         _ => panic!("consult must not release"),
     };
     assert!(
-        consulted.contains("Vebe has two moons, as the initiated count."),
+        consulted.contains("Xobo has two moons, as the initiated count."),
         "heard 'nine' still renders the ledger's 'two' — heard is not true, printed: {consulted}"
     );
     assert!(

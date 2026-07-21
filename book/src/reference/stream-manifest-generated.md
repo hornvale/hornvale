@@ -29,6 +29,18 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `astronomy/moon-density` | per-moon density draw (drawn only for captured moons; impact moons still consume it) |
 | `astronomy/moon-age` | per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it) |
 
+### hornvale-chronicle
+
+| Label | Meaning |
+|---|---|
+| `chronicle/species` | the species-generation stream |
+| `chronicle/capacity` | the carrying-capacity draw |
+| `chronicle/communities` | the community-formation draw |
+| `chronicle/graph` | the connection-graph draw |
+| `chronicle/events` | the event-simulation stream |
+| `chronicle/deliver` | the event-delivery/propagation stream |
+| `chronicle/replay` | the replay-measurement stream |
+
 ### hornvale-climate
 
 *(no seed-derivation streams)*
@@ -36,6 +48,17 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 ### hornvale-culture
 
 *(no seed-derivation streams)*
+
+### hornvale-history
+
+| Label | Meaning |
+|---|---|
+| `history` | root stream for history: reserved for the deep-history bake (Task 3, run at the composition root). No draw is made against it directly. |
+| `residue` | flesh::residue_of's deterministic flavor draws (Task 2). |
+| `structures` | flesh::structures_of's dwelling-count variance draws (Task 2). |
+| `history/bake` | the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse draws, taken sequentially from one stream in commit order (Task 3, run at the composition root). |
+| `history/genesis` | the deep-history bake's genesis draws: proto-community count, site picks, and tech-advance offset (Task 3). Further derives a per-people sub-stream `history/genesis/<people-kind>` via `StreamLabel::dynamic(people.0)`. |
+| `history/flesh` | the per-occupation flesh seed the legibility surface derives before expanding residue/structures on demand (never committed). |
 
 ### hornvale-kernel
 
@@ -142,6 +165,17 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 |---|---|
 | `vessel/agent` | minted agent id draw |
 | `vessel/walk` | walker-battery deterministic walk |
+
+### hornvale-worldgen
+
+| Label | Meaning |
+|---|---|
+| `schema` | the folk causal-schema-selection sub-leg |
+| `sky` | the sky-domain fact-shape sub-leg |
+| `lexeme` | the lexicalization sub-leg for a chosen schema |
+| `doctrine-schema` | the doctrine-voice twin of the folk schema-selection leg |
+| `doctrine-lexeme` | the doctrine-voice twin of the lexeme leg |
+| `religion/deity/v2` | the deity-naming stream, epoch v2 |
 
 ### hornvale-kernel (internal)
 
