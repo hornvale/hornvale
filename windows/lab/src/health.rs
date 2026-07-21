@@ -14,7 +14,7 @@ use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, LocaleTerrain, Npc, RESTED,
-    SUSTENANCE, Terrain, affect_of, derive_npcs,
+    SUSTENANCE, Terrain, affect_of, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -82,8 +82,13 @@ pub fn run_simulation(
             Err(_) => break,
         };
         day += 1.0;
-        let now = WorldTime { day };
+        // Sample each creature at a representative WAKING moment of the day just
+        // simulated — not midnight, where a diurnal creature is asleep (The
+        // Slumber): distress is a waking state, so the metric reads it while up.
         for (i, npc) in npcs.iter().enumerate() {
+            let now = WorldTime {
+                day: (day - 1.0) + waking_offset(npc.activity),
+            };
             traces[i].push(affect_of(&ledger, npc, now, terrain));
         }
     }

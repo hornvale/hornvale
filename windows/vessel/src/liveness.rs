@@ -996,6 +996,26 @@ const SURVIVAL_OVERRIDE: f64 = 0.9;
 /// Fine enough to catch a crepuscular creature's narrow dawn/dusk bands.
 const WAKE_SCAN_STEP: f64 = 0.05;
 
+/// A representative AWAKE fraction of the day for `activity` — where the health
+/// metric samples a creature's felt state (The Slumber). Sampling at midnight
+/// (`frac 0`) would find a diurnal creature asleep and miss its waking distress;
+/// a sleeping creature is not distressed, so the metric must read it while it is
+/// up. Midday for diurnal, deep night for nocturnal, dawn for crepuscular — each
+/// verified awake by `is_awake`.
+/// type-audit: bare-ok(ratio: return)
+pub fn waking_offset(activity: ActivityCycle) -> f64 {
+    // A representative moment EARLY in the active phase, deliberately BEFORE the
+    // diurnal thermal peak (mid-afternoon), so the metric reads a creature's
+    // typical waking condition rather than the noon heat spike — thirst distress
+    // is time-of-day-independent, but thermal peaks midday, and a brief midday
+    // heat is not chronic distress.
+    match activity {
+        ActivityCycle::Diurnal => 0.35,     // mid-morning
+        ActivityCycle::Nocturnal => 0.9,    // deep night (coolest)
+        ActivityCycle::Crepuscular => 0.25, // dawn
+    }
+}
+
 /// The next day after `day` at which a creature of `activity` wakes — so a
 /// sleeping creature JUMPS through its off-phase in one `Rest` rather than
 /// spinning (The Slumber, spec §4). A bounded scan (at most ~1.5 days, one full
