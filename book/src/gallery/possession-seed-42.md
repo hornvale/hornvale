@@ -30,7 +30,7 @@ Ways on: N, SW, SE.
 You stand in temperate forest — a deadfall tangle damp on a rise — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is clear but for high cirrus.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (90 stirred).
+Time passes. You sense movement nearby (111 stirred).
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is clear.
 > knows
