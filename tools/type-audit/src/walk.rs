@@ -1,6 +1,7 @@
 //! Walking the workspace's source tree and grouping audited items by crate.
 
 use crate::extract::{AuditItem, positions_in_file};
+use crate::stream_label::from_static_literal_calls_outside_tests;
 use std::path::{Path, PathBuf};
 
 /// The workspace roots scanned when `check` is given no explicit paths.
@@ -13,6 +14,25 @@ pub struct CrateItems {
     pub crate_name: String,
     /// Every audited item found in the crate's non-test source.
     pub items: Vec<AuditItem>,
+    /// Inline `StreamLabel::from_static(<literal>)` calls found outside a
+    /// `streams.rs` file in this crate (see [`crate::stream_label`]).
+    pub stream_label_violations: Vec<StreamLabelViolation>,
+}
+
+/// One inline `StreamLabel::from_static(<literal>)` call site found outside
+/// a file literally named `streams.rs`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StreamLabelViolation {
+    /// Path (as scanned) of the offending file.
+    pub path: PathBuf,
+    /// 1-based source line of the call.
+    pub line: usize,
+}
+
+/// True iff `path`'s own filename (not full path) is `streams.rs` — the
+/// one file per crate exempted from the inline-literal check.
+fn is_streams_file(path: &Path) -> bool {
+    path.file_name().and_then(|n| n.to_str()) == Some("streams.rs")
 }
 
 /// Derive a crate label from a source-file path.
@@ -56,14 +76,38 @@ pub fn scan(roots: &[PathBuf]) -> Result<Vec<CrateItems>, String> {
     for path in files {
         let src = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
         let file = syn::parse_file(&src).map_err(|e| format!("{}: {e}", path.display()))?;
+
+        // A literal-argument `from_static` call can hide inside a private
+        // fn body with no audited `pub` item at all, so this check runs on
+        // every file — it cannot ride the `items.is_empty()` skip below.
+        let violations: Vec<StreamLabelViolation> = if is_streams_file(&path) {
+            Vec::new()
+        } else {
+            from_static_literal_calls_outside_tests(&src, &file)
+                .map_err(|e| format!("{}: {e}", path.display()))?
+                .into_iter()
+                .map(|c| StreamLabelViolation {
+                    path: path.clone(),
+                    line: c.line,
+                })
+                .collect()
+        };
+
         let items = positions_in_file(&file);
-        if items.is_empty() {
+        if items.is_empty() && violations.is_empty() {
             continue;
         }
         let crate_name = crate_name_of(&path);
         match out.iter_mut().find(|c| c.crate_name == crate_name) {
-            Some(c) => c.items.extend(items),
-            None => out.push(CrateItems { crate_name, items }),
+            Some(c) => {
+                c.items.extend(items);
+                c.stream_label_violations.extend(violations);
+            }
+            None => out.push(CrateItems {
+                crate_name,
+                items,
+                stream_label_violations: violations,
+            }),
         }
     }
     out.sort_by(|a, b| a.crate_name.cmp(&b.crate_name));
