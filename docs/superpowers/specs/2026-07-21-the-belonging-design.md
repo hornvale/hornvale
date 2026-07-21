@@ -1,6 +1,10 @@
 # The Belonging — social affiliation, the sixth drive
 
-**Status:** spec (G3 review)
+**Status:** shipped (merged 2026-07-21) — see the
+[chronicle](../../../book/src/chronicle/the-belonging.md) and
+[retrospective](../../retrospectives/the-belonging.md). One model refinement
+during build: loneliness is *reachability-gated* (dormant when home is beyond
+homing range, never chronic-social-distress) — see the retro.
 **Date:** 2026-07-21
 **Campaign:** The Belonging (Temperament followup #3, sixth & last drive: social)
 **Precedes:** implementation plan → execution → merge

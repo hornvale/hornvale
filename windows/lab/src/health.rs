@@ -162,6 +162,7 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
     let mut cause_fatigue = 0usize;
     let mut cause_hunger = 0usize;
     let mut cause_danger = 0usize;
+    let mut cause_social = 0usize;
     // by-species: (distress ticks, total ticks) per species.
     let mut species_stats: BTreeMap<String, (usize, usize)> = BTreeMap::new();
 
@@ -185,6 +186,7 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
                     Some(DriveKind::Fatigue) => cause_fatigue += 1,
                     Some(DriveKind::Hunger) => cause_hunger += 1,
                     Some(DriveKind::Danger) => cause_danger += 1,
+                    Some(DriveKind::Social) => cause_social += 1,
                     None => {}
                 }
             } else {
@@ -209,6 +211,7 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
         ("fatigue".to_string(), frac(cause_fatigue, distress_ticks)),
         ("hunger".to_string(), frac(cause_hunger, distress_ticks)),
         ("danger".to_string(), frac(cause_danger, distress_ticks)),
+        ("social".to_string(), frac(cause_social, distress_ticks)),
     ]
     .into_iter()
     .collect();
