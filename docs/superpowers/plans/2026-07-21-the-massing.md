@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **STATUS: SHIPPED 2026-07-21 — registry MAP-66.** All 7 tasks merged, whole-branch review clean, Orrery deployed.
+
 **Goal:** Give the Orrery globe a switchable render-**style** layer (Smooth / Voxel / Terraced / Faceted), orthogonal to the data lens, plus a client-only deeper-LOD ceiling so the globe zooms in far further.
 
 **Architecture:** A `GlobeStyle` selects the geometry builder + material used by the globe's per-tile slot builder; the existing `Lens` still supplies color. Style is a pure function of scene data → geometry (no determinism cost — client render). Voxel/Terraced add new geometry builders in `worldMesh.ts`; Faceted is a material flag; Smooth is unchanged. LOD-deepening raises `LOD_CDLOD_MAX_LEVEL` and lowers the globe camera's min distance so deeper region tiles are selected and reachable.

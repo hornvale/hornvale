@@ -213,6 +213,7 @@
 - [The Disposition](./chronicle/the-disposition.md)
 - [The Mettle](./chronicle/the-mettle.md)
 - [The Bane](./chronicle/the-bane.md)
+- [The Massing](./chronicle/the-massing.md)
 
 # Appendix: The Frontier
 
