@@ -18,7 +18,9 @@
 //! purely from the world seed and the occupation entity id. Same world ⇒ same
 //! prose, byte for byte.
 
-use hornvale_history::flesh::{Residue, ResidueItem, Structure, residue_of, structures_of};
+use hornvale_history::flesh::{
+    Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
+};
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
 };
@@ -601,45 +603,89 @@ fn structure_phrase(structures: &[Structure]) -> String {
     join_prose(&parts)
 }
 
-/// The residue sentence — what physically remains. A doll in the grass is the
-/// campaign's whole promise, so it leads when present.
+/// The residue sentence — the archaeological impression a ruin leaves in the
+/// present-day grass. Partitioned by material [`Durability`]: the perishable
+/// personal effects a *young* ruin still holds (the doll — the campaign's
+/// whole promise) lead when present, then the durable record that endures for
+/// millennia (potsherds, foundations, worked stone, bone) reads as a site a
+/// searcher can piece a story out of — never a bare item list.
 fn residue_sentence(residue: &Residue) -> String {
     if residue.items.is_empty() {
         return "Of all that, nothing legible remains: the ground has taken it back.".to_string();
     }
-    // The doll leads — the signature find of an abandoned family hamlet.
-    let mut ordered: Vec<ResidueItem> = residue.items.clone();
-    ordered.sort_by_key(residue_rank);
-    let parts: Vec<String> = ordered.iter().map(|i| residue_phrase(*i)).collect();
-    format!(
-        "They did not take everything. In the grass a searcher finds {}.",
-        join_prose(&parts)
-    )
+    // Split the finds by durability: perishable personal effects vs the
+    // durable/eternal archaeological record. Sort each by evocativeness and
+    // fold out duplicate kinds (a doubled worked-stone scatter reads once).
+    let mut perishable: Vec<ResidueItem> = residue
+        .items
+        .iter()
+        .copied()
+        .filter(|i| i.durability() == Durability::Perishable)
+        .collect();
+    let mut durable: Vec<ResidueItem> = residue
+        .items
+        .iter()
+        .copied()
+        .filter(|i| i.durability() != Durability::Perishable)
+        .collect();
+    perishable.sort_by_key(residue_rank);
+    perishable.dedup();
+    durable.sort_by_key(residue_rank);
+    durable.dedup();
+
+    let mut sentences: Vec<String> = Vec::new();
+    if !perishable.is_empty() {
+        let parts: Vec<String> = perishable.iter().map(|i| residue_phrase(*i)).collect();
+        sentences.push(format!(
+            "They did not take everything: in the grass a searcher finds {}.",
+            join_prose(&parts)
+        ));
+    }
+    if !durable.is_empty() {
+        let parts: Vec<String> = durable.iter().map(|i| residue_phrase(*i)).collect();
+        // A different lead depending on whether a perishable find already
+        // opened the paragraph — so the durable record either stands alone as
+        // the whole impression or reads as the deeper layer beneath the doll.
+        let lead = if perishable.is_empty() {
+            "The dwellings are long gone to grass, but the ground still keeps the shape of them"
+        } else {
+            "Older still, the durable record endures"
+        };
+        sentences.push(format!("{lead}: {}.", join_prose(&parts)));
+    }
+    sentences.join(" ")
 }
 
-/// Sort key putting the most evocative finds first (the doll above all).
+/// Sort key putting the most evocative finds first (the doll above all, then
+/// the sacred and inscribed, then the domestic debris that outlasts them).
 /// type-audit: bare-ok(count: return)
 fn residue_rank(item: &ResidueItem) -> u8 {
     match item {
         ResidueItem::Doll => 0,
-        ResidueItem::Bauble => 1,
-        ResidueItem::Reliquary => 2,
-        ResidueItem::Inscription => 3,
-        ResidueItem::Tool => 4,
-        ResidueItem::Weapon => 5,
-        ResidueItem::Bones => 6,
+        ResidueItem::Reliquary => 1,
+        ResidueItem::Inscription => 2,
+        ResidueItem::Bauble => 3,
+        ResidueItem::Potsherd => 4,
+        ResidueItem::Foundation => 5,
+        ResidueItem::WorkedStone => 6,
+        ResidueItem::Tool => 7,
+        ResidueItem::Weapon => 8,
+        ResidueItem::Bones => 9,
     }
 }
 
 fn residue_phrase(item: ResidueItem) -> String {
     match item {
         ResidueItem::Doll => "a child's rag doll, ragged but whole, where a doorway once stood",
-        ResidueItem::Bauble => "a small bead ornament, its string long rotted",
+        ResidueItem::Bauble => "a scatter of bead ornaments, their strings long rotted",
         ResidueItem::Reliquary => "a sacred vessel, buried deliberate and deep",
         ResidueItem::Inscription => "a slab of incised text, outlasting everything around it",
         ResidueItem::Tool => "a worked pot, chipped at the lip",
         ResidueItem::Weapon => "the corroded head of a blade",
-        ResidueItem::Bones => "unburied bones, left where they fell",
+        ResidueItem::Bones => "old bone, worked loose from the ground by the frost",
+        ResidueItem::Potsherd => "potsherds scattered where the huts once stood",
+        ResidueItem::Foundation => "the low turf-lines of the dwellings still ridging the grass",
+        ResidueItem::WorkedStone => "a scatter of worked flint",
     }
     .to_string()
 }

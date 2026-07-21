@@ -3,7 +3,7 @@
 //! inputs always produce the same output, with no world or global state.
 
 use hornvale_history::flesh::{
-    ResidueItem, RoleHandle, Structure, persona_of, residue_of, structures_of,
+    Durability, ResidueItem, RoleHandle, Structure, persona_of, residue_of, structures_of,
 };
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
@@ -80,10 +80,52 @@ fn a_young_migrated_goblin_hamlet_leaves_a_doll() {
     let r = residue_of(&occ, 2000.0, Seed(7)); // died 1980, now 2000 -> 20y old
     assert!(r.items.contains(&ResidueItem::Doll));
 
-    // An older migrated ruin has weathered to nothing — the belongings a
-    // hamlet leaves in the grass do not outlast the centuries.
-    let old = residue_of(&occ, 50_000.0, Seed(7));
-    assert!(old.items.is_empty());
+    // A far-future ruin (age ~48_000 y) has weathered even its durable
+    // debris away — beyond DURABLE_TRACE_AGE nothing but eternal finds
+    // survive, and a plain hamlet has none.
+    let ancient = residue_of(&occ, 50_000.0, Seed(7));
+    assert!(ancient.items.is_empty());
+}
+
+#[test]
+fn an_ancient_migrated_hamlet_leaves_durable_traces_but_no_doll() {
+    // Task 8b keystone: the real seed-42 world has NO ruin younger than 250 y
+    // — its ruins are all ancient climate abandonments (age 250–1275). Those
+    // MUST still leave a findable archaeological impression: the perishable
+    // doll has rotted away, but the durable domestic debris (potsherds, the
+    // foundation lines of the dwellings, scattered worked stone) endures for
+    // millennia. This is what makes an ancient ruin legible rather than bare
+    // ground.
+    let mut occ = burned_goblin_village();
+    occ.cause = Some(CauseOfEnd::Migrated);
+    occ.ended = Some(1500.0);
+    let r = residue_of(&occ, 2000.0, Seed(7)); // age 500 — an ancient ruin
+
+    // The durable archaeological record is present…
+    assert!(
+        r.items.contains(&ResidueItem::Potsherd),
+        "an ancient hamlet still leaves potsherds: {:?}",
+        r.items
+    );
+    assert!(
+        r.items.contains(&ResidueItem::Foundation),
+        "…and the foundation lines of its dwellings: {:?}",
+        r.items
+    );
+    // …but the perishable doll has rotted away.
+    assert!(
+        !r.items.contains(&ResidueItem::Doll),
+        "a 500-year ruin's doll has perished: {:?}",
+        r.items
+    );
+    // And every surviving find is in fact non-perishable (the filter held).
+    assert!(
+        r.items
+            .iter()
+            .all(|i| i.durability() != Durability::Perishable),
+        "no perishable find survives an ancient ruin: {:?}",
+        r.items
+    );
 }
 
 #[test]

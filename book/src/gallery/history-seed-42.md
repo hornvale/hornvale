@@ -43,5 +43,5 @@ The last of them — at its height a mere three souls.
 In the grass today
 ------------------
 At its height a mere three souls, the last bugbears here raised two huts and a granary.
-Of all that, nothing legible remains: the ground has taken it back.
+The dwellings are long gone to grass, but the ground still keeps the shape of them: potsherds scattered where the huts once stood, the low turf-lines of the dwellings still ridging the grass, and a scatter of worked flint.
 ```
