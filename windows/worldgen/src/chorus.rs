@@ -1577,6 +1577,17 @@ const K_PREDICT: usize = 8;
 /// priesthood's teaching horizon, an honest arm.
 const PREDICTION_HORIZON_STD_DAYS: f64 = 10_000.0;
 
+/// How close a naive prediction must land to its own fit's mean interval
+/// to count as a hit (spec "Hit or miss, and a tolerance") -- 5%, the
+/// same numeric convention as `hornvale_astronomy::resonance::
+/// RATIO_TOLERANCE` without reusing that unrelated constant.
+const PREDICTION_TOLERANCE_FRACTION: f64 = 0.05;
+
+/// How many consecutive retrospective misses constitute a live crisis
+/// (spec "Crisis, not anomaly") -- a single miss is silently absorbed;
+/// only a run counts.
+const CRISIS_MISS_RUN: usize = 2;
+
 /// One culture's witnessed eclipse record by day `at` (C8 §3.1) — pure,
 /// derived, ascending by day (the same order [`hornvale_astronomy::eclipse_events`]
 /// returns). There is no separate "memory" store: the institution's
@@ -1658,13 +1669,93 @@ fn recurrence_key(moon: usize, body: hornvale_astronomy::EclipseBody) -> (usize,
     (moon, discriminant)
 }
 
+/// The mean interval between consecutive entries of an ascending day
+/// sequence of at least two elements -- the naive model's own building
+/// block.
+fn mean_interval(days: &[f64]) -> f64 {
+    let n = days.len();
+    (days[n - 1] - days[0]) / (n - 1) as f64
+}
+
+/// The naive model's own next-day prediction from an ascending witnessed-
+/// day sequence of at least two elements: the last witnessed day plus the
+/// mean interval between witnessed occurrences (spec "A naive model,
+/// replacing the omniscient lookup").
+fn naive_predicted_day(days: &[f64]) -> f64 {
+    days[days.len() - 1] + mean_interval(days)
+}
+
+/// Whether a naive prediction's own day falls beyond the teaching horizon
+/// from `at` -- the honest-omission arm, rebased from the naive value
+/// rather than an omniscient existence check (spec: "the existing
+/// honest-omission arm is preserved, re-based on the new value").
+fn beyond_teaching_horizon(predicted_day: f64, at: f64) -> bool {
+    predicted_day > at + PREDICTION_HORIZON_STD_DAYS
+}
+
+/// Whether the naive model, fit on `days[..i]`, correctly predicted
+/// `days[i]` -- within `PREDICTION_TOLERANCE_FRACTION` of that fit's own
+/// mean interval. `i` must be >= 2 (at least two prior occurrences to fit
+/// a mean interval) -- every call site below satisfies this by
+/// construction.
+fn retrospective_hit(days: &[f64], i: usize) -> bool {
+    let prior = &days[..i];
+    let predicted = naive_predicted_day(prior);
+    let tolerance = PREDICTION_TOLERANCE_FRACTION * mean_interval(prior);
+    (predicted - days[i]).abs() <= tolerance
+}
+
+/// Whether a live crisis exists for an ascending witnessed-day sequence:
+/// the `CRISIS_MISS_RUN` most recent retrospective checks are all misses
+/// (spec "Crisis, not anomaly"). Fewer than `CRISIS_MISS_RUN + 2` entries
+/// means fewer than `CRISIS_MISS_RUN` checks even exist yet -- no crisis.
+fn crisis_live(days: &[f64]) -> bool {
+    let n = days.len();
+    if n < CRISIS_MISS_RUN + 2 {
+        return false;
+    }
+    ((n - CRISIS_MISS_RUN)..n).all(|i| !retrospective_hit(days, i))
+}
+
+/// The most-witnessed recurrence class in an observation set, and its
+/// count -- the same tie-break `ladder_of` has always used (max count,
+/// then the numerically smallest `(moon index, body)` key). `None` for an
+/// empty observation set. Factored out of `ladder_of` so `crisis_of`
+/// (below) shares the identical class-selection logic rather than
+/// re-deriving it.
+fn top_recurrence_class(observations: &Observations) -> Option<((usize, u8), usize)> {
+    let mut class_counts: BTreeMap<(usize, u8), usize> = BTreeMap::new();
+    for &(_, moon, body) in &observations.events {
+        *class_counts.entry(recurrence_key(moon, body)).or_insert(0) += 1;
+    }
+    class_counts
+        .iter()
+        .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
+        .map(|(&key, &count)| (key, count))
+}
+
+/// The ascending witnessed days of one recurrence class, filtered from a
+/// culture's full observation set (already day-ascending per
+/// `observations_of`'s own doc, so filtering to one class preserves
+/// order).
+fn class_days(observations: &Observations, key: (usize, u8)) -> Vec<f64> {
+    observations
+        .events
+        .iter()
+        .filter(|&&(_, moon, body)| recurrence_key(moon, body) == key)
+        .map(|&(day, _, _)| day)
+        .collect()
+}
+
 /// `species`'s ladder rung by day `at`, plus — at `Predictive` only — the
 /// predicted next event's day of the most-observed recurrence class
 /// (C8 §3.2/§3.3). The organized gate reuses
 /// [`doctrine_of`]`(world, species).is_some()` (SOC-1); a tie among
 /// equally-observed recurrence classes breaks toward the numerically
 /// smallest `(moon index, body)` key — deterministic, no significance
-/// claimed beyond that.
+/// claimed beyond that. The predicted day is the naive model's own
+/// extrapolation (see `naive_predicted_day`), not an omniscient lookup —
+/// it can be, and sometimes is, wrong (see `crisis_of`).
 ///
 /// type-audit: bare-ok(identifier-text: species), bare-ok(diagnostic-value: return)
 pub fn ladder_of(
@@ -1681,17 +1772,8 @@ pub fn ladder_of(
         return Ok((LadderRung::Counted, None));
     }
 
-    let mut class_counts: BTreeMap<(usize, u8), usize> = BTreeMap::new();
-    for &(_, moon, body) in &observations.events {
-        *class_counts.entry(recurrence_key(moon, body)).or_insert(0) += 1;
-    }
-    // `class_counts` is never empty here: `observations.events` is
-    // non-empty (checked above), and every event contributes to exactly
-    // one class.
-    let (&top_key, &top_count) = class_counts
-        .iter()
-        .max_by_key(|(key, count)| (**count, std::cmp::Reverse(**key)))
-        .expect("class_counts is non-empty whenever observations.events is");
+    let (top_key, top_count) = top_recurrence_class(&observations)
+        .expect("top_recurrence_class is non-empty whenever observations.events is");
 
     if top_count < K_PREDICT {
         let rung = if observations.events.len() >= K_COUNT {
@@ -1702,34 +1784,159 @@ pub fn ladder_of(
         return Ok((rung, None));
     }
 
-    let sky = crate::sky_of(world)?;
-    let crate::Sky::Generated(sky) = sky else {
-        return Err(BuildError::Pins(
-            "the diachronic prediction requires a Generated sky".to_string(),
-        ));
-    };
-    let horizon_end = hornvale_astronomy::StdDays::new(at.get() + PREDICTION_HORIZON_STD_DAYS)
-        .map_err(|e| BuildError::Pins(e.to_string()))?;
-    let target_body = if top_key.1 == 0 {
-        hornvale_astronomy::EclipseBody::Solar
+    let days = class_days(&observations, top_key);
+    let predicted_day = naive_predicted_day(&days);
+    let prediction = if beyond_teaching_horizon(predicted_day, at.get()) {
+        None
     } else {
-        hornvale_astronomy::EclipseBody::Lunar
+        Some(predicted_day)
     };
-    let prediction =
-        hornvale_astronomy::eclipse_events(sky.system(), sky.calendar(), at, horizon_end)
-            .into_iter()
-            .find(|event| {
-                event.day.get() > at.get() && event.moon == top_key.0 && event.body == target_body
-            })
-            .map(|event| event.day.get());
-
     Ok((LadderRung::Predictive, prediction))
+}
+
+/// One culture's predicted-vs-actual crisis state for its own top
+/// recurrence class, at `at` (spec "Crisis, not anomaly") -- `Some`
+/// exactly when a live crisis exists, carrying the most recent missed
+/// retrospective check's own predicted and actual days for the Reckoning
+/// margin to quote verbatim. Requires the same organized-cult gate
+/// `ladder_of` itself checks (SOC-1): a folk-only culture never has a
+/// crisis to report, since nothing was ever predicted for it to miss.
+///
+/// type-audit: bare-ok(identifier-text: species)
+pub fn crisis_of(
+    world: &World,
+    species: &str,
+    at: hornvale_astronomy::StdDays,
+) -> Result<Option<PredictionCrisis>, BuildError> {
+    let observations = observations_of(world, species, at)?;
+    if doctrine_of(world, species).is_none() {
+        return Ok(None);
+    }
+    let Some((top_key, top_count)) = top_recurrence_class(&observations) else {
+        return Ok(None);
+    };
+    if top_count < K_PREDICT {
+        return Ok(None);
+    }
+    let days = class_days(&observations, top_key);
+    if !crisis_live(&days) {
+        return Ok(None);
+    }
+    let n = days.len();
+    Ok(Some(PredictionCrisis {
+        last_predicted: naive_predicted_day(&days[..n - 1]),
+        last_actual: days[n - 1],
+    }))
+}
+
+/// One culture's live prediction crisis (see [`crisis_of`]): the most
+/// recent missed retrospective check's own predicted and actual days, for
+/// the Reckoning margin to quote verbatim.
+/// type-audit: bare-ok(diagnostic-value: last_predicted), bare-ok(diagnostic-value: last_actual)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PredictionCrisis {
+    /// What the naive model, fit on every occurrence before the most
+    /// recent one, predicted for it.
+    pub last_predicted: f64,
+    /// What actually happened.
+    pub last_actual: f64,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use hornvale_language::LossReason;
+
+    /// The naive model's own worked example (spec "Hit or miss, and a
+    /// tolerance"): intervals 30,30,30,30,45 read hit-hit-hit-miss and
+    /// are NOT yet a crisis (only the tail two checks decide that, and
+    /// the tail is hit-then-miss here, not miss-then-miss). Hand-verified
+    /// before committing: prior [0,30] predicts 60 (exact hit); prior
+    /// [0,30,60] predicts 90 (exact hit); prior [0,30,60,90] predicts
+    /// 120 (exact hit); prior [0,30,60,90,120] (mean 30) predicts 150,
+    /// actual is 165, a 15-day miss against a 1.5-day tolerance.
+    #[test]
+    fn the_naive_model_reads_hit_hit_hit_miss_and_no_crisis_yet() {
+        let days = [0.0, 30.0, 60.0, 90.0, 120.0, 165.0];
+        assert!(retrospective_hit(&days, 2), "prior [0,30] -> 60: exact hit");
+        assert!(
+            retrospective_hit(&days, 3),
+            "prior [0,30,60] -> 90: exact hit"
+        );
+        assert!(
+            retrospective_hit(&days, 4),
+            "prior [0,30,60,90] -> 120: exact hit"
+        );
+        assert!(
+            !retrospective_hit(&days, 5),
+            "prior [0,30,60,90,120] (mean 30) predicts 150, actual is 165: a miss"
+        );
+        assert!(
+            !crisis_live(&days),
+            "the two most recent checks are hit(i=4), miss(i=5) -- not both misses"
+        );
+    }
+
+    /// The crisis case (spec "Hit or miss, and a tolerance"): intervals
+    /// 30,30,30,45,60 miss on BOTH of the tail two checks. Hand-verified:
+    /// prior [0,30,60,90] (mean 30) predicts 120, actual is 135, a 15-day
+    /// miss against a 1.5-day tolerance; prior [0,30,60,90,135] (mean
+    /// 33.75) predicts 168.75, actual is 195, a 26.25-day miss against a
+    /// 1.6875-day tolerance.
+    #[test]
+    fn two_consecutive_misses_read_a_live_crisis() {
+        let days = [0.0, 30.0, 60.0, 90.0, 135.0, 195.0];
+        assert!(retrospective_hit(&days, 2), "prior [0,30] -> 60: exact hit");
+        assert!(
+            retrospective_hit(&days, 3),
+            "prior [0,30,60] -> 90: exact hit"
+        );
+        assert!(
+            !retrospective_hit(&days, 4),
+            "prior [0,30,60,90] (mean 30) predicts 120, actual is 135: a miss"
+        );
+        assert!(
+            !retrospective_hit(&days, 5),
+            "prior [0,30,60,90,135] (mean 33.75) predicts 168.75, actual is 195: a miss"
+        );
+        assert!(
+            crisis_live(&days),
+            "the two most recent checks are both misses: a live crisis"
+        );
+    }
+
+    /// Fewer than CRISIS_MISS_RUN + 2 witnessed days means fewer than
+    /// CRISIS_MISS_RUN retrospective checks even exist yet -- never a
+    /// crisis, regardless of how wild the one or two available checks
+    /// would read.
+    #[test]
+    fn too_few_witnessed_days_are_never_a_crisis() {
+        assert!(
+            !crisis_live(&[0.0, 30.0, 1000.0]),
+            "only one check exists (i=2)"
+        );
+        assert!(!crisis_live(&[]), "empty");
+    }
+
+    /// The rebased honest-omission arm (spec Task 1): a naive prediction
+    /// beyond the teaching horizon from `at` is treated exactly like the
+    /// old omniscient-existence check used to be -- omitted, never taught
+    /// as if it were certain.
+    #[test]
+    fn beyond_teaching_horizon_reads_true_past_the_prediction_horizon() {
+        assert!(
+            beyond_teaching_horizon(20_000.0, 5_000.0),
+            "20,000 is beyond 5,000 + 10,000"
+        );
+        assert!(
+            !beyond_teaching_horizon(10_000.0, 5_000.0),
+            "10,000 is within 5,000 + 10,000"
+        );
+        assert!(
+            !beyond_teaching_horizon(15_000.0, 5_000.0),
+            "exactly at the horizon: not beyond it"
+        );
+    }
 
     /// The unbindable guard (ledger #2), driven directly: `explain` is
     /// private, so this lives here rather than in the integration test
