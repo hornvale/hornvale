@@ -2254,7 +2254,16 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // Belief and exploration state, evolved locally across the walk (the
             // fold includes this tick's own emitted moves). Seed belief from the
             // pre-tick history; grow it whenever the agent stands in water.
-            let mut believed = believed_water(frozen, npc, self.from, self.terrain, PLAN_BUDGET);
+            // The Tidings: seed from the BAND's pooled belief (co-located
+            // members share what they know), not the creature's alone.
+            let mut believed = shared_believed_water(
+                frozen,
+                npc,
+                &self.npcs,
+                self.from,
+                self.terrain,
+                PLAN_BUDGET,
+            );
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -3285,6 +3294,76 @@ mod tests {
         assert_eq!(
             shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
             None
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_moves_toward_shared_water() {
+        // THE TIDINGS, WIRED INTO THE MOVER: a `knower` and a `lost` creature
+        // share `here` (both homed there too). `knower` has genuinely stood
+        // at `water` (two hops away, through `n1`); `lost` never has. Water
+        // sits behind `n1`, whose OWN elevation is left unset (INFINITY);
+        // `here`'s other two neighbors (`n0`, `n2`) are planted at elevation
+        // 0.0 — the lowest-unvisited-neighbor explorer therefore ALWAYS
+        // prefers them over `n1`, and once `home` (already visited) blocks
+        // the way back, blind exploration can structurally never reach `n1`
+        // (let alone `water` beyond it). So under the OLD (non-shared)
+        // belief seed, `lost` — ignorant — can never drink: it wanders
+        // through `n0`/`n2` and their own subtrees, never through `n1`.
+        // Under the shared law, `lost` inherits `knower`'s belief the moment
+        // they're co-located and A*-steps straight through `n1` to `water`,
+        // drinking there. A real, mechanism-tied assertion (not just "moved
+        // somewhere") — mutation-verify: reverting the seed swap reds this.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+        };
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water (day 0), back at `here`
+        // by day 1 — same shape as the pure-`shared_believed_water` tests.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+
+        let sys = DriveMovements {
+            npcs: vec![knower.clone(), lost.clone()],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            terrain: &t,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
+        let lost_drank = next.find(DRANK).filter(|f| f.subject == lost_e).count();
+        assert!(
+            lost_drank >= 1,
+            "shared belief should have carried the lost creature to the water \
+             its co-located band-mate knew, but it never drank"
         );
     }
 
