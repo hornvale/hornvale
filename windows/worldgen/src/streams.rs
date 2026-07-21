@@ -26,3 +26,29 @@ pub const DOCTRINE_LEXEME: StreamLabel<'static> = StreamLabel::from_static("doct
 /// leg chain — matches `domains/climate`'s own `WEATHER_PHASE` pattern).
 /// type-audit: bare-ok(identifier-text: return)
 pub const RELIGION_DEITY_V2: StreamLabel<'static> = StreamLabel::from_static("religion/deity/v2");
+
+/// Every seed-derivation label this crate itself owns (not any domain
+/// crate's), for the generated stream manifest.
+/// type-audit: bare-ok(artifact: return)
+pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+    vec![
+        (SCHEMA.as_str(), "the folk causal-schema-selection sub-leg"),
+        (SKY.as_str(), "the sky-domain fact-shape sub-leg"),
+        (
+            LEXEME.as_str(),
+            "the lexicalization sub-leg for a chosen schema",
+        ),
+        (
+            DOCTRINE_SCHEMA.as_str(),
+            "the doctrine-voice twin of the folk schema-selection leg",
+        ),
+        (
+            DOCTRINE_LEXEME.as_str(),
+            "the doctrine-voice twin of the lexeme leg",
+        ),
+        (
+            RELIGION_DEITY_V2.as_str(),
+            "the deity-naming stream, epoch v2",
+        ),
+    ]
+}

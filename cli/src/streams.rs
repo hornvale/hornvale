@@ -16,6 +16,11 @@ pub fn render_streams() -> String {
     sources.push(("hornvale-kernel", hornvale_kernel::stream_labels()));
     sources.push(("hornvale-locale", hornvale_locale::stream_labels()));
     sources.push(("hornvale-vessel", hornvale_vessel::stream_labels()));
+    sources.push((
+        "hornvale-worldgen",
+        hornvale_worldgen::streams::stream_labels(),
+    ));
+    sources.push(("hornvale-chronicle", hornvale_chronicle::stream_labels()));
     sources.sort_by(|a, b| a.0.cmp(b.0));
 
     let mut doc = String::new();
@@ -60,6 +65,8 @@ mod tests {
             "*(no seed-derivation streams)*",
             "### hornvale-kernel",
             "| `room/face` |",
+            "### hornvale-worldgen",
+            "### hornvale-chronicle",
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
