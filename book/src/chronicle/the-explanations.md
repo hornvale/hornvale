@@ -10,7 +10,7 @@ holds. This campaign — the metaplan's fifth — makes each culture say
 > Vebe is the earth.
 > The day returns because the sky must be crossed.
 >
-> **As the Babako tell it.**
+> **As the Ddenke tell it.**
 > Vebe is the earth.
 > The day returns, as all things return.
 

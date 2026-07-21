@@ -12,7 +12,7 @@ from nothing but the Fact graph:
 > Vebe is a planet with two moons, orbiting a yellow-white dwarf (F); its
 > day lasts about 1.5 standard days.
 >
-> The Vavako are goblins. · The Babako are hobgoblins.
+> The Vavako are goblins. · The Ddenke are hobgoblins.
 
 No human or model wrote those sentences. The first is the planet's ledger —
 `is-a`, `moon-count`, `star-class`, `day-length-std` — passed through a

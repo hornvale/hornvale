@@ -1,5 +1,13 @@
 # The Living Community — Campaign 1 Implementation Plan
 
+> **Status: COMPLETE.** All tasks (1–8b) implemented, reviewed, and merged on
+> the `the-living-community` branch; `make gate` green. Task 9 (Definition of
+> Done — chronicle, retrospective, registry flips, freshness sweep,
+> Confidence-Gradient re-score) is done. The remaining Task-9 pieces — the
+> census regen on the canonical box (`lefford`), the keystone refreeze from
+> main's tip, and the merge/FF — are the close's G6 steps, gated on Nathan.
+> This plan is retained as the campaign's implementation record (not deleted).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Grow the present world as the last frame of a derived deep history —

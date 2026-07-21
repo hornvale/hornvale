@@ -8,7 +8,7 @@ each placed people its own voice. At the end of every volume of The Book,
 the peoples now state who they are in their own languages:
 
 > Saa We Vavako. *(in the goblin tongue: "The Vavako are goblins.")*
-> Babako Babo. *(in the hobgoblin tongue: "The Babako are hobgoblins.")*
+> Ddenke Babo. *(in the hobgoblin tongue: "The Ddenke are hobgoblins.")*
 
 Nothing in those lines was authored. The goblins' language drew a
 verb-initial constituent order and an overt copula — *Saa*, a word built

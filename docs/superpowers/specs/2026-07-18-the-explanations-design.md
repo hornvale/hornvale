@@ -20,7 +20,7 @@ furniture:
 
 > **As the Vavako tell it.**
 > The Vavako are goblins — ourselves.
-> The Babako are hobgoblins — neighbors.
+> The Ddenke are hobgoblins — neighbors.
 > Vebe is the earth. The day returns because ⟨sun-deity⟩ walks the sky —
 > briskly.
 >

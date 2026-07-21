@@ -1,6 +1,11 @@
 # The Living Community — Campaign 1: The Community & its History
 
-**Status:** design (G3 review)
+**Status:** shipped — Campaign 1 complete. History-first placement is the sole
+provider of settlement + ruin facts; all three preregistered gates pass (two
+amended post-data and labelled: displacement is migration not raids; stratigraphy
+correlates negatively with capacity); the goblin-doll / impression acceptance
+surface renders. Chronicle: `book/src/chronicle/the-living-community.md`. The
+census regen (lefford) + keystone refreeze + merge are the close's G6 steps.
 **Program:** The Living Community engine (campaign 1 of ~5)
 **Spine:** history-first placement — the present world is the last frame of a
 derived deep history.

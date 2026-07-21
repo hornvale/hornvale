@@ -201,6 +201,7 @@
 - [Few and Many](./chronicle/few-and-many.md)
 - [The Kindling](./chronicle/the-kindling.md)
 - [The Sounding](./chronicle/the-sounding.md)
+- [The Living Community](./chronicle/the-living-community.md)
 
 # Appendix: The Frontier
 
