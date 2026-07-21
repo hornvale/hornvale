@@ -211,6 +211,11 @@
 - [The Freshwater](./chronicle/the-freshwater.md)
 - [The Vantage](./chronicle/the-vantage.md)
 - [The Belonging](./chronicle/the-belonging.md)
+- [The Disposition](./chronicle/the-disposition.md)
+- [The Mettle](./chronicle/the-mettle.md)
+- [The Bane](./chronicle/the-bane.md)
+- [The Massing](./chronicle/the-massing.md)
+- [The Given Word](./chronicle/the-given-word.md)
 - [The Living Community](./chronicle/the-living-community.md)
 
 # Appendix: The Frontier

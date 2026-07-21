@@ -19,6 +19,8 @@
 use crate::naming::Namer;
 use crate::phoneme::{Height, Manner, Segment, Tone};
 use crate::phonology::Phonology;
+use crate::streams;
+use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
 
 /// The closed family of sound-change rules a cascade may draw from. Each is
@@ -155,14 +157,14 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
 }
 
 /// Draw a 2–4 rule cascade for `species`, from
-/// `seed.derive("language").derive(species).derive("lexicon").derive("cascade")`.
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE)`.
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
     let mut stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("lexicon")
-        .derive("cascade")
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::CASCADE)
         .stream();
     let count = stream.range_u32(CASCADE_LEN_RANGE.0, CASCADE_LEN_RANGE.1);
     let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
@@ -173,17 +175,17 @@ pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
 const PROTO_ROOT_SYLLABLE_RANGE: (u32, u32) = (1, 2);
 
 /// Draw a proto-root for `concept` under `species`'s phonology `ph`, from
-/// `seed.derive("language").derive(species).derive("lexicon").derive("root").derive(concept)`.
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::PROTO_ROOT).derive(StreamLabel::dynamic(concept))`.
 /// 1–2 syllables, filled from `ph`'s phonotactic templates by the same
 /// mechanism [`crate::naming::Namer`] uses to build names.
 /// type-audit: bare-ok(identifier-text)
 pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> Vec<Segment> {
     let mut stream = seed
-        .derive("language")
-        .derive(species)
-        .derive("lexicon")
-        .derive("root")
-        .derive(concept)
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::PROTO_ROOT)
+        .derive(StreamLabel::dynamic(concept))
         .stream();
     let namer = Namer::new(seed, species, ph);
     let syllables = namer.draw_syllables(
@@ -333,16 +335,18 @@ fn draw_candidate(
     let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
     let max = PROTO_ROOT_SYLLABLE_RANGE.1 + tier;
     let base = seed
-        .derive("language")
-        .derive(family)
-        .derive("lexicon")
-        .derive("root")
-        .derive(ROOT_EPOCH)
-        .derive(concept);
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(family))
+        .derive(streams::LEXICON)
+        .derive(streams::PROTO_ROOT)
+        .derive(StreamLabel::dynamic(ROOT_EPOCH))
+        .derive(StreamLabel::dynamic(concept));
     let mut stream = if probe == 0 {
         base.stream()
     } else {
-        base.derive("probe").derive(&probe.to_string()).stream()
+        base.derive(streams::PROBE)
+            .derive(StreamLabel::dynamic(&probe.to_string()))
+            .stream()
     };
     let namer = Namer::new(seed, family, ph);
     let syllables = namer.draw_syllables(&mut stream, min, max, false);

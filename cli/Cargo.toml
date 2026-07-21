@@ -18,6 +18,7 @@ hornvale-species = { path = "../domains/species" }
 hornvale-terrain = { path = "../domains/terrain" }
 hornvale-almanac = { path = "../windows/almanac" }
 hornvale-book = { path = "../windows/book" }
+hornvale-chronicle = { path = "../windows/chronicle" }
 hornvale-explain = { path = "../windows/explain" }
 hornvale-worldgen = { path = "../windows/worldgen" }
 hornvale-lab = { path = "../windows/lab" }

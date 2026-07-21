@@ -3,6 +3,7 @@
 
 use crate::extract::AuditItem;
 use crate::tag::{Verdict, parse_tag};
+use crate::walk::StreamLabelViolation;
 
 /// One audit failure, anchored to an item and line.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,6 +67,20 @@ pub fn audit_item(item: &AuditItem) -> Vec<Finding> {
 /// Audit every item, flattening the findings.
 pub fn audit_items(items: &[AuditItem]) -> Vec<Finding> {
     items.iter().flat_map(audit_item).collect()
+}
+
+/// Turn inline `StreamLabel::from_static(<literal>)` violations into findings
+/// (the same shape `audit_items` produces, so `check`/`report` handle both
+/// checks identically).
+pub fn stream_label_findings(violations: &[StreamLabelViolation]) -> Vec<Finding> {
+    violations
+        .iter()
+        .map(|v| Finding {
+            item: v.path.display().to_string(),
+            line: v.line,
+            message: "inline StreamLabel::from_static(<literal>) outside streams.rs".to_string(),
+        })
+        .collect()
 }
 
 /// The position qualifier of a verdict, if any (uniform across variants).

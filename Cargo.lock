@@ -9,6 +9,7 @@ dependencies = [
  "hornvale-almanac",
  "hornvale-astronomy",
  "hornvale-book",
+ "hornvale-chronicle",
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-explain",

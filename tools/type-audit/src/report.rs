@@ -64,6 +64,24 @@ pub fn render_report(crates: &[CrateItems]) -> String {
         s.push_str(&format!("| wave-{wave} | {n} |\n"));
     }
 
+    s.push_str("\n## Inline `StreamLabel::from_static` literals\n\n");
+    let violation_count: usize = crates.iter().map(|c| c.stream_label_violations.len()).sum();
+    if violation_count == 0 {
+        s.push_str("None — every `from_static` call lives in a `streams.rs`.\n");
+    } else {
+        s.push_str("| Crate | File | Line |\n|-------|------|-----:|\n");
+        for c in crates {
+            for v in &c.stream_label_violations {
+                s.push_str(&format!(
+                    "| {} | {} | {} |\n",
+                    c.crate_name,
+                    v.path.display(),
+                    v.line
+                ));
+            }
+        }
+    }
+
     s
 }
 

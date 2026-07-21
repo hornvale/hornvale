@@ -4,6 +4,9 @@
 //! moisture, and biome are pure derived reads); the only stochastic climate
 //! layer is drawn weather (The Firmament).
 
+use hornvale_kernel::seed::StreamLabel;
+
 /// The label deriving the drifting weather-phase noise seed (The Firmament).
-/// type-audit: bare-ok(identifier-text)
-pub const WEATHER_PHASE: &str = "climate/weather/phase/v1";
+/// type-audit: bare-ok(identifier-text: return)
+pub const WEATHER_PHASE: StreamLabel<'static> =
+    StreamLabel::from_static("climate/weather/phase/v1");

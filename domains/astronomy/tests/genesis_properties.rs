@@ -492,7 +492,7 @@ fn star_battery_mass_bounds_and_monotone_derivations() {
     use hornvale_astronomy::{brightening_per_gyr, generate_star};
     let mut last: Option<(f64, f64, f64, f64, f64)> = None;
     let mut stars: Vec<_> = (0..256u64)
-        .map(|s| generate_star(hornvale_kernel::Seed(s).derive("astronomy")))
+        .map(|s| generate_star(hornvale_kernel::Seed(s).derive(hornvale_astronomy::streams::ROOT)))
         .collect();
     stars.sort_by(|a, b| a.mass.get().total_cmp(&b.mass.get()));
     for s in &stars {

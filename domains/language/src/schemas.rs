@@ -520,6 +520,7 @@ mod tests {
     use super::*;
     use crate::account::LossReason;
     use hornvale_kernel::Seed;
+    use hornvale_kernel::seed::StreamLabel;
 
     /// Every `SchemaId` variant, for the closure test's exhaustiveness
     /// check (the enum itself gives no runtime reflection).
@@ -618,13 +619,19 @@ mod tests {
         let mut wins_beta_8 = 0;
         for i in 0..100u64 {
             let label = format!("test/schemas/beta-sweep/{i}");
-            if select_schema(&weights, 1.0, &mut Seed(1).derive(&label).stream())
-                == Some(SchemaId::Agentive)
+            if select_schema(
+                &weights,
+                1.0,
+                &mut Seed(1).derive(StreamLabel::dynamic(&label)).stream(),
+            ) == Some(SchemaId::Agentive)
             {
                 wins_beta_1 += 1;
             }
-            if select_schema(&weights, 8.0, &mut Seed(1).derive(&label).stream())
-                == Some(SchemaId::Agentive)
+            if select_schema(
+                &weights,
+                8.0,
+                &mut Seed(1).derive(StreamLabel::dynamic(&label)).stream(),
+            ) == Some(SchemaId::Agentive)
             {
                 wins_beta_8 += 1;
             }

@@ -16,7 +16,7 @@ use hornvale_species::{ActivityCycle, MetabolicClass};
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -66,6 +66,20 @@ pub struct Npc {
     /// branched on a diet type. Threaded from the species' authored
     /// `biosphere_registry` at derivation, beside the metabolic class.
     pub niche: ResourceVector,
+    /// The species' `PsychVector.threat_response` (flee 0 ↔ stand 1), read at
+    /// CREATURE scope as its boldness (The Mettle): scales the Danger drive's
+    /// felt threat — `× 2·(1 − boldness)`, centered on `0.5` (steady/inert), so
+    /// a coward (`< 0.5`) fears more and a bold creature (`> 0.5`) fears less.
+    /// The banked third psychology dial, threaded from `psyche_registry` at
+    /// derivation like `deliberation_latency`/`time_horizon` (default `0.5` — a
+    /// steady, byte-identical baseline — for a species without a psyche entry).
+    pub boldness: f64,
+    /// The creature's threat niche (The Bane): how much it dreads each kind of
+    /// hazard, DERIVED at derivation from its temperature niche (HEAT/COLD) and
+    /// metabolic class (UNCANNY) — a cold-adapted creature fears heat, an
+    /// elemental does not fear the eldritch. Read by the Danger drive against the
+    /// cell's hazards for per-kind fear.
+    pub threat_niche: ThreatNiche,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -197,6 +211,97 @@ fn learned_helplessness(last_drank: f64, day: f64) -> bool {
 /// (`0`) leads by none, exactly the pre-anticipation model.
 const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
+/// A cell's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
+/// INDEPENDENT presence of each kind of hazard, the sources a creature's threat
+/// niche dots against. v1 carries the three axes The Dread's scalar field already
+/// sourced; reserved axes (HOLY/UNHOLY, POISON, DROWNING, PSY-10's PREDATOR) are
+/// the extensible future — a general `HazardVector` over a registered
+/// `HazardAxis` basis (the `ResourceVector` parallel) is the reserved
+/// generalization of this concrete struct.
+/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Hazards {
+    /// The UNCANNY — a strange/exotic/cursed place (the strangeness magnitude).
+    pub uncanny: f64,
+    /// HEAT — how far the cell's temperature is above the survivable band.
+    pub heat: f64,
+    /// COLD — how far below.
+    pub cold: f64,
+}
+
+impl Hazards {
+    /// A safe cell — no hazard on any axis (the `Terrain::hazards` default).
+    pub const ZERO: Hazards = Hazards {
+        uncanny: 0.0,
+        heat: 0.0,
+        cold: 0.0,
+    };
+}
+
+/// A creature's THREAT NICHE (The Bane) — how much it dreads each kind of
+/// hazard, the fear twin of the diet `ResourceVector`. Derived from what the
+/// creature already is: the HEAT/COLD weights from its temperature niche (a
+/// creature fears the extreme away from its comfort optimum), the UNCANNY weight
+/// from its metabolic class (a mortal fears the eldritch; an Ametabolic elemental
+/// IS eldritch and does not). v1 weights are `≥ 0` (differential FEAR — a
+/// creature can be *fearless* of a hazard, weight `0`); NEGATIVE weights (true
+/// *attraction* — drawn to the hazard) are the reserved approach shore, shared
+/// with The Mettle's reckless pole.
+/// type-audit: bare-ok(ratio: uncanny), bare-ok(ratio: heat), bare-ok(ratio: cold)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ThreatNiche {
+    /// Dread of the UNCANNY (`1` mortal, `0` an Ametabolic elemental).
+    pub uncanny: f64,
+    /// Dread of HEAT (high for the cold-adapted).
+    pub heat: f64,
+    /// Dread of COLD (high for the heat-adapted).
+    pub cold: f64,
+}
+
+/// The felt threat of a cell FOR a creature (The Bane): its threat niche dotted
+/// with the cell's hazards — `Σ niche·hazard` over the axes, the fear twin of
+/// `food_value = diet_niche · availability`. `≥ 0` in v1 (the reserved
+/// negative-weight attraction would make this go negative — the approach shore).
+fn threat_value(niche: &ThreatNiche, hazards: &Hazards) -> f64 {
+    niche.uncanny * hazards.uncanny + niche.heat * hazards.heat + niche.cold * hazards.cold
+}
+
+/// The temperature-niche optimum (°C) below which a creature weights HEAT fully
+/// and the span over which the weight falls off (The Bane): a cold-adapted
+/// creature (low optimum) dreads heat, a warm one shrugs it off. Authored.
+const HEAT_FEAR_REF_C: f64 = 30.0;
+/// The temperature-niche optimum (°C) above which a creature weights COLD fully,
+/// and the reference the weight is measured from — a heat-adapted creature (high
+/// optimum) dreads cold. Authored.
+const COLD_FEAR_REF_C: f64 = 0.0;
+/// The optimum span (°C) over which the derived HEAT/COLD threat weights slide
+/// from `0` to `1`. Authored.
+const THERMAL_FEAR_SPAN_C: f64 = 40.0;
+
+/// Derive a creature's [`ThreatNiche`] from what it already is (The Bane — no
+/// fresh authoring): the HEAT/COLD weights from its temperature-niche optimum (a
+/// creature dreads the extreme AWAY from its comfort — cold-adapted fears heat,
+/// heat-adapted fears cold), and the UNCANNY weight from its metabolic class (a
+/// metabolising mortal fears the eldritch, weight `1`; an `Ametabolic` creature —
+/// a construct, an elemental like the xorn — IS eldritch and does not, weight
+/// `0`). v1 weights are `≥ 0` (differential fear; the reserved negative-weight
+/// attraction is the approach shore).
+fn derive_threat_niche(
+    temperature_niche: &ConditionResponse,
+    class: MetabolicClass,
+) -> ThreatNiche {
+    let optimum = temperature_niche.optimum;
+    ThreatNiche {
+        uncanny: if matches!(class, MetabolicClass::Ametabolic) {
+            0.0
+        } else {
+            1.0
+        },
+        heat: ((HEAT_FEAR_REF_C - optimum) / THERMAL_FEAR_SPAN_C).clamp(0.0, 1.0),
+        cold: ((optimum - COLD_FEAR_REF_C) / THERMAL_FEAR_SPAN_C).clamp(0.0, 1.0),
+    }
+}
+
 /// The elevation field and fresh-water truth the belief/exploration logic
 /// reads, abstracted so pure tests plant synthetic terrain without building a
 /// world. The session backs it with a `LocaleContext` (see
@@ -261,18 +366,16 @@ pub trait Terrain {
         DEFAULT_FORAGE
     }
 
-    /// The cell's THREAT in `[0, 1]` (The Dread) — the hazard a creature senses
-    /// and flees: `0` is safe, `1` is deadly. The DEFAULT is `0.0` (safe) — so
-    /// planted/synthetic test terrains are threat-free and danger stays silent
-    /// unless a scenario plants a hazard; a live `LocaleTerrain` OVERRIDES it
-    /// with the real climate's threat field (`threat_at`: the uncanny —
-    /// strangeness — plus a lethal-temperature backstop). A slow field (the
-    /// uncanny does not shift by the hour), so it takes no `day`. v1 is
-    /// niche-less: every metabolising creature fears it uniformly; the per-kind
-    /// threat niche (with negative-weight *attraction*) is a reserved seam.
-    /// type-audit: bare-ok(ratio: return)
-    fn threat_value(&self, _room: &RoomAddr) -> f64 {
-        0.0
+    /// The cell's per-axis HAZARD field (The Dread's field, split per-axis by
+    /// The Bane) — the raw, creature-independent presence of each kind of hazard
+    /// (uncanny / heat / cold), which a creature's threat niche dots against. The
+    /// DEFAULT is [`Hazards::ZERO`] (safe) — so planted/synthetic test terrains
+    /// are hazard-free and danger stays silent unless a scenario plants one; a
+    /// live `LocaleTerrain` OVERRIDES it with the real climate (`hazards_at`: the
+    /// uncanny strangeness plus graded heat/cold). A slow field, so it takes no
+    /// `day`.
+    fn hazards(&self, _room: &RoomAddr) -> Hazards {
+        Hazards::ZERO
     }
 }
 
@@ -425,11 +528,16 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         // fallback (the dual of `temperature`'s never-chosen INFINITY).
         self.ctx.productivity_at(room).unwrap_or(0.0)
     }
-    fn threat_value(&self, room: &RoomAddr) -> f64 {
-        // The real climate's threat field (The Dread: the uncanny + lethal
-        // extremes); an undescribable/above-grid room reads 0 (safe) — the
-        // never-feared fallback, the dual of `forage_value`'s never-fed 0.
-        self.ctx.threat_at(room).unwrap_or(0.0)
+    fn hazards(&self, room: &RoomAddr) -> Hazards {
+        // The real climate's per-axis hazard field (The Bane: the uncanny plus
+        // graded heat/cold); an undescribable/above-grid room reads all-zero
+        // (safe) — the never-feared fallback, the dual of `forage_value`'s 0.
+        let (uncanny, heat, cold) = self.ctx.hazards_at(room).unwrap_or((0.0, 0.0, 0.0));
+        Hazards {
+            uncanny,
+            heat,
+            cold,
+        }
     }
 }
 
@@ -1442,13 +1550,46 @@ const DANGER_ACT: f64 = 0.3;
 /// SURVIVAL (a lethal hazard outranks comfort), and a present threat wakes a
 /// sleeping creature. Its serviceability is SIGNED (unclamped) — a step into
 /// worse danger scores NEGATIVE, so danger reshapes the other drives' paths
-/// (a thirsty creature routes around a hazard). v1 is niche-less (every
-/// creature fears the hazard uniformly); the per-kind threat niche is reserved.
-/// type-audit: bare-ok(return)
+/// (a thirsty creature routes around a hazard). Its felt threat is the
+/// creature's THREAT NICHE dotted with the cell's hazards (The Bane — per-kind
+/// fear, so two species flee different cells), then scaled by its `boldness`
+/// (The Mettle) — a bold creature fears less, so its weaker veto lets it cross
+/// ground a timid one flees.
+/// type-audit: bare-ok(ratio: boldness)
 pub struct Danger<'a> {
-    /// The threat field this drive senses (the cell it stands in and the three
+    /// The hazard field this drive senses (the cell it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
     pub terrain: &'a dyn Terrain,
+    /// The creature's threat niche (The Bane): how much it dreads each kind of
+    /// hazard, dotted with the cell's [`Hazards`] to give the felt threat.
+    pub threat_niche: ThreatNiche,
+    /// The creature's boldness (the banked `threat_response` at creature scope,
+    /// The Mettle): scales the felt threat by `2·(1 − boldness)`, centered on
+    /// `0.5` (steady/inert). Below `0.5` a coward fears more; above, a bold
+    /// creature fears less; toward `1` it is fearless.
+    pub boldness: f64,
+}
+
+/// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
+/// dial is centered on (The Mettle). `PsychVector.threat_response` uses `0.5` as
+/// its flee/stand midpoint, and the goblin (and every psyche-less beast) sits
+/// here, so this baseline keeps them byte-identical.
+const BOLDNESS_STEADY: f64 = 0.5;
+
+impl<'a> Danger<'a> {
+    /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
+    /// at steady `0.5`, `×0` at fearless `1`. Floored at `0` so v1 never inverts
+    /// to the reserved reckless/approach shore.
+    fn mettle_factor(&self) -> f64 {
+        (2.0 * (1.0 - self.boldness)).max(0.0)
+    }
+
+    /// The creature's OWN felt threat at `room` (The Bane): its threat niche
+    /// dotted with the cell's hazards. Per-kind — two species read the same cell
+    /// differently. (Boldness is applied separately, in `urgency`.)
+    fn threat_at(&self, room: &RoomAddr) -> f64 {
+        threat_value(&self.threat_niche, &self.terrain.hazards(room))
+    }
 }
 
 impl<'a> Drive for Danger<'a> {
@@ -1456,24 +1597,26 @@ impl<'a> Drive for Danger<'a> {
         // Fear is ANTICIPATORY: a creature dreads the dangerous ground it is on
         // AND the dangerous ground within one step (the potential-field reading —
         // the drive must be ACTIVE while adjacent to a hazard for its signed
-        // serviceability to veto a step INTO it). So urgency is the greatest
-        // threat over the current cell and its neighbours, clamped to [0, 1].
-        let here = self.terrain.threat_value(&view.position);
-        view.position
+        // serviceability to veto a step INTO it). So the base threat is the
+        // greatest over the current cell and its neighbours; the creature's
+        // boldness (The Mettle) then scales how much it FEELS it. Clamped [0, 1].
+        let here = self.threat_at(&view.position);
+        let base = view
+            .position
             .neighbors()
             .iter()
-            .map(|n| self.terrain.threat_value(n))
-            .fold(here, f64::max)
-            .clamp(0.0, 1.0)
+            .map(|n| self.threat_at(n))
+            .fold(here, f64::max);
+        (base * self.mettle_factor()).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
     }
     fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
-        // Flee: step to the safest neighbour, or `None` when boxed in by threat
-        // on every side (cornered → Frustrated). A flow drive needs no plan (no
-        // A*), so `budget` is unused.
-        flee_step(&view.position, self.terrain).map(Action::MoveTo)
+        // Flee: step to the safest neighbour (by THIS creature's threat niche),
+        // or `None` when boxed in by threat on every side (cornered → Frustrated).
+        // A flow drive needs no plan (no A*), so `budget` is unused.
+        flee_step(&view.position, self.terrain, &self.threat_niche).map(Action::MoveTo)
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Danger
@@ -1483,15 +1626,13 @@ impl<'a> Drive for Danger<'a> {
         1.0
     }
     fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
-        // SIGNED (unclamped, unlike thermal): the DROP in threat at the
-        // neighbour it would step to — positive toward safety, NEGATIVE into
-        // worse danger, so a move that serves another drive but raises threat is
-        // penalised and the arbitration routes around the hazard. No consume —
-        // Drink/Rest/Eat do not ease fear.
+        // SIGNED (unclamped, unlike thermal): the DROP in the creature's own felt
+        // threat at the neighbour it would step to — positive toward safety,
+        // NEGATIVE into worse danger, so a move that serves another drive but
+        // raises threat is penalised and the arbitration routes around the hazard.
+        // No consume — Drink/Rest/Eat do not ease fear.
         match action {
-            Action::MoveTo(n) => {
-                self.terrain.threat_value(&view.position) - self.terrain.threat_value(n)
-            }
+            Action::MoveTo(n) => self.threat_at(&view.position) - self.threat_at(n),
             Action::Drink | Action::Rest | Action::Eat => 0.0,
         }
     }
@@ -1501,14 +1642,14 @@ impl<'a> Drive for Danger<'a> {
     }
 }
 
-/// The flee gradient step: the neighbour of LOWEST threat, or `None` when no
-/// neighbour is strictly safer than `from` itself (boxed in by threat — the
-/// creature holds, cornered). The sign-flip of [`comfort_step`] /
-/// [`forage_step`]: minimize threat rather than thermal deviation or maximize
-/// food; same three-neighbour scan and `total_cmp`-then-ascending-`RoomAddr`
-/// tie-break.
-fn flee_step(from: &RoomAddr, terrain: &dyn Terrain) -> Option<RoomAddr> {
-    let threat = |room: &RoomAddr| terrain.threat_value(room);
+/// The flee gradient step: the neighbour of LOWEST felt threat (for this creature's
+/// threat niche), or `None` when no neighbour is strictly safer than `from`
+/// itself (boxed in — the creature holds, cornered). The sign-flip of
+/// [`comfort_step`] / [`forage_step`]: minimize threat rather than thermal
+/// deviation or maximize food; same three-neighbour scan and
+/// `total_cmp`-then-ascending-`RoomAddr` tie-break.
+fn flee_step(from: &RoomAddr, terrain: &dyn Terrain, niche: &ThreatNiche) -> Option<RoomAddr> {
+    let threat = |room: &RoomAddr| threat_value(niche, &terrain.hazards(room));
     let mut best: Option<(RoomAddr, f64)> = None;
     for n in from.neighbors() {
         let t = threat(&n);
@@ -1629,18 +1770,40 @@ impl Drive for Social {
 pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize) -> Intent {
     let thirst = Thirst { params: *p };
     let drives: [&dyn Drive; 1] = [&thirst];
-    arbitrate(
-        view,
-        home,
-        &drives,
-        0.0,
-        0.0,
-        false,
-        true,
-        Mode::Idle,
-        budget,
-    )
-    .intent
+    // The Stage-0 default disposition: grab (latency 0), myopic (horizon 0),
+    // not helpless, awake — exactly the literals the byte-identical seam passed.
+    let disposition = Disposition {
+        latency: 0.0,
+        horizon: 0.0,
+        helpless: false,
+        awake: true,
+    };
+    arbitrate(view, home, &drives, &disposition, Mode::Idle, budget).intent
+}
+
+/// How a creature is disposed to decide right now — the psychology dials that
+/// weight its drives and the momentary states that gate them. The same
+/// perception and drive set yield DIFFERENT decisions through this: it is the
+/// "how this mind decides" bundle [`arbitrate`] reads, distinct from what the
+/// creature perceives (`view`/`drives`), the world frame (`home`/`budget`), and
+/// the hysteresis carry (`incoming: Mode`). Bundling the two dials (endowment,
+/// from the species `PsychVector`) with the two per-tick gates (`helpless`,
+/// `awake`) is the tidy every drive campaign flagged.
+/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Disposition {
+    /// `deliberation_latency`: slides the arbitration weights from *grab* (0 —
+    /// only the loudest drive counts) to *weigh* (1 — the full weighted sum).
+    pub latency: f64,
+    /// `time_horizon`: slides *myopic* (0 — acts only at `act`) to *foresighted*
+    /// (1 — pre-empts a projectable stock drive by its anticipation lead).
+    pub horizon: f64,
+    /// Learned helplessness — the survival drive has gone unmet so long the
+    /// creature has GIVEN UP (short-circuits arbitration to Hold/Helpless).
+    pub helpless: bool,
+    /// The wake-gate state (The Slumber): while asleep, wake-gated drives fall
+    /// silent (unless survival-critical) and the sleep drive engages.
+    pub awake: bool,
 }
 
 /// Action-centric, deterministic arbitration (spec §5/§6): the seam that turns
@@ -1668,24 +1831,21 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 ///   order (then `Drink`), and every max is a `total_cmp` keeping the earliest
 ///   on ties — reload-stable.
 ///
-/// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake), bare-ok(count: budget)
-// The perceived world, the two psychology dials (latency/horizon), the derived
-// helpless state, the incumbent mode, and the plan budget are each a distinct,
-// individually type-audited input to one decision; bundling them into a
-// `Disposition`/`MindState` struct is a reasonable future tidy, deferred rather
-// than done mid-followup.
-#[allow(clippy::too_many_arguments)]
+/// type-audit: bare-ok(count: budget)
 pub fn arbitrate(
     view: &Perceived,
     home: &RoomAddr,
     drives: &[&dyn Drive],
-    latency: f64,
-    horizon: f64,
-    helpless: bool,
-    awake: bool,
+    disposition: &Disposition,
     incoming: Mode,
     budget: usize,
 ) -> Resolution {
+    let Disposition {
+        latency,
+        horizon,
+        helpless,
+        awake,
+    } = *disposition;
     // Learned helplessness (§7, the sticky scar): the survival drive has gone
     // unmet so long the creature has GIVEN UP — it Holds regardless of any
     // affordance (the behavioural difference: it stops trying, where a merely
@@ -1979,7 +2139,11 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         day,
     };
-    let danger = Danger { terrain };
+    let danger = Danger {
+        terrain,
+        threat_niche: npc.threat_niche,
+        boldness: npc.boldness,
+    };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
     let plan_home = plan_to_room(&view.position, &npc.home, PLAN_BUDGET);
@@ -2007,14 +2171,17 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         drives.push(&social);
     }
     let helpless = !ametabolic && learned_helplessness(last_drank, day.day);
+    let disposition = Disposition {
+        latency: npc.deliberation_latency,
+        horizon: npc.time_horizon,
+        helpless,
+        awake: is_awake(npc.activity, terrain, &view.position, day),
+    };
     arbitrate(
         &view,
         &npc.home,
         &drives,
-        npc.deliberation_latency,
-        npc.time_horizon,
-        helpless,
-        is_awake(npc.activity, terrain, &view.position, day),
+        &disposition,
         Mode::Idle,
         PLAN_BUDGET,
     )
@@ -2244,6 +2411,8 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 };
                 let danger = Danger {
                     terrain: self.terrain,
+                    threat_niche: npc.threat_niche,
+                    boldness: npc.boldness,
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -2270,17 +2439,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     drives.push(&social);
                 }
                 let helpless = !ametabolic && learned_helplessness(last_drank, day);
-                let resolution = arbitrate(
-                    &view,
-                    &npc.home,
-                    &drives,
-                    npc.deliberation_latency,
-                    npc.time_horizon,
+                let disposition = Disposition {
+                    latency: npc.deliberation_latency,
+                    horizon: npc.time_horizon,
                     helpless,
-                    is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
-                    mode,
-                    PLAN_BUDGET,
-                );
+                    awake: is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
+                };
+                let resolution =
+                    arbitrate(&view, &npc.home, &drives, &disposition, mode, PLAN_BUDGET);
                 mode = resolution.mode;
                 match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
@@ -2517,6 +2683,16 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|p| p.time_horizon)
                 .unwrap_or(0.5);
+            // Boldness (The Mettle): the banked `threat_response` read at
+            // creature scope. Default steady/inert for a species without a
+            // psyche entry — the beasts.
+            let boldness = psyche
+                .get_by_label(&species)
+                .map(|p| p.threat_response)
+                .unwrap_or(BOLDNESS_STEADY);
+            // The threat niche (The Bane): derived from the temperature niche +
+            // metabolic class already on hand — no fresh authoring.
+            let threat_niche = derive_threat_niche(&temperature_niche, metabolic_class);
             let entity = ledger.mint_entity();
             let label = format!("{species} of {}", village.name);
             // A NAME fact so the provenance read (`why`, backed by
@@ -2551,6 +2727,8 @@ pub fn derive_npcs(
                 time_horizon,
                 metabolic_class,
                 niche,
+                boldness,
+                threat_niche,
                 label,
             }
         })
@@ -2737,6 +2915,39 @@ mod tests {
     use super::*;
     use hornvale_kernel::{ConceptRegistry, Seed};
 
+    /// A thin positional adapter over [`arbitrate`] for the tests (The
+    /// Disposition): it packs the four loose disposition scalars into a
+    /// [`Disposition`] so the many test call sites keep their explicit
+    /// per-argument values without each rebuilding the struct. Production
+    /// callers (`decide`/`affect_of`/the tick) construct `Disposition` directly;
+    /// only the tests, which vary these values case by case, go through this.
+    #[allow(clippy::too_many_arguments)]
+    fn arb(
+        view: &Perceived,
+        home: &RoomAddr,
+        drives: &[&dyn Drive],
+        latency: f64,
+        horizon: f64,
+        helpless: bool,
+        awake: bool,
+        incoming: Mode,
+        budget: usize,
+    ) -> Resolution {
+        arbitrate(
+            view,
+            home,
+            drives,
+            &Disposition {
+                latency,
+                horizon,
+                helpless,
+                awake,
+            },
+            incoming,
+            budget,
+        )
+    }
+
     /// Commit an `agent-at` fact placing `entity` at `room` on `day`.
     fn commit_agent_at(
         ledger: &mut Ledger,
@@ -2789,6 +3000,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -2823,6 +3036,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -2859,6 +3074,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -2893,6 +3110,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -2924,6 +3143,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -2971,6 +3192,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -3126,6 +3349,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -3644,6 +3869,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3747,6 +3974,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -3821,6 +4050,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -3902,6 +4133,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -3968,6 +4201,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -4074,10 +4309,13 @@ mod tests {
         /// thermal tests, which plant none, keep their creatures fed and
         /// hunger-inactive (byte-identical to pre-Provender behaviour).
         forage: std::collections::BTreeMap<RoomAddr, f64>,
-        /// Planted per-room threat for the danger-drive tests; rooms without an
-        /// entry read `0.0` (safe) — so the other tests, which plant none, are
-        /// danger-inactive (byte-identical to pre-Dread behaviour).
-        threat: std::collections::BTreeMap<RoomAddr, f64>,
+        /// Planted per-room hazards for the danger-drive tests; rooms without an
+        /// entry read `Hazards::ZERO` (safe) — so the other tests, which plant
+        /// none, are danger-inactive. Named `threat` for continuity; the
+        /// `hazard()` constructor plants a scalar as the UNCANNY axis (the axis a
+        /// mortal niche weights `1`, so the pre-Bane danger tests are byte-
+        /// identical), and thermal tests plant `Hazards` directly.
+        threat: std::collections::BTreeMap<RoomAddr, Hazards>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
@@ -4126,9 +4364,11 @@ mod tests {
                 threat: std::collections::BTreeMap::new(),
             }
         }
-        /// Planted per-room fresh water AND threat (the danger-drive tests,
-        /// which pair a hazard field with a water source to prove routing).
-        /// Rooms without a threat entry read `0.0` (safe).
+        /// Planted per-room fresh water AND a scalar hazard mapped to the UNCANNY
+        /// axis (the danger-drive tests, which pair a hazard with a water source
+        /// to prove routing). Rooms without an entry read `Hazards::ZERO` (safe).
+        /// A mortal threat niche weights UNCANNY `1`, so a scalar `s` reads as
+        /// felt threat `s` — the pre-Bane danger tests stay byte-identical.
         fn hazard(
             fresh: impl IntoIterator<Item = RoomAddr>,
             threat: impl IntoIterator<Item = (RoomAddr, f64)>,
@@ -4138,7 +4378,28 @@ mod tests {
                 fresh: fresh.into_iter().collect(),
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
-                threat: threat.into_iter().collect(),
+                threat: threat
+                    .into_iter()
+                    .map(|(r, s)| {
+                        (
+                            r,
+                            Hazards {
+                                uncanny: s,
+                                ..Hazards::ZERO
+                            },
+                        )
+                    })
+                    .collect(),
+            }
+        }
+        /// Planted per-room `Hazards` directly (the per-axis thermal-fear tests).
+        fn hazards_map(hazards: impl IntoIterator<Item = (RoomAddr, Hazards)>) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: std::collections::BTreeSet::new(),
+                temps: std::collections::BTreeMap::new(),
+                forage: std::collections::BTreeMap::new(),
+                threat: hazards.into_iter().collect(),
             }
         }
     }
@@ -4155,9 +4416,18 @@ mod tests {
         fn forage_value(&self, room: &RoomAddr) -> f64 {
             self.forage.get(room).copied().unwrap_or(DEFAULT_FORAGE)
         }
-        fn threat_value(&self, room: &RoomAddr) -> f64 {
-            self.threat.get(room).copied().unwrap_or(0.0)
+        fn hazards(&self, room: &RoomAddr) -> Hazards {
+            self.threat.get(room).copied().unwrap_or(Hazards::ZERO)
         }
+    }
+
+    /// The default mortal threat niche (The Bane) — dreads the uncanny fully
+    /// (weight `1`) and heat/cold at the goblinoid-neutral derived level. Used by
+    /// tests that plant an UNCANNY hazard and expect the old scalar behaviour:
+    /// `threat_value` reduces to the planted uncanny, so the pre-Bane danger
+    /// tests stay byte-identical.
+    fn mortal_threat_niche() -> ThreatNiche {
+        derive_threat_niche(&DEFAULT_TEMPERATURE_NICHE, MetabolicClass::Endotherm)
     }
 
     /// A balanced omnivore diet (forage + prey) — the common hunger-test niche.
@@ -4327,7 +4597,11 @@ mod tests {
         // touch the threat, so anticipatory urgency reads 0.
         let far = raddr(-1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.urgency(&view_at(scary)),
             0.8,
@@ -4354,7 +4628,11 @@ mod tests {
                 (ns[2].clone(), 0.9),
             ],
         );
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
             Some(Action::MoveTo(ns[0].clone())),
@@ -4368,7 +4646,11 @@ mod tests {
                 .chain(std::iter::once(here.clone()))
                 .map(|r| (r, 0.9)),
         );
-        let danger_boxed = Danger { terrain: &boxed };
+        let danger_boxed = Danger {
+            terrain: &boxed,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
             None,
@@ -4390,7 +4672,11 @@ mod tests {
                 (worse.clone(), 0.9),
             ],
         );
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
         assert!(
@@ -4416,7 +4702,11 @@ mod tests {
         let detour = ns[1].clone(); // a safe alternative step
         let water = hazard.clone(); // believed water sits on/at the hazard cell
         let t = PlantedTerrain::hazard([water.clone()], [(hazard.clone(), 1.0)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
             position: home.clone(),
@@ -4426,7 +4716,7 @@ mod tests {
             explore_step: Some(detour.clone()),
         };
         let drives: [&dyn Drive; 2] = [&thirst, &danger];
-        let res = arbitrate(
+        let res = arb(
             &view,
             &home,
             &drives,
@@ -4450,11 +4740,129 @@ mod tests {
         // A flow drive: urgency is purely the cell field, no fold, clamped [0,1].
         let cell = raddr(1.0);
         let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 1.5)]);
-        let danger = Danger { terrain: &t };
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+        };
         assert_eq!(
             danger.urgency(&view_at(cell)),
             1.0,
             "threat urgency clamps at 1.0"
+        );
+    }
+
+    #[test]
+    fn boldness_scales_the_felt_threat_across_the_mettle_axis() {
+        // THE METTLE: `effective = base × 2(1 − boldness)`, centered on 0.5.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.4)]);
+        let v = view_at(cell);
+        let feel = |boldness: f64| {
+            Danger {
+                terrain: &t,
+                threat_niche: mortal_threat_niche(),
+                boldness,
+            }
+            .urgency(&v)
+        };
+        // Steady (0.5) → ×1 (unchanged, the inert baseline).
+        assert_eq!(feel(0.5), 0.4, "steady feels the threat as it is");
+        // Bold (0.8) → ×0.4.
+        assert!(
+            (feel(0.8) - 0.4 * 0.4).abs() < 1e-9,
+            "a bold creature fears less"
+        );
+        // Fearless (1.0) → ×0.
+        assert_eq!(feel(1.0), 0.0, "the fearless feel nothing");
+        // Coward (0.0) → ×2, clamped at 1.0.
+        assert_eq!(
+            feel(0.0),
+            (0.4_f64 * 2.0).min(1.0),
+            "a coward fears more (clamped)"
+        );
+        // The monotone axis: coward > steady > bold > fearless.
+        assert!(feel(0.0) > feel(0.5) && feel(0.5) > feel(0.8) && feel(0.8) > feel(1.0));
+    }
+
+    #[test]
+    fn the_threat_niche_is_derived_from_nature() {
+        // THE BANE: HEAT/COLD derive from the temperature optimum, UNCANNY from
+        // the metabolic class.
+        let cold_adapted = ConditionResponse {
+            optimum: -10.0,
+            width: 20.0,
+            devotion: 0.5,
+        };
+        let warm_adapted = ConditionResponse {
+            optimum: 25.0,
+            width: 20.0,
+            devotion: 0.5,
+        };
+        let cold = derive_threat_niche(&cold_adapted, MetabolicClass::Endotherm);
+        let warm = derive_threat_niche(&warm_adapted, MetabolicClass::Endotherm);
+        // A cold-adapted creature dreads HEAT more than a warm one; the reverse
+        // for COLD.
+        assert!(cold.heat > warm.heat, "the cold-adapted fear heat more");
+        assert!(warm.cold > cold.cold, "the warm-adapted fear cold more");
+        // A mortal fears the uncanny; an Ametabolic elemental does not.
+        assert_eq!(cold.uncanny, 1.0, "a mortal fears the eldritch");
+        let elemental = derive_threat_niche(&cold_adapted, MetabolicClass::Ametabolic);
+        assert_eq!(elemental.uncanny, 0.0, "an elemental IS the eldritch");
+    }
+
+    #[test]
+    fn two_species_read_the_same_hot_cell_differently() {
+        // THE BANE, per-kind fear: a HOT cell dreaded by a cold-adapted creature,
+        // shrugged off by a heat-adapted one — the niche·hazard dot.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazards_map([(
+            cell.clone(),
+            Hazards {
+                uncanny: 0.0,
+                heat: 0.8,
+                cold: 0.0,
+            },
+        )]);
+        let v = view_at(cell.clone());
+        let cold_adapted = derive_threat_niche(
+            &ConditionResponse {
+                optimum: -10.0,
+                width: 20.0,
+                devotion: 0.5,
+            },
+            MetabolicClass::Endotherm,
+        );
+        let warm_adapted = derive_threat_niche(
+            &ConditionResponse {
+                optimum: 45.0,
+                width: 20.0,
+                devotion: 0.5,
+            },
+            MetabolicClass::Endotherm,
+        );
+        let fears = Danger {
+            terrain: &t,
+            threat_niche: cold_adapted,
+            boldness: BOLDNESS_STEADY,
+        };
+        let shrugs = Danger {
+            terrain: &t,
+            threat_niche: warm_adapted,
+            boldness: BOLDNESS_STEADY,
+        };
+        assert!(
+            fears.urgency(&v) > shrugs.urgency(&v),
+            "the cold-adapted creature dreads the heat the warm one shrugs off: \
+             {} vs {}",
+            fears.urgency(&v),
+            shrugs.urgency(&v)
+        );
+        // A creature fearless of a hazard (weight 0) feels nothing there.
+        assert_eq!(
+            shrugs.urgency(&v),
+            0.0,
+            "a fully heat-adapted creature (heat weight 0) feels no heat-dread"
         );
     }
 
@@ -4530,7 +4938,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let r = arbitrate(
+        let r = arb(
             &thirsty,
             &home,
             &drives,
@@ -4555,7 +4963,7 @@ mod tests {
             believed_water: None,
             explore_step: None,
         };
-        let r2 = arbitrate(
+        let r2 = arb(
             &sated,
             &home,
             &drives,
@@ -4603,6 +5011,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
@@ -4709,6 +5119,8 @@ mod tests {
                 time_horizon: 0.0,
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: default_diet_niche(),
+                boldness: 0.5,
+                threat_niche: mortal_threat_niche(),
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -4793,6 +5205,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -5065,7 +5479,7 @@ mod tests {
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
-            arbitrate(
+            arb(
                 view,
                 &home,
                 &drives,
@@ -5206,7 +5620,7 @@ mod tests {
         ];
         for v in &views {
             assert_eq!(
-                arbitrate(
+                arb(
                     v,
                     &home,
                     &drives,
@@ -5258,7 +5672,7 @@ mod tests {
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
         // wins decisively over the warm-only one.
-        let intent = arbitrate(
+        let intent = arb(
             &view,
             &home,
             &drives,
@@ -5315,7 +5729,7 @@ mod tests {
             intent: grab,
             mode: gm,
             ..
-        } = arbitrate(
+        } = arb(
             &view,
             &home,
             &drives,
@@ -5326,7 +5740,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let weigh = arbitrate(
+        let weigh = arb(
             &view,
             &home,
             &drives,
@@ -5389,7 +5803,7 @@ mod tests {
         };
         let mild_drives: [&dyn Drive; 2] = [&eager, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &mild,
                 &home,
                 &mild_drives,
@@ -5416,7 +5830,7 @@ mod tests {
         let survival = Thirst { params: SUSTENANCE };
         let dying_drives: [&dyn Drive; 2] = [&survival, &thermal];
         assert_eq!(
-            arbitrate(
+            arb(
                 &dying,
                 &home,
                 &dying_drives,
@@ -5464,7 +5878,7 @@ mod tests {
         };
         // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
         // no active drive, already home → Idle Hold, nothing engaged.
-        let myopic = arbitrate(
+        let myopic = arb(
             &view,
             &home,
             &drives,
@@ -5479,7 +5893,7 @@ mod tests {
         assert_eq!(myopic.affect.object, None, "no drive is engaged yet");
         // Foresighted (horizon 1): thirst active (0.70 ≥ act_eff 0.55) → already
         // beelining to known water, Eager, object Thirst.
-        let foresighted = arbitrate(
+        let foresighted = arb(
             &view,
             &home,
             &drives,
@@ -5581,7 +5995,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let trying = arbitrate(
+        let trying = arb(
             &view,
             &home,
             &drives,
@@ -5596,7 +6010,7 @@ mod tests {
             matches!(trying.intent, Intent::Do(_)),
             "a creature still trying acts toward the water"
         );
-        let given_up = arbitrate(
+        let given_up = arb(
             &view,
             &home,
             &drives,
@@ -5641,6 +6055,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
@@ -5650,6 +6066,8 @@ mod tests {
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             ..base.clone()
         };
         let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
@@ -5687,6 +6105,8 @@ mod tests {
             time_horizon: 0.0,
             metabolic_class: MetabolicClass::Ametabolic,
             niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
@@ -5728,7 +6148,7 @@ mod tests {
             explore_step: None,
         };
         // Awake: it seeks water.
-        let awake = arbitrate(
+        let awake = arb(
             &view,
             &home,
             &drives,
@@ -5741,7 +6161,7 @@ mod tests {
         );
         assert_eq!(awake.affect.object, Some(DriveKind::Thirst));
         // Asleep: the wake-gate silences thirst; it rests instead.
-        let asleep = arbitrate(
+        let asleep = arb(
             &view,
             &home,
             &drives,
@@ -5763,7 +6183,7 @@ mod tests {
             drive: 0.95,
             ..view.clone()
         };
-        let survival = arbitrate(
+        let survival = arb(
             &dying,
             &home,
             &drives,
@@ -5872,7 +6292,7 @@ mod tests {
             believed_water: Some(water.clone()),
             explore_step: None,
         };
-        let m1 = arbitrate(
+        let m1 = arb(
             &low,
             &home,
             &drives,
@@ -5900,7 +6320,7 @@ mod tests {
             explore_step: None,
         };
         assert_eq!(
-            arbitrate(
+            arb(
                 &high,
                 &home,
                 &drives,
@@ -5917,7 +6337,7 @@ mod tests {
         );
         let mut mode = m1;
         for _ in 0..5 {
-            let m = arbitrate(
+            let m = arb(
                 &high,
                 &home,
                 &drives,
@@ -5972,7 +6392,7 @@ mod tests {
             day,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
-        let a = arbitrate(
+        let a = arb(
             &view,
             &home,
             &drives,
@@ -5983,7 +6403,7 @@ mod tests {
             Mode::Idle,
             PLAN_BUDGET,
         );
-        let b = arbitrate(
+        let b = arb(
             &view,
             &home,
             &drives,

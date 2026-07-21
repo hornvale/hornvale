@@ -303,7 +303,17 @@ IV](./laboratory/census-of-coasts-iv.md).
   ~110 km canonical cell is the physics floor, and interpolation beneath it is
   cosmetic, not fidelity. The active-region swap the bet still awaits inherits
   that boundary: it can refine geometry indefinitely, but never invent physics
-  the cells do not hold.
+  the cells do not hold. [The Massing](./chronicle/the-massing.md) deepened the
+  *client* half of that consumption — the globe's level-of-detail ceiling lifted
+  (a purely client-side reach for the finer region tiles the substrate already
+  served) and the camera's own floor lowered to meet it — and, more pointedly,
+  gave the cosmetic-versus-fidelity boundary a *renderer that shows it*. A voxel
+  globe draws one block per cell and no gradient between, so the ~110 km floor
+  reads as the visible edge of a block rather than hiding inside a smooth slope:
+  the honest instrument for the very question of whether the cells' own
+  resolution — not the client's — is the next floor worth deepening. That
+  producer-side deepening stays deferred; what The Massing added is the
+  instrument to judge when it is owed.
 
 ## Genuinely open — split by whether the world can grade itself
 
