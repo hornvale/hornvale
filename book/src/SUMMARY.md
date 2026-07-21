@@ -202,6 +202,7 @@
 - [The Sounding](./chronicle/the-sounding.md)
 - [The Consonance](./chronicle/the-consonance.md)
 - [The Slumber](./chronicle/the-slumber.md)
+- [The Wakeful Sun](./chronicle/the-wakeful-sun.md)
 
 # Appendix: The Frontier
 
