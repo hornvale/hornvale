@@ -48,10 +48,27 @@ pub fn render_site(world: &World, site: CellId) -> String {
     out.push_str(&"=".repeat(header.chars().count()));
     out.push_str("\n\n");
     out.push_str(&stack_opening(&layers));
-    out.push_str("\n\n");
+    out.push('\n');
+
+    // A restacked site is usually one lineage refounding the same ground: the
+    // same kind of settlement, founded from the same forebear, every time.
+    // Saying that once here (instead of once per layer) is what keeps a
+    // five-deep stack from reading like a stuck record (T7 review fix).
+    let shared = SharedLineage::of(world, &layers);
+    if let Some(descriptor) = &shared.descriptor {
+        out.push('\n');
+        out.push_str(descriptor);
+        out.push('\n');
+    }
+    if let Some(founding) = &shared.founding {
+        out.push('\n');
+        out.push_str(founding);
+        out.push('\n');
+    }
+    out.push('\n');
 
     for (i, layer) in layers.iter().enumerate() {
-        out.push_str(&render_layer(world, layer, i, layers.len(), now));
+        out.push_str(&render_layer(world, layer, i, layers.len(), now, &shared));
         out.push('\n');
     }
 
@@ -60,6 +77,70 @@ pub fn render_site(world: &World, site: CellId) -> String {
     let last = &layers[layers.len() - 1];
     out.push_str(&render_flesh(world, last, now));
     out
+}
+
+/// Lineage-wide framing hoisted out of the per-layer paragraphs when every
+/// layer in a multi-layer stack would otherwise repeat it verbatim (T7
+/// review fix): the settlement descriptor (tech/function/notability/people)
+/// and the founding sentence. Both are `None` for a single-layer site (there
+/// is nothing to hoist) or a heterogeneous stack (each layer keeps telling
+/// its own part of the story).
+struct SharedLineage {
+    /// "Every layer here is a classical bugbear steading, an ordinary
+    /// place…" — present only when every layer shares the same tech,
+    /// function, notability, and people.
+    descriptor: Option<String>,
+    /// The founding sentence — present only when every layer's
+    /// `founded_from` thread renders identically (the whole stack traces to
+    /// one forebear, or every layer independently broke new ground).
+    founding: Option<String>,
+}
+
+impl SharedLineage {
+    /// Compute the hoistable lines for one site's stack, or an empty
+    /// (`None`, `None`) pair when there's nothing worth hoisting.
+    fn of(world: &World, layers: &[Layer]) -> SharedLineage {
+        if layers.len() < 2 {
+            return SharedLineage {
+                descriptor: None,
+                founding: None,
+            };
+        }
+        let first = &layers[0].record;
+        let descriptor_uniform = layers.iter().all(|l| {
+            l.record.tech == first.tech
+                && l.record.function == first.function
+                && l.record.notability == first.notability
+                && l.people == layers[0].people
+        });
+        let descriptor = descriptor_uniform.then(|| {
+            let tech = tech_word(first.tech);
+            format!(
+                "Every layer here is {article} {tech} {people} {noun}, {notability}.",
+                article = article(tech),
+                people = layers[0].people,
+                noun = function_noun(first.function),
+                notability = notability_phrase(first.notability),
+            )
+        });
+
+        let founding_sentences: Vec<String> = layers
+            .iter()
+            .map(|l| founding_sentence(world, &l.record))
+            .collect();
+        let founding_uniform = founding_sentences.windows(2).all(|w| w[0] == w[1]);
+        let founding = founding_uniform.then(|| {
+            format!(
+                "The whole lineage traces to one root: {}",
+                founding_sentences[0]
+            )
+        });
+
+        SharedLineage {
+            descriptor,
+            founding,
+        }
+    }
 }
 
 /// One occupation layer at a site: the ledger entity that carries it, plus the
@@ -260,23 +341,46 @@ fn stack_opening(layers: &[Layer]) -> String {
     }
 }
 
-/// Render one occupation layer as a prose paragraph.
-fn render_layer(world: &World, layer: &Layer, index: usize, total: usize, now: f64) -> String {
+/// Render one occupation layer as a prose paragraph. Always names this
+/// layer's own peak population (T7 review fix) — the one figure that
+/// distinguishes it from its neighbors even when the descriptor and founding
+/// sentences are hoisted out to [`SharedLineage`] because every layer would
+/// otherwise repeat them verbatim.
+fn render_layer(
+    world: &World,
+    layer: &Layer,
+    index: usize,
+    total: usize,
+    now: f64,
+    shared: &SharedLineage,
+) -> String {
     let r = &layer.record;
     let depth = depth_phrase(index, total);
     let tech = tech_word(r.tech);
     // People as an adjectival modifier reads singular ("a bugbear steading"),
     // never "a bugbears steading".
-    let mut para = format!(
-        "{depth} — {article} {tech} {people} {noun}, {notability}.\n",
-        article = article(tech),
-        people = layer.people,
-        noun = function_noun(r.function),
-        notability = notability_phrase(r.notability),
-    );
-    para.push_str("  ");
-    para.push_str(&founding_sentence(world, r));
-    para.push('\n');
+    let mut para = if shared.descriptor.is_some() {
+        // The descriptor already ran once, up front; this layer just needs
+        // its place in the stack and its own headcount.
+        format!(
+            "{depth} — at its height {}.\n",
+            souls_phrase(r.peak_population)
+        )
+    } else {
+        format!(
+            "{depth} — {article} {tech} {people} {noun}, {notability}, at its height {souls}.\n",
+            article = article(tech),
+            people = layer.people,
+            noun = function_noun(r.function),
+            notability = notability_phrase(r.notability),
+            souls = souls_phrase(r.peak_population),
+        )
+    };
+    if shared.founding.is_none() {
+        para.push_str("  ");
+        para.push_str(&founding_sentence(world, r));
+        para.push('\n');
+    }
     para.push_str("  ");
     para.push_str(&span_sentence(r, now));
     para.push('\n');

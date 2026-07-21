@@ -41,7 +41,6 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
- "hornvale-worldgen",
 ]
 
 [[package]]

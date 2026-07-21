@@ -2,8 +2,17 @@
 //! committed to a fresh world, read back as prose. The headline is the
 //! findable goblin doll — the whole campaign in one string.
 
+// Relocated from windows/almanac/tests/ (T7 review fix): the original
+// location added `hornvale-worldgen` as a dev-dependency of `windows/almanac`
+// to reach `History`/`emit_history`, which created an almanac→worldgen
+// dev-dependency cycle (worldgen already depends on almanac normally) and
+// made the layering-page drift check fail. `cli` already depends on both
+// `hornvale-almanac` and `hornvale-worldgen` as normal dependencies, so this
+// test needs no new dependency edge here. The history-domain record types
+// come through `hornvale_almanac::hornvale_history`, a re-export riding the
+// almanac→history edge that already existed (see windows/almanac/src/lib.rs).
 use hornvale_almanac::history::render_site;
-use hornvale_history::record::{
+use hornvale_almanac::hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
 };
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
@@ -15,7 +24,7 @@ fn eid(n: u64) -> EntityId {
 
 fn test_world() -> World {
     let mut w = World::new(Seed(42));
-    hornvale_history::register_concepts(&mut w.registry).unwrap();
+    hornvale_almanac::hornvale_history::register_concepts(&mut w.registry).unwrap();
     hornvale_settlement::register_concepts(&mut w.registry).unwrap();
     w
 }

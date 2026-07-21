@@ -18,7 +18,7 @@ kernel  →  domains/*  →  windows/*  →  cli
 | hornvale-settlement | domains | hornvale-kernel | — |
 | hornvale-species | domains | hornvale-kernel | — |
 | hornvale-terrain | domains | hornvale-kernel | — |
-| hornvale-almanac | windows | hornvale-astronomy, hornvale-climate, hornvale-culture, hornvale-kernel, hornvale-religion, hornvale-settlement, hornvale-species, hornvale-terrain | — |
+| hornvale-almanac | windows | hornvale-astronomy, hornvale-climate, hornvale-culture, hornvale-history, hornvale-kernel, hornvale-religion, hornvale-settlement, hornvale-species, hornvale-terrain | — |
 | hornvale-book | windows | hornvale-astronomy, hornvale-kernel, hornvale-language, hornvale-worldgen | hornvale-terrain |
 | hornvale-chronicle | windows | hornvale-kernel | — |
 | hornvale-explain | windows | hornvale-astronomy, hornvale-kernel | — |

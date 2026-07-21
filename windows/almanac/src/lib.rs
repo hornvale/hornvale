@@ -4,6 +4,14 @@
 
 pub mod history;
 
+/// Re-exported so that test code assembling the `OccupationRecord` fixtures
+/// [`history::render_site`] reads can reach the history domain's types
+/// without adding a new dependency edge: `hornvale-almanac` already depends
+/// on `hornvale-history` normally (it is the crate whose facts `render_site`
+/// queries), so this only exposes an edge that already exists in the
+/// dependency graph — it changes no row of the enforced layering page.
+pub use hornvale_history;
+
 use hornvale_astronomy::SkyReport;
 use hornvale_climate::ClimateReport;
 use hornvale_kernel::Phenomenon;

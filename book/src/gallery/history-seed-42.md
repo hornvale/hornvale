@@ -16,28 +16,27 @@ The clearing at cell 36918
 
 Five lives have passed over this ground, one settling atop the ruins of the last.
 
-The deepest layer — a classical bugbear steading, an ordinary place, neither famed nor forgotten.
-  Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+Every layer here is a classical bugbear steading, an ordinary place, neither famed nor forgotten.
+
+The whole lineage traces to one root: Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+
+The deepest layer — at its height a mere seven souls.
   Founded in the year 1525, it held for 25 years, until the year 1550.
   In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
 
-Above it — a classical bugbear steading, an ordinary place, neither famed nor forgotten.
-  Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+Above it — at its height a mere six souls.
   Founded in the year 1575, it held for 25 years, until the year 1600.
   Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
 
-Higher still — a classical bugbear steading, an ordinary place, neither famed nor forgotten.
-  Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+Higher still — at its height a mere five souls.
   Founded in the year 1625, it held for 25 years, until the year 1650.
   The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
 
-Above that again — a classical bugbear steading, an ordinary place, neither famed nor forgotten.
-  Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+Above that again — at its height a mere four souls.
   Founded in the year 1675, it held for 25 years, until the year 1700.
   In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
 
-The last of them — a classical bugbear steading, an ordinary place, neither famed nor forgotten.
-  Its founders fled the ice of the clearing at cell 9264, bugbears looking for kinder ground.
+The last of them — at its height a mere three souls.
   Founded in the year 1725, it held for 25 years, until the year 1750.
   Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
 
