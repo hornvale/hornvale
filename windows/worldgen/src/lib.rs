@@ -3128,12 +3128,26 @@ fn exposure_of_impl(
 
     let species = name;
     // Source perception from the world's component set (ECS c3), keyed by the
-    // kind's `KindId` label.
+    // kind's `KindId` label. Since The Solitary Tongue, a speaker (an
+    // articulation-registry kind) is no longer necessarily a perceiver — the
+    // three dragons speak but do not (yet) perceive (perception stays the
+    // four peoples, deferred). A non-perceiving speaker falls back to the
+    // goblin baseline (`Diurnal`, 0.5/0.5) purely as this classifier's input
+    // — a neutral stand-in, not a claim the dragon actually perceives that
+    // way — so its color/body/kin exposure still classifies instead of
+    // panicking on a missing component that is legitimately absent.
+    const NON_PERCEIVING_SPEAKER_BASELINE: hornvale_species::PerceptionVector =
+        hornvale_species::PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            night_vision: 0.5,
+            sky_attention: 0.5,
+        };
     let perception = wc
         .perception
         .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
-    let depths = pack_depths(perception);
+        .copied()
+        .unwrap_or(NON_PERCEIVING_SPEAKER_BASELINE);
+    let depths = pack_depths(&perception);
     let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
