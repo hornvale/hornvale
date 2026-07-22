@@ -832,7 +832,10 @@ pub fn believed_water(
         }
     }
     seen.into_iter()
-        .filter_map(|r| plan_to_room(&npc.home, &r, budget).map(|p| (p.len(), r)))
+        .filter_map(|r| {
+            plan_to_room(&npc.home, &r, budget, &std::collections::BTreeSet::new())
+                .map(|p| (p.len(), r))
+        })
         .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
         .map(|(_, r)| r)
 }
@@ -891,6 +894,12 @@ pub struct Perceived {
     pub fatigue: f64,
     /// The nearest water the agent KNOWS of (belief), or `None` (ignorant).
     pub believed_water: Option<RoomAddr>,
+    /// The ground the agent remembers being FRIGHTENED on (belief, The Haunt):
+    /// the set of cells its planners route AROUND — the inverted twin of
+    /// `believed_water`. EMPTY ⇒ today's behaviour (every planner edge stays
+    /// `1`, byte-identical). Read by the planning drives (thirst/homing) as a
+    /// finite route cost; the greedy drives ignore it.
+    pub believed_hazard: std::collections::BTreeSet<RoomAddr>,
     /// The next exploration move for an ignorant agent (lowest-elevation
     /// unvisited neighbour), or `None` (nowhere new to look → Hold).
     pub explore_step: Option<RoomAddr>,
@@ -1134,9 +1143,8 @@ impl Drive for Thirst {
         match &view.believed_water {
             // Knows water: the first step of the A* plan toward it (None when
             // that known water is unreachable within budget).
-            Some(w) => {
-                plan_to_water(&view.position, w, budget).and_then(|pl| pl.into_iter().next())
-            }
+            Some(w) => plan_to_water(&view.position, w, budget, &view.believed_hazard)
+                .and_then(|pl| pl.into_iter().next()),
             // Ignorant: the exploration step (None when nowhere new to look).
             None => view.explore_step.clone().map(Action::MoveTo),
         }
@@ -2143,8 +2151,8 @@ pub fn arbitrate(
             object: None,
         };
         if view.position != *home {
-            let step =
-                plan_to_room(&view.position, home, budget).and_then(|pl| pl.into_iter().next());
+            let step = plan_to_room(&view.position, home, budget, &view.believed_hazard)
+                .and_then(|pl| pl.into_iter().next());
             return Resolution {
                 intent: step.map(Intent::Do).unwrap_or(Intent::Hold),
                 mode: Mode::Homing,
@@ -2330,11 +2338,16 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
     let fatigue = fatigue_at(frozen, npc.entity, day);
+    // The Haunt: the ground this creature remembers being frightened on — a fold
+    // over its committed history (empty for a never-frightened creature ⇒
+    // byte-identical). The planning drives read it as a finite route cost.
+    let believed_hazard = believed_hazard(frozen, npc, day, terrain);
     let view = Perceived {
         position: pos,
         drive,
         fatigue,
         believed_water: believed,
+        believed_hazard,
         explore_step,
     };
     let thirst = Thirst { params: SUSTENANCE };
@@ -2370,7 +2383,12 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
     };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
-    let plan_home = plan_to_room(&view.position, &npc.home, PLAN_BUDGET);
+    let plan_home = plan_to_room(
+        &view.position,
+        &npc.home,
+        PLAN_BUDGET,
+        &view.believed_hazard,
+    );
     let social = Social {
         loneliness: loneliness_from_plan(&plan_home),
         home_step: plan_home.and_then(|p| p.into_iter().next()),
@@ -2617,6 +2635,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // fold includes this tick's own emitted moves). Seed belief from the
             // pre-tick history; grow it whenever the agent stands in water.
             let mut believed = believed_water(frozen, npc, self.from, self.terrain, PLAN_BUDGET);
+            // The Haunt: the ground this creature remembers being frightened on —
+            // a fold over its committed (pre-tick) history, computed ONCE per
+            // creature (the hazard at a cell is time-invariant in v1, so the set
+            // does not grow within the walk). Empty for a never-frightened
+            // creature ⇒ every planner edge stays `1`, byte-identical.
+            let believed_hazard = believed_hazard(frozen, npc, self.from, self.terrain);
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -2677,6 +2701,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     drive,
                     fatigue,
                     believed_water: believed.clone(),
+                    believed_hazard: believed_hazard.clone(),
                     explore_step,
                 };
                 // BOTH drives now compete: thirst (the drank-fold, on the view)
@@ -2714,7 +2739,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
-                let plan_home = plan_to_room(&pos, &npc.home, PLAN_BUDGET);
+                let plan_home = plan_to_room(&pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
                 let social = Social {
                     loneliness: loneliness_from_plan(&plan_home),
                     home_step: plan_home.and_then(|p| p.into_iter().next()),
@@ -2865,7 +2890,9 @@ fn nearer_to_home(
     found: RoomAddr,
     budget: usize,
 ) -> Option<RoomAddr> {
-    let d = |r: &RoomAddr| plan_to_room(home, r, budget).map(|p| p.len());
+    let d = |r: &RoomAddr| {
+        plan_to_room(home, r, budget, &std::collections::BTreeSet::new()).map(|p| p.len())
+    };
     match current {
         None => Some(found),
         Some(c) => match (d(&c), d(&found)) {
@@ -3203,13 +3230,45 @@ pub struct PlanState {
     pub hydrated: bool,
 }
 
+/// The extra `MoveTo` cost the planners charge for stepping INTO a
+/// remembered-dangerous cell (The Haunt): a finite detour budget over the
+/// baseline edge cost of `1`, so the A* routes AROUND remembered-bad ground
+/// whenever a detour is cheaper than the penalty, yet still braves it when the
+/// detour would exceed the penalty (survival-override for free — the finite cost
+/// IS the override, never a wall). Deliberately SMALL (decision-ledger #4): the
+/// planners run Dijkstra-mode (`heuristic() == 0`, budget `PLAN_BUDGET` node
+/// expansions), so a LARGE penalty makes A* exhaust its budget exploring the
+/// cost-radius around a chokepoint remembered cell and return `None` — the
+/// creature freezes instead of detouring (the over-avoidance failure; `20` froze
+/// ~900 seed-42 fauna). `5` keeps the cost-radius within budget so avoidance is
+/// graceful (the seed-42 possession `stirred` count barely moves — a handful of
+/// beasts detour, none freeze). Decoupling magnitude from budget via an
+/// admissible geometric heuristic (for STRONG avoidance) is reserved.
+/// type-audit: bare-ok(count)
+const REMEMBERED_PENALTY: u64 = 5;
+
+/// The `MoveTo` edge cost into `n` given the remembered-danger set: the baseline
+/// `1`, plus [`REMEMBERED_PENALTY`] when `n` is remembered-dangerous. For an
+/// EMPTY `avoid` set every edge stays `1` — the byte-identity property both
+/// planners share.
+fn move_cost(n: &RoomAddr, avoid: &std::collections::BTreeSet<RoomAddr>) -> u64 {
+    if avoid.contains(n) {
+        1 + REMEMBERED_PENALTY
+    } else {
+        1
+    }
+}
+
 /// The GOAP search space for the sustenance goal: reach water and drink.
 /// type-audit: bare-ok(return)
-pub struct GoapSpace {
+pub struct GoapSpace<'a> {
     /// The water room the `Drink` action requires.
     pub water: RoomAddr,
+    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
+    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
+    pub avoid: &'a std::collections::BTreeSet<RoomAddr>,
 }
-impl SearchSpace for GoapSpace {
+impl<'a> SearchSpace for GoapSpace<'a> {
     type State = PlanState;
     type Action = Action;
     fn successors(&self, s: &PlanState) -> Vec<(Action, PlanState, u64)> {
@@ -3221,13 +3280,14 @@ impl SearchSpace for GoapSpace {
             .neighbors()
             .into_iter()
             .map(|n| {
+                let cost = move_cost(&n, self.avoid);
                 (
                     Action::MoveTo(n.clone()),
                     PlanState {
                         position: n,
                         hydrated: false,
                     },
-                    1,
+                    cost,
                 )
             })
             .collect();
@@ -3252,12 +3312,19 @@ impl SearchSpace for GoapSpace {
 }
 
 /// Plan the `[move*, drink]` journey to satisfy the sustenance goal, or `None`
-/// if water is unreachable within `budget`.
+/// if water is unreachable within `budget`. `avoid` is the remembered-danger set
+/// the A* routes around (The Haunt); pass an empty set for the memory-less path.
 /// type-audit: bare-ok(count: budget)
-pub fn plan_to_water(from: &RoomAddr, water: &RoomAddr, budget: usize) -> Option<Vec<Action>> {
+pub fn plan_to_water(
+    from: &RoomAddr,
+    water: &RoomAddr,
+    budget: usize,
+    avoid: &std::collections::BTreeSet<RoomAddr>,
+) -> Option<Vec<Action>> {
     astar(
         &GoapSpace {
             water: water.clone(),
+            avoid,
         },
         PlanState {
             position: from.clone(),
@@ -3268,16 +3335,22 @@ pub fn plan_to_water(from: &RoomAddr, water: &RoomAddr, budget: usize) -> Option
 }
 
 /// A navigation-only space (the home-return goal — no Drink): goal is arrival.
-struct NavSpace {
+struct NavSpace<'a> {
     dest: RoomAddr,
+    /// The remembered-dangerous cells to route around (The Haunt) — a `MoveTo`
+    /// into one costs `1 + REMEMBERED_PENALTY`. Empty ⇒ byte-identical.
+    avoid: &'a std::collections::BTreeSet<RoomAddr>,
 }
-impl SearchSpace for NavSpace {
+impl<'a> SearchSpace for NavSpace<'a> {
     type State = RoomAddr;
     type Action = Action;
     fn successors(&self, s: &RoomAddr) -> Vec<(Action, RoomAddr, u64)> {
         s.neighbors()
             .into_iter()
-            .map(|n| (Action::MoveTo(n.clone()), n, 1))
+            .map(|n| {
+                let cost = move_cost(&n, self.avoid);
+                (Action::MoveTo(n.clone()), n, cost)
+            })
             .collect()
     }
     fn goal(&self, s: &RoomAddr) -> bool {
@@ -3289,9 +3362,23 @@ impl SearchSpace for NavSpace {
 }
 
 /// Plan a pure navigation path to `dest` (the home-return goal), or `None`.
+/// `avoid` is the remembered-danger set the A* routes around (The Haunt); pass
+/// an empty set for the memory-less path.
 /// type-audit: bare-ok(count: budget)
-pub fn plan_to_room(from: &RoomAddr, dest: &RoomAddr, budget: usize) -> Option<Vec<Action>> {
-    astar(&NavSpace { dest: dest.clone() }, from.clone(), budget)
+pub fn plan_to_room(
+    from: &RoomAddr,
+    dest: &RoomAddr,
+    budget: usize,
+    avoid: &std::collections::BTreeSet<RoomAddr>,
+) -> Option<Vec<Action>> {
+    astar(
+        &NavSpace {
+            dest: dest.clone(),
+            avoid,
+        },
+        from.clone(),
+        budget,
+    )
 }
 
 #[cfg(test)]
@@ -4261,6 +4348,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(
@@ -4273,6 +4361,7 @@ mod tests {
             drive: 0.1,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(
@@ -4285,6 +4374,7 @@ mod tests {
             drive: 0.1,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(decide(&v, &home, &p, 10_000), Intent::Hold);
@@ -4303,6 +4393,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(decide(&thirsty, &home, &p, 0), Intent::Hold);
@@ -4311,6 +4402,7 @@ mod tests {
             drive: 0.1,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(decide(&away_not_thirsty, &home, &p, 0), Intent::Hold);
@@ -4342,6 +4434,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: Some(explore.clone()),
         };
         assert_eq!(
@@ -4354,6 +4447,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: Some(explore.clone()),
         };
         assert_eq!(
@@ -4370,6 +4464,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(decide(&stuck, &home, &p, 10_000), Intent::Hold);
@@ -4379,6 +4474,7 @@ mod tests {
             drive: 0.1,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert!(matches!(
@@ -4777,7 +4873,8 @@ mod tests {
         // Water is a mesh neighbor of home (one step away): plan is [MoveTo(water), Drink].
         let home = raddr(1.0);
         let water = home.neighbors()[0].clone();
-        let plan = plan_to_water(&home, &water, 10_000).expect("reachable");
+        let plan = plan_to_water(&home, &water, 10_000, &std::collections::BTreeSet::new())
+            .expect("reachable");
         assert_eq!(plan.len(), 2);
         assert!(matches!(plan[0], Action::MoveTo(ref r) if *r == water));
         assert!(matches!(plan[1], Action::Drink));
@@ -4786,7 +4883,8 @@ mod tests {
     #[test]
     fn plan_to_water_when_already_there_is_just_drink() {
         let water = raddr(1.0);
-        let plan = plan_to_water(&water, &water, 10_000).unwrap();
+        let plan =
+            plan_to_water(&water, &water, 10_000, &std::collections::BTreeSet::new()).unwrap();
         assert_eq!(plan, vec![Action::Drink]);
     }
 
@@ -4803,7 +4901,8 @@ mod tests {
             .find(|n| **n != home)
             .unwrap()
             .clone();
-        let plan = plan_to_water(&home, &water, 10_000).expect("reachable");
+        let plan = plan_to_water(&home, &water, 10_000, &std::collections::BTreeSet::new())
+            .expect("reachable");
         let mut pos = home.clone();
         let mut hydrated = false;
         for a in &plan {
@@ -4835,9 +4934,77 @@ mod tests {
     fn plan_to_room_is_pure_navigation_no_drink() {
         let home = raddr(1.0);
         let dest = home.neighbors()[0].clone();
-        let plan = plan_to_room(&home, &dest, 10_000).unwrap();
+        let plan = plan_to_room(&home, &dest, 10_000, &std::collections::BTreeSet::new()).unwrap();
         assert!(plan.iter().all(|a| matches!(a, Action::MoveTo(_))));
         assert!(!plan.is_empty());
+    }
+
+    #[test]
+    fn planner_routes_around_a_remembered_cell() {
+        // THE SHUN: a remembered-dangerous cell on the straight path becomes a
+        // finite detour cost, so the A* routes AROUND it when a cheaper detour
+        // exists — and with an EMPTY avoid set the plan is unchanged (the
+        // byte-identity property, at the planner seam).
+        let home = raddr(1.0);
+        let mid = home.neighbors()[0].clone();
+        let water = mid
+            .neighbors()
+            .iter()
+            .find(|n| **n != home)
+            .unwrap()
+            .clone(); // 2 hops from home, via `mid`
+        let empty = std::collections::BTreeSet::new();
+        let direct = plan_to_water(&home, &water, 10_000, &empty).expect("reachable");
+        assert_eq!(
+            direct.len(),
+            3,
+            "the straight path is two moves then a drink"
+        );
+        // The via-cell the straight plan actually steps through (not water itself).
+        let via = direct
+            .iter()
+            .find_map(|a| match a {
+                Action::MoveTo(r) if *r != water => Some(r.clone()),
+                _ => None,
+            })
+            .expect("a via-cell on the straight path");
+        let mut avoid = std::collections::BTreeSet::new();
+        avoid.insert(via.clone());
+        let around = plan_to_water(&home, &water, 10_000, &avoid).expect("still reachable");
+        assert!(
+            !around
+                .iter()
+                .any(|a| matches!(a, Action::MoveTo(r) if *r == via)),
+            "the plan routes AROUND the remembered cell"
+        );
+        assert!(
+            matches!(around.last(), Some(Action::Drink)),
+            "the detour still reaches water and drinks"
+        );
+        assert!(
+            around.len() >= direct.len(),
+            "the detour costs at least as much as the straight path"
+        );
+    }
+
+    #[test]
+    fn planner_braves_it_when_the_detour_exceeds_the_penalty() {
+        // SURVIVAL-OVERRIDE FOR FREE: the penalty is FINITE, so when the
+        // remembered-bad cell is the ONLY route to water (no detour at all — an
+        // infinite alternative), the creature still takes it. A dying-thirsty
+        // creature braves the haunted ground; the flinch is a preference, not a
+        // wall.
+        let home = raddr(1.0);
+        let water = home.neighbors()[0].clone(); // 1 hop — MoveTo(water) is the sole route in
+        let mut avoid = std::collections::BTreeSet::new();
+        avoid.insert(water.clone());
+        let plan =
+            plan_to_water(&home, &water, 10_000, &avoid).expect("the finite penalty never traps");
+        assert_eq!(
+            plan,
+            vec![Action::MoveTo(water.clone()), Action::Drink],
+            "braves the remembered cell when it is the only route"
+        );
     }
 
     /// A synthetic elevation + fresh-water field for pure tests: planted
@@ -5148,6 +5315,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let hunger = Hunger {
@@ -5168,6 +5336,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(
@@ -5203,6 +5372,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         }
     }
@@ -5335,6 +5505,7 @@ mod tests {
             drive: 0.9, // very thirsty
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: Some(detour.clone()),
         };
         let drives: [&dyn Drive; 2] = [&thirst, &danger];
@@ -6035,7 +6206,7 @@ mod tests {
         let pos = home.neighbors()[2].clone(); // one hop from home
         let water = home.neighbors()[1].clone();
         // The real home-step from `pos` (a genuine neighbour of `pos`).
-        let plan = plan_to_room(&pos, &home, PLAN_BUDGET);
+        let plan = plan_to_room(&pos, &home, PLAN_BUDGET, &std::collections::BTreeSet::new());
         let step = plan.clone().and_then(|p| p.into_iter().next()).unwrap();
         let social = Social {
             loneliness: 0.9,
@@ -6049,6 +6220,7 @@ mod tests {
             drive: 0.95,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let r = arb(
@@ -6074,6 +6246,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let r2 = arb(
@@ -6372,6 +6545,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         }
     }
@@ -6612,6 +6786,7 @@ mod tests {
                 drive: 0.1,
                 fatigue: 0.0,
                 believed_water: Some(water.clone()),
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             }),
             AffectLabel::Content,
@@ -6623,6 +6798,7 @@ mod tests {
                 drive: 0.95,
                 fatigue: 0.0,
                 believed_water: Some(water.clone()),
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             }),
             AffectLabel::Eager,
@@ -6635,6 +6811,7 @@ mod tests {
                 drive: 0.95,
                 fatigue: 0.0,
                 believed_water: None,
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: Some(ns[2].clone()),
             }),
             AffectLabel::Searching,
@@ -6652,6 +6829,7 @@ mod tests {
                 drive: 0.95,
                 fatigue: 0.0,
                 believed_water: None,
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             }),
             AffectLabel::Lost,
@@ -6694,6 +6872,7 @@ mod tests {
                 drive: 0.9,
                 fatigue: 0.0,
                 believed_water: Some(water.clone()),
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             },
             // sated, away (at water) → plan home
@@ -6702,6 +6881,7 @@ mod tests {
                 drive: 0.1,
                 fatigue: 0.0,
                 believed_water: Some(water.clone()),
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             },
             // sated, at home → Hold
@@ -6710,6 +6890,7 @@ mod tests {
                 drive: 0.1,
                 fatigue: 0.0,
                 believed_water: Some(water.clone()),
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             },
             // parched, ignorant, has an explore step → explore
@@ -6718,6 +6899,7 @@ mod tests {
                 drive: 0.9,
                 fatigue: 0.0,
                 believed_water: None,
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: Some(ns[2].clone()),
             },
             // parched, ignorant, nowhere new → Hold
@@ -6726,6 +6908,7 @@ mod tests {
                 drive: 0.9,
                 fatigue: 0.0,
                 believed_water: None,
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             },
         ];
@@ -6772,6 +6955,7 @@ mod tests {
             drive: 0.9,
             fatigue: 0.0,
             believed_water: Some(both.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
@@ -6825,6 +7009,7 @@ mod tests {
             drive: 0.5, // moderate thirst (capped 0.5), active under eager_thirst
             fatigue: 0.0,
             believed_water: Some(both.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let thirst = Thirst {
@@ -6907,6 +7092,7 @@ mod tests {
             drive: 0.5,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let eager = Thirst {
@@ -6936,6 +7122,7 @@ mod tests {
             drive: 1.0,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let survival = Thirst { params: SUSTENANCE };
@@ -6985,6 +7172,7 @@ mod tests {
             drive: 0.70,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         // Myopic (horizon 0): thirst inactive (0.70 < 0.85), thermal inactive →
@@ -7104,6 +7292,7 @@ mod tests {
             drive: 1.0,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let trying = arb(
@@ -7256,6 +7445,7 @@ mod tests {
             drive: 0.85, // thirsty (active while awake), but not yet dying
             fatigue: 0.2,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         // Awake: it seeks water.
@@ -7361,6 +7551,7 @@ mod tests {
                 drive: 0.0,
                 fatigue: 1.0,
                 believed_water: None,
+                believed_hazard: std::collections::BTreeSet::new(),
                 explore_step: None,
             };
             assert_eq!(rest.affordance(&view, PLAN_BUDGET), Some(Action::Rest));
@@ -7401,6 +7592,7 @@ mod tests {
             drive: 0.50,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let m1 = arb(
@@ -7428,6 +7620,7 @@ mod tests {
             drive: 0.65,
             fatigue: 0.0,
             believed_water: Some(water.clone()),
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         assert_eq!(
@@ -7494,6 +7687,7 @@ mod tests {
             drive: 0.0,
             fatigue: 0.0,
             believed_water: None,
+            believed_hazard: std::collections::BTreeSet::new(),
             explore_step: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
