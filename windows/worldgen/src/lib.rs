@@ -1652,7 +1652,7 @@ pub fn paleoclimate_from(
 ///   order the coarse ice diagnostic already pays.
 /// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
 ///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
-///   `era_for` marches the glacial cycles forward across the simulated
+///   `era_index_for` marches the glacial cycles forward across the simulated
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single

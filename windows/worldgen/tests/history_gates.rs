@@ -70,8 +70,9 @@ use hornvale_worldgen::{
 // deferred to C3.
 const MIGRATION_FLOOR: u64 = 5;
 
-/// Gate 2. Seed-42 measured 0.055 region overlap (raw cell-set overlap is a
-/// structural 0). A world above this ceiling has interleaved, not separated,
+/// Gate 2. Seed-42 measured 0.0466 region overlap under the moving sea (0.055
+/// pre-Sundering; raw cell-set overlap is a structural 0). A world above this
+/// ceiling has interleaved, not separated,
 /// peoples — the diversity payoff would have failed.
 const MAX_REGION_OVERLAP: f64 = 0.25;
 
