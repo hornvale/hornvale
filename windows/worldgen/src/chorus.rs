@@ -1461,7 +1461,15 @@ pub fn tongue_morphology_of(
         Some(_) => (family, crate::proto_phonology_of_in(world, &wc, family)),
         None => (name, ph.clone()),
     };
-    let cascade = hornvale_language::draw_cascade(&world.seed, name);
+    // Route through cascade_of, not the language crate's default-regime
+    // draw_cascade: this fn already returns a Result, so the swap is
+    // trivial (`?` propagates). tongue_morphology_of is in practice only
+    // ever called over placed_peoples (culture/chorus is placement-gated,
+    // and dragons are never placed — see windows/book/src/lib.rs and
+    // deep_grammar.rs's callers), so it never actually sees a dragon
+    // today; routed anyway for consistency with lexicon_of's regime and to
+    // stay correct if that placement gate ever loosens.
+    let cascade = crate::cascade_of(world, name)?;
     let (evidential_depth, noun_class_depth, class_position) =
         hornvale_language::morph_depths(&world.seed, species);
     let (evidential, class) =

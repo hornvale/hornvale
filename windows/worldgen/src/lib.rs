@@ -3264,9 +3264,30 @@ pub fn family_daughters(
         // language divergence is a speaker concern. Byte-identical for the
         // peoples' families, whose members all speak.
         .filter(|(kind, _)| wc.articulation.contains(kind))
-        .map(|(kind, _)| hornvale_language::Daughter {
-            cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
-            phonology: language_of_wc(world, wc, kind.0),
+        .map(|(kind, _)| {
+            // Draw at kind's OWN regime (cascade_regime_of), not the
+            // language crate's default-regime draw_cascade: a family can
+            // hold a dragon (the "draconic" family), so the daughter's
+            // cascade must be frozen consistent with its lexicon. This
+            // reads the biosphere row from the CALLER's `wc` rather than
+            // calling `cascade_of` (which re-`assemble()`s the CANONICAL
+            // registries) — `family_daughters` is also called with a
+            // synthetic `wc` (Lab's solo/twin components,
+            // `WorldComponents::from_stores`), whose re-keyed kinds
+            // (e.g. "goblin-twin") do not exist in the canonical registry
+            // `cascade_of` would resolve against.
+            let bio = wc
+                .biosphere
+                .get(kind)
+                .expect("every kind in family_of has a biosphere row (integrity-checked)");
+            hornvale_language::Daughter {
+                cascade: hornvale_language::draw_cascade_with_regime(
+                    &world.seed,
+                    kind.0,
+                    cascade_regime_of(bio),
+                ),
+                phonology: language_of_wc(world, wc, kind.0),
+            }
         })
         .collect()
 }

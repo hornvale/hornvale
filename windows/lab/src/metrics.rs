@@ -3593,6 +3593,13 @@ fn lexicon_regular(v: &FullView, species: &str) -> MetricValue {
         return MetricValue::Absent;
     }
     let ph = language_of_in(v.world(), v.components(), species);
+    // NOT routed through hornvale_worldgen::cascade_of (The Solitary Tongue,
+    // Task 4): every call site passes a fixed people, never a dragon-
+    // reachable roster scan — the two direct registrations below pass the
+    // literal "goblin"/"kobold", and lexicon_regular_family's only other
+    // caller iterates the fixed ALL_DAUGHTERS = ["goblin", "hobgoblin",
+    // "bugbear", "kobold"] constant. The default SETTLED regime is
+    // therefore always the correct one here.
     let cascade = hornvale_language::draw_cascade(&v.world().seed, species);
     let Ok(lex) = lex(v, species) else {
         return MetricValue::Absent;
