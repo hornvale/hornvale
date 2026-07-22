@@ -708,3 +708,22 @@ fn features_seed_is_derived_and_perturbs_no_existing_draw() {
     // distinct from the lithology seed (a different label)
     assert_ne!(a.features_noise_seed(), a.lithology_noise_seed());
 }
+
+#[test]
+fn features_are_a_pure_pin_invariant_projection() {
+    let geo = Geosphere::new(4);
+    let base = GeneratedTerrain::new(
+        geo.clone(),
+        generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
+    );
+    // Re-affirm a drawn value via a pin; the derived caves/deposits must not shift.
+    let pins = TerrainPins {
+        plates: Some(summarize(base.globe()).plate_count),
+        ..TerrainPins::default()
+    };
+    let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
+    for cell in geo.cells() {
+        assert_eq!(base.cave_at(cell), pinned.cave_at(cell));
+        assert_eq!(base.deposit_at(cell), pinned.deposit_at(cell));
+    }
+}
