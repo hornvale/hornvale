@@ -2352,6 +2352,69 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
     .affect
 }
 
+/// The per-tick ALARM field (The Alarm) — fear-contagion as a derived,
+/// order-independent field over the frozen population, the vessel's dynamic
+/// sibling of `worldgen::predator_pressure`. For each creature that is
+/// **primary-afraid** (its own Danger drive is active — `affect_of` reads
+/// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
+/// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
+/// (a one-hop halo), accumulating (`+=`) across emitters, then clamps every
+/// entry to `[0, 1]`. Empty when no creature is primary-afraid.
+///
+/// # The termination invariant (spec §3)
+///
+/// The field is built by reading `affect_of` **alarm-free** — the frozen
+/// ledger holds no committed alarm (affect is immaterial, never committed), and
+/// `affect_of`'s own Danger drive passes `alarm: None`. So an emitter's danger
+/// is necessarily **terrain-sourced**: a creature alarmed only by contagion
+/// (borrowed alarm) is NOT itself an emitter, and secondary transmission (a
+/// self-sustaining stampede, `R0 ≥ 1`) is impossible by construction. Only the
+/// tick's Danger drive then READS the field (via `alarm: Some(&field)`) — the
+/// wave is a bounded halo around genuine hazard, collapsing the next tick once
+/// the hazard clears.
+///
+/// # Determinism
+///
+/// Accumulation into a `BTreeMap` with `+=` is order-independent (addition is
+/// commutative), so the field is the same regardless of `npcs` order; the clamp
+/// is applied once at the end over the sorted keys. The field is a compute-path
+/// intermediate, never serialized.
+///
+/// type-audit: bare-ok(ratio: return)
+pub fn alarm_field(
+    frozen: &Ledger,
+    npcs: &[Npc],
+    terrain: &dyn Terrain,
+    day: WorldTime,
+) -> std::collections::BTreeMap<RoomAddr, f64> {
+    let mut field: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+    for npc in npcs {
+        // The ALARM-FREE read (the build invariant): `affect_of` senses only the
+        // terrain hazards, never borrowed alarm — so emission is terrain-sourced
+        // by construction and the wave terminates.
+        let affect = affect_of(frozen, npc, day, terrain);
+        let primary_afraid =
+            affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT;
+        if !primary_afraid {
+            continue;
+        }
+        // Stamp the emitter's felt-threat magnitude on its cell and the one-hop
+        // halo (its three edge-neighbours), accumulating across emitters.
+        let magnitude = affect.arousal;
+        let pos = agent_position(frozen, npc, day);
+        *field.entry(pos.clone()).or_insert(0.0) += magnitude;
+        for n in pos.neighbors() {
+            *field.entry(n).or_insert(0.0) += magnitude;
+        }
+    }
+    // Saturation: a stampeding crowd is not infinitely scarier than a threshold
+    // few. Clamp once at the emit boundary, over the sorted keys.
+    for v in field.values_mut() {
+        *v = v.clamp(0.0, 1.0);
+    }
+    field
+}
+
 /// The plan search's node-expansion budget: generous for the short local
 /// journeys every derived NPC actually walks (`nearest_water` finds a real
 /// world's water within a handful of mesh hops of home), but finite so a
@@ -2459,6 +2522,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         let mut out: Vec<Fact> = Vec::new();
+        // THE ALARM: build the per-tick alarm field ONCE, from the frozen
+        // population, before advancing any creature — it is fixed across the whole
+        // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
+        // emission is terrain-sourced and the wave terminates; the per-step Danger
+        // drive below then reads it at each creature's cell.
+        let alarm = alarm_field(frozen, &self.npcs, self.terrain, self.from);
         for npc in &self.npcs {
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
@@ -2577,9 +2646,11 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     threat_niche: npc.threat_niche,
                     boldness: npc.boldness,
-                    // Task 2 wires the real per-tick alarm field here; alarm-free
-                    // for now (Task 1's inert additive term).
-                    alarm: None,
+                    // THE ALARM: the tick's mover READS the per-tick field (built
+                    // alarm-free above), so a calm creature beside genuine distress
+                    // catches the alarm and flees. Empty on the settled worlds
+                    // (no primary distress) ⇒ byte-identical.
+                    alarm: Some(&alarm),
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -5272,6 +5343,113 @@ mod tests {
             both > terrain_only && both > 0.5,
             "the sum is strictly above either the terrain hazard or the alarm alone"
         );
+    }
+
+    /// A steady mortal NPC placed (via `commit_agent_at`) at `pos`, minted into
+    /// `ledger` — the common emitter/reader for the `alarm_field` tests.
+    /// `boldness` dials whether it is primary-afraid on hazard ground.
+    fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &RoomAddr, boldness: f64) -> Npc {
+        let e = ledger.mint_entity();
+        commit_agent_at(ledger, reg, e, pos, 0.0);
+        Npc {
+            entity: e,
+            home: pos.clone(),
+            resource: pos.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness,
+            threat_niche: mortal_threat_niche(),
+            label: "creature".into(),
+        }
+    }
+
+    #[test]
+    fn alarm_field_is_empty_with_no_primary_fear() {
+        // THE ALARM: a settled population on hazard-free ground raises no alarm —
+        // the field is empty, the byte-identical resting state.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let a = raddr(1.0);
+        let b = a.neighbors()[0].clone();
+        let npc_a = alarm_npc(&mut ledger, &reg, &a, BOLDNESS_STEADY);
+        let npc_b = alarm_npc(&mut ledger, &reg, &b, BOLDNESS_STEADY);
+        let terrain = PlantedTerrain::default(); // no hazard anywhere
+        let field = alarm_field(&ledger, &[npc_a, npc_b], &terrain, WorldTime { day: 0.5 });
+        assert!(
+            field.is_empty(),
+            "no creature is primary-afraid, so the alarm field is empty: {field:?}"
+        );
+    }
+
+    #[test]
+    fn alarm_field_haloes_a_primary_afraid_creature() {
+        // THE ALARM: one creature on an UNCANNY-hazard cell (its Danger crosses
+        // act) stamps a one-hop halo — its cell and its three neighbours carry
+        // alarm in [0, 1]; a distant cell is untouched.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let cell = raddr(1.0);
+        let ns = cell.neighbors();
+        let far = raddr(-1.0); // the far side of the world, outside the halo
+        let npc = alarm_npc(&mut ledger, &reg, &cell, BOLDNESS_STEADY);
+        // A full-strength uncanny hazard ONLY on the creature's cell.
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.8)]);
+        let field = alarm_field(&ledger, &[npc], &terrain, WorldTime { day: 0.5 });
+        for room in std::iter::once(&cell).chain(ns.iter()) {
+            let v = field.get(room).copied().unwrap_or(0.0);
+            assert!(
+                v > 0.0 && v <= 1.0,
+                "the halo cell {room:?} carries alarm in (0, 1]: {v}"
+            );
+        }
+        assert!(
+            !field.contains_key(&far),
+            "a cell far from the distress carries no alarm"
+        );
+    }
+
+    #[test]
+    fn alarm_field_does_not_re_emit() {
+        // THE ALARM's termination guarantee (built alarm-free): a creature A on
+        // genuine hazard ground is primary-afraid and emits; a BOLD creature B on
+        // an adjacent cell shrugs the hazard off (its own terrain danger is below
+        // act) and so contributes NOTHING — borrowed alarm is never re-emitted.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let h = raddr(1.0); // A's hazard cell
+        let ns = h.neighbors();
+        let b_cell = ns[0].clone(); // B sits one hop from A, inside A's halo
+        // A is a coward (feels the hazard fully); B is bold (shrugs it off).
+        let a = alarm_npc(&mut ledger, &reg, &h, BOLDNESS_STEADY);
+        let b = alarm_npc(&mut ledger, &reg, &b_cell, 0.95);
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(h.clone(), 0.8)]);
+        // The field over BOTH creatures.
+        let both = alarm_field(
+            &ledger,
+            &[a.clone(), b.clone()],
+            &terrain,
+            WorldTime { day: 0.5 },
+        );
+        // The field over A ALONE — the reference: B must add nothing.
+        let a_only = alarm_field(&ledger, &[a], &terrain, WorldTime { day: 0.5 });
+        assert_eq!(
+            both, a_only,
+            "the bold neighbour B is not primary-afraid, so it re-emits no alarm"
+        );
+        // And B's own neighbours OUTSIDE A's halo are untouched — no secondary wave.
+        for n in b_cell.neighbors() {
+            if n != h && !ns.contains(&n) {
+                assert!(
+                    !both.contains_key(&n),
+                    "B does not stamp its own halo: {n:?} must be absent"
+                );
+            }
+        }
     }
 
     #[test]
