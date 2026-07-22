@@ -3,5 +3,7 @@
 #![warn(missing_docs)]
 
 pub mod graph;
+pub mod route;
 
 pub use graph::{ConnectionGraph, Edge, EdgeKind};
+pub use route::{CellRoute, least_cost};
