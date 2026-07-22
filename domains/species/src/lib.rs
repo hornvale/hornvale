@@ -702,7 +702,8 @@ pub struct BiosphereTraits {
     /// sovereignty floor (`hornvale_kernel::sovereignty_floor`) so mighty
     /// creatures buffer environmental constraint. Authored as the creature's
     /// 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
-    /// supernatural set (dragon/fey/elemental); mundane beasts and the four
+    /// supernatural set (dragon/plant/elemental — treant is 5E plant-typed);
+    /// mundane beasts and the four
     /// peoples carry 0.
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
