@@ -77,6 +77,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod chorus;
 pub mod components;
+pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
 pub mod schedule;
@@ -91,6 +92,7 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use graph_derive::{GraphConfig, connection_graph};
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
