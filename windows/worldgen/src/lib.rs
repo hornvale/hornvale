@@ -3253,6 +3253,11 @@ pub fn family_daughters(
     wc.family_of
         .iter()
         .filter(|(_, fam)| **fam == family)
+        // Speakers only: since The Eremite a family may hold a non-speaking
+        // minded kind (a dragon carries a family label but no articulation);
+        // language divergence is a speaker concern. Byte-identical for the
+        // peoples' families, whose members all speak.
+        .filter(|(kind, _)| wc.articulation.contains(kind))
         .map(|(kind, _)| hornvale_language::Daughter {
             cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
             phonology: language_of_wc(world, wc, kind.0),
