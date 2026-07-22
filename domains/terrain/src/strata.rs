@@ -36,7 +36,9 @@ impl GeothermalGradient {
 
 /// The geothermal gradient for a cell: hot under young/thin crust, cool under
 /// ancient thick cratons. Pure function of the crust fields terrain owns.
-/// type-audit: bare-ok(count: crust_thickness_km), bare-ok(ratio: crust_age), bare-ok(flag: continental)
+/// Oceanic crust runs the hot end regardless of thickness (`thickness_norm` is
+/// 0 there); thickness only cools the continental side.
+/// type-audit: bare-ok(ratio: crust_thickness_km), bare-ok(ratio: crust_age), bare-ok(flag: continental)
 pub fn geothermal_gradient(
     crust_thickness_km: f64,
     crust_age: f64,
@@ -56,7 +58,7 @@ pub fn geothermal_gradient(
 /// Temperature at a depth below the surface, given the surface datum and the
 /// cell's gradient. Pure; the surface datum is the caller's (climate's) to
 /// supply, so terrain stays climate-free.
-/// type-audit: bare-ok(count: depth_km)
+/// type-audit: bare-ok(ratio: depth_km)
 pub fn temperature_at_depth(
     surface: Temperature,
     gradient: GeothermalGradient,

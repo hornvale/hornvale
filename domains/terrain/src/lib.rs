@@ -17,7 +17,7 @@ pub mod provider;
 pub mod render;
 pub mod rift;
 pub mod shape;
-mod strata;
+pub mod strata;
 pub mod streams;
 pub mod water;
 
