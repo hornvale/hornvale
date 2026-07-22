@@ -799,8 +799,10 @@ fn year(value: f64) -> i64 {
     value.round() as i64
 }
 
-/// Join a prose list with commas and a trailing "and".
-fn join_prose(parts: &[String]) -> String {
+/// Join a prose list with commas and a trailing "and". `pub(crate)`: shared
+/// with `connections::render_connections`, which lists route destinations
+/// the same way this module lists structures/residue finds.
+pub(crate) fn join_prose(parts: &[String]) -> String {
     match parts.len() {
         0 => String::new(),
         1 => parts[0].clone(),
