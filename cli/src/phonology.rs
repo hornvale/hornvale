@@ -36,11 +36,15 @@ pub fn render_phonology() -> String {
          the third view, authored to clips by `hornvale voice`.\n\n"
     ));
 
-    // peopled-only: fauna never speak, so the phonology page covers exactly
-    // the psyche key-set (the peopled kinds); fauna carry no psyche row and so
-    // never appear here. `iter()` is `KindId`-ascending, byte-identical to the
-    // old registry-then-filter order.
+    // Speaker-only: the phonology page needs language, so it covers exactly the
+    // speaking peoples. Since The Eremite the psyche registry is a superset (the
+    // dragons carry a mind but no speech), so skip any non-speaker. `iter()` is
+    // `KindId`-ascending, byte-identical to the old registry-then-filter order.
+    let speakers = hornvale_language::articulation_registry();
     for (kind, psych) in hornvale_species::psyche_registry().iter() {
+        if speakers.get(kind).is_none() {
+            continue;
+        }
         let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
 
@@ -207,9 +211,9 @@ mod tests {
     #[test]
     fn renders_every_species_with_an_ipa_column_and_sample_names() {
         let doc = render_phonology();
-        // peopled-only: the page never renders a fauna heading, so it covers
-        // exactly the psyche key-set (the peopled kinds).
-        for kind in hornvale_species::psyche_registry().ids() {
+        // Speaker-only: the page renders a heading per speaking people, so it
+        // covers exactly the articulation key-set (the speakers).
+        for kind in hornvale_language::articulation_registry().ids() {
             let species = kind.0;
             assert!(
                 doc.contains(&capitalize(species)),
@@ -235,10 +239,14 @@ mod tests {
     fn a_sample_name_carries_both_romanization_and_ipa() {
         let world = World::new(Seed(REFERENCE_SEED));
         let psyche = hornvale_species::psyche_registry();
-        // A peopled species: the psyche registry holds exactly the peopled
-        // kinds, so its first key is a safe pick now that fauna (biosphere-only,
-        // no psyche row) sort ahead of every people (Task 4).
-        let (kind, psych) = psyche.iter().next().expect("at least one peopled species");
+        let articulation = hornvale_language::articulation_registry();
+        // A SPEAKING people: since The Eremite the psyche registry is a superset
+        // (the dragons carry a mind but no speech, and sort ahead of the peoples
+        // by KindId), so pick the first psyche-carrier that also speaks.
+        let (kind, psych) = psyche
+            .iter()
+            .find(|&(k, _)| articulation.contains(k))
+            .expect("at least one speaking people");
         let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
@@ -262,10 +270,14 @@ mod tests {
         assert!(doc.contains("Espeak"), "missing the Espeak column");
         let world = World::new(Seed(REFERENCE_SEED));
         let psyche = hornvale_species::psyche_registry();
-        // A peopled species: the psyche registry holds exactly the peopled
-        // kinds, so its first key is a safe pick now that fauna (biosphere-only,
-        // no psyche row) sort ahead of every people (Task 4).
-        let (kind, psych) = psyche.iter().next().expect("at least one peopled species");
+        let articulation = hornvale_language::articulation_registry();
+        // A SPEAKING people: since The Eremite the psyche registry is a superset
+        // (the dragons carry a mind but no speech, and sort ahead of the peoples
+        // by KindId), so pick the first psyche-carrier that also speaks.
+        let (kind, psych) = psyche
+            .iter()
+            .find(|&(k, _)| articulation.contains(k))
+            .expect("at least one speaking people");
         let samples = sample_names_for(&world, kind.0, psych);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {

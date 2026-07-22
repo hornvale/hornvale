@@ -1249,7 +1249,15 @@ pub fn registry() -> Vec<Metric> {
                 // metric's population has always been the psych-bearing
                 // roster — fauna carrying capacity is the biosphere/niche
                 // path, not this field.
-                for (_kind, psych) in v.components().psyche.iter() {
+                for (kind, psych) in v.components().psyche.iter() {
+                    // Peoples-only (the settling roster); skip the minded
+                    // solitaries (dragons carry a psyche but never settle) so
+                    // this metric is byte-identical to before The Eremite.
+                    if v.components().biosphere.get(kind).map(|b| b.social_form)
+                        != Some(hornvale_species::SocialForm::Settled)
+                    {
+                        continue;
+                    }
                     let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
                         hornvale_worldgen::species_carrying_input(*base_inputs.get(c), psych)
                     });

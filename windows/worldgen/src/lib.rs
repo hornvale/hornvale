@@ -990,17 +990,17 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
     let climate = climate_of(world)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
-    let psyche = hornvale_species::psyche_registry();
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
-    // species — not a people (no `psyche_registry` entry), not a rooted
-    // `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <= threshold`).
+    // species — not a settling people (`social_form != Settled`), not a
+    // rooted `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <=
+    // threshold`).
     let prey: std::collections::BTreeSet<u32> = wc
         .biosphere
         .iter()
         .enumerate()
-        .filter(|(_, (kind, bio))| {
+        .filter(|(_, (_kind, bio))| {
             bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
-                && psyche.get_by_label(kind.0).is_none()
+                && bio.social_form != hornvale_species::SocialForm::Settled
                 && !matches!(
                     bio.metabolic_class,
                     hornvale_species::MetabolicClass::Autotroph
@@ -1033,7 +1033,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 /// distinct MOBILE BEAST species, as `(species label, unit-sphere position)`.
 /// From [`demography_report`]'s coexistence-stack settlements (the per-cell
 /// density condensations), keeps those whose DOMINANT species is a mobile beast —
-/// *not* a people (no `psyche_registry` entry — the peoples carry one) and *not*
+/// *not* a settling people (`social_form != Settled`) and *not*
 /// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
 /// flees) — then takes the densest concentration of each DISTINCT species (a herd
 /// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
@@ -1053,19 +1053,17 @@ pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64;
         .iter()
         .map(|(kind, _)| kind.0.to_string())
         .collect();
-    let psyche = hornvale_species::psyche_registry();
     let biosphere = hornvale_species::biosphere_registry();
     let is_mobile_beast = |label: &str| -> bool {
-        // A mobile beast: a species the peoples' `psyche_registry` does not carry
-        // (not a people) and not a rooted `Autotroph` (a plant is placed, never
-        // agentified).
-        psyche.get_by_label(label).is_none()
-            && biosphere.get_by_label(label).is_some_and(|b| {
-                !matches!(
-                    b.metabolic_class,
-                    hornvale_species::MetabolicClass::Autotroph
-                )
-            })
+        // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
+        // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
+        // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        biosphere.get_by_label(label).is_some_and(|b| {
+            matches!(
+                b.social_form,
+                hornvale_species::SocialForm::Solitary | hornvale_species::SocialForm::Gregarious
+            )
+        })
     };
     // Each mobile beast's DENSEST home — the stack settlement where its local
     // abundance (its composition fraction × the catchment biomass) peaks. So a
@@ -2555,6 +2553,14 @@ fn resolve_kind(wc: &WorldComponents, species: &str) -> Result<&'static str, Bui
         })
 }
 
+/// Whether a kind settles (forms villages) — the successor to the "has a
+/// psyche entry" peoplehood proxy. Reads the universal `social_form`.
+fn is_settled(wc: &WorldComponents, label: &str) -> bool {
+    wc.biosphere
+        .get_by_label(label)
+        .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled)
+}
+
 /// The phenomena a species (resolved within `wc`) observes.
 /// type-audit: bare-ok(identifier-text: species)
 pub fn observed_phenomena_as_in(
@@ -3253,6 +3259,11 @@ pub fn family_daughters(
     wc.family_of
         .iter()
         .filter(|(_, fam)| **fam == family)
+        // Speakers only: since The Eremite a family may hold a non-speaking
+        // minded kind (a dragon carries a family label but no articulation);
+        // language divergence is a speaker concern. Byte-identical for the
+        // peoples' families, whose members all speak.
+        .filter(|(kind, _)| wc.articulation.contains(kind))
         .map(|(kind, _)| hornvale_language::Daughter {
             cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
             phonology: language_of_wc(world, wc, kind.0),
@@ -3733,14 +3744,20 @@ fn build_to(
     // never settle, so pinning one must fail loudly with the physical reason
     // (constitution: "pins fail loudly") rather than reach `peopled(def)`
     // downstream and panic.
-    // The peopled kinds are exactly the psyche store's key-set (ascending
-    // `KindId`) — the same peopled subset, in the same order, the default
-    // roster's `registry()`-key filter gave.
+    // The peopled kinds are exactly the settling ones — `social_form ==
+    // Settled` (ascending `KindId`, `wc.biosphere`'s natural `BTreeMap`
+    // order) — the same peopled subset, in the same order, the psyche
+    // store's key-set gave before this re-key (byte-identical today).
     let species_set: Vec<&'static str> = match &settlement_pins.species {
-        None => wc.psyche.ids().map(|k| k.0).collect(),
+        None => wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+            .map(|(k, _)| k.0)
+            .collect(),
         Some(name) => {
             let resolved = resolve_kind(wc, name)?;
-            if !wc.psyche.contains(&KindId(resolved)) {
+            if !is_settled(wc, resolved) {
                 return Err(BuildError::Pins(format!(
                     "'{name}' is not a settling people (a biosphere-only fauna kind)"
                 )));
@@ -4416,15 +4433,26 @@ fn species_genesis(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        if let Some(p) = wc.psyche.get(kind) {
+        // Peopled-registry facts (mind + perception + speech) describe a
+        // settling people's full cluster. A minded solitary (a dragon carries a
+        // psyche but no perception or speech) emits only its `SPECIES_NAME`
+        // above; its mind stays latent — read from the registry if it is ever
+        // agentified — so every shipped world is byte-identical (The Eremite).
+        // Gated on `Settled`, which the nested-capacity invariant guarantees
+        // implies the full peopled cluster, so the reads below are total.
+        let settled = wc
+            .biosphere
+            .get(kind)
+            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled);
+        if let Some(p) = wc.psyche.get(kind).filter(|_| settled) {
             let perception = wc
                 .perception
                 .get(kind)
-                .expect("peopled cluster shares one key-set (integrity-checked)");
+                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
             let articulation = wc
                 .articulation
                 .get(kind)
-                .expect("peopled cluster shares one key-set (integrity-checked)");
+                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
             let sociality = match p.sociality {
                 Sociality::Hierarchic => "hierarchic",
                 Sociality::Communal => "communal",
@@ -5435,14 +5463,80 @@ mod tests {
         let b = wild_concentrations(&world, 5).unwrap();
         assert_eq!(a, b, "deterministic");
         assert!(!a.is_empty(), "the wild is populated: {a:?}");
-        let psyche = hornvale_species::psyche_registry();
+        let biosphere = hornvale_species::biosphere_registry();
         for (species, _pos) in &a {
+            let social_form = biosphere
+                .get_by_label(species)
+                .unwrap_or_else(|| panic!("{species} has a biosphere entry"))
+                .social_form;
             assert!(
-                psyche.get_by_label(species).is_none(),
-                "{species} is a beast, not a people"
+                social_form != hornvale_species::SocialForm::Settled,
+                "{species} is wild (not Settled)"
             );
         }
         eprintln!("WILD {:?}", a.iter().map(|(s, _)| s).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn social_form_selects_the_settled_and_wild_sets() {
+        // THE EREMITE: the re-key onto `SocialForm` selects the settlement
+        // roster (byte-identical to the pre-Eremite psyche key-set) and the
+        // wild-agentified set. After The Eremite the dragons carry a mind yet
+        // stay Solitary, so both sets are pinned against NAMED references, not
+        // the live psyche key-set (now a superset of Settled).
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+
+        // The `Settled` set is exactly the four peoples.
+        let settled: std::collections::BTreeSet<&'static str> = wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+            .map(|(k, _)| k.0)
+            .collect();
+        let four_peoples: std::collections::BTreeSet<&'static str> =
+            ["bugbear", "goblin", "hobgoblin", "kobold"]
+                .into_iter()
+                .collect();
+        assert_eq!(settled, four_peoples, "Settled is exactly the four peoples");
+
+        // The wild-agentified `{Solitary, Gregarious}` set: the ten mobile,
+        // non-settled kinds — the same kinds the retired `¬psyche ∧ ¬autotroph`
+        // proxy selected before the dragons gained a mind (still agentified,
+        // now with a temperament to read). Disjoint from the settling peoples.
+        let mobile_beasts: std::collections::BTreeSet<&'static str> = wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| {
+                matches!(
+                    b.social_form,
+                    hornvale_species::SocialForm::Solitary
+                        | hornvale_species::SocialForm::Gregarious
+                )
+            })
+            .map(|(k, _)| k.0)
+            .collect();
+        let expected_wild: std::collections::BTreeSet<&'static str> = [
+            "black-dragon",
+            "giant-elk",
+            "giant-goat",
+            "otyugh",
+            "owlbear",
+            "red-dragon",
+            "rust-monster",
+            "white-dragon",
+            "woolly-mammoth",
+            "xorn",
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(
+            mobile_beasts, expected_wild,
+            "the {{Solitary, Gregarious}} set is the ten mobile non-settled kinds"
+        );
+        assert!(
+            settled.is_disjoint(&mobile_beasts),
+            "a settling people is never wild-agentified"
+        );
     }
 
     #[test]
@@ -5797,8 +5891,19 @@ mod tests {
             .get(&KindId("goblin"))
             .expect("the shipped goblin has a biosphere row")
             .clone();
+        // A fauna fixture: goblin's biosphere row minus peoplehood — the
+        // nested-capacity invariant (Task 2) requires a `Settled` biosphere
+        // row to carry all four peopled components, so a fauna-only kind
+        // must be non-`Settled` (`Solitary` — the same social form the
+        // dragon/xorn menagerie carries).
+        let test_beast_bio = hornvale_species::BiosphereTraits {
+            social_form: hornvale_species::SocialForm::Solitary,
+            ..goblin_bio
+        };
         let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
-            [(KindId("test-beast"), goblin_bio)].into_iter().collect();
+            [(KindId("test-beast"), test_beast_bio)]
+                .into_iter()
+                .collect();
         let family_of: ComponentStore<KindId, &'static str> =
             [(KindId("test-beast"), "test-beast")].into_iter().collect();
         let fauna_only_wc = WorldComponents::from_stores(
@@ -7336,8 +7441,19 @@ mod tests {
             .get(&KindId("goblin"))
             .expect("the shipped goblin has a biosphere row")
             .clone();
+        // A fauna fixture: goblin's biosphere row minus peoplehood — the
+        // nested-capacity invariant (Task 2) requires a `Settled` biosphere
+        // row to carry all four peopled components, so a fauna-only kind
+        // must be non-`Settled` (`Solitary` — the same social form the
+        // dragon/xorn menagerie carries).
+        let test_beast_bio = hornvale_species::BiosphereTraits {
+            social_form: hornvale_species::SocialForm::Solitary,
+            ..goblin_bio
+        };
         let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
-            [(KindId("test-beast"), goblin_bio)].into_iter().collect();
+            [(KindId("test-beast"), test_beast_bio)]
+                .into_iter()
+                .collect();
         let family_of: ComponentStore<KindId, &'static str> =
             [(KindId("test-beast"), "test-beast")].into_iter().collect();
         let wc = WorldComponents::from_stores(

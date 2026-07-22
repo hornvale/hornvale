@@ -125,6 +125,49 @@ macro_rules! stream_labels {
                 $leg_name:ident = $leg_value:literal => $leg_desc:literal;
             )+
         }
+        flat {
+            $(
+                $(#[$flat_meta:meta])*
+                $flat_name:ident = $flat_value:literal => $flat_desc:literal;
+            )+
+        }
+    ) => {
+        $(#[$root_meta])*
+        pub const $root_name: $crate::seed::StreamLabel<'static> =
+            $crate::seed::StreamLabel::from_static($root_value);
+        $(
+            $(#[$leg_meta])*
+            pub const $leg_name: $crate::seed::StreamLabel<'static> =
+                $crate::seed::StreamLabel::from_static($leg_value);
+        )+
+        $(
+            $(#[$flat_meta])*
+            pub const $flat_name: $crate::seed::StreamLabel<'static> =
+                $crate::seed::StreamLabel::from_static($flat_value);
+        )+
+
+        /// Every seed-derivation label this crate uses, for the generated
+        /// stream manifest (PROC-19: a crate whose labels don't all
+        /// share one root — some legs compose under the root via
+        /// `concat!`, some flat entries are independent roots of their
+        /// own, drawn at a different call site entirely).
+        pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
+            vec![
+                ($root_name.as_str(), $root_desc),
+                $( (concat!($root_value, "/", $leg_value), $leg_desc) ),+ ,
+                $( ($flat_name.as_str(), $flat_desc) ),+
+            ]
+        }
+    };
+    (
+        $(#[$root_meta:meta])*
+        root: $root_name:ident = $root_value:literal => $root_desc:literal;
+        legs {
+            $(
+                $(#[$leg_meta:meta])*
+                $leg_name:ident = $leg_value:literal => $leg_desc:literal;
+            )+
+        }
     ) => {
         $(#[$root_meta])*
         pub const $root_name: $crate::seed::StreamLabel<'static> =
@@ -450,6 +493,47 @@ mod stream_labels_macro_tests {
                     ("testcrate", "root stream for the test crate"),
                     ("testcrate/gamma", "the gamma test leg"),
                     ("testcrate/delta", "the delta test leg"),
+                ]
+            );
+        }
+    }
+
+    mod root_leg_and_flat {
+        crate::stream_labels! {
+            /// Root stream label for the test crate.
+            root: ROOT = "testcrate" => "root stream for the test crate";
+            legs {
+                /// A test-only leg.
+                EPSILON = "epsilon" => "the epsilon test leg";
+            }
+            flat {
+                /// A test-only flat, independent-root entry.
+                ZETA = "testcrate/zeta" => "the zeta test entry";
+                /// A second test-only flat, independent-root entry.
+                ETA = "testcrate/eta" => "the eta test entry";
+            }
+        }
+
+        #[test]
+        fn every_constant_keeps_its_own_bare_value() {
+            // The real .derive() call chain uses these bare values.
+            // Flat entries are NOT children of ROOT in the derivation
+            // sense — they must never be composed with it.
+            assert_eq!(ROOT.as_str(), "testcrate");
+            assert_eq!(EPSILON.as_str(), "epsilon");
+            assert_eq!(ZETA.as_str(), "testcrate/zeta");
+            assert_eq!(ETA.as_str(), "testcrate/eta");
+        }
+
+        #[test]
+        fn manifest_qualifies_legs_under_root_but_not_flat_entries() {
+            assert_eq!(
+                stream_labels(),
+                vec![
+                    ("testcrate", "root stream for the test crate"),
+                    ("testcrate/epsilon", "the epsilon test leg"),
+                    ("testcrate/zeta", "the zeta test entry"),
+                    ("testcrate/eta", "the eta test entry"),
                 ]
             );
         }

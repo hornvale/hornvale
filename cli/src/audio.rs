@@ -22,9 +22,14 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
     let world = World::new(Seed(crate::phonology::REFERENCE_SEED));
     let (mut written, mut kept) = (0u32, 0u32);
-    // peopled-only: fauna never speak, so `sample_names_for` covers exactly
-    // the psyche key-set (the peopled kinds); fauna carry no psyche row.
+    // Speaker-only: `sample_names_for` needs language, so cover exactly the
+    // speaking peoples; skip the minded solitaries (dragons) — a superset of the
+    // speakers in the psyche registry since The Eremite.
+    let speakers = hornvale_language::articulation_registry();
     for (kind, psych) in hornvale_species::psyche_registry().iter() {
+        if speakers.get(kind).is_none() {
+            continue;
+        }
         let species = kind;
         for (_, name) in crate::phonology::sample_names_for(&world, species.0, psych) {
             let path = out_dir.join(audio_filename(&name.espeak));
