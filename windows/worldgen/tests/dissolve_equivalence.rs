@@ -14,16 +14,18 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
     // biosphere = the canonical entity set (all 16 kinds today).
     assert_eq!(wc.biosphere.len(), 16);
-    // peopled cluster is coherent: psyche and perception share one key-set,
-    // a subset of biosphere.
-    let psy: Vec<_> = wc.psyche.ids().collect();
-    let per: Vec<_> = wc.perception.ids().collect();
-    assert_eq!(psy, per);
-    assert_eq!(wc.psyche.len(), 4);
+    // Nested capacities (The Eremite): perception ⊆ psyche — the peoples carry
+    // both, the three dragons carry a mind but no perception — and psyche ⊆
+    // biosphere.
+    for k in wc.perception.ids() {
+        assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
+    }
+    assert_eq!(wc.psyche.len(), 7, "four peoples + three minded dragons");
+    assert_eq!(wc.perception.len(), 4, "perception is the four peoples");
     for k in wc.psyche.ids() {
         assert!(
             wc.biosphere.contains(k),
-            "peopled kind {k:?} lacks a biosphere row"
+            "minded kind {k:?} lacks a biosphere row"
         );
     }
 }
@@ -33,27 +35,27 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
     let art = hornvale_language::articulation_registry();
     let lex = hornvale_language::lexicon_registry();
-    // Articulation and lexicon are keyed to exactly the peopled kinds — the
-    // same key-set as psyche — and to nothing else.
-    let peopled: Vec<_> = wc.psyche.ids().collect();
+    // Articulation and lexicon are keyed to exactly the SPEAKING peoples — the
+    // perception key-set (since The Eremite psyche is a superset: the dragons
+    // carry a mind but no perception or speech) — and to nothing else.
+    let speakers: Vec<_> = wc.perception.ids().collect();
     assert_eq!(
         art.ids().collect::<Vec<_>>(),
-        peopled,
-        "articulation must key exactly the peopled kinds"
+        speakers,
+        "articulation must key exactly the speaking peoples"
     );
     assert_eq!(
         lex.ids().collect::<Vec<_>>(),
-        peopled,
-        "lexicon must key exactly the peopled kinds"
+        speakers,
+        "lexicon must key exactly the speaking peoples"
     );
-    // Fauna (biosphere rows without a psyche row) carry neither.
+    // A non-speaker (fauna, or a minded solitary dragon) carries no lexicon.
     for kind in wc.biosphere.ids() {
-        if !wc.psyche.contains(kind) {
+        if !art.contains(kind) {
             assert!(
-                art.get(kind).is_none(),
-                "fauna {kind:?} has no articulation"
+                lex.get(kind).is_none(),
+                "a non-speaker {kind:?} has no lexicon either"
             );
-            assert!(lex.get(kind).is_none(), "fauna {kind:?} has no lexicon");
         }
     }
     // Every family proto belongs to a family with more than one member across
