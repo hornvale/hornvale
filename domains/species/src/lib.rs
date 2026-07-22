@@ -987,6 +987,42 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
                 status_basis: StatusBasis::Rank,
             },
         ),
+        // The Eremite: the three chromatic dragons carry a mind though they
+        // never settle or speak — a solitary temperament, one shared chromatic
+        // profile (per-chromatic differentiation is a deferred refinement).
+        (
+            KindId("white-dragon"),
+            PsychVector {
+                threat_response: 0.95,            // an apex — stands, never flees
+                deliberation_latency: 0.5,        // banked dial, baseline
+                in_group_radius: 0.05,            // "us" = self; utterly solitary
+                time_horizon: 0.90,               // a centuries-long hoarder
+                sociality: Sociality::Hierarchic, // relates by dominance
+                status_basis: StatusBasis::Rank,  // esteems power / the hoard
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            PsychVector {
+                threat_response: 0.95,
+                deliberation_latency: 0.5,
+                in_group_radius: 0.05,
+                time_horizon: 0.90,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            PsychVector {
+                threat_response: 0.95,
+                deliberation_latency: 0.5,
+                in_group_radius: 0.05,
+                time_horizon: 0.90,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -1260,12 +1296,19 @@ mod tests {
         let fam_ids: Vec<_> = fam.ids().collect();
         assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
 
-        let psy_ids: Vec<_> = psy.ids().collect();
-        let per_ids: Vec<_> = per.ids().collect();
-        assert_eq!(psy_ids, per_ids, "psyche and perception share one key-set");
-        assert_eq!(psy.len(), 4, "the four peoples");
+        // The Eremite: capacities nest (perception ⊆ psyche). The peoples carry
+        // both; the three dragons carry a mind (psyche) but no perception, so
+        // the two stores no longer share one key-set.
+        for kind in per.ids() {
+            assert!(
+                psy.contains(kind),
+                "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
+            );
+        }
+        assert_eq!(psy.len(), 7, "four peoples + three minded dragons");
+        assert_eq!(per.len(), 4, "perception is the four peoples");
         for kind in psy.ids() {
-            assert!(bio.contains(kind), "people {kind:?} has a biosphere row");
+            assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
         }
     }
 
@@ -1504,7 +1547,15 @@ mod tests {
             "owlbear",
         ] {
             let d = bio.get(&KindId(name)).unwrap();
-            assert!(!psy.contains(&KindId(name)), "{name} is fauna: no psyche");
+            // The Eremite: the three dragons are MINDED fauna — a solitary
+            // psyche, but no perception or speech (deferred). Every other
+            // menagerie kind carries neither capacity.
+            let is_dragon = matches!(name, "white-dragon" | "red-dragon" | "black-dragon");
+            assert_eq!(
+                psy.contains(&KindId(name)),
+                is_dragon,
+                "{name}: only the dragons among the menagerie carry a mind"
+            );
             assert!(
                 !per.contains(&KindId(name)),
                 "{name} is fauna: no perception"

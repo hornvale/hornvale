@@ -342,10 +342,14 @@ mod tests {
         let lexicon = lexicon_registry();
         let family_of = family_of();
 
-        // Drop a peopled kind's articulation row so the peopled cluster no
-        // longer shares one key-set (psyche/perception still agree, so the
-        // articulation check is the one that must fire).
-        let drop = *psyche.ids().next().expect("at least one peopled kind");
+        // Drop a speaker's articulation row so articulation and lexicon no
+        // longer share one key-set (the `articulation.ids == lexicon.ids` check
+        // must fire). Pick a kind that IS in articulation — a settling people —
+        // since the minded solitaries (dragons) carry no articulation.
+        let drop = *articulation
+            .ids()
+            .next()
+            .expect("at least one speaking kind");
         articulation = articulation
             .iter()
             .filter(|(k, _)| **k != drop)
@@ -373,7 +377,10 @@ mod tests {
         let full_lexicon = lexicon_registry();
         let family_of = family_of();
 
-        let drop = *psyche.ids().next().expect("at least one peopled kind");
+        let drop = *articulation
+            .ids()
+            .next()
+            .expect("at least one speaking kind");
         let lexicon: ComponentStore<KindId, hornvale_language::speech::Lexicon> = full_lexicon
             .iter()
             .filter(|(k, _)| **k != drop)
@@ -432,7 +439,10 @@ mod tests {
         let lexicon = lexicon_registry();
         let full_family_of = family_of();
 
-        let missing = *psyche.ids().next().expect("at least one peopled kind");
+        let missing = *articulation
+            .ids()
+            .next()
+            .expect("at least one speaking kind");
         let family_of: ComponentStore<KindId, &'static str> = full_family_of
             .iter()
             .filter(|(k, _)| **k != missing)

@@ -4422,15 +4422,26 @@ fn species_genesis(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        if let Some(p) = wc.psyche.get(kind) {
+        // Peopled-registry facts (mind + perception + speech) describe a
+        // settling people's full cluster. A minded solitary (a dragon carries a
+        // psyche but no perception or speech) emits only its `SPECIES_NAME`
+        // above; its mind stays latent — read from the registry if it is ever
+        // agentified — so every shipped world is byte-identical (The Eremite).
+        // Gated on `Settled`, which the nested-capacity invariant guarantees
+        // implies the full peopled cluster, so the reads below are total.
+        let settled = wc
+            .biosphere
+            .get(kind)
+            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled);
+        if let Some(p) = wc.psyche.get(kind).filter(|_| settled) {
             let perception = wc
                 .perception
                 .get(kind)
-                .expect("peopled cluster shares one key-set (integrity-checked)");
+                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
             let articulation = wc
                 .articulation
                 .get(kind)
-                .expect("peopled cluster shares one key-set (integrity-checked)");
+                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
             let sociality = match p.sociality {
                 Sociality::Hierarchic => "hierarchic",
                 Sociality::Communal => "communal",
@@ -5456,29 +5467,31 @@ mod tests {
     }
 
     #[test]
-    fn social_form_reproduces_the_psyche_proxy_sets() {
-        // THE EREMITE, Task 3: the re-key onto `SocialForm` selects the exact
-        // same sets the retired `psyche_registry`-membership proxy did — the
-        // load-bearing equivalence every re-keyed gate depends on.
+    fn social_form_selects_the_settled_and_wild_sets() {
+        // THE EREMITE: the re-key onto `SocialForm` selects the settlement
+        // roster (byte-identical to the pre-Eremite psyche key-set) and the
+        // wild-agentified set. After The Eremite the dragons carry a mind yet
+        // stay Solitary, so both sets are pinned against NAMED references, not
+        // the live psyche key-set (now a superset of Settled).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
-        let psyche = hornvale_species::psyche_registry();
 
-        // The `Settled` set equals the psyche store's key-set.
+        // The `Settled` set is exactly the four peoples.
         let settled: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
-        let peopled: std::collections::BTreeSet<&'static str> = psyche.ids().map(|k| k.0).collect();
-        assert_eq!(
-            settled, peopled,
-            "the Settled social-form set must equal the psyche registry's key-set"
-        );
-        assert!(!settled.is_empty(), "the shipped roster has peoples");
+        let four_peoples: std::collections::BTreeSet<&'static str> =
+            ["bugbear", "goblin", "hobgoblin", "kobold"]
+                .into_iter()
+                .collect();
+        assert_eq!(settled, four_peoples, "Settled is exactly the four peoples");
 
-        // The `{Solitary, Gregarious}` set equals `{non-people, non-autotroph}`
-        // — the set `is_mobile_beast` used to select via the retired proxy.
+        // The wild-agentified `{Solitary, Gregarious}` set: the ten mobile,
+        // non-settled kinds — the same kinds the retired `¬psyche ∧ ¬autotroph`
+        // proxy selected before the dragons gained a mind (still agentified,
+        // now with a temperament to read). Disjoint from the settling peoples.
         let mobile_beasts: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
@@ -5491,23 +5504,28 @@ mod tests {
             })
             .map(|(k, _)| k.0)
             .collect();
-        let non_people_non_autotroph: std::collections::BTreeSet<&'static str> = wc
-            .biosphere
-            .iter()
-            .filter(|(kind, b)| {
-                psyche.get_by_label(kind.0).is_none()
-                    && !matches!(
-                        b.metabolic_class,
-                        hornvale_species::MetabolicClass::Autotroph
-                    )
-            })
-            .map(|(k, _)| k.0)
-            .collect();
+        let expected_wild: std::collections::BTreeSet<&'static str> = [
+            "black-dragon",
+            "giant-elk",
+            "giant-goat",
+            "otyugh",
+            "owlbear",
+            "red-dragon",
+            "rust-monster",
+            "white-dragon",
+            "woolly-mammoth",
+            "xorn",
+        ]
+        .into_iter()
+        .collect();
         assert_eq!(
-            mobile_beasts, non_people_non_autotroph,
-            "the {{Solitary, Gregarious}} set must equal the {{non-people, non-autotroph}} set"
+            mobile_beasts, expected_wild,
+            "the {{Solitary, Gregarious}} set is the ten mobile non-settled kinds"
         );
-        assert!(!mobile_beasts.is_empty(), "the shipped roster has beasts");
+        assert!(
+            settled.is_disjoint(&mobile_beasts),
+            "a settling people is never wild-agentified"
+        );
     }
 
     #[test]
