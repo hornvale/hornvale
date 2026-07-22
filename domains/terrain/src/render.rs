@@ -299,6 +299,45 @@ pub fn sediment_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &sediment_pixels(geo, globe))
 }
 
+/// Saturation depth (m) for the column lens: pale (exposed shield) → dark
+/// (deep sedimentary archive).
+const COLUMN_LENS_SCALE_M: f64 = 3000.0;
+
+/// Depth-to-basement colour: pale where bedrock is near the surface, deepening
+/// toward blue where the sedimentary archive is thick.
+/// type-audit: bare-ok(render-internal: depth_m)
+fn column_color(depth_m: f64) -> [u8; 3] {
+    let t = (depth_m / COLUMN_LENS_SCALE_M).clamp(0.0, 1.0);
+    let pale = (255.0 * (1.0 - t)) as u8;
+    let blue = (255.0 * (0.3 + 0.7 * t)) as u8;
+    [pale, pale, blue]
+}
+
+/// Raw RGB pixels of the equirectangular column (depth-to-basement) map:
+/// nearest-cell `depth_to_basement` (categorical-resolution debug lens, no
+/// coastal-noise refinement — same convention as `lithology_pixels`).
+fn column_pixels(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
+    let index = NearestCellIndex::new(geo);
+    rasterize(width, height, |latitude, longitude| {
+        let cell = index.nearest(geo, latitude, longitude);
+        let buf = globe.lithology.get(cell);
+        let dtb = crate::strata::depth_to_basement(
+            buf.soil_depth.get(),
+            *globe.sediment_thickness.get(cell),
+        );
+        column_color(dtb)
+    })
+}
+
+/// A depth-to-basement lens: how thick the sedimentary archive is above
+/// bedrock. Same globe, same bytes — no seed, since the sample is a pure
+/// function of already-committed fields (no coastal-noise refinement).
+/// type-audit: bare-ok(artifact: return)
+pub fn column_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &column_pixels(geo, globe))
+}
+
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
 /// type-audit: bare-ok(artifact)
@@ -373,6 +412,16 @@ mod tests {
         assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
         assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
         assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    #[test]
+    fn column_png_is_a_nonempty_raster() {
+        let geo = Geosphere::new(3);
+        let globe = crate::generate(Seed(42), &geo, &crate::TerrainPins::default())
+            .unwrap()
+            .globe;
+        let png = column_png(&geo, &globe);
+        assert!(png.len() > 8, "expected encoded PNG bytes");
     }
 
     #[test]
