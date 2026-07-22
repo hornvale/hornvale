@@ -229,6 +229,7 @@
 - [The Connection Graph](./chronicle/the-connection-graph.md)
 - [The Alarm](./chronicle/the-alarm.md)
 - [The Tidings](./chronicle/the-tidings.md)
+- [The Eremite](./chronicle/the-eremite.md)
 
 # Appendix: The Frontier
 

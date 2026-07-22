@@ -299,10 +299,13 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     if world.registry.concept(concept).is_none() {
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
-                        // peopled-only: fauna never speak, so `lexicon_of`
-                        // is undefined for them. `psyche_registry()` is keyed
-                        // by exactly the four speaking peoples.
-                        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
+                        // Speaker-only: fauna and the minded solitaries (dragons)
+                        // never speak, so `lexicon_of` is undefined for them; the
+                        // articulation registry is keyed by exactly the speakers.
+                        for species in hornvale_language::articulation_registry()
+                            .ids()
+                            .map(|k| k.0)
+                        {
                             match world_builder::lexicon_of(world, species) {
                                 Ok(lexicon) => match lexicon.entry(concept) {
                                     Some(entry) => writeln!(

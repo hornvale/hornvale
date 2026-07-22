@@ -4,7 +4,14 @@
 **Registry:** UNI-31 (personhood is a region of component-space, not a node) ·
 dissolves the peopled-cluster all-or-none invariant into nested capacities ·
 adds `BiosphereTraits.social_form` · authors the three dragons a solitary mind
-**Status:** G3 draft (awaiting Nathan)
+**Status:** SHIPPED (2026-07-22, chronicle: the-eremite) — SocialForm axis +
+nested-capacity lattice + the three dragons' solitary mind; decision 0065; idea
+UNI-31 shipped. Byte-identical (the dragon mind is latent until placement),
+verified before and after absorbing main. The determinism argument here proved
+INCOMPLETE — it covered the re-keyed gates but not the many direct
+`psyche_registry` consumers; the blast-radius sweep and its lesson are in the
+retrospective. Deferred: dragon perception, the solitary tongue (BIO-37),
+per-chromatic differentiation, minds for xorn/otyugh, the PsychVector split.
 **Date:** 2026-07-22
 
 ---

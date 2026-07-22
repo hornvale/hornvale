@@ -174,10 +174,16 @@ distinctly is **potency** — a creature's magical might — assayed, like `mass
 from the D&D 5E corpus: it is the kind's adult Challenge Rating over thirty
 (`CR/30`), nonzero only for the supernatural set (dragons, treant, xorn) and
 zero for mundane beasts. It is the term that buys the mighty their rarity,
-through the sovereignty floor the habitat model reads. What the old
-`Option<PeopledTraits>` once
-guaranteed by the shape of a type — all the peopled traits together or none —
-worldgen now enforces as a load-time referential-integrity check across the
+through the sovereignty floor the habitat model reads. A second universal
+biosphere dimension is **social organization** (`SocialForm`: sessile, solitary,
+gregarious, or settled) — orthogonal to the mind, perception, and speech
+*capacities* a creature may or may not carry. Only the settling peoples build
+settlements; and the capacities compose as a **nested lattice** rather than the
+old all-or-none bundle — speech presupposes perception presupposes a mind, and a
+settling people carries the full cluster, yet a solitary creature (a dragon) may
+carry a mind without perception or speech. What the old `Option<PeopledTraits>`
+once guaranteed by the shape of a type — the peopled traits together or none —
+worldgen now enforces as this load-time nested-capacity check across the
 registries. Every dimension here is still **authored**. Nothing in this table is
 drawn, fit, or measured; species is data written once by a person reading a
 corpus, the same posture each of the three sub-vector chapters keeps on its

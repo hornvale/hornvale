@@ -120,6 +120,23 @@ pub enum ActivityCycle {
     Crepuscular,
 }
 
+/// How a creature organizes with its own kind — the universal social axis,
+/// distinct from [`Sociality`] (a peopled society's *authority* shape).
+/// Ordered by permanence of association. Only `Settled` builds settlements;
+/// re-keying a "has a mind ⇒ is a people" proxy onto `Settled` is what lets a
+/// solitary creature carry a mind without being a settling people.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SocialForm {
+    /// Rooted; placed on the map, never agentified (autotrophs).
+    Sessile,
+    /// Lives and ranges alone (a dragon, a xorn).
+    Solitary,
+    /// Moves in herds or packs, forming no fixed place (an elk herd).
+    Gregarious,
+    /// Forms sedentary communities — the settling peoples.
+    Settled,
+}
+
 /// The closed six-dimension psychology vector (spec §3). Scalars are bare
 /// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
 /// requires its own campaign.
@@ -707,6 +724,11 @@ pub struct BiosphereTraits {
     /// peoples carry 0.
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
+    /// How this creature organizes socially (universal; every kind carries
+    /// one). `Settled` is the sole settlement-forming value and the successor
+    /// to the old "has a psyche entry" proxy for peoplehood. (An enum, not a
+    /// bare primitive — no type-audit verdict needed.)
+    pub social_form: SocialForm,
 }
 
 // The biosphere / psyche / perception / family authoring lives in the four
@@ -727,7 +749,10 @@ impl Component for PerceptionVector {}
 /// rationale lives in its `*_condition_niche` helper above. Potency is the
 /// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
 /// supernatural set (dragons, treant, xorn); mundane beasts and the four
-/// peoples carry 0.
+/// peoples carry 0. `social_form` is the universal social-organization axis
+/// (spec §3.1, The Eremite): `Settled` for the four peoples, `Sessile` for
+/// the rooted autotrophs, `Gregarious` for the herding beasts, `Solitary`
+/// for everything else (including the three dragons).
 /// type-audit: bare-ok(identifier-text)
 pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
     [
@@ -739,6 +764,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.50), (ANIMAL_PREY, 0.50)]).unwrap(),
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Settled,
             },
         ),
         (
@@ -749,6 +775,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.55), (ANIMAL_PREY, 0.45)]).unwrap(),
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Settled,
             },
         ),
         (
@@ -759,6 +786,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap(),
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Settled,
             },
         ),
         (
@@ -769,6 +797,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 0.15), (ANIMAL_PREY, 0.85)]).unwrap(),
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Settled,
             },
         ),
         (
@@ -779,6 +808,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: treant_condition_niche(),
                 potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
+                social_form: SocialForm::Sessile,
             },
         ),
         (
@@ -789,6 +819,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Sessile,
             },
         ),
         (
@@ -799,6 +830,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Gregarious,
             },
         ),
         (
@@ -809,6 +841,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Gregarious,
             },
         ),
         (
@@ -819,6 +852,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Gregarious,
             },
         ),
         (
@@ -829,6 +863,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -839,6 +874,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -849,6 +885,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -859,6 +896,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(), // obligate apex
                 condition_niche: white_dragon_condition_niche(),
                 potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -869,6 +907,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: red_dragon_condition_niche(),
                 potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -879,6 +918,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: black_dragon_condition_niche(),
                 potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
+                social_form: SocialForm::Solitary,
             },
         ),
         (
@@ -889,6 +929,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
+                social_form: SocialForm::Solitary,
             },
         ),
     ]
@@ -943,6 +984,42 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
                 in_group_radius: 0.3,
                 time_horizon: 0.3,
                 sociality: Sociality::Communal,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+        // The Eremite: the three chromatic dragons carry a mind though they
+        // never settle or speak — a solitary temperament, one shared chromatic
+        // profile (per-chromatic differentiation is a deferred refinement).
+        (
+            KindId("white-dragon"),
+            PsychVector {
+                threat_response: 0.95,            // an apex — stands, never flees
+                deliberation_latency: 0.5,        // banked dial, baseline
+                in_group_radius: 0.05,            // "us" = self; utterly solitary
+                time_horizon: 0.90,               // a centuries-long hoarder
+                sociality: Sociality::Hierarchic, // relates by dominance
+                status_basis: StatusBasis::Rank,  // esteems power / the hoard
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            PsychVector {
+                threat_response: 0.95,
+                deliberation_latency: 0.5,
+                in_group_radius: 0.05,
+                time_horizon: 0.90,
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            PsychVector {
+                threat_response: 0.95,
+                deliberation_latency: 0.5,
+                in_group_radius: 0.05,
+                time_horizon: 0.90,
+                sociality: Sociality::Hierarchic,
                 status_basis: StatusBasis::Rank,
             },
         ),
@@ -1219,12 +1296,19 @@ mod tests {
         let fam_ids: Vec<_> = fam.ids().collect();
         assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
 
-        let psy_ids: Vec<_> = psy.ids().collect();
-        let per_ids: Vec<_> = per.ids().collect();
-        assert_eq!(psy_ids, per_ids, "psyche and perception share one key-set");
-        assert_eq!(psy.len(), 4, "the four peoples");
+        // The Eremite: capacities nest (perception ⊆ psyche). The peoples carry
+        // both; the three dragons carry a mind (psyche) but no perception, so
+        // the two stores no longer share one key-set.
+        for kind in per.ids() {
+            assert!(
+                psy.contains(kind),
+                "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
+            );
+        }
+        assert_eq!(psy.len(), 7, "four peoples + three minded dragons");
+        assert_eq!(per.len(), 4, "perception is the four peoples");
         for kind in psy.ids() {
-            assert!(bio.contains(kind), "people {kind:?} has a biosphere row");
+            assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
         }
     }
 
@@ -1463,7 +1547,15 @@ mod tests {
             "owlbear",
         ] {
             let d = bio.get(&KindId(name)).unwrap();
-            assert!(!psy.contains(&KindId(name)), "{name} is fauna: no psyche");
+            // The Eremite: the three dragons are MINDED fauna — a solitary
+            // psyche, but no perception or speech (deferred). Every other
+            // menagerie kind carries neither capacity.
+            let is_dragon = matches!(name, "white-dragon" | "red-dragon" | "black-dragon");
+            assert_eq!(
+                psy.contains(&KindId(name)),
+                is_dragon,
+                "{name}: only the dragons among the menagerie carry a mind"
+            );
             assert!(
                 !per.contains(&KindId(name)),
                 "{name} is fauna: no perception"
