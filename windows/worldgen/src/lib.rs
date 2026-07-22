@@ -93,7 +93,8 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use graph_derive::{
-    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+    GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
+    land_route_attempt_count,
 };
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
@@ -101,7 +102,7 @@ pub use history_emit::{
     goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
 };
 pub use settlement_pins::SettlementPins;
-pub use traversal::{BASE_COST, traversal_cost};
+pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
