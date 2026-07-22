@@ -189,3 +189,34 @@ stay within the commit-gate wall-time budget (adjacency is cheap; measured, not 
 - Chronicle, retrospective, book freshness sweep (living-community + connection-graph
   chapters), Confidence Gradient re-score if a bet moved, registry flip (MAP-61 slice-2 →
   shipped; repoint Where), full gate + artifact drift.
+
+## 10. Measured outcome (post-execution — the honest record)
+
+The moving-sea graph works exactly as designed and is proven in use: on seed-42, **11 of 12
+migrations cross water on era-only connectivity** (a bridge or lane that exists only in the
+era they moved), and the glacial low-stand richly reconnects refugia (the largest landmass
+holds 755 of 843 refugia at the glacial era vs 224 at present). Territories stay separated
+(region overlap 0.0466, tighter than C1's 0.055). Same-seed byte-identity holds.
+
+But the diaspora is **honestly modest** — migration measured 12, not the static world's 51 —
+and the investigation (three preregistered diagnostics, ledger #8–#12) established *why*, and
+that it is **not** a defect in this substrate:
+
+- The static 51 was **inflated by unphysical ocean-walking** (the old raw-mesh BFS strode
+  across open ocean). Removing that is most of the 51→12 drop; **12 is the honest volume**.
+- The forcing is **already severe** (`ALBEDO_GAIN_C = 42 °C`), and reachability is **not** the
+  bottleneck (the bridges reach the refugia).
+- The real cause is an emergent, defensible **settlement × climate coupling**: carrying-capacity
+  settles peoples on the warmest, highest-capacity land, which is also the most glacially
+  *stable* — the ice freezes the cold, empty land and leaves the warm, settled land habitable.
+  Tropical peoples ride out the ice; only the temperate-edge settlements (the 12) are displaced.
+- Crowding pressure is **absent** (raids/flees/resettles = 0; ample vacant land), so peoples are
+  never pushed to move by competition.
+
+**Decision (Nathan, ledger #13): ship the routes; the diaspora *volume* is C3's job.** The
+Sundering delivers the correct moving-sea substrate the diaspora rides; the volume bottleneck is
+crowding/pressure, which is the explicit thesis of **C3 (conflict-as-criticality)**. The §7 gate 1
+is therefore **re-scoped** (not floored): `MIGRATION_FLOOR` 20→5 and `MIN_RESTACKED_SITES` 3→1,
+each labelled in-source with this reasoning, and **isolation-predicts-divergence becomes the
+headline payoff** (§7 gate 3). Raising diaspora volume via crowding/pressure is captured as a C3
+follow-up; the settlement × climate coupling is recorded as an idea-registry finding.
