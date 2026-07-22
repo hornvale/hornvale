@@ -210,6 +210,11 @@ Geothermal gradient spans 21–30 K/km — the deep's warmth.
 40% of the land records an unconformity — an age the rock forgot.
 Glaciated strata lie in the cover over 2235 cells — the ice left its mark.
 
+## The Lode
+
+The land's lode is dominantly salt, found across 32% of it.
+Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
+
 ## Deep Time
 
 The frost retreated: at the glacial maximum (day -243500000), ice advanced over 18% of the land.

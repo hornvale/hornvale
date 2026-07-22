@@ -231,6 +231,7 @@
 - [The Tidings](./chronicle/the-tidings.md)
 - [The Eremite](./chronicle/the-eremite.md)
 - [The Deep](./chronicle/the-deep.md)
+- [The Lode](./chronicle/the-lode.md)
 
 # Appendix: The Frontier
 
