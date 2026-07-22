@@ -83,7 +83,12 @@ pub enum DepositProcess {
 }
 
 /// The commodity a deposit yields.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// `Ord`/`PartialOrd` (declaration order below) exist only so callers can
+/// collect commodities into a `BTreeMap` (the project bans `HashMap`) with a
+/// deterministic tie-break — there is no meaningful ranking between
+/// commodities.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Commodity {
     /// Copper (magmatic arc).
     Copper,

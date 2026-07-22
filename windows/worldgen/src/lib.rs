@@ -2264,6 +2264,25 @@ pub fn soil_order_name(order: hornvale_terrain::SoilOrder) -> &'static str {
     }
 }
 
+/// Human-readable commodity name (The Lode, spec §5): lowercase, for almanac
+/// prose and census categorical values — a pure naming projection, no new
+/// draws.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn commodity_name(commodity: Commodity) -> &'static str {
+    use Commodity::*;
+    match commodity {
+        Copper => "copper",
+        Gold => "gold",
+        LeadZinc => "lead-zinc",
+        Iron => "iron",
+        Salt => "salt",
+        Coal => "coal",
+        Gems => "gems",
+        Tin => "tin",
+        Bauxite => "bauxite",
+    }
+}
+
 /// Land-cell karst-hydrology share above which "karst country" is a notable
 /// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
 /// threshold, not a physical constant.
