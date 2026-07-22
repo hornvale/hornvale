@@ -3,6 +3,29 @@
 One page of process, not product. The product is chronicled; this is what
 the close learned that the code does not record.
 
+## An unrelated red gate, found and fixed at close
+
+Absorbing `main` during this campaign's close (well after G3/execution)
+surfaced a real, pre-existing gap from an entirely different campaign,
+The Deep: it added three new census schema columns
+(`mean-depth-to-basement`, `unconformity-fraction`,
+`mean-geothermal-gradient`) but never regenerated the census fixtures, so
+`branches_family_calibration::clean_outgroup_kobold_holds_on_every_swept_seed`
+failed on a schema mismatch the moment this branch's own preflight
+absorption pulled it in. Nothing about this campaign's own diff caused
+it — PROC-12 touches zero Rust code — but merging with a red gate
+would have landed the corruption on `main` regardless of whose fault it
+was. Flagged to Nathan directly (census regen is authorization-gated by
+standing policy, not something to run unattended), who authorized the
+regen; `HV_CENSUS=1 bash scripts/regenerate-artifacts.sh` (~18 min this
+run) fixed it, `make census-check` confirmed every golden pin still
+held, and the fix landed as its own commit, clearly separated from this
+campaign's own work. **Worth naming as a general pattern**: absorbing
+main during a close is not just a mechanical ancestry check — it can
+surface a genuinely unrelated prior campaign's own incomplete DoD, and
+the closing campaign is the one left holding it if it doesn't stop and
+chase it back rather than merging through a red gate it didn't cause.
+
 ## What went well
 
 - **The tree-finding ideonomy pass found two real, load-bearing
