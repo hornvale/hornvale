@@ -130,61 +130,50 @@ Some 10% of the surface is habitable — land with water and a tolerable season.
 - **Nobzxebnoaboo** — tropical-seasonal-forest
 - **Xnetvnodzhfatnoaboo** — tropical-seasonal-forest
 - **Shngoavngooshngaaboo** — alpine
-- **Dvaovngooshdoodoa** — temperate-forest
+- **Fnodngatnoenoanoaboo** — temperate-forest
+- **Qbeaqteenoagoogeetao** — tropical-seasonal-forest
 - **Foakboeveenoenoanoagoo** — temperate-forest
 - **Ngetxngokzvednoaboo** — tropical-seasonal-forest
-- **Fnodngatnoenoanoaboo** — temperate-forest
-- **Tvaoshvngooshkvoodoodoa** — temperate-forest
-- **Kkoamjeongjoenoenoa** — temperate-forest
 - **Vngatsfoknednoaboo** — tropical-seasonal-forest
-- **Vngookvaogootao** — tropical-seasonal-forest
 - **Ngjaakbaanoenoanoagoo** — temperate-forest
-- **Ngobxngebnoaboo** — alpine
-- **Vngoashngoashvngaoshdoodoa** — temperate-forest
-- **Vngooshshngoagvaoboo** — alpine
-- **Qbeaqteenoagoogeetao** — tropical-seasonal-forest
+- **Mjoofeanjoanoenoa** — temperate-forest
 - **Zhxobfnoknoaboo** — alpine
-- **Shngaovngoashshngooshdoodoa** — temperate-forest
-- **Feevoekbeanoenoa** — temperate-forest
+- **Ngodngekzhxadnoaboo** — tropical-seasonal-forest
 - **Vngaavngaashshngoaboo** — alpine
-- **Vngadvngobxnobnoabooboe** — alpine
-- **Noknodzhfokbeetaonoaboo** — tropical-seasonal-forest
-- **Sxedxngobboenoaboo** — alpine
-- **Vnadzhvobzhxodboenoaboo** — alpine
-- **Njeotbeanoenoa** — temperate-forest
-- **Shngoashngaoshvngaoboo** — alpine
-- **Foengjoenjeenoagoo** — temperate-forest
-- **Vooqtaeqoanoagoo** — tropical-rainforest
-- **Sfodsfodnoaboo** — alpine
-- **Shngoovngaotoadoo** — temperate-rainforest
+- **Vngooshshngoagvaoboo** — alpine
+- **Tvoashbvoashshngaoboo** — alpine
+- **Gvoakvoashvngaoshboo** — alpine
 - **Qkoefoenjaenoagoo** — temperate-forest
-- **Tgoefeanoenoanoagoo** — temperate-forest
-- **Qvooshvngaavngaashboo** — alpine
-- **Nodnodsxobbeetaonoaboo** — tropical-seasonal-forest
-- **Njaemjoemjaenoenoanoagoo** — temperate-forest
+- **Sfedzhxadsvadbeetao** — tropical-seasonal-forest
+- **Dvaovngooshdoodoa** — temperate-forest
 - **Gkeabkoenoenoanoagoo** — temperate-forest
-- **Ngodzhfobxngetnoabooboe** — alpine
-- **Vaovoanjoonoagoonoenoa** — temperate-forest
+- **Vooqtaeqoanoagoo** — tropical-rainforest
+- **Ngobxngebnoaboo** — alpine
+- **Njeoxoofeonoagoonoenoa** — temperate-forest
 - **Faangjeanoagoo** — temperate-forest
-- **Vngebzxadnednoaboo** — tropical-seasonal-forest
-- **Sfedxnekboe** — alpine
-- **Shngoavngaobvaaboo** — alpine
-- **Tvaoshshngaoshngoaboo** — alpine
-- **Shngoashshngaoshvngaashboo** — alpine
-- **Xngabfngeknoaboo** — alpine
+- **Sxedxngobboenoaboo** — alpine
+- **Sfodsfodnoaboo** — alpine
 - **Bqeamjeanoenoa** — temperate-forest
-- **Shngoavngaadvaashdoodoa** — temperate-forest
-- **Kvaokvooshshngoatoadoo** — temperate-rainforest
-- **Xeomjeenoagoonoenoa** — temperate-forest
-- **Tvoashgvaoshgootao** — tropical-seasonal-forest
-- **Ngjeefaonoagoonoenoa** — temperate-forest
 - **Faongjooxaogeetaonoagoo** — tropical-seasonal-forest
-- **Ngabfnebboe** — alpine
-- **Bboeqgoanjeenoenoa** — temperate-forest
+- **Tvaoshvngooshkvoodoodoa** — temperate-forest
+- **Ngjeefaonoagoonoenoa** — temperate-forest
+- **Njeotbeanoenoa** — temperate-forest
 - **Xoefaebbaanoenoa** — temperate-forest
-- **Xngekzvebsxedboenoaboo** — alpine
-- **Ngakfnadvngadnoaboo** — alpine
+- **Veoggaotteanoenoanoagoo** — temperate-forest
+- **Voakbaegeetaonoagoo** — tropical-seasonal-forest
+- **Feevoekbeanoenoa** — temperate-forest
+- **Vnadzhvobzhxodboenoaboo** — alpine
+- **Vngoashngoashvngaoshdoodoa** — temperate-forest
 - **Voomjaaxoanoenoanoagoo** — temperate-forest
+- **Ngodzhfobxngetnoabooboe** — alpine
+- **Shngoovngaotoadoo** — temperate-rainforest
+- **Foengjoenjeenoagoo** — temperate-forest
+- **Dvaoshbvooshgootao** — tropical-seasonal-forest
+- **Vngoashngooshdoodoa** — temperate-forest
+- **Vngoadvoatoadoo** — temperate-rainforest
+- **Footqaemjaonoagoo** — alpine
+- **Shngoavngaadvaashdoodoa** — temperate-forest
+- **Vngaoshngaashshngoatoadoo** — temperate-rainforest
 
 Mild and temperate. The air is warm, still, and unchanging. (18°C)
 
@@ -222,7 +211,7 @@ The sun brightens by 8 parts in a hundred over a gigayear — the slow fire unde
 
 ## The People
 
-The land holds 128 settlement(s).
+The land holds 117 settlement(s).
 The chief bugbear settlement, Vngaobvaoqoa, holds 110 souls amid tropical-rainforest.
 The chief goblin settlement, Fnetzhfodxngebbeetaonoaboo, holds 84 souls amid tropical-seasonal-forest.
 The chief hobgoblin settlement, Faaxoomjoonoagoonoenoa, holds 86 souls amid temperate-forest.

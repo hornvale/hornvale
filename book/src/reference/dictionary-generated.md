@@ -61,7 +61,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Doodoadaokaa | /doodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Daoqao | /daoqao/ | Naeqae | Naeqae → no change → Daoqao |
-| `shrubland` | a biome class | Daakoa | /daakoa/ | Naakoa | Naakoa → no change → Daakoa |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
 | `sibling` | one's brother or sister | Boodao | /boodao/ | Peonae | Peonae → no change → Boodao |
 | `sleep` | to rest unconscious | Dooboo | /dooboo/ | Neepeo | Neepeo → no change → Dooboo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
@@ -232,7 +232,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6 |
 | `stone` | rock | Naonea | /naonea/ | Naonea | Naonea → no change → Naonea |
 | `sun` | the sun | Noagoo | /noagoo/ | Noagoo | Noagoo → no change → Noagoo |
-| `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
+| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
@@ -289,7 +289,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | Roro | /roro/ | Rorot | Rorot → finalloss → Roro |
 | `light` | the color term for white/light hues | Xaxo | /xaxo/ | Xaxo | Xaxo → no change → Xaxo |
 | `many` | an indefinitely large count | Rogrra | /rogrra/ | Rogrra | Rogrra → no change → Rogrra |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Roqrra | /roqrra/ | Roqrrat | Roqrrat → finalloss → Roqrra |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Rakxo | /rakxo/ | Rrakxot | Rrakxot → finalloss → clustersimplify → Rakxo |
@@ -313,10 +313,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Ra | /ra/ | Rraq | Rraq → finalloss → clustersimplify → Ra |
 | `stone` | rock | Xa | /xa/ | Xaq | Xaq → finalloss → Xa |
 | `sun` | the sun | Rogxa | /rogxa/ | Rrogxa | Rrogxa → clustersimplify → Rogxa |
-| `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
+| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
 | `temperate-forest` | a biome class | Xatxo | /xatxo/ | Xatxo | Xatxo → no change → Xatxo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'temperate-rainforest' |
+| `temperate-rainforest` | a biome class | Xotro | /xotro/ | Xotrot | Xotrot → finalloss → Xotro |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `tree` | a woody plant | Rakrra | /rakrra/ | Rrakrra | Rrakrra → clustersimplify → Rakrra |
 | `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |

@@ -95,15 +95,17 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use graph_derive::{
-    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+    GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
+    land_route_attempt_count,
 };
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
-    GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
-    goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
+    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
+    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
+    stratigraphy, sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
-pub use traversal::{BASE_COST, traversal_cost};
+pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -1682,7 +1684,7 @@ pub fn paleoclimate_from(
 ///   order the coarse ice diagnostic already pays.
 /// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
 ///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
-///   `era_for` marches the glacial cycles forward across the simulated
+///   `era_index_for` marches the glacial cycles forward across the simulated
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
@@ -3993,6 +3995,27 @@ fn build_to(
     let cfg = history_bake::BakeConfig::default_millennia();
     let eras = bake_eras(&world, &terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    // The Sundering (the moving sea): one geography graph per era. A cell is
+    // ocean in era E iff elevation < era.sea_level(E); the glacial low-stand
+    // exposes the shelf as land bridges to island refugia (the diaspora
+    // crosses), the rising sea drowns them (the peoples sunder). Adjacency +
+    // sailing lanes only, empty settlement slice. Derived per era, never
+    // committed.
+    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
+        .iter()
+        .map(|era| {
+            crate::graph_derive::connection_graph_at(
+                geo,
+                elevation,
+                era.sea_level,
+                &current,
+                &[],
+                &crate::graph_derive::GraphConfig::default(),
+            )
+        })
+        .collect();
     let history = history_bake::bake(
         seed,
         geo,
@@ -4002,6 +4025,7 @@ fn build_to(
         &paleo.refugia,
         &peoples,
         &cfg,
+        &graphs,
     );
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the

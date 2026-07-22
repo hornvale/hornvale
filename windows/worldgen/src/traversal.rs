@@ -70,6 +70,34 @@ pub fn traversal_cost(
     })
 }
 
+/// Per-cell land-traversal cost at a given sea level: identical to
+/// [`traversal_cost`] except a cell is ocean (`u64::MAX`) iff its elevation is
+/// below `sea_level`, rather than by present biome. This is the era-aware cost
+/// The Sundering's moving sea plans over — at a glacial low-stand the exposed
+/// shelf drops below `u64::MAX` and becomes a passable land bridge.
+/// type-audit: bare-ok(count: return)
+pub fn traversal_cost_at(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+) -> CellMap<u64> {
+    CellMap::from_fn(geo, |cell| {
+        let here = elevation.get(cell).get();
+        if here < sea_level.get() {
+            return u64::MAX;
+        }
+        let max_gap = geo.neighbors(cell).iter().fold(0.0_f64, |acc, &n| {
+            let gap = (elevation.get(n).get() - here).abs();
+            if gap.total_cmp(&acc).is_gt() {
+                gap
+            } else {
+                acc
+            }
+        });
+        BASE_COST.saturating_add((max_gap * SLOPE_SCALE) as u64)
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

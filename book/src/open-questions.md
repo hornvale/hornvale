@@ -454,4 +454,13 @@ debt from open to **banked and measured**, holds the prey-stronghold debt
 against Stage 2, moves the **peoples-territory** bet from open to **answered by
 history-first placement** (a time resolution, not the anticipated spatial one),
 and — the field having gained its clock — narrows the vary-time debt to its
-blind-attribution core, still open.
+blind-attribution core, still open. *The Sundering* (the connection graph's
+second slice) then gave that peoples-territory resolution a second, *dynamic*
+mechanism: routing the history bake over a time-varying connection graph — a sea
+that falls with the ice, opening land bridges, and rises to drown them — so
+peoples are confined to the landmasses they can reach. Seed-42's four peoples
+resolve onto four sea-bound landmasses, three holding only a subset of them, and
+the territory overlap held (0.0466). It stays in the checkable tier; what it did
+*not* resolve — the *volume* of the diaspora, throttled by the world's ample
+vacant land and by peoples settling glacially-stable ground — it handed, with
+measurements, to conflict-as-criticality.

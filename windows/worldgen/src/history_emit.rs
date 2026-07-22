@@ -316,6 +316,89 @@ pub fn migration_events(world: &World) -> u64 {
         .count() as u64
 }
 
+/// The number of occupations the moving sea's paleoclimate ended by
+/// starvation — the collapse signal, mirroring [`migration_events`] exactly
+/// (same `OCC_CAUSE` predicate, the sibling `cause_label` for `Famine`).
+/// Reads committed `occ-cause` facts; no seed draw, no replay of the bake.
+/// Measured on the real seed-42 world: 1 collapse of 151 occupations
+/// (≈ 0.0066 share) — the depopulation-ceiling gate
+/// (`windows/worldgen/tests/history_sundering.rs`) checks this stays a
+/// minority; the moving sea corrects the map's climate, it does not empty it.
+/// type-audit: bare-ok(count: return)
+pub fn collapse_events(world: &World) -> u64 {
+    world
+        .ledger
+        .find(hornvale_history::OCC_CAUSE)
+        .filter(|f| matches!(&f.object, Value::Text(t) if t == "famine"))
+        .count() as u64
+}
+
+/// One inhabited, sea-isolated landmass: a connected component of the
+/// *present* connection graph (conductance ≥ the isolation threshold), with
+/// the peoples whose alive occupations sit on it. `peoples` holds the raw
+/// `OCC_PEOPLE` label text rather than a resolved `KindId` — the
+/// isolation-divergence gate only needs stable people *identity*, and
+/// `String` ordering is already deterministic, so this sidesteps needing the
+/// `WorldComponents`-based interner a pure ledger-readback helper has no
+/// access to (mirrors the "compare content, don't reconstruct a `'static`
+/// key" idiom [`resolve_people`] uses one level up).
+/// type-audit: bare-ok(identifier-text: peoples)
+pub struct Landmass {
+    /// The component's cells.
+    pub cells: BTreeSet<CellId>,
+    /// The raw people-label text of every alive occupation on this landmass.
+    pub peoples: BTreeSet<String>,
+}
+
+/// The inhabited sea-isolated landmasses of a built world: the present
+/// connection graph's connected components, filtered to those holding at
+/// least one alive settlement. Purely derived from committed facts plus the
+/// graph reconstruction ([`crate::graph_derive::connection_graph_of`]) — the
+/// graph itself is never committed, so this replays no bake and draws no
+/// seed. The isolation threshold (1e-6) matches the almanac's
+/// `ISOLATION_THRESHOLD` (`windows/almanac/src/connections.rs`): "genuinely
+/// disconnected", not "technically nonzero". Measured on the real seed-42
+/// world: 4 inhabited landmasses over the 4 goblinoid peoples, three of which
+/// host only a proper subset (2, 2, and 3 of the 4) — the campaign's headline
+/// isolation-predicts-divergence payoff
+/// (`windows/worldgen/tests/history_sundering.rs`): a people that could not
+/// physically cross the water never diverges into a landmass it never
+/// reached.
+pub fn sundered_landmasses(world: &World) -> Vec<Landmass> {
+    let graph = crate::graph_derive::connection_graph_of(
+        world,
+        &crate::graph_derive::GraphConfig::default(),
+    );
+
+    let mut site_people: BTreeMap<CellId, String> = BTreeMap::new();
+    for s in hornvale_settlement::all_settlements(world) {
+        let Some(Value::Number(cell)) = world.ledger.value_of(s.id, hornvale_settlement::CELL_ID)
+        else {
+            continue;
+        };
+        let Some(label) = world.ledger.text_of(s.id, hornvale_history::OCC_PEOPLE) else {
+            continue;
+        };
+        site_people.insert(CellId(*cell as u32), label.to_string());
+    }
+
+    graph
+        .reachable_regions(1e-6)
+        .into_iter()
+        .filter_map(|cells| {
+            let peoples: BTreeSet<String> = cells
+                .iter()
+                .filter_map(|c| site_people.get(c).cloned())
+                .collect();
+            if peoples.is_empty() {
+                None
+            } else {
+                Some(Landmass { cells, peoples })
+            }
+        })
+        .collect()
+}
+
 /// How many neighbour rings a people's occupied cells are dilated by to form
 /// its *region of influence* for [`goblinoid_region_overlap`]. One ring — a
 /// cell plus its immediate neighbours — is the natural "territory around a

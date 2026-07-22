@@ -8,13 +8,13 @@
 <text x="50" y="86.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">750</text>
 <line x1="56.0" y1="36.0" x2="624.0" y2="36.0" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
-<rect x="70.2" y="97.8" width="160.9" height="138.2" fill="#5b8dd9" rx="2" />
-<text x="150.7" y="93.8" font-size="11" fill="currentColor" text-anchor="middle">691</text>
+<rect x="70.2" y="98.4" width="160.9" height="137.6" fill="#5b8dd9" rx="2" />
+<text x="150.7" y="94.4" font-size="11" fill="currentColor" text-anchor="middle">688</text>
 <text x="150.7" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">lunar</text>
 <rect x="259.5" y="219.8" width="160.9" height="16.2" fill="#5b8dd9" rx="2" />
 <text x="340.0" y="215.8" font-size="11" fill="currentColor" text-anchor="middle">81</text>
 <text x="340.0" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">solar</text>
-<rect x="448.9" y="190.4" width="160.9" height="45.6" fill="#5b8dd9" rx="2" />
-<text x="529.3" y="186.4" font-size="11" fill="currentColor" text-anchor="middle">228</text>
+<rect x="448.9" y="189.8" width="160.9" height="46.2" fill="#5b8dd9" rx="2" />
+<text x="529.3" y="185.8" font-size="11" fill="currentColor" text-anchor="middle">231</text>
 <text x="529.3" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">absent</text>
 </svg>

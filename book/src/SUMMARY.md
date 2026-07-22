@@ -219,6 +219,7 @@
 - [The Given Word](./chronicle/the-given-word.md)
 - [The Single Saying](./chronicle/the-single-saying.md)
 - [The Compound Word](./chronicle/the-compound-word.md)
+- [The Standing Offer](./chronicle/the-standing-offer.md)
 - [The Diorama](./chronicle/the-diorama.md)
 - [The Overworld](./chronicle/the-overworld.md)
 - [The Living Community](./chronicle/the-living-community.md)
@@ -231,6 +232,8 @@
 - [The Tidings](./chronicle/the-tidings.md)
 - [The Eremite](./chronicle/the-eremite.md)
 - [The Deep](./chronicle/the-deep.md)
+- [The Haunt](./chronicle/the-haunt.md)
+- [The Sundering](./chronicle/the-sundering.md)
 - [The Lode](./chronicle/the-lode.md)
 
 # Appendix: The Frontier
