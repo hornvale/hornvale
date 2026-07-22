@@ -2,7 +2,7 @@
 
 **Campaign:** The Haunt
 **Date:** 2026-07-22
-**Status:** draft (G3 — awaiting review)
+**Status:** shipped (2026-07-22)
 **Registry:** PSY-11 (the threat/fear engine) — the reserved *remembered danger* instance
 
 ## The idea
