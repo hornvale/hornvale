@@ -194,13 +194,16 @@ impl WorldComponents {
     }
 }
 
-/// Enforce peopled-cluster coherence: the four peopled stores (psyche,
-/// perception, articulation, lexicon) share one key-set — the peoples — and
-/// every peopled kind has a biosphere row and a family row. Also enforce
-/// forward-proto coherence (the load-time invariant, both constructors): every
-/// family label carried by ≥2 kinds in `family_of` must have a `family_proto`
-/// entry, so a multi-member family always has a proto ancestral vector to draw
-/// its shared proto phonology from (a singleton family stays its own proto).
+/// Enforce the nested-capacity lattice (The Eremite): articulation and
+/// lexicon share one key-set; perception and articulation are each subsets
+/// of psyche (a creature may carry a mind without perception or speech — the
+/// solitary minded); every minded kind has a biosphere row; and a `Settled`
+/// kind carries the full peopled cluster (psyche, perception, articulation,
+/// lexicon). Also enforce forward-proto coherence (the load-time invariant,
+/// both constructors): every family label carried by ≥2 kinds in `family_of`
+/// must have a `family_proto` entry, so a multi-member family always has a
+/// proto ancestral vector to draw its shared proto phonology from (a
+/// singleton family stays its own proto).
 fn check_integrity(
     biosphere: &ComponentStore<KindId, BiosphereTraits>,
     psyche: &ComponentStore<KindId, PsychVector>,
@@ -210,30 +213,51 @@ fn check_integrity(
     family_proto: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     family_of: &ComponentStore<KindId, &'static str>,
 ) -> Result<(), BuildError> {
-    if !psyche.ids().eq(perception.ids()) {
+    // Nested capacities (The Eremite): speech ⊆ mind, perception ⊆ mind, and a
+    // Settled people carries the full peopled cluster. A creature may carry a
+    // mind (psyche) without perception or speech — the solitary minded.
+    if !articulation.ids().eq(lexicon.ids()) {
         return Err(BuildError::MalformedKind(
-            "psyche and perception registries must share one key-set".into(),
+            "articulation and lexicon registries must share one key-set".into(),
         ));
     }
-    if !psyche.ids().eq(articulation.ids()) {
-        return Err(BuildError::MalformedKind(
-            "psyche and articulation registries must share one key-set".into(),
-        ));
-    }
-    if !psyche.ids().eq(lexicon.ids()) {
-        return Err(BuildError::MalformedKind(
-            "psyche and lexicon registries must share one key-set".into(),
-        ));
-    }
-    for k in psyche.ids() {
-        if !biosphere.contains(k) {
+    for k in perception.ids() {
+        if !psyche.contains(k) {
             return Err(BuildError::MalformedKind(format!(
-                "peopled kind {k:?} has no biosphere component"
+                "kind {k:?} perceives but has no mind (psyche)"
+            )));
+        }
+    }
+    for k in articulation.ids() {
+        if !psyche.contains(k) {
+            return Err(BuildError::MalformedKind(format!(
+                "kind {k:?} speaks but has no mind (psyche)"
             )));
         }
         if !family_of.contains(k) {
             return Err(BuildError::MalformedKind(format!(
-                "kind {k:?} has no family"
+                "speaking kind {k:?} has no family"
+            )));
+        }
+    }
+    for k in psyche.ids() {
+        if !biosphere.contains(k) {
+            return Err(BuildError::MalformedKind(format!(
+                "minded kind {k:?} has no biosphere component"
+            )));
+        }
+    }
+    // A settling people is the full peopled cluster (what the old all-equal
+    // invariant guaranteed for the peoples, now scoped to Settled).
+    for (k, bio) in biosphere.iter() {
+        if bio.social_form == hornvale_species::SocialForm::Settled
+            && !(psyche.contains(k)
+                && perception.contains(k)
+                && articulation.contains(k)
+                && lexicon.contains(k))
+        {
+            return Err(BuildError::MalformedKind(format!(
+                "Settled kind {k:?} is missing a peopled component"
             )));
         }
     }
@@ -461,6 +485,114 @@ mod tests {
             &articulation,
             &lexicon,
             &family_proto,
+            &family_of,
+        );
+        assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn psyche_without_speech_passes() {
+        // The Eremite: a creature may carry a mind (psyche) without
+        // perception or speech — the solitary minded. Not added to
+        // perception/articulation/lexicon.
+        let mut biosphere = biosphere_registry();
+        let mut psyche = psyche_registry();
+        let perception = perception_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        let new_kind = KindId("solitary-mind");
+        let mind = *psyche.iter().next().expect("at least one peopled kind").1;
+        psyche.insert(new_kind, mind);
+        let mut body = biosphere
+            .iter()
+            .next()
+            .expect("at least one biosphere row")
+            .1
+            .clone();
+        body.social_form = hornvale_species::SocialForm::Solitary;
+        biosphere.insert(new_kind, body);
+
+        let result = check_integrity(
+            &biosphere,
+            &psyche,
+            &perception,
+            &articulation,
+            &lexicon,
+            &family_proto(),
+            &family_of,
+        );
+        assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[test]
+    fn speech_without_psyche_fails() {
+        // A kind in articulation+lexicon but not psyche must fail: speech
+        // requires a mind (articulation/lexicon ⊆ psyche).
+        let biosphere = biosphere_registry();
+        let psyche = psyche_registry();
+        let perception = perception_registry();
+        let mut articulation = articulation_registry();
+        let mut lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        let new_kind = KindId("mute-no-more");
+        let art = *articulation
+            .iter()
+            .next()
+            .expect("at least one articulation row")
+            .1;
+        articulation.insert(new_kind, art);
+        let lex = lexicon
+            .iter()
+            .next()
+            .expect("at least one lexicon row")
+            .1
+            .clone();
+        lexicon.insert(new_kind, lex);
+
+        let result = check_integrity(
+            &biosphere,
+            &psyche,
+            &perception,
+            &articulation,
+            &lexicon,
+            &family_proto(),
+            &family_of,
+        );
+        assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn settled_missing_a_peopled_component_fails() {
+        // A Settled kind must carry the full peopled cluster (psyche,
+        // perception, articulation, lexicon) — the nested-lattice successor
+        // to the old all-equal invariant, scoped to Settled.
+        let mut biosphere = biosphere_registry();
+        let psyche = psyche_registry();
+        let perception = perception_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        let new_kind = KindId("unheeded-settler");
+        let mut body = biosphere
+            .iter()
+            .next()
+            .expect("at least one biosphere row")
+            .1
+            .clone();
+        body.social_form = hornvale_species::SocialForm::Settled;
+        biosphere.insert(new_kind, body);
+
+        let result = check_integrity(
+            &biosphere,
+            &psyche,
+            &perception,
+            &articulation,
+            &lexicon,
+            &family_proto(),
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
