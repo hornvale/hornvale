@@ -372,6 +372,48 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        0.0,
+        100.0,
+        300.0,
+        600.0,
+        1000.0,
+        2000.0
+      ],
+      "doc": "Mean depth to crystalline basement over land (m) — the sedimentary archive's thickness.",
+      "kind": "numeric",
+      "name": "mean-depth-to-basement",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.",
+      "kind": "numeric",
+      "name": "unconformity-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        15.0,
+        18.0,
+        21.0,
+        24.0,
+        27.0,
+        30.0
+      ],
+      "doc": "Mean geothermal gradient over land (K/km) — the deep's energy base.",
+      "kind": "numeric",
+      "name": "mean-geothermal-gradient",
+      "rung": "terrain"
+    },
+    {
       "doc": "The most common land biome by cell count, kebab-case",
       "kind": "categorical",
       "name": "dominant-land-biome",
@@ -1845,7 +1887,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x5b1ca1ffddac36fa"
+    "fnv1a64": "0xdc49c961b75399ad"
   },
   "schema_version": 1,
   "study": {
