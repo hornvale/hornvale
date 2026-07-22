@@ -58,7 +58,7 @@ The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (1267 stirred).
+Time passes. You sense movement nearby (1262 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

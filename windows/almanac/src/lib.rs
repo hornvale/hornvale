@@ -113,7 +113,7 @@ pub struct NightSkyLines {
 }
 
 /// Everything the almanac needs, gathered by the composition root.
-/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines)
+/// type-audit: bare-ok(constructor-edge: seed), bare-ok(prose: land_lines), bare-ok(prose: biome_lines), bare-ok(prose: ground_lines), bare-ok(prose: water_lines), bare-ok(prose: deep_time_lines), bare-ok(prose: calendar_lines), bare-ok(prose: night_sky), bare-ok(prose: genesis_notes), bare-ok(prose: settlement_lines), bare-ok(prose: diurnal_lines), bare-ok(prose: seas_lines), bare-ok(prose: rains_lines), bare-ok(prose: firmament_lines), bare-ok(prose: deep_lines)
 pub struct AlmanacContext {
     /// The world seed, for the title.
     pub seed: u64,
@@ -138,6 +138,10 @@ pub struct AlmanacContext {
     /// the drainage substrate always computed but never reported; empty for
     /// a landless world.
     pub water_lines: Vec<String>,
+    /// The Deep's headline lines: the column's depth-to-basement, geothermal
+    /// range, notable unconformities, and (when a deep-time past exists) a
+    /// glaciation-record line. Empty for a landless world (The Deep, spec §7).
+    pub deep_lines: Vec<String>,
     /// Per-sample-site diurnal-range readouts (The Turning, spec §2): the
     /// peak-to-peak day/night swing at the driest interior land and at the
     /// open ocean, so the reader sees both ends of the range. Empty for
@@ -385,6 +389,14 @@ pub fn render(ctx: &AlmanacContext) -> String {
         doc.push('\n');
     }
 
+    if !ctx.deep_lines.is_empty() {
+        doc.push_str("## The Deep\n\n");
+        for line in &ctx.deep_lines {
+            doc.push_str(&format!("{line}\n"));
+        }
+        doc.push('\n');
+    }
+
     if !ctx.deep_time_lines.is_empty() {
         doc.push_str("## Deep Time\n\n");
         for line in &ctx.deep_time_lines {
@@ -513,6 +525,7 @@ mod tests {
                 "Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 7% of the land."
                     .to_string(),
             ],
+            deep_lines: Vec::new(),
             diurnal_lines: vec![],
             seas_lines: vec![],
             rains_lines: vec![],
@@ -708,6 +721,15 @@ mod tests {
     }
 
     #[test]
+    fn deep_section_is_suppressed_when_empty() {
+        let mut ctx = sample_context();
+        ctx.deep_lines = Vec::new();
+        assert!(!render(&ctx).contains("## The Deep"));
+        ctx.deep_lines = vec!["The archive runs 400 m to basement on average.".to_string()];
+        assert!(render(&ctx).contains("## The Deep"));
+    }
+
+    #[test]
     fn waters_section_names_the_fresh_water_share_and_is_skipped_when_empty() {
         let mut ctx = sample_context();
         ctx.water_lines = vec![
@@ -738,6 +760,25 @@ mod tests {
         assert!(
             waters_pos < deep_time_pos,
             "Waters must come before Deep Time"
+        );
+    }
+
+    #[test]
+    fn deep_section_renders_between_waters_and_deep_time() {
+        let ctx = AlmanacContext {
+            water_lines: vec!["Fresh water reaches 7% of the land.".to_string()],
+            deep_lines: vec!["The archive runs 400 m to basement on average.".to_string()],
+            deep_time_lines: vec!["The frost retreated.".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let waters_pos = doc.find("## The Waters").unwrap();
+        let deep_pos = doc.find("## The Deep").unwrap();
+        let deep_time_pos = doc.find("## Deep Time").unwrap();
+        assert!(waters_pos < deep_pos, "The Deep must come after The Waters");
+        assert!(
+            deep_pos < deep_time_pos,
+            "The Deep must come before Deep Time"
         );
     }
 

@@ -4,7 +4,7 @@
 //! convergent-vs-interior elevation contrast).
 
 use hornvale_kernel::{CellMap, Geosphere, Seed};
-use hornvale_terrain::{GenesisError, TerrainPins, generate, streams, summarize};
+use hornvale_terrain::{GeneratedTerrain, GenesisError, TerrainPins, generate, streams, summarize};
 
 #[test]
 fn pin_isolation_holds_at_the_globe_level() {
@@ -654,4 +654,42 @@ fn the_clip_reshapes_real_coastlines_on_seed_42() {
         "the seam clip changed no cell's continental classification on seed 42 — \
          the rift is not shaping real coastlines"
     );
+}
+
+#[test]
+fn the_column_is_deterministic() {
+    let geo = Geosphere::new(4);
+    let a = GeneratedTerrain::new(
+        geo.clone(),
+        generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
+    );
+    let b = GeneratedTerrain::new(
+        geo.clone(),
+        generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
+    );
+    for cell in geo.cells() {
+        assert_eq!(a.column_at(cell), b.column_at(cell));
+        assert_eq!(
+            a.geothermal_gradient_at(cell),
+            b.geothermal_gradient_at(cell)
+        );
+    }
+}
+
+#[test]
+fn the_column_is_a_pure_projection_unperturbed_by_pins() {
+    let geo = Geosphere::new(4);
+    let base = GeneratedTerrain::new(
+        geo.clone(),
+        generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
+    );
+    // Re-affirm a drawn value via a pin; the derived column must not shift.
+    let pins = TerrainPins {
+        plates: Some(summarize(base.globe()).plate_count),
+        ..TerrainPins::default()
+    };
+    let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
+    for cell in geo.cells() {
+        assert_eq!(base.column_at(cell), pinned.column_at(cell));
+    }
 }
