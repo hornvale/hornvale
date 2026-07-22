@@ -86,17 +86,6 @@ pub enum Era {
     Primordial,
 }
 
-/// Classify a normalized age `[0,1]` (0 recent → 1 primordial) into an era.
-/// type-audit: bare-ok(ratio: normalized_age)
-pub fn era_from_age(normalized_age: f64) -> Era {
-    match normalized_age {
-        a if a >= 0.75 => Era::Primordial,
-        a if a >= 0.5 => Era::Deep,
-        a if a >= 0.25 => Era::Ancient,
-        _ => Era::Recent,
-    }
-}
-
 /// The named bands, top → bottom; resolution coarsens downward.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BandKind {
@@ -159,7 +148,11 @@ pub fn unconformity(depth_to_basement_m: f64, crust_age: f64) -> bool {
 
 /// Build a cell's column from fields terrain already owns. Pure; no draws.
 /// Bands are stamped so that era is monotone non-decreasing with depth (the
-/// archive's ordering), the deepest band always `Primordial`.
+/// archive's ordering), the deepest band always `Primordial`. Band top-depths
+/// assume `moho_m >= depth_to_basement_m` — always true for real crust (the
+/// Moho is kilometres deep, the cover at most a few hundred metres); were it
+/// violated the Roots and Underneath tops would coincide, but the era ordering
+/// still holds.
 /// type-audit: bare-ok(ratio: crust_thickness_km), bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(ratio: sediment_m), bare-ok(ratio: soil_depth_m)
 pub fn column(
     crust_thickness_km: f64,

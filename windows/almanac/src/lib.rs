@@ -764,6 +764,25 @@ mod tests {
     }
 
     #[test]
+    fn deep_section_renders_between_waters_and_deep_time() {
+        let ctx = AlmanacContext {
+            water_lines: vec!["Fresh water reaches 7% of the land.".to_string()],
+            deep_lines: vec!["The archive runs 400 m to basement on average.".to_string()],
+            deep_time_lines: vec!["The frost retreated.".to_string()],
+            ..sample_context()
+        };
+        let doc = render(&ctx);
+        let waters_pos = doc.find("## The Waters").unwrap();
+        let deep_pos = doc.find("## The Deep").unwrap();
+        let deep_time_pos = doc.find("## Deep Time").unwrap();
+        assert!(waters_pos < deep_pos, "The Deep must come after The Waters");
+        assert!(
+            deep_pos < deep_time_pos,
+            "The Deep must come before Deep Time"
+        );
+    }
+
+    #[test]
     fn culture_lines_render_under_the_people_section() {
         let ctx = AlmanacContext {
             peoples: vec![PeopleBlock {
