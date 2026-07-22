@@ -205,6 +205,29 @@ impl GeneratedTerrain {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
 
+    /// The cave at a cell, if the fluid-flow point process places one.
+    pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
+        if self.is_ocean(id) {
+            return None;
+        }
+        let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let pos = self.geosphere.position(id);
+        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 5.0, 4);
+        let prob = crate::features::presence_prob(self.cave_proneness_at(id), belt);
+        if noise >= prob {
+            return None;
+        }
+        let buf = self.material_at(id);
+        let near_fault = self.boundary_at(id).is_some();
+        let kind = crate::features::cave_kind(&buf, near_fault);
+        // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
+        let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
+        Some(crate::features::Cave {
+            kind,
+            depth_reach_bands,
+        })
+    }
+
     /// The geothermal gradient at a cell (K/km) — the deep's energy base.
     pub fn geothermal_gradient_at(&self, id: CellId) -> crate::strata::GeothermalGradient {
         crate::strata::geothermal_gradient(

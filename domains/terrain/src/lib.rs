@@ -9,6 +9,7 @@ pub mod crust;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
+pub mod features;
 pub mod globe;
 pub mod lithology;
 pub mod pins;
@@ -28,6 +29,7 @@ pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
+pub use features::{Cave, CaveKind};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,
