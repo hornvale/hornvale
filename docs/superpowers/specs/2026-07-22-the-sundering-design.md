@@ -1,201 +1,191 @@
-# The Sundering — Campaign 2, Slice 2: The Diaspora on Routes
+# The Sundering — Campaign 2, Slice 2: The Moving Sea
 
-**Status:** design (G3 review)
+**Status:** design (G3 re-review — revised after the hard-block hit the preregistered depopulation risk)
 **Program:** The Living Community engine (campaign 2 of ~5), slice 2 of the Connection Graph
-**Slice:** the deep-history dynamics follow the derived transport graph — a genesis epoch.
+**Slice:** the deep-history dynamics follow a **time-varying** transport graph — the sea itself moves with the ice. A genesis epoch.
 **Base:** origin/main @94d5308e.
 
 ---
 
 ## 1. The payoff
 
-The sea stops being a road you can walk. Today a fleeing community in the deep-history
-bake finds its next home by breadth-first search over the raw icosphere mesh — which
-steps straight across open ocean as if it were meadow. This slice makes migration follow
-the **real transport topology** slice 1 derived, and the world changes shape:
+The sea is a barrier that breathes. When the ice comes, the sea *falls* — up to 120 m at
+the glacial maximum — and the drowned shelf between a mainland and an island rises into a
+**land bridge**. When the ice retreats, the sea *rises* and the bridge drowns, **sundering**
+the peoples who crossed. This slice makes the deep-history bake follow that moving sea:
 
-- **Oceans sunder.** Land travel can no longer cross the sea, so a people on a separate
-  landmass — or behind an impassable strait — with no current-lane out is genuinely
-  *stranded*. It stays, it clusters, and its territory becomes distinct by isolation, not
-  by niche. C1 made isolation *legible*; this makes it *dynamic* — isolation now shapes who
-  ends up where.
-- **Sailing lanes leapfrog.** A current-lane between two coasts is a single hop, so a
-  coastal community can cross to a far shore in one step. Maritime migration — and, because
-  all reach is now graph-reach, sea raids and daughter-colonies across the water — fall out
-  of the same rule.
+- **Glacial eras open the bridges — the diaspora crosses.** A community whose home freezes
+  migrates toward the refugia that survive the cold; in the glacial era the shelf to those
+  refugia is exposed land, so the migration reaches them. Peoples spread along the bridges
+  the low sea uncovers — a real ice-age diaspora.
+- **Interglacial and present drown the bridges — the peoples sunder.** As the sea rises the
+  bridge becomes ocean, and the peoples who crossed are cut off on their landmass. Their
+  territory becomes distinct by *isolation*, not niche. C1 made isolation legible; this makes
+  it dynamic — and gives it a cause you can name: *they were one people, before the sea rose.*
 
-One swap, a dual consequence: **the sea is barrier and bridge**. That duality is the whole
-campaign.
+The sea is barrier **and** bridge — not by a fixed rule, but because it is *the same sea at a
+different time*. That is the whole campaign, and it is exactly how the Earth's ice-age
+biogeography actually worked (Beringia, Doggerland, Wallace's Line).
 
-## 2. Context — what slice 1 left, and what this is
+## 2. Context — why the graph must move
 
-The Connection Graph (MAP-61) is a multi-slice campaign. Slice 1 (The Connection Graph,
-shipped @cfaf57e3) derived the legible substrate — a `ConnectionGraph` over `CellId` nodes
-with `Adjacency` / `WaterRoute` / `LandRoute` edges, each carrying a conductance — and
-proved the keystone finding: **on the icosphere, ocean (not elevation) is the real
-separator**, because a land BFS routes through mountain gaps at zero hop-cost but cannot
-cross an impassable-ocean cell. Slice 1 deliberately did **not** touch the dynamics: C1's
-displacement still runs on raw mesh adjacency, and the graph is a pure read.
+The Connection Graph (MAP-61) is a multi-slice campaign. Slice 1 (shipped @cfaf57e3) derived
+the legible substrate — a `ConnectionGraph` over `CellId` nodes with `Adjacency` /
+`WaterRoute` / `LandRoute` edges — and proved the keystone finding: **ocean, not elevation,
+is the real separator.** Slice 1 did not touch the dynamics.
 
-This slice spends that finding. It reroutes C1's deep-history bake — the forward simulation
-that seeds proto-communities and marches epochs across paleoclimate era-variance — so that
-every place a community "reaches" is a graph edge, not a raw mesh neighbour. The later
-slices remain future work: conductance-*weighted* distance (slice "conductance gating"),
-field-diffusion / fixed-point coupling (trade, culture, disease), and built roads + portals.
+This slice reroutes C1's bake to follow that graph. The **first** design (a single,
+present-coastline graph; oceans an absolute block; hop-distance) was implemented and its
+mechanism proven correct — but it hit the spec's own preregistered **depopulation risk** on
+the real seed-42 world: with a static present sea, the glacial refugia are islands the
+land BFS can no longer reach, so climate-driven migration collapsed **51 → 1**. The map was
+not depopulated and peoples stayed separated, but the diaspora went inert.
+
+The measured cause pointed straight at the fix. A *static present coastline* is an
+anachronism: ice-age migration to refugia happened across land bridges the low glacial sea
+uncovered. And the substrate to model that **already exists** — `EraClimate.sea_level`
+carries each era's eustatic sea level (present + change, down to −120 m at the glacial
+maximum), and "land this era" is already `elevation ≥ era.sea_level` in the paleoclimate.
+The connection graph is the **one** Hornvale substrate still frozen in time while
+habitability, ice, and sea level around it already vary per era. This slice conforms it to
+the sim's own principle — *fields are functions over space × time* — by making the graph a
+function of the era: **`graph(era)`**.
+
+The later slices remain future work: conductance-*weighted* distance; field-diffusion /
+fixed-point coupling; built roads + portals; and — the deeper, slower second layer of the
+moving coastline — **tectonic** uplift over deep time.
 
 ## 3. Architecture (constitutional layering)
 
-Nothing new is committed to the ledger; the graph stays a derived read, exactly as slice 1
-built it. What moves is the *skeleton the bake produces*.
+Nothing new is committed to the ledger; the graph stays a derived read. What moves is the
+*skeleton the bake produces*.
 
-- **`windows/worldgen` (composition root)** — the bake already lives here
-  (`history_bake::bake`), because it reads terrain, paleoclimate, and demography together.
-  Before the bake, the root derives a **geography-stable `ConnectionGraph`** and passes a
-  `&ConnectionGraph` into `bake`. The three site-picking paths traverse it.
-- **`domains/topology`** — reused unchanged. The bake consumes `ConnectionGraph::edges`
-  (adjacency list) and the existing `reachable_regions` for the isolation legibility. No
-  new topology API is required for the core rewire (an optional small helper is allowed if
-  the plan finds the BFS cleaner factored into the crate — see §4.4).
-- **`windows/almanac`** — reuses slice 1's `render_connections` isolation readout to *name*
-  which present communities are cut off (the divergence legibility). No new emit.
+- **`windows/worldgen` (composition root)** — the bake lives here. Before the bake, the root
+  derives **one geography graph per era** (`CLIMATE_ERAS = 25`), each with the era's own
+  marine mask (`elevation < era.sea_level` ⇒ ocean this era), and passes them into `bake`
+  aligned with the era series. The three site-picking paths traverse **the graph for the era
+  in force**.
+- **`domains/topology`** — reused unchanged (`ConnectionGraph`, `edges`, `reachable_regions`).
+- **`windows/worldgen/graph_derive` + `traversal`** — gain an **era-aware** derivation: a
+  traversal-cost / marine test keyed to a per-era sea level rather than the present
+  `biome.is_marine()`. The present graph (era = now) is still the slice-1 graph, so the
+  legibility surface and the isolation payoff are unchanged.
+- **`windows/almanac`** — reuses slice 1's `render_connections` isolation readout on the
+  present (era = now) graph. No new emit.
 
-**The geography-stable graph.** Adjacency and sailing-lane edges depend only on terrain and
-the ocean-current field — never on who lives where — so the graph is built **once**, before
-the bake, from the same inputs `connection_graph_of` already reads. Concretely it is
-`connection_graph(geo, elevation, biome, current, &[], cfg)` with an **empty settlement
-slice**: adjacency + water routes are assembled; `add_land_routes` over no settlements is a
-no-op. Land routes are settlement-dependent and the bake's settlements move every epoch, so
-including them would mean re-deriving O(N²) bounded A\* every one of ~80 epochs — rejected on
-cost; land routes stay a slice-1 present-world read.
-
-**Derived, never committed — but a genesis epoch.** The graph is not written to the ledger
-(no new save-format field). But because the dynamics it drives change which cells get
-occupied, the committed occupation skeleton changes: **byte-identity deliberately breaks and
-the census moves.** That is the defining property of this campaign and §5 treats it as the
-load-bearing decision.
+**Derived per era, never committed.** Each era's graph is a total function of terrain +
+that era's sea level — no seed draw, no wall-clock, never written to the ledger (no new
+save-format field). Twenty-five cheap derivations (adjacency is O(cells); the cost check in
+§7 bounds the total).
 
 ## 4. The mechanism
 
-C1's bake has exactly three call sites that reach other cells via raw `geo.neighbors`. Each
-is rerouted to traverse graph edges whose **conductance is strictly positive** (the
-traversability line: ocean-touching adjacency edges are stored at conductance 0, so a
-`> 0.0` test is exactly "you can travel this edge"). Sailing-lane edges carry the current's
-magnitude as conductance, positive for any real current, so lanes are traversable and a lane
-is one hop.
+### 4.1 The era-aware graph
 
-### 4.1 `nearest_dest` — migration and flee-resettle
+The essential era-varying part is **adjacency** — whether the cell-pair is land-connected
+this era. A cell is ocean in era E iff `elevation < era.sea_level(E)`; an adjacency edge's
+conductance is 0 if either endpoint is ocean this era (unchanged conductance rule, era-aware
+inputs). So the exposed glacial shelf carries positive-conductance adjacency edges — the land
+bridges — that vanish as the sea rises. Sailing lanes (`WaterRoute`) use the era's coastline
+for launch points but the **present** current field (Hornvale has no paleo-current model —
+a documented simplification; the land bridges, not the lanes, are the era-varying heart).
 
-The BFS that finds the nearest vacant habitable cell keeps its structure and its
-tie-break (refugial cells first, then river-adjacent, then lowest `CellId` — a total,
-deterministic order), but expands over **graph edges with conductance > 0** instead of
-`geo.neighbors`. Ocean is no longer walked through; a sailing-lane edge reaches the far
-coast in one BFS layer (leapfrog). If the whole reachable component is full or hostile,
-the result is `None` — and the community collapses (Famine), exactly as today, but now
-"reachable" honours the sea.
+### 4.2 The three site-picking paths (unchanged from the first design)
 
-### 4.2 `raid_target` — conflict
+C1's bake reaches other cells via raw `geo.neighbors` at exactly three sites. Each iterates
+`traversable_neighbors(graph, cell)` — edges with **`conductance > 0.0`**, ascending, deduped
+— where `graph` is **the era's graph**:
 
-The scan for the wealthiest occupied neighbour expands over the same conductance-positive
-graph edges (Nathan's ruling, decision #2: all movement follows the graph). A coastal
-community can raid across a current-lane (a sea raid); an isolated component cannot be
-raided from outside. Tie-break unchanged (highest population, then lowest `CellId`).
+- `nearest_dest` — the migration / flee-resettle BFS.
+- `raid_target` — the raid scan (all movement follows the graph — sea raids across a lane, an
+  isolated component un-raidable from outside).
+- the daughter-founding pick in `grow`.
 
-### 4.3 daughter-founding in `grow`
+Every tie-break (refugia > river > `CellId`; raid population > `CellId`; daughter
+`capacity*river_factor` > `CellId`) is unchanged. `traversable_neighbors` and the
+sunder/leapfrog proof from the first implementation are reused verbatim; only the graph handed
+to them becomes era-specific.
 
-The daughter settles the vacant habitable **graph-neighbour** of highest river-weighted
-capacity (a daughter can be a maritime colony across a lane), replacing the direct
-`geo.neighbors` pick. Scoring (`capacity * river_factor`) and tie-break (lowest `CellId`)
-are unchanged.
+### 4.3 Threading the era
 
-### 4.4 The traversal helper
-
-The BFS/neighbour-scan currently reads `geo.neighbors(c)`. After the rewire each site-picking
-path needs "the conductance-positive graph neighbours of `c`". The plan may either inline a
-filtered `graph.edges(c)` iteration at each site or factor a small
-`traversable_neighbors(&ConnectionGraph, CellId) -> impl Iterator<Item = CellId>` helper;
-either is acceptable so long as the filter (`conductance > 0.0`) and the ascending-`CellId`
-determinism are identical across all three sites.
+The bake's epoch loop already selects the era in force (`era_for(year)`). It now also selects
+that era's graph (parallel to the era series) and hands it to `step_community`. Genesis
+seeding uses the earliest era's graph.
 
 ## 5. The epoch — the load-bearing decision (leads the G3 flagged section)
 
-This is a **genesis epoch**. It changes the deterministic topology the bake's dynamics use,
-which changes which communities exist and where, which shifts every downstream artifact.
+Unchanged from the first design: this is a **genesis epoch**. The dynamics' topology now
+varies with era, changing which communities exist and where — the committed skeleton moves.
 
-- **No new stream label, no relabel.** The seed-derivation labels (`history/bake`,
-  `history/genesis/<people>`) are unchanged in meaning — the bake still draws genesis site
-  picks and daughter probabilities from them in commit order. What changes is the *world
-  state* those draws act on, not the labels' semantics. Per the save-format contract, an
-  epoch suffix is for *redefining a label's draws*; that is not happening here, so no
-  `history/bake/v2`. (This is the specific determinism-contract judgment for Nathan to
-  confirm at G3.)
-- **Byte-identity breaks by design; the census regenerates.** Same seed + pins is still
-  byte-identical *after* this change (the bake stays a total function of the committed
-  world), but the seed-42 skeleton is different from main's. The census must regenerate on
-  the canonical Linux box `lefford` (decision 0063; macOS cannot commit census goldens),
-  and the seed-42 keystone fixture refreezes at merge from main's tip. **Census regen is a
-  carve-out — explicit authorization at G6.**
-- **The census-close cascade (from C1).** After the lefford regen: `rows.csv` goldens →
-  `golden-pins.sql` + `calibration.rs` (`make census-check`, column order = live-computed,
-  pinned-literal) → and the other census-fixture-backed calibrations that run in the normal
-  gate (`branches_family_calibration.rs`, `gathering_calibration.rs`). Fixture-backed
-  re-pins can be done on macOS; only the `rows.csv` regen must be on lefford.
+- **No new stream label, no relabel, no new committed field.** The `history/bake` /
+  `history/genesis/<people>` labels' draw semantics are unchanged; the graph is never
+  committed. (Determinism-contract judgment for Nathan to confirm.)
+- **Byte-identity breaks by design; the census regenerates on `lefford`** (decision 0063;
+  macOS cannot commit census goldens). **Census regen is a carve-out — explicit
+  authorization at G6.** The seed-42 keystone fixture refreezes at merge.
+- **The census-close cascade (from C1)** applies: `rows.csv` → `golden-pins.sql` +
+  `calibration.rs` (`make census-check`) → `branches_family_calibration.rs`,
+  `gathering_calibration.rs`.
 
 ## 6. Determinism
 
-Within a seed the bake remains fully deterministic. The graph derivation is byte-identical
-(slice 1's contract: `CellId`-ascending iteration, `f64::total_cmp` tie-breaks, no
-`HashMap`/`HashSet`, no wall-clock). The rerouted BFS/scans keep every existing tie-break and
-add one filter (`conductance > 0.0`). No new seed draw is introduced (destination selection
-is deterministic, not stochastic), so the `history/bake` stream's *draw sequence per
-world-state* is unchanged in kind — only the world-state it walks differs. `total_cmp` at
-every float comparison; graph conductances are compared, never serialized in the path.
+Within a seed the bake stays fully deterministic. Each era's graph derivation is
+byte-identical (slice-1 contract: `CellId`-ascending, `f64::total_cmp`, no `HashMap`, no
+wall-clock). The era-aware marine test (`elevation < era.sea_level`) reads committed terrain
++ the paleoclimate's already-committed per-era sea level. No new seed draw. `total_cmp` at
+every float comparison.
 
 ## 7. Success criteria — measure, don't narrate
 
-The campaign lives or dies on three preregistered gates over the seed-42 (and a small seed
-sample) baked skeleton. Each is a real assertion with a mutation-testable failure, not a
-narration.
+The fold-in gives the diaspora its **best physical shot** — but its efficacy on seed-42 is
+*measured*, not assumed. If the glacial low-stand genuinely reaches the refugia, displacement
+fires again and the payoff lands. If seed-42's refugia are deep-ocean islands no −120 m
+bridge reaches, migration stays low — and *that is the honest finding*, at which point the
+displacement gate is re-scoped to the isolation that fires (labelled post-data, as C1 did),
+not floored. Either outcome is legitimate; the gate adjudicates.
 
-1. **Displacement still fires at volume.** Migration + flee + resettle events stay above the
-   volume floor C1 established (the bake is not allowed to go inert). Rerouting must not
-   silently convert the dynamics into stasis.
-2. **The map is not depopulated (the headline risk).** Blocking ocean crossings must not
-   strand peoples into mass extinction: the alive-at-`now` settlement count stays within the
-   walkable band the C1 quality gate defines (`tests/history_placement.rs`), and the
-   collapse (Famine) share does not blow past a preregistered ceiling. **If graph-blocking
-   depopulates the map, that is a fidelity/tuning finding brought to Nathan (carve-out) — it
-   is never patched with a floor.**
-3. **Isolation predicts divergence.** At least one seed exhibits a genuinely isolated graph
-   component (a landmass or strait-sealed region) whose occupations form a **distinct
-   people/lineage territory cluster** — measured structurally over the existing record
-   fields (no new committed field; decision #3). A metric shows isolation correlating with
-   territory divergence, the dynamic form of C1's region-overlap result.
+1. **Displacement fires (measured, re-pin-or-re-scope).** With the moving sea, migration on
+   seed-42 is re-measured. If it fires at volume, re-pin `MIGRATION_FLOOR` clear of the new
+   value (labelled). If it stays inert *despite* the bridges, re-scope the displacement gate
+   to the isolation/divergence signal and record the "refugia are true islands" finding — do
+   not floor it. (This is the resolution of the first design's block, made explicit.)
+2. **The map is not depopulated.** Alive-at-`now` count stays in the walkable band
+   (`history_placement`'s `40..=400`); collapse (Famine) share stays under a preregistered
+   ceiling set above the measured value.
+3. **Isolation predicts divergence.** On the **present** (era = now) graph, ≥ 2 inhabited land
+   components, and at least one isolated component hosts a *proper subset* of the world's
+   peoples — the structural, un-tunable signature of divergence-by-isolation (no new committed
+   field). The drowned-bridge legibility ("these two peoples were joined before the sea rose")
+   is captured as a follow-up, not built here.
 
-A preregistered **cost check** confirms the graph derivation + the rerouted bake stay within
-the commit-gate wall-time budget (the geography-stable graph is one cheap derivation; graph
-BFS is ~mesh-BFS cost — but this is measured, not asserted by hand, per the Sounding's
-lesson).
+A preregistered **cost check** confirms the 25 per-era graph derivations + the era-graph bake
+stay within the commit-gate wall-time budget (adjacency is cheap; measured, not asserted).
 
 ## 8. Non-goals (§9 — read before assuming scope)
 
-- **Conductance-weighted distance.** Distance stays hop-count over the graph. Weighting
-  migration by conductance (seasonal/gradual ease-of-travel) is the named later slice.
-- **Land-routes in the dynamics.** Settlement-pair land corridors stay a slice-1 present-world
-  read; the bake follows only the geography-stable adjacency + sailing lanes.
-- **Field-diffusion / fixed-point coupling** (trade, culture, disease over the graph) — later.
-- **Built roads and portals** — later (society's marks; magic/astronomy-gated).
-- **Cultural drift per isolated component** (tongue/deity divergence) — the language/religion
-  domains' job; C1 leaves those `None` in the bake. Captured as a followup, not built here.
-- **A new committed graph or divergence field** — the graph stays derived; divergence stays
-  emergent and measured.
+- **Tectonic coastline evolution.** The moving sea here is *eustatic* (ice-volume / climate).
+  Coastlines moving with plate uplift over deep time is the deeper, slower second layer — the
+  terrain domain, a later campaign.
+- **Paleo-currents.** Sailing lanes use the era's coastline but the present current field
+  (no paleo-current model). The era-varying land bridges are the heart; era-specific currents
+  are a captured follow-up.
+- **Conductance-weighted distance** — distance stays hop-count over the era graph. Weighting
+  by ease-of-travel is a named later slice.
+- **Settlement land-routes in the dynamics** — the bake follows era adjacency + sailing lanes;
+  settlement-pair corridors stay a slice-1 present-world read.
+- **Field-diffusion / fixed-point coupling; built roads + portals** — later.
+- **A new committed graph, sea-level, or divergence field** — the graph stays derived per era;
+  divergence stays emergent and measured.
 
 ## 9. Definition of Done (per CLAUDE.md)
 
-- The three site-picking paths (`nearest_dest`, `raid_target`, daughter-founding) traverse
-  the geography-stable `ConnectionGraph` (conductance > 0), built once at the worldgen root.
-- The three §7 gates pass on the merged tree; the cost check is within budget.
+- The bake derives one era-aware graph per era (`elevation < era.sea_level` marine mask) and
+  the three site-picking paths traverse the era-in-force graph via `traversable_neighbors`
+  (`conductance > 0`); `traversable_neighbors` + the sunder/leapfrog proof are reused.
+- The §7 gates pass on the merged tree (displacement re-pinned **or** re-scoped per the
+  measured reality, labelled); the cost check is within budget.
 - Census regenerated on lefford (authorized at G6); the census-close cascade re-pinned green;
   the seed-42 keystone fixture refrozen from main's tip.
-- Chronicle entry, retrospective, book freshness sweep (the living-community + connection-graph
+- Chronicle, retrospective, book freshness sweep (living-community + connection-graph
   chapters), Confidence Gradient re-score if a bet moved, registry flip (MAP-61 slice-2 →
-  shipped; repoint Where), full gate + artifact drift check.
+  shipped; repoint Where), full gate + artifact drift.
