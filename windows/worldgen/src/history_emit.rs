@@ -358,8 +358,8 @@ pub struct Landmass {
 /// seed. The isolation threshold (1e-6) matches the almanac's
 /// `ISOLATION_THRESHOLD` (`windows/almanac/src/connections.rs`): "genuinely
 /// disconnected", not "technically nonzero". Measured on the real seed-42
-/// world: 4 inhabited landmasses over the 4 goblinoid peoples, two of which
-/// host only 2 of the 4 — the campaign's headline
+/// world: 4 inhabited landmasses over the 4 goblinoid peoples, three of which
+/// host only a proper subset (2, 2, and 3 of the 4) — the campaign's headline
 /// isolation-predicts-divergence payoff
 /// (`windows/worldgen/tests/history_sundering.rs`): a people that could not
 /// physically cross the water never diverges into a landmass it never
