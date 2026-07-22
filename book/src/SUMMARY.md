@@ -220,6 +220,7 @@
 - [The Diorama](./chronicle/the-diorama.md)
 - [The Living Community](./chronicle/the-living-community.md)
 - [The Quarry](./chronicle/the-quarry.md)
+- [The Connection Graph](./chronicle/the-connection-graph.md)
 
 # Appendix: The Frontier
 
