@@ -230,6 +230,7 @@
 - [The Alarm](./chronicle/the-alarm.md)
 - [The Tidings](./chronicle/the-tidings.md)
 - [The Eremite](./chronicle/the-eremite.md)
+- [The Deep](./chronicle/the-deep.md)
 
 # Appendix: The Frontier
 

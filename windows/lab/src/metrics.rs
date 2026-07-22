@@ -1060,6 +1060,66 @@ pub fn registry() -> Vec<Metric> {
             }),
         },
         Metric {
+            name: "mean-depth-to-basement",
+            doc: "Mean depth to crystalline basement over land (m) — the sedimentary archive's thickness.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 100.0, 300.0, 600.0, 1000.0, 2000.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut sum) = (0usize, 0.0f64);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        sum += v.terrain.depth_to_basement_at(cell);
+                    }
+                }
+                MetricValue::Number(if land == 0 { 0.0 } else { sum / land as f64 })
+            }),
+        },
+        Metric {
+            name: "unconformity-fraction",
+            doc: "Fraction of land cells recording a nonconformity (missing time) — the archive's floating gaps.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut gaps) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.unconformity_at(cell) {
+                            gaps += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    gaps as f64 / land as f64
+                })
+            }),
+        },
+        Metric {
+            name: "mean-geothermal-gradient",
+            doc: "Mean geothermal gradient over land (K/km) — the deep's energy base.",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[15.0, 18.0, 21.0, 24.0, 27.0, 30.0],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut sum) = (0usize, 0.0f64);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        sum += v.terrain.geothermal_gradient_at(cell).get();
+                    }
+                }
+                MetricValue::Number(if land == 0 { 0.0 } else { sum / land as f64 })
+            }),
+        },
+        Metric {
             name: "dominant-land-biome",
             doc: "The most common land biome by cell count, kebab-case",
             summary: SummaryKind::Categorical,
@@ -4801,8 +4861,22 @@ mod tests {
         // belief-kind-{bugbear,goblin,hobgoblin,kobold} — net -1 +4),
         // +6 for The Chorus (C4 Task 5, LANG-41: chorus-distortion,
         // chorus-distinctiveness, chorus-recoverability, chorus-variance,
-        // chorus-param-spread, chorus-sky-calibration).
-        assert_eq!(registry().len(), 158);
+        // chorus-param-spread, chorus-sky-calibration), +3 for The Deep
+        // (Task 5: mean-depth-to-basement, unconformity-fraction,
+        // mean-geothermal-gradient).
+        assert_eq!(registry().len(), 161);
+    }
+
+    #[test]
+    fn the_deep_metrics_are_registered() {
+        let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
+        for want in [
+            "mean-depth-to-basement",
+            "unconformity-fraction",
+            "mean-geothermal-gradient",
+        ] {
+            assert!(names.contains(&want), "missing metric {want}");
+        }
     }
 
     #[test]

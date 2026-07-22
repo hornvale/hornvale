@@ -17,6 +17,7 @@ pub mod provider;
 pub mod render;
 pub mod rift;
 pub mod shape;
+pub mod strata;
 pub mod streams;
 pub mod water;
 
@@ -35,6 +36,10 @@ pub use lithology::{
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
+pub use strata::{
+    BandKind, BandSample, Era, GeothermalGradient, StratigraphicColumn, column, depth_to_basement,
+    geothermal_gradient, temperature_at_depth, unconformity,
+};
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
 
 use hornvale_kernel::{

@@ -1495,6 +1495,68 @@ order: coarse before fine, features before layers.
   layer is the natural second customer of the venue enum perception introduced
   — evidence the seam was cut in the right place.
 
+**The arc, as the 2026-07-22 brainstorm settled it (MAP-10 → The Deep).** The
+two tiers above still hold as *tiers*, but the brainstorm fixed the order
+differently and found the spine that unifies them. The organizing insight:
+**depth is one anisotropic axis along which four things vary at once** — down
+(space), older (the deeper strata record earlier ages), more forgotten (the
+deep is what a culture let slip), and — reserved for later — more numinous.
+Space and time are therefore not two systems: the rock column *is* the
+deep-time archive, read top-down, and Deep Time froze the solid earth
+precisely where its record is most legible. Lifted, the column is *the ledger
+made spatial* — an append-and-truncate log indexed by a coordinate that
+doubles as age — so its gaps matter: an **unconformity** is missing time that
+left no record, the geological instance of the memory economy's floating gap
+(MEM-2), and the reason reading the deep past is *meant* to be uncertain.
+
+The representation converged (four ideonomy passes) on a layered form rather
+than a single structure: a derived **stratigraphic column** (resolution
+degrading with depth — the deep past is coarse and cheap), exposed through a
+**field interface**, annotated with sparse **located features** tagged by
+provenance (natural ones re-derive from the seed; emplaced ones — a mine, a
+seal, a gate — are ledgered events), with the fine 3D **underworld graph** (the
+old "subterranean venue" bullet) deferred as a later refinement that may
+decouple from surface topology. The column is a *lattice*, not a strict stack:
+the places where depth ≡ age *breaks* — a dike, a fault-vein, a gate-scar
+punched down through old ages — are exactly the anomalies, and the data model
+reserves room for them from the start.
+
+The arc is sequenced along an **autonomy ladder**, inert → agentic: each
+campaign raises the agency ceiling without retrofitting, because the inert
+substrate already carries the hooks the agentic rungs will grab. That resolves
+the mythic register the project wants — **not** an underworld of the dead, but
+the Lovecraftian *sealed and forgotten*. A cross-domain re-instantiation into
+immunology (the walled-off granuloma that reactivates under immunosuppression)
+gave it a mechanism rather than a mood: **a seal is a maintained containment
+field with an upkeep cost, and "the dwarves delved too deep" is the abandoned
+library (MEM-1) — the ward fails when the civilization that paid to maintain it
+declines, not when a pickaxe strikes.** The dimensional gate is then an *event*
+(something flooding through from elsewhere), not an intrinsic property of the
+deep.
+
+**Campaign 1 — The Deep — is the inert first stone** (spec'd): the derived
+*geological* column, its **deep-time archive** (era-stamps and unconformities),
+and **geothermal as the deep's energy base** — the Pellucidar "inner sun" a
+later chemo/lithotroph ecology (PSY-10) will feed on. It extends terrain's
+lithology rather than founding a new domain (the archive needs only terrain's
+own narrated tectonic history; paleoclimate is an optional shallow-strata
+refinement), and it changes no committed byte — a refining tier, not an epoch.
+It is deliberately purely geological: the **thaumic** axis stays reserved at
+zero, and the whole magical-energy layer Nathan proposed — a second energy
+field (thaumic flux) with linear **lodes**, a fourth "anomalous" rock origin,
+and the numen leg of the depth spine — banks to a dedicated metaphysics-
+activation campaign (gated on UNI-2), because crossing the metaphysics gate is
+its own decision, not a rider on a geology campaign.
+
+Downstream rungs, in ladder order: located features + gates (carrying the
+seal-as-containment mechanism); the fine graph and its lightless **venue
+vocabulary** (the deep-dweller Venue The Eyes deferred, EXP-9); subterranean
+ecology and the archive-keeps-what-the-surface-lost refugium (MAP-22); and the
+richest of them, **the vertical relationship** (MAP-69) — surface↔under as
+speciation-by-stratum (Morlock/Eloi as divergence, not authored), over/under
+commerce, predation-inversion, chthonic emergence, and the valence that makes
+one people's tomb another's cathedral.
+
 ---
 
 ## The cultural-memory economy — knowledge as a maintained thing
