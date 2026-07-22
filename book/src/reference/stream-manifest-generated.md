@@ -43,7 +43,9 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 
 ### hornvale-climate
 
-*(no seed-derivation streams)*
+| Label | Meaning |
+|---|---|
+| `climate/weather/phase/v1` | drifting weather-phase noise seed (The Firmament) |
 
 ### hornvale-culture
 
@@ -153,11 +155,16 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
 | `terrain/lithology` | lithology sub-cell hash-noise (hash-noise only; no stream draws) |
-| `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
 | `terrain/terranes` | terrane count, then per terrane host-craton index/bearing/size/age |
+| `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
 | `terrain/arc-gate` | along-strike island-arc gating noise (hash-noise only; no stream draws) |
 | `terrain/relief` | fBm relief-detail noise (hash-noise only; no stream draws) |
 | `terrain/rift` | ONE spreading-rate draw; per-seam geometry via hash sub-derivations (seam-{a}-{b}); no other sequential draws |
+| `terrain/lobing` | craton lobing-noise sub-leg (hash-noise only; no stream draws) |
+| `terrain/slice-0` | first of three orthogonal crust noise slices, shared with the render lens (hash-noise only; no stream draws) |
+| `terrain/slice-1` | second of three orthogonal crust noise slices (hash-noise only; no stream draws) |
+| `terrain/slice-2` | third of three orthogonal crust noise slices (hash-noise only; no stream draws) |
+| `terrain/crenulation` | rift crenulation-noise sub-leg (hash-noise only; no stream draws) |
 
 ### hornvale-vessel
 

@@ -22,6 +22,7 @@ pub use diurnal::{diurnal_amplitude, diurnal_anomaly, diurnal_waveform};
 pub use habitability::{habitable_fraction, is_habitable};
 pub use precipitation::{PrecipRegime, precip_mm_yr, precip_regime, snow_fraction};
 pub use provider::{ClimateInputs, ClimateSummary, GeneratedClimate, summarize};
+pub use streams::stream_labels;
 pub use substellar::{
     SUBSTELLAR, locked_cell_temperature, substellar_at, substellar_cosine, substellar_cosine_dir,
 };
@@ -59,12 +60,6 @@ pub const RAIN: &str = "rain";
 /// cell.
 /// type-audit: bare-ok(identifier-text)
 pub const SNOW: &str = "snow";
-
-/// Every seed-derivation label this crate uses (none yet).
-/// type-audit: bare-ok(identifier-text)
-pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    Vec::new()
-}
 
 /// Register climate's contribution to the concept registry.
 ///

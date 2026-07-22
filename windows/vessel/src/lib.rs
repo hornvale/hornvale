@@ -48,12 +48,17 @@ impl std::fmt::Display for VesselError {
 }
 
 /// Options for a possession.
-/// type-audit: bare-ok(flag: echo)
+/// type-audit: bare-ok(flag: echo), bare-ok(flag: wild_agents)
 pub struct PossessOpts {
     /// The frozen day the possession observes.
     pub day: hornvale_kernel::WorldTime,
     /// Echo each command line (script/transcript mode).
     pub echo: bool,
+    /// Whether to append the world's wild beast agents to the derived NPCs
+    /// (The Wilding). On by default — the game and its galleries show the
+    /// fauna walking alongside the peoples. A settled-population unit test
+    /// that isolates the peopled narration path sets this off.
+    pub wild_agents: bool,
 }
 
 impl Default for PossessOpts {
@@ -66,6 +71,7 @@ impl Default for PossessOpts {
         PossessOpts {
             day: hornvale_kernel::WorldTime { day: 0.5 },
             echo: false,
+            wild_agents: true,
         }
     }
 }

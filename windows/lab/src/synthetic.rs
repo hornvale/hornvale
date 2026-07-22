@@ -56,6 +56,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// reads `calm` (a comfortable temperature) instead of its hostile value, so a
 /// creature boxed in by heat is released and recovers. `None` = a permanent
 /// climate.
+#[derive(Default)]
 pub struct SyntheticTerrain {
     fresh: BTreeSet<RoomAddr>,
     temps: BTreeMap<RoomAddr, f64>,
@@ -275,10 +276,7 @@ pub fn stranded_from_known_water() -> Scenario {
         npcs: vec![npc],
         terrain: SyntheticTerrain {
             fresh: [spring].into_iter().collect(),
-            temps: BTreeMap::new(),
-            calm_after: None,
-            forage: BTreeMap::new(),
-            threat: BTreeMap::new(),
+            ..Default::default()
         },
     }
 }
@@ -321,9 +319,7 @@ pub fn stranded_in_a_hot_waste() -> Scenario {
         terrain: SyntheticTerrain {
             fresh: [spring].into_iter().collect(),
             temps,
-            calm_after: None,
-            forage: BTreeMap::new(),
-            threat: BTreeMap::new(),
+            ..Default::default()
         },
     }
 }
@@ -362,8 +358,7 @@ pub fn a_heat_wave_that_passes() -> Scenario {
             fresh: [spring].into_iter().collect(),
             temps,
             calm_after: Some((WAVE_BREAKS_DAY, AFTER_WAVE_C)),
-            forage: BTreeMap::new(),
-            threat: BTreeMap::new(),
+            ..Default::default()
         },
     }
 }
@@ -402,10 +397,8 @@ pub fn a_forager_in_a_food_desert() -> Scenario {
         npcs: vec![npc],
         terrain: SyntheticTerrain {
             fresh: [spring].into_iter().collect(),
-            temps: BTreeMap::new(),
-            calm_after: None,
             forage,
-            threat: BTreeMap::new(),
+            ..Default::default()
         },
     }
 }
@@ -440,10 +433,8 @@ pub fn a_creature_cornered_by_dread() -> Scenario {
         npcs: vec![npc],
         terrain: SyntheticTerrain {
             fresh: [spring].into_iter().collect(),
-            temps: BTreeMap::new(),
-            calm_after: None,
-            forage: BTreeMap::new(),
             threat,
+            ..Default::default()
         },
     }
 }
@@ -501,10 +492,8 @@ pub fn dread_pit_steady_vs_bold() -> Scenario {
         npcs: vec![steady, bold],
         terrain: SyntheticTerrain {
             fresh,
-            temps: BTreeMap::new(),
-            calm_after: None,
-            forage: BTreeMap::new(),
             threat,
+            ..Default::default()
         },
     }
 }
@@ -566,10 +555,7 @@ pub fn a_stricken_and_a_healthy_people() -> Scenario {
         npcs,
         terrain: SyntheticTerrain {
             fresh: [spring, healthy_spring].into_iter().collect(),
-            temps: BTreeMap::new(),
-            calm_after: None,
-            forage: BTreeMap::new(),
-            threat: BTreeMap::new(),
+            ..Default::default()
         },
     }
 }

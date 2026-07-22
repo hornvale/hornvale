@@ -2,6 +2,7 @@
 //! depend on domains (they present them); domains never depend on windows.
 #![warn(missing_docs)]
 
+pub mod connections;
 pub mod history;
 
 /// Re-exported so that test code assembling the `OccupationRecord` fixtures

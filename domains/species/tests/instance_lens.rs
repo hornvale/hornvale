@@ -165,7 +165,7 @@ fn join_equals_scan_over_random_ledgers() {
     // overrides before AND after changes, both zero spellings, dangling
     // labels, kindless entities.
     let reg = biosphere_registry();
-    // "treant" carries a non-zero authored potency (0.6); the other valid
+    // "treant" carries a non-zero authored potency (0.30 = CR 9/30); the other valid
     // labels are all potency 0.0, so without it the property never exercises
     // potency-default resolution after a kind change (the c4 signed-zero
     // lesson: the generator's value-space must cover the field).

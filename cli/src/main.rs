@@ -53,6 +53,10 @@ usage:
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale history --world <PATH> --site <CELL>
                           read a site's stratigraphy + flesh (the deep history of one cell)
+  hornvale connections --world <PATH> --site <CELL>
+                          read a site's transport topology (sea-lanes, natural land routes, isolation)
+  hornvale connections --world <PATH> --overview
+                          summarize the world's reachability: real regions, the largest, the rest
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
   hornvale locale --world W --sample N [--depth D]
@@ -113,6 +117,7 @@ fn main() -> ExitCode {
         Some("star-chart") => cmd_star_chart(&args),
         Some("scene") => cmd_scene(&args),
         Some("history") => cmd_history(&args),
+        Some("connections") => cmd_connections(&args),
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
         Some("streams") => cmd_streams(),
@@ -305,6 +310,39 @@ fn cmd_history(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Read one site's transport topology off the world's derived
+/// [`hornvale_topology::ConnectionGraph`]: its sea-lanes, its natural
+/// overland routes, and whether its region is cut off from the wider world.
+/// `--overview` (in place of `--site`) instead prints the world-level
+/// reachability summary (`hornvale_almanac::connections::render_overview`):
+/// how many real regions the map resolves into, the largest, and the rest.
+/// Derives the graph fresh via `hornvale_worldgen::connection_graph_of`
+/// (the composition-root entry point; Task 5) with the default
+/// `GraphConfig` -- the same config `windows/worldgen`'s own tests and
+/// gates use -- then renders it with `hornvale_almanac::connections`.
+fn cmd_connections(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let graph = world_builder::connection_graph_of(&world, &Default::default());
+    if args.iter().any(|a| a == "--overview") {
+        print!("{}", hornvale_almanac::connections::render_overview(&graph));
+        return Ok(());
+    }
+    let raw = flag_value(args, "--site")
+        .ok_or("connections: --site <CELL> is required (or pass --overview)")?;
+    let cell: u32 = raw.parse().map_err(|_| {
+        format!("connections: bad --site '{raw}' (must be a non-negative cell index)")
+    })?;
+    print!(
+        "{}",
+        hornvale_almanac::connections::render_connections(
+            &world,
+            hornvale_kernel::CellId(cell),
+            &graph
+        )
+    );
+    Ok(())
+}
+
 /// The first positional (non-flag) argument after the subcommand, skipping
 /// `--world <value>` and any other `--flag`. `None` if only flags are present.
 fn positional_target(args: &[String]) -> Option<&str> {
@@ -404,6 +442,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: true,
+                wild_agents: true,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -418,6 +457,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: false,
+                wild_agents: true,
             },
             stdin.lock(),
             stdout.lock(),

@@ -1,14 +1,21 @@
 //! Seed-derivation labels for the kernel — permanent save-format contracts
 //! (The Room Mesh spec §6/§10). Changing one silently corrupts every world.
+//!
+//! `ROOM_FACE`/`ROOM_CHILD` are declared via `stream_labels!` (PROC-18),
+//! which also generates `stream_labels()` below. `OCTAVE_LABELS` stays
+//! hand-authored, outside the macro: it is a single constant holding an
+//! *array* of 16 algorithmically-named labels, not 16 independently
+//! meaningful manifest rows, and is deliberately never published in
+//! `stream_labels()` (PROC-18 spec §5.1).
 
 use crate::seed::StreamLabel;
 
-/// Root label for a room's base face.
-/// type-audit: bare-ok(identifier-text: return)
-pub const ROOM_FACE: StreamLabel<'static> = StreamLabel::from_static("room/face");
-/// Label for a room's child descent.
-/// type-audit: bare-ok(identifier-text: return)
-pub const ROOM_CHILD: StreamLabel<'static> = StreamLabel::from_static("room/child");
+crate::stream_labels! {
+    /// Root label for a room's base face.
+    ROOM_FACE = "room/face" => "room base face";
+    /// Label for a room's child descent.
+    ROOM_CHILD = "room/child" => "room child descent";
+}
 
 /// Static per-octave derivation labels for `noise::fbm_2d`'s common octave
 /// range, indexed by octave number (index 0 is a placeholder — octave 0
@@ -40,12 +47,3 @@ pub const OCTAVE_LABELS: [StreamLabel<'static>; 16] = [
     StreamLabel::from_static("octave-14"),
     StreamLabel::from_static("octave-15"),
 ];
-
-/// Every kernel seed label, for the generated stream manifest.
-/// type-audit: bare-ok(artifact: return)
-pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![
-        (ROOM_FACE.as_str(), "room base face"),
-        (ROOM_CHILD.as_str(), "room child descent"),
-    ]
-}

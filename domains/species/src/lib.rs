@@ -700,8 +700,11 @@ pub struct BiosphereTraits {
     pub condition_niche: ConditionNiche,
     /// Magical potency (0 = a purely material creature). Raises the species'
     /// sovereignty floor (`hornvale_kernel::sovereignty_floor`) so mighty
-    /// creatures buffer environmental constraint. The four material peoples
-    /// carry 0.
+    /// creatures buffer environmental constraint. Authored as the creature's
+    /// 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
+    /// supernatural set (dragon/plant/elemental — treant is 5E plant-typed);
+    /// mundane beasts and the four
+    /// peoples carry 0.
     /// type-audit: bare-ok(ratio: potency)
     pub potency: f64,
 }
@@ -721,8 +724,10 @@ impl Component for PerceptionVector {}
 /// Every kind that competes for space has a biosphere row; this is the
 /// canonical entity set. Mass is D&D 5E canon (kg); niche is a sparse
 /// utilization profile over the resource-axis basis; each kind's climate-tile
-/// rationale lives in its `*_condition_niche` helper above. Potency > 0 only
-/// for the mighty (dragons, treant, xorn); the four material peoples carry 0.
+/// rationale lives in its `*_condition_niche` helper above. Potency is the
+/// creature's 5E adult Challenge Rating over 30 (`CR/30`), nonzero only for the
+/// supernatural set (dragons, treant, xorn); mundane beasts and the four
+/// peoples carry 0.
 /// type-audit: bare-ok(identifier-text)
 pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
     [
@@ -773,7 +778,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 metabolic_class: MetabolicClass::Autotroph,
                 niche: ResourceVector::new(&[(PHOTOSYNTHATE, 1.0)]).unwrap(),
                 condition_niche: treant_condition_niche(),
-                potency: 0.6,
+                potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
             },
         ),
         (
@@ -833,7 +838,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 metabolic_class: MetabolicClass::Ametabolic,
                 niche: ResourceVector::new(&[(MINERAL, 1.0)]).unwrap(),
                 condition_niche: xorn_condition_niche(),
-                potency: 0.5,
+                potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
             },
         ),
         (
@@ -853,7 +858,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(), // obligate apex
                 condition_niche: white_dragon_condition_niche(),
-                potency: 0.85, // mighty
+                potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
             },
         ),
         (
@@ -863,7 +868,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: red_dragon_condition_niche(),
-                potency: 0.95, // mightiest of the three chromatics
+                potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
             },
         ),
         (
@@ -873,7 +878,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 metabolic_class: MetabolicClass::Endotherm,
                 niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
                 condition_niche: black_dragon_condition_niche(),
-                potency: 0.85,
+                potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
             },
         ),
         (

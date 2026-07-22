@@ -77,11 +77,13 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod chorus;
 pub mod components;
+pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
+pub mod traversal;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -90,12 +92,16 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use graph_derive::{
+    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+};
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
     goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
 };
 pub use settlement_pins::SettlementPins;
+pub use traversal::{BASE_COST, traversal_cost};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -962,6 +968,132 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
             0.0
         }
     }))
+}
+
+/// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
+/// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure`].
+/// Where the predator field sums CARNIVORE realized density (so a quarry flees
+/// it), this sums the PREY BASE's realized density (so a carnivore's hunger is
+/// drawn UP it): the coexistence-stack density of **mobile-beast, non-carnivore**
+/// species — the herbivores and omnivore-beasts a carnivore hunts. Peoples are
+/// excluded from the v1 prey base (a carnivore is drawn to the WILD, not toward
+/// settlements — the acute-hunt tier owns predators-stalk-towns), and autotrophs
+/// are excluded (a plant is not a carnivore's prey). Realized density, not
+/// capacity, so it concentrates on genuine wild prey ground (the same honesty
+/// `predator_pressure` paid for). Normalized to `[0, 1]` by its own maximum.
+/// Derived from the committed demography stack — no seed, no epoch, byte-identical
+/// across calls.
+/// type-audit: bare-ok(ratio: return)
+pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let geo = terrain.geosphere();
+    let report = demography_report_from(world, &wc, &terrain, &climate)?;
+    let psyche = hornvale_species::psyche_registry();
+    // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
+    // species — not a people (no `psyche_registry` entry), not a rooted
+    // `Autotroph`, and not itself prey-dominant (`ANIMAL_PREY <= threshold`).
+    let prey: std::collections::BTreeSet<u32> = wc
+        .biosphere
+        .iter()
+        .enumerate()
+        .filter(|(_, (kind, bio))| {
+            bio.niche.weight(hornvale_kernel::ANIMAL_PREY) <= CARNIVORE_THRESHOLD
+                && psyche.get_by_label(kind.0).is_none()
+                && !matches!(
+                    bio.metabolic_class,
+                    hornvale_species::MetabolicClass::Autotroph
+                )
+        })
+        .map(|(i, _)| i as u32)
+        .collect();
+    // Sum prey-base REALIZED density (the stack) per cell.
+    let prey_density: Vec<&hornvale_kernel::CellMap<f64>> = report
+        .stack
+        .density
+        .iter()
+        .filter(|(tag, _)| prey.contains(tag))
+        .map(|(_, d)| d)
+        .collect();
+    let raw = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        prey_density.iter().map(|d| *d.get(cell)).sum::<f64>()
+    });
+    let max = raw.iter().map(|(_, v)| *v).fold(0.0_f64, f64::max);
+    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        if max > 0.0 {
+            (*raw.get(cell) / max).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
+    }))
+}
+
+/// The `k` densest WILD concentrations (The Wilding) — the herds and lairs of
+/// distinct MOBILE BEAST species, as `(species label, unit-sphere position)`.
+/// From [`demography_report`]'s coexistence-stack settlements (the per-cell
+/// density condensations), keeps those whose DOMINANT species is a mobile beast —
+/// *not* a people (no `psyche_registry` entry — the peoples carry one) and *not*
+/// a rooted `Autotroph` (a plant is placed but never an *agent* that walks and
+/// flees) — then takes the densest concentration of each DISTINCT species (a herd
+/// leader, a lone apex; not five of the same twig-blight) up to `k`, by biomass.
+/// Deterministic (mass-descending, label tie-break) and seed-free. Encapsulates
+/// the demography — the vessel mints wild NPCs from these without ever reaching
+/// into the stack.
+/// type-audit: bare-ok(count: k), bare-ok(identifier-text: return)
+pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let terrain = terrain_of(world)?;
+    let climate = climate_of(world)?;
+    let report = demography_report_from(world, &wc, &terrain, &climate)?;
+    // The dense-index → species-label map (the same ascending-`KindId` order the
+    // stack's `dominant` tag indexes into).
+    let labels: Vec<String> = wc
+        .biosphere
+        .iter()
+        .map(|(kind, _)| kind.0.to_string())
+        .collect();
+    let psyche = hornvale_species::psyche_registry();
+    let biosphere = hornvale_species::biosphere_registry();
+    let is_mobile_beast = |label: &str| -> bool {
+        // A mobile beast: a species the peoples' `psyche_registry` does not carry
+        // (not a people) and not a rooted `Autotroph` (a plant is placed, never
+        // agentified).
+        psyche.get_by_label(label).is_none()
+            && biosphere.get_by_label(label).is_some_and(|b| {
+                !matches!(
+                    b.metabolic_class,
+                    hornvale_species::MetabolicClass::Autotroph
+                )
+            })
+    };
+    // Each mobile beast's DENSEST home — the stack settlement where its local
+    // abundance (its composition fraction × the catchment biomass) peaks. So a
+    // charismatic beast present but never *dominant* (an apex over a wide range,
+    // a herd sharing its patch) still gets a home, not only the cell-dominators.
+    let mut best: std::collections::BTreeMap<String, ([f64; 3], f64)> =
+        std::collections::BTreeMap::new();
+    for s in &report.stack_settlements {
+        for (sid, frac) in &s.composition {
+            let Some(label) = labels.get(*sid as usize) else {
+                continue;
+            };
+            if !is_mobile_beast(label) {
+                continue;
+            }
+            let abundance = frac * s.mass_total;
+            let entry = best.entry(label.clone()).or_insert((s.position, f64::MIN));
+            if abundance > entry.1 {
+                *entry = (s.position, abundance);
+            }
+        }
+    }
+    // Top `k` distinct beasts by peak local abundance (label tie-break).
+    let mut wild: Vec<(String, [f64; 3], f64)> =
+        best.into_iter().map(|(l, (p, a))| (l, p, a)).collect();
+    wild.sort_by(|a, b| b.2.total_cmp(&a.2).then_with(|| a.0.cmp(&b.0)));
+    wild.truncate(k);
+    Ok(wild.into_iter().map(|(l, p, _)| (l, p)).collect())
 }
 
 /// [`demography_report`], reusing ALREADY-BUILT terrain/climate (a Lab view's
@@ -5288,6 +5420,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn wild_concentrations_are_deterministic_beasts() {
+        // THE WILDING: the wild concentrations are byte-identical across calls,
+        // and they name BEASTS (not the peoples) at real positions.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = wild_concentrations(&world, 5).unwrap();
+        let b = wild_concentrations(&world, 5).unwrap();
+        assert_eq!(a, b, "deterministic");
+        assert!(!a.is_empty(), "the wild is populated: {a:?}");
+        let psyche = hornvale_species::psyche_registry();
+        for (species, _pos) in &a {
+            assert!(
+                psyche.get_by_label(species).is_none(),
+                "{species} is a beast, not a people"
+            );
+        }
+        eprintln!("WILD {:?}", a.iter().map(|(s, _)| s).collect::<Vec<_>>());
+    }
+
+    #[test]
     fn predator_pressure_is_deterministic_and_nontrivial() {
         // THE QUARRY: the carnivore-density field is byte-identical across calls
         // (no seed, pure over committed facts) and genuinely varies — some cells
@@ -5310,6 +5468,53 @@ mod tests {
             "some cells are dense predator territory"
         );
         assert!(va.contains(&0.0), "many cells carry no predators");
+    }
+
+    #[test]
+    fn prey_pressure_is_deterministic_nontrivial_and_the_predator_dual() {
+        // THE TEETH: the prey-base density field is byte-identical across calls
+        // (no seed, pure over committed facts), genuinely varies, and is a
+        // DISTINCT field from the predator pressure — prey range where predators
+        // are thin and vice versa, so a hunter drawn up the prey gradient heads
+        // somewhere other than the carnivore territory a quarry flees.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = prey_pressure(&world).unwrap();
+        let b = prey_pressure(&world).unwrap();
+        let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
+        let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
+        assert_eq!(va, vb, "two calls produce byte-identical fields");
+        assert!(
+            va.iter().any(|v| *v > 0.5),
+            "some cells are dense prey territory"
+        );
+        // A gradient exists for a hunter to climb: density varies from a sparse
+        // floor (~0.005) up to the normalized peak, so a prey-poor cell has a
+        // prey-richer neighbour to forage toward.
+        let min = va.iter().cloned().fold(f64::INFINITY, f64::min);
+        assert!(
+            min < 0.2,
+            "prey density varies — prey-poor cells exist to leave"
+        );
+        // The prey field is not the predator field: at least some cells differ
+        // (the two populations do not perfectly coincide).
+        let pred: Vec<f64> = predator_pressure(&world)
+            .unwrap()
+            .iter()
+            .map(|(_, v)| *v)
+            .collect();
+        assert!(
+            va.iter()
+                .zip(&pred)
+                .any(|(prey, pred)| (prey - pred).abs() > 0.1),
+            "prey and predator fields are distinct populations"
+        );
     }
 
     #[test]

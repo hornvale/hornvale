@@ -111,7 +111,7 @@ pub fn serpent_tonal_solo_components() -> WorldComponents {
 }
 
 /// The Individuation's two-kind test roster: `owlbear` (the canonical beast,
-/// biosphere only) and `awakened-owlbear` (the same body, `potency: 0.6`,
+/// biosphere only) and `awakened-owlbear` (the same body, `potency: 9/30`,
 /// plus the full goblin-derived peopled cluster — an awakened beast speaks,
 /// and check_integrity's peopled invariant is kept, not relaxed). Test/lab
 /// only: canonical registries must never carry these rows (genesis would
@@ -126,7 +126,7 @@ pub fn awakened_owlbear_components() -> WorldComponents {
         .expect("the shipped owlbear has a biosphere row")
         .clone();
     let mut awakened_traits = beast_traits.clone();
-    awakened_traits.potency = 0.6;
+    awakened_traits.potency = 9.0 / 30.0; // Lab synthetic: treant-tier magic (CR 9/30)
 
     let mut biosphere: ComponentStore<KindId, _> = ComponentStore::new();
     biosphere.insert(beast, beast_traits);
