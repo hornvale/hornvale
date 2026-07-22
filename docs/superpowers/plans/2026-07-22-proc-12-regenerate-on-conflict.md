@@ -320,7 +320,7 @@ echo "--- Scenario 2: Tier B falls back to conflict markers when the crate can't
 
 git checkout "$base_branch" -q
 git checkout -b scenario2-a -q
-echo "fn this_does_not_compile( {" >> kernel/src/lib.rs
+echo "fn this_does_not_compile_a( {" >> kernel/src/lib.rs
 git add kernel/src/lib.rs
 git commit -q -m "test: break the build on scenario2-a"
 echo "stray-a2" >> book/src/reference/phonology.md
@@ -329,6 +329,19 @@ git commit -q -m "test: stray-a2 alongside the broken build"
 
 git checkout "$base_branch" -q
 git checkout -b scenario2-b -q
+# Both branches must touch kernel/src/lib.rs, not just scenario2-a: a
+# one-sided change auto-merges cleanly (git takes the only side that
+# changed it), so the file would sit on disk in its OLD, still-buildable
+# form at the moment the driver runs for phonology.md's conflict --
+# the build check would then spuriously succeed. Touching it on BOTH
+# sides forces a genuine two-sided conflict, so git deposits real
+# <<<<<<< markers into kernel/src/lib.rs immediately as part of its own
+# standard (undriven) conflict handling -- invalid Rust syntax on disk
+# before any driver for any OTHER file ever runs, guaranteeing the build
+# is actually broken when merge-regenerate.sh's dispatch tries it.
+echo "fn this_does_not_compile_b( {" >> kernel/src/lib.rs
+git add kernel/src/lib.rs
+git commit -q -m "test: also modify kernel/src/lib.rs on scenario2-b (forces a genuine two-sided conflict)"
 echo "stray-b2" >> book/src/reference/phonology.md
 git add book/src/reference/phonology.md
 git commit -q -m "test: stray-b2"
