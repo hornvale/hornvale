@@ -77,11 +77,13 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
 
 pub mod chorus;
 pub mod components;
+pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
+pub mod traversal;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -90,12 +92,16 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
+pub use graph_derive::{
+    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+};
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
     goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
 };
 pub use settlement_pins::SettlementPins;
+pub use traversal::{BASE_COST, traversal_cost};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)

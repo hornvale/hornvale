@@ -14,6 +14,7 @@
 pub mod flesh;
 pub mod record;
 pub mod streams;
+pub use streams::stream_labels;
 
 use hornvale_kernel::{ConceptRegistry, RegistryError};
 
@@ -114,49 +115,6 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
     registry.register_predicate(OCC_NOTABILITY, true, "how notable the occupation was")?;
     registry.register_predicate(IS_RUIN, true, "subject is a ruin (a dead occupation)")?;
     Ok(())
-}
-
-/// Every seed-derivation label this crate documents. The root is reserved
-/// for the deep-history bake (Task 3), which runs at the composition root
-/// (`windows/worldgen`) but documents its draws under this same
-/// `history/*` namespace; the local flesh derivations (Task 2) draw against
-/// the sub-labels below, relative to whatever occupation-scoped seed the
-/// caller hands them.
-/// type-audit: bare-ok(identifier-text)
-pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![
-        (
-            streams::ROOT.as_str(),
-            "root stream for history: reserved for the deep-history bake \
-             (Task 3, run at the composition root). No draw is made \
-             against it directly.",
-        ),
-        (
-            streams::RESIDUE.as_str(),
-            "flesh::residue_of's deterministic flavor draws (Task 2).",
-        ),
-        (
-            streams::STRUCTURES.as_str(),
-            "flesh::structures_of's dwelling-count variance draws (Task 2).",
-        ),
-        (
-            streams::BAKE.as_str(),
-            "the deep-history bake's epoch dynamics: grow/found/migrate/raid/collapse \
-             draws, taken sequentially from one stream in commit order (Task 3, run at \
-             the composition root).",
-        ),
-        (
-            streams::GENESIS.as_str(),
-            "the deep-history bake's genesis draws: proto-community count, site picks, \
-             and tech-advance offset (Task 3). Further derives a per-people sub-stream \
-             `history/genesis/<people-kind>` via `StreamLabel::dynamic(people.0)`.",
-        ),
-        (
-            streams::FLESH.as_str(),
-            "the per-occupation flesh seed the legibility surface derives before \
-             expanding residue/structures on demand (never committed).",
-        ),
-    ]
 }
 
 /// History as a registrable unit for the composition-root roster (mirrors

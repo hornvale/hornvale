@@ -18,6 +18,7 @@ hornvale-language = { path = "../../domains/language" }
 hornvale-culture = { path = "../../domains/culture" }
 hornvale-religion = { path = "../../domains/religion" }
 hornvale-paleoclimate = { path = "../../domains/paleoclimate" }
+hornvale-topology = { path = "../../domains/topology" }
 hornvale-almanac = { path = "../../windows/almanac" }
 
 [dev-dependencies]
