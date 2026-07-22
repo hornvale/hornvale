@@ -2322,6 +2322,57 @@ fn ground_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> 
     lines
 }
 
+/// The Deep's headline lines: mean depth-to-basement, geothermal range, and
+/// notable unconformities, plus a glaciation-record line when a deep-time past
+/// exists. Empty for a landless world. (The Deep, spec §7.)
+/// type-audit: bare-ok(prose: return)
+pub fn deep_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let geo = terrain.geosphere();
+    let (mut land, mut dtb_sum, mut gaps) = (0usize, 0.0f64, 0usize);
+    let (mut grad_min, mut grad_max) = (f64::INFINITY, f64::NEG_INFINITY);
+    for cell in geo.cells() {
+        if !terrain.is_ocean(cell) {
+            land += 1;
+            dtb_sum += terrain.depth_to_basement_at(cell);
+            let g = terrain.geothermal_gradient_at(cell).get();
+            grad_min = grad_min.min(g);
+            grad_max = grad_max.max(g);
+            if terrain.unconformity_at(cell) {
+                gaps += 1;
+            }
+        }
+    }
+    if land == 0 {
+        return Ok(Vec::new()); // a waterworld has no legible column
+    }
+    let mut lines = vec![
+        format!(
+            "The archive runs {:.0} m to basement on average.",
+            dtb_sum / land as f64
+        ),
+        format!("Geothermal gradient spans {grad_min:.0}–{grad_max:.0} K/km — the deep's warmth."),
+    ];
+    let gap_frac = gaps as f64 / land as f64;
+    if gap_frac > 0.0 {
+        lines.push(format!(
+            "{:.0}% of the land records an unconformity — an age the rock forgot.",
+            gap_frac * 100.0
+        ));
+    }
+    // Optional deep-time refinement: glaciated strata recorded in the cover.
+    let paleo = paleoclimate_from(world, terrain)?;
+    if paleo.max_ice_fraction > 0.0 {
+        let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
+        lines.push(format!(
+            "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+        ));
+    }
+    Ok(lines)
+}
+
 /// The Waters' headline line for the almanac (The Freshet, DOM-5 first
 /// slice): the fresh-water (river) share of a world's land — the salt/fresh
 /// distinction the ground substrate always computed but never reported. A
@@ -5355,6 +5406,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         biome_lines: biome_lines_from(&climate),
         ground_lines: ground_lines_from(&terrain, &climate),
         water_lines: water_lines_from(&terrain),
+        deep_lines: deep_lines_from(world, &terrain)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
