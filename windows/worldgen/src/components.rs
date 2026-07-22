@@ -344,8 +344,9 @@ mod tests {
 
         // Drop a speaker's articulation row so articulation and lexicon no
         // longer share one key-set (the `articulation.ids == lexicon.ids` check
-        // must fire). Pick a kind that IS in articulation — a settling people —
-        // since the minded solitaries (dragons) carry no articulation.
+        // must fire). Any articulation kind works — dropping it desyncs the two
+        // stores; the first key may be a people or a dragon (both speak since
+        // The Solitary Tongue).
         let drop = *articulation
             .ids()
             .next()

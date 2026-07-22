@@ -185,7 +185,8 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
     SoundRule { kind, param }
 }
 
-/// Draw a cascade for `species` whose rule count. Convenience wrapper over
+/// Draw a cascade for `species` at the historical `SETTLED` rate (2–4 rules).
+/// Convenience wrapper over
 /// [`draw_cascade_with_regime`] at [`CascadeRegime::SETTLED`] (2–4 rules) —
 /// the historical rate every existing caller drew at before `CascadeRegime`
 /// existed. Byte-identical to the pre-regime `draw_cascade`: the stream
