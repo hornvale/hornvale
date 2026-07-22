@@ -409,6 +409,20 @@ pub trait Terrain {
     fn hazards(&self, _room: &RoomAddr) -> Hazards {
         Hazards::ZERO
     }
+
+    /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
+    /// prey-base biomass a HUNTER can eat there, the anti-symmetric dual of the
+    /// predator hazard (`worldgen::prey_pressure`). A creature's `food_value`
+    /// dots this against its `ANIMAL_PREY` diet weight, so a carnivore is drawn
+    /// up the prey gradient. The DEFAULT is `0.0` (a prey-empty cell) — so
+    /// planted/synthetic test terrains have no prey field and a carnivore reads
+    /// only the ordinary productivity unless a scenario plants prey; a live
+    /// `LocaleTerrain` OVERRIDES it with the injected `prey_pressure` field. A
+    /// slow field, so it takes no `day`.
+    /// type-audit: bare-ok(ratio: return)
+    fn prey_value(&self, _room: &RoomAddr) -> f64 {
+        0.0
+    }
 }
 
 /// The default cell productivity (`Terrain::forage_value`) for a terrain that
@@ -507,6 +521,11 @@ pub struct LocaleTerrain<'a> {
     /// predator_pressure`), injected here (a domain/window can't reach up to
     /// demography); `None` → no PREDATOR hazard (throwaway reads / no field).
     predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+    /// The world's prey-pressure field (The Teeth — `worldgen::prey_pressure`),
+    /// the dual of `predator`, injected the same way; `None` → no prey draw
+    /// (throwaway reads / no field), so a carnivore reads only ordinary
+    /// productivity.
+    prey: Option<&'a hornvale_kernel::CellMap<f64>>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
@@ -517,6 +536,7 @@ impl<'a> LocaleTerrain<'a> {
             ctx,
             calendar: None,
             predator: None,
+            prey: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
@@ -532,20 +552,35 @@ impl<'a> LocaleTerrain<'a> {
             ctx,
             calendar,
             predator: None,
+            prey: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
-    /// Quarry) — the full drive read, where danger senses carnivore territory.
+    /// Quarry) — no prey field. Retained for callers that read danger but not the
+    /// hunt; delegates to [`with_fields`](Self::with_fields).
     /// type-audit: bare-ok(ratio: predator)
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
     ) -> Self {
+        Self::with_fields(ctx, calendar, predator, None)
+    }
+    /// Build with the world's `calendar`, predator-pressure field (The Quarry),
+    /// AND prey-pressure field (The Teeth) — the full drive read, where danger
+    /// senses carnivore territory and a carnivore's hunger senses prey.
+    /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey)
+    pub fn with_fields(
+        ctx: &'a LocaleContext,
+        calendar: Option<&'a hornvale_astronomy::Calendar>,
+        predator: Option<&'a hornvale_kernel::CellMap<f64>>,
+        prey: Option<&'a hornvale_kernel::CellMap<f64>>,
+    ) -> Self {
         Self {
             ctx,
             calendar,
             predator,
+            prey,
         }
     }
 }
@@ -604,6 +639,15 @@ impl<'a> Terrain for LocaleTerrain<'a> {
             cold,
             predator,
         }
+    }
+    fn prey_value(&self, room: &RoomAddr) -> f64 {
+        // The PREY field (The Teeth): the injected prey-pressure field, corner-
+        // blended per room (the same read as the predator axis); `0` where no
+        // field is injected or the room is above the grid — the prey-empty
+        // fallback, so a carnivore there reads only ordinary productivity.
+        self.prey
+            .and_then(|field| self.ctx.blend_at(room, field))
+            .unwrap_or(0.0)
     }
 }
 
@@ -1424,6 +1468,18 @@ const HUNGER: DriveParams = DriveParams {
 /// (desert/ice, a planted wasteland) starve. Authored.
 const EAT_THRESHOLD: f64 = 0.15;
 
+/// The scale of the prey-presence term in [`food_value`] (The Teeth) — how
+/// strongly a carnivore is drawn up the `prey_pressure` gradient, per unit of
+/// `ANIMAL_PREY` diet weight. The prey term is ADDITIVE (it only raises
+/// `food_value`), so a creature that already eats where it stands keeps doing so
+/// — the current settled peoples are byte-identical regardless of this value
+/// (they never forage; The Confluence sat them on productive ground). It bites
+/// only for a creature that must FORAGE on prey-sparse ground: a wild carnivore
+/// beast (`ANIMAL_PREY`-dominant) on barren wild land, drawn toward the herds.
+/// Sized so that draw is real without swamping the ordinary productivity term.
+/// Authored; the woken-hunt analog of The Quarry's `PREDATOR_LATENT_SCALE`.
+const PREY_LATENT_SCALE: f64 = 1.0;
+
 /// The food-value of a cell FOR a specific creature (The Provender, spec §1):
 /// its niche dotted with the cell's resource availability. The MATERIAL axes
 /// (plant forage + animal prey) read the cell's productivity
@@ -1453,7 +1509,13 @@ fn food_value(
         }
         None => 1.0,
     };
-    material * productivity + niche.weight(PHOTOSYNTHATE) * light
+    // The Teeth: the ANIMAL_PREY axis also reads the PREY field — a carnivore's
+    // meat is other creatures, not the biome, so it is drawn up the prey gradient.
+    // ADDITIVE (food_value only rises) so an eat-in-place creature is unchanged;
+    // it wakes a foraging wild carnivore. `prey_value` defaults 0.0 (no prey
+    // field ⇒ pre-Teeth behaviour exactly).
+    let prey_draw = niche.weight(ANIMAL_PREY) * PREY_LATENT_SCALE * terrain.prey_value(room);
+    material * productivity + niche.weight(PHOTOSYNTHATE) * light + prey_draw
 }
 
 /// The forage gradient step: the neighbour whose [`food_value`] is HIGHEST
@@ -4106,6 +4168,7 @@ mod tests {
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
             threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
@@ -4211,6 +4274,7 @@ mod tests {
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
             threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
         };
         let sys = DriveMovements {
             npcs: vec![npc],
@@ -4538,6 +4602,10 @@ mod tests {
         /// mortal niche weights `1`, so the pre-Bane danger tests are byte-
         /// identical), and thermal tests plant `Hazards` directly.
         threat: std::collections::BTreeMap<RoomAddr, Hazards>,
+        /// Planted per-room prey presence (The Teeth's hunt tests); rooms without
+        /// an entry read `0.0` (prey-empty) — so every other test is byte-
+        /// identical (a carnivore there reads only ordinary productivity).
+        prey: std::collections::BTreeMap<RoomAddr, f64>,
     }
     impl PlantedTerrain {
         /// No elevation data — just a set of fresh-water rooms (the common
@@ -4550,6 +4618,7 @@ mod tests {
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
                 threat: std::collections::BTreeMap::new(),
+                prey: std::collections::BTreeMap::new(),
             }
         }
         /// No fresh water anywhere — just planted elevations (the
@@ -4561,6 +4630,7 @@ mod tests {
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
                 threat: std::collections::BTreeMap::new(),
+                prey: std::collections::BTreeMap::new(),
             }
         }
         /// Just planted per-room temperatures (the thermal-drive tests, which
@@ -4573,6 +4643,7 @@ mod tests {
                 temps: temps.into_iter().collect(),
                 forage: std::collections::BTreeMap::new(),
                 threat: std::collections::BTreeMap::new(),
+                prey: std::collections::BTreeMap::new(),
             }
         }
         /// Just planted per-room food productivity (the hunger-drive tests).
@@ -4584,6 +4655,7 @@ mod tests {
                 temps: std::collections::BTreeMap::new(),
                 forage: forage.into_iter().collect(),
                 threat: std::collections::BTreeMap::new(),
+                prey: std::collections::BTreeMap::new(),
             }
         }
         /// Planted per-room fresh water AND a scalar hazard mapped to the UNCANNY
@@ -4612,6 +4684,7 @@ mod tests {
                         )
                     })
                     .collect(),
+                prey: std::collections::BTreeMap::new(),
             }
         }
         /// Planted per-room `Hazards` directly (the per-axis thermal-fear tests).
@@ -4622,6 +4695,24 @@ mod tests {
                 temps: std::collections::BTreeMap::new(),
                 forage: std::collections::BTreeMap::new(),
                 threat: hazards.into_iter().collect(),
+                prey: std::collections::BTreeMap::new(),
+            }
+        }
+        /// Planted per-room food productivity AND prey presence — the hunt tests
+        /// (The Teeth): a carnivore on this ground reads productivity for its
+        /// forage axis and the prey field for its prey axis. Rooms without a
+        /// forage entry read `DEFAULT_FORAGE`; without a prey entry, `0.0`.
+        fn forage_and_prey(
+            forage: impl IntoIterator<Item = (RoomAddr, f64)>,
+            prey: impl IntoIterator<Item = (RoomAddr, f64)>,
+        ) -> Self {
+            Self {
+                elevations: std::collections::BTreeMap::new(),
+                fresh: std::collections::BTreeSet::new(),
+                temps: std::collections::BTreeMap::new(),
+                forage: forage.into_iter().collect(),
+                threat: std::collections::BTreeMap::new(),
+                prey: prey.into_iter().collect(),
             }
         }
     }
@@ -4640,6 +4731,9 @@ mod tests {
         }
         fn hazards(&self, room: &RoomAddr) -> Hazards {
             self.threat.get(room).copied().unwrap_or(Hazards::ZERO)
+        }
+        fn prey_value(&self, room: &RoomAddr) -> f64 {
+            self.prey.get(room).copied().unwrap_or(0.0)
         }
     }
 
@@ -4679,6 +4773,67 @@ mod tests {
         // An EMPTY niche reads no food anywhere (the niche-gate's basis).
         let empty = ResourceVector::new(&[]).unwrap();
         assert_eq!(food_value(&empty, &t, &rich, day), 0.0);
+    }
+
+    #[test]
+    fn prey_ground_feeds_a_carnivore_and_leaves_a_herbivore_flat() {
+        // THE TEETH: the prey field lifts `food_value` for the ANIMAL_PREY axis,
+        // so prey-dense ground is worth more to a carnivore — but a pure
+        // herbivore (no prey-axis weight) reads the prey field as nothing, so its
+        // food_value is flat across prey-dense and prey-empty ground.
+        let preyful = raddr(1.0);
+        let empty = preyful.neighbors()[0].clone();
+        // Uniform productivity, prey only on `preyful`.
+        let t = PlantedTerrain::forage_and_prey(
+            [(preyful.clone(), 1.0), (empty.clone(), 1.0)],
+            [(preyful.clone(), 1.0)],
+        );
+        let day = WorldTime { day: 0.5 };
+        let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
+        let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
+        assert!(
+            food_value(&carnivore, &t, &preyful, day) > food_value(&carnivore, &t, &empty, day),
+            "prey-dense ground feeds a carnivore more"
+        );
+        assert_eq!(
+            food_value(&herbivore, &t, &preyful, day),
+            food_value(&herbivore, &t, &empty, day),
+            "a pure herbivore reads the prey field as nothing — flat"
+        );
+    }
+
+    #[test]
+    fn a_carnivore_forages_toward_prey_a_herbivore_does_not() {
+        // THE TEETH, end to end: on ground of UNIFORM productivity (no forage
+        // gradient) with prey concentrated in one neighbour, a carnivore forages
+        // toward the prey — the hunt, live — while a herbivore, blind to the prey
+        // field, follows only the (flat) forage and breaks the tie elsewhere.
+        let c = raddr(1.0);
+        let neighbors = c.neighbors();
+        // The prey cell is the LARGEST-address neighbour, so a herbivore's
+        // uniform-forage tie-break (smallest address) can never land on it —
+        // any pull toward it is the prey draw, not an artefact of the tie-break.
+        let prey_cell = neighbors.iter().max().unwrap().clone();
+        let uniform: Vec<(RoomAddr, f64)> = neighbors
+            .iter()
+            .cloned()
+            .chain(std::iter::once(c.clone()))
+            .map(|r| (r, 1.0))
+            .collect();
+        let t = PlantedTerrain::forage_and_prey(uniform, [(prey_cell.clone(), 1.0)]);
+        let day = WorldTime { day: 0.5 };
+        let carnivore = ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap();
+        let herbivore = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
+        assert_eq!(
+            forage_step(&c, &carnivore, &t, day),
+            Some(prey_cell.clone()),
+            "a carnivore forages toward prey-dense ground"
+        );
+        assert_ne!(
+            forage_step(&c, &herbivore, &t, day),
+            Some(prey_cell),
+            "a herbivore ignores the prey field (uniform forage → tie-break, not prey)"
+        );
     }
 
     #[test]
@@ -5504,6 +5659,7 @@ mod tests {
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
             threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();

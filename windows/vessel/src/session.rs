@@ -70,6 +70,10 @@ pub struct Session<'w> {
     /// `start`, so the danger drive senses carnivore territory; `None` if the
     /// demography fit fails.
     predator: Option<hornvale_kernel::CellMap<f64>>,
+    /// The world's prey-pressure field (The Teeth), computed once at `start`, so
+    /// a carnivore's hunger senses prey territory; `None` if the demography fit
+    /// fails.
+    prey: Option<hornvale_kernel::CellMap<f64>>,
 }
 
 impl<'w> Session<'w> {
@@ -124,6 +128,9 @@ impl<'w> Session<'w> {
         // drive senses carnivore territory. A demography fit — bounded to session
         // start; `None` on failure (danger simply loses its PREDATOR axis).
         let predator = hornvale_worldgen::predator_pressure(world).ok();
+        // The prey-pressure field (The Teeth), so a carnivore's hunger senses
+        // prey territory — the dual of the predator field, same one-shot fit.
+        let prey = hornvale_worldgen::prey_pressure(world).ok();
         let mut session = Session {
             world,
             ctx,
@@ -138,6 +145,7 @@ impl<'w> Session<'w> {
             npcs,
             calendar,
             predator,
+            prey,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -351,10 +359,11 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::with_calendar_and_predators(
+        let terrain = LocaleTerrain::with_fields(
             &self.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
+            self.prey.as_ref(),
         );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
@@ -523,10 +532,11 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
-        let terrain = LocaleTerrain::with_calendar_and_predators(
+        let terrain = LocaleTerrain::with_fields(
             &self.ctx,
             self.calendar.as_ref(),
             self.predator.as_ref(),
+            self.prey.as_ref(),
         );
         here.iter()
             .map(|npc| {

@@ -133,8 +133,10 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     // The predator-pressure field (The Quarry), so danger senses carnivore
     // territory. A demography fit — bounded to the ~5 null-control seeds.
     let predator = hornvale_worldgen::predator_pressure(world).ok();
+    // The prey-pressure field (The Teeth), so a carnivore's hunger senses prey.
+    let prey = hornvale_worldgen::prey_pressure(world).ok();
     let terrain =
-        LocaleTerrain::with_calendar_and_predators(&ctx, calendar.as_ref(), predator.as_ref());
+        LocaleTerrain::with_fields(&ctx, calendar.as_ref(), predator.as_ref(), prey.as_ref());
     let traces = run_simulation(&ledger, &registry, &npcs, &terrain, HEALTH_TICKS);
     npcs.into_iter()
         .zip(traces)
