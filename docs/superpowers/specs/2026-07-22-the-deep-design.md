@@ -201,9 +201,13 @@ dimensionless indices stay bare `f64` with `bare-ok(ratio)` tags.
    chapter; a freshness sweep of any chapter the new fields touch; **MAP-10 /
    DOM-14 re-scored on the Confidence Gradient** (this campaign resolves part
    of both bets). A one-page retrospective in `docs/retrospectives/`.
-6. **Concepts/facts:** register the column/era concepts; ledger emission is
-   deliberately minimal (summary facts only — mean depth-to-basement, deepest
-   era) — the field and its observations are the deliverable.
+6. **Concepts/facts:** **no new committed facts this campaign.** `world.to_json()`
+   serializes the ledger, so committing even a summary fact would move the
+   `lens_purity` world-identity golden — contradicting the no-epoch guarantee
+   (§6). v1 therefore stays strictly non-serializing: the column is a derived
+   provider query, and the map/almanac/census read it *live*. Summary-fact
+   emission (a deliberate golden-moving change) is deferred. The field and its
+   observations are the deliverable — exactly The Ground's stance.
 
 ## 8. Implementation sequencing
 
