@@ -1668,6 +1668,18 @@ const DANGER_OVERRIDE: f64 = 0.5;
 /// authored judgment call.
 const DANGER_ACT: f64 = 0.3;
 
+/// The LATENT scale on BORROWED alarm (The Alarm) — the fear-contagion twin of
+/// [`PREDATOR_LATENT_SCALE`] / `PREY_LATENT_SCALE`: how much of a neighbour's
+/// distress a creature adds to its own felt threat before the boldness scaling.
+/// The additive-latent discipline — the term only ever RAISES felt threat, so a
+/// creature below `DANGER_ACT` with no primary-afraid neighbours is byte-
+/// identical by construction. Authored; `1.0` (the alarm field is already the
+/// emitter's felt-threat magnitude, clamped `[0, 1]`, so a full-strength alarm
+/// reads as a full-strength threat). Byte-identity is STRUCTURAL, not scale-
+/// tuned: the settled peoples never reach primary danger distress, so the field
+/// is empty on seed 42 regardless of scale.
+const ALARM_SCALE: f64 = 1.0;
+
 /// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
 /// drive (like [`Thermal`]) that senses the threat at the cell it occupies and
 /// FLEES down the threat gradient. Where hunger climbs *toward* a resource,
@@ -1683,7 +1695,7 @@ const DANGER_ACT: f64 = 0.3;
 /// fear, so two species flee different cells), then scaled by its `boldness`
 /// (The Mettle) — a bold creature fears less, so its weaker veto lets it cross
 /// ground a timid one flees.
-/// type-audit: bare-ok(ratio: boldness)
+/// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: alarm)
 pub struct Danger<'a> {
     /// The hazard field this drive senses (the cell it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
@@ -1696,6 +1708,13 @@ pub struct Danger<'a> {
     /// `0.5` (steady/inert). Below `0.5` a coward fears more; above, a bold
     /// creature fears less; toward `1` it is fearless.
     pub boldness: f64,
+    /// The per-tick ALARM field (The Alarm): borrowed distress from nearby
+    /// primary-afraid creatures, keyed by cell. Read at the creature's OWN cell
+    /// only (the field build already spread each emitter's alarm to its
+    /// neighbours, so reading neighbours again would double-count) and folded
+    /// ADDITIVELY into the felt threat, scaled by [`ALARM_SCALE`]. `None` ⇒ no
+    /// contagion — the current (pre-Alarm) behaviour, byte-identical.
+    pub alarm: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
@@ -1735,7 +1754,20 @@ impl<'a> Drive for Danger<'a> {
             .iter()
             .map(|n| self.threat_at(n))
             .fold(here, f64::max);
-        (base * self.mettle_factor()).clamp(0.0, 1.0)
+        // THE ALARM: fold the borrowed distress at the creature's OWN cell into
+        // the felt threat, ADDITIVELY and BEFORE the boldness scaling — so a calm
+        // creature beside genuine distress feels it, scaled by its own mettle,
+        // exactly as it feels a terrain hazard. `None` (or a cell absent from the
+        // sparse field) contributes `0.0`, keeping the current worlds byte-
+        // identical. Read at `position` only: the field build already haloed the
+        // alarm to the neighbours.
+        let borrowed = self
+            .alarm
+            .and_then(|field| field.get(&view.position))
+            .copied()
+            .unwrap_or(0.0);
+        let felt = base + ALARM_SCALE * borrowed;
+        (felt * self.mettle_factor()).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
@@ -2271,6 +2303,10 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         threat_niche: npc.threat_niche,
         boldness: npc.boldness,
+        // The instantaneous affect read is alarm-free (terrain-sourced only) —
+        // this is the read `alarm_field` builds over, so it MUST NOT see borrowed
+        // alarm (else secondary transmission, a self-sustaining stampede).
+        alarm: None,
     };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
@@ -2541,6 +2577,9 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     threat_niche: npc.threat_niche,
                     boldness: npc.boldness,
+                    // Task 2 wires the real per-tick alarm field here; alarm-free
+                    // for now (Task 1's inert additive term).
+                    alarm: None,
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -4951,6 +4990,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.urgency(&view_at(scary)),
@@ -4982,6 +5022,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
@@ -5000,6 +5041,7 @@ mod tests {
             terrain: &boxed,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
@@ -5026,6 +5068,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
@@ -5056,6 +5099,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
@@ -5094,6 +5138,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.urgency(&view_at(cell)),
@@ -5113,6 +5158,7 @@ mod tests {
                 terrain: &t,
                 threat_niche: mortal_threat_niche(),
                 boldness,
+                alarm: None,
             }
             .urgency(&v)
         };
@@ -5133,6 +5179,99 @@ mod tests {
         );
         // The monotone axis: coward > steady > bold > fearless.
         assert!(feel(0.0) > feel(0.5) && feel(0.5) > feel(0.8) && feel(0.8) > feel(1.0));
+    }
+
+    #[test]
+    fn alarm_raises_a_calm_creatures_danger() {
+        // THE ALARM: a creature on hazard-free ground feels nothing of its own,
+        // but a borrowed alarm at its cell wakes its Danger drive additively.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::default(); // no hazard anywhere — nothing to fear
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.8);
+        let feel = |alarm: Option<&std::collections::BTreeMap<RoomAddr, f64>>| {
+            Danger {
+                terrain: &t,
+                threat_niche: mortal_threat_niche(),
+                boldness: BOLDNESS_STEADY,
+                alarm,
+            }
+            .urgency(&view_at(cell.clone()))
+        };
+        let felt = feel(Some(&map));
+        assert!(felt > 0.0, "borrowed alarm raises felt threat above zero");
+        assert!(
+            felt >= DANGER_ACT,
+            "a full-strength alarm crosses the danger act threshold"
+        );
+        assert_eq!(
+            feel(None),
+            0.0,
+            "with no alarm field a calm creature on safe ground fears nothing"
+        );
+    }
+
+    #[test]
+    fn borrowed_alarm_is_scaled_by_boldness() {
+        // THE ALARM reuses THE METTLE's dial: borrowed fear is scaled by the
+        // reader's own `mettle_factor`, so a bold creature shrugs off the herd's
+        // panic exactly as it shrugs off a hazard.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::default();
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.8);
+        let feel = |boldness: f64| {
+            Danger {
+                terrain: &t,
+                threat_niche: mortal_threat_niche(),
+                boldness,
+                alarm: Some(&map),
+            }
+            .urgency(&view_at(cell.clone()))
+        };
+        // Bold < steady < coward — the monotone Mettle ordering, borrowed.
+        assert!(
+            feel(0.9) < feel(0.5) && feel(0.5) < feel(0.1),
+            "a bold creature feels less of the borrowed alarm than a coward"
+        );
+        // A bold omnivore shrugs the herd off — its borrowed alarm stays below act.
+        assert!(
+            feel(0.9) < DANGER_ACT,
+            "a bold creature's borrowed alarm falls below the danger act threshold"
+        );
+    }
+
+    #[test]
+    fn alarm_is_additive_over_terrain_hazard() {
+        // THE ALARM is ADDITIVE: on mildly hazardous ground the borrowed alarm
+        // stacks on the creature's own felt threat, strictly above either alone.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.2)]);
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.5);
+        let both = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: Some(&map),
+        }
+        .urgency(&view_at(cell.clone()));
+        let terrain_only = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+        }
+        .urgency(&view_at(cell.clone()));
+        // With ALARM_SCALE = 1.0 and steady boldness: 0.2 + 0.5 = 0.7.
+        assert!(
+            (both - 0.7).abs() < 1e-9,
+            "felt threat is base + ALARM_SCALE * alarm"
+        );
+        assert!(
+            both > terrain_only && both > 0.5,
+            "the sum is strictly above either the terrain hazard or the alarm alone"
+        );
     }
 
     #[test]
@@ -5210,11 +5349,13 @@ mod tests {
             terrain: &t,
             threat_niche: cold_adapted,
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let shrugs = Danger {
             terrain: &t,
             threat_niche: warm_adapted,
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert!(
             fears.urgency(&v) > shrugs.urgency(&v),
@@ -5285,11 +5426,13 @@ mod tests {
             terrain: &t,
             threat_niche: herbivore,
             boldness: 0.0,
+            alarm: None,
         };
         let hunter = Danger {
             terrain: &t,
             threat_niche: apex,
             boldness: 0.0,
+            alarm: None,
         };
         assert!(
             quarry.urgency(&v) > 0.0,
