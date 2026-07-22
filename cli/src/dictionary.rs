@@ -33,17 +33,17 @@ pub fn render_dictionary(world: &World) -> Result<String, String> {
          the same world can differ in which rows are roots, compounds, or gaps.\n\n",
     );
 
-    // Lexicons are a speaking-peoples concept (fauna carry no psyche and never
-    // speak); `psyche_registry()` is keyed by exactly the four peoples, so
-    // iterating it filters to the speaking kinds before ever reaching
-    // `lexicon_of`.
+    // Lexicons are a speaking-peoples concept: iterate the articulation
+    // registry, keyed by exactly the speaking peoples. Since The Eremite the
+    // psyche registry is a SUPERSET (the dragons carry a mind but no speech),
+    // so articulation — not psyche — is the speaker boundary before `lexicon_of`.
     let mut lexicons: BTreeMap<&str, Lexicon> = BTreeMap::new();
-    for species in hornvale_species::psyche_registry().ids() {
+    for species in hornvale_language::articulation_registry().ids() {
         let lexicon = world_builder::lexicon_of(world, species.0).map_err(|e| e.to_string())?;
         lexicons.insert(species.0, lexicon);
     }
 
-    for species in hornvale_species::psyche_registry().ids() {
+    for species in hornvale_language::articulation_registry().ids() {
         let lexicon = &lexicons[species.0];
 
         doc.push_str(&format!("## {}\n\n", capitalize(species.0)));
@@ -95,15 +95,16 @@ fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String 
     );
 
     let family_of = hornvale_species::family_of();
-    let psyche = hornvale_species::psyche_registry();
     for family in hornvale_language::family_proto().ids() {
-        // The `psyche.contains` filter excludes fauna families (draconic,
-        // plant) — they carry no lexicon (`lexicons` above was built
-        // peopled-only), so this leaves the goblinoid triad the only family
-        // that clears the `daughters.len() < 2` guard below.
+        // Daughters are the family's SPEAKING members — those with a lexicon.
+        // Filtering on `lexicons` (built from the speaking peoples) excludes the
+        // draconic family: since The Eremite the three dragons carry a psyche,
+        // so a psyche-membership filter would wrongly admit them (their shared
+        // "draconic" family has a proto) and then index a missing lexicon. This
+        // leaves the goblinoid triad the only family that clears the guard below.
         let daughters: Vec<&str> = family_of
             .ids()
-            .filter(|kind| family_of.get(kind) == Some(&family.0) && psyche.contains(kind))
+            .filter(|kind| family_of.get(kind) == Some(&family.0) && lexicons.contains_key(kind.0))
             .map(|kind| kind.0)
             .collect();
         if daughters.len() < 2 {
@@ -298,7 +299,10 @@ mod tests {
         assert!(doc.contains("| Concept | Gloss | Word | IPA | Proto | Derivation |"));
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
+        for species in hornvale_language::articulation_registry()
+            .ids()
+            .map(|k| k.0)
+        {
             assert!(doc.contains(&capitalize(species)), "missing {species}");
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (concept, _) in lexicon.entries() {
@@ -318,7 +322,10 @@ mod tests {
         let mut saw_gap = false;
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
+        for species in hornvale_language::articulation_registry()
+            .ids()
+            .map(|k| k.0)
+        {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
                 match entry {
@@ -400,7 +407,10 @@ mod tests {
         let world = reference_world();
         // peopled-only: fauna never speak, so `lexicon_of` is undefined for
         // them (Task 4 widened `registry()` to include biosphere-only kinds).
-        for species in hornvale_species::psyche_registry().ids().map(|k| k.0) {
+        for species in hornvale_language::articulation_registry()
+            .ids()
+            .map(|k| k.0)
+        {
             let lexicon = world_builder::lexicon_of(&world, species).unwrap();
             for (_, entry) in lexicon.entries() {
                 let line = word_line(entry);

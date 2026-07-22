@@ -240,7 +240,15 @@ fn k_biomass_gradient_grounding_holds_after_the_freshwater_repoint() {
     let base_inputs = carrying_inputs_of(geo, &terrain, &climate);
 
     let (mut trop_sum, mut trop_n, mut pole_sum, mut pole_n) = (0.0_f64, 0u32, 0.0_f64, 0u32);
-    for (_kind, psych) in wc.psyche.iter() {
+    // Peoples-only carrying capacity (the settling roster); skip the minded
+    // solitaries (a dragon carries a psyche but never settles) so the metric is
+    // byte-identical to before The Eremite.
+    for (kind, psych) in wc.psyche.iter() {
+        if wc.biosphere.get(kind).map(|b| b.social_form)
+            != Some(hornvale_species::SocialForm::Settled)
+        {
+            continue;
+        }
         let inputs = hornvale_kernel::CellMap::from_fn(geo, |c| {
             species_carrying_input(*base_inputs.get(c), psych)
         });

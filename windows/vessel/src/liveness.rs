@@ -837,6 +837,54 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// The BAND's water belief for `npc` (The Tidings; anchoring split per
+/// decision #8). With NO co-located peer, returns `believed_water(npc)`
+/// verbatim — the home-anchored nearest water it remembers — an exact no-op
+/// (this is what keeps the live one-per-settlement population byte-identical).
+/// With a co-located peer, pools `npc`'s and every co-located peer's
+/// `believed_water` and returns the one nearest to `npc`'s CURRENT position
+/// (ties: ascending `RoomAddr`), `None` if the pool is empty. Current-position
+/// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
+/// a stranded creature adopt a here-reachable water its home-anchored memory
+/// could never admit. Order-independent by construction (`BTreeSet` union +
+/// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
+/// type-audit: bare-ok(count: budget)
+pub fn shared_believed_water(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let own = believed_water(frozen, npc, t, terrain, budget);
+    let here = agent_position(frozen, npc, t);
+    let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut has_peer = false;
+    // Co-located OTHERS (never npc itself) contribute what they know of water.
+    for other in band {
+        if other.entity != npc.entity && agent_position(frozen, other, t) == here {
+            has_peer = true;
+            if let Some(w) = believed_water(frozen, other, t, terrain, budget) {
+                pool.insert(w);
+            }
+        }
+    }
+    // ALONE: home-anchored memory, unchanged — the byte-identical no-op.
+    if !has_peer {
+        return own;
+    }
+    // CO-LOCATED: rank the pooled beliefs (npc's + peers') by nearness to npc's
+    // CURRENT position (ties: ascending RoomAddr) — act on what's reachable HERE.
+    if let Some(w) = own {
+        pool.insert(w);
+    }
+    pool.into_iter()
+        .filter_map(|r| plan_to_room(&here, &r, budget).map(|p| (p.len(), r)))
+        .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
+        .map(|(_, r)| r)
+}
+
 /// What the agent perceives of the world — the `view` the decision reads. Splits
 /// SELF-knowledge (position, drive — always true) from world-BELIEF
 /// (`believed_water` — a cache that may be absent/ignorant) and immediate
@@ -2249,15 +2297,24 @@ pub fn arbitrate(
 /// (belief and last-drank are folded from history; exploration starts fresh, no
 /// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
 /// the health metric's continuous loop). The narration seam
-/// (`Session::needs`) reads a creature's `Affect` through this.
-pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terrain) -> Affect {
+/// (`Session::needs`) reads a creature's `Affect` through this. `band` is the
+/// same cohort the paired `DriveMovements` moves (The Tidings band-consistency
+/// invariant) — a sampled felt state must reflect the belief the creature
+/// acted on, not a poorer solo one.
+pub fn affect_of(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    day: WorldTime,
+    terrain: &dyn Terrain,
+) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
         .find(DRANK)
         .filter(|f| f.subject == npc.entity)
         .filter_map(|f| f.day)
         .fold(0.0_f64, f64::max);
-    let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
         npc.entity,
@@ -2392,7 +2449,12 @@ pub fn alarm_field(
         // The ALARM-FREE read (the build invariant): `affect_of` senses only the
         // terrain hazards, never borrowed alarm — so emission is terrain-sourced
         // by construction and the wave terminates.
-        let affect = affect_of(frozen, npc, day, terrain);
+        // The Tidings: an EMPTY band — the field reads each creature's intrinsic
+        // affect (its own home-anchored belief), not band-shared belief.
+        // Belief-sharing is orthogonal to terrain-fear emission, and `&[]`
+        // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly, so
+        // the alarm field is unchanged by this campaign.
+        let affect = affect_of(frozen, npc, &[], day, terrain);
         let primary_afraid =
             affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT;
         if !primary_afraid {
@@ -2556,7 +2618,16 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // Belief and exploration state, evolved locally across the walk (the
             // fold includes this tick's own emitted moves). Seed belief from the
             // pre-tick history; grow it whenever the agent stands in water.
-            let mut believed = believed_water(frozen, npc, self.from, self.terrain, PLAN_BUDGET);
+            // The Tidings: seed from the BAND's pooled belief (co-located
+            // members share what they know), not the creature's alone.
+            let mut believed = shared_believed_water(
+                frozen,
+                npc,
+                &self.npcs,
+                self.from,
+                self.terrain,
+                PLAN_BUDGET,
+            );
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -3539,6 +3610,231 @@ mod tests {
         );
     }
 
+    /// Build an `Npc` with the same authored field values every belief test
+    /// uses, varying only what these tests vary: entity, home, resource, and
+    /// label. Mirrors the `Npc` literal repeated across the `believed_water`
+    /// tests above — factored here only to keep the four-band-member Tidings
+    /// tests below from repeating it four times over.
+    fn shared_belief_npc(entity: EntityId, home: RoomAddr, resource: RoomAddr, label: &str) -> Npc {
+        Npc {
+            entity,
+            home,
+            resource,
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: label.into(),
+        }
+    }
+
+    #[test]
+    fn shared_belief_fills_an_ignorant_colocated_creature() {
+        // Two creatures share a room ("here"); `knower` has stood at `water`,
+        // `lost` never has. Both homed at `here`.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // Alone, `lost` is ignorant.
+        assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
+        // Co-located with `knower`, it learns the water.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            Some(water.clone())
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_order_independent() {
+        // Same setup as `shared_belief_fills_an_ignorant_colocated_creature`;
+        // permuting the band must not change the result.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let ab = [knower.clone(), lost.clone()];
+        let ba = [lost.clone(), knower.clone()];
+        let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
+        assert_eq!(result, Some(water));
+        assert_eq!(
+            result,
+            shared_believed_water(&ledger, &lost, &ba, now, &t, 10_000),
+            "permuting the band must not change the pooled belief"
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_a_noop_when_alone_or_band_empty() {
+        // A lone knower's shared belief equals its own belief; an empty band,
+        // and a band whose only co-located member is `knower` itself, are
+        // both no-ops (the strict-generalization contract).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let solo = believed_water(&ledger, &knower, now, &t, 10_000);
+        assert_eq!(solo, Some(water));
+
+        assert_eq!(
+            shared_believed_water(&ledger, &knower, &[], now, &t, 10_000),
+            solo,
+            "an empty band changes nothing"
+        );
+        assert_eq!(
+            shared_believed_water(
+                &ledger,
+                &knower,
+                std::slice::from_ref(&knower),
+                now,
+                &t,
+                10_000
+            ),
+            solo,
+            "a band of only itself changes nothing"
+        );
+    }
+
+    #[test]
+    fn shared_belief_ignores_a_knower_in_a_different_room() {
+        // `knower` knows water but currently stands in a DIFFERENT room than
+        // `lost` -> no share.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let water = neighbors[0].clone();
+        let elsewhere = neighbors[1].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower has stood at water (knows it) but its LATEST position is
+        // `elsewhere`, not `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &elsewhere, 1.0);
+        // lost stands at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // sanity: knower does know water when consulted directly...
+        assert_eq!(
+            believed_water(&ledger, &knower, now, &t, 10_000),
+            Some(water)
+        );
+        // ...but lost gains nothing, since knower is in a different room.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_moves_toward_shared_water() {
+        // THE TIDINGS, WIRED INTO THE MOVER: a `knower` and a `lost` creature
+        // share `here` (both homed there too). `knower` has genuinely stood
+        // at `water` (two hops away, through `n1`); `lost` never has. Water
+        // sits behind `n1`, whose OWN elevation is left unset (INFINITY);
+        // `here`'s other two neighbors (`n0`, `n2`) are planted at elevation
+        // 0.0 — the lowest-unvisited-neighbor explorer therefore ALWAYS
+        // prefers them over `n1`, and once `home` (already visited) blocks
+        // the way back, blind exploration can structurally never reach `n1`
+        // (let alone `water` beyond it). So under the OLD (non-shared)
+        // belief seed, `lost` — ignorant — can never drink: it wanders
+        // through `n0`/`n2` and their own subtrees, never through `n1`.
+        // Under the shared law, `lost` inherits `knower`'s belief the moment
+        // they're co-located and A*-steps straight through `n1` to `water`,
+        // drinking there. A real, mechanism-tied assertion (not just "moved
+        // somewhere") — mutation-verify: reverting the seed swap reds this.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water (day 0), back at `here`
+        // by day 1 — same shape as the pure-`shared_believed_water` tests.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+
+        let sys = DriveMovements {
+            npcs: vec![knower.clone(), lost.clone()],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            terrain: &t,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
+        let lost_drank = next.find(DRANK).filter(|f| f.subject == lost_e).count();
+        assert!(
+            lost_drank >= 1,
+            "shared belief should have carried the lost creature to the water \
+             its co-located band-mate knew, but it never drank"
+        );
+    }
+
     #[test]
     fn derive_npcs_are_distinct_and_placed() {
         // Use the real worldgen build for a populated world:
@@ -3583,11 +3879,17 @@ mod tests {
     fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
         // THE WILDING: the wild roster is minted from the world's beast
         // concentrations, NOT its peoples. A beast is, by construction, a
-        // species absent from the psyche registry (`wild_concentrations`'s
-        // `is_mobile_beast`), so every wild NPC takes the DEFAULT psyche dials —
-        // steady boldness, mid latency/horizon — while its threat niche is
-        // still derived from its biosphere nature (so a herbivore fears
-        // predators). This is the peopled `derive_npcs` path's mirror for fauna.
+        // species whose `social_form` is not `Settled` (`wild_concentrations`'s
+        // `is_mobile_beast`). On today's seed-42 roster every such wild kind
+        // also carries no `psyche_registry` entry, so every wild NPC takes the
+        // DEFAULT psyche dials — steady boldness, mid latency/horizon — while
+        // its threat niche is still derived from its biosphere nature (so a
+        // herbivore fears predators). This is the peopled `derive_npcs` path's
+        // mirror for fauna. NOTE: the defaulted-psyche assertion below holds
+        // for these seed-42 wild kinds because they happen to carry no psyche
+        // entry — it is not a claim that every wild (non-`Settled`) creature
+        // lacks one; a placed dragon (Task 4) is `Solitary` yet carries an
+        // authored mind.
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -3604,19 +3906,24 @@ mod tests {
             "seed 42 mints between 1 and 4 wild beasts, got {}",
             wild.len()
         );
-        let psyche = hornvale_species::psyche_registry();
+        let biosphere = hornvale_species::biosphere_registry();
         for n in &wild {
             assert!(
                 n.label.starts_with("a wild "),
                 "a wild NPC reads as a beast: {}",
                 n.label
             );
+            let social_form = biosphere
+                .get_by_label(&n.species)
+                .unwrap_or_else(|| panic!("{} has a biosphere entry", n.species))
+                .social_form;
             assert!(
-                psyche.get_by_label(&n.species).is_none(),
-                "a wild species is a beast, absent from the psyche registry: {}",
+                social_form != hornvale_species::SocialForm::Settled,
+                "a wild species is wild (not Settled): {}",
                 n.species
             );
-            // Beast → defaulted psyche (no registry entry to read).
+            // Beast → defaulted psyche (no registry entry to read; see the
+            // NOTE above the loop for the scope of this claim).
             assert_eq!(
                 n.boldness, BOLDNESS_STEADY,
                 "{} takes steady boldness",
@@ -5971,7 +6278,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             a.label,
             AffectLabel::Content,
@@ -7014,7 +7321,7 @@ mod tests {
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
-        let a = affect_of(&ledger, &base, WorldTime { day: 100.0 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 100.0 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
         let meta = Npc {
@@ -7024,7 +7331,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 100.0 }, &terrain);
         assert_ne!(
             b.label,
             AffectLabel::Content,
@@ -7063,13 +7370,13 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 0.5 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             b.object,
             Some(DriveKind::Danger),
@@ -7373,6 +7680,61 @@ mod tests {
             a.intent,
             Intent::Do(Action::MoveTo(smaller)),
             "an equal-utility tie resolves to the smaller RoomAddr"
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_feels_relief() {
+        // THE TIDINGS, WIRED INTO THE SAMPLER: same co-located knower/lost
+        // scenario as `shared_belief_fills_an_ignorant_colocated_creature`,
+        // read through `affect_of` at a moment well past the thirst act
+        // threshold (chronic, not yet at the learned-helplessness onset).
+        // Alone, `lost` is ignorant: its own `believed_water` is `None`, but
+        // it is never truly stuck — a mesh room always has 3 neighbours, so
+        // an ignorant thirsty creature always has an exploration gradient to
+        // follow (Searching: normal seeking, valence 0.0 — not yet relief).
+        // With the band, `shared_believed_water` hands it
+        // `knower`'s known, reachable source: the SAME arbitration now
+        // beelines to a KNOWN target, reading Eager (valence 0.5) instead —
+        // the measurable relief the shared belief buys it. Mutation-verify:
+        // an `affect_of` that dropped `band` (or passed it through empty)
+        // would read `Searching` in BOTH calls; this reds without the wiring.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        // Day 10: well past thirst's act threshold (chronic), well before the
+        // 15-day learned-helplessness onset (which, being a pure function of
+        // `last_drank`/day, would be identical alone or in-band and so could
+        // never distinguish them).
+        let now = WorldTime { day: 10.0 };
+
+        let alone = affect_of(&ledger, &lost, &[], now, &t);
+        let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
+
+        assert_eq!(
+            alone.label,
+            AffectLabel::Searching,
+            "alone and ignorant, {lost:?} follows a gradient, unrelieved: {alone:?}"
+        );
+        assert_eq!(
+            in_band.label,
+            AffectLabel::Eager,
+            "co-located with a knower, the shared belief relieves it: {in_band:?}"
+        );
+        assert!(
+            in_band.valence > alone.valence,
+            "the shared belief must make the felt state MORE positive, not just different"
         );
     }
 }

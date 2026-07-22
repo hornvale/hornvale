@@ -540,7 +540,7 @@ impl<'w> Session<'w> {
         );
         here.iter()
             .map(|npc| {
-                let affect = affect_of(&self.ledger, npc, self.day, &terrain);
+                let affect = affect_of(&self.ledger, npc, &self.npcs, self.day, &terrain);
                 format!("The {} {}.", npc.label, felt_phrase(&affect))
             })
             .collect::<Vec<_>>()

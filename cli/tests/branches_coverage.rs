@@ -133,11 +133,12 @@ fn derivations_replay() {
     let world = default_generated_seed_42();
     let mut checked = 0;
 
-    // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // psyche row and never speak); the psyche registry holds exactly the
-    // settling, speaking kinds, so iterating its keys matches the same
-    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
-    for kind in hornvale_species::psyche_registry().ids() {
+    // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
+    // psyche registry is a SUPERSET of the speakers — the dragons carry a mind
+    // but no articulation — so iterate the articulation registry, which holds
+    // exactly the settling, speaking kinds (the same peopled boundary
+    // `windows/worldgen`'s settlement-genesis pass applies).
+    for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
         let ph = hornvale_worldgen::language_of(&world, species);
         let cascade = hornvale_language::draw_cascade(&world.seed, species);
@@ -173,11 +174,12 @@ fn every_concept_resolves_once() {
     let concept_count = world.registry.concepts().count();
     assert!(concept_count > 0, "the registry should hold concepts");
 
-    // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // psyche row and never speak); the psyche registry holds exactly the
-    // settling, speaking kinds, so iterating its keys matches the same
-    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
-    for kind in hornvale_species::psyche_registry().ids() {
+    // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
+    // psyche registry is a SUPERSET of the speakers — the dragons carry a mind
+    // but no articulation — so iterate the articulation registry, which holds
+    // exactly the settling, speaking kinds (the same peopled boundary
+    // `windows/worldgen`'s settlement-genesis pass applies).
+    for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
         let lex = hornvale_worldgen::lexicon_of(&world, species)
             .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
@@ -218,11 +220,12 @@ fn gaps_have_reasons() {
         "needs",
     ];
 
-    // Language/lexicon coverage is a peopled-only concern (fauna carry no
-    // psyche row and never speak); the psyche registry holds exactly the
-    // settling, speaking kinds, so iterating its keys matches the same
-    // peopled boundary `windows/worldgen`'s settlement-genesis pass applies.
-    for kind in hornvale_species::psyche_registry().ids() {
+    // Language/lexicon coverage is a speaker-only concern. Since The Eremite the
+    // psyche registry is a SUPERSET of the speakers — the dragons carry a mind
+    // but no articulation — so iterate the articulation registry, which holds
+    // exactly the settling, speaking kinds (the same peopled boundary
+    // `windows/worldgen`'s settlement-genesis pass applies).
+    for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
         let lex = hornvale_worldgen::lexicon_of(&world, species)
             .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
