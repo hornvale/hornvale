@@ -98,8 +98,9 @@ pub use graph_derive::{
 };
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
-    GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
-    goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
+    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
+    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
+    stratigraphy, sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
