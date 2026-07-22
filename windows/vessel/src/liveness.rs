@@ -5453,6 +5453,204 @@ mod tests {
     }
 
     #[test]
+    fn the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle() {
+        // THE ALARM, end-to-end (the spec's e2e criterion): drive the REAL
+        // field-aware `DriveMovements` tick, not a hand-built affect. Creature A
+        // is CORNERED on genuine UNCANNY hazard ground (its cell and every
+        // neighbour are hazardous, so no step is strictly safer — it holds, and
+        // keeps screaming every tick). Creature B stands one hop away, INSIDE
+        // A's alarm halo, but dreads the uncanny only WEAKLY (a low threat-niche
+        // weight), so its OWN terrain-sourced danger stays below `act`: B has NO
+        // primary fear of its own. Yet the BORROWED alarm at B's cell pushes it
+        // over `act`, and B flees down the local threat gradient to safe ground
+        // OUTSIDE the halo — then, separated from the distress, it settles. The
+        // wave is bounded and terminates (spec §3): no perpetual stampede.
+
+        // A registry carrying every predicate the tick may commit.
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+
+        // Geometry, read from the real mesh so the scenario is topology-robust.
+        let x = raddr(1.0); // A's cell — the core of the hazard
+        let ns = x.neighbors(); // A's three edge-neighbours
+        let b_start = ns[0].clone(); // B stands here: one hop from A, in the halo
+        // The hazard patch = A's cell AND its neighbours, so A is boxed in (no
+        // neighbour is strictly safer → cornered, holds, keeps emitting).
+        let patch: std::collections::BTreeSet<RoomAddr> = std::iter::once(x.clone())
+            .chain(ns.iter().cloned())
+            .collect();
+        // B's escape: a neighbour of B's cell OUTSIDE the patch — and thus
+        // outside A's one-hop halo. The mesh gives B such a way out; assert it.
+        let escape: std::collections::BTreeSet<RoomAddr> = b_start
+            .neighbors()
+            .into_iter()
+            .filter(|n| !patch.contains(n))
+            .collect();
+        assert!(
+            !escape.is_empty(),
+            "B must have a hop out of the halo for the wave to terminate"
+        );
+        // `flee_step` (and arbitration) pick the safest neighbour, ties to the
+        // smallest RoomAddr — among the equally-safe escape cells that is the
+        // minimum. Make it B's home, so B flees home to safety and rests there
+        // (no home-ward pull back into the halo → no oscillation).
+        let b_home = escape.iter().min().unwrap().clone();
+
+        // A strong UNCANNY hazard over the whole patch.
+        let terrain =
+            PlantedTerrain::hazard(std::iter::empty(), patch.iter().cloned().map(|c| (c, 0.8)));
+
+        // A — a mortal dreading the uncanny fully (weight 1), steady boldness:
+        // felt threat 0.8 ≥ DANGER_ACT, cornered, emits arousal 0.8 every tick.
+        let build_a = |ledger: &mut Ledger| -> Npc {
+            let e = ledger.mint_entity();
+            commit_agent_at(ledger, &reg, e, &x, 0.0);
+            Npc {
+                entity: e,
+                home: x.clone(),
+                resource: x.clone(),
+                species: "goblin".into(),
+                activity: hornvale_species::ActivityCycle::Diurnal,
+                temperature_niche: test_niche(),
+                deliberation_latency: 0.5,
+                time_horizon: 0.0,
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: default_diet_niche(),
+                boldness: BOLDNESS_STEADY,
+                threat_niche: mortal_threat_niche(),
+                label: "cornered".into(),
+            }
+        };
+        // B — dreads the uncanny only WEAKLY (0.25), so 0.8·0.25 = 0.20 <
+        // DANGER_ACT (0.3): NO primary fear of its own. Its home is the safe
+        // escape cell it flees to.
+        let build_b = |ledger: &mut Ledger| -> Npc {
+            let e = ledger.mint_entity();
+            commit_agent_at(ledger, &reg, e, &b_start, 0.0);
+            Npc {
+                entity: e,
+                home: b_home.clone(),
+                resource: b_home.clone(),
+                species: "goblin".into(),
+                activity: hornvale_species::ActivityCycle::Diurnal,
+                temperature_niche: test_niche(),
+                deliberation_latency: 0.5,
+                time_horizon: 0.0,
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: default_diet_niche(),
+                boldness: BOLDNESS_STEADY,
+                threat_niche: ThreatNiche {
+                    uncanny: 0.25,
+                    heat: 0.0,
+                    cold: 0.0,
+                    predator: 0.0,
+                },
+                label: "herd-edge".into(),
+            }
+        };
+
+        // --- The contagion run: A present and cornered, B one hop away. ---
+        let mut ledger = Ledger::default();
+        let a = build_a(&mut ledger);
+        let b = build_b(&mut ledger);
+        let a_entity = a.entity;
+        let b_entity = b.entity;
+
+        // TICK 1 — the daytime window (frac 0.30 → 0.40, both awake). The alarm
+        // field haloes A's neighbourhood (B's cell included), so B bolts.
+        let sys1 = DriveMovements {
+            npcs: vec![a.clone(), b.clone()],
+            from: WorldTime { day: 0.30 },
+            to: WorldTime { day: 0.40 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
+
+        // B's actual tick STEPS (excluding the day-0 seed placement).
+        let b_moves_1: Vec<&Fact> = after1
+            .find(AGENT_AT)
+            .filter(|f| f.subject == b_entity && f.provenance != "test")
+            .collect();
+        let b_fear_moves = b_moves_1
+            .iter()
+            .filter(|f| f.provenance.contains("fear"))
+            .count();
+        assert!(
+            b_fear_moves >= 1,
+            "B, with no primary fear of its own, FLEES the borrowed alarm (a fear-provenance move)"
+        );
+        // Bounded — no perpetual within-tick stampede (the field is fixed across
+        // the interval; an oscillating B would run to MAX_STEPS, committing
+        // thousands of moves). A small count proves the wave is a bounded halo.
+        assert!(
+            b_moves_1.len() <= 4,
+            "B's flight is bounded, not a runaway stampede: got {} moves",
+            b_moves_1.len()
+        );
+        // A is cornered — it never STEPS during the tick (only the day-0 seed
+        // placement, provenance "test", is on the ledger). It holds and keeps
+        // emitting, the persistent alarm source.
+        assert_eq!(
+            after1
+                .find(AGENT_AT)
+                .filter(|f| f.subject == a_entity && f.provenance != "test")
+                .count(),
+            0,
+            "the cornered A holds its ground, the persistent alarm source"
+        );
+
+        // TICK 2 — A still cornered and screaming; B now on safe ground OUTSIDE
+        // the halo. The alarm no longer reaches B, so it settles: no new move.
+        // TERMINATION (spec §3): the wave dies not because the source vanished
+        // (A still screams) but because B escaped the one-hop halo.
+        let sys2 = DriveMovements {
+            npcs: vec![a.clone(), b.clone()],
+            from: WorldTime { day: 0.40 },
+            to: WorldTime { day: 0.55 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
+        let b_moves_2 = after2
+            .find(AGENT_AT)
+            .filter(|f| f.subject == b_entity && f.provenance != "test")
+            .count();
+        assert_eq!(
+            b_moves_2,
+            b_moves_1.len(),
+            "once out of the halo B settles — the wave terminates (no perpetual stampede)"
+        );
+
+        // --- The control run: B alone (A absent). ---
+        // With no primary-afraid neighbour the alarm field is EMPTY, so B feels
+        // nothing borrowed and never flees. (It may amble home, but never with
+        // the fear provenance — the flight was borrowed, not intrinsic.)
+        let mut control = Ledger::default();
+        let cb = build_b(&mut control);
+        let cb_entity = cb.entity;
+        let csys = DriveMovements {
+            npcs: vec![cb.clone()],
+            from: WorldTime { day: 0.30 },
+            to: WorldTime { day: 0.40 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
+        let c_fear = cafter
+            .find(AGENT_AT)
+            .filter(|f| f.subject == cb_entity && f.provenance.contains("fear"))
+            .count();
+        assert_eq!(
+            c_fear, 0,
+            "with no distressed neighbour present, B never flees — the flight was borrowed"
+        );
+    }
+
+    #[test]
     fn the_threat_niche_is_derived_from_nature() {
         // THE BANE: HEAT/COLD derive from the temperature optimum, UNCANNY from
         // the metabolic class.
