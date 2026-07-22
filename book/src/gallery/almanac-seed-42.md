@@ -167,6 +167,11 @@ The archive runs 18 m to basement on average.
 Geothermal gradient spans 21–30 K/km — the deep's warmth.
 40% of the land records an unconformity — an age the rock forgot.
 
+## The Lode
+
+The land's lode is dominantly salt, found across 34% of it.
+Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
+
 ## The People
 
 The land holds 116 settlement(s).

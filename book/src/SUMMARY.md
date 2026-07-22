@@ -234,6 +234,7 @@
 - [The Deep](./chronicle/the-deep.md)
 - [The Haunt](./chronicle/the-haunt.md)
 - [The Sundering](./chronicle/the-sundering.md)
+- [The Lode](./chronicle/the-lode.md)
 
 # Appendix: The Frontier
 

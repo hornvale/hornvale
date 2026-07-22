@@ -11,13 +11,13 @@ use hornvale_language::{
 };
 use hornvale_religion::beliefs_of;
 use hornvale_terrain::{
-    CarveParams, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
+    CarveParams, Commodity, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_from,
-    build_world_from_components, build_world_to, climate_from, climate_of, flagship_of,
-    language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from, rock_class_name,
-    sky_of, soil_of, soil_order_name, terrain_of,
+    build_world_from_components, build_world_to, climate_from, climate_of, commodity_name,
+    flagship_of, language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from,
+    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -1117,6 +1117,107 @@ pub fn registry() -> Vec<Metric> {
                     }
                 }
                 MetricValue::Number(if land == 0 { 0.0 } else { sum / land as f64 })
+            }),
+        },
+        // --- The Lode (Task 7): cave and ore-deposit census metrics, over
+        // land cells only (`terrain.is_ocean` guards each), mirroring The
+        // Ground. ---
+        Metric {
+            name: "cave-fraction",
+            doc: "Fraction of land cells with a cave (The Lode, spec §5; \
+                  MAP-10's lab candidate)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut caves) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.cave_at(cell).is_some() {
+                            caves += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    caves as f64 / land as f64
+                })
+            }),
+        },
+        Metric {
+            name: "deposit-density",
+            doc: "Fraction of land cells with an ore deposit (The Lode, spec §5)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut land, mut deposits) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell) {
+                        land += 1;
+                        if v.terrain.deposit_at(cell).is_some() {
+                            deposits += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    deposits as f64 / land as f64
+                })
+            }),
+        },
+        Metric {
+            name: "dominant-commodity",
+            doc: "The most common land ore commodity by cell count (The \
+                  Lode, spec §5); Absent where no land cell has a deposit",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let mut counts: std::collections::BTreeMap<Commodity, usize> =
+                    std::collections::BTreeMap::new();
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell)
+                        && let Some(deposit) = v.terrain.deposit_at(cell)
+                    {
+                        *counts.entry(deposit.commodity).or_insert(0) += 1;
+                    }
+                }
+                match counts.iter().max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0))) {
+                    Some((&commodity, _)) => {
+                        MetricValue::Text(commodity_name(commodity).to_string())
+                    }
+                    None => MetricValue::Absent,
+                }
+            }),
+        },
+        Metric {
+            name: "mean-ore-grade",
+            doc: "Mean ore grade [0,1] over land cells with a deposit (The \
+                  Lode, spec §5); 0.0 where no land cell has a deposit",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.1, 0.2, 0.4, 0.6, 0.8],
+            },
+            extract: Extractor::Terrain(|v: &TerrainView| {
+                let geo = v.terrain.geosphere();
+                let (mut deposits, mut sum) = (0usize, 0.0f64);
+                for cell in geo.cells() {
+                    if !v.terrain.is_ocean(cell)
+                        && let Some(deposit) = v.terrain.deposit_at(cell)
+                    {
+                        deposits += 1;
+                        sum += deposit.grade;
+                    }
+                }
+                MetricValue::Number(if deposits == 0 {
+                    0.0
+                } else {
+                    sum / deposits as f64
+                })
             }),
         },
         Metric {
@@ -4863,8 +4964,10 @@ mod tests {
         // chorus-distinctiveness, chorus-recoverability, chorus-variance,
         // chorus-param-spread, chorus-sky-calibration), +3 for The Deep
         // (Task 5: mean-depth-to-basement, unconformity-fraction,
-        // mean-geothermal-gradient).
-        assert_eq!(registry().len(), 161);
+        // mean-geothermal-gradient), +4 for The Lode (Task 7:
+        // cave-fraction, deposit-density, dominant-commodity,
+        // mean-ore-grade).
+        assert_eq!(registry().len(), 165);
     }
 
     #[test]
@@ -4874,6 +4977,19 @@ mod tests {
             "mean-depth-to-basement",
             "unconformity-fraction",
             "mean-geothermal-gradient",
+        ] {
+            assert!(names.contains(&want), "missing metric {want}");
+        }
+    }
+
+    #[test]
+    fn the_lode_metrics_are_registered() {
+        let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
+        for want in [
+            "cave-fraction",
+            "deposit-density",
+            "dominant-commodity",
+            "mean-ore-grade",
         ] {
             assert!(names.contains(&want), "missing metric {want}");
         }
@@ -5186,6 +5302,24 @@ mod tests {
         assert!(
             matches!(m("fertile-land-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
         );
+    }
+
+    #[test]
+    fn the_lode_metrics_extract_for_seed_42() {
+        // The Lode (Task 7): cave/deposit census metrics, over land cells
+        // only; fractions and grade must land in [0, 1], and the dominant
+        // commodity is either a named commodity or Absent (no land deposit).
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+        assert!(matches!(m("cave-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+        assert!(matches!(m("deposit-density"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+        match m("dominant-commodity") {
+            MetricValue::Text(name) => assert!(!name.is_empty()),
+            MetricValue::Absent => {}
+            other => panic!("dominant-commodity: {other:?}"),
+        }
+        assert!(matches!(m("mean-ore-grade"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
     }
 
     #[test]
