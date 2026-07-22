@@ -726,8 +726,8 @@ pub struct BiosphereTraits {
     pub potency: f64,
     /// How this creature organizes socially (universal; every kind carries
     /// one). `Settled` is the sole settlement-forming value and the successor
-    /// to the old "has a psyche entry" proxy for peoplehood.
-    /// type-audit: bare-ok(identifier-text: social_form)
+    /// to the old "has a psyche entry" proxy for peoplehood. (An enum, not a
+    /// bare primitive — no type-audit verdict needed.)
     pub social_form: SocialForm,
 }
 
