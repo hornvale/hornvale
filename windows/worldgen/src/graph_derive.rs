@@ -85,10 +85,36 @@ pub fn connection_graph(
     let cost = traversal_cost(geo, elevation, biome);
     let mut graph = ConnectionGraph::new(geo.cell_count());
 
+    let marine = CellMap::from_fn(geo, |c| biome.get(c).is_marine());
     add_adjacency_edges(geo, &cost, &mut graph);
-    add_water_routes(geo, biome, current, cfg, &mut graph);
+    add_water_routes(geo, &marine, current, cfg, &mut graph);
     add_land_routes(geo, &cost, settlements, cfg, &mut graph);
 
+    graph
+}
+
+/// The era-aware connection graph: like [`connection_graph`] but a cell is
+/// ocean iff `elevation < sea_level`, so a glacial low-stand exposes the shelf
+/// as passable land (the land bridges The Sundering's diaspora crosses).
+/// Adjacency + sailing lanes, plus era-aware land routes if `settlements` is
+/// non-empty (their corridors are costed at this era's `sea_level`, not the
+/// present). The Sundering's bake calls this with no settlements, so it derives
+/// adjacency + sailing lanes only. Derived, never committed.
+/// type-audit: bare-ok(diagnostic-value: current)
+pub fn connection_graph_at(
+    geo: &Geosphere,
+    elevation: &CellMap<ReferenceElevation>,
+    sea_level: ReferenceElevation,
+    current: &CellMap<[f64; 3]>,
+    settlements: &[CellId],
+    cfg: &GraphConfig,
+) -> ConnectionGraph {
+    let marine = CellMap::from_fn(geo, |c| elevation.get(c).get() < sea_level.get());
+    let cost = crate::traversal::traversal_cost_at(geo, elevation, sea_level);
+    let mut graph = ConnectionGraph::new(geo.cell_count());
+    add_adjacency_edges(geo, &cost, &mut graph);
+    add_water_routes(geo, &marine, current, cfg, &mut graph);
+    add_land_routes(geo, &cost, settlements, cfg, &mut graph);
     graph
 }
 
@@ -202,11 +228,11 @@ fn cost_conductance(a: u64, b: u64) -> f64 {
 /// marine neighbor (`geo.neighbors` is already ascending, so this is a
 /// stable, deterministic pick when a coastal cell borders more than one
 /// ocean cell). `None` if `cell` is not coastal (no marine neighbor at all).
-fn first_marine_neighbor(geo: &Geosphere, biome: &CellMap<Biome>, cell: CellId) -> Option<CellId> {
+fn first_marine_neighbor(geo: &Geosphere, marine: &CellMap<bool>, cell: CellId) -> Option<CellId> {
     geo.neighbors(cell)
         .iter()
         .copied()
-        .find(|&n| biome.get(n).is_marine())
+        .find(|&n| *marine.get(n))
 }
 
 /// The neighbor of `cell` whose direction best aligns with `vector` (the
@@ -241,7 +267,7 @@ fn downstream_neighbor(geo: &Geosphere, cell: CellId, vector: [f64; 3]) -> Optio
 /// in time.
 fn follow_current(
     geo: &Geosphere,
-    biome: &CellMap<Biome>,
+    marine: &CellMap<bool>,
     current: &CellMap<[f64; 3]>,
     start: CellId,
     max_steps: u32,
@@ -252,7 +278,7 @@ fn follow_current(
     for _ in 0..max_steps {
         let vector = *current.get(cell);
         let next = downstream_neighbor(geo, cell, vector)?;
-        if !biome.get(next).is_marine() {
+        if !*marine.get(next) {
             return Some(next);
         }
         if !visited.insert(next) {
@@ -277,20 +303,20 @@ fn vector_magnitude(v: [f64; 3]) -> f64 {
 /// the current's strength at the launch cell.
 fn add_water_routes(
     geo: &Geosphere,
-    biome: &CellMap<Biome>,
+    marine: &CellMap<bool>,
     current: &CellMap<[f64; 3]>,
     cfg: &GraphConfig,
     graph: &mut ConnectionGraph,
 ) {
     for cell in geo.cells() {
-        if biome.get(cell).is_marine() {
+        if *marine.get(cell) {
             continue;
         }
-        let Some(launch) = first_marine_neighbor(geo, biome, cell) else {
+        let Some(launch) = first_marine_neighbor(geo, marine, cell) else {
             continue;
         };
         let Some(destination) =
-            follow_current(geo, biome, current, launch, cfg.water_route_max_steps)
+            follow_current(geo, marine, current, launch, cfg.water_route_max_steps)
         else {
             continue;
         };

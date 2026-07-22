@@ -233,6 +233,7 @@
 - [The Eremite](./chronicle/the-eremite.md)
 - [The Deep](./chronicle/the-deep.md)
 - [The Haunt](./chronicle/the-haunt.md)
+- [The Sundering](./chronicle/the-sundering.md)
 
 # Appendix: The Frontier
 

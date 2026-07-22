@@ -34,7 +34,25 @@ use hornvale_history::record::{
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{CellId, CellMap, EntityId, Geosphere, KindId, Seed, Stream};
 use hornvale_paleoclimate::EraClimate;
+use hornvale_topology::ConnectionGraph;
 use std::collections::{BTreeMap, BTreeSet};
+
+/// The conductance-positive graph neighbours of `cell` (`conductance > 0.0` —
+/// ocean-touching adjacency edges are stored at exactly 0.0). Ascending and
+/// deduplicated, matching `Geosphere::neighbors`' contract so the rerouted
+/// BFS/scans stay deterministic. On an all-land graph this equals
+/// `geo.neighbors(cell)`.
+fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
+    let mut ns: Vec<CellId> = graph
+        .edges(cell)
+        .iter()
+        .filter(|e| e.conductance > 0.0)
+        .map(|e| e.to)
+        .collect();
+    ns.sort();
+    ns.dedup();
+    ns
+}
 
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
@@ -203,8 +221,13 @@ struct Community {
 /// The mutable bake state: records, live communities, the one-alive-per-site
 /// index, the id counter, the dynamics stream, and the running tally.
 struct Bake<'a> {
-    /// The region graph.
-    geo: &'a Geosphere,
+    /// One era-aware connection graph per era (`graphs.len() == eras.len()`).
+    /// Each graph's traversable neighbours (`conductance > 0.0`) are that era's
+    /// passable geography: the glacial low-stand exposes shelf land bridges, the
+    /// rising sea drowns them. The bake walks `cur()` — the era being stepped.
+    graphs: &'a [ConnectionGraph],
+    /// Index into `graphs` of the era currently being stepped.
+    cur_graph: usize,
     /// Per-cell base carrying capacity.
     capacity: &'a CellMap<f64>,
     /// Per-cell proximity to fresh flowing water in `[0, 1]` (~1 on a river,
@@ -257,13 +280,18 @@ impl<'a> Bake<'a> {
         id
     }
 
-    /// The era in effect for `year`: the last era whose `day` is at or before
-    /// `year` (piecewise-constant), or the earliest era for years before it.
-    fn era_for<'e>(&self, eras: &'e [EraClimate], year: f64) -> &'e EraClimate {
-        let mut chosen = &eras[0];
-        for e in eras {
+    /// The graph for the era currently being stepped.
+    fn cur(&self) -> &ConnectionGraph {
+        &self.graphs[self.cur_graph]
+    }
+
+    /// The index of the era in force for `year`: the last era whose `day` is at
+    /// or before `year`, or 0 for years before the first.
+    fn era_index_for(&self, eras: &[EraClimate], year: f64) -> usize {
+        let mut chosen = 0;
+        for (i, e) in eras.iter().enumerate() {
             if e.day <= year {
-                chosen = e;
+                chosen = i;
             }
         }
         chosen
@@ -302,7 +330,7 @@ impl<'a> Bake<'a> {
             let mut next: Vec<CellId> = Vec::new();
             let mut candidates: Vec<CellId> = Vec::new();
             for &c in &frontier {
-                for &n in self.geo.neighbors(c) {
+                for n in traversable_neighbors(self.cur(), c) {
                     if visited.insert(n) {
                         next.push(n);
                         if self.vacant_habitable(era, n) {
@@ -334,7 +362,7 @@ impl<'a> Bake<'a> {
     /// tie-broken by lowest `CellId`. `None` if no occupied neighbour.
     fn raid_target(&self, site: CellId) -> Option<usize> {
         let mut best: Option<(usize, f64, CellId)> = None;
-        for &n in self.geo.neighbors(site) {
+        for n in traversable_neighbors(self.cur(), site) {
             if let Some(&idx) = self.node_index.get(&n) {
                 let pop = self.communities[idx].population;
                 let better = match best {
@@ -546,11 +574,8 @@ impl<'a> Bake<'a> {
             // occupied set toward fresh water. `RIVER_SITE_WEIGHT` tunes how
             // hard river proximity outbids raw capacity here. Tie-broken by
             // lowest CellId — total & deterministic (`f64::total_cmp`).
-            let dest = self
-                .geo
-                .neighbors(site)
-                .iter()
-                .copied()
+            let dest = traversable_neighbors(self.cur(), site)
+                .into_iter()
                 .filter(|&n| self.vacant_habitable(era, n))
                 .max_by(|a, b| {
                     let sa = *self.capacity.get(*a) * river_factor(*self.river_prox.get(*a));
@@ -600,9 +625,12 @@ pub fn bake(
     refugia: &CellMap<bool>,
     peoples: &[KindId],
     cfg: &BakeConfig,
+    graphs: &[ConnectionGraph],
 ) -> History {
+    assert_eq!(graphs.len(), eras.len(), "one graph per era");
     let mut bake = Bake {
-        geo,
+        graphs,
+        cur_graph: 0,
         capacity,
         river_prox,
         refugia,
@@ -678,7 +706,9 @@ pub fn bake(
     //    stream-draw order stays deterministic).
     let mut year = cfg.start_year;
     while year < cfg.end_year {
-        let era = bake.era_for(eras, year).clone();
+        let era_idx = bake.era_index_for(eras, year);
+        bake.cur_graph = era_idx;
+        let era = eras[era_idx].clone();
         let snapshot: Vec<usize> = (0..bake.communities.len())
             .filter(|&i| bake.communities[i].alive)
             .collect();
@@ -696,5 +726,66 @@ pub fn bake(
         records: bake.records,
         now,
         tally: bake.tally,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
+
+    #[test]
+    fn traversable_neighbors_excludes_ocean_includes_lanes() {
+        let mut g = ConnectionGraph::new(4);
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0,
+            },
+        );
+        g.add_edge(
+            CellId(1),
+            Edge {
+                to: CellId(2),
+                kind: EdgeKind::Adjacency,
+                conductance: 0.0,
+            },
+        );
+        g.add_edge(
+            CellId(1),
+            Edge {
+                to: CellId(3),
+                kind: EdgeKind::WaterRoute,
+                conductance: 0.5,
+            },
+        );
+        assert_eq!(
+            traversable_neighbors(&g, CellId(1)),
+            vec![CellId(0), CellId(3)]
+        );
+    }
+
+    #[test]
+    fn traversable_neighbors_dedups_parallel_edges() {
+        let mut g = ConnectionGraph::new(2);
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::Adjacency,
+                conductance: 1.0,
+            },
+        );
+        g.add_edge(
+            CellId(0),
+            Edge {
+                to: CellId(1),
+                kind: EdgeKind::WaterRoute,
+                conductance: 0.5,
+            },
+        );
+        assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
     }
 }
