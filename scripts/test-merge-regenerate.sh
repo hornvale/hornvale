@@ -4,8 +4,11 @@
 # (this campaign adds no Rust code); run manually or wire into `make
 # quick` at a later campaign's discretion. Exercises three scenarios in
 # a throwaway clone: Tier B success (regenerates past a real conflict),
-# Tier B failure (falls back to real conflict markers when the crate
-# doesn't build), and Tier A (union keeps both sides' additions).
+# Tier B failure (the driver-governed file is left unmerged in the
+# index, not textually marked, when the crate doesn't build — a
+# genuinely UNDRIVEN conflict elsewhere, e.g. kernel/src/lib.rs, still
+# gets git's ordinary <<<<<<< markers), and Tier A (union keeps both
+# sides' additions).
 set -euo pipefail
 
 repo_root="$(git rev-parse --show-toplevel)"
@@ -54,8 +57,8 @@ if ! diff -q "$fresh" book/src/reference/phonology.md > /dev/null; then
 fi
 pass "scenario 1: Tier B conflict resolved by regeneration, byte-matches fresh output"
 
-# --- Scenario 2: Tier B failure path falls back to real conflict markers ---
-echo "--- Scenario 2: Tier B falls back to conflict markers when the crate can't build ---"
+# --- Scenario 2: Tier B failure path leaves the driver-governed file unmerged ---
+echo "--- Scenario 2: Tier B is left unmerged (no textual markers) when the crate can't build ---"
 
 git checkout "$base_branch" -q
 git checkout -b scenario2-a -q
@@ -103,7 +106,7 @@ if [ ! -s book/src/reference/phonology.md ]; then
     fail "scenario 2: phonology.md is empty — the driver must never leave partial/empty output on failure"
 fi
 git merge --abort
-pass "scenario 2: build failure correctly falls back to real conflict markers, no partial output"
+pass "scenario 2: build failure correctly leaves the driver-governed file unmerged (no textual markers, no partial output)"
 
 # --- Scenario 3: Tier A union merge keeps both sides' additions ---
 echo "--- Scenario 3: Tier A union merge keeps both sides' SUMMARY.md bullets ---"

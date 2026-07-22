@@ -167,7 +167,7 @@ set -euo pipefail
 ours="$2"
 path="$4"
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
 tmp_out="$(mktemp)"
