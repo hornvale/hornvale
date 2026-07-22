@@ -150,6 +150,45 @@ left as a standing open question rather than tuned back down (Study 011).
 See [Language](./language.md) for the phonology, the gloss, and the naming
 grammar themselves.
 
+**History places now; the field became substrate (The Living
+Community).** The carrying-capacity field no longer *places* settlements. It
+is demoted from placer to **substrate** — the fitness landscape a derived deep
+history plays out across. Genesis seeds a handful of proto-communities on the
+early world and runs a coarse forward history over roughly two thousand years:
+each community, each era, resolves against *that era's* carrying capacity
+(the field ticked by the paleoclimate the world already computes) — growing
+under slack, founding a daughter into vacant favourable ground, retreating
+toward refugia when its cell turns against it, or ending. The **present world
+is the last frame** of that run. A living settlement is a community still alive
+at the final year; a ruin is one that died; the grassy clearing is one that
+died lifetimes ago. The condensation flow above still builds the capacity
+field the history reads, but it no longer emits the present map — history is
+the sole provider of both settlement and ruin facts, and each carries a
+provenance pointer to the skeleton event that produced it.
+
+The history lives as a **committed skeleton, locally-derived flesh**: a
+compact, dated event log (foundings, migrations, endings, each with
+role-handles) is committed to the ledger, and the flesh — the persona behind a
+handle, the objects a ruin leaves, a site's rendered prose — is a pure
+function of a committed fact plus the lossless seed, derived on demand and
+never stored. The present frame is a *query* over the communities still alive,
+not a separate tier of state. Because the world is finite and equilibrating,
+displacement is kept perpetually alive without a floor: era-varying
+habitability (glacial advance and retreat) drives sustained migration, and a
+preregistered census gate *aborts the build* if displacement fails to fire at
+volume. On the real, sparsely-peopled world that displacement resolves as
+climate **migration**, not war — vacant land lets a frozen-out community move
+rather than raid — so the ruins are abandonment ruins, and organised conflict
+is deferred to a later campaign of the program. Two measured findings shaped
+the result: the four near-identical goblinoids finally hold **distinct
+territories**, separated by history rather than niche; and re-occupation
+stratigraphy accretes on **marginal, climate-contested** land (repeatedly
+abandoned and resettled), while prime land is held stably by one long
+occupation — the deepest layers mark the *worst* ground, not the best. A site's
+layers and their flesh render through a read-only surface (the `history` CLI
+verb and the almanac); see [The Living
+Community](../chronicle/the-living-community.md).
+
 **The model card.**
 
 - **Drawn (from the seed, or pinned):** a settlement's name, drawn by
@@ -168,27 +207,32 @@ grammar themselves.
   filling (an epoch bump behind the same interface, never a silent change);
   the concentration threshold is a frozen constant, not yet a per-world
   choice; no cross-species spacing (a documented, temporary regression); no
-  inter-settlement relationships or trade routes yet (deferred to
-  Campaign 4b's successor); no settlement history — every settlement is
-  founded, fully formed, at genesis, its population an equilibrium
-  snapshot rather than something that grew there.
+  inter-settlement relationships or trade routes yet (deferred to the
+  connection-graph campaign of the living-community program).
+- **Grown, not placed (The Living Community):** settlements are no longer
+  founded fully formed at genesis. They are the last frame of a derived deep
+  history run over the (now era-varying) capacity field — grown, migrated, and
+  abandoned across ~2000 years — with standing ruins and separated territories
+  falling out of the run. See the history-first section above.
 
-Seed 42 under a spinning sky condenses 66 settlements. Since [The
+Seed 42 under a spinning sky now grows **129 settlements** as the present
+frame of its derived history (the field-condensation model above supplies the
+substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
 competitive niche-K stack, the four peoples (goblin, hobgoblin, bugbear, and
 kobold, since [The Branches](../chronicle/the-branches.md) gave the
-goblinoids two new members) are packed *together* and only the locally
-prevailing one flagships each settlement: goblin and hobgoblin hold all
-sixty-six, with kobold and bugbear present in their compositions but never
-the majority. The world flagship, the hobgoblin settlement
-**Mjaamjaenoenoanoagoo**, holds 17 souls in temperate forest, and the chief
-goblin settlement **Nobzxekngatnoenoa** holds 2 — real, phonology-drawn
-names (Campaign Y2-3, The Tongues; Campaign 27, The Words). Populations run
-far smaller than the pre-cutover flat model's, because competition divides
-each cell's capacity among its rivals rather than handing it whole to one
-independently-condensed field. The gallery holds the exit-demo pair: [The
+goblinoids two new members) share the landscape, but history now separates
+them into distinct territories and each holds its own chief settlement: the
+bugbear **Qvooshtvoagootao** (118 souls, tropical-seasonal-forest) is the
+world flagship, with the hobgoblin **Bqoabtoonoagoo** (110), the kobold
+**Roqrrarogxok** (110), and the goblin **Zhvekngokngaknoenoanoaboo** (90)
+each holding their own — real, phonology-drawn names (Campaign Y2-3, The
+Tongues; Campaign 27, The Words). Populations run larger than the equilibrium
+snapshot's, because a settlement's headcount is now something that *grew*
+there over the history rather than a single field readout. The gallery holds
+the exit-demo pair: [The
 Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
-tidally-locked twin](../gallery/settlement-seed-42-locked.md) (71
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (128
 settlements), where habitability's collapse toward the terminator ring
 (Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm
@@ -202,6 +246,11 @@ scatter to the carrying-capacity field and its condensation.
 
 **The tier ladder ahead:** the multi-species exclusion this campaign
 loosened, restored properly by a coexistence stack layered on the field;
-settlement histories — founding, growth, fission, abandonment — as the
-field gains a clock; inter-settlement relationships and trade; and a
-pinnable flagship-selection override (spec §9, deferred as showpiece-only).
+inter-settlement relationships, trade, and a real transport topology for
+diaspora and conflict (the connection-graph campaign next in the
+living-community program); and a pinnable flagship-selection override (spec
+§9, deferred as showpiece-only). *Settlement histories — founding, growth,
+migration, abandonment — have since landed:* the field gained a clock in [The
+Living Community](../chronicle/the-living-community.md), which grows the
+present world as the last frame of a derived deep history rather than placing
+it fully formed at genesis.

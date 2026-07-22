@@ -62,13 +62,21 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
         "doctrines_of must cover exactly every organized placed culture"
     );
 
-    // Negative arm: sweep seeds 1..=10 for any species whose flagship's
-    // committed cult-form is "folk" -> doctrine_of must gate to None. If
-    // the sweep finds no such culture at all, PANIC (fail loudly, the C5
-    // F2 lesson) rather than silently passing a law whose negative arm was
-    // never exercised.
+    // Negative arm: sweep for any species whose flagship's committed
+    // cult-form is "folk" -> doctrine_of must gate to None. If the sweep
+    // finds no such culture at all, PANIC (fail loudly, the C5 F2 lesson)
+    // rather than silently passing a law whose negative arm was never
+    // exercised.
+    //
+    // Widened under The Living Community epoch (this merge) from 1..=10 to
+    // 1..=60: the deep-history bake grows flagship communities large enough
+    // that most clear the SOC-1 organized gate, so folk flagships became
+    // rare — the first now appears at seed 56 (goblin). The wider range is
+    // the minimal window that still reaches a real folk flagship and keeps
+    // this negative arm exercised (the property itself — doctrine iff
+    // organized — is unchanged and holds across the whole sweep).
     let mut found_folk = false;
-    for seed in 1..=10u64 {
+    for seed in 1..=60u64 {
         let w = generated(seed);
         for (kind, village) in hornvale_worldgen::placed_peoples(&w) {
             if hornvale_religion::cult_form_held_by(&w, village.id).as_deref() == Some("folk") {
@@ -82,7 +90,7 @@ fn the_soc1_gate_is_the_flagship_cult_form() {
     }
     assert!(
         found_folk,
-        "SOC-1's negative arm found NO folk-cult-form flagship across seeds 1..=10 — this must \
+        "SOC-1's negative arm found NO folk-cult-form flagship across seeds 1..=60 — this must \
          not silently pass. Add a synthetic-society unit test driving doctrine_of directly \
          against a hand-built world whose flagship's committed cult-form is \"folk\" instead of \
          relying on this sweep."

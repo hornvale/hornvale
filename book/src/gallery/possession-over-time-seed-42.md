@@ -13,58 +13,58 @@ settlement's real, measured outcome. The world still moves only
 inside a possess session; a freshly built world commits none of this.)*
 
 ```text
-[room 694550540, day 0]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is clear but for high cirrus.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
-[room 694550540, day 0]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is clear but for high cirrus.
+[room 738918402, day 0]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
-3 NPC(s) derived this session:
-  [136] hobgoblin of Foenjoavaenoenoanoagoo
-  [137] hobgoblin of Njeoxaeveanoagoo
-  [138] hobgoblin of Qbaetteemjaonoenoa
+7 NPC(s) derived this session:
+  [245] bugbear of Qvooshtvoagootao
+  [246] kobold of Xatxoratrro
+  [247] bugbear of Shngaodvaashqoa
+  [248] a wild rust-monster
+  [249] a wild otyugh
+  [250] a wild xorn
+  [251] a wild giant-elk
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo looks lost, unsure where to turn.
+The bugbear of Qvooshtvoagootao seems content.
 > wait 5
 Time passes; the world keeps its shape.
 > look
-[room 694550540, day 5]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
+[room 738918402, day 5]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo casts about for water.
+The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (6 stirred).
+Time passes. You sense movement nearby (28 stirred).
 > look
-[room 694550540, day 6]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is clear but for high cirrus.
+[room 738918402, day 6]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo grows restless.
+The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes; the world keeps its shape.
+Time passes. You sense movement nearby (27 stirred).
 > look
-[room 694550540, day 7]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
+[room 738918402, day 7]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo settles down to rest.
+The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
-hobgoblin of Foenjoavaenoenoanoagoo:
-- canonical name of an entity: hobgoblin of Foenjoavaenoenoanoagoo (asserted by the-quickening)
-- an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5)
-- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5)
-
+No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (123 stirred).
+Time passes. You sense movement nearby (1267 stirred).
 > look
-[room 694550540, day 97]
-You stand in temperate forest — a shaft of clear light sun-warmed — in the lands of Foenjoavaenoenoanoagoo. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is fair, with scattered cumulus.
+[room 738918402, day 97]
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The hobgoblin of Foenjoavaenoenoanoagoo settles down to rest.
+The bugbear of Qvooshtvoagootao eats its fill.
 > release
 You let go.
 ```

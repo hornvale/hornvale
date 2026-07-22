@@ -40,37 +40,43 @@ fn beta_matches_the_preregistered_roster() {
 
 #[test]
 fn the_day_binds_by_period_match_never_identity() {
-    // Measured (seed 10, hobgoblin): the day entry fires Agentive, bound
-    // to the deity whose re-derived period (1.29 std days) matches the
-    // world's committed day length within 1% relative tolerance — the
-    // shortest-period cyclic belief in hobgoblin's pantheon (manner
-    // Brisk). Binding is by PERIOD alone; this test additionally verifies
-    // the bound agent name against the ledger's OWN `deity-name` fact
-    // (not just the `Belief.deity` copy) so the pin is truly identity-
-    // free: nothing here ever asks which phenomenon produced the belief.
-    let w = generated(10);
+    // Measured (seed 4, bugbear): the day entry fires Agentive, bound to
+    // the deity whose re-derived period matches the world's committed day
+    // length within 1% relative tolerance — a cyclic belief in bugbear's
+    // pantheon (manner Brisk). Binding is by PERIOD alone; this test
+    // additionally verifies the bound agent name against the ledger's OWN
+    // `deity-name` fact (not just the `Belief.deity` copy) so the pin is
+    // truly identity-free: nothing here ever asks which phenomenon produced
+    // the belief.
+    //
+    // Re-pointed under The Living Community epoch (this merge): the prior
+    // anchor (seed 10 hobgoblin) no longer fires an Agentive day-schema —
+    // the epoch re-placed every world, so its day now reads Balance
+    // (deity-free). Seed 4 bugbear is the nearest surviving seed whose day
+    // still fires the Agentive-bound-by-period case this test exercises.
+    let w = generated(4);
     let voices = accounts_of(&w);
     let hobgoblin = voices
         .iter()
-        .find(|v| v.kind == "hobgoblin")
-        .expect("hobgoblin must place at seed 10");
+        .find(|v| v.kind == "bugbear")
+        .expect("bugbear must place at seed 4");
 
     let day = hobgoblin
         .account
         .entries
         .iter()
         .find(|e| e.fact.predicate == "day-length-std")
-        .expect("a day-length-std ground fact must exist at seed 10");
+        .expect("a day-length-std ground fact must exist at seed 4");
 
     let day_value = match &day.fact.object {
         hornvale_kernel::Value::Number(n) => *n,
         other => panic!("day-length-std must be a Number, got {other:?}"),
     };
-    let cyclic = cyclic_beliefs_of(&w, "hobgoblin");
+    let cyclic = cyclic_beliefs_of(&w, "bugbear");
     let matched = cyclic
         .iter()
         .find(|(_, p)| (*p - day_value).abs() < 0.01 * day_value)
-        .expect("a day-matched cyclic belief must exist at seed 10 hobgoblin");
+        .expect("a day-matched cyclic belief must exist at seed 4 bugbear");
     let deity_name_fact = w
         .ledger
         .text_of(matched.0.id, hornvale_religion::DEITY_NAME)
@@ -84,7 +90,7 @@ fn the_day_binds_by_period_match_never_identity() {
             )),
             schema: SchemaId::Agentive,
             agent: Some(deity_name_fact.to_string()),
-            lexeme: Some(hornvale_language::LexemeId("stalks")),
+            lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Brisk,
         }
     );
@@ -195,13 +201,13 @@ fn moons_explained_only_where_kept() {
     // pantheon's longest — manner Slow); goblin's stays plain Lost, never
     // Explained.
     //
-    // Re-pinned again under The Demesne (BIO-35 Stage 1 per-axis supply, this
-    // merge): seed 2's kobold re-derived its settlement demography once more,
-    // so its language re-mapped and the Slow manner verb shifted
-    // "drives" -> "stalks". The agent ("Nggo"), schema (Agentive), underlying
-    // (Kept), and manner (Slow) are all unchanged — only the drawn lexeme
-    // moved, the expected signature of a language re-derivation. (Under The
-    // Rains it had shifted "strides" -> "drives".)
+    // Re-pinned again under The Living Community epoch (history is the sole
+    // settlement placer, this merge): seed 2's kobold re-derived its
+    // settlement demography once more, so its language re-mapped and the Slow
+    // manner verb shifted "stalks" -> "strides". The agent ("Nggo"), schema
+    // (Agentive), underlying (Kept), and manner (Slow) are all unchanged —
+    // only the drawn lexeme moved, the expected signature of a language
+    // re-derivation. (Prior drifts: strides -> drives -> stalks -> strides.)
     let w = generated(2);
     let voices = accounts_of(&w);
     let kobold = voices
@@ -225,7 +231,7 @@ fn moons_explained_only_where_kept() {
             underlying: Box::new(Disposition::Kept),
             schema: SchemaId::Agentive,
             agent: Some("Nggo".to_string()),
-            lexeme: Some(hornvale_language::LexemeId("stalks")),
+            lexeme: Some(hornvale_language::LexemeId("strides")),
             manner: Manner::Slow,
         }
     );

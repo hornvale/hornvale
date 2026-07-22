@@ -51,6 +51,8 @@ usage:
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
+  hornvale history --world <PATH> --site <CELL>
+                          read a site's stratigraphy + flesh (the deep history of one cell)
   hornvale locale --world W [--at LAT,LON | --room ID] [--depth D] [--json]
                           describe one room: biome, fields, regime, exits
   hornvale locale --world W --sample N [--depth D]
@@ -110,6 +112,7 @@ fn main() -> ExitCode {
         Some("settlement-map") => cmd_settlement_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
         Some("scene") => cmd_scene(&args),
+        Some("history") => cmd_history(&args),
         Some("locale") => cmd_locale(&args),
         Some("concepts") => cmd_concepts(&args),
         Some("streams") => cmd_streams(),
@@ -287,6 +290,21 @@ fn cmd_almanac(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Read one site's deep history off the world's ledger: its stratigraphy of
+/// occupation layers plus the derived flesh in the present-day grass.
+fn cmd_history(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let raw = flag_value(args, "--site").ok_or("history: --site <CELL> is required")?;
+    let cell: u32 = raw
+        .parse()
+        .map_err(|_| format!("history: bad --site '{raw}' (must be a non-negative cell index)"))?;
+    print!(
+        "{}",
+        hornvale_almanac::history::render_site(&world, hornvale_kernel::CellId(cell))
+    );
+    Ok(())
+}
+
 /// The first positional (non-flag) argument after the subcommand, skipping
 /// `--world <value>` and any other `--flag`. `None` if only flags are present.
 fn positional_target(args: &[String]) -> Option<&str> {
@@ -386,6 +404,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: true,
+                wild_agents: true,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -400,6 +419,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: false,
+                wild_agents: true,
             },
             stdin.lock(),
             stdout.lock(),

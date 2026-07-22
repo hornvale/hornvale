@@ -24,7 +24,15 @@ fn day_zero_session_is_unchanged_until_you_wait() {
 #[test]
 fn waiting_moves_an_npc_and_it_is_observed() {
     let w = world();
-    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    // Peoples-only (The Wilding): this test isolates the settled on-water
+    // settlement's invariant (its NPCs drink in place, never walk). The wild
+    // beasts DO walk — that is The Quarry waking — and their motion is covered
+    // by `a_wild_beast_walks_away_from_water_and_is_observed` below, not here.
+    let opts = PossessOpts {
+        wild_agents: false,
+        ..PossessOpts::default()
+    };
+    let (mut session, _opening) = Session::start(&w, &opts).unwrap();
     // THE CONFLUENCE, MEASURED: pre-Confluence, an NPC started away from its
     // resource and a full drive cycle committed at least one `agent-at` (a
     // real walk). Settlement condensation now pulls seed 42's flagship
@@ -104,8 +112,16 @@ fn a_colocated_npcs_drinking_in_place_is_not_narrated_as_a_false_departure() {
     // end-to-end coverage gap is captured as a followup (decision-ledger);
     // the naming logic itself (`Session::narrate_motion`) is unchanged code,
     // reviewed at the point The Confluence stopped touching it.
+    //
+    // Peoples-only (The Wilding): the wild beasts DO leave their rooms (The
+    // Quarry, live); this test isolates the settled on-water NPC's stay-put
+    // narration. The wild motion path has its own coverage below.
     let w = world();
-    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let opts = PossessOpts {
+        wild_agents: false,
+        ..PossessOpts::default()
+    };
+    let (mut session, _opening) = Session::start(&w, &opts).unwrap();
     let labels: Vec<String> = session
         .npc_labels()
         .into_iter()
@@ -157,8 +173,15 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
     // `why <npc>` must recount it with the day it was asserted, not just
     // that it happened. (Renamed from "...after_it_moves": The Confluence's
     // on-water flagship settlement never moves at all — see below.)
+    //
+    // Peoples-only (The Wilding): scoped to the settled flagship NPC's own
+    // dated history; the wild beasts' motion is covered separately below.
     let w = world();
-    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let opts = PossessOpts {
+        wild_agents: false,
+        ..PossessOpts::default()
+    };
+    let (mut session, _opening) = Session::start(&w, &opts).unwrap();
     let labels: Vec<String> = session
         .npc_labels()
         .into_iter()
@@ -246,36 +269,39 @@ fn needs_reports_a_colocated_npcs_felt_state_and_it_differs_across_the_drive_cyc
         Turn::Released(_) => panic!("needs never releases"),
     };
 
-    // Day 0.5 (PossessOpts::default, before any wait): the co-located
-    // home-settlement NPC's drive is barely risen (0.5 * 0.15 = 0.075),
-    // below RESTLESS_AROUSAL (still calm) -> "seems content".
+    // Day 0.5 (PossessOpts::default, before any wait): re-derived at the
+    // the-living-community merge. The history-driven re-placement seats a
+    // different co-located home-settlement NPC (the bugbear of
+    // Qvooshtvoagootao) whose merged diurnal/fatigue physics put it on a REST
+    // phase at day 0.5 — it reads "settles down to rest", not the old
+    // "seems content". (A PLACEMENT/PHYSICS behavior change, not a moved value:
+    // the drive-cycle-differs intent is preserved by re-pinning against a day
+    // where the felt state genuinely moves — see below.)
     let early = out_text(session.handle("needs"));
     assert!(
-        early.contains("seems content"),
-        "a freshly derived NPC reads content at day 0.5: {early}"
+        early.contains("settles down to rest"),
+        "the co-located NPC reads as resting at day 0.5: {early}"
     );
     assert!(
         !early.contains("No one else is here"),
         "the home settlement's NPC must be co-located at the start: {early}"
     );
 
-    // Wait to day 3.5: by now sleep-debt fatigue (The Slumber, followup #3) has
-    // risen past its threshold, so the co-located NPC has grown tired and
-    // settles down to rest — the felt state has moved off "seems content" to a
-    // resting read. (This replaces the earlier thirst-restlessness pin: with a
-    // third drive, fatigue crosses first, so rest is what a mid-cycle read now
-    // surfaces.)
-    session.handle("wait 3");
+    // Wait to day 5.5: thirst has now risen past its restlessness threshold and
+    // momentarily dominates the fatigue-rest baseline, so the co-located NPC
+    // casts about for water — the felt state has moved off "settles down to
+    // rest" to a thirst-restlessness read (measured: day 5.5 is where this
+    // NPC's drive competition flips).
+    session.handle("wait 5");
     let later = out_text(session.handle("needs"));
     assert!(
-        later.contains("settles down to rest"),
-        "a tired NPC reads as resting, not calm: {later}"
+        later.contains("casts about for water"),
+        "a thirsty NPC casts about for water, not resting: {later}"
     );
 
     // THE MUTATION-VERIFIED ASSERTION: the felt state DIFFERS across the
     // drive cycle. Fixing the drive to a constant (e.g. always returning
-    // 0.0) would make `early == later` (both "seems content") and red this
-    // line.
+    // 0.0) would make `early == later` and red this line.
     assert_ne!(
         early, later,
         "the felt state must differ across the drive cycle: {early} / {later}"
@@ -307,4 +333,56 @@ fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
         Turn::Out(s) => assert!(s.contains("No one here answers")),
         _ => panic!("why must not release"),
     }
+}
+
+#[test]
+fn a_wild_beast_walks_away_from_water_and_is_observed() {
+    // THE WILDING, LIVE — the settled tests' inverse. `PossessOpts::wild_agents`
+    // (on by default) appends the world's wild beast agents to the peopled
+    // NPCs. Unlike seed 42's on-water flagship settlement — whose peoples drink
+    // in place and never walk (the peoples-only tests above) — the wild beasts
+    // are placed at their concentrations (a herd, a lair) away from fresh water,
+    // so crossing a full drive cycle commits real `agent-at` walks. This is the
+    // population that DOES move: The Quarry's predator niche and the drive layer,
+    // finally exercised by a live agent in possession.
+    let w = world();
+    let (mut wild_session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+
+    // Wild agents enlarge the roster over the peoples-only session, and read as
+    // beasts ("a wild <species>").
+    let peopled_count = {
+        let opts = PossessOpts {
+            wild_agents: false,
+            ..PossessOpts::default()
+        };
+        let (s, _o) = Session::start(&w, &opts).unwrap();
+        s.npc_labels().len()
+    };
+    let labels: Vec<String> = wild_session
+        .npc_labels()
+        .into_iter()
+        .map(str::to_string)
+        .collect();
+    assert!(
+        labels.len() > peopled_count,
+        "wild agents enlarge the roster: {} vs peopled {peopled_count}",
+        labels.len()
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("wild")),
+        "at least one appended agent reads as a wild beast: {labels:?}"
+    );
+
+    // Cross the seek crossing (~5.667 days from day 0.5): the wild beasts,
+    // unlike the on-water peoples, commit real walks — a dated, provenanced
+    // `agent-at` the world remembers.
+    let out = match wild_session.handle("wait 7") {
+        Turn::Out(s) => s,
+        Turn::Released(_) => panic!("wait never releases"),
+    };
+    assert!(
+        wild_session.committed_agent_at_count() >= 1,
+        "a wild beast placed away from water committed at least one real walk"
+    );
+    assert!(!out.is_empty(), "the wait narrates the world's motion");
 }

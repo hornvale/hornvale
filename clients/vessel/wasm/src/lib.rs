@@ -78,6 +78,7 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
     let opts = PossessOpts {
         day: WorldTime { day: 0.0 },
         echo: false,
+        wild_agents: true,
     };
     match Session::start(world_ref, &opts) {
         Ok((session, opening)) => {

@@ -3,7 +3,7 @@
 
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs,
+    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs, derive_wild_npcs,
 };
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
@@ -15,6 +15,10 @@ use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 /// How many NPCs a session derives (spec §4: a small authored constant, not
 /// every settlement — the flagship's own leader plus a couple of neighbors).
 const NPC_COUNT: usize = 3;
+
+/// How many WILD beast agents a session derives (The Wilding) — a small handful
+/// of the world's fauna (a herd, a lair) walking alongside the peoples.
+const WILD_COUNT: usize = 4;
 
 /// The closed fallback line `consult` renders when no initiated line
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
@@ -62,6 +66,14 @@ pub struct Session<'w> {
     /// The world's calendar, built once at `start`, so the NPC wake cycle reads
     /// the real sun (The Slumber Tier-1); `None` on a world with no sky.
     calendar: Option<hornvale_astronomy::Calendar>,
+    /// The world's predator-pressure field (The Quarry), computed once at
+    /// `start`, so the danger drive senses carnivore territory; `None` if the
+    /// demography fit fails.
+    predator: Option<hornvale_kernel::CellMap<f64>>,
+    /// The world's prey-pressure field (The Teeth), computed once at `start`, so
+    /// a carnivore's hunger senses prey territory; `None` if the demography fit
+    /// fails.
+    prey: Option<hornvale_kernel::CellMap<f64>>,
 }
 
 impl<'w> Session<'w> {
@@ -99,12 +111,26 @@ impl<'w> Session<'w> {
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
-        let npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
+        let mut npcs = derive_npcs(world, &ctx, &mut ledger, NPC_COUNT, agent.village.id);
+        // The Wilding: append a few wild beast agents (a herd, a lair) so the
+        // world's fauna walks alongside its peoples — and a herbivore beast
+        // finally fears predator ground (The Quarry, live). Off only for the
+        // settled-population narration unit tests that isolate the peopled path.
+        if opts.wild_agents {
+            npcs.extend(derive_wild_npcs(world, &ctx, &mut ledger, WILD_COUNT));
+        }
         // Build the world's calendar once, for the NPC wake cycle's real-sun
         // read (The Slumber Tier-1). Absent (no sky) → the fractional-day sun.
         let calendar = hornvale_worldgen::sky_of(world)
             .ok()
             .and_then(|sky| sky.calendar().cloned());
+        // Compute the predator-pressure field once (The Quarry), so the danger
+        // drive senses carnivore territory. A demography fit — bounded to session
+        // start; `None` on failure (danger simply loses its PREDATOR axis).
+        let predator = hornvale_worldgen::predator_pressure(world).ok();
+        // The prey-pressure field (The Teeth), so a carnivore's hunger senses
+        // prey territory — the dual of the predator field, same one-shot fit.
+        let prey = hornvale_worldgen::prey_pressure(world).ok();
         let mut session = Session {
             world,
             ctx,
@@ -118,6 +144,8 @@ impl<'w> Session<'w> {
             registry,
             npcs,
             calendar,
+            predator,
+            prey,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -331,7 +359,12 @@ impl<'w> Session<'w> {
         self.day = WorldTime {
             day: self.day.day + days,
         };
-        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
+        let terrain = LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+        );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
@@ -499,7 +532,12 @@ impl<'w> Session<'w> {
         // Read each co-located NPC's felt state through the SAME arbitration
         // that drives it (spec §7) — the affect label coloured by what the
         // feeling is about (its intentional object), not a bare thirst scalar.
-        let terrain = LocaleTerrain::with_calendar(&self.ctx, self.calendar.as_ref());
+        let terrain = LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+        );
         here.iter()
             .map(|npc| {
                 let affect = affect_of(&self.ledger, npc, self.day, &terrain);

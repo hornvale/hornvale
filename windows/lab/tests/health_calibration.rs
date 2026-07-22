@@ -67,20 +67,33 @@ fn trace(labels: &[AffectLabel]) -> AffectTrace {
 #[test]
 fn the_null_control_reads_no_chronic_distress() {
     // A real, healthy world (seed 42's flagship settlement condenses onto fresh
-    // water) reads NO CHRONIC distress — the alarm the metric exists to fire. It
-    // is deterministic and its instantaneous prevalence is NEGLIGIBLE: under the
-    // real sun and a diurnal climate (The Slumber Tier-1), a healthy population
-    // may catch a momentary blip (a one-tick block, a mid-morning warm spell) —
-    // that is life in a varied world, not a bug. The alarm is chronicity, and it
-    // stays silent.
+    // water) reads NO CHRONIC distress — the alarm the metric exists to fire —
+    // and what distress it does carry is TRANSIENT and RECOVERS.
+    //
+    // Re-derived at the-living-community merge (Nathan's "chronic philosophy"
+    // call): The Slumber's diurnal climate plus this campaign's history-driven
+    // re-placement seat the flagship in an honestly VARIED world, so it now
+    // carries ~0.2 instantaneous prevalence of momentary blips (a one-tick
+    // block, a mid-morning warm spell) that RECOVER — "life in a varied world,
+    // not a bug," exactly as this test's own comment already said. The old
+    // `prevalence < 0.02` bound was pinned when seed 42's flagship sat on
+    // perfect fresh water under a constant sun (pre-epoch), and no seed now
+    // reads that near-zero (the lowest in the merge sweep is ~0.07). Loosening
+    // the number to pass would be the seed-shopping ADR-0016 forbids; instead we
+    // anchor on the metric's actual PHILOSOPHY (The Slumber §7/§8): the alarm is
+    // CHRONICITY (a distress run that never returns to health → `chronicity > 0`
+    // and `recovery_ticks == None`), and a healthy-but-varied world is precisely
+    // one where chronicity stays silent AND every distress run recovers
+    // (`recovery_ticks.is_some()`). Instantaneous prevalence is not the alarm and
+    // is no longer bounded here.
     let a = health_report(&simulate_world(&world(42)));
     let b = health_report(&simulate_world(&world(42)));
     assert_eq!(a, b, "same world -> same report (deterministic)");
     assert_eq!(a.chronicity, 0.0, "healthy world: no one chronically stuck");
     assert!(
-        a.prevalence < 0.02,
-        "healthy world: distress is negligible transient, not sustained: {}",
-        a.prevalence
+        a.recovery_ticks.is_some(),
+        "healthy world: its distress is transient and recovers (never a chronic \
+         run that never returns to health): {a:?}"
     );
 }
 

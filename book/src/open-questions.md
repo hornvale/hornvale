@@ -390,9 +390,16 @@ form, no iteration, no clock — and equilibrium is not the same claim as
 "vary time." What remains open splits cleanly along the same
 checkability line this whole chapter runs on. Giving the field a clock —
 temporal relaxation, and the founding/growth/fission/abandonment history
-that only becomes tellable once population moves — is squarely part of the
-vary-time horizon above: it inherits that bet's shape and has not yet been
-attempted. A second, narrower piece is not a time question at all: today's
+that only becomes tellable once population moves — **has now landed**: *The
+Living Community* (the living-community engine's first campaign) grows the
+present world as the last frame of a coarse forward history run over the
+capacity field, now ticked per-era by paleoclimate, so settlements found,
+grow, migrate, and end across ~2000 years and leave standing ruins. That is
+the *placement* half of the vary-time horizon; the deeper bet above — a
+blind-attribution metric over thousands of worlds against a zero-forcing null
+control whose present is indistinguishable from its genesis — is not thereby
+settled and stays open at the top of the checkability gradient. A second,
+narrower piece is not a time question at all: today's
 condensation runs each species' field independently, which loosens the old
 rule keeping different peoples' settlements apart. Packing multiple
 species onto one landscape properly — footprint-scaled home ranges, a
@@ -430,11 +437,21 @@ both measured rather than asserted: the **prey axis** (dragons and predators
 still hold no place) waits on Stage 2's trophic food-web field, and — newly
 surfaced by the shipped half — the four small **peoples** do not diversify at
 all, because their authored niches carry zero weight on any axis this stage
-spatialized, leaving them competing on one shared forage number. That last is
-not a tuning shortfall but its own open design question (an order-independent
-territory force — a field or a fixed point, never a cumulative tally), and the
-preregistered `≥6`-distinct-dominants test stays honestly `#[ignore]`d as its
-remaining target. So the rescore moves the **abiotic** stronghold debt from
-open to **banked and measured**, holds the prey-stronghold debt against
-Stage 2, adds the peoples-territory question as a new named bet, and leaves
-the vary-time debt still open.
+spatialized, leaving them competing on one shared forage number. That last was
+named its own open design question (an order-independent territory force — a
+field or a fixed point, never a cumulative tally); the preregistered
+`≥6`-distinct-dominants test — a *material*-dominance target spanning all
+sixteen kinds — stays honestly `#[ignore]`d as its remaining target. **The
+peoples half of that question has since been answered, but from the other
+axis.** *The Living Community* separates the four near-identical goblinoids not
+by a spatial resource force at all but by **history**: history-first placement
+grows them at different founding sites and displaces them along different
+climate paths, so they end up holding distinct territories (region-of-influence
+overlap 0.055 on seed 42, every sampled seed under 0.06) — diversity by *time*
+where the spatial axes had none to give. It resolved to the checkable tier;
+it was architecture, not taste. So the rescore moves the **abiotic** stronghold
+debt from open to **banked and measured**, holds the prey-stronghold debt
+against Stage 2, moves the **peoples-territory** bet from open to **answered by
+history-first placement** (a time resolution, not the anticipated spatial one),
+and — the field having gained its clock — narrows the vary-time debt to its
+blind-attribution core, still open.
