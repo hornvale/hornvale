@@ -3305,6 +3305,7 @@ pub fn lexicon_of_in(
         &proto_ph,
         &exposures,
         &daughters,
+        hornvale_language::CascadeRegime::SETTLED,
     ))
 }
 
@@ -3342,6 +3343,7 @@ fn lexicon_of_in_from(
         &proto_ph,
         &exposures,
         &daughters,
+        hornvale_language::CascadeRegime::SETTLED,
     ))
 }
 
@@ -3947,7 +3949,14 @@ fn build_to(
         lexicons.insert(
             name,
             hornvale_language::build_lexicon(
-                &seed, name, fam_label, ph, &proto_ph, &exposures, &daughters,
+                &seed,
+                name,
+                fam_label,
+                ph,
+                &proto_ph,
+                &exposures,
+                &daughters,
+                hornvale_language::CascadeRegime::SETTLED,
             ),
         );
     }
@@ -7951,6 +7960,7 @@ mod tests {
             &ph,
             &ex,
             &daughters,
+            hornvale_language::CascadeRegime::SETTLED,
         );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
     }

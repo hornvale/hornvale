@@ -147,6 +147,7 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
         &kph,
         &kex,
         &kdaughters,
+        hornvale_language::CascadeRegime::SETTLED,
     );
     assert_eq!(
         hornvale_worldgen::lexicon_of(&world, "kobold").expect("lexicon_of(kobold) must succeed"),

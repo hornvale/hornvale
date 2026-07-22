@@ -74,8 +74,8 @@ pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
 pub use etymology::{
-    AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
-    draw_cascade, evolve, proto_root,
+    AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
+    assign_proto_roots, draw_cascade, draw_cascade_with_regime, evolve, proto_root,
 };
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
