@@ -20,6 +20,8 @@ pub mod shape;
 pub mod streams;
 pub mod water;
 
+pub use streams::stream_labels;
+
 pub use boundaries::{BoundaryKind, CellBoundary};
 pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
@@ -58,73 +60,6 @@ pub const IS_PLACE: &str = "is-place";
 /// Predicate giving a place's biome.
 /// type-audit: bare-ok(identifier-text)
 pub const BIOME: &str = "biome";
-
-/// Every seed-derivation label this crate uses, with docs. All chains hang
-/// off the world seed's "terrain" derivation. Labels are permanent
-/// save-format contracts.
-/// type-audit: bare-ok(identifier-text)
-pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![
-        ("terrain", "root stream for tectonic genesis"),
-        ("terrain/plate-count", "how many plates"),
-        (
-            "terrain/plate-seeds",
-            "per-plate seed positions on the sphere",
-        ),
-        (
-            "terrain/plate-motion",
-            "per-plate Euler pole axis and rate draws",
-        ),
-        ("terrain/maturity", "per-plate orogenic maturity draws"),
-        (
-            "terrain/hotspots",
-            "hotspot count, positions, and strengths",
-        ),
-        ("terrain/ocean-fraction", "target ocean fraction draw"),
-        (
-            "terrain/coast-render",
-            "render-lens coastline noise (hash-noise only; no stream draws)",
-        ),
-        (
-            "terrain/cratons",
-            "margin draw (scales the ocean-fraction-derived budget, Task 9 \
-             iteration 3'), craton count, then per-craton center/radius/age",
-        ),
-        (
-            "terrain/plate-weights",
-            "per-plate heavy-tailed Voronoi weight draws",
-        ),
-        (
-            "terrain/plate-edge",
-            "plate-edge noise (hash-noise only; no stream draws)",
-        ),
-        (
-            "terrain/lithology",
-            "lithology sub-cell hash-noise (hash-noise only; no stream draws)",
-        ),
-        (
-            "terrain/microcontinents",
-            "fixed candidate count, then per candidate position/radius/age",
-        ),
-        (
-            "terrain/terranes",
-            "terrane count, then per terrane host-craton index/bearing/size/age",
-        ),
-        (
-            "terrain/arc-gate",
-            "along-strike island-arc gating noise (hash-noise only; no stream draws)",
-        ),
-        (
-            "terrain/relief",
-            "fBm relief-detail noise (hash-noise only; no stream draws)",
-        ),
-        (
-            "terrain/rift",
-            "ONE spreading-rate draw; per-seam geometry via hash sub-derivations \
-             (seam-{a}-{b}); no other sequential draws",
-        ),
-    ]
-}
 
 /// Register terrain's contribution to the concept registry: the tier-0
 /// place predicates plus the tectonic summary predicates. Idempotent.
@@ -322,7 +257,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 17);
+        assert_eq!(labels.len(), 22);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");
