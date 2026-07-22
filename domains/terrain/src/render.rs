@@ -415,13 +415,16 @@ mod tests {
     }
 
     #[test]
-    fn column_png_is_a_nonempty_raster() {
+    fn column_png_is_well_formed_and_byte_deterministic() {
         let geo = Geosphere::new(3);
         let globe = crate::generate(Seed(42), &geo, &crate::TerrainPins::default())
             .unwrap()
             .globe;
-        let png = column_png(&geo, &globe);
-        assert!(png.len() > 8, "expected encoded PNG bytes");
+        let a = column_png(&geo, &globe);
+        assert_eq!(a, column_png(&geo, &globe));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
     }
 
     #[test]
