@@ -2449,7 +2449,12 @@ pub fn alarm_field(
         // The ALARM-FREE read (the build invariant): `affect_of` senses only the
         // terrain hazards, never borrowed alarm — so emission is terrain-sourced
         // by construction and the wave terminates.
-        let affect = affect_of(frozen, npc, day, terrain);
+        // The Tidings: an EMPTY band — the field reads each creature's intrinsic
+        // affect (its own home-anchored belief), not band-shared belief.
+        // Belief-sharing is orthogonal to terrain-fear emission, and `&[]`
+        // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly, so
+        // the alarm field is unchanged by this campaign.
+        let affect = affect_of(frozen, npc, &[], day, terrain);
         let primary_afraid =
             affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT;
         if !primary_afraid {
@@ -3800,6 +3805,7 @@ mod tests {
             temps: std::collections::BTreeMap::new(),
             forage: std::collections::BTreeMap::new(),
             threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
         };
         let knower_e = ledger.mint_entity();
         let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
