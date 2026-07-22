@@ -25,10 +25,10 @@
 <rect x="416.3" y="220.8" width="60.4" height="15.2" fill="#5b8dd9" rx="2" />
 <text x="446.5" y="216.8" font-size="11" fill="currentColor" text-anchor="middle">38</text>
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[5, 6)</text>
-<rect x="487.3" y="116.4" width="60.4" height="119.6" fill="#5b8dd9" rx="2" />
-<text x="517.5" y="112.4" font-size="11" fill="currentColor" text-anchor="middle">299</text>
+<rect x="487.3" y="117.2" width="60.4" height="118.8" fill="#5b8dd9" rx="2" />
+<text x="517.5" y="113.2" font-size="11" fill="currentColor" text-anchor="middle">297</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 6</text>
-<rect x="558.3" y="191.6" width="60.4" height="44.4" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="187.6" font-size="11" fill="currentColor" text-anchor="middle">111</text>
+<rect x="558.3" y="190.8" width="60.4" height="45.2" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="186.8" font-size="11" fill="currentColor" text-anchor="middle">113</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">absent</text>
 </svg>
