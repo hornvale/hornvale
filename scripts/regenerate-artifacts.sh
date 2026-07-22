@@ -189,6 +189,8 @@ run -p hornvale -- paleo-map --world "$wsky" --out book/src/gallery/paleo-seed-4
 # sibling yet, so the markdown goes to /dev/null.
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/sediment-seed-42.png \
     --field sediment > /dev/null
+run -p hornvale -- map --world "$wsky" --out book/src/gallery/column-seed-42.png \
+    --field column > book/src/gallery/column-seed-42.md
 run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-seed-42.png \
     > book/src/gallery/star-chart-seed-42.md
 

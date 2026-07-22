@@ -205,6 +205,41 @@ impl GeneratedTerrain {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
     }
 
+    /// The geothermal gradient at a cell (K/km) — the deep's energy base.
+    pub fn geothermal_gradient_at(&self, id: CellId) -> crate::strata::GeothermalGradient {
+        crate::strata::geothermal_gradient(
+            self.crust_thickness_at(id),
+            self.crust_age_at(id),
+            self.is_continental_at(id),
+        )
+    }
+
+    /// The cell's stratigraphic column — its vertical dimension and deep-time archive.
+    pub fn column_at(&self, id: CellId) -> crate::strata::StratigraphicColumn {
+        let buf = self.material_at(id);
+        crate::strata::column(
+            self.crust_thickness_at(id),
+            self.crust_age_at(id),
+            self.is_continental_at(id),
+            self.sediment_thickness_at(id),
+            buf.soil_depth.get(),
+            self.rock_at(id),
+            buf.basement,
+        )
+    }
+
+    /// Depth to crystalline basement at a cell, metres.
+    /// type-audit: bare-ok(diagnostic-value: return)
+    pub fn depth_to_basement_at(&self, id: CellId) -> f64 {
+        self.column_at(id).depth_to_basement_m
+    }
+
+    /// Whether the cell's column records a nonconformity (missing time).
+    /// type-audit: bare-ok(flag: return)
+    pub fn unconformity_at(&self, id: CellId) -> bool {
+        self.column_at(id).unconformity
+    }
+
     /// Walk-facing appearance vector at a cell (The Ground, spec §3).
     pub fn appearance_at(&self, id: CellId) -> crate::lithology::Appearance {
         crate::lithology::appearance(&self.material_at(id), self.rock_at(id))
