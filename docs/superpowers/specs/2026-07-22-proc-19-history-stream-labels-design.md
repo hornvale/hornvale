@@ -153,6 +153,30 @@ the macro, matching the convention every other migrated crate now
 follows) and retires the hand-typed `stream_labels()` free function
 currently in `lib.rs`.
 
+**Correction (caught by Task 2's own implementer, not anticipated when
+this section was first drafted):** the *generated manifest's* two leg
+rows DO change content, even though the underlying constants don't.
+`domains/history`'s current hand-typed `stream_labels()` publishes
+`RESIDUE`/`STRUCTURES` under their bare, unqualified values (`"residue"`,
+`"structures"`) — unlike `domains/astronomy` and `domains/terrain`, whose
+already-migrated root+leg manifests always publish a leg root-qualified
+(`"astronomy/star-mass"`, `"terrain/plate-count"`) via the macro's
+`concat!` composition. §4.1's own worked example already shows this
+correctly (`concat!("history", "/", "residue")`); this section's earlier
+"every value unchanged" claim conflated *constant values* (genuinely
+unchanged) with *manifest key presentation* (changes for the two legs,
+by design — the new arm reuses the existing root+leg arm's `concat!`
+logic exactly, deliberately, per §4.1). **This is accepted as a
+deliberate correction**, not an unplanned regression: `domains/history`'s
+bare-key rows were the one inconsistency in an otherwise fully saturated
+pattern (every other root+leg crate already qualifies every leg), and
+`domains/history` predates PROC-18's convention entirely, so there was
+never a moment its author could have cross-checked it. No `.derive()`
+call site, test, or downstream consumer anywhere in the codebase asserts
+the old bare-key manifest text (verified by a full-workspace grep) — the
+generated book page's two `history/*` leg rows are the only content
+affected, and regenerating it is part of this task's own Step 5/6.
+
 ## 6. Testing
 
 - `domains/history`'s existing test suite (including
