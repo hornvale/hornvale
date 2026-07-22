@@ -217,6 +217,7 @@
 - [The Massing](./chronicle/the-massing.md)
 - [The Given Word](./chronicle/the-given-word.md)
 - [The Single Saying](./chronicle/the-single-saying.md)
+- [The Compound Word](./chronicle/the-compound-word.md)
 - [The Diorama](./chronicle/the-diorama.md)
 - [The Overworld](./chronicle/the-overworld.md)
 - [The Living Community](./chronicle/the-living-community.md)

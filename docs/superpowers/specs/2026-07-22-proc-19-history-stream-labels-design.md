@@ -2,7 +2,9 @@
 
 **Working campaign name:** The Compound Word.
 
-**Status:** draft, awaiting G3 (spec review).
+**Status:** SHIPPED. Approved at G3 ("LGTM"), fully executed and
+whole-branch reviewed (Ready to merge: Yes). Chronicled as
+[The Compound Word](../../../book/src/chronicle/the-compound-word.md).
 
 **Worktree:** `~/.config/superpowers/worktrees/hornvale/proc-19`, branch `proc-19`, off `main` @5f6489cd.
 

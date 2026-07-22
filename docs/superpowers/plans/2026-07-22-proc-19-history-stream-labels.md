@@ -1,5 +1,9 @@
 # PROC-19: Third `stream_labels!` Arm + `domains/history` Migration Implementation Plan
 
+**Status: COMPLETE.** Both tasks executed, task-reviewed, and passed a
+final whole-branch review (Ready to merge: Yes). Chronicled as
+[The Compound Word](../../../book/src/chronicle/the-compound-word.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a third arm to `hornvale_kernel::stream_labels!` (`kernel/src/seed.rs`) supporting a root+leg group combined with independent flat entries in one invocation, then migrate `domains/history` to it.
