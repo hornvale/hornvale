@@ -82,6 +82,7 @@ pub mod history_emit;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
+pub mod traversal;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -96,6 +97,7 @@ pub use history_emit::{
     goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
 };
 pub use settlement_pins::SettlementPins;
+pub use traversal::{BASE_COST, traversal_cost};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
