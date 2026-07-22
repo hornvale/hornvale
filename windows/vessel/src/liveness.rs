@@ -4165,10 +4165,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
-            temps: std::collections::BTreeMap::new(),
-            forage: std::collections::BTreeMap::new(),
-            threat: std::collections::BTreeMap::new(),
-            prey: std::collections::BTreeMap::new(),
+            ..Default::default()
         };
         let sys = DriveMovements {
             npcs: vec![npc.clone()],
@@ -4271,10 +4268,7 @@ mod tests {
         let t = PlantedTerrain {
             elevations: [(water.clone(), 0.0)].into_iter().collect(),
             fresh: [water.clone()].into_iter().collect(),
-            temps: std::collections::BTreeMap::new(),
-            forage: std::collections::BTreeMap::new(),
-            threat: std::collections::BTreeMap::new(),
-            prey: std::collections::BTreeMap::new(),
+            ..Default::default()
         };
         let sys = DriveMovements {
             npcs: vec![npc],
@@ -4584,6 +4578,7 @@ mod tests {
     /// mirrors `LocaleTerrain`'s undescribable-room fallback), and a planted
     /// SET of fresh-water rooms (the-surmise T5 re-wire: water is no longer
     /// an elevation threshold — `Terrain::is_fresh_water` is authoritative).
+    #[derive(Default)]
     struct PlantedTerrain {
         elevations: std::collections::BTreeMap<RoomAddr, f64>,
         fresh: std::collections::BTreeSet<RoomAddr>,
@@ -4613,12 +4608,8 @@ mod tests {
         /// `downhill_step`/`nearest_water`'s elevation reads).
         fn fresh_only(rooms: impl IntoIterator<Item = RoomAddr>) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
                 fresh: rooms.into_iter().collect(),
-                temps: std::collections::BTreeMap::new(),
-                forage: std::collections::BTreeMap::new(),
-                threat: std::collections::BTreeMap::new(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// No fresh water anywhere — just planted elevations (the
@@ -4626,11 +4617,7 @@ mod tests {
         fn dry(elevations: std::collections::BTreeMap<RoomAddr, f64>) -> Self {
             Self {
                 elevations,
-                fresh: std::collections::BTreeSet::new(),
-                temps: std::collections::BTreeMap::new(),
-                forage: std::collections::BTreeMap::new(),
-                threat: std::collections::BTreeMap::new(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// Just planted per-room temperatures (the thermal-drive tests, which
@@ -4638,24 +4625,16 @@ mod tests {
         /// read `INFINITY` (never chosen as a comfort target).
         fn thermal(temps: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
-                fresh: std::collections::BTreeSet::new(),
                 temps: temps.into_iter().collect(),
-                forage: std::collections::BTreeMap::new(),
-                threat: std::collections::BTreeMap::new(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// Just planted per-room food productivity (the hunger-drive tests).
         /// Rooms without an entry read `DEFAULT_FORAGE` (fed).
         fn forage(forage: impl IntoIterator<Item = (RoomAddr, f64)>) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
-                fresh: std::collections::BTreeSet::new(),
-                temps: std::collections::BTreeMap::new(),
                 forage: forage.into_iter().collect(),
-                threat: std::collections::BTreeMap::new(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// Planted per-room fresh water AND a scalar hazard mapped to the UNCANNY
@@ -4668,10 +4647,7 @@ mod tests {
             threat: impl IntoIterator<Item = (RoomAddr, f64)>,
         ) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
                 fresh: fresh.into_iter().collect(),
-                temps: std::collections::BTreeMap::new(),
-                forage: std::collections::BTreeMap::new(),
                 threat: threat
                     .into_iter()
                     .map(|(r, s)| {
@@ -4684,18 +4660,14 @@ mod tests {
                         )
                     })
                     .collect(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// Planted per-room `Hazards` directly (the per-axis thermal-fear tests).
         fn hazards_map(hazards: impl IntoIterator<Item = (RoomAddr, Hazards)>) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
-                fresh: std::collections::BTreeSet::new(),
-                temps: std::collections::BTreeMap::new(),
-                forage: std::collections::BTreeMap::new(),
                 threat: hazards.into_iter().collect(),
-                prey: std::collections::BTreeMap::new(),
+                ..Default::default()
             }
         }
         /// Planted per-room food productivity AND prey presence — the hunt tests
@@ -4707,12 +4679,9 @@ mod tests {
             prey: impl IntoIterator<Item = (RoomAddr, f64)>,
         ) -> Self {
             Self {
-                elevations: std::collections::BTreeMap::new(),
-                fresh: std::collections::BTreeSet::new(),
-                temps: std::collections::BTreeMap::new(),
                 forage: forage.into_iter().collect(),
-                threat: std::collections::BTreeMap::new(),
                 prey: prey.into_iter().collect(),
+                ..Default::default()
             }
         }
     }
@@ -5656,10 +5625,7 @@ mod tests {
         let terrain = PlantedTerrain {
             elevations: m,
             fresh: [water.clone()].into_iter().collect(),
-            temps: std::collections::BTreeMap::new(),
-            forage: std::collections::BTreeMap::new(),
-            threat: std::collections::BTreeMap::new(),
-            prey: std::collections::BTreeMap::new(),
+            ..Default::default()
         };
         let mut ledger = Ledger::default();
         let e = ledger.mint_entity();
