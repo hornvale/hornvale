@@ -220,6 +220,7 @@
 - [The Overworld](./chronicle/the-overworld.md)
 - [The Living Community](./chronicle/the-living-community.md)
 - [The Quarry](./chronicle/the-quarry.md)
+- [The Assay](./chronicle/the-assay.md)
 
 # Appendix: The Frontier
 

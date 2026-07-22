@@ -5,7 +5,11 @@
 touches the sovereignty/coexistence buffering path only · unblocks nothing,
 but establishes the `CR/30` authoring convention the program's later
 age-ladder and roster campaigns reuse
-**Status:** G3 draft (awaiting Nathan)
+**Status:** SHIPPED (2026-07-21, chronicle: the-assay) — potency = CR/30 over
+the supernatural set; decision 0064. No artifact bytes changed (the mighty
+menagerie is unplaced), no census regen. The program's later campaigns
+(personhood-region / sociality axis → UNI-31; solitary-tongue → BIO-37) remain
+deferred.
 **Date:** 2026-07-21
 
 ---
