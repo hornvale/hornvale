@@ -29,7 +29,7 @@
 use hornvale_climate::Biome;
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
 use hornvale_topology::EdgeKind;
-use hornvale_worldgen::graph_derive::{GraphConfig, connection_graph};
+use hornvale_worldgen::graph_derive::{GraphConfig, connection_graph, land_route_attempt_count};
 
 /// Test-only helper: a validated `ReferenceElevation`.
 fn e(m: f64) -> ReferenceElevation {
@@ -197,6 +197,32 @@ fn no_land_route_crosses_the_peak() {
             "expected no LandRoute edge between {from:?} and {to:?} across the peak"
         );
     }
+}
+
+/// The light in-gate half of the cost gate (The Connection Graph, Task 5):
+/// on this fixture's small pinned world (`Geosphere::new(1)`, 42 cells, 3
+/// settlements), the land-route attempt count -- settlement pairs within
+/// `cfg().land_route_radius` hops, exactly what `add_land_routes` would run
+/// `least_cost` on -- must stay a small constant. This runs in `make gate`
+/// (no live worldgen build); the heavy battery in `cli/tests/graph_cost.rs`
+/// measures the same quantity on a real seed-42 world with many more
+/// settlements and asserts the size-risk bound `make gate-full` needs.
+#[test]
+fn land_route_attempts_are_bounded_on_the_fixture() {
+    let (geo, _elevation, _biome, _current, settlements) = fixture();
+    let attempts = land_route_attempt_count(&geo, &settlements, &cfg());
+    // Measured: all 3 possible pairs among 3 settlements sit within
+    // `cfg().land_route_radius` (10 hops) on this small mesh, so the exact
+    // count is C(3,2) = 3 -- an equality assertion (not just an upper bound)
+    // so a regression that silently widened or narrowed the radius check
+    // still trips this. The fixture is too small to prove the O(N^2)-vs-
+    // bounded distinction itself; the heavy battery in
+    // `cli/tests/graph_cost.rs` measures that on a real seed-42 world with
+    // many more settlements.
+    assert_eq!(
+        attempts, 3,
+        "expected exactly 3 land-route attempts on this 3-settlement fixture, got {attempts}"
+    );
 }
 
 #[test]

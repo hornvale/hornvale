@@ -15,7 +15,7 @@
 
 use crate::traversal::traversal_cost;
 use hornvale_climate::Biome;
-use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
+use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation, Value, World};
 use hornvale_topology::route::least_cost;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
 use std::collections::BTreeSet;
@@ -90,6 +90,76 @@ pub fn connection_graph(
     add_land_routes(geo, &cost, settlements, cfg, &mut graph);
 
     graph
+}
+
+/// Derive a world's [`ConnectionGraph`] directly from a built [`World`] --
+/// the World-to-inputs adapter over [`connection_graph`] (Task 5's real-world
+/// entry point; Task 6's legibility surface and Task 7's DoD check reuse it
+/// too). Reconstructs terrain and climate (`crate::terrain_of` /
+/// `crate::climate_from`), reads the current field pointwise
+/// (`GeneratedClimate::current_at`, no `current_map()` accessor exists) into
+/// a `CellMap`, and reads each settlement's `cell-id` fact
+/// (`hornvale_settlement::CELL_ID`) into the `Vec<CellId>` `connection_graph`
+/// wants -- then calls `connection_graph`. Derivation logic stays there;
+/// this function is only the adapter, so it never duplicates
+/// `connection_graph`'s edge-assembly.
+///
+/// # Panics
+///
+/// `world` must have been built through at least `BuildDepth::Settlements`
+/// (true of any world `build_world`/`build_world_to` returned at that depth
+/// or deeper): panics if terrain or climate fails to reconstruct, or if any
+/// committed settlement lacks its `cell-id` fact.
+pub fn connection_graph_of(world: &World, cfg: &GraphConfig) -> ConnectionGraph {
+    let terrain = crate::terrain_of(world)
+        .expect("world was built with terrain (BuildDepth::Terrain or deeper)");
+    let climate = crate::climate_from(world, &terrain)
+        .expect("world was built with climate (BuildDepth::Terrain or deeper)");
+    let geo = terrain.geosphere();
+    let elevation = &terrain.globe().elevation;
+    let biome = climate.biome_map();
+    let current = CellMap::from_fn(geo, |c| climate.current_at(c));
+
+    let settlements: Vec<CellId> = hornvale_settlement::all_settlements(world)
+        .iter()
+        .map(
+            |s| match world.ledger.value_of(s.id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => CellId(*n as u32),
+                _ => panic!("settlement {} has no cell-id fact", s.id.0),
+            },
+        )
+        .collect();
+
+    connection_graph(geo, elevation, &biome, &current, &settlements, cfg)
+}
+
+/// The number of settlement pairs [`connection_graph`]'s land-route
+/// derivation actually attempts with `least_cost` -- every pair whose bare-
+/// adjacency hop distance (`Geosphere::hops_between`) is within
+/// `cfg.land_route_radius`. Mirrors `add_land_routes`'s own sort/dedup/bound
+/// check exactly (same settlement dedup, same hop-radius test), so this is
+/// the precise attempt count, not an estimate -- exposed so the cost gate
+/// (Task 5) can measure and bound the size-risk without re-instrumenting
+/// `connection_graph` itself.
+/// type-audit: bare-ok(count: return)
+pub fn land_route_attempt_count(
+    geo: &Geosphere,
+    settlements: &[CellId],
+    cfg: &GraphConfig,
+) -> usize {
+    let mut sorted: Vec<CellId> = settlements.to_vec();
+    sorted.sort();
+    sorted.dedup();
+
+    let mut attempts = 0usize;
+    for (i, &a) in sorted.iter().enumerate() {
+        for &b in &sorted[i + 1..] {
+            if geo.hops_between(a, b, cfg.land_route_radius).is_some() {
+                attempts += 1;
+            }
+        }
+    }
+    attempts
 }
 
 /// Bare mesh adjacency: one `Adjacency` edge per unordered neighbor pair.

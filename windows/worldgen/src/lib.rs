@@ -92,7 +92,9 @@ pub use chorus::{
     pathological_params, schema_prior, sky_capability, tongue_morphology_of,
 };
 pub use components::WorldComponents;
-pub use graph_derive::{GraphConfig, connection_graph};
+pub use graph_derive::{
+    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+};
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
