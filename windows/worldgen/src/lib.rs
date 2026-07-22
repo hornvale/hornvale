@@ -2423,6 +2423,83 @@ pub fn deep_lines_from(
     Ok(lines)
 }
 
+/// The Lode's headline lines for the almanac: the dominant ore commodity
+/// (and any other notable commodities) across the land, the cave-country
+/// share, and any regions where a cave and an ore deposit coincide (The
+/// Lode, spec §4/§5). Reads the canonical [`deposit_of`] query — terrain's
+/// primary deposits overlaid with the climate-coupled laterite — so the
+/// almanac and the census agree on what counts as ore. A pure projection
+/// over the world's single sculpted terrain/climate: no new draws. Empty
+/// for a landless world, or for land with neither caves nor ore.
+/// type-audit: bare-ok(prose: return)
+pub fn lode_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<String>, BuildError> {
+    let _ = world; // no world-level refinement today; kept for signature symmetry with deep_lines_from
+    let geo = terrain.geosphere();
+    let (mut land, mut cave_land, mut ore_land, mut colocated) = (0usize, 0usize, 0usize, 0usize);
+    let mut commodities: std::collections::BTreeMap<Commodity, usize> =
+        std::collections::BTreeMap::new();
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let has_cave = terrain.cave_at(cell).is_some();
+        if has_cave {
+            cave_land += 1;
+        }
+        if let Some(deposit) = deposit_of(terrain, climate, geo, cell) {
+            ore_land += 1;
+            *commodities.entry(deposit.commodity).or_insert(0) += 1;
+            if has_cave {
+                colocated += 1;
+            }
+        }
+    }
+    if land == 0 || (ore_land == 0 && cave_land == 0) {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = Vec::new();
+    if ore_land > 0 {
+        // Ties break to the lower-declared variant, same as ground_lines_from.
+        let dominant = commodities
+            .iter()
+            .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+            .map(|(&c, _)| c)
+            .expect("ore_land > 0 guarantees at least one commodity count");
+        lines.push(format!(
+            "The land's lode is dominantly {}, found across {:.0}% of it.",
+            commodity_name(dominant),
+            ore_land as f64 / land as f64 * 100.0
+        ));
+        let others: Vec<&'static str> = commodities
+            .keys()
+            .copied()
+            .filter(|&c| c != dominant)
+            .map(commodity_name)
+            .collect();
+        if !others.is_empty() {
+            lines.push(format!("Notable ore: {}.", others.join(", ")));
+        }
+    }
+    if cave_land > 0 {
+        lines.push(format!(
+            "{:.0}% of the land is cave country.",
+            cave_land as f64 / land as f64 * 100.0
+        ));
+    }
+    if colocated > 0 {
+        lines.push(format!(
+            "{colocated} cells hold both cave and ore — the deep worked twice."
+        ));
+    }
+    Ok(lines)
+}
+
 /// The Waters' headline line for the almanac (The Freshet, DOM-5 first
 /// slice): the fresh-water (river) share of a world's land — the salt/fresh
 /// distinction the ground substrate always computed but never reported. A
@@ -5487,6 +5564,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         ground_lines: ground_lines_from(&terrain, &climate),
         water_lines: water_lines_from(&terrain),
         deep_lines: deep_lines_from(world, &terrain)?,
+        lode_lines: lode_lines_from(world, &terrain, &climate)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
