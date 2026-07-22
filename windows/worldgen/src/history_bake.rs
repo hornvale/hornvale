@@ -54,6 +54,44 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
     ns
 }
 
+/// The nearest OCCUPIED cell to `from` (excluding `from`), by breadth-first
+/// graph-hop distance over `graph`; within the nearest layer, lowest
+/// `CellId` wins — a total, deterministic order (mirrors `nearest_dest`'s
+/// BFS structure). Returns the occupying community's index (`node_index`'s
+/// value), or `None` if no occupied cell is reachable. A free function (not
+/// a `Bake` method) so it is unit-testable against a hand-built graph +
+/// `node_index` without constructing a full `Bake`; [`Bake::nearest_occupied`]
+/// delegates to it over the era graph in force.
+fn nearest_occupied(
+    graph: &ConnectionGraph,
+    node_index: &BTreeMap<CellId, usize>,
+    from: CellId,
+) -> Option<usize> {
+    let mut visited: BTreeSet<CellId> = BTreeSet::new();
+    visited.insert(from);
+    let mut frontier: Vec<CellId> = vec![from];
+    while !frontier.is_empty() {
+        let mut next: Vec<CellId> = Vec::new();
+        let mut hits: Vec<(CellId, usize)> = Vec::new();
+        for &c in &frontier {
+            for n in traversable_neighbors(graph, c) {
+                if visited.insert(n) {
+                    next.push(n);
+                    if let Some(&idx) = node_index.get(&n) {
+                        hits.push((n, idx));
+                    }
+                }
+            }
+        }
+        if !hits.is_empty() {
+            hits.sort_by_key(|a| a.0); // lowest CellId in the nearest layer
+            return Some(hits[0].1);
+        }
+        frontier = next;
+    }
+    None
+}
+
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
@@ -111,6 +149,16 @@ const DAUGHTER_POP: f64 = 8.0;
 /// this stays deliberately small. A save-format constant: changing it
 /// re-places every world.
 const RIVER_SITE_WEIGHT: f64 = 2.0;
+/// Hard cap on a single relaxation cascade's BFS depth (displacement chain
+/// length) — a safety bound against a pathological unbounded chain, not a
+/// physical parameter. The Sea-Peoples cascade (a later task) reads this;
+/// Task 1 only reserves the constant.
+/// type-audit: bare-ok(count)
+pub const CASCADE_DEPTH_CAP: u32 = 256;
+/// Number of log2 bins in [`BakeCensus::cascade_hist`]: bin `i` counts
+/// cascades whose size falls in `[2^i, 2^(i+1))`, covering sizes 1, 2, 3-4,
+/// 5-8, … up to 2^11+.
+const CASCADE_BINS: usize = 12;
 
 /// Configuration for a deep-history bake: the span of years to simulate and
 /// the epoch step. Years are bare `f64` (absolute, no wall-clock).
@@ -152,7 +200,7 @@ pub struct History {
 
 /// A tally of the events a bake resolved — the falsification instrument. The
 /// campaign lives or dies on `fled + resettled` firing at volume.
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: records_total), bare-ok(count: alive_at_now)
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BakeCensus {
     /// Grow events (a community expanded under a sub-capacity load).
@@ -173,11 +221,42 @@ pub struct BakeCensus {
     pub records_total: u64,
     /// Records still alive at `now`.
     pub alive_at_now: u64,
+    /// Log-binned histogram of cascade sizes (# displacements in one
+    /// relaxation): bin i counts cascades whose size falls in
+    /// `[2^i, 2^(i+1))`. The raw material of The Tumult's power-law
+    /// falsification metric. Not committed to save format (diagnostic only).
+    pub cascade_hist: [u64; CASCADE_BINS],
+}
+
+impl BakeCensus {
+    /// Record one completed cascade of `size` displacements into the
+    /// log-binned histogram. `size == 0` (a relocation that reached vacant
+    /// land directly, not a cascade) is not recorded.
+    // Task-1 scaffolding: only exercised by this module's unit tests so far —
+    // the cascade resolution (a later Tumult task) is the first non-test
+    // caller. Remove this allow once it is.
+    #[allow(dead_code)]
+    fn record_cascade(&mut self, size: u32) {
+        if size == 0 {
+            return;
+        }
+        let bin = (31 - size.leading_zeros()).min(CASCADE_BINS as u32 - 1) as usize;
+        self.cascade_hist[bin] += 1;
+    }
 }
 
 /// Read the event census off a baked history.
 pub fn census(h: &History) -> BakeCensus {
     h.tally
+}
+
+/// The cascade-size histogram off a baked history (bin `i` = sizes
+/// `[2^i, 2^(i+1))`). Scaffolding for The Tumult's Sea-Peoples cascade
+/// (a later task) — always all-zero until that task's cascade resolution
+/// starts calling [`BakeCensus::record_cascade`].
+/// type-audit: bare-ok(count: return)
+pub fn cascade_sizes(h: &History) -> [u64; CASCADE_BINS] {
+    h.tally.cascade_hist
 }
 
 impl History {
@@ -356,6 +435,19 @@ impl<'a> Bake<'a> {
             frontier = next;
         }
         None
+    }
+
+    /// The nearest OCCUPIED cell to `from` (excluding `from`), over the era
+    /// graph currently being stepped. Delegates to the free [`nearest_occupied`]
+    /// function so the BFS/tie-break logic is unit-testable against a
+    /// hand-built graph + `node_index` without constructing a full `Bake`.
+    /// The Tumult's Sea-Peoples cascade displaces this cell when no vacant
+    /// land is reachable.
+    // Task-1 scaffolding: not yet called — the cascade resolution (a later
+    // Tumult task) is the first consumer. Remove this allow once it is.
+    #[allow(dead_code)]
+    fn nearest_occupied(&self, from: CellId) -> Option<usize> {
+        nearest_occupied(self.cur(), &self.node_index, from)
     }
 
     /// The wealthiest alive community adjacent to `site` (raid target),
@@ -787,5 +879,86 @@ mod tests {
             },
         );
         assert_eq!(traversable_neighbors(&g, CellId(0)), vec![CellId(1)]);
+    }
+
+    /// A pure-land connection graph over `geo` (unit-conductance adjacency,
+    /// no water routes) — mirrors the integration test file's `full_land_graph`
+    /// helper, duplicated here because `Bake` (and this free function) are
+    /// private to this module and the unit test can't reach the integration
+    /// file's helper.
+    fn full_land_graph(geo: &Geosphere) -> ConnectionGraph {
+        let mut g = ConnectionGraph::new(geo.cell_count());
+        for cell in geo.cells() {
+            for &n in geo.neighbors(cell) {
+                if n.0 > cell.0 {
+                    g.add_edge(
+                        cell,
+                        Edge {
+                            to: n,
+                            kind: EdgeKind::Adjacency,
+                            conductance: 1.0,
+                        },
+                    );
+                }
+            }
+        }
+        g
+    }
+
+    #[test]
+    fn nearest_occupied_finds_the_closest_occupied_cell_over_the_graph() {
+        // full-land graph over Geosphere::new(1); occupy cells 3 and 20; from
+        // cell 0, whichever is fewer graph-hops away wins (lowest CellId
+        // breaks a tie). `nearest_occupied` is a free function (not a `Bake`
+        // method) precisely so this test can hand-build the graph +
+        // `node_index` without constructing a full `Bake`.
+        let geo = Geosphere::new(1);
+        let graph = full_land_graph(&geo);
+
+        let mut node_index: BTreeMap<CellId, usize> = BTreeMap::new();
+        node_index.insert(CellId(3), 0);
+        node_index.insert(CellId(20), 1);
+
+        let hops_3 = geo
+            .hops_between(CellId(0), CellId(3), 16)
+            .expect("cell 3 reachable");
+        let hops_20 = geo
+            .hops_between(CellId(0), CellId(20), 16)
+            .expect("cell 20 reachable");
+        assert_ne!(hops_3, hops_20, "fixture must not tie on hop distance");
+        let expected_idx = if hops_3 < hops_20 { 0 } else { 1 };
+
+        assert_eq!(
+            nearest_occupied(&graph, &node_index, CellId(0)),
+            Some(expected_idx),
+            "expected the nearer occupied cell (hops_3={hops_3}, hops_20={hops_20})"
+        );
+    }
+
+    #[test]
+    fn record_cascade_bins_by_log2_and_skips_zero() {
+        // bin i covers sizes [2^i, 2^(i+1)); size 0 is not a cascade.
+        let mut c = BakeCensus::default();
+        c.record_cascade(0);
+        assert_eq!(c.cascade_hist, [0u64; CASCADE_BINS], "size 0 not recorded");
+
+        c.record_cascade(1); // bin 0: [1, 2)
+        c.record_cascade(2); // bin 1: [2, 4)
+        c.record_cascade(3); // bin 1: [2, 4)
+        c.record_cascade(4); // bin 2: [4, 8)
+        assert_eq!(c.cascade_hist[0], 1);
+        assert_eq!(c.cascade_hist[1], 2);
+        assert_eq!(c.cascade_hist[2], 1);
+
+        // A huge cascade clamps into the top bin instead of panicking/wrapping.
+        c.record_cascade(u32::MAX);
+        assert_eq!(c.cascade_hist[CASCADE_BINS - 1], 1);
+
+        let h = History::new(Vec::new(), 0.0);
+        assert_eq!(
+            cascade_sizes(&h),
+            [0u64; CASCADE_BINS],
+            "hand-built history starts at zero"
+        );
     }
 }
