@@ -1,5 +1,9 @@
 # PROC-12: Regenerate-on-Conflict for Generated Artifacts Implementation Plan
 
+**Status: COMPLETE.** Both tasks executed, task-reviewed, and passed a
+final whole-branch review (Ready to merge: Yes). Chronicled as
+[The Standing Offer](../../../book/src/chronicle/the-standing-offer.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Turn generated-artifact merge conflicts (the type-audit report, 5 reference-dump pages, and 2 append-only chronicle/registry lists) into no-ops instead of manual resolutions.

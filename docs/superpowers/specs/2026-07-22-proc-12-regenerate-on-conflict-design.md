@@ -2,7 +2,9 @@
 
 **Working campaign name:** The Standing Offer.
 
-**Status:** draft, awaiting G3 (spec review).
+**Status:** SHIPPED. Approved at G3 ("LGTM!"), fully executed and
+whole-branch reviewed (Ready to merge: Yes). Chronicled as
+[The Standing Offer](../../../book/src/chronicle/the-standing-offer.md).
 
 **Worktree:** `~/.config/superpowers/worktrees/hornvale/proc-12`, branch `proc-12`, off `main` @3c42db40.
 
