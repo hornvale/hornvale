@@ -228,6 +228,39 @@ impl GeneratedTerrain {
         })
     }
 
+    /// The dominant ore deposit at a cell, if the point process places one.
+    pub fn deposit_at(&self, id: CellId) -> Option<crate::features::Deposit> {
+        if self.is_ocean(id) {
+            return None;
+        }
+        let buf = self.material_at(id);
+        let rock = self.rock_at(id);
+        let boundary = self.boundary_at(id).map(|b| b.kind);
+        let endorheic = self.is_endorheic(id);
+        let (process, commodity) = crate::features::deposit_kind(rock, boundary, &buf, endorheic)?;
+        // Areal ores (rock IS the ore) are always present; point ores gate on prospectivity×belt×noise.
+        let areal = matches!(process, crate::features::DepositProcess::ChemicalSediment)
+            || matches!(process, crate::features::DepositProcess::Placer);
+        let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let pos = self.geosphere.position(id);
+        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 7.0, 4);
+        if !areal {
+            let prob = crate::features::presence_prob(self.prospectivity_at(id), belt);
+            if noise >= prob {
+                return None;
+            }
+        }
+        let (grade, tonnage) =
+            crate::features::deposit_grade_tonnage(process, self.prospectivity_at(id), noise);
+        Some(crate::features::Deposit {
+            process,
+            commodity,
+            depth: crate::features::deposit_depth(process),
+            grade,
+            tonnage,
+        })
+    }
+
     /// The geothermal gradient at a cell (K/km) — the deep's energy base.
     pub fn geothermal_gradient_at(&self, id: CellId) -> crate::strata::GeothermalGradient {
         crate::strata::geothermal_gradient(
