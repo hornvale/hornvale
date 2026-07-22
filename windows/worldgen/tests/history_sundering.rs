@@ -56,8 +56,8 @@ fn the_map_is_not_depopulated() {
 /// (≥ `MIN_LANDMASSES` inhabited land components) and at least one isolated
 /// landmass hosts only a proper SUBSET of the world's peoples — a people that
 /// could not cross to it. Measured seed-42: 4 inhabited landmasses, over all
-/// 4 goblinoid peoples; two masses host only 2 of the 4 (a genuine proper
-/// subset). The floor is set just below the measured count (4 → 3).
+/// 4 goblinoid peoples; three of the four host only a proper subset (2, 2,
+/// and 3 of the 4). The floor is set just below the measured count (4 → 3).
 const MIN_LANDMASSES: usize = 3;
 #[test]
 fn isolation_predicts_divergence() {
