@@ -228,6 +228,7 @@
 - [The Connection Graph](./chronicle/the-connection-graph.md)
 - [The Alarm](./chronicle/the-alarm.md)
 - [The Tidings](./chronicle/the-tidings.md)
+- [The Deep](./chronicle/the-deep.md)
 
 # Appendix: The Frontier
 
