@@ -1,7 +1,8 @@
 # The Deep — Design
 
 **Date:** 2026-07-22
-**Status:** Approved (brainstorming session)
+**Status:** Shipped (2026-07-22; the-deep campaign merged. Census fixture
+refresh for the three new metric columns owed as a follow-up.)
 **Campaign:** The Deep (slug-named per decision 0026) — campaign 1 of the
 subsurface arc.
 **Provenance:** The first stone of the *underworld* (MAP-10 / DOM-14). It
