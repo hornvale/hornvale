@@ -853,40 +853,61 @@ pub fn believed_water(
 /// fold over its committed `agent-at` history ∩ frightening-truth, the inverted
 /// twin of [`believed_water`] (a SET it plans *around*, not a target it plans
 /// *toward*). Among the rooms the creature has stood in at or before `t`, those
-/// where its own Danger reading crosses `DANGER_ACT` ([`frightened_at`]).
+/// whose felt threat — terrain PLUS the re-derived transient alarm over
+/// `roster` at the visited day — crosses `DANGER_ACT` ([`frightened_at`]).
 /// BELIEF == FOLD-OVER-PERCEIVED: no stored state — it re-derives from committed
 /// facts every read, exactly as `believed_water` re-derives `is_water`. Returns
 /// the EMPTY set for a creature never frightened, so the settled peoples (never
 /// frightened on their good ground) carry an empty set and every planner edge
 /// stays `1` — byte-identical by construction.
 ///
-/// STALENESS — a fold that still forgets (spec §1). The precise rule is *a cell
-/// is remembered-dangerous iff the creature's MOST RECENT visit there was
-/// frightened* (a later safe visit clears the memory). For v1's terrain-sourced
-/// danger the hazard at a cell is time-invariant, so this reduces to *visited ∧
-/// still-frightening* and needs no visit-order bookkeeping — revising a
-/// disproven fear is reserved (transient-danger memory).
+/// STALENESS — now LIVE (spec §2, The Phantom). The rule is *a cell is
+/// remembered-dangerous iff the creature's MOST RECENT visit there was
+/// frightened*: a later SAFE visit CLEARS the memory (experience disproving the
+/// fear). The Haunt specified this but left it inert — static terrain makes
+/// every visit's verdict identical, so it reduced to *visited ∧ still-
+/// frightening*. The Phantom makes it bite: a cell alarm-frightened on day t₁
+/// and safely revisited on t₂ > t₁ is no longer shunned. With an EMPTY
+/// `roster` the re-derived alarm is 0 (terrain is time-invariant), so the rule
+/// collapses back to any-visit — The Haunt's exact set, byte-identical.
+///
+/// THE RECURSION BREAK: the tick passes the FULL population as `roster`;
+/// [`affect_of`] passes its `band`; and `alarm_field`'s internal `affect_of`
+/// passes `&[]` — so the alarm-field replay always sees an empty roster,
+/// terrain-only, and never re-enters the transient path. Deterministic: the
+/// most-recent verdict per cell accumulates into a `BTreeMap` (max day wins,
+/// verdict order-independent), yielded sorted.
 pub fn believed_hazard(
     ledger: &Ledger,
     npc: &Npc,
     t: WorldTime,
     terrain: &dyn Terrain,
+    roster: &[Npc],
 ) -> std::collections::BTreeSet<RoomAddr> {
-    let mut shunned: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    // Keep, per visited cell, the (latest-day, frightened-verdict) pair; a cell
+    // is shunned iff its LATEST visit ≤ t was frightened.
+    let mut latest: std::collections::BTreeMap<RoomAddr, (f64, bool)> =
+        std::collections::BTreeMap::new();
     for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
         if let Some(fday) = f.day.filter(|d| *d <= t.day)
             && let Value::Text(s) = &f.object
         {
             let room = room_from_text(s);
-            // T1: terrain-only memory (empty roster ⇒ the alarm re-derivation
-            // short-circuits to 0 ⇒ The Haunt's verdict). T2 threads the real
-            // roster and the most-recent-visit staleness rule.
-            if frightened_at(&room, npc, terrain, WorldTime { day: fday }, &[], ledger) {
-                shunned.insert(room);
+            // Recompute only when this visit is strictly newer than the one on
+            // record (ties keep the first — the verdict is identical anyway).
+            let newer = latest.get(&room).map(|(d, _)| fday > *d).unwrap_or(true);
+            if newer {
+                let frightened =
+                    frightened_at(&room, npc, terrain, WorldTime { day: fday }, roster, ledger);
+                latest.insert(room, (fday, frightened));
             }
         }
     }
-    shunned
+    latest
+        .into_iter()
+        .filter(|(_, (_, frightened))| *frightened)
+        .map(|(room, _)| room)
+        .collect()
 }
 
 /// The BAND's water belief for `npc` (The Tidings; anchoring split per
@@ -2452,10 +2473,12 @@ pub fn affect_of(
     let visited = std::collections::BTreeSet::new();
     let explore_step = lowest_unvisited_neighbor(&pos, &visited, terrain);
     let fatigue = fatigue_at(frozen, npc.entity, day);
-    // The Haunt: the ground this creature remembers being frightened on — a fold
-    // over its committed history (empty for a never-frightened creature ⇒
-    // byte-identical). The planning drives read it as a finite route cost.
-    let believed_hazard = believed_hazard(frozen, npc, day, terrain);
+    // The Haunt + The Phantom: the ground this creature remembers being
+    // frightened on — a fold over its committed history (empty for a never-
+    // frightened creature ⇒ byte-identical). The roster is this call's `band`;
+    // `alarm_field` invokes `affect_of` with `band = &[]`, so its replay reads
+    // a terrain-only memory and the transient re-derivation never recurses.
+    let believed_hazard = believed_hazard(frozen, npc, day, terrain, band);
     let view = Perceived {
         position: pos,
         drive,
@@ -2763,12 +2786,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 self.terrain,
                 PLAN_BUDGET,
             );
-            // The Haunt: the ground this creature remembers being frightened on —
-            // a fold over its committed (pre-tick) history, computed ONCE per
-            // creature (the hazard at a cell is time-invariant in v1, so the set
-            // does not grow within the walk). Empty for a never-frightened
-            // creature ⇒ every planner edge stays `1`, byte-identical.
-            let believed_hazard = believed_hazard(frozen, npc, self.from, self.terrain);
+            // The Haunt + The Phantom: the ground this creature remembers being
+            // frightened on — a fold over its committed (pre-tick) history,
+            // computed ONCE per creature. The FULL population is the roster, so
+            // the memory folds the re-derived transient alarm too (the phantom);
+            // the most-recent-visit staleness clears a disproven fear. Empty for
+            // a never-frightened creature ⇒ every planner edge stays `1`, byte-
+            // identical (no primary-afraid emitter on the settled worlds).
+            let believed_hazard = believed_hazard(frozen, npc, self.from, self.terrain, &self.npcs);
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -3873,7 +3898,7 @@ mod tests {
         commit_agent_at(&mut ledger, &reg, e, &home, 1.0);
         commit_agent_at(&mut ledger, &reg, e, &elsewhere, 2.0);
         assert!(
-            believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t).is_empty(),
+            believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t, &[]).is_empty(),
             "a creature never frightened shuns nothing"
         );
     }
@@ -3896,11 +3921,79 @@ mod tests {
         let npc = haunt_npc(e, home.clone());
         commit_agent_at(&mut ledger, &reg, e, &home, 1.0); // safe
         commit_agent_at(&mut ledger, &reg, e, &scary, 2.0); // frightened here
-        let got = believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t);
+        let got = believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t, &[]);
         let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
         assert_eq!(
             got, expected,
             "shuns exactly the visited-and-dangerous cell"
+        );
+    }
+
+    #[test]
+    fn believed_hazard_is_terrain_only_with_empty_roster() {
+        // Byte-identity guard: with an EMPTY roster the re-derived alarm is 0,
+        // so the most-recent-visit rule over TIME-INVARIANT terrain collapses to
+        // The Haunt's any-visit set — exactly the pre-Phantom behaviour, even
+        // across a safe visit sandwiched between two frightened ones.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let safe = raddr(1.0);
+        let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(scary.clone(), 0.8)]);
+        let npc = haunt_npc(e, safe.clone());
+        commit_agent_at(&mut ledger, &reg, e, &scary, 2.0); // frightened
+        commit_agent_at(&mut ledger, &reg, e, &safe, 3.0); // safe
+        commit_agent_at(&mut ledger, &reg, e, &scary, 4.0); // still frightened
+        let got = believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t, &[]);
+        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        assert_eq!(got, expected, "empty roster ⇒ The Haunt's any-visit set");
+    }
+
+    #[test]
+    fn believed_hazard_clears_a_disproven_phantom() {
+        // The staleness rule, now LIVE: a cell alarm-frightened on an early
+        // visit and SAFELY revisited later is no longer shunned (the fear
+        // disproved), while a creature that never revisits still shuns it (the
+        // phantom, re-derived from the emitter's PAST cell).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let ns = d_cell.neighbors();
+        let hazard = ns[0].clone(); // E: frightens the emitter B
+        let x = ns[1].clone(); // X: safe, in B's halo (the phantom cell)
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        // Emitter B: beside X on day 0.5, then far away by 9.5.
+        let b_e = ledger.mint_entity();
+        let b = haunt_npc(b_e, d_cell.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let far = raddr(-1.0);
+        commit_agent_at(&mut ledger, &reg, b_e, &far, 9.5);
+        // A (coward) stands at X while B is beside it (0.5), then SAFELY
+        // revisits X after B is gone (9.5) — the disproof.
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 9.5);
+        // C (coward) stands at X only while B is beside it (0.5), never revisits.
+        let c_e = ledger.mint_entity();
+        let mut c = haunt_npc(c_e, x.clone());
+        c.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, c_e, &x, 0.5);
+
+        let now = WorldTime { day: 10.0 };
+        let roster = [b.clone()];
+        // A's most-recent visit to X was safe → the phantom is cleared.
+        assert!(
+            !believed_hazard(&ledger, &a, now, &terrain, &roster).contains(&x),
+            "a safe revisit clears the disproven phantom"
+        );
+        // C never revisited → the phantom persists (re-derived from B's PAST
+        // cell — requires the day-aware position lookup).
+        assert!(
+            believed_hazard(&ledger, &c, now, &terrain, &roster).contains(&x),
+            "without a corrective revisit, the phantom is still shunned"
         );
     }
 
@@ -5617,7 +5710,7 @@ mod tests {
             commit_agent_at(&mut fl, &reg, fe, &x, 0.15);
             commit_agent_at(&mut fl, &reg, fe, &start, 0.2);
             let n = npc_at(fe);
-            let hz = believed_hazard(&fl, &n, WorldTime { day: 1.0 }, &terrain);
+            let hz = believed_hazard(&fl, &n, WorldTime { day: 1.0 }, &terrain, &[]);
             assert_eq!(
                 hz.into_iter().collect::<Vec<_>>(),
                 vec![x.clone()],
