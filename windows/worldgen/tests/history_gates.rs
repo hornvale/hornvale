@@ -31,6 +31,23 @@
 //!    prime cells are settled once and simply persist. The gate asserts the
 //!    measured reality (negative coupling), and the falsification is the real
 //!    finding — recorded, not buried.
+//!
+//! 3. **The moving sea corrected the migration count 51 → 12 (spec §7
+//!    re-scope).** The Sundering rerouted the bake onto a time-varying
+//!    connection graph — one per era, ocean where `elevation < sea_level` — so
+//!    a community can only step across cells that era's sea level leaves as
+//!    land. The pre-Sundering static count (51) was inflated by unphysical
+//!    ocean-walking: the raw-mesh BFS strode straight across open ocean. The
+//!    moving-sea graph removes those illegitimate strides, so seed-42 now
+//!    measures 12 migrations (and 2 re-stacks, was 6). This is a correction,
+//!    NOT a regression: displacement still FIRES, and 11 of the 12 migrations
+//!    cross water only passable at the era they occur — they genuinely ride the
+//!    glacial land-bridges and sailing lanes. The campaign's headline payoff
+//!    accordingly moves to **isolation-predicts-divergence**
+//!    (`history_sundering.rs`): sundered peoples drift apart. Raising the
+//!    diaspora VOLUME (more settled peoples displaced) is a crowding/pressure
+//!    matter deferred to campaign C3, not a Sundering deliverable. The floors
+//!    below are re-scoped clear of the corrected values.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -42,18 +59,27 @@ use hornvale_worldgen::{
 
 // ---- Frozen thresholds (set BELOW the measured seed-42 values) -------------
 
-/// Gate 1. Seed-42 measured 51 migration events; a run below this floor means
-/// climate-driven displacement went inert (the campaign's STOP condition).
-const MIGRATION_FLOOR: u64 = 20;
+/// Gate 1. A run below this floor means climate-driven displacement went inert
+/// (the campaign's STOP condition).
+// The Sundering (moving sea) re-scope: seed-42 now measures 12 (was 51). The
+// static 51 was inflated by unphysical ocean-walking (the raw-mesh BFS strode
+// across open ocean); the moving-sea graph corrects it. Displacement still
+// FIRES and rides the era-bridges (11/12 migrations cross water); the
+// campaign's headline payoff is now isolation-predicts-divergence
+// (history_sundering.rs). Raising diaspora VOLUME is a crowding/pressure matter
+// deferred to C3.
+const MIGRATION_FLOOR: u64 = 5;
 
 /// Gate 2. Seed-42 measured 0.055 region overlap (raw cell-set overlap is a
 /// structural 0). A world above this ceiling has interleaved, not separated,
 /// peoples — the diversity payoff would have failed.
 const MAX_REGION_OVERLAP: f64 = 0.25;
 
-/// Gate 3a. Seed-42 measured 6 re-occupied sites; below this floor no
-/// stratigraphy emerged at all.
-const MIN_RESTACKED_SITES: u64 = 3;
+/// Gate 3a. Below this floor no stratigraphy emerged at all.
+// The Sundering (moving sea) re-scope: seed-42 now measures 2 (was 6). Fewer
+// relocations (migration 51→12) ⇒ fewer re-stacks; the depth/capacity NEGATIVE-
+// correlation finding still holds at -0.2049.
+const MIN_RESTACKED_SITES: u64 = 1;
 
 fn build(seed: Seed, depth: BuildDepth) -> hornvale_kernel::World {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
