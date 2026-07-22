@@ -130,6 +130,48 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf '```\n'
 } > book/src/gallery/history-seed-42.md
 
+# The transport topology's legibility surface (The Connection Graph, T6): two
+# real seed-42 sites read off the derived ConnectionGraph as prose, plus the
+# world-level reachability overview. Cell 13980 is this world's flagship
+# settlement -- inside the largest connected region, reached only by land
+# routes here. Cell 28435 sits on a *different* landmass (a real, separate
+# region under natural travel) and shows both a sea-lane and land routes at
+# once, so the page demonstrates every edge kind the graph derives. Framing
+# lines are hand-authored (the render replaces the file body, so re-emit
+# them here); the fenced blocks are the `connections` verb's exact,
+# drift-checked output.
+echo "regenerate-artifacts: the legibility surface (the transport topology)" >&2
+{
+    printf '# The Transport Topology — Seed 42\n\n'
+    printf 'The connection graph'\''s legibility surface: a site'\''s natural sea-lanes and\n'
+    printf 'overland routes, and which of the world'\''s naturally-connected regions it\n'
+    printf 'belongs to, read off the `connections` verb. Nothing here is authored\n'
+    printf 'infrastructure -- a "route" is always a natural corridor the terrain and\n'
+    printf 'currents make easy, never a built road (see `EdgeKind`). The graph itself\n'
+    printf 'is purely derived (no epoch, no seed draw): the same world always yields\n'
+    printf 'the same topology.\n\n'
+    printf '## A well-linked capital\n\n'
+    printf 'The flagship settlement, on the world'\''s largest connected landmass. Its\n'
+    printf 'own overland routes reach two neighboring settlements directly.\n\n'
+    printf '```text\n'
+    run -p hornvale -- connections --world "$wsky" --site 13980
+    printf '```\n\n'
+    printf '## A hub on a different shore\n\n'
+    printf 'Cell 28435 sits on a *separate* landmass under natural travel -- close\n'
+    printf 'enough to its neighbors to reach several by both sea-lane and land route,\n'
+    printf 'but with no natural corridor at all bridging it back to the flagship'\''s\n'
+    printf 'larger region.\n\n'
+    printf '```text\n'
+    run -p hornvale -- connections --world "$wsky" --site 28435
+    printf '```\n\n'
+    printf '## The world, in sum\n\n'
+    printf 'The world-level reachability summary: how many real regions natural\n'
+    printf 'travel divides this world into, the largest, and the rest.\n\n'
+    printf '```text\n'
+    run -p hornvale -- connections --world "$wsky" --overview
+    printf '```\n'
+} > book/src/gallery/connections-seed-42.md
+
 echo "regenerate-artifacts: gallery maps (rendered per-cell views)" >&2
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/elevation-seed-42.png \
     > book/src/gallery/elevation-seed-42.md

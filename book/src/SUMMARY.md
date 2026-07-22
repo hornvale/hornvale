@@ -49,6 +49,7 @@
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
 - [An Abandoned Clearing — Seed 42](./gallery/history-seed-42.md)
+- [The Transport Topology — Seed 42](./gallery/connections-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
@@ -225,6 +226,9 @@
 - [The Wilding](./chronicle/the-wilding.md)
 - [The Teeth](./chronicle/the-teeth.md)
 - [The Assay](./chronicle/the-assay.md)
+- [The Connection Graph](./chronicle/the-connection-graph.md)
+- [The Alarm](./chronicle/the-alarm.md)
+- [The Tidings](./chronicle/the-tidings.md)
 
 # Appendix: The Frontier
 

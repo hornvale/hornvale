@@ -837,6 +837,54 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// The BAND's water belief for `npc` (The Tidings; anchoring split per
+/// decision #8). With NO co-located peer, returns `believed_water(npc)`
+/// verbatim — the home-anchored nearest water it remembers — an exact no-op
+/// (this is what keeps the live one-per-settlement population byte-identical).
+/// With a co-located peer, pools `npc`'s and every co-located peer's
+/// `believed_water` and returns the one nearest to `npc`'s CURRENT position
+/// (ties: ascending `RoomAddr`), `None` if the pool is empty. Current-position
+/// anchoring is the semantics of hearsay — "water near HERE" — and is what lets
+/// a stranded creature adopt a here-reachable water its home-anchored memory
+/// could never admit. Order-independent by construction (`BTreeSet` union +
+/// deterministic `min`); no RNG. BELIEF == FOLD (UNI-20): stores nothing.
+/// type-audit: bare-ok(count: budget)
+pub fn shared_believed_water(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    budget: usize,
+) -> Option<RoomAddr> {
+    let own = believed_water(frozen, npc, t, terrain, budget);
+    let here = agent_position(frozen, npc, t);
+    let mut pool: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut has_peer = false;
+    // Co-located OTHERS (never npc itself) contribute what they know of water.
+    for other in band {
+        if other.entity != npc.entity && agent_position(frozen, other, t) == here {
+            has_peer = true;
+            if let Some(w) = believed_water(frozen, other, t, terrain, budget) {
+                pool.insert(w);
+            }
+        }
+    }
+    // ALONE: home-anchored memory, unchanged — the byte-identical no-op.
+    if !has_peer {
+        return own;
+    }
+    // CO-LOCATED: rank the pooled beliefs (npc's + peers') by nearness to npc's
+    // CURRENT position (ties: ascending RoomAddr) — act on what's reachable HERE.
+    if let Some(w) = own {
+        pool.insert(w);
+    }
+    pool.into_iter()
+        .filter_map(|r| plan_to_room(&here, &r, budget).map(|p| (p.len(), r)))
+        .min_by(|(la, ra), (lb, rb)| la.cmp(lb).then_with(|| ra.cmp(rb)))
+        .map(|(_, r)| r)
+}
+
 /// What the agent perceives of the world — the `view` the decision reads. Splits
 /// SELF-knowledge (position, drive — always true) from world-BELIEF
 /// (`believed_water` — a cache that may be absent/ignorant) and immediate
@@ -1668,6 +1716,18 @@ const DANGER_OVERRIDE: f64 = 0.5;
 /// authored judgment call.
 const DANGER_ACT: f64 = 0.3;
 
+/// The LATENT scale on BORROWED alarm (The Alarm) — the fear-contagion twin of
+/// [`PREDATOR_LATENT_SCALE`] / `PREY_LATENT_SCALE`: how much of a neighbour's
+/// distress a creature adds to its own felt threat before the boldness scaling.
+/// The additive-latent discipline — the term only ever RAISES felt threat, so a
+/// creature below `DANGER_ACT` with no primary-afraid neighbours is byte-
+/// identical by construction. Authored; `1.0` (the alarm field is already the
+/// emitter's felt-threat magnitude, clamped `[0, 1]`, so a full-strength alarm
+/// reads as a full-strength threat). Byte-identity is STRUCTURAL, not scale-
+/// tuned: the settled peoples never reach primary danger distress, so the field
+/// is empty on seed 42 regardless of scale.
+const ALARM_SCALE: f64 = 1.0;
+
 /// Danger — the fifth drive (The Dread), the avoidance twin of hunger: a FLOW
 /// drive (like [`Thermal`]) that senses the threat at the cell it occupies and
 /// FLEES down the threat gradient. Where hunger climbs *toward* a resource,
@@ -1683,7 +1743,7 @@ const DANGER_ACT: f64 = 0.3;
 /// fear, so two species flee different cells), then scaled by its `boldness`
 /// (The Mettle) — a bold creature fears less, so its weaker veto lets it cross
 /// ground a timid one flees.
-/// type-audit: bare-ok(ratio: boldness)
+/// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: alarm)
 pub struct Danger<'a> {
     /// The hazard field this drive senses (the cell it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
@@ -1696,6 +1756,13 @@ pub struct Danger<'a> {
     /// `0.5` (steady/inert). Below `0.5` a coward fears more; above, a bold
     /// creature fears less; toward `1` it is fearless.
     pub boldness: f64,
+    /// The per-tick ALARM field (The Alarm): borrowed distress from nearby
+    /// primary-afraid creatures, keyed by cell. Read at the creature's OWN cell
+    /// only (the field build already spread each emitter's alarm to its
+    /// neighbours, so reading neighbours again would double-count) and folded
+    /// ADDITIVELY into the felt threat, scaled by [`ALARM_SCALE`]. `None` ⇒ no
+    /// contagion — the current (pre-Alarm) behaviour, byte-identical.
+    pub alarm: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
@@ -1735,7 +1802,20 @@ impl<'a> Drive for Danger<'a> {
             .iter()
             .map(|n| self.threat_at(n))
             .fold(here, f64::max);
-        (base * self.mettle_factor()).clamp(0.0, 1.0)
+        // THE ALARM: fold the borrowed distress at the creature's OWN cell into
+        // the felt threat, ADDITIVELY and BEFORE the boldness scaling — so a calm
+        // creature beside genuine distress feels it, scaled by its own mettle,
+        // exactly as it feels a terrain hazard. `None` (or a cell absent from the
+        // sparse field) contributes `0.0`, keeping the current worlds byte-
+        // identical. Read at `position` only: the field build already haloed the
+        // alarm to the neighbours.
+        let borrowed = self
+            .alarm
+            .and_then(|field| field.get(&view.position))
+            .copied()
+            .unwrap_or(0.0);
+        let felt = base + ALARM_SCALE * borrowed;
+        (felt * self.mettle_factor()).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
@@ -2217,15 +2297,24 @@ pub fn arbitrate(
 /// (belief and last-drank are folded from history; exploration starts fresh, no
 /// incumbent mode, so no sticky `Helpless` — persistence is the caller's, e.g.
 /// the health metric's continuous loop). The narration seam
-/// (`Session::needs`) reads a creature's `Affect` through this.
-pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terrain) -> Affect {
+/// (`Session::needs`) reads a creature's `Affect` through this. `band` is the
+/// same cohort the paired `DriveMovements` moves (The Tidings band-consistency
+/// invariant) — a sampled felt state must reflect the belief the creature
+/// acted on, not a poorer solo one.
+pub fn affect_of(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    day: WorldTime,
+    terrain: &dyn Terrain,
+) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
         .find(DRANK)
         .filter(|f| f.subject == npc.entity)
         .filter_map(|f| f.day)
         .fold(0.0_f64, f64::max);
-    let believed = believed_water(frozen, npc, day, terrain, PLAN_BUDGET);
+    let believed = shared_believed_water(frozen, npc, band, day, terrain, PLAN_BUDGET);
     let drive = drive_at(
         frozen,
         npc.entity,
@@ -2271,6 +2360,10 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         terrain,
         threat_niche: npc.threat_niche,
         boldness: npc.boldness,
+        // The instantaneous affect read is alarm-free (terrain-sourced only) —
+        // this is the read `alarm_field` builds over, so it MUST NOT see borrowed
+        // alarm (else secondary transmission, a self-sustaining stampede).
+        alarm: None,
     };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
@@ -2314,6 +2407,74 @@ pub fn affect_of(frozen: &Ledger, npc: &Npc, day: WorldTime, terrain: &dyn Terra
         PLAN_BUDGET,
     )
     .affect
+}
+
+/// The per-tick ALARM field (The Alarm) — fear-contagion as a derived,
+/// order-independent field over the frozen population, the vessel's dynamic
+/// sibling of `worldgen::predator_pressure`. For each creature that is
+/// **primary-afraid** (its own Danger drive is active — `affect_of` reads
+/// `object == Some(Danger)` with `arousal ≥ DANGER_ACT`), it stamps the
+/// emitter's felt-threat magnitude onto its cell and each `neighbors()` cell
+/// (a one-hop halo), accumulating (`+=`) across emitters, then clamps every
+/// entry to `[0, 1]`. Empty when no creature is primary-afraid.
+///
+/// # The termination invariant (spec §3)
+///
+/// The field is built by reading `affect_of` **alarm-free** — the frozen
+/// ledger holds no committed alarm (affect is immaterial, never committed), and
+/// `affect_of`'s own Danger drive passes `alarm: None`. So an emitter's danger
+/// is necessarily **terrain-sourced**: a creature alarmed only by contagion
+/// (borrowed alarm) is NOT itself an emitter, and secondary transmission (a
+/// self-sustaining stampede, `R0 ≥ 1`) is impossible by construction. Only the
+/// tick's Danger drive then READS the field (via `alarm: Some(&field)`) — the
+/// wave is a bounded halo around genuine hazard, collapsing the next tick once
+/// the hazard clears.
+///
+/// # Determinism
+///
+/// Accumulation into a `BTreeMap` with `+=` is order-independent (addition is
+/// commutative), so the field is the same regardless of `npcs` order; the clamp
+/// is applied once at the end over the sorted keys. The field is a compute-path
+/// intermediate, never serialized.
+///
+/// type-audit: bare-ok(ratio: return)
+pub fn alarm_field(
+    frozen: &Ledger,
+    npcs: &[Npc],
+    terrain: &dyn Terrain,
+    day: WorldTime,
+) -> std::collections::BTreeMap<RoomAddr, f64> {
+    let mut field: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+    for npc in npcs {
+        // The ALARM-FREE read (the build invariant): `affect_of` senses only the
+        // terrain hazards, never borrowed alarm — so emission is terrain-sourced
+        // by construction and the wave terminates.
+        // The Tidings: an EMPTY band — the field reads each creature's intrinsic
+        // affect (its own home-anchored belief), not band-shared belief.
+        // Belief-sharing is orthogonal to terrain-fear emission, and `&[]`
+        // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly, so
+        // the alarm field is unchanged by this campaign.
+        let affect = affect_of(frozen, npc, &[], day, terrain);
+        let primary_afraid =
+            affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT;
+        if !primary_afraid {
+            continue;
+        }
+        // Stamp the emitter's felt-threat magnitude on its cell and the one-hop
+        // halo (its three edge-neighbours), accumulating across emitters.
+        let magnitude = affect.arousal;
+        let pos = agent_position(frozen, npc, day);
+        *field.entry(pos.clone()).or_insert(0.0) += magnitude;
+        for n in pos.neighbors() {
+            *field.entry(n).or_insert(0.0) += magnitude;
+        }
+    }
+    // Saturation: a stampeding crowd is not infinitely scarier than a threshold
+    // few. Clamp once at the emit boundary, over the sorted keys.
+    for v in field.values_mut() {
+        *v = v.clamp(0.0, 1.0);
+    }
+    field
 }
 
 /// The plan search's node-expansion budget: generous for the short local
@@ -2423,6 +2584,12 @@ impl<'a> TickSystem for DriveMovements<'a> {
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         let mut out: Vec<Fact> = Vec::new();
+        // THE ALARM: build the per-tick alarm field ONCE, from the frozen
+        // population, before advancing any creature — it is fixed across the whole
+        // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
+        // emission is terrain-sourced and the wave terminates; the per-step Danger
+        // drive below then reads it at each creature's cell.
+        let alarm = alarm_field(frozen, &self.npcs, self.terrain, self.from);
         for npc in &self.npcs {
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
@@ -2451,7 +2618,16 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // Belief and exploration state, evolved locally across the walk (the
             // fold includes this tick's own emitted moves). Seed belief from the
             // pre-tick history; grow it whenever the agent stands in water.
-            let mut believed = believed_water(frozen, npc, self.from, self.terrain, PLAN_BUDGET);
+            // The Tidings: seed from the BAND's pooled belief (co-located
+            // members share what they know), not the creature's alone.
+            let mut believed = shared_believed_water(
+                frozen,
+                npc,
+                &self.npcs,
+                self.from,
+                self.terrain,
+                PLAN_BUDGET,
+            );
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -2541,6 +2717,11 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     terrain: self.terrain,
                     threat_niche: npc.threat_niche,
                     boldness: npc.boldness,
+                    // THE ALARM: the tick's mover READS the per-tick field (built
+                    // alarm-free above), so a calm creature beside genuine distress
+                    // catches the alarm and flees. Empty on the settled worlds
+                    // (no primary distress) ⇒ byte-identical.
+                    alarm: Some(&alarm),
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -3426,6 +3607,231 @@ mod tests {
             believed_water(&reloaded, &npc, WorldTime { day: 5.0 }, &t, 10_000),
             got,
             "the tie resolves identically after reload"
+        );
+    }
+
+    /// Build an `Npc` with the same authored field values every belief test
+    /// uses, varying only what these tests vary: entity, home, resource, and
+    /// label. Mirrors the `Npc` literal repeated across the `believed_water`
+    /// tests above — factored here only to keep the four-band-member Tidings
+    /// tests below from repeating it four times over.
+    fn shared_belief_npc(entity: EntityId, home: RoomAddr, resource: RoomAddr, label: &str) -> Npc {
+        Npc {
+            entity,
+            home,
+            resource,
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: label.into(),
+        }
+    }
+
+    #[test]
+    fn shared_belief_fills_an_ignorant_colocated_creature() {
+        // Two creatures share a room ("here"); `knower` has stood at `water`,
+        // `lost` never has. Both homed at `here`.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // Alone, `lost` is ignorant.
+        assert_eq!(believed_water(&ledger, &lost, now, &t, 10_000), None);
+        // Co-located with `knower`, it learns the water.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            Some(water.clone())
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_order_independent() {
+        // Same setup as `shared_belief_fills_an_ignorant_colocated_creature`;
+        // permuting the band must not change the result.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let ab = [knower.clone(), lost.clone()];
+        let ba = [lost.clone(), knower.clone()];
+        let result = shared_believed_water(&ledger, &lost, &ab, now, &t, 10_000);
+        assert_eq!(result, Some(water));
+        assert_eq!(
+            result,
+            shared_believed_water(&ledger, &lost, &ba, now, &t, 10_000),
+            "permuting the band must not change the pooled belief"
+        );
+    }
+
+    #[test]
+    fn shared_belief_is_a_noop_when_alone_or_band_empty() {
+        // A lone knower's shared belief equals its own belief; an empty band,
+        // and a band whose only co-located member is `knower` itself, are
+        // both no-ops (the strict-generalization contract).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        let now = WorldTime { day: 1.0 };
+        let solo = believed_water(&ledger, &knower, now, &t, 10_000);
+        assert_eq!(solo, Some(water));
+
+        assert_eq!(
+            shared_believed_water(&ledger, &knower, &[], now, &t, 10_000),
+            solo,
+            "an empty band changes nothing"
+        );
+        assert_eq!(
+            shared_believed_water(
+                &ledger,
+                &knower,
+                std::slice::from_ref(&knower),
+                now,
+                &t,
+                10_000
+            ),
+            solo,
+            "a band of only itself changes nothing"
+        );
+    }
+
+    #[test]
+    fn shared_belief_ignores_a_knower_in_a_different_room() {
+        // `knower` knows water but currently stands in a DIFFERENT room than
+        // `lost` -> no share.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let water = neighbors[0].clone();
+        let elsewhere = neighbors[1].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower has stood at water (knows it) but its LATEST position is
+        // `elsewhere`, not `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &elsewhere, 1.0);
+        // lost stands at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        let band = [knower.clone(), lost.clone()];
+        let now = WorldTime { day: 1.0 };
+
+        // sanity: knower does know water when consulted directly...
+        assert_eq!(
+            believed_water(&ledger, &knower, now, &t, 10_000),
+            Some(water)
+        );
+        // ...but lost gains nothing, since knower is in a different room.
+        assert_eq!(
+            shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
+            None
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_moves_toward_shared_water() {
+        // THE TIDINGS, WIRED INTO THE MOVER: a `knower` and a `lost` creature
+        // share `here` (both homed there too). `knower` has genuinely stood
+        // at `water` (two hops away, through `n1`); `lost` never has. Water
+        // sits behind `n1`, whose OWN elevation is left unset (INFINITY);
+        // `here`'s other two neighbors (`n0`, `n2`) are planted at elevation
+        // 0.0 — the lowest-unvisited-neighbor explorer therefore ALWAYS
+        // prefers them over `n1`, and once `home` (already visited) blocks
+        // the way back, blind exploration can structurally never reach `n1`
+        // (let alone `water` beyond it). So under the OLD (non-shared)
+        // belief seed, `lost` — ignorant — can never drink: it wanders
+        // through `n0`/`n2` and their own subtrees, never through `n1`.
+        // Under the shared law, `lost` inherits `knower`'s belief the moment
+        // they're co-located and A*-steps straight through `n1` to `water`,
+        // drinking there. A real, mechanism-tied assertion (not just "moved
+        // somewhere") — mutation-verify: reverting the seed swap reds this.
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water (day 0), back at `here`
+        // by day 1 — same shape as the pure-`shared_believed_water` tests.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+
+        let sys = DriveMovements {
+            npcs: vec![knower.clone(), lost.clone()],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            terrain: &t,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
+        let lost_drank = next.find(DRANK).filter(|f| f.subject == lost_e).count();
+        assert!(
+            lost_drank >= 1,
+            "shared belief should have carried the lost creature to the water \
+             its co-located band-mate knew, but it never drank"
         );
     }
 
@@ -4951,6 +5357,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.urgency(&view_at(scary)),
@@ -4982,6 +5389,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
@@ -5000,6 +5408,7 @@ mod tests {
             terrain: &boxed,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
@@ -5026,6 +5435,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
@@ -5056,6 +5466,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
@@ -5094,6 +5505,7 @@ mod tests {
             terrain: &t,
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert_eq!(
             danger.urgency(&view_at(cell)),
@@ -5113,6 +5525,7 @@ mod tests {
                 terrain: &t,
                 threat_niche: mortal_threat_niche(),
                 boldness,
+                alarm: None,
             }
             .urgency(&v)
         };
@@ -5133,6 +5546,404 @@ mod tests {
         );
         // The monotone axis: coward > steady > bold > fearless.
         assert!(feel(0.0) > feel(0.5) && feel(0.5) > feel(0.8) && feel(0.8) > feel(1.0));
+    }
+
+    #[test]
+    fn alarm_raises_a_calm_creatures_danger() {
+        // THE ALARM: a creature on hazard-free ground feels nothing of its own,
+        // but a borrowed alarm at its cell wakes its Danger drive additively.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::default(); // no hazard anywhere — nothing to fear
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.8);
+        let feel = |alarm: Option<&std::collections::BTreeMap<RoomAddr, f64>>| {
+            Danger {
+                terrain: &t,
+                threat_niche: mortal_threat_niche(),
+                boldness: BOLDNESS_STEADY,
+                alarm,
+            }
+            .urgency(&view_at(cell.clone()))
+        };
+        let felt = feel(Some(&map));
+        assert!(felt > 0.0, "borrowed alarm raises felt threat above zero");
+        assert!(
+            felt >= DANGER_ACT,
+            "a full-strength alarm crosses the danger act threshold"
+        );
+        assert_eq!(
+            feel(None),
+            0.0,
+            "with no alarm field a calm creature on safe ground fears nothing"
+        );
+    }
+
+    #[test]
+    fn borrowed_alarm_is_scaled_by_boldness() {
+        // THE ALARM reuses THE METTLE's dial: borrowed fear is scaled by the
+        // reader's own `mettle_factor`, so a bold creature shrugs off the herd's
+        // panic exactly as it shrugs off a hazard.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::default();
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.8);
+        let feel = |boldness: f64| {
+            Danger {
+                terrain: &t,
+                threat_niche: mortal_threat_niche(),
+                boldness,
+                alarm: Some(&map),
+            }
+            .urgency(&view_at(cell.clone()))
+        };
+        // Bold < steady < coward — the monotone Mettle ordering, borrowed.
+        assert!(
+            feel(0.9) < feel(0.5) && feel(0.5) < feel(0.1),
+            "a bold creature feels less of the borrowed alarm than a coward"
+        );
+        // A bold omnivore shrugs the herd off — its borrowed alarm stays below act.
+        assert!(
+            feel(0.9) < DANGER_ACT,
+            "a bold creature's borrowed alarm falls below the danger act threshold"
+        );
+    }
+
+    #[test]
+    fn alarm_is_additive_over_terrain_hazard() {
+        // THE ALARM is ADDITIVE: on mildly hazardous ground the borrowed alarm
+        // stacks on the creature's own felt threat, strictly above either alone.
+        let cell = raddr(1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.2)]);
+        let mut map: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
+        map.insert(cell.clone(), 0.5);
+        let both = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: Some(&map),
+        }
+        .urgency(&view_at(cell.clone()));
+        let terrain_only = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+        }
+        .urgency(&view_at(cell.clone()));
+        // With ALARM_SCALE = 1.0 and steady boldness: 0.2 + 0.5 = 0.7.
+        assert!(
+            (both - 0.7).abs() < 1e-9,
+            "felt threat is base + ALARM_SCALE * alarm"
+        );
+        assert!(
+            both > terrain_only && both > 0.5,
+            "the sum is strictly above either the terrain hazard or the alarm alone"
+        );
+    }
+
+    /// A steady mortal NPC placed (via `commit_agent_at`) at `pos`, minted into
+    /// `ledger` — the common emitter/reader for the `alarm_field` tests.
+    /// `boldness` dials whether it is primary-afraid on hazard ground.
+    fn alarm_npc(ledger: &mut Ledger, reg: &ConceptRegistry, pos: &RoomAddr, boldness: f64) -> Npc {
+        let e = ledger.mint_entity();
+        commit_agent_at(ledger, reg, e, pos, 0.0);
+        Npc {
+            entity: e,
+            home: pos.clone(),
+            resource: pos.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness,
+            threat_niche: mortal_threat_niche(),
+            label: "creature".into(),
+        }
+    }
+
+    #[test]
+    fn alarm_field_is_empty_with_no_primary_fear() {
+        // THE ALARM: a settled population on hazard-free ground raises no alarm —
+        // the field is empty, the byte-identical resting state.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let a = raddr(1.0);
+        let b = a.neighbors()[0].clone();
+        let npc_a = alarm_npc(&mut ledger, &reg, &a, BOLDNESS_STEADY);
+        let npc_b = alarm_npc(&mut ledger, &reg, &b, BOLDNESS_STEADY);
+        let terrain = PlantedTerrain::default(); // no hazard anywhere
+        let field = alarm_field(&ledger, &[npc_a, npc_b], &terrain, WorldTime { day: 0.5 });
+        assert!(
+            field.is_empty(),
+            "no creature is primary-afraid, so the alarm field is empty: {field:?}"
+        );
+    }
+
+    #[test]
+    fn alarm_field_haloes_a_primary_afraid_creature() {
+        // THE ALARM: one creature on an UNCANNY-hazard cell (its Danger crosses
+        // act) stamps a one-hop halo — its cell and its three neighbours carry
+        // alarm in [0, 1]; a distant cell is untouched.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let cell = raddr(1.0);
+        let ns = cell.neighbors();
+        let far = raddr(-1.0); // the far side of the world, outside the halo
+        let npc = alarm_npc(&mut ledger, &reg, &cell, BOLDNESS_STEADY);
+        // A full-strength uncanny hazard ONLY on the creature's cell.
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(cell.clone(), 0.8)]);
+        let field = alarm_field(&ledger, &[npc], &terrain, WorldTime { day: 0.5 });
+        for room in std::iter::once(&cell).chain(ns.iter()) {
+            let v = field.get(room).copied().unwrap_or(0.0);
+            assert!(
+                v > 0.0 && v <= 1.0,
+                "the halo cell {room:?} carries alarm in (0, 1]: {v}"
+            );
+        }
+        assert!(
+            !field.contains_key(&far),
+            "a cell far from the distress carries no alarm"
+        );
+    }
+
+    #[test]
+    fn alarm_field_does_not_re_emit() {
+        // THE ALARM's termination guarantee (built alarm-free): a creature A on
+        // genuine hazard ground is primary-afraid and emits; a BOLD creature B on
+        // an adjacent cell shrugs the hazard off (its own terrain danger is below
+        // act) and so contributes NOTHING — borrowed alarm is never re-emitted.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let h = raddr(1.0); // A's hazard cell
+        let ns = h.neighbors();
+        let b_cell = ns[0].clone(); // B sits one hop from A, inside A's halo
+        // A is a coward (feels the hazard fully); B is bold (shrugs it off).
+        let a = alarm_npc(&mut ledger, &reg, &h, BOLDNESS_STEADY);
+        let b = alarm_npc(&mut ledger, &reg, &b_cell, 0.95);
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(h.clone(), 0.8)]);
+        // The field over BOTH creatures.
+        let both = alarm_field(
+            &ledger,
+            &[a.clone(), b.clone()],
+            &terrain,
+            WorldTime { day: 0.5 },
+        );
+        // The field over A ALONE — the reference: B must add nothing.
+        let a_only = alarm_field(&ledger, &[a], &terrain, WorldTime { day: 0.5 });
+        assert_eq!(
+            both, a_only,
+            "the bold neighbour B is not primary-afraid, so it re-emits no alarm"
+        );
+        // And B's own neighbours OUTSIDE A's halo are untouched — no secondary wave.
+        for n in b_cell.neighbors() {
+            if n != h && !ns.contains(&n) {
+                assert!(
+                    !both.contains_key(&n),
+                    "B does not stamp its own halo: {n:?} must be absent"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_herd_bolts_borrowed_alarm_makes_a_calm_creature_flee_then_settle() {
+        // THE ALARM, end-to-end (the spec's e2e criterion): drive the REAL
+        // field-aware `DriveMovements` tick, not a hand-built affect. Creature A
+        // is CORNERED on genuine UNCANNY hazard ground (its cell and every
+        // neighbour are hazardous, so no step is strictly safer — it holds, and
+        // keeps screaming every tick). Creature B stands one hop away, INSIDE
+        // A's alarm halo, but dreads the uncanny only WEAKLY (a low threat-niche
+        // weight), so its OWN terrain-sourced danger stays below `act`: B has NO
+        // primary fear of its own. Yet the BORROWED alarm at B's cell pushes it
+        // over `act`, and B flees down the local threat gradient to safe ground
+        // OUTSIDE the halo — then, separated from the distress, it settles. The
+        // wave is bounded and terminates (spec §3): no perpetual stampede.
+
+        // A registry carrying every predicate the tick may commit.
+        let mut reg = ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+
+        // Geometry, read from the real mesh so the scenario is topology-robust.
+        let x = raddr(1.0); // A's cell — the core of the hazard
+        let ns = x.neighbors(); // A's three edge-neighbours
+        let b_start = ns[0].clone(); // B stands here: one hop from A, in the halo
+        // The hazard patch = A's cell AND its neighbours, so A is boxed in (no
+        // neighbour is strictly safer → cornered, holds, keeps emitting).
+        let patch: std::collections::BTreeSet<RoomAddr> = std::iter::once(x.clone())
+            .chain(ns.iter().cloned())
+            .collect();
+        // B's escape: a neighbour of B's cell OUTSIDE the patch — and thus
+        // outside A's one-hop halo. The mesh gives B such a way out; assert it.
+        let escape: std::collections::BTreeSet<RoomAddr> = b_start
+            .neighbors()
+            .into_iter()
+            .filter(|n| !patch.contains(n))
+            .collect();
+        assert!(
+            !escape.is_empty(),
+            "B must have a hop out of the halo for the wave to terminate"
+        );
+        // `flee_step` (and arbitration) pick the safest neighbour, ties to the
+        // smallest RoomAddr — among the equally-safe escape cells that is the
+        // minimum. Make it B's home, so B flees home to safety and rests there
+        // (no home-ward pull back into the halo → no oscillation).
+        let b_home = escape.iter().min().unwrap().clone();
+
+        // A strong UNCANNY hazard over the whole patch.
+        let terrain =
+            PlantedTerrain::hazard(std::iter::empty(), patch.iter().cloned().map(|c| (c, 0.8)));
+
+        // A — a mortal dreading the uncanny fully (weight 1), steady boldness:
+        // felt threat 0.8 ≥ DANGER_ACT, cornered, emits arousal 0.8 every tick.
+        let build_a = |ledger: &mut Ledger| -> Npc {
+            let e = ledger.mint_entity();
+            commit_agent_at(ledger, &reg, e, &x, 0.0);
+            Npc {
+                entity: e,
+                home: x.clone(),
+                resource: x.clone(),
+                species: "goblin".into(),
+                activity: hornvale_species::ActivityCycle::Diurnal,
+                temperature_niche: test_niche(),
+                deliberation_latency: 0.5,
+                time_horizon: 0.0,
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: default_diet_niche(),
+                boldness: BOLDNESS_STEADY,
+                threat_niche: mortal_threat_niche(),
+                label: "cornered".into(),
+            }
+        };
+        // B — dreads the uncanny only WEAKLY (0.25), so 0.8·0.25 = 0.20 <
+        // DANGER_ACT (0.3): NO primary fear of its own. Its home is the safe
+        // escape cell it flees to.
+        let build_b = |ledger: &mut Ledger| -> Npc {
+            let e = ledger.mint_entity();
+            commit_agent_at(ledger, &reg, e, &b_start, 0.0);
+            Npc {
+                entity: e,
+                home: b_home.clone(),
+                resource: b_home.clone(),
+                species: "goblin".into(),
+                activity: hornvale_species::ActivityCycle::Diurnal,
+                temperature_niche: test_niche(),
+                deliberation_latency: 0.5,
+                time_horizon: 0.0,
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: default_diet_niche(),
+                boldness: BOLDNESS_STEADY,
+                threat_niche: ThreatNiche {
+                    uncanny: 0.25,
+                    heat: 0.0,
+                    cold: 0.0,
+                    predator: 0.0,
+                },
+                label: "herd-edge".into(),
+            }
+        };
+
+        // --- The contagion run: A present and cornered, B one hop away. ---
+        let mut ledger = Ledger::default();
+        let a = build_a(&mut ledger);
+        let b = build_b(&mut ledger);
+        let a_entity = a.entity;
+        let b_entity = b.entity;
+
+        // TICK 1 — the daytime window (frac 0.30 → 0.40, both awake). The alarm
+        // field haloes A's neighbourhood (B's cell included), so B bolts.
+        let sys1 = DriveMovements {
+            npcs: vec![a.clone(), b.clone()],
+            from: WorldTime { day: 0.30 },
+            to: WorldTime { day: 0.40 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
+
+        // B's actual tick STEPS (excluding the day-0 seed placement).
+        let b_moves_1: Vec<&Fact> = after1
+            .find(AGENT_AT)
+            .filter(|f| f.subject == b_entity && f.provenance != "test")
+            .collect();
+        let b_fear_moves = b_moves_1
+            .iter()
+            .filter(|f| f.provenance.contains("fear"))
+            .count();
+        assert!(
+            b_fear_moves >= 1,
+            "B, with no primary fear of its own, FLEES the borrowed alarm (a fear-provenance move)"
+        );
+        // Bounded — no perpetual within-tick stampede (the field is fixed across
+        // the interval; an oscillating B would run to MAX_STEPS, committing
+        // thousands of moves). A small count proves the wave is a bounded halo.
+        assert!(
+            b_moves_1.len() <= 4,
+            "B's flight is bounded, not a runaway stampede: got {} moves",
+            b_moves_1.len()
+        );
+        // A is cornered — it never STEPS during the tick (only the day-0 seed
+        // placement, provenance "test", is on the ledger). It holds and keeps
+        // emitting, the persistent alarm source.
+        assert_eq!(
+            after1
+                .find(AGENT_AT)
+                .filter(|f| f.subject == a_entity && f.provenance != "test")
+                .count(),
+            0,
+            "the cornered A holds its ground, the persistent alarm source"
+        );
+
+        // TICK 2 — A still cornered and screaming; B now on safe ground OUTSIDE
+        // the halo. The alarm no longer reaches B, so it settles: no new move.
+        // TERMINATION (spec §3): the wave dies not because the source vanished
+        // (A still screams) but because B escaped the one-hop halo.
+        let sys2 = DriveMovements {
+            npcs: vec![a.clone(), b.clone()],
+            from: WorldTime { day: 0.40 },
+            to: WorldTime { day: 0.55 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
+        let b_moves_2 = after2
+            .find(AGENT_AT)
+            .filter(|f| f.subject == b_entity && f.provenance != "test")
+            .count();
+        assert_eq!(
+            b_moves_2,
+            b_moves_1.len(),
+            "once out of the halo B settles — the wave terminates (no perpetual stampede)"
+        );
+
+        // --- The control run: B alone (A absent). ---
+        // With no primary-afraid neighbour the alarm field is EMPTY, so B feels
+        // nothing borrowed and never flees. (It may amble home, but never with
+        // the fear provenance — the flight was borrowed, not intrinsic.)
+        let mut control = Ledger::default();
+        let cb = build_b(&mut control);
+        let cb_entity = cb.entity;
+        let csys = DriveMovements {
+            npcs: vec![cb.clone()],
+            from: WorldTime { day: 0.30 },
+            to: WorldTime { day: 0.40 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
+        let c_fear = cafter
+            .find(AGENT_AT)
+            .filter(|f| f.subject == cb_entity && f.provenance.contains("fear"))
+            .count();
+        assert_eq!(
+            c_fear, 0,
+            "with no distressed neighbour present, B never flees — the flight was borrowed"
+        );
     }
 
     #[test]
@@ -5210,11 +6021,13 @@ mod tests {
             terrain: &t,
             threat_niche: cold_adapted,
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         let shrugs = Danger {
             terrain: &t,
             threat_niche: warm_adapted,
             boldness: BOLDNESS_STEADY,
+            alarm: None,
         };
         assert!(
             fears.urgency(&v) > shrugs.urgency(&v),
@@ -5285,11 +6098,13 @@ mod tests {
             terrain: &t,
             threat_niche: herbivore,
             boldness: 0.0,
+            alarm: None,
         };
         let hunter = Danger {
             terrain: &t,
             threat_niche: apex,
             boldness: 0.0,
+            alarm: None,
         };
         assert!(
             quarry.urgency(&v) > 0.0,
@@ -5452,7 +6267,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             a.label,
             AffectLabel::Content,
@@ -6495,7 +7310,7 @@ mod tests {
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
-        let a = affect_of(&ledger, &base, WorldTime { day: 100.0 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 100.0 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "the deathless are still");
         assert_eq!(a.object, None, "no drive is engaged");
         let meta = Npc {
@@ -6505,7 +7320,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 100.0 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 100.0 }, &terrain);
         assert_ne!(
             b.label,
             AffectLabel::Content,
@@ -6544,13 +7359,13 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             label: "xorn".to_string(),
         };
-        let a = affect_of(&ledger, &base, WorldTime { day: 0.5 }, &terrain);
+        let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(a.label, AffectLabel::Content, "a construct does not flinch");
         let meta = Npc {
             metabolic_class: MetabolicClass::Endotherm,
             ..base.clone()
         };
-        let b = affect_of(&ledger, &meta, WorldTime { day: 0.5 }, &terrain);
+        let b = affect_of(&ledger, &meta, &[], WorldTime { day: 0.5 }, &terrain);
         assert_eq!(
             b.object,
             Some(DriveKind::Danger),
@@ -6854,6 +7669,61 @@ mod tests {
             a.intent,
             Intent::Do(Action::MoveTo(smaller)),
             "an equal-utility tie resolves to the smaller RoomAddr"
+        );
+    }
+
+    #[test]
+    fn a_colocated_lost_creature_feels_relief() {
+        // THE TIDINGS, WIRED INTO THE SAMPLER: same co-located knower/lost
+        // scenario as `shared_belief_fills_an_ignorant_colocated_creature`,
+        // read through `affect_of` at a moment well past the thirst act
+        // threshold (chronic, not yet at the learned-helplessness onset).
+        // Alone, `lost` is ignorant: its own `believed_water` is `None`, but
+        // it is never truly stuck — a mesh room always has 3 neighbours, so
+        // an ignorant thirsty creature always has an exploration gradient to
+        // follow (Searching: normal seeking, valence 0.0 — not yet relief).
+        // With the band, `shared_believed_water` hands it
+        // `knower`'s known, reachable source: the SAME arbitration now
+        // beelines to a KNOWN target, reading Eager (valence 0.5) instead —
+        // the measurable relief the shared belief buys it. Mutation-verify:
+        // an `affect_of` that dropped `band` (or passed it through empty)
+        // would read `Searching` in BOTH calls; this reds without the wiring.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let water = here.neighbors()[0].clone();
+        let t = PlantedTerrain::fresh_only([water.clone()]);
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        // knower's perception history: stood at water, now back at `here`.
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        // lost has only ever been at `here`.
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+        // Day 10: well past thirst's act threshold (chronic), well before the
+        // 15-day learned-helplessness onset (which, being a pure function of
+        // `last_drank`/day, would be identical alone or in-band and so could
+        // never distinguish them).
+        let now = WorldTime { day: 10.0 };
+
+        let alone = affect_of(&ledger, &lost, &[], now, &t);
+        let in_band = affect_of(&ledger, &lost, &[knower.clone(), lost.clone()], now, &t);
+
+        assert_eq!(
+            alone.label,
+            AffectLabel::Searching,
+            "alone and ignorant, {lost:?} follows a gradient, unrelieved: {alone:?}"
+        );
+        assert_eq!(
+            in_band.label,
+            AffectLabel::Eager,
+            "co-located with a knower, the shared belief relieves it: {in_band:?}"
+        );
+        assert!(
+            in_band.valence > alone.valence,
+            "the shared belief must make the felt state MORE positive, not just different"
         );
     }
 }
