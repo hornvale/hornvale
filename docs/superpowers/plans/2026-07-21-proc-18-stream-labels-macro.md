@@ -1,5 +1,9 @@
 # PROC-18: `stream_labels!` Macro Implementation Plan
 
+**Status: COMPLETE.** All 10 tasks executed, task-reviewed, and passed a
+final whole-branch review (Ready to merge: Yes). Chronicled as
+[The Single Saying](../../../book/src/chronicle/the-single-saying.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a `stream_labels!` macro (`kernel/src/seed.rs`) that declares a

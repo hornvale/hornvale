@@ -1,8 +1,10 @@
 # PROC-18: `stream_labels!` — one authored site for a seed-derivation label
 
-**Working campaign name:** The Single Saying (Nathan may rename at G3).
+**Working campaign name:** The Single Saying.
 
-**Status:** draft, awaiting G3 (spec review).
+**Status:** SHIPPED. Approved at G3 ("Looks great!"), fully executed and
+whole-branch reviewed (Ready to merge: Yes). Chronicled as
+[The Single Saying](../../../book/src/chronicle/the-single-saying.md).
 
 **Worktree:** `~/.config/superpowers/worktrees/hornvale/proc-18`, branch `proc-18`, off `main` @835fc844.
 
