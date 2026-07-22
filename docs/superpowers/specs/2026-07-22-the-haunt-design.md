@@ -87,38 +87,57 @@ therefore **unchanged** (present danger → flee, exactly as now); memory lives 
 planning layer. "Flow + memory" = the flow drive senses the present while the
 creature's plans carry the past.
 
-### 3. Latent + finite — byte-identity and survival-override, both for free
+### 3. Latent + finite — scoped drift and survival-override
 
-- **Additive-latent byte-identity.** The penalty only ever *raises* an edge cost, and
-  for a creature whose `believed_hazard` set is **empty** every edge stays `1` and
-  every plan is byte-identical. The settled peoples of a generated world are never
-  frightened (their Danger drive never crosses `act` on their good ground — verified
-  through every prior threat campaign), so their remembered set is empty and seed-42
-  is byte-identical *by construction* — the empty-source form (as The Alarm's alarm
-  field is empty on seed 42).
-- **Survival-override for free.** The penalty is **finite**: a creature whose only
-  route to its water runs through remembered-bad ground still takes it (the detour
-  costs more than the penalty), so a dying-thirsty creature braves the haunted ravine.
-  The flinch is a preference, not a wall — no soft-Maslow special-case needed; the
-  finite cost *is* the override.
+- **Additive-latent, but NOT dormant on seed 42 (corrected — decision-ledger #4).**
+  The penalty only ever *raises* an edge cost, so a creature whose `believed_hazard`
+  set is **empty** plans byte-identically. The settled peoples never cross `act` on
+  their good ground, so *they* are unchanged. But the seed-42 possession walk also
+  runs the **wild fauna** (agentified by The Wilding / The Teeth), which roam
+  genuinely hazardous ground, cross `DANGER_ACT`, and therefore carry **non-empty**
+  remembered sets — so remembered danger legitimately changes *their* paths, and the
+  possession-over-time gallery updates. This is the feature working as intended on the
+  fauna, not a regression: unlike The Alarm (whose signal changed only neighbours, and
+  none crossed threshold), memory changes the frightened creature's *own* plan. The
+  campaign therefore does **not** claim seed-42 byte-identity; it claims **scoped
+  drift**: only the possession-over-time gallery moves, and only by the intended
+  fauna-avoidance (a few beasts detour around remembered ground, still reach water) —
+  the census, reference dumps, and every other gallery stay byte-identical, and the
+  seed→world derivation (the determinism anchor) is untouched.
+- **Survival-override, and the budget (corrected — decision-ledger #4).** The penalty
+  is **finite**, so a creature whose only route to water runs through remembered-bad
+  ground still takes it — the flinch is a preference, not a wall. But the penalty must
+  be **small** (~3–5): the planners run Dijkstra-mode (`heuristic() = 0`, budget = 1000
+  node-expansions), so a large penalty makes A* exhaust its budget around a chokepoint
+  remembered cell and return `None` (the creature freezes instead of detouring — the
+  over-avoidance failure). A small penalty keeps the cost-radius within budget so
+  avoidance is graceful, verified by the plan-failure count not rising. Decoupling
+  penalty magnitude from budget via an admissible geometric A* heuristic (enabling
+  *strong* avoidance) is reserved (§Reserved) — it needs a RoomAddr centroid and a
+  proven per-hop bound in the kernel, out of v1's vessel scope.
 
 ## Determinism
 
 Genesis byte-identical: `believed_hazard` is a fold over already-committed `agent-at`
 facts + the terrain's own danger — no seed draw, no new predicate, **no epoch**, like
 `believed_water`. The A* over `u64` edge costs is deterministic with the existing
-tie-breaks; the fold's set is `BTreeSet`-ordered. The only behavioural change is the
-planner routing around a non-empty remembered set — dormant for the current agents
-(empty set, verified on seed 42), waking for a creature that has been frightened
-somewhere and must later plan past it. Stream consumption order is untouched.
+tie-breaks; the fold's set is `BTreeSet`-ordered. `new --seed 42` (genesis) is
+byte-identical — the fold and planner live only in the vessel's session tick, never
+in world generation. The one intended behavioural change is downstream: the possession
+walk's wild fauna route around remembered ground (decision-ledger #4). Stream
+consumption order is untouched.
 
 ## Success criteria
 
 - `believed_hazard` returns a deterministic set that is **empty** for a creature never
   frightened, and contains exactly the visited-and-dangerous cells otherwise — a unit
   test on a planted history.
-- `new --seed 42` and the seed-42 possession galleries are **byte-identical** (the
-  remembered set is empty — the settled peoples are never frightened).
+- `new --seed 42` (genesis) is **byte-identical**, and the seed-42 drift is **scoped**
+  (decision-ledger #4): ONLY `possession-over-time-seed-42.md` moves, and only by the
+  intended fauna-avoidance (a few wild beasts detour around remembered-dangerous
+  ground, still reach water; the plan-failure count does not rise); the census,
+  reference dumps, and every other gallery stay byte-identical. The gallery is
+  regenerated as the new baseline and the diff is inspected for sensibility.
 - A **planner unit test**: `plan_to_water` / `plan_to_room` with a non-empty avoid-set
   routes *around* a remembered-dangerous cell when a detour is available, and *through*
   it (braves it) when the detour exceeds the penalty; with an empty set the plan is
