@@ -143,7 +143,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6
 stone: root Naonea /naonea/
 sun: root Noagoo /noagoo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toaneo /toaneo/
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: root Daakoa /daakoa/
+shrubland: gap (experiential): no compound recipe for 'shrubland'
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -279,7 +279,7 @@ kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 kobold-kind: root Roro /roro/
 light: root Xaxo /xaxo/
 many: root Rogrra /rogrra/
-mesopelagic: gap (experiential): no settlement in or beside mesopelagic
+mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
 moon: root Roqrra /roqrra/
 mountain: gap (experiential): kobold has no exposure to 'mountain'
 mouth: root Rakxo /rakxo/
@@ -303,10 +303,10 @@ star: root Rogra /rogra/
 starlit: root Ra /ra/
 stone: root Xa /xa/
 sun: root Rogxa /rogxa/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Xatxo /xatxo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: gap (experiential): no compound recipe for 'temperate-rainforest'
+temperate-rainforest: root Xotro /xotro/
 tide: gap (experiential): kobold has no exposure to 'tide'
 tree: root Rakrra /rakrra/
 tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
