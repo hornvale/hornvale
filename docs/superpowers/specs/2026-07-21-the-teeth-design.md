@@ -2,7 +2,7 @@
 
 **Campaign:** The Teeth
 **Date:** 2026-07-21
-**Status:** spec (G3 review)
+**Status:** shipped (2026-07-21)
 **Registry:** PSY-10 (the trophic engine)
 
 ## The idea
