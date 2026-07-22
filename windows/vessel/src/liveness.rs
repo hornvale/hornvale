@@ -837,6 +837,42 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// Belief (L1): the ground the creature has stood on that FRIGHTENS it — a pure
+/// fold over its committed `agent-at` history ∩ frightening-truth, the inverted
+/// twin of [`believed_water`] (a SET it plans *around*, not a target it plans
+/// *toward*). Among the rooms the creature has stood in at or before `t`, those
+/// where its own Danger reading crosses `DANGER_ACT` ([`frightened_at`]).
+/// BELIEF == FOLD-OVER-PERCEIVED: no stored state — it re-derives from committed
+/// facts every read, exactly as `believed_water` re-derives `is_water`. Returns
+/// the EMPTY set for a creature never frightened, so the settled peoples (never
+/// frightened on their good ground) carry an empty set and every planner edge
+/// stays `1` — byte-identical by construction.
+///
+/// STALENESS — a fold that still forgets (spec §1). The precise rule is *a cell
+/// is remembered-dangerous iff the creature's MOST RECENT visit there was
+/// frightened* (a later safe visit clears the memory). For v1's terrain-sourced
+/// danger the hazard at a cell is time-invariant, so this reduces to *visited ∧
+/// still-frightening* and needs no visit-order bookkeeping — revising a
+/// disproven fear is reserved (transient-danger memory).
+pub fn believed_hazard(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+) -> std::collections::BTreeSet<RoomAddr> {
+    let mut shunned: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
+        let sighted = f.day.map(|d| d <= t.day).unwrap_or(false);
+        if sighted && let Value::Text(s) = &f.object {
+            let room = room_from_text(s);
+            if frightened_at(&room, npc, terrain) {
+                shunned.insert(room);
+            }
+        }
+    }
+    shunned
+}
+
 /// What the agent perceives of the world — the `view` the decision reads. Splits
 /// SELF-knowledge (position, drive — always true) from world-BELIEF
 /// (`believed_water` — a cache that may be absent/ignorant) and immediate
@@ -1723,14 +1759,44 @@ pub struct Danger<'a> {
 /// here, so this baseline keeps them byte-identical.
 const BOLDNESS_STEADY: f64 = 0.5;
 
-impl<'a> Danger<'a> {
-    /// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
-    /// at steady `0.5`, `×0` at fearless `1`. Floored at `0` so v1 never inverts
-    /// to the reserved reckless/approach shore.
-    fn mettle_factor(&self) -> f64 {
-        (2.0 * (1.0 - self.boldness)).max(0.0)
-    }
+/// The boldness scaling factor `2·(1 − boldness)` — `×2` at coward `0`, `×1`
+/// at steady `0.5`, `×0` at fearless `1`. Floored at `0` so v1 never inverts to
+/// the reserved reckless/approach shore. The single source of the Mettle dial:
+/// the Danger drive and [`believed_hazard`] both scale felt threat by it, so
+/// they never disagree about how much a creature feels a hazard.
+/// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: return)
+fn mettle_factor(boldness: f64) -> f64 {
+    (2.0 * (1.0 - boldness)).max(0.0)
+}
 
+/// The terrain-sourced felt threat over `room` and its neighbours (the
+/// potential-field reading the Danger drive engages on — the greatest over the
+/// cell it stands in and the three it may flee to of the per-kind
+/// [`threat_value`], boldness applied separately). The alarm-free terrain half
+/// of the drive's urgency, factored out so the live drive and
+/// [`believed_hazard`]'s memory read the SAME danger — one source of truth.
+/// type-audit: bare-ok(return)
+fn threat_field(room: &RoomAddr, niche: &ThreatNiche, terrain: &dyn Terrain) -> f64 {
+    let here = threat_value(niche, &terrain.hazards(room));
+    room.neighbors()
+        .iter()
+        .map(|n| threat_value(niche, &terrain.hazards(n)))
+        .fold(here, f64::max)
+}
+
+/// Whether the creature is FRIGHTENED at `room` — its own felt terrain threat
+/// there crosses `DANGER_ACT`, exactly the Danger drive's own (alarm-free)
+/// reading: `threat_field × mettle_factor ≥ act`. The one source of truth
+/// [`believed_hazard`] folds over, so the memory and the live drive never
+/// disagree about what ground is frightening. The per-tick alarm field is
+/// transient and unpersisted, so remembered danger reads terrain only (§1;
+/// transient-danger memory is reserved).
+fn frightened_at(room: &RoomAddr, npc: &Npc, terrain: &dyn Terrain) -> bool {
+    (threat_field(room, &npc.threat_niche, terrain) * mettle_factor(npc.boldness)).clamp(0.0, 1.0)
+        >= DANGER_ACT
+}
+
+impl<'a> Danger<'a> {
     /// The creature's OWN felt threat at `room` (The Bane): its threat niche
     /// dotted with the cell's hazards. Per-kind — two species read the same cell
     /// differently. (Boldness is applied separately, in `urgency`.)
@@ -1747,13 +1813,7 @@ impl<'a> Drive for Danger<'a> {
         // serviceability to veto a step INTO it). So the base threat is the
         // greatest over the current cell and its neighbours; the creature's
         // boldness (The Mettle) then scales how much it FEELS it. Clamped [0, 1].
-        let here = self.threat_at(&view.position);
-        let base = view
-            .position
-            .neighbors()
-            .iter()
-            .map(|n| self.threat_at(n))
-            .fold(here, f64::max);
+        let base = threat_field(&view.position, &self.threat_niche, self.terrain);
         // THE ALARM: fold the borrowed distress at the creature's OWN cell into
         // the felt threat, ADDITIVELY and BEFORE the boldness scaling — so a calm
         // creature beside genuine distress feels it, scaled by its own mettle,
@@ -1767,7 +1827,7 @@ impl<'a> Drive for Danger<'a> {
             .copied()
             .unwrap_or(0.0);
         let felt = base + ALARM_SCALE * borrowed;
-        (felt * self.mettle_factor()).clamp(0.0, 1.0)
+        (felt * mettle_factor(self.boldness)).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
         DANGER_ACT
@@ -3537,6 +3597,103 @@ mod tests {
             got,
             "the tie resolves identically after reload"
         );
+    }
+
+    /// A steady mortal NPC for the believed_hazard folds — the default mortal
+    /// threat niche weights UNCANNY `1`, so a planted UNCANNY hazard reads as
+    /// felt threat directly, and steady boldness (`0.5`) leaves it unscaled.
+    fn haunt_npc(entity: EntityId, home: RoomAddr) -> Npc {
+        Npc {
+            entity,
+            home: home.clone(),
+            resource: home,
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: "h".into(),
+        }
+    }
+
+    #[test]
+    fn believed_hazard_is_empty_when_never_frightened() {
+        // The empty-source form: a history over hazard-free ground shuns
+        // nothing, so every planner edge stays `1` (byte-identical, the settled
+        // peoples' set).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0);
+        let elsewhere = raddr(-1.0);
+        let t = PlantedTerrain::default(); // no hazard anywhere
+        let npc = haunt_npc(e, home.clone());
+        commit_agent_at(&mut ledger, &reg, e, &home, 1.0);
+        commit_agent_at(&mut ledger, &reg, e, &elsewhere, 2.0);
+        assert!(
+            believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t).is_empty(),
+            "a creature never frightened shuns nothing"
+        );
+    }
+
+    #[test]
+    fn believed_hazard_holds_the_visited_dangerous_cells() {
+        // The fold ∩ frightening-truth: exactly the visited-and-dangerous cells.
+        // A visited SAFE cell is absent, and an UNVISITED dangerous cell is
+        // absent (the creature must have STOOD there to remember it).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let home = raddr(1.0); // safe, visited ([1,0,0])
+        let scary = raddr(-1.0); // UNCANNY 0.8 ≥ act, visited → shunned ([-1,0,0])
+        let unvisited_scary = RoomAddr::containing([0.0, 1.0, 0.0], 6); // dangerous, never stood in ([0,1,0])
+        let t = PlantedTerrain::hazard(
+            std::iter::empty(),
+            [(scary.clone(), 0.8), (unvisited_scary.clone(), 0.8)],
+        );
+        let npc = haunt_npc(e, home.clone());
+        commit_agent_at(&mut ledger, &reg, e, &home, 1.0); // safe
+        commit_agent_at(&mut ledger, &reg, e, &scary, 2.0); // frightened here
+        let got = believed_hazard(&ledger, &npc, WorldTime { day: 5.0 }, &t);
+        let expected: std::collections::BTreeSet<RoomAddr> = [scary].into_iter().collect();
+        assert_eq!(
+            got, expected,
+            "shuns exactly the visited-and-dangerous cell"
+        );
+    }
+
+    #[test]
+    fn frightened_at_matches_the_danger_drive() {
+        // ONE SOURCE OF TRUTH: `frightened_at` agrees with the Danger drive's own
+        // reading (`urgency ≥ DANGER_ACT`, alarm-free) on the same cell — the
+        // memory and the live drive never disagree about frightening ground.
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let scary = raddr(1.0); // UNCANNY 0.8 → frightened
+        let mild = raddr(-1.0); // UNCANNY 0.1 → below act, not frightened
+        let t = PlantedTerrain::hazard(
+            std::iter::empty(),
+            [(scary.clone(), 0.8), (mild.clone(), 0.1)],
+        );
+        let npc = haunt_npc(e, scary.clone());
+        for cell in [&scary, &mild] {
+            let drive = Danger {
+                terrain: &t,
+                threat_niche: npc.threat_niche,
+                boldness: npc.boldness,
+                alarm: None,
+            };
+            let drive_afraid = drive.urgency(&view_at(cell.clone())) >= DANGER_ACT;
+            assert_eq!(
+                frightened_at(cell, &npc, &t),
+                drive_afraid,
+                "frightened_at agrees with the Danger drive at {cell:?}"
+            );
+        }
     }
 
     #[test]
