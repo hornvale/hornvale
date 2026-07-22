@@ -38,7 +38,7 @@ usage:
   hornvale repl [--world <PATH>]           interrogate a world interactively
   hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
                                             walk a frozen world as its flagship settler
-  hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment]
+  hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
@@ -483,9 +483,9 @@ page above is deterministic.\n\n";
 
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let field = flag_value(args, "--field").unwrap_or("elevation");
-    if !matches!(field, "elevation" | "lithology" | "sediment") {
+    if !matches!(field, "elevation" | "lithology" | "sediment" | "column") {
         return Err(format!(
-            "unknown --field '{field}' (expected elevation|lithology|sediment)"
+            "unknown --field '{field}' (expected elevation|lithology|sediment|column)"
         ));
     }
     let world = load_world(args)?;
@@ -508,6 +508,7 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
             "sediment" => {
                 hornvale_terrain::render::sediment_png(terrain.geosphere(), terrain.globe())
             }
+            "column" => hornvale_terrain::render::column_png(terrain.geosphere(), terrain.globe()),
             _ => hornvale_terrain::render::elevation_png(
                 terrain.geosphere(),
                 terrain.globe(),

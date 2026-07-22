@@ -93,15 +93,17 @@ pub use chorus::{
 };
 pub use components::WorldComponents;
 pub use graph_derive::{
-    GraphConfig, connection_graph, connection_graph_of, land_route_attempt_count,
+    GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
+    land_route_attempt_count,
 };
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
-    GOBLINOIDS, Stratigraphy, TERRITORY_DILATION_RINGS, emit_history, emit_now, goblinoid_overlap,
-    goblinoid_region_overlap, migration_events, ruins_of_people, stratigraphy, territories,
+    GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
+    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
+    stratigraphy, sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
-pub use traversal::{BASE_COST, traversal_cost};
+pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -1649,7 +1651,7 @@ pub fn paleoclimate_from(
 ///   order the coarse ice diagnostic already pays.
 /// - **The day-axis is re-based onto the bake's `[start_year, end_year)`
 ///   window** (oldest era → `start_year`, present → `end_year`), so `bake`'s
-///   `era_for` marches the glacial cycles forward across the simulated
+///   `era_index_for` marches the glacial cycles forward across the simulated
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
@@ -2318,6 +2320,57 @@ fn ground_lines_from(terrain: &GeneratedTerrain, climate: &GeneratedClimate) -> 
         lines.push(format!("Notable: {}.", notables.join(", ")));
     }
     lines
+}
+
+/// The Deep's headline lines: mean depth-to-basement, geothermal range, and
+/// notable unconformities, plus a glaciation-record line when a deep-time past
+/// exists. Empty for a landless world. (The Deep, spec §7.)
+/// type-audit: bare-ok(prose: return)
+pub fn deep_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let geo = terrain.geosphere();
+    let (mut land, mut dtb_sum, mut gaps) = (0usize, 0.0f64, 0usize);
+    let (mut grad_min, mut grad_max) = (f64::INFINITY, f64::NEG_INFINITY);
+    for cell in geo.cells() {
+        if !terrain.is_ocean(cell) {
+            land += 1;
+            dtb_sum += terrain.depth_to_basement_at(cell);
+            let g = terrain.geothermal_gradient_at(cell).get();
+            grad_min = grad_min.min(g);
+            grad_max = grad_max.max(g);
+            if terrain.unconformity_at(cell) {
+                gaps += 1;
+            }
+        }
+    }
+    if land == 0 {
+        return Ok(Vec::new()); // a waterworld has no legible column
+    }
+    let mut lines = vec![
+        format!(
+            "The archive runs {:.0} m to basement on average.",
+            dtb_sum / land as f64
+        ),
+        format!("Geothermal gradient spans {grad_min:.0}–{grad_max:.0} K/km — the deep's warmth."),
+    ];
+    let gap_frac = gaps as f64 / land as f64;
+    if gap_frac > 0.0 {
+        lines.push(format!(
+            "{:.0}% of the land records an unconformity — an age the rock forgot.",
+            gap_frac * 100.0
+        ));
+    }
+    // Optional deep-time refinement: glaciated strata recorded in the cover.
+    let paleo = paleoclimate_from(world, terrain)?;
+    if paleo.max_ice_fraction > 0.0 {
+        let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
+        lines.push(format!(
+            "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+        ));
+    }
+    Ok(lines)
 }
 
 /// The Waters' headline line for the almanac (The Freshet, DOM-5 first
@@ -3919,6 +3972,27 @@ fn build_to(
     let cfg = history_bake::BakeConfig::default_millennia();
     let eras = bake_eras(&world, &terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    // The Sundering (the moving sea): one geography graph per era. A cell is
+    // ocean in era E iff elevation < era.sea_level(E); the glacial low-stand
+    // exposes the shelf as land bridges to island refugia (the diaspora
+    // crosses), the rising sea drowns them (the peoples sunder). Adjacency +
+    // sailing lanes only, empty settlement slice. Derived per era, never
+    // committed.
+    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
+        .iter()
+        .map(|era| {
+            crate::graph_derive::connection_graph_at(
+                geo,
+                elevation,
+                era.sea_level,
+                &current,
+                &[],
+                &crate::graph_derive::GraphConfig::default(),
+            )
+        })
+        .collect();
     let history = history_bake::bake(
         seed,
         geo,
@@ -3928,6 +4002,7 @@ fn build_to(
         &paleo.refugia,
         &peoples,
         &cfg,
+        &graphs,
     );
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
@@ -5502,6 +5577,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         biome_lines: biome_lines_from(&climate),
         ground_lines: ground_lines_from(&terrain, &climate),
         water_lines: water_lines_from(&terrain),
+        deep_lines: deep_lines_from(world, &terrain)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),

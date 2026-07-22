@@ -22,13 +22,13 @@ You stand in tropical seasonal forest — buttressed canopy — in the lands of 
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [245] bugbear of Qvooshtvoagootao
-  [246] kobold of Xatxoratrro
-  [247] bugbear of Shngaodvaashqoa
-  [248] a wild rust-monster
-  [249] a wild otyugh
-  [250] a wild xorn
-  [251] a wild giant-elk
+  [216] bugbear of Qvooshtvoagootao
+  [217] kobold of Xatxoratrro
+  [218] bugbear of Shngaodvaashqoa
+  [219] a wild rust-monster
+  [220] a wild otyugh
+  [221] a wild xorn
+  [222] a wild giant-elk
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5
@@ -58,7 +58,7 @@ The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (1267 stirred).
+Time passes. You sense movement nearby (1262 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

@@ -15,8 +15,8 @@
 <rect x="203.3" y="229.2" width="60.4" height="6.8" fill="#5b8dd9" rx="2" />
 <text x="233.5" y="225.2" font-size="11" fill="currentColor" text-anchor="middle">17</text>
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[2, 3)</text>
-<rect x="274.3" y="87.2" width="60.4" height="148.8" fill="#5b8dd9" rx="2" />
-<text x="304.5" y="83.2" font-size="11" fill="currentColor" text-anchor="middle">372</text>
+<rect x="274.3" y="88.0" width="60.4" height="148.0" fill="#5b8dd9" rx="2" />
+<text x="304.5" y="84.0" font-size="11" fill="currentColor" text-anchor="middle">370</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[3, 4)</text>
 <text x="375.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="375.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[4, 5)</text>
@@ -24,7 +24,7 @@
 <text x="446.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">[5, 6)</text>
 <text x="517.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="517.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">&gt;= 6</text>
-<rect x="558.3" y="191.6" width="60.4" height="44.4" fill="#5b8dd9" rx="2" />
-<text x="588.5" y="187.6" font-size="11" fill="currentColor" text-anchor="middle">111</text>
+<rect x="558.3" y="190.8" width="60.4" height="45.2" fill="#5b8dd9" rx="2" />
+<text x="588.5" y="186.8" font-size="11" fill="currentColor" text-anchor="middle">113</text>
 <text x="588.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="middle">absent</text>
 </svg>

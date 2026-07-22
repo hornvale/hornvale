@@ -226,6 +226,72 @@ fn land_route_attempts_are_bounded_on_the_fixture() {
 }
 
 #[test]
+fn a_shelf_joins_two_uplands_only_at_the_glacial_low_stand() {
+    use hornvale_worldgen::graph_derive::connection_graph_at;
+    let geo = Geosphere::new(1);
+    // Two upland blobs (+100 m) around cells 0 and 30; the two-ring boundary
+    // between them sits on a shelf at -50 m (ocean at present, land at -120 m).
+    let ring2 = |seed: CellId| {
+        let mut s = std::collections::BTreeSet::new();
+        s.insert(seed);
+        for &n in geo.neighbors(seed) {
+            s.insert(n);
+        }
+        for c in s.clone() {
+            for &n in geo.neighbors(c) {
+                s.insert(n);
+            }
+        }
+        s
+    };
+    let up_a = ring2(CellId(0));
+    let far = geo
+        .cells()
+        .filter(|c| !up_a.contains(c))
+        .max_by_key(|&c| geo.hops_between(CellId(0), c, 16).unwrap_or(0))
+        .unwrap();
+    let up_b: std::collections::BTreeSet<_> = ring2(far).difference(&up_a).copied().collect();
+    let elevation = CellMap::from_fn(&geo, |c| {
+        if up_a.contains(&c) || up_b.contains(&c) {
+            e(100.0)
+        } else {
+            e(-50.0)
+        }
+    });
+    let current = CellMap::from_fn(&geo, |_| [0.0, 0.0, 0.0]); // no lanes — test the bridge
+    let cfg = GraphConfig::default();
+    let present = connection_graph_at(&geo, &elevation, e(0.0), &current, &[], &cfg);
+    let glacial = connection_graph_at(&geo, &elevation, e(-120.0), &current, &[], &cfg);
+    // Present: the shelf is ocean, so the two uplands are separate components.
+    assert!(
+        present
+            .reachable_regions(1e-9)
+            .iter()
+            .filter(|c| c.len() > 1)
+            .count()
+            >= 2,
+        "present sea should leave the uplands sundered"
+    );
+    // Glacial: the shelf is land, bridging them into one big component.
+    let glacial_big = glacial
+        .reachable_regions(1e-9)
+        .into_iter()
+        .map(|c| c.len())
+        .max()
+        .unwrap();
+    assert!(
+        glacial_big
+            > present
+                .reachable_regions(1e-9)
+                .into_iter()
+                .map(|c| c.len())
+                .max()
+                .unwrap(),
+        "the glacial low-stand must merge the uplands via the exposed shelf"
+    );
+}
+
+#[test]
 fn the_graph_is_deterministic_across_rebuilds() {
     let (geo, elevation, biome, current, settlements) = fixture();
     let config = cfg();

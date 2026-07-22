@@ -25,6 +25,9 @@
 -- goblin-solo/goblin-twin-solo builds are no longer perfect clones on every
 -- seed — still well inside the directional sampling bound, so this is a
 -- re-pinned measurement, not a broken invariant.)
+-- (Resync 2026-07-22, The Sundering (moving-sea epoch) regen on lefford
+-- (0063): the moving-sea epoch re-placed every world again; all drifted
+-- literals below were re-synced to calibration.rs in this same commit.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -248,17 +251,20 @@ checks AS (
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
          CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 151 AS ok FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 41 -> 40.
   SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(locked_ambient AS DOUBLE), 41.0, locked_ambient = 41 FROM agg
+         CAST(locked_ambient AS DOUBLE), 40.0, locked_ambient = 40 FROM agg
   UNION ALL
   SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
          CAST(spinning_eternal_exceptions AS DOUBLE), 9.0, spinning_eternal_exceptions = 9 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 536 -> 535.
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 536.0, flagship_coastal = 536 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 535.0, flagship_coastal = 535 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 235.0, flagship_inland = 235 FROM agg
+         CAST(flagship_inland AS DOUBLE), 234.0, flagship_inland = 234 FROM agg
   UNION ALL
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
          CAST(moonless_solar AS DOUBLE), 33.0, moonless_solar = 33 FROM agg
@@ -266,38 +272,51 @@ checks AS (
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
          CAST(moonless_lunar AS DOUBLE), 63.0, moonless_lunar = 63 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 703 -> 700.
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 703.0, blind_correct = 703 FROM agg
+         CAST(blind_correct AS DOUBLE), 700.0, blind_correct = 700 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
   SELECT 'blind-attribution total count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_total AS DOUBLE), 771.0, blind_total = 771 FROM agg
+         CAST(blind_total AS DOUBLE), 768.0, blind_total = 768 FROM agg
   UNION ALL
   SELECT 'mooned+spinning blind-attribution mismatches (calibration.rs::blind_attribution_beats_chance_decisively, correct_mooned == total_mooned)',
          CAST(mooned_spinning_mismatches AS DOUBLE), 0.0, mooned_spinning_mismatches = 0 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 50 -> 48.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 50.0, collision_zero = 50 FROM agg
+         CAST(collision_zero AS DOUBLE), 48.0, collision_zero = 48 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 723.0, collision_nonzero = 723 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 722.0, collision_nonzero = 722 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_absent AS DOUBLE), 227.0, collision_absent = 227 FROM agg
+         CAST(collision_absent AS DOUBLE), 230.0, collision_absent = 230 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 0.178_726_790_236_740_12 ->
+  -- 0.183_235_100_516_883.
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.178_726_790_236_740_12, abs(collision_mean - 0.178_726_790_236_740_12) < 1e-6 FROM agg
+         collision_mean, 0.183_235_100_516_883, abs(collision_mean - 0.183_235_100_516_883) < 1e-6 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(goblin_len_present AS DOUBLE), 771.0, goblin_len_present = 771 FROM agg
+         CAST(goblin_len_present AS DOUBLE), 769.0, goblin_len_present = 769 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 13.461_308_710_376_134 ->
+  -- 13.382_874_198_569_583.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.461_308_710_376_134, abs(goblin_len_mean - 13.461_308_710_376_134) < 1e-6 FROM agg
+         goblin_len_mean, 13.382_874_198_569_583, abs(goblin_len_mean - 13.382_874_198_569_583) < 1e-6 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(kobold_len_present AS DOUBLE), 772.0, kobold_len_present = 772 FROM agg
+         CAST(kobold_len_present AS DOUBLE), 769.0, kobold_len_present = 769 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 12.748_786_009_455_962 ->
+  -- 12.690_321_674_122_243.
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 12.748_786_009_455_962, abs(kobold_len_mean - 12.748_786_009_455_962) < 1e-6 FROM agg
+         kobold_len_mean, 12.690_321_674_122_243, abs(kobold_len_mean - 12.690_321_674_122_243) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
@@ -308,11 +327,13 @@ checks AS (
   SELECT '"the-census" fixture row count (calibration.rs — implicit in several present+absent==1000 row-count assertions)',
          CAST(row_count AS DOUBLE), 1000.0, row_count = 1000 FROM agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 325 -> 324.
   SELECT 'indistinguishable solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(indistinguishable AS DOUBLE), 325.0, indistinguishable = 325 FROM meeting_agg
+         CAST(indistinguishable AS DOUBLE), 324.0, indistinguishable = 324 FROM meeting_agg
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): 64 -> 63.
   SELECT 'decided solo-pair count (calibration.rs::null_control_blind_attribution_is_at_chance)',
-         CAST(total_pairs - indistinguishable AS DOUBLE), 64.0, total_pairs - indistinguishable = 64 FROM meeting_agg
+         CAST(total_pairs - indistinguishable AS DOUBLE), 63.0, total_pairs - indistinguishable = 63 FROM meeting_agg
   UNION ALL
   SELECT 'head-domain distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, head TVD == 0)',
          CAST(diff AS DOUBLE), 0.0, diff = 0 FROM head_domain_diff
@@ -320,17 +341,22 @@ checks AS (
   -- cult-form TVD is no longer exactly zero under history-first placement
   -- (path-dependent condensation order breaks the perfect solo/twin-solo
   -- clone on a couple of seeds); pinned to the measured count-diff.
+  -- The Sundering (moving-sea epoch, 0063): 2 -> 4.
   SELECT 'cult-form distribution diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, cult-form TVD re-pinned nonzero)',
-         CAST(diff AS DOUBLE), 2.0, diff = 2 FROM cult_form_diff
+         CAST(diff AS DOUBLE), 4.0, diff = 4 FROM cult_form_diff
   UNION ALL
   -- Same movement as cult-form above: pantheon-size mean-diff, formerly an
   -- exact-zero structural pin, is now a tiny measured nonzero value.
+  -- The Sundering (moving-sea epoch, 0063): -0.010_282_776_349_614_053 ->
+  -- -0.012_919_896_640_825_712.
   SELECT 'pantheon-size mean diff (calibration.rs::null_control_distributions_are_within_the_sampling_bound, SMD re-pinned nonzero)',
-         mean_a - mean_b, -0.010_282_776_349_614_053, abs(mean_a - mean_b - -0.010_282_776_349_614_053) < 1e-6 FROM pantheon_size_stats
+         mean_a - mean_b, -0.012_919_896_640_825_712, abs(mean_a - mean_b - -0.012_919_896_640_825_712) < 1e-6 FROM pantheon_size_stats
   UNION ALL
+  -- The Sundering (moving-sea epoch, 0063): -0.057_530_513_798_514_59 ->
+  -- -0.065_161_843_432_313_42.
   SELECT 'name-length SMD (calibration.rs::null_control_name_length_smd_is_pinned)',
-         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.057_530_513_798_514_59,
-         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.057_530_513_798_514_59) < 1e-6
+         (mean_a - mean_b) / sqrt((var_a + var_b) / 2.0), -0.065_161_843_432_313_42,
+         abs((mean_a - mean_b) / sqrt((var_a + var_b) / 2.0) - -0.065_161_843_432_313_42) < 1e-6
     FROM namelen_stats
 )
 SELECT pin, computed, pinned, ok FROM checks ORDER BY pin;

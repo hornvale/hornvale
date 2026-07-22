@@ -20,7 +20,10 @@ substrate; it does not yet change how anything moves. The Living Community's
 displacement bake is untouched, byte-identical, still walking raw adjacency.
 The graph is additive legibility on top of an unmodified world — the next
 campaign in the program is the one that routes displacement, trade, and
-conflict over it.
+conflict over it. (That campaign shipped as *The Sundering*, which made the
+graph a function of the era — a moving sea whose glacial low-stands open land
+bridges and whose rising drowns them — and routed the displacement bake over
+it.)
 
 ## The graph itself
 

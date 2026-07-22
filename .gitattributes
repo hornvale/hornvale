@@ -1,0 +1,20 @@
+# Generated-artifact merge conflicts (PROC-12): a conflict on one of
+# these files means two branches each hold a stale or independently
+# regenerated copy, never a real semantic disagreement worth a human's
+# time. See docs/superpowers/specs/2026-07-22-proc-12-regenerate-on-conflict-design.md.
+
+# Tier A — append-only lists (git's builtin union driver; no setup step,
+# no risk of dropping either side's addition, at most a cosmetic
+# ordering difference between the two sides' new lines).
+book/src/SUMMARY.md merge=union
+book/src/frontier/idea-registry.md merge=union
+
+# Tier B — fully re-derived documents (scripts/merge-regenerate.sh,
+# registered via `make install-hooks`; safely falls back to a normal
+# 3-way merge on any clone that hasn't run that target).
+docs/audits/type-audit-report.md merge=hv-regenerate
+book/src/reference/concept-registry-generated.md merge=hv-regenerate
+book/src/reference/concept-manifest-generated.md merge=hv-regenerate
+book/src/reference/stream-manifest-generated.md merge=hv-regenerate
+book/src/reference/phonology.md merge=hv-regenerate
+book/src/reference/proto-goblinoid-generated.md merge=hv-regenerate

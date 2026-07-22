@@ -161,6 +161,12 @@ Notable: karst country, salt flats.
 
 Fresh water (rivers, including endorheic feeders bound for a salt sink) reaches 6% of the land.
 
+## The Deep
+
+The archive runs 18 m to basement on average.
+Geothermal gradient spans 21–30 K/km — the deep's warmth.
+40% of the land records an unconformity — an age the rock forgot.
+
 ## The People
 
 The land holds 116 settlement(s).

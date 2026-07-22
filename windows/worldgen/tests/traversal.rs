@@ -9,7 +9,7 @@
 
 use hornvale_climate::Biome;
 use hornvale_kernel::{CellId, CellMap, Geosphere, ReferenceElevation};
-use hornvale_worldgen::traversal::{BASE_COST, traversal_cost};
+use hornvale_worldgen::traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 
 /// Test-only helper: a validated `ReferenceElevation`.
 fn e(m: f64) -> ReferenceElevation {
@@ -115,4 +115,23 @@ fn the_field_is_deterministic_across_rebuilds() {
     for cell in geo.cells() {
         assert_eq!(*a.get(cell), *b.get(cell));
     }
+}
+
+#[test]
+fn a_shelf_cell_is_ocean_at_present_but_a_bridge_at_glacial_low_stand() {
+    let geo = Geosphere::new(1);
+    let shelf = CellId(5);
+    // shelf sits at -50 m; everything else is upland at +100 m.
+    let elevation = CellMap::from_fn(&geo, |c| if c == shelf { e(-50.0) } else { e(100.0) });
+    let present = traversal_cost_at(&geo, &elevation, e(0.0));
+    let glacial = traversal_cost_at(&geo, &elevation, e(-120.0));
+    assert_eq!(
+        *present.get(shelf),
+        u64::MAX,
+        "shelf is ocean at present sea level"
+    );
+    assert!(
+        *glacial.get(shelf) < u64::MAX,
+        "shelf is passable land at -120 m (a bridge)"
+    );
 }
