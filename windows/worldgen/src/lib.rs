@@ -96,7 +96,9 @@ pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
 };
-pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
+pub use history_bake::{
+    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, bake, cascade_sizes, census,
+};
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
     emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
