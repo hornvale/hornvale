@@ -23,7 +23,9 @@ use hornvale_kernel::{
     RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
-use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use hornvale_terrain::{
+    BandKind, Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, TerrainPins,
+};
 use std::cell::RefCell;
 use std::sync::OnceLock;
 // The profiler measures wall-clock stage durations for a committed diagnostic
@@ -603,6 +605,37 @@ pub fn soil_of(
             &mat.soil_depth,
         )
     })
+}
+
+/// The canonical deposit query: terrain's derived deposits, overlaid with the
+/// one climate-coupled ore (laterite — bauxite/nickel from hot+wet weathering)
+/// where terrain has no stronger primary. The soil-projection seam (The Ground)
+/// applied to ore. (The Lode, spec §4.)
+pub fn deposit_of(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    geo: &Geosphere,
+    cell: hornvale_kernel::CellId,
+) -> Option<Deposit> {
+    if let Some(d) = terrain.deposit_at(cell) {
+        return Some(d); // a primary/areal deposit wins
+    }
+    if terrain.is_ocean(cell) {
+        return None;
+    }
+    let _ = geo;
+    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+    let wet = climate.moisture_at(cell) > 0.6;
+    if hot && wet {
+        return Some(Deposit {
+            process: DepositProcess::Lateritic,
+            commodity: Commodity::Bauxite,
+            depth: BandKind::Regolith,
+            grade: 0.4,
+            tonnage: 0.6,
+        });
+    }
+    None
 }
 
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
@@ -7265,6 +7298,61 @@ mod tests {
         assert!(
             land_orders.len() >= 2,
             "soil felt monolithic: {land_orders:?}"
+        );
+    }
+
+    #[test]
+    fn deposit_of_overlays_laterite_and_passes_through_primary_deposits() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let mut saw_primary_passthrough = false;
+        let mut saw_laterite_overlay = false;
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                assert_eq!(deposit_of(&terrain, &climate, geo, cell), None);
+                continue;
+            }
+            let combined = deposit_of(&terrain, &climate, geo, cell);
+            match terrain.deposit_at(cell) {
+                Some(primary) => {
+                    assert_eq!(
+                        combined,
+                        Some(primary),
+                        "a primary deposit must pass through unchanged at {cell:?}"
+                    );
+                    saw_primary_passthrough = true;
+                }
+                None => {
+                    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+                    let wet = climate.moisture_at(cell) > 0.6;
+                    if hot && wet {
+                        assert_eq!(
+                            combined,
+                            Some(Deposit {
+                                process: DepositProcess::Lateritic,
+                                commodity: Commodity::Bauxite,
+                                depth: BandKind::Regolith,
+                                grade: 0.4,
+                                tonnage: 0.6,
+                            }),
+                            "a hot+wet land cell with no primary deposit gets a laterite overlay at {cell:?}"
+                        );
+                        saw_laterite_overlay = true;
+                    } else {
+                        assert_eq!(combined, None);
+                    }
+                }
+            }
+        }
+        assert!(
+            saw_laterite_overlay,
+            "seed 42 has no hot+wet land cell without a primary deposit to overlay"
+        );
+        assert!(
+            saw_primary_passthrough,
+            "seed 42 has no land cell with a primary deposit to pass through"
         );
     }
 
