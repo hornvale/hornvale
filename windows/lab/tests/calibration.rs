@@ -177,9 +177,12 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // history-first placement re-opens the ambient reading (0 -> 41 locked-
     // ambient heads — the ambient-extinction movement partially reverses)
     // and grows the locked-eternal count (114 -> 151).
+    //
+    // The Sundering (moving-sea epoch; lefford regen, 0063): (151, 41) ->
+    // (151, 40).
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 41),
+        (151, 40),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -374,8 +377,11 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
     // history-first placement swings the split back toward coastal (404 ->
     // 536 coastal, 587 -> 235 inland).
-    assert_eq!(coastal, 536, "coastal flagship count drifted");
-    assert_eq!(inland, 235, "inland flagship count drifted");
+    //
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 536 -> 535
+    // coastal, 235 -> 234 inland.
+    assert_eq!(coastal, 535, "coastal flagship count drifted");
+    assert_eq!(inland, 234, "inland flagship count drifted");
 }
 
 #[test]
@@ -658,8 +664,11 @@ fn blind_attribution_beats_chance_decisively() {
     // name-length re-pin above), which reopens attributable pairs on far
     // more seeds (94/120 -> 703/771; accuracy 0.911, still decisively above
     // the 0.75 floor asserted above).
-    assert_eq!(correct, 703, "blind-attribution count drifted");
-    assert_eq!(total, 771, "attributable-pair count drifted");
+    //
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 703 -> 700
+    // correct, 771 -> 768 total.
+    assert_eq!(correct, 700, "blind-attribution count drifted");
+    assert_eq!(total, 768, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -973,9 +982,12 @@ fn name_collision_rate_is_measured_and_pinned() {
     // History-first placement widens the absent set sharply (0 -> 227
     // worlds report no measurable collision rate at all) and redistributes
     // the rest (304 -> 50 zero-collision, 696 -> 723 nonzero-collision).
-    assert_eq!(zero, 50, "zero-collision world count drifted");
-    assert_eq!(nonzero, 723, "nonzero-collision world count drifted");
-    assert_eq!(absent, 227, "absent name-collision-rate count drifted");
+    //
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 50 -> 48
+    // zero-collision, 723 -> 722 nonzero-collision, 227 -> 230 absent.
+    assert_eq!(zero, 48, "zero-collision world count drifted");
+    assert_eq!(nonzero, 722, "nonzero-collision world count drifted");
+    assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
     let mean = sum / f64::from(present);
@@ -1007,7 +1019,10 @@ fn name_collision_rate_is_measured_and_pinned() {
         // (name-collision-rate fell under Demesne's spatial supply; history-
         // first placement reverses that trend sharply, back above every
         // prior regen's rate).
-        (mean - 0.178_726_790_236_740_12).abs() < 1e-6,
+        //
+        // The Sundering (moving-sea epoch; lefford regen, 0063):
+        // 0.178_726_790_236_740_12 -> 0.183_235_100_516_883.
+        (mean - 0.183_235_100_516_883).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1101,7 +1116,10 @@ fn name_length_distributions_are_measured_and_pinned() {
         // every world; re-pinned to the regenerated 1000-seed census
         // (lefford, 0063): history-first placement drops goblin presence
         // sharply (991 -> 771 present; mean 14.126 -> 13.461).
-        ("goblin", 771u32, 13.461_308_710_376_134),
+        //
+        // The Sundering (moving-sea epoch; lefford regen, 0063): 771 -> 769
+        // present, mean 13.461_308_710_376_134 -> 13.382_874_198_569_583.
+        ("goblin", 769u32, 13.382_874_198_569_583),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1117,7 +1135,10 @@ fn name_length_distributions_are_measured_and_pinned() {
         // present) — history seats kobolds in MORE worlds under history-
         // first placement, the opposite of the Demesne movement; mean drops
         // 10.037 -> 12.749.
-        ("kobold", 772u32, 12.748_786_009_455_962),
+        //
+        // The Sundering (moving-sea epoch; lefford regen, 0063): 772 -> 769
+        // present, mean 12.748_786_009_455_962 -> 12.690_321_674_122_243.
+        ("kobold", 769u32, 12.690_321_674_122_243),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1225,8 +1246,11 @@ fn null_control_blind_attribution_is_at_chance() {
     // 0.484, well inside the ±0.2 directional floor above). The attributable
     // pool itself also shrank (389 pairs measurable here vs 500 pre-epoch,
     // since the 1000-seed drift study is now smaller after presence shifts).
-    assert_eq!(indistinguishable, 325, "indistinguishable count drifted");
-    assert_eq!(decided, 64, "decided count drifted");
+    //
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 325 -> 324
+    // indistinguishable, 64 -> 63 decided.
+    assert_eq!(indistinguishable, 324, "indistinguishable count drifted");
+    assert_eq!(decided, 63, "decided count drifted");
     assert_eq!(picks_twin, 31, "twin-pick count drifted");
 }
 
@@ -1287,12 +1311,16 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     // inside the ±0.15/±0.2 directional sampling bound asserted above, so
     // this is a re-pinned MEASUREMENT, not a broken invariant.
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
+    // The Sundering (moving-sea epoch; lefford regen, 0063):
+    // 0.002_570_694_087_403_610_5 -> 0.005167958656330775.
     assert!(
-        (cult - 0.002_570_694_087_403_610_5).abs() < 1e-9,
+        (cult - 0.005_167_958_656_330_775).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
+    // The Sundering (moving-sea epoch; lefford regen, 0063):
+    // -0.002_628_737_160_115_815_5 -> -0.003297896904548732.
     assert!(
-        (size - -0.002_628_737_160_115_815_5).abs() < 1e-9,
+        (size - -0.003_297_896_904_548_732).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -1384,7 +1412,11 @@ fn null_control_name_length_smd_is_pinned() {
         // (lefford, 0063): -0.047_266_428_630_096_086 ->
         // -0.057_530_513_798_514_59; still well inside the ±0.2 sampling
         // bound.
-        (namelen - -0.057_530_513_798_514_59).abs() < 1e-9,
+        //
+        // The Sundering (moving-sea epoch; lefford regen, 0063):
+        // -0.057_530_513_798_514_59 -> -0.06516184343231343; still well
+        // inside the ±0.2 sampling bound.
+        (namelen - -0.065_161_843_432_313_43).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

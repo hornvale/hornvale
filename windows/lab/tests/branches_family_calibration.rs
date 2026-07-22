@@ -234,7 +234,8 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // Census regen (The Living Community epoch, history-first placement,
     // lefford 0063): re-measured on the regenerated 1000-seed census
     // (goblin 3.057 -> 3.058).
-    assert!((mg - 3.058).abs() < 1e-9, "goblin mean drifted: {mg}");
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 3.058 -> 3.059.
+    assert!((mg - 3.059).abs() < 1e-9, "goblin mean drifted: {mg}");
     // Census regen (2026-07-18, the-chorus close, regen commit fe2332c):
     // re-measured (was 2.485) — accumulated lexeme-space drift (the person
     // concept (C2), the grammar streams (C3), The Echo) surfacing at the
@@ -349,10 +350,13 @@ fn homophony_count_is_measured_and_pinned() {
     // (goblin 1.939 -> 1.841, hobgoblin 1.689 -> 1.591, bugbear 3.025 ->
     // 6.58, kobold 0.904 -> 1.912 — history-first settlement placement
     // reshapes each daughter's periphery homophony draws).
-    assert!((mg - 1.841).abs() < 1e-9, "goblin mean drifted: {mg}");
-    assert!((mh - 1.591).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.58).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 1.912).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Sundering (moving-sea epoch; lefford regen, 0063): goblin
+    // 1.841 -> 1.823; hobgoblin 1.591 -> 1.571; bugbear 6.58 -> 6.57;
+    // kobold 1.912 -> 1.902.
+    assert!((mg - 1.823).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.571).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 6.57).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 1.902).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
