@@ -237,7 +237,8 @@ impl GeneratedTerrain {
         let rock = self.rock_at(id);
         let boundary = self.boundary_at(id).map(|b| b.kind);
         let endorheic = self.is_endorheic(id);
-        let (process, commodity) = crate::features::deposit_kind(rock, boundary, &buf, endorheic)?;
+        let (process, commodity) =
+            crate::features::deposit_kind(rock, boundary, &buf, endorheic, self.crust_age_at(id))?;
         // Areal ores (rock IS the ore) are always present; point ores gate on prospectivity×belt×noise.
         let areal = matches!(process, crate::features::DepositProcess::ChemicalSediment)
             || matches!(process, crate::features::DepositProcess::Placer);

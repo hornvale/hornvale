@@ -124,22 +124,30 @@ pub struct Deposit {
 /// The dominant deposit family for a cell, from rock + tectonic setting.
 /// Areal ores (iron/salt/coal) project directly from the rock class; the point
 /// ores read the setting. Returns `None` where nothing is prospective.
-/// type-audit: bare-ok(flag: endorheic)
+/// type-audit: bare-ok(flag: endorheic), bare-ok(ratio: crust_age)
 pub fn deposit_kind(
     rock: RockClass,
     boundary: Option<BoundaryKind>,
     buf: &MaterialBuffer,
     endorheic: bool,
+    crust_age: f64,
 ) -> Option<(DepositProcess, Commodity)> {
     use Commodity::*;
     use DepositProcess::*;
-    // Areal bedded ores: the rock IS the ore.
+    // Areal bedded ores: the rock IS the ore. (`Ironstone` classifies only on
+    // the ocean floor — BIF is marine — so that arm is dead on land today; the
+    // ancient-craton branch below is iron's land-reachable route.)
     match rock {
         RockClass::Ironstone => return Some((ChemicalSediment, Iron)),
         RockClass::Evaporite => return Some((ChemicalSediment, Salt)),
         RockClass::Coal => return Some((ChemicalSediment, Coal)),
         RockClass::Alluvium => return Some((Placer, Gold)),
         _ => {}
+    }
+    // Exhumed ancient banded-iron formation: the great iron ranges are marine
+    // BIF now uplifted onto old, metamorphosed cratons — iron's path on land.
+    if crust_age > 0.75 && buf.metamorphic_grade > 0.3 && buf.carbonate < 0.3 {
+        return Some((ChemicalSediment, Iron));
     }
     if endorheic && buf.carbonate < 0.2 {
         return Some((ChemicalSediment, Salt));
@@ -255,27 +263,42 @@ mod tests {
     #[test]
     fn areal_rock_classes_project_to_their_ore() {
         assert_eq!(
-            deposit_kind(RockClass::Ironstone, None, &buf(0.0, 0.5), false),
+            deposit_kind(RockClass::Ironstone, None, &buf(0.0, 0.5), false, 0.0),
             Some((DepositProcess::ChemicalSediment, Commodity::Iron))
         );
         assert_eq!(
-            deposit_kind(RockClass::Evaporite, None, &buf(0.0, 0.5), true),
+            deposit_kind(RockClass::Evaporite, None, &buf(0.0, 0.5), true, 0.0),
             Some((DepositProcess::ChemicalSediment, Commodity::Salt))
         );
         assert_eq!(
-            deposit_kind(RockClass::Coal, None, &buf(0.0, 0.5), false),
+            deposit_kind(RockClass::Coal, None, &buf(0.0, 0.5), false, 0.0),
             Some((DepositProcess::ChemicalSediment, Commodity::Coal))
         );
     }
 
     #[test]
+    fn ancient_cratons_carry_land_reachable_iron() {
+        // Iron's land path: `RockClass::Ironstone` classifies only on the ocean
+        // floor, so on land iron comes from exhumed BIF on old, metamorphosed,
+        // non-carbonate cratons.
+        let mut b = buf(0.1, 0.5);
+        b.metamorphic_grade = 0.5;
+        assert_eq!(
+            deposit_kind(RockClass::Gneiss, None, &b, false, 0.85),
+            Some((DepositProcess::ChemicalSediment, Commodity::Iron))
+        );
+        // A young craton carries no exhumed BIF.
+        assert_eq!(deposit_kind(RockClass::Gneiss, None, &b, false, 0.2), None);
+    }
+
+    #[test]
     fn carbonate_hosts_lead_zinc_and_alluvium_hosts_placer() {
         assert_eq!(
-            deposit_kind(RockClass::Marble, None, &buf(0.8, 0.4), false).map(|(_, c)| c),
+            deposit_kind(RockClass::Marble, None, &buf(0.8, 0.4), false, 0.0).map(|(_, c)| c),
             Some(Commodity::LeadZinc)
         );
         assert_eq!(
-            deposit_kind(RockClass::Alluvium, None, &buf(0.1, 0.5), false).map(|(p, _)| p),
+            deposit_kind(RockClass::Alluvium, None, &buf(0.1, 0.5), false, 0.0).map(|(p, _)| p),
             Some(DepositProcess::Placer)
         );
     }
