@@ -173,9 +173,29 @@ pattern (every other root+leg crate already qualifies every leg), and
 `domains/history` predates PROC-18's convention entirely, so there was
 never a moment its author could have cross-checked it. No `.derive()`
 call site, test, or downstream consumer anywhere in the codebase asserts
-the old bare-key manifest text (verified by a full-workspace grep) — the
-generated book page's two `history/*` leg rows are the only content
-affected, and regenerating it is part of this task's own Step 5/6.
+the old bare-key manifest text (verified by a full-workspace grep).
+
+**Further correction (caught by the final whole-branch review, not by
+the paragraph above):** the shipped manifest diff is not confined to the
+two leg keys — the *description* text of all six `history`/`history/*`
+rows changed too, dropping campaign-internal `(Task 2)`/`(Task 3)`
+phase parentheticals and tightening a few phrases (e.g.
+`StreamLabel::dynamic(people.0)` → `StreamLabel::dynamic`). This was a
+deliberate editorial choice already present in this plan's own Task 2
+replacement text (a permanent reference page shouldn't carry a
+since-completed crate's internal task numbering), but the paragraph
+above, written when only the key-qualification issue was in view,
+under-stated it as "the generated book page's two `history/*` leg rows
+are the only content affected." The accurate scope is: **all six rows'
+description text was reworded (cosmetic, zero functional impact — these
+strings are documentation prose, never fed into any `.derive()` call),
+and two of the six rows' keys were additionally re-qualified** (the
+leg-qualification correction above). Both changes are confined to
+`domains/history`'s section of the generated manifest; no other crate's
+rows are touched. This is itself a small instance of the same lesson
+decision ledger #3 already named: a claim about a generated artifact's
+diff should be checked against the actual regenerated output, not
+inferred — including when *correcting* an earlier such claim.
 
 ## 6. Testing
 
