@@ -3473,11 +3473,17 @@ mod tests {
     fn derive_wild_npcs_mint_beast_agents_with_defaulted_psyche() {
         // THE WILDING: the wild roster is minted from the world's beast
         // concentrations, NOT its peoples. A beast is, by construction, a
-        // species absent from the psyche registry (`wild_concentrations`'s
-        // `is_mobile_beast`), so every wild NPC takes the DEFAULT psyche dials —
-        // steady boldness, mid latency/horizon — while its threat niche is
-        // still derived from its biosphere nature (so a herbivore fears
-        // predators). This is the peopled `derive_npcs` path's mirror for fauna.
+        // species whose `social_form` is not `Settled` (`wild_concentrations`'s
+        // `is_mobile_beast`). On today's seed-42 roster every such wild kind
+        // also carries no `psyche_registry` entry, so every wild NPC takes the
+        // DEFAULT psyche dials — steady boldness, mid latency/horizon — while
+        // its threat niche is still derived from its biosphere nature (so a
+        // herbivore fears predators). This is the peopled `derive_npcs` path's
+        // mirror for fauna. NOTE: the defaulted-psyche assertion below holds
+        // for these seed-42 wild kinds because they happen to carry no psyche
+        // entry — it is not a claim that every wild (non-`Settled`) creature
+        // lacks one; a placed dragon (Task 4) is `Solitary` yet carries an
+        // authored mind.
         let world = hornvale_worldgen::build_world(
             Seed(42),
             &hornvale_astronomy::SkyPins::default(),
@@ -3494,19 +3500,24 @@ mod tests {
             "seed 42 mints between 1 and 4 wild beasts, got {}",
             wild.len()
         );
-        let psyche = hornvale_species::psyche_registry();
+        let biosphere = hornvale_species::biosphere_registry();
         for n in &wild {
             assert!(
                 n.label.starts_with("a wild "),
                 "a wild NPC reads as a beast: {}",
                 n.label
             );
+            let social_form = biosphere
+                .get_by_label(&n.species)
+                .unwrap_or_else(|| panic!("{} has a biosphere entry", n.species))
+                .social_form;
             assert!(
-                psyche.get_by_label(&n.species).is_none(),
-                "a wild species is a beast, absent from the psyche registry: {}",
+                social_form != hornvale_species::SocialForm::Settled,
+                "a wild species is wild (not Settled): {}",
                 n.species
             );
-            // Beast → defaulted psyche (no registry entry to read).
+            // Beast → defaulted psyche (no registry entry to read; see the
+            // NOTE above the loop for the scope of this claim).
             assert_eq!(
                 n.boldness, BOLDNESS_STEADY,
                 "{} takes steady boldness",
