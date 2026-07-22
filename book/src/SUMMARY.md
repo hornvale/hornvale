@@ -222,6 +222,7 @@
 - [The Quarry](./chronicle/the-quarry.md)
 - [The Wilding](./chronicle/the-wilding.md)
 - [The Teeth](./chronicle/the-teeth.md)
+- [The Alarm](./chronicle/the-alarm.md)
 
 # Appendix: The Frontier
 

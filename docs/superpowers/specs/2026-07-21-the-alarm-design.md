@@ -2,7 +2,7 @@
 
 **Campaign:** The Alarm
 **Date:** 2026-07-21
-**Status:** draft (G3 — awaiting review)
+**Status:** shipped (2026-07-22)
 **Registry:** PSY-11 (the threat/fear engine) — the reserved *fear-contagion* instance
 
 ## The idea
