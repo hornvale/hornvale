@@ -96,8 +96,10 @@ pub fn connection_graph(
 /// The era-aware connection graph: like [`connection_graph`] but a cell is
 /// ocean iff `elevation < sea_level`, so a glacial low-stand exposes the shelf
 /// as passable land (the land bridges The Sundering's diaspora crosses).
-/// Adjacency + sailing lanes only (settlement land-routes stay a present-world
-/// read); derived, never committed.
+/// Adjacency + sailing lanes, plus era-aware land routes if `settlements` is
+/// non-empty (their corridors are costed at this era's `sea_level`, not the
+/// present). The Sundering's bake calls this with no settlements, so it derives
+/// adjacency + sailing lanes only. Derived, never committed.
 /// type-audit: bare-ok(diagnostic-value: current)
 pub fn connection_graph_at(
     geo: &Geosphere,
