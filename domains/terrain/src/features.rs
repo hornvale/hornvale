@@ -42,12 +42,15 @@ pub fn cave_kind(buf: &MaterialBuffer, near_fault: bool) -> CaveKind {
 }
 
 /// Lineament proximity weight: features cluster into belts near plate contacts.
-/// `hops` is boundary distance (fewer = closer); `None` = cratonic interior.
+/// `hops` is boundary distance (fewer = closer); `None` = cratonic interior,
+/// which is the floor — boundaries only *raise* the weight above it, so a
+/// far-from-boundary cell never scores below the interior (the `.max` floor).
 /// type-audit: bare-ok(count: hops), bare-ok(ratio: return)
 pub fn belt_weight(hops: Option<u32>) -> f64 {
+    const INTERIOR_FLOOR: f64 = 0.3;
     match hops {
-        Some(h) => 1.0 / (1.0 + h as f64 * 0.1),
-        None => 0.3,
+        Some(h) => (1.0 / (1.0 + h as f64 * 0.1)).max(INTERIOR_FLOOR),
+        None => INTERIOR_FLOOR,
     }
 }
 
@@ -88,5 +91,9 @@ mod tests {
     fn belt_weight_is_higher_near_lineaments() {
         assert!(belt_weight(Some(0)) > belt_weight(Some(8)));
         assert!(belt_weight(Some(8)) > belt_weight(None));
+        // Far-from-boundary cells never dip below the cratonic-interior floor
+        // (max boundary distance is ~49 hops at GLOBE_LEVEL 6).
+        assert!(belt_weight(Some(30)) >= belt_weight(None));
+        assert!(belt_weight(Some(49)) >= belt_weight(None));
     }
 }
