@@ -99,10 +99,17 @@ book/src/reference/proto-goblinoid-generated.md merge=hv-regenerate
 # Exits nonzero on ANY failure (unrecognized path, or the generator
 # command itself failing — most likely because a *different*, still-
 # unresolved conflict elsewhere in the same merge means the crate
-# doesn't currently build) and writes nothing to $A in that case, so git
-# discards whatever driver output exists and performs its own standard
-# conflict-marker merge instead. Never trust $A's on-disk content after
-# a nonzero exit.
+# doesn't currently build) and writes nothing to $A in that case. Git's
+# actual behavior for a custom `merge=<driver>`-attributed path on a
+# nonzero exit (verified directly, not assumed from prose): the path is
+# left marked UNMERGED in the index (three conflict stages — base/ours/
+# theirs), with the working-tree file at its pre-merge "ours" content —
+# NOT textual <<<<<<< diff3 markers, which only appear for git's
+# default, undriven conflict handling. `git status`/`git ls-files -u`
+# show the real conflict either way; this file is never silently left
+# with partial/broken driver output, and the merge as a whole still
+# fails, requiring a human to resolve it normally. Never trust $A's
+# on-disk content after a nonzero exit.
 set -euo pipefail
 
 ours="$2"
@@ -350,8 +357,15 @@ if git merge scenario2-a -q 2>/dev/null; then
     fail "scenario 2: expected the merge to report a conflict (build broken), but it succeeded"
 fi
 
-if ! grep -q "^<<<<<<<" book/src/reference/phonology.md; then
-    fail "scenario 2: expected real conflict markers in phonology.md when the driver can't build the crate, found none"
+# A custom `merge=<driver>`-attributed path does NOT get textual
+# <<<<<<< diff3 markers on driver failure (that's only git's default,
+# undriven conflict handling) -- verified directly against real git
+# behavior, not assumed from documentation prose: git leaves the path
+# marked unmerged in the index (three conflict stages: base/ours/
+# theirs) with the working-tree file at its pre-merge "ours" content.
+# `git ls-files -u` is the correct signal to check.
+if ! git ls-files -u -- book/src/reference/phonology.md | grep -q .; then
+    fail "scenario 2: expected phonology.md to be left unmerged (conflict stages present) when the driver can't build the crate, found none"
 fi
 if [ ! -s book/src/reference/phonology.md ]; then
     fail "scenario 2: phonology.md is empty — the driver must never leave partial/empty output on failure"

@@ -149,10 +149,19 @@ fresh regeneration is.
 #!/usr/bin/env bash
 # scripts/merge-regenerate.sh %O %A %B %P — a git merge driver (PROC-12).
 # Regenerates a fully-re-derived artifact instead of textually merging
-# it. Exits nonzero (writing nothing) on any failure, so git falls back
-# to its own standard conflict-marker merge — see gitattributes(5)'s
-# merge-driver contract. Never trust %A's content after a nonzero exit;
-# git discards it and does its own fallback merge into the real file.
+# it. Exits nonzero (writing nothing) on any failure.
+#
+# CORRECTED (found and verified empirically during Task 2, not merely
+# asserted from documentation prose — see decision ledger #7): on a
+# nonzero exit, git does NOT fall back to textual <<<<<<< diff3 markers
+# for a path governed by a custom `merge=<driver>` attribute — that
+# fallback is only git's default, undriven conflict handling. Instead
+# the path is left marked UNMERGED in the index (three conflict stages —
+# base/ours/theirs), with the working-tree file at its pre-merge "ours"
+# content. `git status`/`git ls-files -u` surface the real conflict
+# either way, and the file is never left with partial/broken driver
+# output — the safety property holds, only the exact on-disk shape of
+# the fallback differs from git's default undriven path.
 set -euo pipefail
 
 ours="$2"
@@ -196,8 +205,11 @@ The dispatch happens in a temp file first, copied to `$ours` only on
 success — if any generator command fails partway (most likely: the crate
 doesn't currently build, because a *different*, unrelated conflict
 elsewhere in the same merge hasn't been resolved yet), the script exits
-nonzero before ever touching `$ours`, and git's own fallback (standard
-conflict markers) takes over untouched.
+nonzero before ever touching `$ours`, and git leaves the path unmerged
+(three conflict stages in the index; the working-tree file at its
+pre-merge "ours" content — not textual diff3 markers, which is only
+git's default undriven fallback) rather than committing anything the
+driver produced.
 
 **`.gitattributes`** (same file as Tier A, additional lines):
 
@@ -255,9 +267,15 @@ process tooling. Verification is a scripted integration check:
   phonology` — proving the driver actually regenerated rather than
   keeping one side's stray line.
 - A second case exercising the failure path: temporarily break the build
-  (e.g. a syntax error injected in a throwaway copy), attempt the same
-  merge, and assert the driver exits nonzero and the file is left with
-  normal conflict markers, not empty or partial content.
+  on BOTH divergent branches (touching the same region of a source file
+  so it genuinely conflicts too, not just one side — a one-sided change
+  auto-merges cleanly and never actually leaves the build broken when
+  the driver runs, a real bug this campaign's own Task 2 found and
+  corrected, see decision ledger #6), attempt the same merge, and assert
+  the driver exits nonzero and the Tier B file is left unmerged (`git
+  ls-files -u` shows conflict stages) with non-empty content — not
+  textual diff3 markers (decision ledger #7), and never empty or partial
+  content.
 - Tier A needs no custom test — `union` is git's own tested builtin;
   a smoke check (two branches each adding a different `SUMMARY.md`
   bullet, merged, both present) is enough to confirm the `.gitattributes`
