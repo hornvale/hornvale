@@ -36,7 +36,10 @@ pub use lithology::{
 pub use pins::{GenesisError, TerrainPins, parse_pin, pin_strings};
 pub use plates::Plate;
 pub use provider::GeneratedTerrain;
-pub use strata::{GeothermalGradient, geothermal_gradient, temperature_at_depth};
+pub use strata::{
+    BandKind, BandSample, Era, GeothermalGradient, StratigraphicColumn, column, depth_to_basement,
+    era_from_age, geothermal_gradient, temperature_at_depth, unconformity,
+};
 pub use water::{RIVER_MIN_DRAINAGE, RIVER_REACH, WaterKind, river_proximity};
 
 use hornvale_kernel::{

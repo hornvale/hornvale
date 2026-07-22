@@ -68,6 +68,167 @@ pub fn temperature_at_depth(
         .expect("finite geothermal temperature")
 }
 
+use crate::RockClass;
+use crate::lithology::Basement;
+
+/// The era a band records, coarsening downward — the archive's time-ordering.
+/// Ordinal (deeper is older); normalized, not absolute years (crust age is a
+/// `[0,1]` field, not a year count).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Era {
+    /// Youngest: recent cover, active deposition.
+    Recent,
+    /// Consolidated older cover / young basement.
+    Ancient,
+    /// Deep crystalline crust.
+    Deep,
+    /// The primordial substrate — pre-life; the deepest band.
+    Primordial,
+}
+
+/// Classify a normalized age `[0,1]` (0 recent → 1 primordial) into an era.
+/// type-audit: bare-ok(ratio: normalized_age)
+pub fn era_from_age(normalized_age: f64) -> Era {
+    match normalized_age {
+        a if a >= 0.75 => Era::Primordial,
+        a if a >= 0.5 => Era::Deep,
+        a if a >= 0.25 => Era::Ancient,
+        _ => Era::Recent,
+    }
+}
+
+/// The named bands, top → bottom; resolution coarsens downward.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BandKind {
+    /// The living skin: soil / weathered regolith.
+    Regolith,
+    /// Deposited / volcanic surface rock — the legible archive.
+    Cover,
+    /// Crystalline craton (terrain's inherited `Basement`).
+    Basement,
+    /// Deep crust: hot, high-pressure.
+    Roots,
+    /// The primordial substrate / threshold to the not-here.
+    Underneath,
+}
+
+/// One band of a cell's column.
+/// type-audit: bare-ok(diagnostic-value: top_depth_m)
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BandSample {
+    /// Which band this is.
+    pub kind: BandKind,
+    /// The era it records (deeper = older).
+    pub era: Era,
+    /// Depth to the top of this band, metres below the surface.
+    pub top_depth_m: f64,
+    /// A representative rock for the band.
+    pub rock: RockClass,
+}
+
+/// A cell's coarse stratigraphic column: the vertical dimension and the
+/// deep-time archive, as a pure projection over terrain's fields.
+/// type-audit: bare-ok(diagnostic-value: depth_to_basement_m), bare-ok(flag: unconformity)
+#[derive(Debug, Clone, PartialEq)]
+pub struct StratigraphicColumn {
+    /// The five bands, top → bottom.
+    pub bands: [BandSample; 5],
+    /// Depth to crystalline basement (soil + sedimentary cover), metres.
+    pub depth_to_basement_m: f64,
+    /// A nonconformity — thin/young cover directly on ancient basement: the
+    /// archive's floating gap (missing time that left no record).
+    pub unconformity: bool,
+}
+
+/// Depth to crystalline basement: the soil cover plus the sedimentary cover.
+/// type-audit: bare-ok(ratio: soil_depth_m), bare-ok(ratio: sediment_m), bare-ok(diagnostic-value: return)
+pub fn depth_to_basement(soil_depth_m: f64, sediment_m: f64) -> f64 {
+    soil_depth_m + sediment_m
+}
+
+/// Minimum cover (m) below which thin cover on old rock reads as a gap.
+const UNCONFORMITY_COVER_M: f64 = 200.0;
+/// Minimum normalized basement age for a thin-cover gap to count.
+const UNCONFORMITY_AGE: f64 = 0.6;
+
+/// A nonconformity: thin cover directly on ancient basement.
+/// type-audit: bare-ok(ratio: depth_to_basement_m), bare-ok(ratio: crust_age), bare-ok(flag: return)
+pub fn unconformity(depth_to_basement_m: f64, crust_age: f64) -> bool {
+    depth_to_basement_m < UNCONFORMITY_COVER_M && crust_age > UNCONFORMITY_AGE
+}
+
+/// Build a cell's column from fields terrain already owns. Pure; no draws.
+/// Bands are stamped so that era is monotone non-decreasing with depth (the
+/// archive's ordering), the deepest band always `Primordial`.
+/// type-audit: bare-ok(ratio: crust_thickness_km), bare-ok(ratio: crust_age), bare-ok(flag: continental), bare-ok(ratio: sediment_m), bare-ok(ratio: soil_depth_m)
+pub fn column(
+    crust_thickness_km: f64,
+    crust_age: f64,
+    continental: bool,
+    sediment_m: f64,
+    soil_depth_m: f64,
+    surface_rock: RockClass,
+    basement: Basement,
+) -> StratigraphicColumn {
+    let _ = continental; // reserved for future facies refinement; keeps the signature stable
+    let dtb = depth_to_basement(soil_depth_m, sediment_m);
+    let moho_m = crust_thickness_km * 1000.0;
+    let basement_rock = match basement {
+        Basement::Continental => RockClass::Granite,
+        Basement::Oceanic => RockClass::Gabbro,
+    };
+    // Shallow eras from deposition recency; deep eras fixed by depth. Capped so
+    // the ordering never inverts (cover never older than basement, etc.).
+    let cover_era = if crust_age >= 0.5 {
+        Era::Ancient
+    } else {
+        Era::Recent
+    };
+    let basement_era = if crust_age >= 0.5 {
+        Era::Deep
+    } else {
+        Era::Ancient
+    };
+    let roots_top = dtb + (moho_m - dtb).max(0.0) * 0.5;
+    let bands = [
+        BandSample {
+            kind: BandKind::Regolith,
+            era: Era::Recent,
+            top_depth_m: 0.0,
+            rock: surface_rock,
+        },
+        BandSample {
+            kind: BandKind::Cover,
+            era: cover_era,
+            top_depth_m: soil_depth_m,
+            rock: surface_rock,
+        },
+        BandSample {
+            kind: BandKind::Basement,
+            era: basement_era,
+            top_depth_m: dtb,
+            rock: basement_rock,
+        },
+        BandSample {
+            kind: BandKind::Roots,
+            era: Era::Deep,
+            top_depth_m: roots_top,
+            rock: RockClass::Gneiss,
+        },
+        BandSample {
+            kind: BandKind::Underneath,
+            era: Era::Primordial,
+            top_depth_m: moho_m.max(dtb),
+            rock: RockClass::Gabbro,
+        },
+    ];
+    StratigraphicColumn {
+        bands,
+        depth_to_basement_m: dtb,
+        unconformity: unconformity(dtb, crust_age),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -88,5 +249,72 @@ mod tests {
         let shallow = temperature_at_depth(surface, g, 1.0).get();
         let deep = temperature_at_depth(surface, g, 5.0).get();
         assert!(deep > shallow && shallow > 10.0);
+    }
+
+    use crate::RockClass;
+    use crate::lithology::Basement;
+
+    #[test]
+    fn band_eras_are_monotone_non_decreasing_with_depth() {
+        for &age in &[0.0, 0.3, 0.6, 1.0] {
+            let col = column(
+                40.0,
+                age,
+                true,
+                500.0,
+                2.0,
+                RockClass::Sandstone,
+                Basement::Continental,
+            );
+            for w in col.bands.windows(2) {
+                assert!(
+                    w[0].era <= w[1].era,
+                    "age {age}: {:?} !<= {:?}",
+                    w[0].era,
+                    w[1].era
+                );
+            }
+            assert_eq!(
+                col.bands[4].era,
+                Era::Primordial,
+                "deepest band is primordial"
+            );
+        }
+    }
+
+    #[test]
+    fn thin_cover_on_ancient_basement_is_an_unconformity() {
+        assert!(unconformity(50.0, 0.9));
+        assert!(!unconformity(1500.0, 0.9)); // thick cover — no gap
+        assert!(!unconformity(50.0, 0.2)); // young basement — no gap
+    }
+
+    #[test]
+    fn depth_to_basement_sums_the_cover() {
+        assert_eq!(depth_to_basement(3.0, 400.0), 403.0);
+    }
+
+    #[test]
+    fn basement_band_rock_follows_the_basement_variant() {
+        let cont = column(
+            40.0,
+            0.8,
+            true,
+            100.0,
+            2.0,
+            RockClass::Shale,
+            Basement::Continental,
+        );
+        assert_eq!(cont.bands[2].rock, RockClass::Granite);
+        let ocean = column(
+            8.0,
+            0.0,
+            false,
+            50.0,
+            0.0,
+            RockClass::Basalt,
+            Basement::Oceanic,
+        );
+        assert_eq!(ocean.bands[2].rock, RockClass::Gabbro);
     }
 }
