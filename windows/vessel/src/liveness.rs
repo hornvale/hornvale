@@ -5007,6 +5007,174 @@ mod tests {
         );
     }
 
+    #[test]
+    fn the_shun_a_frightened_creature_detours_around_remembered_ground_a_control_goes_through() {
+        // THE SHUN, end-to-end through the real DriveMovements tick (spec §e2e):
+        // a creature frightened at a cell X on an early trip plans its LATER
+        // journeys to water AROUND X — proactively — while an otherwise-identical
+        // control that never stood at X takes the straight path THROUGH it. Both
+        // reach water (the frightened one is never trapped — the finite penalty is
+        // a preference, not a wall). X is only MILDLY hazardous (0.4, just over
+        // DANGER_ACT): enough that the memory forms and a dying-thirsty control
+        // reactively pushes through it, but not lethal (that would make the
+        // control route around reactively too — the keystone
+        // `danger_routes_a_thirsty_creature_around_a_hazard_to_water` case).
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+
+        // Geometry: discover the straight S→W path (hazard-free planning) and pick
+        // an INTERIOR cell X (distance 2 from S) as the frightening ground. X is
+        // not adjacent to S or W, so standing at S/W is never itself frightening
+        // (`threat_field` maxes over neighbours) — the remembered set is exactly
+        // {X}.
+        let start = raddr(1.0);
+        // Chain neighbours to a distant water cell, then take the true shortest
+        // path so an interior cell is guaranteed.
+        let c1 = start.neighbors()[0].clone();
+        let c2 = c1
+            .neighbors()
+            .iter()
+            .find(|n| **n != start)
+            .unwrap()
+            .clone();
+        let c3 = c2
+            .neighbors()
+            .iter()
+            .find(|n| **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let water = c3
+            .neighbors()
+            .iter()
+            .find(|n| **n != c2 && **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let empty = std::collections::BTreeSet::new();
+        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
+        assert!(
+            straight.len() >= 4,
+            "need a path with an interior cell not adjacent to either endpoint"
+        );
+        let path_cells: Vec<RoomAddr> = straight
+            .iter()
+            .map(|a| match a {
+                Action::MoveTo(r) => r.clone(),
+                _ => unreachable!("plan_to_room emits only MoveTo"),
+            })
+            .collect();
+        let x = path_cells[1].clone(); // distance 2 from start ⇒ not adjacent to start; ≥2 from water
+        assert!(
+            !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
+            "X must be interior (not adjacent to start or water)"
+        );
+
+        // Terrain: fresh water at W, a MILD uncanny hazard at X. The planner reads
+        // only the avoid-set, not the terrain hazard, so the control's straight
+        // plan still runs through X; the hazard drives only the reactive Danger
+        // drive during the walk.
+        let terrain = PlantedTerrain::hazard([water.clone()], [(x.clone(), 0.4)]);
+
+        // A steady mortal creature; home == start so homing does not pull it off X.
+        let npc_at = |entity: EntityId| Npc {
+            entity,
+            home: start.clone(),
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: "wanderer".into(),
+        };
+
+        // Run one creature forward over a multi-cycle window and return (ledger,
+        // entity). `remember_x` seeds a committed visit to X (day 0.15), so the
+        // frightened creature's believed_hazard is {X}; the control never stood
+        // there. Both know water (a committed visit to W) and start at S.
+        let run = |remember_x: bool| -> (Ledger, EntityId) {
+            let mut ledger = Ledger::default();
+            let e = ledger.mint_entity();
+            commit_agent_at(&mut ledger, &reg, e, &water, 0.1); // knows water
+            if remember_x {
+                commit_agent_at(&mut ledger, &reg, e, &x, 0.15); // frightened here → remembers X
+            }
+            commit_agent_at(&mut ledger, &reg, e, &start, 0.2); // now at start
+            let sys = DriveMovements {
+                npcs: vec![npc_at(e)],
+                from: WorldTime { day: 1.0 }, // after the seeded history
+                to: WorldTime { day: 60.0 },  // several thirst cycles (act/rise ≈ 5.7 days)
+                params: SUSTENANCE,
+                terrain: &terrain,
+            };
+            let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+            (next, e)
+        };
+
+        // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
+        let walked = |ledger: &Ledger, e: EntityId| -> Vec<RoomAddr> {
+            ledger
+                .find(AGENT_AT)
+                .filter(|f| f.subject == e)
+                .filter(|f| f.day.map(|d| d >= 1.0).unwrap_or(false))
+                .filter_map(|f| match &f.object {
+                    Value::Text(s) => Some(room_from_text(s)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let drinks =
+            |ledger: &Ledger, e: EntityId| ledger.find(DRANK).filter(|f| f.subject == e).count();
+
+        // Confirmed sanity: believed_hazard is exactly {X} for the frightened
+        // creature and empty for the control (the one-source-of-truth fold).
+        {
+            let mut fl = Ledger::default();
+            let fe = fl.mint_entity();
+            commit_agent_at(&mut fl, &reg, fe, &water, 0.1);
+            commit_agent_at(&mut fl, &reg, fe, &x, 0.15);
+            commit_agent_at(&mut fl, &reg, fe, &start, 0.2);
+            let n = npc_at(fe);
+            let hz = believed_hazard(&fl, &n, WorldTime { day: 1.0 }, &terrain);
+            assert_eq!(
+                hz.into_iter().collect::<Vec<_>>(),
+                vec![x.clone()],
+                "the frightened creature remembers exactly X"
+            );
+        }
+
+        let (frightened_led, fe) = run(true);
+        let (control_led, ce) = run(false);
+
+        let frightened_path = walked(&frightened_led, fe);
+        let control_path = walked(&control_led, ce);
+
+        // (a) Both reach water and drink — the frightened one is NEVER trapped.
+        assert!(
+            drinks(&frightened_led, fe) >= 1,
+            "the frightened creature still reaches water (the detour is finite)"
+        );
+        assert!(drinks(&control_led, ce) >= 1, "the control reaches water");
+        // (b) The frightened creature's LATER journeys detour AROUND X — no
+        // tick-emitted position is X.
+        assert!(
+            !frightened_path.contains(&x),
+            "the frightened creature routes around remembered ground X"
+        );
+        // (c) The control, with no memory of X, takes the straight path THROUGH X
+        // (mildly hazardous ground a dying-thirsty creature pushes across).
+        assert!(
+            control_path.contains(&x),
+            "the never-frightened control blunders straight through X"
+        );
+    }
+
     /// A synthetic elevation + fresh-water field for pure tests: planted
     /// heights, INFINITY elsewhere (INFINITY = "never chosen downhill" —
     /// mirrors `LocaleTerrain`'s undescribable-room fallback), and a planted
