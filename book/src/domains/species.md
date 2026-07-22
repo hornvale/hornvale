@@ -169,7 +169,13 @@ for a people that settles and speaks, the **psychology** (6) and **perception**
 social **lexicon** — the speech a kind that speaks carries. The biosphere-only
 fauna of the menagerie (dragons, treant, xorn, …) simply have no rows in the
 peopled registries, and none of this table; their dragon-ness is that absence,
-expressed rather than declared. What the old `Option<PeopledTraits>` once
+expressed rather than declared. The one biosphere dimension the fauna carry
+distinctly is **potency** — a creature's magical might — assayed, like `mass`,
+from the D&D 5E corpus: it is the kind's adult Challenge Rating over thirty
+(`CR/30`), nonzero only for the supernatural set (dragons, treant, xorn) and
+zero for mundane beasts. It is the term that buys the mighty their rarity,
+through the sovereignty floor the habitat model reads. What the old
+`Option<PeopledTraits>` once
 guaranteed by the shape of a type — all the peopled traits together or none —
 worldgen now enforces as a load-time referential-integrity check across the
 registries. Every dimension here is still **authored**. Nothing in this table is
