@@ -20,6 +20,7 @@ pub mod sky_position;
 pub mod star;
 pub mod starfield;
 pub mod streams;
+pub use streams::stream_labels;
 pub mod system;
 pub mod units;
 pub mod wanderers;
@@ -71,66 +72,6 @@ use hornvale_kernel::{
 /// Phenomenon kind for bodies visible in the sky.
 /// type-audit: bare-ok(identifier-text)
 pub const CELESTIAL_BODY: &str = "celestial-body";
-
-/// Every seed-derivation label this crate uses, with docs. All chains hang
-/// off the world seed's "astronomy" derivation.
-/// type-audit: bare-ok(identifier-text)
-pub fn stream_labels() -> Vec<(&'static str, &'static str)> {
-    vec![
-        ("astronomy", "root stream for sky genesis"),
-        ("astronomy/star-mass", "main-sequence star mass draw"),
-        ("astronomy/anchor-mass", "anchor world mass draw"),
-        ("astronomy/rotation", "rotation regime and period draw"),
-        ("astronomy/orbit", "anchor orbital distance draw"),
-        ("astronomy/obliquity", "axial tilt draw"),
-        ("astronomy/moon-count", "how many moons"),
-        (
-            "astronomy/moons",
-            "per-moon mass/distance draws (sequential attempts)",
-        ),
-        ("astronomy/neighbors", "neighbor class/distance draws"),
-        ("astronomy/forcing", "deep-time orbital forcing"),
-        ("astronomy/phase-offsets", "per-body genesis phase offsets"),
-        (
-            "astronomy/neighbor-positions",
-            "per-neighbor celestial position draws (declination, right ascension)",
-        ),
-        (
-            "astronomy/spin-direction",
-            "spin-direction draw: prograde or retrograde",
-        ),
-        (
-            "astronomy/moon-inclinations",
-            "per-moon orbital-inclination draws",
-        ),
-        ("astronomy/wanderer-count", "how many wandering planets"),
-        (
-            "astronomy/wanderers",
-            "per-wanderer parameter draws, sequential",
-        ),
-        (
-            "astronomy/starfield",
-            "background starfield: count + per-star position/brightness (derived on demand)",
-        ),
-        (
-            "astronomy/moon-nodes",
-            "per-moon ascending-node longitude draws",
-        ),
-        ("astronomy/star-age", "stellar age draw"),
-        (
-            "astronomy/moon-formation",
-            "per-moon formation-mechanism draw (giant impact vs. capture)",
-        ),
-        (
-            "astronomy/moon-density",
-            "per-moon density draw (drawn only for captured moons; impact moons still consume it)",
-        ),
-        (
-            "astronomy/moon-age",
-            "per-moon age draw (impact: coeval jitter under the planet's age; capture: an independent fraction of it)",
-        ),
-    ]
-}
 
 /// Register astronomy's contribution to the concept registry.
 ///
