@@ -218,8 +218,11 @@
 - [The Massing](./chronicle/the-massing.md)
 - [The Given Word](./chronicle/the-given-word.md)
 - [The Diorama](./chronicle/the-diorama.md)
+- [The Overworld](./chronicle/the-overworld.md)
 - [The Living Community](./chronicle/the-living-community.md)
 - [The Quarry](./chronicle/the-quarry.md)
+- [The Wilding](./chronicle/the-wilding.md)
+- [The Teeth](./chronicle/the-teeth.md)
 - [The Connection Graph](./chronicle/the-connection-graph.md)
 
 # Appendix: The Frontier

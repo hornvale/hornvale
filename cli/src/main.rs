@@ -442,6 +442,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: true,
+                wild_agents: true,
             },
             std::io::Cursor::new(script),
             &mut out,
@@ -456,6 +457,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
                 echo: false,
+                wild_agents: true,
             },
             stdin.lock(),
             stdout.lock(),

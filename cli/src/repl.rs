@@ -344,6 +344,7 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                 let opts = hornvale_vessel::PossessOpts {
                     day: WorldTime { day: 0.0 },
                     echo: false,
+                    wild_agents: true,
                 };
                 match hornvale_vessel::Session::start(world, &opts) {
                     Err(e) => writeln!(output, "error: {e}")?,
