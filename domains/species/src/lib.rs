@@ -137,6 +137,19 @@ pub enum SocialForm {
     Settled,
 }
 
+impl SocialForm {
+    /// Whether this form lives *socially* — in a group with its own kind, so a
+    /// minded member has a society-mind (authority, status, an in-group). True
+    /// for `Gregarious` (packs/herds) and `Settled` (communities); false for
+    /// `Solitary` and `Sessile`. This is the sociality axis, deliberately
+    /// distinct from settlement-forming (`Settled` alone): a nomadic band is
+    /// social without being sedentary (decision 0068 refines 0067).
+    /// type-audit: bare-ok(flag: return)
+    pub const fn is_social(self) -> bool {
+        matches!(self, Self::Gregarious | Self::Settled)
+    }
+}
+
 /// The individual-mind vector (spec: The Cloister): the psychology every
 /// minded kind carries, whether or not it belongs to a society. Scalars are
 /// bare ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening requires

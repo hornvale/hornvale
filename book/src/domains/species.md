@@ -38,8 +38,12 @@ deliberation latency, time horizon) — is carried by every minded kind: the
 four settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
-knowledge, or generosity) — is carried only by a `Settled` kind; a
-`Solitary` creature carries none. Goblin is the baseline for both: every
+knowledge, or generosity) — is carried by a minded kind that lives
+*socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
+creature (a dragon) carries none. The gate is sociality, not settlement — a
+nomadic band would carry a society without ever settling — though today that
+set is exactly the four settling peoples, since no `Gregarious` kind is yet
+minded (decision 0068 refines 0067). Goblin is the baseline for both: every
 scalar sits at exactly 0.5, every enum at its goblin variant, and every
 downstream formula that reads either vector is built so the baseline value
 reproduces today's behavior — not tuned to match, but constructed to match,
