@@ -3310,12 +3310,26 @@ fn exposure_of_impl(
 
     let species = name;
     // Source perception from the world's component set (ECS c3), keyed by the
-    // kind's `KindId` label.
+    // kind's `KindId` label. Since The Solitary Tongue, a speaker (an
+    // articulation-registry kind) is no longer necessarily a perceiver — the
+    // three dragons speak but do not (yet) perceive (perception stays the
+    // four peoples, deferred). A non-perceiving speaker falls back to the
+    // goblin baseline (`Diurnal`, 0.5/0.5) purely as this classifier's input
+    // — a neutral stand-in, not a claim the dragon actually perceives that
+    // way — so its color/body/kin exposure still classifies instead of
+    // panicking on a missing component that is legitimately absent.
+    const NON_PERCEIVING_SPEAKER_BASELINE: hornvale_species::PerceptionVector =
+        hornvale_species::PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            night_vision: 0.5,
+            sky_attention: 0.5,
+        };
     let perception = wc
         .perception
         .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
-    let depths = pack_depths(perception);
+        .copied()
+        .unwrap_or(NON_PERCEIVING_SPEAKER_BASELINE);
+    let depths = pack_depths(&perception);
     let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
@@ -3446,11 +3460,93 @@ pub fn family_daughters(
         // language divergence is a speaker concern. Byte-identical for the
         // peoples' families, whose members all speak.
         .filter(|(kind, _)| wc.articulation.contains(kind))
-        .map(|(kind, _)| hornvale_language::Daughter {
-            cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
-            phonology: language_of_wc(world, wc, kind.0),
+        .map(|(kind, _)| {
+            // Draw at kind's OWN regime (cascade_regime_of), not the
+            // language crate's default-regime draw_cascade: a family can
+            // hold a dragon (the "draconic" family), so the daughter's
+            // cascade must be frozen consistent with its lexicon. This
+            // reads the biosphere row from the CALLER's `wc` rather than
+            // calling `cascade_of` (which re-`assemble()`s the CANONICAL
+            // registries) — `family_daughters` is also called with a
+            // synthetic `wc` (Lab's solo/twin components,
+            // `WorldComponents::from_stores`), whose re-keyed kinds
+            // (e.g. "goblin-twin") do not exist in the canonical registry
+            // `cascade_of` would resolve against.
+            let bio = wc
+                .biosphere
+                .get(kind)
+                .expect("every kind in family_of has a biosphere row (integrity-checked)");
+            hornvale_language::Daughter {
+                cascade: hornvale_language::draw_cascade_with_regime(
+                    &world.seed,
+                    kind.0,
+                    cascade_regime_of(bio),
+                ),
+                phonology: language_of_wc(world, wc, kind.0),
+            }
         })
         .collect()
+}
+
+/// The lifespan (years) at and above which a `Solitary` species' cascade
+/// regime freezes to the isolate rate ([`CascadeRegime::new`]`(0, 1)`)
+/// instead of the historical `SETTLED` rate. Authored comfortably between
+/// two bracketing values computed from `hornvale_species::lifespan` at the
+/// registry's authored masses: the longest-lived of the four settling
+/// peoples, bugbear at ~80.9 yr (132.0 kg, `Endotherm`), and the
+/// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
+/// `Endotherm`). Also clear of the wild `Solitary` beasts
+/// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
+/// stay banked at `SETTLED` rather than freezing.
+///
+/// [`CascadeRegime::new`]: hornvale_language::CascadeRegime::new
+const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
+
+/// The authored drift-rate map (spec — drift = f(SocialForm, lifespan)),
+/// pure over a biosphere row (no world/seed needed; `domains/language`
+/// cannot read `SocialForm`, so worldgen — the composition root — computes
+/// this and passes the regime in). `Settled` peoples keep drawing at the
+/// historical rate; `Gregarious` beasts (no current speaker) bank a slightly
+/// slower `{1,2}`; `Solitary` freezes to the isolate rate `{0,1}` once its
+/// allometric lifespan clears [`LIFESPAN_THRESHOLD_YEARS`] (a dragon), else
+/// it stays at the historical rate (a short-lived solitary beast, banked);
+/// `Sessile` never speaks and is inert at `SETTLED`. Total over
+/// `SocialForm`.
+fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
+    match bio.social_form {
+        hornvale_species::SocialForm::Settled => hornvale_language::CascadeRegime::SETTLED,
+        hornvale_species::SocialForm::Gregarious => hornvale_language::CascadeRegime::new(1, 2),
+        hornvale_species::SocialForm::Solitary => {
+            if hornvale_species::lifespan(bio.mass, bio.metabolic_class).get()
+                >= LIFESPAN_THRESHOLD_YEARS
+            {
+                hornvale_language::CascadeRegime::new(0, 1)
+            } else {
+                hornvale_language::CascadeRegime::SETTLED
+            }
+        }
+        hornvale_species::SocialForm::Sessile => hornvale_language::CascadeRegime::SETTLED,
+    }
+}
+
+/// A species' cascade, drawn at its own regime ([`cascade_regime_of`]) rather
+/// than the historical default — the composition-root seam every
+/// dragon-reachable cascade draw should route through, so a dragon's cascade
+/// stays consistent with the frozen regime its lexicon draws at. Assembles
+/// `WorldComponents`, resolves the kind, and reads its biosphere row.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cascade, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("resolve_kind only returns kinds with a biosphere row (integrity-checked)");
+    Ok(hornvale_language::draw_cascade_with_regime(
+        &world.seed,
+        name,
+        cascade_regime_of(bio),
+    ))
 }
 
 /// Build `species`' lexicon within an explicit component set `wc` — the
@@ -3479,6 +3575,10 @@ pub fn lexicon_of_in(
         None => (name, ph.clone()),
     };
     let daughters = family_daughters(world, wc, family);
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("every kind has a biosphere row (integrity-checked)");
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         name,
@@ -3487,6 +3587,7 @@ pub fn lexicon_of_in(
         &proto_ph,
         &exposures,
         &daughters,
+        cascade_regime_of(bio),
     ))
 }
 
@@ -3516,6 +3617,10 @@ fn lexicon_of_in_from(
         None => (name, ph.clone()),
     };
     let daughters = family_daughters(world, wc, family);
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("every kind has a biosphere row (integrity-checked)");
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         name,
@@ -3524,6 +3629,7 @@ fn lexicon_of_in_from(
         &proto_ph,
         &exposures,
         &daughters,
+        cascade_regime_of(bio),
     ))
 }
 
@@ -4148,10 +4254,23 @@ fn build_to(
             None => (name, ph.clone()),
         };
         let daughters = family_daughters(&world, wc, family);
+        // `species_set` is the history-placed settling roster (occupations
+        // form communities only for `Settled` kinds), so every `name` here
+        // resolves to `SETTLED` via `cascade_regime_of` too — this stays the
+        // literal for clarity rather than re-deriving a biosphere lookup
+        // this loop doesn't otherwise need. Dragons never reach this site
+        // (unplaced).
         lexicons.insert(
             name,
             hornvale_language::build_lexicon(
-                &seed, name, fam_label, ph, &proto_ph, &exposures, &daughters,
+                &seed,
+                name,
+                fam_label,
+                ph,
+                &proto_ph,
+                &exposures,
+                &daughters,
+                hornvale_language::CascadeRegime::SETTLED,
             ),
         );
     }
@@ -5742,6 +5861,67 @@ mod tests {
         assert!(
             settled.is_disjoint(&mobile_beasts),
             "a settling people is never wild-agentified"
+        );
+    }
+
+    #[test]
+    fn cascade_regime_of_matches_the_authored_regime_map() {
+        // THE SOLITARY TONGUE (Task 2): cascade_regime_of is a total, pure
+        // function of a biosphere row (no world/seed needed). Each of the
+        // four peoples (Settled) draws at the historical SETTLED rate; each
+        // dragon (Solitary, long-lived) freezes to the isolate rate.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        for people in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+            let bio = wc
+                .biosphere
+                .get_by_label(people)
+                .unwrap_or_else(|| panic!("{people} has a biosphere row"));
+            assert_eq!(
+                cascade_regime_of(bio),
+                hornvale_language::CascadeRegime::SETTLED,
+                "{people} is Settled -> the SETTLED regime"
+            );
+        }
+        for dragon in ["white-dragon", "red-dragon", "black-dragon"] {
+            let bio = wc
+                .biosphere
+                .get_by_label(dragon)
+                .unwrap_or_else(|| panic!("{dragon} has a biosphere row"));
+            assert_eq!(
+                cascade_regime_of(bio),
+                hornvale_language::CascadeRegime::new(0, 1),
+                "{dragon} is Solitary and long-lived -> the frozen isolate regime"
+            );
+        }
+        // Total-map coverage: Gregarious (no current speaker) banks {1,2};
+        // short-lived Solitary beasts bank SETTLED (below the threshold);
+        // Sessile never speaks and is inert at SETTLED.
+        let elk = wc
+            .biosphere
+            .get_by_label("giant-elk")
+            .expect("giant-elk has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(elk),
+            hornvale_language::CascadeRegime::new(1, 2),
+            "giant-elk is Gregarious -> the banked {{1,2}} regime"
+        );
+        let otyugh = wc
+            .biosphere
+            .get_by_label("otyugh")
+            .expect("otyugh has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(otyugh),
+            hornvale_language::CascadeRegime::SETTLED,
+            "otyugh is Solitary but short-lived -> the banked SETTLED regime"
+        );
+        let treant = wc
+            .biosphere
+            .get_by_label("treant")
+            .expect("treant has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(treant),
+            hornvale_language::CascadeRegime::SETTLED,
+            "treant is Sessile (never speaks) -> inert at SETTLED"
         );
     }
 
@@ -8201,7 +8381,10 @@ mod tests {
         let ph = language_of(&world, "kobold");
         let ex = exposure_of(&world, "kobold").unwrap();
         // Singleton path: family == species, proto_ph == ph; the merger-aware
-        // daughters slice is the family's one member (kobold itself).
+        // daughters slice is the family's one member (kobold itself). Kobold
+        // is Settled, so `cascade_regime_of` resolves to SETTLED here too —
+        // the literal stays for a direct, mechanism-level comparison against
+        // `lexicon_of`.
         let wc = WorldComponents::assemble().unwrap();
         let daughters = family_daughters(&world, &wc, "kobold");
         let direct = hornvale_language::build_lexicon(
@@ -8212,8 +8395,36 @@ mod tests {
             &ph,
             &ex,
             &daughters,
+            hornvale_language::CascadeRegime::SETTLED,
         );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
+    }
+
+    #[test]
+    fn goblin_lexicon_mechanism_is_stable_given_fixed_exposures() {
+        // THE SOLITARY TONGUE (Task 2) byte-identity guard: goblin exercises
+        // the OTHER branch of `lexicon_of_in` (a real multi-member family
+        // with a shared proto phonology, unlike kobold's singleton path).
+        // Goblin is Settled, so `cascade_regime_of` must resolve to the
+        // historical SETTLED regime here exactly as the pre-Task-2 literal
+        // did — a dragon-blind caller sees byte-identical draws.
+        let world = generated(42);
+        let ph = language_of(&world, "goblin");
+        let ex = exposure_of(&world, "goblin").unwrap();
+        let wc = WorldComponents::assemble().unwrap();
+        let proto_ph = proto_phonology_of_in(&world, &wc, "goblinoid");
+        let daughters = family_daughters(&world, &wc, "goblinoid");
+        let direct = hornvale_language::build_lexicon(
+            &world.seed,
+            "goblin",
+            "goblinoid",
+            &ph,
+            &proto_ph,
+            &ex,
+            &daughters,
+            hornvale_language::CascadeRegime::SETTLED,
+        );
+        assert_eq!(lexicon_of(&world, "goblin").unwrap(), direct);
     }
 
     #[test]

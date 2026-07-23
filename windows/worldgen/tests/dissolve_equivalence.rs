@@ -35,21 +35,33 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
     let art = hornvale_language::articulation_registry();
     let lex = hornvale_language::lexicon_registry();
-    // Articulation and lexicon are keyed to exactly the SPEAKING peoples — the
-    // perception key-set (since The Eremite psyche is a superset: the dragons
-    // carry a mind but no perception or speech) — and to nothing else.
-    let speakers: Vec<_> = wc.perception.ids().collect();
+    // The Solitary Tongue: the three chromatic dragons now speak (a frozen
+    // Draconic tongue) though they do not perceive (perception stays the four
+    // peoples, deferred). Articulation and lexicon are keyed to exactly the
+    // MINDED kinds — the psyche key-set (four peoples + three dragons, 7) —
+    // which is now a STRICT SUPERSET of the four-people perception key-set;
+    // perception ⊆ articulation holds, articulation == perception no longer
+    // does.
+    let minded: Vec<_> = wc.psyche.ids().collect();
     assert_eq!(
         art.ids().collect::<Vec<_>>(),
-        speakers,
-        "articulation must key exactly the speaking peoples"
+        minded,
+        "articulation must key exactly the minded kinds (peoples + dragons)"
     );
     assert_eq!(
         lex.ids().collect::<Vec<_>>(),
-        speakers,
-        "lexicon must key exactly the speaking peoples"
+        minded,
+        "lexicon must key exactly the minded kinds (peoples + dragons)"
     );
-    // A non-speaker (fauna, or a minded solitary dragon) carries no lexicon.
+    // perception (the four peoples) is a subset of articulation (the seven
+    // minded speakers) — a dragon speaks but does not (yet) perceive.
+    for kind in wc.perception.ids() {
+        assert!(
+            art.contains(kind),
+            "perceiving kind {kind:?} must also speak (perception ⊆ articulation)"
+        );
+    }
+    // A non-minded kind (ordinary fauna) carries no lexicon.
     for kind in wc.biosphere.ids() {
         if !art.contains(kind) {
             assert!(

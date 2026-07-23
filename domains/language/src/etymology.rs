@@ -144,8 +144,37 @@ const RULE_KINDS: [RuleKind; 6] = [
 /// picked.
 const RULE_PARAM_RANGE: (u32, u32) = (0, 1);
 
-/// The inclusive range of rules a drawn cascade contains.
-const CASCADE_LEN_RANGE: (u32, u32) = (2, 4);
+/// The inclusive range of rules a drawn cascade contains, as a passed-in
+/// value rather than a global constant — the mechanism [`draw_cascade_with_regime`]
+/// draws its rule count from. A settled, socially connected people drifts at
+/// the historical rate ([`CascadeRegime::SETTLED`]); a long-lived solitary
+/// has no one to drift *with*, so a later regime (the composition root's
+/// `cascade_regime_of`, `windows/worldgen`) narrows this toward frozen. This
+/// type is language-owned and knows nothing of `SocialForm` or any other
+/// species concept — the regime is always computed elsewhere and passed in,
+/// keeping this crate kernel-only.
+/// type-audit: bare-ok(count: min), bare-ok(count: max)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CascadeRegime {
+    /// The minimum number of rules a drawn cascade may contain, inclusive.
+    pub min: u32,
+    /// The maximum number of rules a drawn cascade may contain, inclusive.
+    pub max: u32,
+}
+
+impl CascadeRegime {
+    /// The historical rate every kind that speaks today draws at: 2–4
+    /// rules. This is the pre-existing `CASCADE_LEN_RANGE` constant it
+    /// replaces, preserved exactly so [`draw_cascade`]'s default stays
+    /// byte-identical.
+    pub const SETTLED: CascadeRegime = CascadeRegime { min: 2, max: 4 };
+
+    /// Construct a regime from an inclusive `(min, max)` rule-count range.
+    /// type-audit: bare-ok(count: min), bare-ok(count: max)
+    pub const fn new(min: u32, max: u32) -> CascadeRegime {
+        CascadeRegime { min, max }
+    }
+}
 
 /// Draw one rule: a kind, then a param, in that order.
 fn draw_rule(stream: &mut Stream) -> SoundRule {
@@ -156,17 +185,34 @@ fn draw_rule(stream: &mut Stream) -> SoundRule {
     SoundRule { kind, param }
 }
 
-/// Draw a 2–4 rule cascade for `species`, from
-/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE)`.
+/// Draw a cascade for `species` at the historical `SETTLED` rate (2–4 rules).
+/// Convenience wrapper over
+/// [`draw_cascade_with_regime`] at [`CascadeRegime::SETTLED`] (2–4 rules) —
+/// the historical rate every existing caller drew at before `CascadeRegime`
+/// existed. Byte-identical to the pre-regime `draw_cascade`: the stream
+/// derivation is unchanged, only the rule-count bounds now flow through a
+/// regime value instead of a bare constant.
 /// type-audit: bare-ok(identifier-text)
 pub fn draw_cascade(seed: &Seed, species: &str) -> Cascade {
+    draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED)
+}
+
+/// Draw a cascade for `species` whose rule count is bounded by `regime`,
+/// from
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE)`.
+/// The stream derivation is identical regardless of `regime` — only the
+/// `range_u32` bounds it draws the rule count from change, so
+/// `draw_cascade_with_regime(seed, species, CascadeRegime::SETTLED)` is
+/// exactly [`draw_cascade`]'s behavior.
+/// type-audit: bare-ok(identifier-text)
+pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegime) -> Cascade {
     let mut stream = seed
         .derive(streams::ROOT)
         .derive(StreamLabel::dynamic(species))
         .derive(streams::LEXICON)
         .derive(streams::CASCADE)
         .stream();
-    let count = stream.range_u32(CASCADE_LEN_RANGE.0, CASCADE_LEN_RANGE.1);
+    let count = stream.range_u32(regime.min, regime.max);
     let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
     Cascade { rules }
 }
@@ -810,6 +856,25 @@ mod tests {
         let d = evolve(&proto, &cascade, &ph);
         let replayed = evolve(&d.proto, &cascade, &ph);
         assert_eq!(replayed.modern, d.modern);
+    }
+
+    #[test]
+    fn draw_cascade_default_equals_settled_regime() {
+        // draw_cascade must stay a thin wrapper over draw_cascade_with_regime
+        // at CascadeRegime::SETTLED — byte-identical for every existing
+        // caller, across several seeds/species.
+        for (seed, species) in [
+            (Seed(1), "goblin"),
+            (Seed(5), "kobold"),
+            (Seed(9), "hobgoblin"),
+            (Seed(42), "test"),
+        ] {
+            assert_eq!(
+                draw_cascade(&seed, species),
+                draw_cascade_with_regime(&seed, species, CascadeRegime::SETTLED),
+                "draw_cascade({seed:?}, {species:?}) must equal the SETTLED-regime draw"
+            );
+        }
     }
 
     #[test]
