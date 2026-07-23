@@ -3,8 +3,11 @@
 //! (settlement-abandonment history + terrain): no live mutation, no committed
 //! facts, no metaphysics — the door and its dread, not the entity.
 
+use crate::history_emit::{occupations_at, present_day};
 use hornvale_history::record::{CauseOfEnd, Function, Notability, OccupationRecord};
-use hornvale_kernel::math;
+use hornvale_kernel::{CellId, World, math};
+use hornvale_terrain::GeneratedTerrain;
+use hornvale_terrain::crust::sphere_fbm01;
 
 /// What a residue site is, by maker → purpose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,6 +135,88 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     }
 }
 
+/// Winning-craton age above which crust counts as ancient enough to have
+/// witnessed the pre-human deep (`[0,1]`, `GeneratedTerrain::crust_age_at`'s
+/// scale).
+/// type-audit: bare-ok(ratio)
+const ANCIENT_CRUST_AGE: f64 = 0.8;
+
+/// Spatial frequency for the pre-human presence noise. Distinct from The
+/// Lode's cave (5.0) and deposit (7.0) frequencies sampled off the same
+/// seed, so the three point processes decorrelate on the sphere.
+/// type-audit: bare-ok(ratio)
+const PREHUMAN_FREQ: f64 = 11.0;
+
+/// fBm octaves for the pre-human presence noise (matches The Lode's caves/deposits).
+/// type-audit: bare-ok(count)
+const PREHUMAN_OCTAVES: u32 = 4;
+
+/// Presence threshold for the pre-human noise test: `sphere_fbm01`
+/// compresses variance toward 0.5 (see `domains/terrain/src/crust.rs`), so
+/// this is not a small absolute probability but is still sparse relative to
+/// the ancient-crust population it gates within — at seed 42 it selects 1 of
+/// ~1900 ancient-crust cells.
+/// type-audit: bare-ok(ratio)
+const PREHUMAN_PRESENCE_THRESHOLD: f64 = 0.30;
+
+/// A rare pre-human gate-scar, if this cell's deep crust is old enough and
+/// the shared hash-noise presence test fires. Pure and deterministic: no
+/// draws, no facts, no epoch — reuses The Lode's FEATURES noise seed
+/// (`GeneratedTerrain::globe().features_noise_seed()`) exactly as
+/// `cave_at`/`deposit_at` do, so no new stream label is introduced. Ocean
+/// cells never qualify (nothing pre-human is legible under open water in
+/// this model). `founded_day` is `None`: pre-human residue predates the
+/// narrated (people) timeline entirely.
+pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: CellId) -> Option<Vestige> {
+    if terrain.is_ocean(cell) {
+        return None;
+    }
+    if terrain.crust_age_at(cell) <= ANCIENT_CRUST_AGE {
+        return None;
+    }
+    let pos = terrain.geosphere().position(cell);
+    let noise = sphere_fbm01(
+        terrain.globe().features_noise_seed(),
+        pos,
+        PREHUMAN_FREQ,
+        PREHUMAN_OCTAVES,
+    );
+    if noise >= PREHUMAN_PRESENCE_THRESHOLD {
+        return None;
+    }
+    Some(Vestige {
+        kind: VestigeKind::GateScar,
+        seal_state: SealState::Breached,
+        valence: Valence::Forgotten,
+        hazard: HazardKind::Numinous,
+        // Forgotten before there was anyone to forget it: maximally dreaded,
+        // with no warning ever legible to begin with.
+        dread: 0.9,
+        warning_legibility: 0.0,
+        founded_day: None,
+    })
+}
+
+/// The full palimpsest stack at a cell, oldest layer first: the pre-human
+/// residue (if any) — deep-time-old, so always first — then every people
+/// occupation (`occupations_at`, already oldest-founded-first), each read
+/// forward to `now` via `vestige_from_occupation`. Pure derived read: no
+/// facts are written, nothing is mutated. `now` is the world's committed
+/// present day (see [`crate::present_day`]).
+pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> Vec<Vestige> {
+    let now = present_day(world);
+    let mut layers = Vec::new();
+    if let Some(prehuman) = prehuman_vestige(terrain, cell) {
+        layers.push(prehuman);
+    }
+    layers.extend(
+        occupations_at(world, cell)
+            .iter()
+            .map(|occ| vestige_from_occupation(occ, now)),
+    );
+    layers
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,5 +292,111 @@ mod tests {
             2000.0,
         );
         assert_eq!(v.hazard, HazardKind::Pestilent);
+    }
+
+    use crate::{SettlementPins, SkyChoice, build_world, terrain_of};
+    use hornvale_astronomy::SkyPins;
+    use hornvale_kernel::Seed;
+    use hornvale_terrain::TerrainPins;
+
+    /// Build the seed-42 Full world (and its terrain provider) once per test,
+    /// the same helper `history_emit`'s tests use.
+    fn seed_42_world_and_terrain() -> (hornvale_kernel::World, GeneratedTerrain) {
+        let world = build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let terrain = terrain_of(&world).unwrap();
+        (world, terrain)
+    }
+
+    /// Found by an exploratory scan of seed 42's terrain: ancient continental
+    /// crust (`crust_age_at` ~0.992, well past [`ANCIENT_CRUST_AGE`]) whose
+    /// presence noise (~0.277) falls below [`PREHUMAN_PRESENCE_THRESHOLD`] —
+    /// the one pre-human hit among that seed's ~1900 ancient-crust cells.
+    const DEEP_ANCIENT_NUMINOUS_CELL: CellId = CellId(21966);
+
+    /// A land cell at seed 42 whose crust falls short of the ancient
+    /// threshold (`crust_age_at` ~0.716) — fails the age gate regardless of
+    /// the noise draw.
+    const SHALLOW_YOUNG_CELL: CellId = CellId(5);
+
+    #[test]
+    fn a_deep_ancient_cell_can_yield_a_prehuman_gate_scar() {
+        let (_world, terrain) = seed_42_world_and_terrain();
+        assert!(
+            !terrain.is_ocean(DEEP_ANCIENT_NUMINOUS_CELL),
+            "the fixture cell must be land"
+        );
+        assert!(
+            terrain.crust_age_at(DEEP_ANCIENT_NUMINOUS_CELL) > ANCIENT_CRUST_AGE,
+            "the fixture cell must be ancient"
+        );
+        let v = prehuman_vestige(&terrain, DEEP_ANCIENT_NUMINOUS_CELL)
+            .expect("ancient crust + a firing presence draw yields a pre-human vestige");
+        assert_eq!(v.kind, VestigeKind::GateScar);
+        assert_eq!(v.hazard, HazardKind::Numinous);
+        assert_eq!(v.valence, Valence::Forgotten);
+        assert_eq!(v.seal_state, SealState::Breached);
+        assert_eq!(v.founded_day, None);
+    }
+
+    #[test]
+    fn a_shallow_young_cell_yields_no_prehuman_vestige() {
+        let (_world, terrain) = seed_42_world_and_terrain();
+        assert!(
+            terrain.crust_age_at(SHALLOW_YOUNG_CELL) <= ANCIENT_CRUST_AGE,
+            "the fixture cell must fall short of the ancient threshold"
+        );
+        assert_eq!(prehuman_vestige(&terrain, SHALLOW_YOUNG_CELL), None);
+    }
+
+    #[test]
+    fn vestiges_at_orders_prehuman_first_then_people_and_is_deterministic() {
+        let (world_a, terrain_a) = seed_42_world_and_terrain();
+        let (world_b, terrain_b) = seed_42_world_and_terrain();
+
+        let stack_a = vestiges_at(&world_a, &terrain_a, DEEP_ANCIENT_NUMINOUS_CELL);
+        let stack_b = vestiges_at(&world_b, &terrain_b, DEEP_ANCIENT_NUMINOUS_CELL);
+        assert_eq!(stack_a, stack_b, "vestiges_at must be deterministic");
+
+        assert!(
+            !stack_a.is_empty(),
+            "the fixture cell has at least the pre-human layer"
+        );
+        assert_eq!(
+            stack_a[0].kind,
+            VestigeKind::GateScar,
+            "the pre-human layer comes first (oldest)"
+        );
+        assert_eq!(stack_a[0].founded_day, None);
+        for layer in &stack_a[1..] {
+            assert!(
+                layer.founded_day.is_some(),
+                "every layer after the pre-human one is a people occupation"
+            );
+        }
+
+        // Founded-day ordering among the people layers is oldest-first,
+        // inherited from `occupations_at`.
+        let founded: Vec<f64> = stack_a[1..].iter().filter_map(|v| v.founded_day).collect();
+        assert!(
+            founded.windows(2).all(|w| w[0] <= w[1]),
+            "people layers must stay oldest-founded-first"
+        );
+    }
+
+    #[test]
+    fn vestiges_at_with_no_prehuman_layer_starts_with_people_only() {
+        let (world, terrain) = seed_42_world_and_terrain();
+        let stack = vestiges_at(&world, &terrain, SHALLOW_YOUNG_CELL);
+        assert!(
+            stack.iter().all(|v| v.founded_day.is_some()),
+            "with no pre-human layer, every entry is a people occupation"
+        );
     }
 }

@@ -103,11 +103,14 @@ pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
     emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
-    occupations_at, ruins_of_people, stratigraphy, sundered_landmasses, territories,
+    occupations_at, present_day, ruins_of_people, stratigraphy, sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
-pub use vestige::{HazardKind, SealState, Valence, Vestige, VestigeKind, vestige_from_occupation};
+pub use vestige::{
+    HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
+    vestige_from_occupation, vestiges_at,
+};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)

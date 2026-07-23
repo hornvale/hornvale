@@ -250,6 +250,38 @@ pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), Bu
     Ok(())
 }
 
+/// The present frame's day: the latest founding-or-ending recorded anywhere in
+/// the world's deep history — the moment "today" sits at, e.g. for measuring
+/// a ruin's age back from. Deterministic (`f64::total_cmp` over ledger
+/// numbers). Mirrors `windows/almanac::history::present_day`'s read (that
+/// window cannot be depended on here — worldgen is the composition root, so
+/// this is the shared, non-almanac-specific home for the read); a future
+/// cleanup could have the almanac call this one instead of its private copy.
+/// type-audit: bare-ok(count: return)
+pub fn present_day(world: &World) -> f64 {
+    if let Some(now) = world.ledger.find(hornvale_history::HISTORY_NOW).next()
+        && let Value::Number(n) = &now.object
+    {
+        return *n;
+    }
+    // Fallback for a world with no committed `history-now` fact (a save from
+    // before T8, or a synthetic Lab world that never ran the composition-root
+    // bake): approximate the present as the latest committed occupation
+    // event. This UNDERSTATES every ruin's age and tenure by the bake's
+    // post-history stretch (the true present is `BakeConfig::end_year`, not
+    // the last stochastic draw) — see `emit_now` above.
+    let founded = world.ledger.find(hornvale_history::OCC_FOUNDED);
+    let ended = world.ledger.find(hornvale_history::OCC_ENDED);
+    founded
+        .chain(ended)
+        .filter_map(|f| match &f.object {
+            Value::Number(n) => Some(*n),
+            _ => None,
+        })
+        .max_by(|a, b| a.total_cmp(b))
+        .unwrap_or(0.0)
+}
+
 /// Reconstruct every committed occupation from the ledger, in commit order —
 /// the shared decoder both this window (a future consumer, e.g. The Vestige)
 /// and `windows/almanac`'s prose renderer read history back through. Lifted
