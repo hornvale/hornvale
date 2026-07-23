@@ -237,6 +237,7 @@
 - [The Solitary Tongue](./chronicle/the-solitary-tongue.md)
 - [The Lode](./chronicle/the-lode.md)
 - [The First Mark](./chronicle/the-first-mark.md)
+- [The Cloister](./chronicle/the-cloister.md)
 
 # Appendix: The Frontier
 

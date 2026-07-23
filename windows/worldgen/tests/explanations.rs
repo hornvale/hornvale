@@ -26,11 +26,11 @@ fn beta_matches_the_preregistered_roster() {
     // Plan header roster (ledger #6): goblin/hobgoblin 2.5, bugbear 2.0,
     // kobold 1.0 — status_basis (Knowledge -> 1.0, Rank -> 2.0) plus 0.5
     // for Hierarchic sociality.
-    let psych = hornvale_species::psyche_registry();
-    let goblin = psych.get_by_label("goblin").unwrap();
-    let hobgoblin = psych.get_by_label("hobgoblin").unwrap();
-    let kobold = psych.get_by_label("kobold").unwrap();
-    let bugbear = psych.get_by_label("bugbear").unwrap();
+    let society = hornvale_species::society_registry();
+    let goblin = society.get_by_label("goblin").unwrap();
+    let hobgoblin = society.get_by_label("hobgoblin").unwrap();
+    let kobold = society.get_by_label("kobold").unwrap();
+    let bugbear = society.get_by_label("bugbear").unwrap();
 
     assert_eq!(beta_of(goblin), 2.5);
     assert_eq!(beta_of(hobgoblin), 2.5);

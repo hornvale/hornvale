@@ -278,6 +278,7 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let wc = hornvale_worldgen::WorldComponents::from_stores(
         biosphere,
         psyche,
+        hornvale_species::society_registry(),
         hornvale_species::perception_registry(),
         hornvale_language::articulation_registry(),
         hornvale_language::lexicon_registry(),

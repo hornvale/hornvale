@@ -137,24 +137,47 @@ pub enum SocialForm {
     Settled,
 }
 
-/// The closed six-dimension psychology vector (spec §3). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign.
+/// The individual-mind vector (spec: The Cloister): the psychology every
+/// minded kind carries, whether or not it belongs to a society. Scalars are
+/// bare ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening requires
+/// its own campaign.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PsychVector {
-    /// How a society answers threat: flee 0 ↔ stand 1.
+pub struct MindVector {
+    /// How this creature answers threat: flee 0 ↔ stand 1.
     pub threat_response: f64,
-    /// How slowly decisions are made (idle this campaign; banked).
+    /// How slowly decisions are made (banked; read by the vessel).
     pub deliberation_latency: f64,
-    /// How wide "us" is drawn: insular 0 ↔ expansive 1.
-    pub in_group_radius: f64,
     /// How far ahead works are planned: immediate 0 ↔ generational 1.
     pub time_horizon: f64,
+}
+
+/// The community-mind vector (spec: The Cloister): the psychology only a
+/// society has, carried solely by `Settled` kinds. A `Solitary` creature
+/// carries none; consumers needing a society reading for one resolve
+/// [`SocietyVector::baseline`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+/// type-audit: bare-ok(ratio)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SocietyVector {
     /// Authority shape.
     pub sociality: Sociality,
     /// What earns standing.
     pub status_basis: StatusBasis,
+    /// How wide "us" is drawn: insular 0 ↔ expansive 1.
+    pub in_group_radius: f64,
+}
+
+impl SocietyVector {
+    /// The goblin-baseline society reading — the value a mixed consumer
+    /// resolves for a `Solitary` kind that carries no society vector. Equal to
+    /// the goblin's authored society dims (`Hierarchic`, `Rank`, 0.5).
+    pub const fn baseline() -> Self {
+        Self {
+            sociality: Sociality::Hierarchic,
+            status_basis: StatusBasis::Rank,
+            in_group_radius: 0.5,
+        }
+    }
 }
 
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
@@ -739,7 +762,8 @@ pub struct BiosphereTraits {
 // (articulation, lexicon, family proto) lives in `hornvale_language`.
 
 impl Component for BiosphereTraits {}
-impl Component for PsychVector {}
+impl Component for MindVector {}
+impl Component for SocietyVector {}
 impl Component for PerceptionVector {}
 
 /// The universal biosphere component, authored directly (one row per kind).
@@ -937,54 +961,42 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
     .collect()
 }
 
-/// The peopled psychology component — authored directly, present only for the
-/// four settling, speaking peoples (goblin is the baseline: scalars 0.5,
-/// default enum variants).
+/// The individual-mind component — authored directly, present for every
+/// minded kind (the four settling peoples and the three solitary dragons;
+/// goblin is the baseline: scalars 0.5).
 /// type-audit: bare-ok(identifier-text)
-pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
+pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
     [
         (
             KindId("goblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.5,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.5,
                 time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("kobold"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.7,
-                in_group_radius: 0.2,
                 time_horizon: 0.8,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Knowledge,
             },
         ),
         (
             KindId("hobgoblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.7,
                 deliberation_latency: 0.6,
-                in_group_radius: 0.3,
                 time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("bugbear"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.4,
-                in_group_radius: 0.3,
                 time_horizon: 0.3,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Rank,
             },
         ),
         // The Eremite: the three chromatic dragons carry a mind though they
@@ -992,35 +1004,69 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         // profile (per-chromatic differentiation is a deferred refinement).
         (
             KindId("white-dragon"),
-            PsychVector {
-                threat_response: 0.95,            // an apex — stands, never flees
-                deliberation_latency: 0.5,        // banked dial, baseline
-                in_group_radius: 0.05,            // "us" = self; utterly solitary
-                time_horizon: 0.90,               // a centuries-long hoarder
-                sociality: Sociality::Hierarchic, // relates by dominance
-                status_basis: StatusBasis::Rank,  // esteems power / the hoard
+            MindVector {
+                threat_response: 0.95,     // an apex — stands, never flees
+                deliberation_latency: 0.5, // banked dial, baseline
+                time_horizon: 0.90,        // a centuries-long hoarder
             },
         ),
         (
             KindId("red-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.05,
                 time_horizon: 0.90,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("black-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.05,
                 time_horizon: 0.90,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// The community-mind component — authored directly, present only for the
+/// four settling peoples (goblin is the baseline). A Solitary minded kind
+/// (a dragon) carries a MindVector but no SocietyVector.
+/// type-audit: bare-ok(identifier-text)
+pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
+    [
+        (
+            KindId("goblin"),
+            SocietyVector {
                 sociality: Sociality::Hierarchic,
                 status_basis: StatusBasis::Rank,
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("kobold"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.2,
+            },
+        ),
+        (
+            KindId("hobgoblin"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.3,
+            },
+        ),
+        (
+            KindId("bugbear"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.3,
             },
         ),
     ]
@@ -1334,16 +1380,17 @@ mod tests {
     fn goblin_is_the_baseline_vector() {
         let psy = psyche_registry();
         let g = psy.get(&KindId("goblin")).unwrap();
-        for v in [
-            g.threat_response,
-            g.deliberation_latency,
-            g.in_group_radius,
-            g.time_horizon,
-        ] {
+        for v in [g.threat_response, g.deliberation_latency, g.time_horizon] {
             assert_eq!(v, 0.5, "goblin scalars must sit exactly at baseline");
         }
-        assert_eq!(g.sociality, Sociality::Hierarchic);
-        assert_eq!(g.status_basis, StatusBasis::Rank);
+        let soc = society_registry();
+        let g_soc = soc.get(&KindId("goblin")).unwrap();
+        assert_eq!(
+            g_soc.in_group_radius, 0.5,
+            "goblin society sits at baseline"
+        );
+        assert_eq!(g_soc.sociality, Sociality::Hierarchic);
+        assert_eq!(g_soc.status_basis, StatusBasis::Rank);
     }
 
     #[test]
@@ -1375,9 +1422,12 @@ mod tests {
         );
         let psy = psyche_registry();
         let k = psy.get(&KindId("kobold")).unwrap();
-        assert_eq!(k.sociality, Sociality::Communal);
-        assert_eq!(k.status_basis, StatusBasis::Knowledge);
-        assert!(k.in_group_radius < 0.5 && k.time_horizon > 0.5 && k.threat_response > 0.5);
+        assert!(k.time_horizon > 0.5 && k.threat_response > 0.5);
+        let soc = society_registry();
+        let k_soc = soc.get(&KindId("kobold")).unwrap();
+        assert_eq!(k_soc.sociality, Sociality::Communal);
+        assert_eq!(k_soc.status_basis, StatusBasis::Knowledge);
+        assert!(k_soc.in_group_radius < 0.5);
     }
 
     #[test]
@@ -1647,5 +1697,20 @@ mod tests {
         bio.ids()
             .map(|k| (*k, bio.get(k).unwrap().clone()))
             .collect()
+    }
+
+    #[test]
+    fn society_baseline_equals_the_goblin_authored_society() {
+        let goblin = society_registry().get(&KindId("goblin")).copied().unwrap();
+        assert_eq!(goblin, SocietyVector::baseline());
+    }
+
+    #[test]
+    fn society_registry_holds_exactly_the_settled_peoples() {
+        let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
+        assert_eq!(society, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
+        // dragons are minded (psyche) but not Settled — no society vector
+        assert!(society_registry().get(&KindId("red-dragon")).is_none());
+        assert!(psyche_registry().get(&KindId("red-dragon")).is_some());
     }
 }

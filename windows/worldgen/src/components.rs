@@ -11,7 +11,7 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{ComponentStore, KindId};
-use hornvale_species::{BiosphereTraits, PerceptionVector, PsychVector};
+use hornvale_species::{BiosphereTraits, MindVector, PerceptionVector, SocietyVector};
 
 use crate::BuildError;
 
@@ -25,7 +25,9 @@ pub struct WorldComponents {
     /// Universal body component — the canonical entity set.
     pub biosphere: ComponentStore<KindId, BiosphereTraits>,
     /// Peopled psychology.
-    pub psyche: ComponentStore<KindId, PsychVector>,
+    pub psyche: ComponentStore<KindId, MindVector>,
+    /// Community psychology — carried only by `Settled` kinds.
+    pub society: ComponentStore<KindId, SocietyVector>,
     /// Peopled perception.
     pub perception: ComponentStore<KindId, PerceptionVector>,
     /// Peopled phonology (language-owned).
@@ -51,6 +53,7 @@ impl WorldComponents {
     pub fn assemble() -> Result<Self, BuildError> {
         let biosphere = hornvale_species::biosphere_registry();
         let psyche = hornvale_species::psyche_registry();
+        let society = hornvale_species::society_registry();
         let perception = hornvale_species::perception_registry();
         let articulation = hornvale_language::articulation_registry();
         let lexicon = hornvale_language::lexicon_registry();
@@ -63,6 +66,7 @@ impl WorldComponents {
         check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -73,6 +77,7 @@ impl WorldComponents {
         Ok(Self {
             biosphere,
             psyche,
+            society,
             perception,
             articulation,
             lexicon,
@@ -95,7 +100,8 @@ impl WorldComponents {
     #[allow(clippy::too_many_arguments)]
     pub fn from_stores(
         biosphere: ComponentStore<KindId, BiosphereTraits>,
-        psyche: ComponentStore<KindId, PsychVector>,
+        psyche: ComponentStore<KindId, MindVector>,
+        society: ComponentStore<KindId, SocietyVector>,
         perception: ComponentStore<KindId, PerceptionVector>,
         articulation: ComponentStore<KindId, hornvale_language::ArticulationVector>,
         lexicon: ComponentStore<KindId, hornvale_language::speech::Lexicon>,
@@ -108,6 +114,7 @@ impl WorldComponents {
         check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -118,6 +125,7 @@ impl WorldComponents {
         Ok(Self {
             biosphere,
             psyche,
+            society,
             perception,
             articulation,
             lexicon,
@@ -139,6 +147,8 @@ pub enum ComponentTag {
     Biosphere,
     /// Peopled psychology.
     Psyche,
+    /// Community psychology — `Settled` kinds only.
+    Society,
     /// Peopled perception.
     Perception,
     /// Peopled phonology.
@@ -163,6 +173,7 @@ impl WorldComponents {
         match tag {
             ComponentTag::Biosphere => self.biosphere.ids().copied().collect(),
             ComponentTag::Psyche => self.psyche.ids().copied().collect(),
+            ComponentTag::Society => self.society.ids().copied().collect(),
             ComponentTag::Perception => self.perception.ids().copied().collect(),
             ComponentTag::Articulation => self.articulation.ids().copied().collect(),
             ComponentTag::Lexicon => self.lexicon.ids().copied().collect(),
@@ -182,6 +193,7 @@ impl WorldComponents {
         let mut all: std::collections::BTreeSet<KindId> = std::collections::BTreeSet::new();
         all.extend(self.biosphere.ids().copied());
         all.extend(self.psyche.ids().copied());
+        all.extend(self.society.ids().copied());
         all.extend(self.perception.ids().copied());
         all.extend(self.articulation.ids().copied());
         all.extend(self.lexicon.ids().copied());
@@ -204,9 +216,11 @@ impl WorldComponents {
 /// must have a `family_proto` entry, so a multi-member family always has a
 /// proto ancestral vector to draw its shared proto phonology from (a
 /// singleton family stays its own proto).
+#[allow(clippy::too_many_arguments)]
 fn check_integrity(
     biosphere: &ComponentStore<KindId, BiosphereTraits>,
-    psyche: &ComponentStore<KindId, PsychVector>,
+    psyche: &ComponentStore<KindId, MindVector>,
+    society: &ComponentStore<KindId, SocietyVector>,
     perception: &ComponentStore<KindId, PerceptionVector>,
     articulation: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     lexicon: &ComponentStore<KindId, hornvale_language::speech::Lexicon>,
@@ -261,6 +275,18 @@ fn check_integrity(
             )));
         }
     }
+    // The Cloister: society ⟺ Settled. Every Settled kind carries a society
+    // vector; no non-Settled kind does (a Solitary carries a mind but no society).
+    let settled: std::collections::BTreeSet<KindId> = biosphere
+        .iter()
+        .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+        .map(|(k, _)| *k)
+        .collect();
+    if !society.ids().copied().eq(settled.iter().copied()) {
+        return Err(BuildError::MalformedKind(
+            "society vector key-set must equal the Settled key-set".into(),
+        ));
+    }
     // Forward-proto coherence: count each family label's membership, then
     // require a `family_proto` entry for every label carried by ≥2 kinds.
     let mut family_counts: std::collections::BTreeMap<&'static str, usize> =
@@ -282,12 +308,15 @@ fn check_integrity(
 mod tests {
     use super::*;
     use hornvale_language::{articulation_registry, family_proto, lexicon_registry};
-    use hornvale_species::{biosphere_registry, family_of, perception_registry, psyche_registry};
+    use hornvale_species::{
+        biosphere_registry, family_of, perception_registry, psyche_registry, society_registry,
+    };
 
     #[test]
     fn canonical_registries_pass_integrity() {
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -297,6 +326,7 @@ mod tests {
             check_integrity(
                 &biosphere,
                 &psyche,
+                &society,
                 &perception,
                 &articulation,
                 &lexicon,
@@ -311,6 +341,7 @@ mod tests {
     fn key_set_mismatch_between_psyche_and_perception_fails_loudly() {
         let biosphere = biosphere_registry();
         let mut psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -324,6 +355,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -337,6 +369,7 @@ mod tests {
     fn key_set_mismatch_between_psyche_and_articulation_fails_loudly() {
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let mut articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -360,6 +393,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -373,6 +407,7 @@ mod tests {
     fn key_set_mismatch_between_psyche_and_lexicon_fails_loudly() {
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let full_lexicon = lexicon_registry();
@@ -391,6 +426,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -404,6 +440,7 @@ mod tests {
     fn peopled_kind_missing_biosphere_row_fails_loudly() {
         let full_biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -422,6 +459,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -435,6 +473,7 @@ mod tests {
     fn peopled_kind_missing_family_row_fails_loudly() {
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -453,6 +492,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -466,6 +506,7 @@ mod tests {
     fn multi_member_family_missing_its_proto_fails_loudly() {
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -492,6 +533,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -508,6 +550,7 @@ mod tests {
         // perception/articulation/lexicon.
         let mut biosphere = biosphere_registry();
         let mut psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -528,6 +571,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -543,6 +587,7 @@ mod tests {
         // requires a mind (articulation/lexicon ⊆ psyche).
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let mut articulation = articulation_registry();
         let mut lexicon = lexicon_registry();
@@ -566,6 +611,7 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
@@ -582,6 +628,7 @@ mod tests {
         // to the old all-equal invariant, scoped to Settled.
         let mut biosphere = biosphere_registry();
         let psyche = psyche_registry();
+        let society = society_registry();
         let perception = perception_registry();
         let articulation = articulation_registry();
         let lexicon = lexicon_registry();
@@ -600,11 +647,43 @@ mod tests {
         let result = check_integrity(
             &biosphere,
             &psyche,
+            &society,
             &perception,
             &articulation,
             &lexicon,
             &family_proto(),
             &family_of,
+        );
+        assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn integrity_rejects_a_non_settled_kind_carrying_society() {
+        // The Cloister: society ⟺ Settled. A Solitary kind (a dragon) must
+        // not carry a society vector; give red-dragon a bogus society row
+        // through the public constructor and expect a loud rejection.
+        let biosphere = biosphere_registry();
+        let psyche = psyche_registry();
+        let mut society = society_registry();
+        let bogus = *society.iter().next().expect("at least one society row").1;
+        society.insert(KindId("red-dragon"), bogus); // Solitary, not Settled
+        let perception = perception_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        let result = WorldComponents::from_stores(
+            biosphere,
+            psyche,
+            society,
+            perception,
+            articulation,
+            lexicon,
+            family_proto(),
+            family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
     }
