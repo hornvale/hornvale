@@ -3,7 +3,7 @@
 //! see `EdgeKind`) and their reachability under a conductance threshold.
 
 use hornvale_kernel::CellId;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// The kind of natural route an edge represents. These are derived from
 /// terrain and hydrology, never authored infrastructure — hence no `Road`
@@ -34,12 +34,14 @@ pub struct Edge {
 }
 
 /// The world's derived transport topology: an undirected graph over
-/// `CellId`, backed by a `BTreeMap` adjacency list for determinism (no
-/// `HashMap` — iteration and comparison order must never depend on hash
-/// seed or insertion order).
+/// `CellId`, backed by a per-cell adjacency `Vec` indexed by `CellId`. The
+/// node set is the dense `0..node_count`, so a `Vec` indexes in O(1) and
+/// iterates in ascending-`CellId` order — the same determinism a `BTreeMap`
+/// gave (no dependence on hash seed or insertion order), without the per-key
+/// tree traversal or per-node allocation.
 #[derive(Clone, Debug)]
 pub struct ConnectionGraph {
-    adjacency: BTreeMap<CellId, Vec<Edge>>,
+    adjacency: Vec<Vec<Edge>>,
 }
 
 impl ConnectionGraph {
@@ -47,11 +49,9 @@ impl ConnectionGraph {
     /// `CellId(node_count - 1)`, each starting with no edges.
     /// type-audit: bare-ok(count: node_count)
     pub fn new(node_count: usize) -> Self {
-        let mut adjacency = BTreeMap::new();
-        for i in 0..node_count {
-            adjacency.insert(CellId(i as u32), Vec::new());
+        ConnectionGraph {
+            adjacency: vec![Vec::new(); node_count],
         }
-        ConnectionGraph { adjacency }
     }
 
     /// Add an undirected edge: `edge` is appended to `from`'s adjacency
@@ -64,20 +64,23 @@ impl ConnectionGraph {
             kind: edge.kind,
             conductance: edge.conductance,
         };
-        self.adjacency.entry(from).or_default().push(edge);
-        self.adjacency.entry(to).or_default().push(mirror);
+        self.adjacency[from.0 as usize].push(edge);
+        self.adjacency[to.0 as usize].push(mirror);
     }
 
     /// The edges leaving `from`, in insertion order. Empty (not absent) for
     /// a node with no edges yet.
     pub fn edges(&self, from: CellId) -> &[Edge] {
-        self.adjacency.get(&from).map(Vec::as_slice).unwrap_or(&[])
+        self.adjacency
+            .get(from.0 as usize)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     /// Every node currently in the graph, in ascending `CellId` order (the
-    /// `BTreeMap` key order).
+    /// `Vec` index order).
     pub fn nodes(&self) -> impl Iterator<Item = CellId> + '_ {
-        self.adjacency.keys().copied()
+        (0..self.adjacency.len() as u32).map(CellId)
     }
 
     /// Connected components over edges whose `conductance >= min_conductance`.
@@ -86,7 +89,7 @@ impl ConnectionGraph {
     /// regardless of edge-insertion order.
     /// type-audit: bare-ok(ratio: min_conductance)
     pub fn reachable_regions(&self, min_conductance: f64) -> Vec<BTreeSet<CellId>> {
-        let mut unvisited: BTreeSet<CellId> = self.adjacency.keys().copied().collect();
+        let mut unvisited: BTreeSet<CellId> = self.nodes().collect();
         let mut components: Vec<BTreeSet<CellId>> = Vec::new();
 
         while let Some(&start) = unvisited.iter().next() {

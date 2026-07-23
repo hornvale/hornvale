@@ -87,3 +87,23 @@ fn nodes_iterates_every_node_added_at_construction() {
     ids.sort();
     assert_eq!(ids, vec![CellId(0), CellId(1), CellId(2), CellId(3)]);
 }
+
+#[test]
+fn nodes_are_yielded_in_ascending_cellid_order_without_sorting() {
+    // The dense-Vec adjacency (The Lookup) must preserve the ascending-CellId
+    // iteration a BTreeMap gave — asserted WITHOUT sorting the result.
+    let graph = ConnectionGraph::new(5);
+    let ids: Vec<CellId> = graph.nodes().collect();
+    assert_eq!(
+        ids,
+        vec![CellId(0), CellId(1), CellId(2), CellId(3), CellId(4)]
+    );
+}
+
+#[test]
+fn edges_on_an_out_of_range_node_is_empty_not_a_panic() {
+    // Preserved defensive behavior: a node id past the graph's size reads as
+    // an empty edge list, matching the old BTreeMap `get(&id).unwrap_or(&[])`.
+    let graph = ConnectionGraph::new(3);
+    assert!(graph.edges(CellId(99)).is_empty());
+}
