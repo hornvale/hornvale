@@ -220,6 +220,109 @@ fn the_workload_fires_displacement_at_volume() {
     );
 }
 
+/// A saturating world: a tiny habitable cluster (cell 0 and its direct
+/// neighbours) that genesis fills completely, surrounded by permanently
+/// uninhabitable land. Once the cluster is full there is nowhere vacant, so
+/// when a final era turns cell 0 hostile its community cannot migrate to
+/// vacant land — it must DISPLACE an occupied neighbour, and that neighbour
+/// cascades onward (the Sea-Peoples avalanche). Two eras: a long warm span
+/// that lets the cluster saturate and stabilise, then a hostile span that
+/// evicts cell 0 with no vacant refuge anywhere.
+fn saturating_fixture() -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
+    let geo = Geosphere::new(1); // 42 cells
+    let mut hab: BTreeSet<CellId> = BTreeSet::new();
+    hab.insert(CellId(0));
+    for &n in geo.neighbors(CellId(0)) {
+        hab.insert(n);
+    }
+    // Uniform capacity across the cluster; the rest of the world is worthless
+    // AND uninhabitable in every era, so the cluster is the whole playfield.
+    let capacity = CellMap::from_fn(&geo, |c| if hab.contains(&c) { 100.0 } else { 0.0 });
+    let refugia = CellMap::from_fn(&geo, |_| false);
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    // Warm: the whole cluster is habitable. Hostile: cell 0 turns hostile with
+    // the rest of the cluster still habitable AND occupied — no vacant refuge.
+    let warm = EraClimate {
+        day: 0.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c)),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    let hostile = EraClimate {
+        day: 1000.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |c| hab.contains(&c) && c.0 != 0),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    (geo, capacity, river_prox, vec![warm, hostile], refugia)
+}
+
+#[test]
+fn a_full_world_cascades_when_a_cell_turns_hostile() {
+    let (geo, cap, river, eras, refugia) = saturating_fixture();
+    let people = peoples();
+    let cfg = BakeConfig {
+        start_year: 0.0,
+        end_year: 1200.0,
+        epoch_years: 25.0,
+    };
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    let h = bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    );
+    let c = census(&h);
+    // (a) a cascade fired: some log2 bin of the histogram is populated, and the
+    //     per-displacement raid/flee tallies rose (a cascade of size N raids and
+    //     flees N times as it walks the saturated graph).
+    assert!(
+        c.cascade_hist.iter().any(|&b| b > 0),
+        "no cascade recorded — the hostile cell found vacant land instead of \
+         displacing: {c:?}"
+    );
+    assert!(
+        c.raided > 0 && c.fled > 0,
+        "a cascade must raid and flee per displacement: {c:?}"
+    );
+    // (b) the bake TERMINATED — reaching this line proves the depth cap held
+    //     (a runaway cascade would hang, not return). Guard the bound too.
+    assert!(
+        c.raided <= u64::from(hornvale_worldgen::history_bake::CASCADE_DEPTH_CAP) * 4,
+        "cascade did not respect the depth cap: {c:?}"
+    );
+    // (c) determinism: same seed → byte-identical skeleton.
+    let h2 = bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    );
+    assert_eq!(
+        h.records, h2.records,
+        "cascade must be deterministic (same seed → identical records)"
+    );
+}
+
 #[test]
 fn ocean_sunders_and_a_lane_leapfrogs() {
     use hornvale_worldgen::history_bake::{BakeConfig, History, bake, census};

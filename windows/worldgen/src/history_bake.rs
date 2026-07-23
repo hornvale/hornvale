@@ -232,10 +232,6 @@ impl BakeCensus {
     /// Record one completed cascade of `size` displacements into the
     /// log-binned histogram. `size == 0` (a relocation that reached vacant
     /// land directly, not a cascade) is not recorded.
-    // Task-1 scaffolding: only exercised by this module's unit tests so far —
-    // the cascade resolution (a later Tumult task) is the first non-test
-    // caller. Remove this allow once it is.
-    #[allow(dead_code)]
     fn record_cascade(&mut self, size: u32) {
         if size == 0 {
             return;
@@ -443,11 +439,88 @@ impl<'a> Bake<'a> {
     /// hand-built graph + `node_index` without constructing a full `Bake`.
     /// The Tumult's Sea-Peoples cascade displaces this cell when no vacant
     /// land is reachable.
-    // Task-1 scaffolding: not yet called — the cascade resolution (a later
-    // Tumult task) is the first consumer. Remove this allow once it is.
-    #[allow(dead_code)]
     fn nearest_occupied(&self, from: CellId) -> Option<usize> {
         nearest_occupied(self.cur(), &self.node_index, from)
+    }
+
+    /// Relocate a homeless people (evicted by climate or raid) to a new home,
+    /// cascading when there is no vacant land. Returns the cascade size — the
+    /// number of OCCUPIED cells this relocation displaced (0 if it reached
+    /// vacant land directly). The Sea-Peoples avalanche: no vacant cell ⇒ take
+    /// the nearest occupied cell (raid it), and its evicted occupant relocates
+    /// in turn. Bounded by `CASCADE_DEPTH_CAP` (a truncated cascade drops the
+    /// last remnant).
+    #[allow(clippy::too_many_arguments)]
+    fn relocate(
+        &mut self,
+        people: KindId,
+        pop: f64,
+        lineage: EntityId,
+        offset: f64,
+        from: CellId,
+        era: &EraClimate,
+        year: f64,
+        depth: u32,
+    ) -> u32 {
+        if depth >= CASCADE_DEPTH_CAP {
+            return 0; // truncated — the last remnant is lost (bounded-size guard)
+        }
+        // Vacant land reachable? Then no conflict — settle there.
+        if let Some(dest) = self.nearest_dest(era, from) {
+            let new_idx = self.open(
+                people,
+                dest,
+                year,
+                pop,
+                Founding::From(lineage),
+                Some(lineage),
+                offset,
+            );
+            self.touch(new_idx, year);
+            return 0;
+        }
+        // No vacant land — displace the nearest occupied cell (the avalanche).
+        let Some(victim) = self.nearest_occupied(from) else {
+            return 0; // nothing vacant AND nothing occupied reachable — lost
+        };
+        let victim_site = self.communities[victim].site;
+        let (v_people, v_pop, v_lineage, v_offset) = {
+            let c = &self.communities[victim];
+            (
+                self.records[c.record].people,
+                c.population,
+                c.lineage,
+                c.tech_offset,
+            )
+        };
+        // The homeless people takes the victim's site (open BEFORE close so
+        // node_index[victim_site] points at the new occupant; close then sees
+        // the cell already re-indexed and does not free it).
+        let new_idx = self.open(
+            people,
+            victim_site,
+            year,
+            pop,
+            Founding::From(lineage),
+            Some(lineage),
+            offset,
+        );
+        let displacer_id = self.communities[new_idx].id;
+        self.close(victim, year, CauseOfEnd::Fled, Ended::By(displacer_id));
+        self.touch(new_idx, year);
+        self.tally.raided += 1;
+        self.tally.fled += 1;
+        // The evicted occupant cascades onward.
+        1 + self.relocate(
+            v_people,
+            v_pop * MIGRATE_SURVIVAL,
+            v_lineage,
+            v_offset,
+            victim_site,
+            era,
+            year,
+            depth + 1,
+        )
     }
 
     /// The wealthiest alive community adjacent to `site` (raid target),
@@ -563,33 +636,30 @@ impl<'a> Bake<'a> {
         let site = self.communities[idx].site;
         let eff = self.eff_capacity(era, site);
 
-        // The cell turned hostile: migrate to the nearest refuge, or die.
+        // The cell turned hostile: relocate to the nearest vacant refuge, or —
+        // if there is none — displace the nearest occupied cell and let that
+        // occupant cascade onward (the Sea-Peoples avalanche).
         if eff == 0.0 {
-            match self.nearest_dest(era, site) {
-                Some(dest) => {
-                    let (people, pop, lineage, offset) = {
-                        let c = &self.communities[idx];
-                        (c.record, c.population, c.lineage, c.tech_offset)
-                    };
-                    let people = self.records[people].people;
-                    let community_id = self.communities[idx].id;
-                    self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
-                    let new_idx = self.open(
-                        people,
-                        dest,
-                        year,
-                        pop * MIGRATE_SURVIVAL,
-                        Founding::From(community_id),
-                        Some(lineage),
-                        offset,
-                    );
-                    self.touch(new_idx, year);
-                    self.tally.migrated += 1;
-                }
-                None => {
-                    self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
-                    self.tally.collapsed += 1;
-                }
+            let (record, pop, lineage, offset) = {
+                let c = &self.communities[idx];
+                (c.record, c.population, c.lineage, c.tech_offset)
+            };
+            let people = self.records[record].people;
+            self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
+            let size = self.relocate(
+                people,
+                pop * MIGRATE_SURVIVAL,
+                lineage,
+                offset,
+                site,
+                era,
+                year,
+                0,
+            );
+            if size == 0 {
+                self.tally.migrated += 1;
+            } else {
+                self.tally.record_cascade(size);
             }
             return;
         }
@@ -623,10 +693,10 @@ impl<'a> Bake<'a> {
         self.touch(raider, year);
 
         // The raided community flees its site.
-        let (people, remaining, lineage, offset, target_id) = {
+        let (people, remaining, lineage, offset) = {
             let c = &self.communities[target];
             let people = self.records[c.record].people;
-            (people, c.population, c.lineage, c.tech_offset, c.id)
+            (people, c.population, c.lineage, c.tech_offset)
         };
         let raider_id = self.communities[raider].id;
         let flee_site = self.communities[target].site;
@@ -634,19 +704,13 @@ impl<'a> Bake<'a> {
         self.tally.fled += 1;
 
         // Refound on the nearest vacant habitable cell (excluding the site it
-        // just abandoned), or be lost.
-        if let Some(dest) = self.nearest_dest(era, flee_site) {
-            let new_idx = self.open(
-                people,
-                dest,
-                year,
-                remaining,
-                Founding::From(target_id),
-                Some(lineage),
-                offset,
-            );
-            self.touch(new_idx, year);
+        // just abandoned); with none, displace the nearest occupied cell and
+        // cascade (the Sea-Peoples avalanche).
+        let size = self.relocate(people, remaining, lineage, offset, flee_site, era, year, 0);
+        if size == 0 {
             self.tally.resettled += 1;
+        } else {
+            self.tally.record_cascade(size);
         }
     }
 
