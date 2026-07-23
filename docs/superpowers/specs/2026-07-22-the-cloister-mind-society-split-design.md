@@ -7,7 +7,7 @@ Placement): separate `PsychVector`'s six dimensions into the ones a lone
 creature genuinely has (`MindVector`) and the ones only a society has
 (`SocietyVector`), and let a solitary creature carry only the first.
 
-Status: **spec, awaiting G3 review.**
+Status: **SHIPPED (2026-07-23, decision 0067).**
 
 ## 1. Problem
 
@@ -217,7 +217,7 @@ its society reading resolves to the baseline.
 
 ## 8. Proposed decision (ratify at close)
 
-> **Decision 00XX — the mind/society vector split.** `PsychVector` is cleaved
+> **Decision 0067 — the mind/society vector split.** `PsychVector` is cleaved
 > into `MindVector` (threat_response, deliberation_latency, time_horizon;
 > carried by every minded kind) and `SocietyVector` (sociality, status_basis,
 > in_group_radius; carried only by `Settled` kinds). A `Solitary` kind carries

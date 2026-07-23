@@ -60,8 +60,9 @@ about a phenomenon rather than a second phenomenon standing in for the
 first.
 
 **The articulation vector, and why it stays closed.** A species' phonology
-is built from an **articulation vector** — the species crate's third closed
-vector, after the six-dimension psychology vector and the three-dimension
+is built from an **articulation vector** — the species crate's fourth closed
+vector, after the three-dimension mind and society vectors (*The Cloister*
+split the old six-dimension psychology vector) and the three-dimension
 perception vector, authored per species with goblin sitting at every
 scalar's 0.5 and every enumeration's goblin variant, the identity-at-baseline
 discipline both earlier vectors already keep. Seven dimensions: each one a
@@ -162,7 +163,7 @@ class. Settlement names stay bare stems or lightly affixed ones; deity names
 stay weighty bare stems; **epithets** are the morphologically rich kind, a
 compound or reduplicated descriptive stem with an honorific optionally
 stacked on top. Which epithets actually carry that honorific is not left to
-chance: epithet morphology keys to the psychology vector's **status basis**,
+chance: epithet morphology keys to the society vector's **status basis**,
 the same dimension culture already reads to decide whether a settlement's
 ladder tops out at a chief or at elders. A `Rank`-basis society — goblin —
 affixes dominance honorifics onto its gods' titles; a `Knowledge`- or
@@ -360,8 +361,9 @@ domain builds *from* that envelope sorts into the same four kinds
   `ArticulationVector` onto language's own `Envelope` copy, the only place
   either vector is ever converted, language never importing species to do
   it; the voice knobs, `voice_params`, deriving formality, repetition, and
-  epithet density from the psychology vector's status basis, sociality, and
-  deliberation latency (identity 0.5 at the goblin baseline); naming
+  epithet density from the society vector's status basis and sociality and
+  the mind vector's deliberation latency (identity 0.5 at the goblin
+  baseline); naming
   morphology, `morph_options`, gating honorifics to a `Rank`-basis status;
   and, since Campaign 17, the **espeak formulation** (`espeak`,
   `espeak_word`) — a derived view computed over the same drawn segment

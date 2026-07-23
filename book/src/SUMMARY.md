@@ -236,6 +236,7 @@
 - [The Sundering](./chronicle/the-sundering.md)
 - [The Solitary Tongue](./chronicle/the-solitary-tongue.md)
 - [The Lode](./chronicle/the-lode.md)
+- [The Cloister](./chronicle/the-cloister.md)
 
 # Appendix: The Frontier
 
