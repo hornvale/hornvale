@@ -14,10 +14,11 @@ use hornvale_terrain::{
     CarveParams, Commodity, GlobeSummary, Hydro, MarginPolarity, RockClass, SoilOrder, fertility,
 };
 use hornvale_worldgen::{
-    BuildDepth, BuildError, ChorusVoice, Sky, SkyChoice, WorldComponents, accounts_from,
-    build_world_from_components, build_world_to, climate_from, climate_of, commodity_name,
-    flagship_of, language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from,
-    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
+    BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
+    accounts_from, build_world_from_components, build_world_to, climate_from, climate_of,
+    commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
+    observed_phenomena_as_in_from, rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
+    vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -610,6 +611,39 @@ impl Metric {
     /// rung (the tag *is* the metric's build-depth, spec MAP-25).
     pub fn rung(&self) -> BuildDepth {
         self.extract.rung()
+    }
+}
+
+/// The most-dreaded layer in a vestige stack (The Vestige, spec §9.2) — the
+/// one a wanderer would sense most strongly. Mirrors
+/// `hornvale_worldgen::render`'s private `most_dread` (re-derived here since
+/// metrics can't reach across that module boundary): ties keep the
+/// first-encountered (oldest, per `vestiges_at`'s ordering) layer, so the
+/// pick is deterministic without depending on float tie-breaking.
+fn most_dread_vestige(stack: &[hornvale_worldgen::Vestige]) -> Option<&hornvale_worldgen::Vestige> {
+    let mut best: Option<&hornvale_worldgen::Vestige> = None;
+    for vestige in stack {
+        if best.is_none_or(|b| vestige.dread > b.dread) {
+            best = Some(vestige);
+        }
+    }
+    best
+}
+
+/// Human-readable hazard-kind name (The Vestige, spec §9.2): lowercase, for
+/// census categorical values — a pure naming projection, no new draws.
+/// Exhaustive (mirrors `commodity_name`/`rock_class_name`): a future
+/// `HazardKind` variant fails to compile here rather than falling through a
+/// wildcard.
+fn hazard_name(hazard: HazardKind) -> &'static str {
+    use HazardKind::*;
+    match hazard {
+        Structural => "structural",
+        ToxicGas => "toxic-gas",
+        Pestilent => "pestilent",
+        Flooded => "flooded",
+        Numinous => "numinous",
+        Cursed => "cursed",
     }
 }
 
@@ -1218,6 +1252,138 @@ pub fn registry() -> Vec<Metric> {
                 } else {
                     sum / deposits as f64
                 })
+            }),
+        },
+        // --- The Vestige (Task 7): subsurface historical-residue census
+        // metrics, over land cells only (`terrain.is_ocean` guards each),
+        // mirroring The Ground/The Lode. `Extractor::Full`, not `Terrain`:
+        // residue is derived from committed settlement history
+        // (`vestiges_field`), which does not exist until `BuildDepth::Full`.
+        // Each metric computes `vestiges_field` exactly ONCE (a single
+        // grouped ledger scan) and then iterates its `CellMap` — never
+        // `vestiges_at` per cell, which would rescan the whole ledger once
+        // per cell. ---
+        Metric {
+            name: "vestige-density",
+            doc: "Fraction of land cells with a non-empty vestige stack \
+                  (The Vestige, spec §9.2)",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.02, 0.05, 0.1, 0.2, 0.3],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let (mut land, mut bearing) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !terrain.is_ocean(cell) {
+                        land += 1;
+                        if !field.get(cell).is_empty() {
+                            bearing += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if land == 0 {
+                    0.0
+                } else {
+                    bearing as f64 / land as f64
+                })
+            }),
+        },
+        Metric {
+            name: "forgotten-fraction",
+            doc: "Over land cells with a non-empty vestige stack, the fraction \
+                  whose most-dread layer is Forgotten rather than Venerated \
+                  (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let (mut bearing, mut forgotten) = (0usize, 0usize);
+                for cell in geo.cells() {
+                    if !terrain.is_ocean(cell)
+                        && let Some(top) = most_dread_vestige(field.get(cell))
+                    {
+                        bearing += 1;
+                        if top.valence == Valence::Forgotten {
+                            forgotten += 1;
+                        }
+                    }
+                }
+                MetricValue::Number(if bearing == 0 {
+                    0.0
+                } else {
+                    forgotten as f64 / bearing as f64
+                })
+            }),
+        },
+        Metric {
+            name: "dominant-hazard",
+            doc: "The most common hazard kind among land-cell vestiges by \
+                  layer count (The Vestige, spec §9.2); Absent where no land \
+                  cell bears a vestige",
+            summary: SummaryKind::Categorical,
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let kinds = [
+                    HazardKind::Structural,
+                    HazardKind::ToxicGas,
+                    HazardKind::Pestilent,
+                    HazardKind::Flooded,
+                    HazardKind::Numinous,
+                    HazardKind::Cursed,
+                ];
+                let mut counts = [0usize; 6];
+                for cell in geo.cells() {
+                    if !terrain.is_ocean(cell) {
+                        for vestige in field.get(cell) {
+                            let idx = kinds
+                                .iter()
+                                .position(|k| *k == vestige.hazard)
+                                .expect("kinds lists every HazardKind variant");
+                            counts[idx] += 1;
+                        }
+                    }
+                }
+                let mut best = 0usize;
+                for i in 1..counts.len() {
+                    if counts[i] > counts[best] {
+                        best = i;
+                    }
+                }
+                if counts[best] == 0 {
+                    MetricValue::Absent
+                } else {
+                    MetricValue::Text(hazard_name(kinds[best]).to_string())
+                }
+            }),
+        },
+        Metric {
+            name: "mean-warning-legibility",
+            doc: "Mean warning_legibility over every land-cell vestige layer \
+                  (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+            summary: SummaryKind::Numeric {
+                bucket_edges: &[0.0, 0.2, 0.4, 0.6, 0.8],
+            },
+            extract: Extractor::Full(|v: &FullView| {
+                let terrain = v.terrain();
+                let geo = terrain.geosphere();
+                let field = vestiges_field(v.world(), terrain);
+                let (mut count, mut sum) = (0usize, 0.0f64);
+                for cell in geo.cells() {
+                    if !terrain.is_ocean(cell) {
+                        for vestige in field.get(cell) {
+                            count += 1;
+                            sum += vestige.warning_legibility;
+                        }
+                    }
+                }
+                MetricValue::Number(if count == 0 { 0.0 } else { sum / count as f64 })
             }),
         },
         Metric {
@@ -4973,8 +5139,9 @@ mod tests {
         // (Task 5: mean-depth-to-basement, unconformity-fraction,
         // mean-geothermal-gradient), +4 for The Lode (Task 7:
         // cave-fraction, deposit-density, dominant-commodity,
-        // mean-ore-grade).
-        assert_eq!(registry().len(), 165);
+        // mean-ore-grade), +4 for The Vestige (Task 7: vestige-density,
+        // forgotten-fraction, dominant-hazard, mean-warning-legibility).
+        assert_eq!(registry().len(), 169);
     }
 
     #[test]
@@ -4997,6 +5164,19 @@ mod tests {
             "deposit-density",
             "dominant-commodity",
             "mean-ore-grade",
+        ] {
+            assert!(names.contains(&want), "missing metric {want}");
+        }
+    }
+
+    #[test]
+    fn the_vestige_metrics_are_registered() {
+        let names: Vec<&str> = registry().iter().map(|m| m.name).collect();
+        for want in [
+            "vestige-density",
+            "forgotten-fraction",
+            "dominant-hazard",
+            "mean-warning-legibility",
         ] {
             assert!(names.contains(&want), "missing metric {want}");
         }
@@ -5327,6 +5507,29 @@ mod tests {
             other => panic!("dominant-commodity: {other:?}"),
         }
         assert!(matches!(m("mean-ore-grade"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+    }
+
+    #[test]
+    fn the_vestige_metrics_extract_for_seed_42() {
+        // The Vestige (Task 7): subsurface historical-residue census
+        // metrics, over land cells only; fractions must land in [0, 1], and
+        // the dominant hazard is either a named hazard or Absent (no land
+        // cell bears a vestige).
+        let view = FullView::build(Seed(42), &SkyPins::default()).unwrap();
+        let built = BuiltView::Full(view);
+        let m = |name: &str| extract_from(&built, name);
+        assert!(matches!(m("vestige-density"), MetricValue::Number(f) if (0.0..=1.0).contains(&f)));
+        assert!(
+            matches!(m("forgotten-fraction"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
+        match m("dominant-hazard") {
+            MetricValue::Text(name) => assert!(!name.is_empty()),
+            MetricValue::Absent => {}
+            other => panic!("dominant-hazard: {other:?}"),
+        }
+        assert!(
+            matches!(m("mean-warning-legibility"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))
+        );
     }
 
     #[test]
