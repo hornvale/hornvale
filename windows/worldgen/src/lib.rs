@@ -82,6 +82,7 @@ pub mod components;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
+pub mod render;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;

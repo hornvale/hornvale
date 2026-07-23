@@ -43,6 +43,7 @@ usage:
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
+  hornvale vestige-map [--world <PATH>] [--out <PNG>] render the residue map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale scene tiles-region --world W --face F --level L --ix X --iy Y --samples N
@@ -114,6 +115,7 @@ fn main() -> ExitCode {
         Some("biome-map") => cmd_biome_map(&args),
         Some("paleo-map") => cmd_paleo_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
+        Some("vestige-map") => cmd_vestige_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
         Some("scene") => cmd_scene(&args),
         Some("history") => cmd_history(&args),
@@ -638,6 +640,40 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
         let pixels =
             hornvale_climate::render::biome_pixels(climate.geosphere(), &climate.biome_map());
         let png = hornvale_settlement::render::overlay_png(&pixels, &sites, flagship);
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
+/// Render the world's residue palimpsest (The Vestige): a markdown page
+/// (title + kind/valence legend) to stdout and, with `--out`, the PNG to
+/// disk. Both deterministic; mirrors `paleo-map`/`settlement-map`'s
+/// structure. No ASCII lens: the palette distinguishes five kinds times two
+/// valences (ten colors), more than a 72×24 glyph budget can render legibly,
+/// unlike paleo's three-stratum ASCII map.
+fn cmd_vestige_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let mut doc = format!("# The Vestige of Seed {}\n\n", world.seed.0);
+    doc.push_str(
+        "The underworld's residue: sealed wards, abandoned delvings, buried \
+         ruins, and dormant gate-scars, colored by kind and by whether the \
+         site is still venerated or has been forgotten.\n\n",
+    );
+    doc.push_str(
+        "Legend: gate-scar (violet), natural seal (blue), abandoned delving \
+         (gold), buried ruin (rust), sealed vault (pale yellow) — bright/warm \
+         reads venerated, dim/dark reads forgotten; slate marks no residue.\n\n",
+    );
+    if let Some(out) = flag_value(args, "--out") {
+        let png = world_builder::render::vestige_png(&world);
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -1470,6 +1506,11 @@ mod tests {
     #[test]
     fn usage_mentions_paleo_map() {
         assert!(USAGE.contains("paleo-map"));
+    }
+
+    #[test]
+    fn usage_mentions_vestige_map() {
+        assert!(USAGE.contains("vestige-map"));
     }
 
     #[test]
