@@ -4,7 +4,7 @@
 //! facts, no metaphysics — the door and its dread, not the entity.
 
 use crate::history_emit::{occupations_at, occupations_by_cell, present_day};
-use hornvale_history::record::{CauseOfEnd, Function, Notability, OccupationRecord};
+use hornvale_history::record::{CauseOfEnd, Function, OccupationRecord};
 use hornvale_kernel::{CellId, CellMap, World, math};
 use hornvale_terrain::GeneratedTerrain;
 
@@ -87,10 +87,12 @@ const WARNING_HALF_LIFE_DAYS: f64 = 300.0;
 /// Read backward: no simulation.
 /// type-audit: bare-ok(diagnostic-value: now)
 pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
-    let kind = match (occ.function, occ.notability) {
-        (Function::Mine, _) => VestigeKind::AbandonedDelving,
-        (Function::Fort, _) | (Function::Cult, _) => VestigeKind::SealedVault,
-        (_, Notability::Seat) => VestigeKind::BuriedRuin, // undercity scale (see size, later)
+    let kind = match occ.function {
+        Function::Mine => VestigeKind::AbandonedDelving,
+        Function::Fort | Function::Cult => VestigeKind::SealedVault,
+        // Everything else is a buried ruin; the undercity/ruin size split rides
+        // on notability at the consumer (the almanac counts seats as
+        // undercities), not on a distinct vestige kind.
         _ => VestigeKind::BuriedRuin,
     };
     let (seal_state, valence) = match occ.ended {
@@ -107,10 +109,9 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     let hazard = match occ.cause {
         Some(CauseOfEnd::Plague) => HazardKind::Pestilent,
         Some(CauseOfEnd::Burned) => HazardKind::Cursed,
-        _ => match occ.function {
-            Function::Mine => HazardKind::Structural,
-            _ => HazardKind::Structural,
-        },
+        // Every other end leaves structural collapse as the default; per-function
+        // hazards (a flooded mine, toxic gas) are a later refinement.
+        _ => HazardKind::Structural,
     };
     // Warning decays fast (the fastest of the three rates); recent = legible.
     let warning_legibility = match occ.ended {
