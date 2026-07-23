@@ -10,7 +10,7 @@ use crate::{
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Seed, Value, World, WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -329,6 +329,24 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(artifact: return)
     pub fn session_ledger_json(&self) -> String {
         serde_json::to_string(&self.ledger).expect("a ledger always serializes")
+    }
+
+    /// Consume the session and fold its evolved ledger + registry into a
+    /// saveable `World` (The First Mark, Task 4: persistence). The evolved
+    /// ledger is the bubble's forward integration made history — player
+    /// facts, the consequences they triggered, and NPC ticks alike — not
+    /// just the player's own marks, so a played world stays an ordinary
+    /// `World { seed, registry, ledger }` and every existing tool (almanac,
+    /// `why`, map) works over it unchanged. The caller supplies the seed
+    /// (the frozen `world` this session possessed is only ever borrowed —
+    /// `Session` never owns or mutates it, so there is nothing here to copy
+    /// it from); the input world is never mutated in place.
+    pub fn into_played_world(self, seed: Seed) -> World {
+        World {
+            seed,
+            registry: self.registry,
+            ledger: self.ledger,
+        }
     }
 
     /// The derived NPCs' labels (test accessor: the T3 review's colocation

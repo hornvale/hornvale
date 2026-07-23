@@ -36,8 +36,9 @@ usage:
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
-  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
-                                            walk a frozen world as its flagship settler
+  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
+                                            walk a frozen world as its flagship settler;
+                                            --out saves the played world (the world remembers)
   hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column|features]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
@@ -430,14 +431,14 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     };
     let day = parse_possess_day(args)?;
     let stdout = std::io::stdout();
-    if let Some(path) = flag_value(args, "--script") {
+    let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
         let mut out = stdout.lock();
         use std::io::Write;
         writeln!(out, "# A Possession — seed {}, day {day}\n", world.seed.0)
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
-        hornvale_vessel::run(
+        let played = hornvale_vessel::run(
             &world,
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
@@ -449,7 +450,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
         writeln!(out, "```").map_err(|e| e.to_string())?;
-        Ok(())
+        played
     } else {
         let stdin = std::io::stdin();
         hornvale_vessel::run(
@@ -462,8 +463,20 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             stdin.lock(),
             stdout.lock(),
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?
+    };
+    // The input `--world` file is read-only; only `--out` writes (The First
+    // Mark, Task 4 — the played world outlives the session).
+    if let Some(out) = flag_value(args, "--out") {
+        played
+            .save(std::path::Path::new(out))
+            .map_err(|e| format!("saving {out}: {e}"))?;
+        eprintln!(
+            "played world written to {out} ({} facts)",
+            played.ledger.len()
+        );
     }
+    Ok(())
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,

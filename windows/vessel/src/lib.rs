@@ -86,13 +86,16 @@ pub enum Turn {
 }
 
 /// Drive a session over line-based I/O until release or EOF — the same
-/// shape as the repl's `run`, so tests drive it with buffers.
+/// shape as the repl's `run`, so tests drive it with buffers. Returns the
+/// played world (the session's evolved ledger + registry, folded onto the
+/// input world's seed — The First Mark, Task 4): "the world remembers"
+/// applies to every caller of `run`, not just the CLI's `--out` flag.
 pub fn run(
     world: &hornvale_kernel::World,
     opts: PossessOpts,
     input: impl BufRead,
     mut output: impl Write,
-) -> std::io::Result<()> {
+) -> std::io::Result<hornvale_kernel::World> {
     let (mut session, opening) = match Session::start(world, &opts) {
         Ok(x) => x,
         Err(e) => {
@@ -118,5 +121,5 @@ pub fn run(
             }
         }
     }
-    Ok(())
+    Ok(session.into_played_world(world.seed))
 }

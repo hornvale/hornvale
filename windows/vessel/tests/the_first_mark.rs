@@ -108,3 +108,69 @@ fn same_action_trace_is_byte_identical() {
         "same seed + same trace -> identical ledger"
     );
 }
+
+#[test]
+fn played_world_persists_the_mark_across_reload() {
+    let w = world();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
+    let played = s.into_played_world(w.seed);
+
+    // round-trip through JSON exactly as save/load would.
+    let json = serde_json::to_string(&played).unwrap();
+    let reloaded: hornvale_kernel::World = serde_json::from_str(&json).unwrap();
+
+    let player_facts = reloaded.ledger.find("disposition-shift").count();
+    assert_eq!(player_facts, 3, "the player's marks survive reload");
+    let hostility_facts = reloaded.ledger.find("turned-hostile").count();
+    assert_eq!(hostility_facts, 1, "the consequence survives reload too");
+    // the played world carries MORE facts than the pristine one.
+    assert!(
+        reloaded.ledger.len() > w.ledger.len(),
+        "the world remembers"
+    );
+}
+
+#[test]
+fn played_world_is_deterministic_for_the_same_action_script() {
+    let w = world();
+    let run = |script: &[&str]| {
+        let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+        for line in script {
+            s.handle(line);
+        }
+        let played = s.into_played_world(w.seed);
+        serde_json::to_string(&played).unwrap()
+    };
+    let script = [
+        format!("provoke {GRIEVANCE_NPC}"),
+        "wait".to_string(),
+        format!("provoke {GRIEVANCE_NPC}"),
+        "wait".to_string(),
+        format!("provoke {GRIEVANCE_NPC}"),
+        "wait".to_string(),
+    ];
+    let script: Vec<&str> = script.iter().map(String::as_str).collect();
+    assert_eq!(
+        run(&script),
+        run(&script),
+        "same seed + same trace -> byte-identical played world"
+    );
+}
+
+#[test]
+fn into_played_world_never_mutates_the_input_world() {
+    let w = world();
+    let before = serde_json::to_string(&w).unwrap();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait");
+    let _played = s.into_played_world(w.seed);
+    let after = serde_json::to_string(&w).unwrap();
+    assert_eq!(before, after, "the input world is never mutated in place");
+}
