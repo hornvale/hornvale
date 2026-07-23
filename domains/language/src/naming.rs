@@ -890,6 +890,7 @@ fn capitalize_first(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, build_lexicon};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
@@ -938,7 +939,16 @@ mod tests {
         let mut exposures = BTreeMap::new();
         exposures.insert("water".to_string(), ExposureClass::Steeped);
         exposures.insert("fire".to_string(), ExposureClass::Steeped);
-        build_lexicon(&Seed(seed), "test", "test", &ph, &ph, &exposures, &[])
+        build_lexicon(
+            &Seed(seed),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        )
     }
 
     /// An empty lexicon (no concepts at all) — every site concept
@@ -946,7 +956,16 @@ mod tests {
     /// branch.
     fn empty_lexicon(seed: u64) -> Lexicon {
         let ph = wordy_ph();
-        build_lexicon(&Seed(seed), "test", "test", &ph, &ph, &BTreeMap::new(), &[])
+        build_lexicon(
+            &Seed(seed),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &BTreeMap::new(),
+            &[],
+            CascadeRegime::SETTLED,
+        )
     }
 
     #[test]
@@ -1549,7 +1568,16 @@ mod tests {
             // (the draw source) — see build_lexicon's doc comment on
             // (ph, proto_ph) at lexicon.rs:237, and NOT the fixture's usual
             // ph == proto_ph collapse.
-            let lex = build_lexicon(&Seed(seed), "fam", "swept", &ph, &proto, &exposures, &[]);
+            let lex = build_lexicon(
+                &Seed(seed),
+                "fam",
+                "swept",
+                &ph,
+                &proto,
+                &exposures,
+                &[],
+                CascadeRegime::SETTLED,
+            );
             let attested = attested_forms(&lex);
             for chosen in [
                 vec!["water"],

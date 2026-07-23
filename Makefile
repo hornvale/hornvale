@@ -123,9 +123,11 @@ preflight: ## GO/NO-GO before integrating a campaign branch with main (run from 
 doctor: ## Print the repo self-map (orientation for a fresh session)
 	@bash scripts/doctor.sh
 
-install-hooks: ## Point git at scripts/hooks (runs `make quick` + the golden-pins.sql tripwire guard pre-commit)
+install-hooks: ## Point git at scripts/hooks + register the regenerate-on-conflict merge driver (PROC-12)
 	git config core.hooksPath scripts/hooks
+	git config merge.hv-regenerate.driver 'scripts/merge-regenerate.sh %O %A %B %P'
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
+	@echo "merge.hv-regenerate driver registered for generated-artifact conflicts."
 
 gate-remote: ## Run the CI gate on this worktree's AWS spot box
 	@scripts/aws-gate/gate-remote.sh

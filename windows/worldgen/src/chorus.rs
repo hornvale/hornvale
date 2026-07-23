@@ -31,7 +31,7 @@ use hornvale_language::{
     Observability, OrderPolicy, Requirement, SchemaId, SlotKind, Stance, SubFrame, account_of,
     admitted, lexemes_for, schema_table, schemas::Manner, select_lexeme, select_schema,
 };
-use hornvale_species::{ActivityCycle, PerceptionVector, PsychVector, Sociality, StatusBasis};
+use hornvale_species::{ActivityCycle, PerceptionVector, Sociality, SocietyVector, StatusBasis};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The authored observability table (build-state; spec §3.2): what it
@@ -191,13 +191,13 @@ pub fn schema_prior(
 /// plus `0.5` when `sociality` is `Hierarchic`. Roster (measured, plan
 /// header): goblin/hobgoblin `2.5`, bugbear `2.0`, kobold `1.0`.
 /// type-audit: bare-ok(ratio: return)
-pub fn beta_of(psych: &PsychVector) -> f64 {
-    let base = match psych.status_basis {
+pub fn beta_of(society: &SocietyVector) -> f64 {
+    let base = match society.status_basis {
         StatusBasis::Knowledge => 1.0,
         StatusBasis::Rank => 2.0,
         StatusBasis::Generosity => 1.5,
     };
-    let modifier = if psych.sociality == Sociality::Hierarchic {
+    let modifier = if society.sociality == Sociality::Hierarchic {
         0.5
     } else {
         0.0
@@ -696,10 +696,10 @@ fn explain(
     let Ok(wc) = WorldComponents::assemble() else {
         return;
     };
-    let Some(psych) = wc.psyche.get_by_label(species) else {
+    let Some(society) = wc.society.get_by_label(species) else {
         return;
     };
-    let beta = beta_of(psych);
+    let beta = beta_of(society);
 
     explain_day(
         world.seed,
@@ -710,7 +710,7 @@ fn explain(
         day,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
     );
     explain_moons(
         world.seed,
@@ -721,7 +721,7 @@ fn explain(
         day,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
     );
     explain_moon_ratio(
         world.seed,
@@ -731,7 +731,7 @@ fn explain(
         &cyclic,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
     );
 }
 
@@ -771,8 +771,8 @@ pub fn doctrine_params_of(folk: &AccountParams) -> AccountParams {
 /// this is the doctrine analog of [`beta_of`], never folded into
 /// [`doctrine_params_of`].
 /// type-audit: bare-ok(ratio: return)
-pub fn doctrine_beta_of(psych: &PsychVector) -> f64 {
-    beta_of(psych) + 0.5
+pub fn doctrine_beta_of(society: &SocietyVector) -> f64 {
+    beta_of(society) + 0.5
 }
 
 /// Per-fact folk-verifiability (delta-adjacent, ledger #3): whether the
@@ -1068,10 +1068,10 @@ fn doctrine_explain(world: &World, species: &str, account: &mut Account, params:
     let Ok(wc) = WorldComponents::assemble() else {
         return;
     };
-    let Some(psych) = wc.psyche.get_by_label(species) else {
+    let Some(society) = wc.society.get_by_label(species) else {
         return;
     };
-    let beta = doctrine_beta_of(psych);
+    let beta = doctrine_beta_of(society);
     let high_god_id = hornvale_religion::beliefs_held_by(world, flagship.id)
         .into_iter()
         .find(|b| b.high_god)
@@ -1086,7 +1086,7 @@ fn doctrine_explain(world: &World, species: &str, account: &mut Account, params:
         day,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
         high_god_id,
     );
     doctrine_explain_moons(
@@ -1098,7 +1098,7 @@ fn doctrine_explain(world: &World, species: &str, account: &mut Account, params:
         day,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
         high_god_id,
     );
 }
@@ -1218,6 +1218,11 @@ pub(crate) fn account_params_from(
             "'{species}' carries no psyche component (not a peopled kind)"
         ))
     })?;
+    let society = wc.society.get_by_label(species).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{species}' carries no society component (not a peopled kind)"
+        ))
+    })?;
 
     let exposure = crate::exposure_from(world, species, terrain, climate)?;
     let holdings: BTreeSet<String> = exposure
@@ -1236,7 +1241,7 @@ pub(crate) fn account_params_from(
     for (kind, _village) in crate::placed_peoples(world) {
         let stance = if kind == species {
             Stance::Ourselves
-        } else if psyche.in_group_radius >= 0.5 {
+        } else if society.in_group_radius >= 0.5 {
             Stance::Neighbors
         } else if psyche.threat_response >= 0.5 {
             Stance::Rivals
@@ -1461,7 +1466,15 @@ pub fn tongue_morphology_of(
         Some(_) => (family, crate::proto_phonology_of_in(world, &wc, family)),
         None => (name, ph.clone()),
     };
-    let cascade = hornvale_language::draw_cascade(&world.seed, name);
+    // Route through cascade_of, not the language crate's default-regime
+    // draw_cascade: this fn already returns a Result, so the swap is
+    // trivial (`?` propagates). tongue_morphology_of is in practice only
+    // ever called over placed_peoples (culture/chorus is placement-gated,
+    // and dragons are never placed — see windows/book/src/lib.rs and
+    // deep_grammar.rs's callers), so it never actually sees a dragon
+    // today; routed anyway for consistency with lexicon_of's regime and to
+    // stay correct if that placement gate ever loosens.
+    let cascade = crate::cascade_of(world, name)?;
     let (evidential_depth, noun_class_depth, class_position) =
         hornvale_language::morph_depths(&world.seed, species);
     let (evidential, class) =
@@ -1501,8 +1514,8 @@ pub fn day_schema_of(world: &World, species: &str) -> Option<SchemaId> {
         .as_deref()
         .and_then(subsistence_from_name)?;
     let wc = WorldComponents::assemble().ok()?;
-    let psych = wc.psyche.get_by_label(species)?;
-    let beta = beta_of(psych);
+    let society = wc.society.get_by_label(species)?;
+    let beta = beta_of(society);
 
     day_schema_draw(
         world.seed,
@@ -1513,7 +1526,7 @@ pub fn day_schema_of(world: &World, species: &str) -> Option<SchemaId> {
         day,
         beta,
         subsistence,
-        psych.sociality,
+        society.sociality,
     )
     .map(|(schema, _rank)| schema)
 }
@@ -2264,11 +2277,11 @@ mod tests {
             .and_then(subsistence_from_name)
             .expect("goblin flagship must have a subsistence");
         let wc = WorldComponents::assemble().expect("component assembly must succeed");
-        let psych = wc
-            .psyche
+        let society = wc
+            .society
             .get_by_label("goblin")
-            .expect("goblin psychology must exist");
-        let beta = beta_of(psych);
+            .expect("goblin society must exist");
+        let beta = beta_of(society);
 
         let ground = vec![GroundFact {
             subject: "Vebe".to_string(),
@@ -2292,7 +2305,7 @@ mod tests {
             &cyclic,
             beta,
             subsistence,
-            psych.sociality,
+            society.sociality,
         );
 
         let Disposition::Explained { schema, .. } = &account.entries[0].disposition else {

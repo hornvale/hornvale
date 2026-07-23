@@ -9,7 +9,9 @@ use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
-use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, World, WorldTime, tick};
+use hornvale_kernel::{
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Seed, Value, World, WorldTime, tick,
+};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
 /// How many NPCs a session derives (spec §4: a small authored constant, not
@@ -24,6 +26,53 @@ const WILD_COUNT: usize = 4;
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
 const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 
+/// The player-authored disposition-shift predicate (The First Mark): the
+/// first fact the possessing player, not a world system, ever commits.
+/// type-audit: bare-ok(identifier-text)
+pub const DISPOSITION_SHIFT: &str = "disposition-shift";
+
+/// How hard one committed `disposition-shift` fact leans on an NPC's
+/// grievance toward the possessing player (The First Mark, direct social
+/// consequence — decision-ledger #6: the first slice's consequence is
+/// direct social, not an ambient drive tip). A game-design coefficient, not
+/// a tuned physical constant.
+/// type-audit: bare-ok(ratio)
+pub const GRIEVANCE_GAIN: f64 = 1.0;
+
+/// Net grievance at which a neutral NPC turns hostile toward the player —
+/// three net provokes, one per day (same-day repeats dedup, Task 1), so
+/// three distinct days of antagonism. A game-design constant, not an
+/// empirical drive value: this mechanic never reads or perturbs the
+/// homeostatic drive layer (`liveness.rs`), and there is no seed-42
+/// calibration behind it.
+/// type-audit: bare-ok(ratio)
+pub const HOSTILITY_THRESHOLD: f64 = 3.0;
+
+/// The one-hop forward integration (The First Mark): an NPC whose grievance
+/// crosses `HOSTILITY_THRESHOLD` commits this fact toward the possessing
+/// player. Functional per subject — an NPC turns hostile once, so the `wait`
+/// tick's firing (guarded by `Ledger::value_of`) is idempotent by
+/// construction, not by a separate dedup check.
+/// type-audit: bare-ok(identifier-text)
+pub const TURNED_HOSTILE: &str = "turned-hostile";
+
+/// An NPC's grievance toward the possessing player: the additive fold over
+/// their committed `disposition-shift` facts (The First Mark, direct social
+/// consequence). Zero with no player facts, so an unplayed world — or a
+/// session that never provokes/soothes this NPC — is byte-identical to that
+/// zero by construction.
+pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
+    ledger
+        .facts_about(npc)
+        .filter(|f| f.predicate == DISPOSITION_SHIFT)
+        .map(|f| match f.object {
+            Value::Number(n) => n,
+            _ => 0.0,
+        })
+        .sum::<f64>()
+        * GRIEVANCE_GAIN
+}
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -36,6 +85,8 @@ verbs:
   npcs             the derived NPCs sharing this world (label, id)
   why <who>        recount an NPC's dated history (by label or id)
   needs            read the felt state of anyone sharing this room
+  provoke [who]    shift a co-located NPC's disposition, your own mark
+  soothe [who]     ease a co-located NPC's disposition, your own mark
   write <sentence> speak a line of Common; you absorb what it says, written
                    into your own margin
   consult          read the Book's Reckoning at your own day, and whatever
@@ -108,6 +159,27 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
+        // The player's disposition mark — the first player-authored predicate.
+        // Non-functional (a subject may be provoked and later soothed; each is
+        // one dated fact). Additive: registering a new predicate perturbs
+        // nothing already committed.
+        registry
+            .register_predicate(
+                DISPOSITION_SHIFT,
+                false,
+                "an agent's disposition was shifted by the possessing player",
+            )
+            .expect("DISPOSITION_SHIFT registers identically every session");
+        // The consequence of the mark above (The First Mark, one-hop forward
+        // integration): functional (an NPC turns hostile once — the second
+        // commit attempt is a guaranteed no-op, not just a discouraged one).
+        registry
+            .register_predicate(
+                TURNED_HOSTILE,
+                true,
+                "an NPC turned hostile toward the possessing player",
+            )
+            .expect("TURNED_HOSTILE registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
@@ -184,12 +256,97 @@ impl<'w> Session<'w> {
         self.ledger.find(DRANK).count()
     }
 
+    /// How many player disposition-shift facts the session's owned ledger
+    /// has committed — zero until the first `provoke`/`soothe` (test
+    /// accessor: The First Mark's one-fact-per-act guard).
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_disposition_count(&self) -> usize {
+        self.ledger.find(DISPOSITION_SHIFT).count()
+    }
+
+    /// How many `turned-hostile` facts the session's owned ledger has
+    /// committed — zero until an NPC (co-located when the grievance was
+    /// *earned*, not necessarily when the threshold is crossed) first has
+    /// its grievance cross `HOSTILITY_THRESHOLD` on a `wait` tick (test
+    /// accessor: The First Mark's one-hop forward integration).
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_hostility_count(&self) -> usize {
+        self.ledger.find(TURNED_HOSTILE).count()
+    }
+
+    /// The possessed agent's own stable identity as a ledger `EntityId` — the
+    /// object a hostile NPC's `turned-hostile` fact points at. The `Agent`
+    /// struct itself is never committed to the ledger (derived fresh each
+    /// session, spec's reversibility rule), but its `AgentId` is a
+    /// deterministic, seed-derived `u64` (`mint_flagship`'s stream draw), so
+    /// it is a stable, collision-free identity to reference AS an object —
+    /// this never asserts the player has facts of their own, only that an
+    /// NPC's own fact points at them.
+    fn agent_entity(&self) -> EntityId {
+        EntityId::new(self.agent.id.0)
+            .expect("a minted agent id is a seeded stream draw, never exactly zero")
+    }
+
+    /// Would the named co-located NPC be hostile to the player right now
+    /// (their grievance fold at or past `HOSTILITY_THRESHOLD`)? A pure read
+    /// — never commits anything. `who` resolves exactly as `provoke`/
+    /// `soothe` do (`colocated_npc`): empty selects the sole co-located
+    /// NPC, else a numeric id or a case-insensitive label substring; an
+    /// unresolved (not-here) `who` reads as not-hostile rather than
+    /// erroring. This mechanic's whole consequence is Task 3's; this task
+    /// stops at the gate.
+    /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
+    pub fn would_turn_hostile(&self, who: &str) -> bool {
+        self.colocated_npc(who)
+            .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
+            .unwrap_or(false)
+    }
+
+    /// A named NPC's current grievance fold toward the player (test
+    /// accessor: the byte-identity guard that an unprovoked NPC's grievance
+    /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
+    /// ALL derived NPCs, not only co-located ones — grievance is a ledger
+    /// fold over that NPC's own facts, not a proximity check — matched by
+    /// numeric id or case-insensitive label substring; `None` if no derived
+    /// NPC matches `who`.
+    /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
+    pub fn npc_grievance(&self, who: &str) -> Option<f64> {
+        who.parse::<u64>()
+            .ok()
+            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .or_else(|| {
+                let needle = who.to_lowercase();
+                self.npcs
+                    .iter()
+                    .find(|n| n.label.to_lowercase().contains(&needle))
+            })
+            .map(|npc| grievance(&self.ledger, npc.entity))
+    }
+
     /// The session's owned, evolving ledger, serialized — a determinism
     /// accessor: same seed + same waits must yield the same bytes (test
     /// accessor: T3's determinism test).
     /// type-audit: bare-ok(artifact: return)
     pub fn session_ledger_json(&self) -> String {
         serde_json::to_string(&self.ledger).expect("a ledger always serializes")
+    }
+
+    /// Consume the session and fold its evolved ledger + registry into a
+    /// saveable `World` (The First Mark, Task 4: persistence). The evolved
+    /// ledger is the bubble's forward integration made history — player
+    /// facts, the consequences they triggered, and NPC ticks alike — not
+    /// just the player's own marks, so a played world stays an ordinary
+    /// `World { seed, registry, ledger }` and every existing tool (almanac,
+    /// `why`, map) works over it unchanged. The caller supplies the seed
+    /// (the frozen `world` this session possessed is only ever borrowed —
+    /// `Session` never owns or mutates it, so there is nothing here to copy
+    /// it from); the input world is never mutated in place.
+    pub fn into_played_world(self, seed: Seed) -> World {
+        World {
+            seed,
+            registry: self.registry,
+            ledger: self.ledger,
+        }
     }
 
     /// The derived NPCs' labels (test accessor: the T3 review's colocation
@@ -244,6 +401,8 @@ impl<'w> Session<'w> {
             "npcs" => Turn::Out(self.list_npcs()),
             "why" => Turn::Out(self.why(rest)),
             "needs" => Turn::Out(self.needs()),
+            "provoke" => self.act_on_disposition(rest, 1),
+            "soothe" => self.act_on_disposition(rest, -1),
             "write" => Turn::Out(self.write(rest)),
             "consult" => Turn::Out(self.consult()),
             "enter" | "exit" => Turn::Out(
@@ -376,6 +535,45 @@ impl<'w> Session<'w> {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
                 self.ledger = next;
+                // The First Mark, one-hop forward integration: after the NPC
+                // drive tick settles, any co-located-or-not NPC whose
+                // grievance has crossed the hostility threshold commits its
+                // `turned-hostile` fact — a discrete social consequence of
+                // the player's own acts, not an ambient drive. Iterating
+                // `self.npcs` in its existing (derivation) order keeps the
+                // commit sequence deterministic.
+                let player = self.agent_entity();
+                for npc in self.npcs.iter() {
+                    // The `value_of(...).is_none()` check below is the SOLE
+                    // idempotency guarantee for this fact, not a second
+                    // layer atop `TURNED_HOSTILE`'s `functional: true`
+                    // registration: `Ledger::commit` only dedups via an
+                    // exact full-envelope match, and `day` advances every
+                    // tick, so a later-day re-fire is never an exact dup;
+                    // and the functional flag only rejects a *different*
+                    // object for the same subject/predicate, but `object`
+                    // here is always the same constant `player`, so that
+                    // flag can never trip either. Remove this guard and the
+                    // loop silently refires (a new `turned-hostile` fact,
+                    // same subject/predicate/object, only `day` differing)
+                    // on every subsequent `wait` the NPC is still past
+                    // threshold for.
+                    if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
+                        && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
+                    {
+                        let fact = Fact {
+                            subject: npc.entity,
+                            predicate: TURNED_HOSTILE.to_string(),
+                            object: Value::Entity(player),
+                            place: None,
+                            day: Some(self.day.day),
+                            provenance: "player-provoked".to_string(),
+                        };
+                        self.ledger
+                            .commit(fact, &self.registry)
+                            .expect("turned-hostile is registered and finite");
+                    }
+                }
                 // Re-absorb the (possibly changed) here into knowledge; the
                 // possessed agent's own scenery is still read from the
                 // frozen `self.world`, so this cannot change day-0 output.
@@ -511,6 +709,83 @@ impl<'w> Session<'w> {
         hornvale_historiography::recount(&evolved, entity)
     }
 
+    /// Every derived NPC sharing the possessed agent's current room — the
+    /// co-located lookup `needs` and `provoke`/`soothe` both build on.
+    fn colocated_npcs(&self) -> Vec<&Npc> {
+        self.npcs
+            .iter()
+            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
+            .collect()
+    }
+
+    /// Resolve `who` to one co-located NPC (The First Mark): an empty
+    /// argument selects the first NPC sharing this room (the common case —
+    /// a lone co-located NPC needs no name), otherwise `who` is matched as a
+    /// numeric entity id or a case-insensitive substring of an NPC's label,
+    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    fn colocated_npc(&self, who: &str) -> Option<&Npc> {
+        let here = self.colocated_npcs();
+        let who = who.trim();
+        if who.is_empty() {
+            return here.into_iter().next();
+        }
+        who.parse::<u64>()
+            .ok()
+            .and_then(|id| here.iter().find(|n| n.entity.0.get() == id).copied())
+            .or_else(|| {
+                let needle = who.to_lowercase();
+                here.iter()
+                    .find(|n| n.label.to_lowercase().contains(&needle))
+                    .copied()
+            })
+    }
+
+    /// Commit the first player-authored fact: a signed disposition shift on
+    /// a co-located NPC. `sign` is +1 (provoke) / -1 (soothe). The fact
+    /// carries a `player:` provenance so a reader (and contradiction
+    /// checking) can tell it from every fact a world system commits.
+    ///
+    /// Same-day dedup is intentional, not a bug: exactly one disposition
+    /// shift lands per (NPC, day, direction) — escalating a mark on the same
+    /// NPC the same day requires time to pass first (a `wait`), not
+    /// repeating the verb. Because `self.day` only advances on `wait`, a
+    /// same-day repeat of `provoke` (or `soothe`) on the same NPC produces a
+    /// byte-identical `Fact` envelope, and `Ledger::commit`'s idempotent
+    /// dedup (`Ok(false)` = identical fact already present, nothing
+    /// appended) makes it a true no-op. The narration below reads that
+    /// return value rather than assuming success, so the player is never
+    /// told a mark landed when the ledger disagrees.
+    fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
+        let Some(npc) = self.colocated_npc(who) else {
+            return Turn::Out("There is no one here to provoke or soothe.".to_string());
+        };
+        let entity = npc.entity;
+        let label = npc.label.clone();
+        let verb = if sign >= 0 { "provoke" } else { "soothe" };
+        let fact = Fact {
+            subject: entity,
+            predicate: DISPOSITION_SHIFT.to_string(),
+            object: Value::Number(sign as f64),
+            place: None,
+            day: Some(self.day.day),
+            provenance: format!("player: {verb}"),
+        };
+        let appended = self
+            .ledger
+            .commit(fact, &self.registry)
+            .expect("disposition-shift is registered and finite");
+        if appended {
+            let felt = if sign >= 0 { "bristles" } else { "eases" };
+            Turn::Out(format!("You {verb} {label}. They {felt}."))
+        } else if sign >= 0 {
+            Turn::Out(format!(
+                "You round on {label} again, but the moment already holds all the edge it will take today."
+            ))
+        } else {
+            Turn::Out(format!("{label} is already as eased as they'll be today."))
+        }
+    }
+
     /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):
     /// diegetic prose for every CO-LOCATED NPC's drive, never a raw number.
     /// Deliberately reads the NPCs, not the possessed agent — the player's
@@ -521,11 +796,7 @@ impl<'w> Session<'w> {
     /// real fold over its own committed history, so its felt state is
     /// meaningful the moment the drive model exists.
     fn needs(&self) -> String {
-        let here: Vec<&Npc> = self
-            .npcs
-            .iter()
-            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
-            .collect();
+        let here = self.colocated_npcs();
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }

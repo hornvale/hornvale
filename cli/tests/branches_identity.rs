@@ -147,6 +147,7 @@ fn kobold_lexicon_is_the_singleton_build_lexicon_call() {
         &kph,
         &kex,
         &kdaughters,
+        hornvale_language::CascadeRegime::SETTLED,
     );
     assert_eq!(
         hornvale_worldgen::lexicon_of(&world, "kobold").expect("lexicon_of(kobold) must succeed"),
@@ -277,6 +278,7 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let wc = hornvale_worldgen::WorldComponents::from_stores(
         biosphere,
         psyche,
+        hornvale_species::society_registry(),
         hornvale_species::perception_registry(),
         hornvale_language::articulation_registry(),
         hornvale_language::lexicon_registry(),

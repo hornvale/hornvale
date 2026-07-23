@@ -97,11 +97,14 @@ fn render_cognates(world: &World, lexicons: &BTreeMap<&str, Lexicon>) -> String 
     let family_of = hornvale_species::family_of();
     for family in hornvale_language::family_proto().ids() {
         // Daughters are the family's SPEAKING members — those with a lexicon.
-        // Filtering on `lexicons` (built from the speaking peoples) excludes the
-        // draconic family: since The Eremite the three dragons carry a psyche,
-        // so a psyche-membership filter would wrongly admit them (their shared
-        // "draconic" family has a proto) and then index a missing lexicon. This
-        // leaves the goblinoid triad the only family that clears the guard below.
+        // Filtering on `lexicons` (built from `articulation_registry`, the
+        // speaker boundary) rather than psyche is what makes this correct:
+        // since The Eremite the three dragons carry a psyche without
+        // speaking, so a psyche-membership filter would have wrongly admitted
+        // them before The Solitary Tongue. Now that the dragons DO speak
+        // (a shared frozen "draconic" tongue), they carry a lexicon too, and
+        // the draconic family (3 members) clears this guard alongside the
+        // goblinoid triad — the intended additive Draconic cognates section.
         let daughters: Vec<&str> = family_of
             .ids()
             .filter(|kind| family_of.get(kind) == Some(&family.0) && lexicons.contains_key(kind.0))

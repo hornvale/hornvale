@@ -155,6 +155,7 @@ Labels are permanent save-format contracts; regeneration uses epoch suffixes (e.
 | `terrain/plate-weights` | per-plate heavy-tailed Voronoi weight draws |
 | `terrain/plate-edge` | plate-edge noise (hash-noise only; no stream draws) |
 | `terrain/lithology` | lithology sub-cell hash-noise (hash-noise only; no stream draws) |
+| `terrain/features` | subsurface features point-process hash-noise (hash-noise only; no stream draws) |
 | `terrain/terranes` | terrane count, then per terrane host-craton index/bearing/size/age |
 | `terrain/microcontinents` | fixed candidate count, then per candidate position/radius/age |
 | `terrain/arc-gate` | along-strike island-arc gating noise (hash-noise only; no stream draws) |

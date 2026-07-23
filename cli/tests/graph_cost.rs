@@ -123,3 +123,50 @@ fn connection_graph_cost_is_bounded_on_seed_42() {
         "connection_graph_of attempted {attempts} land routes on seed 42, budget is {ATTEMPT_BUDGET}"
     );
 }
+
+/// Wall-time budget for the whole `build_world_to(.., BuildDepth::Settlements)`
+/// call on a seed-42 world, which now includes the moving-sea bake (25
+/// per-era connection-graph derivations via `connection_graph_at`, one per
+/// `CLIMATE_ERAS` era, plus the graph-following bake itself) alongside
+/// everything the existing `connection_graph_cost_is_bounded_on_seed_42`
+/// measures separately. This is a falsification ceiling, not a target: the
+/// present-era graph derivation alone measured ~2.6s (module doc); 25
+/// era-graph derivations plus the bake are expected to land well under 45s.
+const MOVING_SEA_BAKE_BUDGET_SECS: u64 = 45;
+
+/// The moving-sea bake cost gate: build seed-42 to `BuildDepth::Settlements`
+/// and assert the WHOLE build (which now derives 25 per-era connection
+/// graphs and bakes across them) stays under budget. Prints the measured
+/// wall-time (`--nocapture`) so a future re-measurement doesn't need to
+/// re-derive the harness.
+#[test]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
+fn moving_sea_bake_stays_within_budget() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+
+    #[allow(clippy::disallowed_types)] // benchmark harness: measuring the derivation, not sim logic
+    let start = Instant::now();
+    let _world = build_world_to(
+        Seed(42),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &wc,
+        BuildDepth::Settlements,
+    )
+    .expect("seed 42 builds to BuildDepth::Settlements");
+    #[allow(clippy::disallowed_types)] // benchmark harness
+    let elapsed = start.elapsed();
+
+    eprintln!(
+        "moving_sea_bake_stays_within_budget: {elapsed:?} to build seed-42 to \
+         BuildDepth::Settlements (25 per-era graphs + bake), budget {MOVING_SEA_BAKE_BUDGET_SECS}s"
+    );
+
+    assert!(
+        elapsed.as_secs() < MOVING_SEA_BAKE_BUDGET_SECS,
+        "the 25-era-graph bake regressed: {elapsed:?} to build seed-42 settlements \
+         (budget {MOVING_SEA_BAKE_BUDGET_SECS}s)"
+    );
+}

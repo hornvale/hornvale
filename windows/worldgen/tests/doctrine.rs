@@ -123,11 +123,11 @@ fn the_selection_bias_law_field_by_field() {
 
     // Beta is not an AccountParams field: assert the function-level delta
     // directly.
-    let registry = hornvale_species::psyche_registry();
-    let psych = registry.get_by_label("goblin").unwrap();
+    let registry = hornvale_species::society_registry();
+    let society = registry.get_by_label("goblin").unwrap();
     assert_eq!(
-        hornvale_worldgen::doctrine_beta_of(psych),
-        hornvale_worldgen::beta_of(psych) + 0.5
+        hornvale_worldgen::doctrine_beta_of(society),
+        hornvale_worldgen::beta_of(society) + 0.5
     );
 }
 

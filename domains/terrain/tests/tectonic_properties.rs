@@ -693,3 +693,37 @@ fn the_column_is_a_pure_projection_unperturbed_by_pins() {
         assert_eq!(base.column_at(cell), pinned.column_at(cell));
     }
 }
+
+#[test]
+fn features_seed_is_derived_and_perturbs_no_existing_draw() {
+    let geo = Geosphere::new(4);
+    let a = generate(Seed(42), &geo, &TerrainPins::default())
+        .unwrap()
+        .globe;
+    let b = generate(Seed(42), &geo, &TerrainPins::default())
+        .unwrap()
+        .globe;
+    // deterministic
+    assert_eq!(a.features_noise_seed(), b.features_noise_seed());
+    // distinct from the lithology seed (a different label)
+    assert_ne!(a.features_noise_seed(), a.lithology_noise_seed());
+}
+
+#[test]
+fn features_are_a_pure_pin_invariant_projection() {
+    let geo = Geosphere::new(4);
+    let base = GeneratedTerrain::new(
+        geo.clone(),
+        generate(Seed(42), &geo, &TerrainPins::default()).unwrap(),
+    );
+    // Re-affirm a drawn value via a pin; the derived caves/deposits must not shift.
+    let pins = TerrainPins {
+        plates: Some(summarize(base.globe()).plate_count),
+        ..TerrainPins::default()
+    };
+    let pinned = GeneratedTerrain::new(geo.clone(), generate(Seed(42), &geo, &pins).unwrap());
+    for cell in geo.cells() {
+        assert_eq!(base.cave_at(cell), pinned.cave_at(cell));
+        assert_eq!(base.deposit_at(cell), pinned.deposit_at(cell));
+    }
+}

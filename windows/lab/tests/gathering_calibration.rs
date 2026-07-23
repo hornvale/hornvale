@@ -179,9 +179,11 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // lefford 0063): re-measured on the regenerated 1000-seed census
     // (13.3566 -> 15.3251); still comfortably below the uniform-sphere
     // baseline of 32.7.
+    // The Sundering (moving-sea epoch; lefford regen, 0063): 15.3251 ->
+    // 15.3811; still comfortably below the uniform-sphere baseline of 32.7.
     assert!(
-        (mean - 15.3251).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.3251)"
+        (mean - 15.3811).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.3811)"
     );
 }
 
@@ -324,6 +326,7 @@ fn world_level_population_conserves_against_total_capacity() {
     let wc = hornvale_worldgen::WorldComponents::from_stores(
         biosphere,
         psyche,
+        hornvale_species::society_registry(),
         hornvale_species::perception_registry(),
         hornvale_language::articulation_registry(),
         hornvale_language::lexicon_registry(),
