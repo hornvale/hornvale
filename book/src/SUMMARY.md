@@ -238,6 +238,7 @@
 - [The Lode](./chronicle/the-lode.md)
 - [The First Mark](./chronicle/the-first-mark.md)
 - [The Cloister](./chronicle/the-cloister.md)
+- [The Phantom](./chronicle/the-phantom.md)
 
 # Appendix: The Frontier
 

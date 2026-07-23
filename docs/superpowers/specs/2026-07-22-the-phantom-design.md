@@ -2,7 +2,7 @@
 
 **Campaign:** The Phantom
 **Date:** 2026-07-22
-**Status:** draft (G3 — awaiting review)
+**Status:** shipped (2026-07-23)
 **Registry:** PSY-11 (the threat/fear engine) — the reserved *transient-danger memory*, the capstone of The Haunt + The Alarm
 
 ## The idea

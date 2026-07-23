@@ -1,5 +1,11 @@
 # The Phantom — Implementation Plan
 
+**Status: COMPLETE (shipped 2026-07-23).** T1 537ee52b, T2 2e02d6e2, T3 7ac5e289.
+Fully byte-identical (no scoped drift). The re-derive-at-read-time cost detonated on
+the health battery (>710s); resolved (decision-ledger #4, 2 ideonomy passes) by a
+session-level append-only `primary_afraid(entity, day)` memo + terrain-shortcut,
+reaching parity with believed_water (~371s). Felt phobia = next campaign.
+
 Transient-danger memory (PSY-11's capstone of The Haunt + The Alarm). Spec:
 `docs/superpowers/specs/2026-07-22-the-phantom-design.md`. Generalize
 `frightened_at(cell) → frightened_at(cell, day, roster)` folding terrain +
