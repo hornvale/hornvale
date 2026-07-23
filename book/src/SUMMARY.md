@@ -48,6 +48,7 @@
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
+- [The Vestige of Seed 42](./gallery/vestige-seed-42.md)
 - [An Abandoned Clearing — Seed 42](./gallery/history-seed-42.md)
 - [The Transport Topology — Seed 42](./gallery/connections-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
@@ -237,6 +238,7 @@
 - [The Solitary Tongue](./chronicle/the-solitary-tongue.md)
 - [The Lode](./chronicle/the-lode.md)
 - [The Cloister](./chronicle/the-cloister.md)
+- [The Vestige](./chronicle/the-vestige.md)
 
 # Appendix: The Frontier
 
