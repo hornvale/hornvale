@@ -1010,6 +1010,28 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
     }))
 }
 
+/// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
+/// subsurface palimpsest radiates: the MAX dread over the cell's vestige
+/// stack ([`vestiges_at`]; an empty stack reads `0.0`), already `[0, 1]` (each
+/// [`Vestige::dread`] is authored in-range, so no field-wide normalization is
+/// needed here — max, not sum, because dread is a warning signal a wanderer
+/// SENSES, not an additive hazard load). Derived from committed history
+/// (occupation records) and terrain (the pre-human gate-scar presence test):
+/// no seed, no facts, byte-identical across calls. EXPOSED but not yet
+/// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
+/// hazard axis is a deferred follow-on.
+/// type-audit: bare-ok(ratio: return)
+pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let geo = terrain.geosphere();
+    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
+        vestiges_at(world, &terrain, cell)
+            .iter()
+            .map(|v| v.dread)
+            .fold(0.0, f64::max)
+    }))
+}
+
 /// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
 /// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure`].
 /// Where the predator field sums CARNIVORE realized density (so a quarry flees
@@ -5970,6 +5992,61 @@ mod tests {
             "some cells are dense predator territory"
         );
         assert!(va.contains(&0.0), "many cells carry no predators");
+    }
+
+    #[test]
+    fn vestige_dread_is_deterministic_in_range_and_reads_higher_where_haunted() {
+        // THE VESTIGE: the derived dread field is byte-identical across calls
+        // (no seed, pure over committed history + terrain), stays in [0,1] (each
+        // Vestige::dread is authored in-range and the fold is a max, not a sum),
+        // and reads strictly higher at a cell carrying a breached/forgotten
+        // vestige than at a cell whose stack is empty.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = vestige_dread(&world).unwrap();
+        let b = vestige_dread(&world).unwrap();
+        let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
+        let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
+        assert_eq!(va, vb, "two calls produce byte-identical fields");
+        assert!(
+            va.iter().all(|v| (0.0..=1.0).contains(v)),
+            "every cell's dread stays in [0,1]"
+        );
+
+        // The fixture cell `vestige.rs`'s own tests use: ancient continental
+        // crust whose presence noise fires the pre-human gate-scar test, so
+        // its stack's first (and only) layer is breached + forgotten
+        // (dread 0.9). See `vestige::DEEP_ANCIENT_NUMINOUS_CELL`'s doc comment
+        // for how this cell was found.
+        let haunted_cell = hornvale_kernel::CellId(21966);
+        let terrain = terrain_of(&world).unwrap();
+        let haunted_stack = vestiges_at(&world, &terrain, haunted_cell);
+        assert!(
+            !haunted_stack.is_empty(),
+            "the fixture cell must carry at least the pre-human vestige"
+        );
+
+        // Find a genuinely empty-stack cell by scanning: land or ocean, no
+        // pre-human scar, no occupation ever founded there.
+        let geo = terrain.geosphere();
+        let empty_cell = geo
+            .cells()
+            .find(|&cell| vestiges_at(&world, &terrain, cell).is_empty())
+            .expect("some cell in a seed-42 world has no vestige at all");
+
+        let haunted_dread = *a.get(haunted_cell);
+        let empty_dread = *a.get(empty_cell);
+        assert!(
+            haunted_dread > empty_dread,
+            "a haunted cell must read strictly higher than an empty one ({haunted_dread} vs {empty_dread})"
+        );
+        assert_eq!(empty_dread, 0.0, "an empty stack folds to zero dread");
     }
 
     #[test]
