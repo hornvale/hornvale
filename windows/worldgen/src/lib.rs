@@ -2532,6 +2532,129 @@ pub fn lode_lines_from(
     Ok(lines)
 }
 
+/// A hazard's almanac-facing name, in `HazardKind`'s declaration order (the
+/// tie-break the dominant-hazard line below relies on).
+fn hazard_name(hazard: HazardKind) -> &'static str {
+    match hazard {
+        HazardKind::Structural => "structural collapse",
+        HazardKind::ToxicGas => "toxic gas",
+        HazardKind::Pestilent => "pestilence",
+        HazardKind::Flooded => "flooding",
+        HazardKind::Numinous => "the numinous",
+        HazardKind::Cursed => "the cursed",
+    }
+}
+
+/// The Vestige's headline lines for the almanac: notable subsurface residue
+/// across the land — sealed wards, abandoned delvings and buried undercities,
+/// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
+/// and the residue's dominant hazard (The Vestige). Reads the batched
+/// [`vestiges_field`] once for the whole world (rather than calling
+/// [`vestiges_at`] per cell, which would rescan the ledger's committed
+/// occupation history once per cell). Land-only, mirroring the Lode/Deep
+/// sections; empty for a landless world, or for land with no residue at all.
+/// type-audit: bare-ok(prose: return)
+pub fn vestige_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let geo = terrain.geosphere();
+    let field = vestiges_field(world, terrain);
+
+    let (mut land, mut residue_cells) = (0usize, 0usize);
+    let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
+        (0usize, 0usize, 0usize, 0usize);
+    let (mut venerated, mut forgotten) = (0usize, 0usize);
+    let mut hazard_counts = [0usize; 6];
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let stack = field.get(cell);
+        if stack.is_empty() {
+            continue;
+        }
+        residue_cells += 1;
+        for vestige in stack {
+            match vestige.kind {
+                VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
+                VestigeKind::AbandonedDelving => delvings += 1,
+                VestigeKind::BuriedRuin => buried_ruins += 1,
+                VestigeKind::GateScar => gate_scars += 1,
+            }
+            match vestige.valence {
+                Valence::Venerated => venerated += 1,
+                Valence::Forgotten => forgotten += 1,
+            }
+            let idx = match vestige.hazard {
+                HazardKind::Structural => 0,
+                HazardKind::ToxicGas => 1,
+                HazardKind::Pestilent => 2,
+                HazardKind::Flooded => 3,
+                HazardKind::Numinous => 4,
+                HazardKind::Cursed => 5,
+            };
+            hazard_counts[idx] += 1;
+        }
+    }
+    if land == 0 || residue_cells == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = vec![format!(
+        "The underworld's residue marks {:.0}% of the land — the buried palimpsest of ages before.",
+        residue_cells as f64 / land as f64 * 100.0
+    )];
+    if sealed > 0 {
+        lines.push(format!(
+            "{sealed} cells hold a sealed ward — the deep still shut."
+        ));
+    }
+    if delvings + buried_ruins > 0 {
+        lines.push(format!(
+            "{delvings} abandoned delvings and {buried_ruins} buried undercities lie beneath the land."
+        ));
+    }
+    lines.push(if forgotten > venerated {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — forgetting outpaces memory."
+        )
+    } else {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — memory still holds most of the ground."
+        )
+    });
+    if gate_scars > 0 {
+        lines.push(format!(
+            "{gate_scars} pre-human gate-scars still weep dread into the deep."
+        ));
+    }
+    // Ties break to the lower-declared variant, same as ground_lines_from /
+    // lode_lines_from.
+    let (dominant_idx, dominant_count) = hazard_counts
+        .iter()
+        .enumerate()
+        .max_by(|(ia, ca), (ib, cb)| ca.cmp(cb).then(ib.cmp(ia)))
+        .map(|(i, c)| (i, *c))
+        .expect("hazard_counts is a fixed-size non-empty array");
+    if dominant_count > 0 {
+        let hazard = match dominant_idx {
+            0 => HazardKind::Structural,
+            1 => HazardKind::ToxicGas,
+            2 => HazardKind::Pestilent,
+            3 => HazardKind::Flooded,
+            4 => HazardKind::Numinous,
+            _ => HazardKind::Cursed,
+        };
+        lines.push(format!(
+            "The residue's dominant hazard is {} — {dominant_count} layers so afflicted.",
+            hazard_name(hazard)
+        ));
+    }
+    Ok(lines)
+}
+
 /// The Waters' headline line for the almanac (The Freshet, DOM-5 first
 /// slice): the fresh-water (river) share of a world's land — the salt/fresh
 /// distinction the ground substrate always computed but never reported. A
@@ -5755,6 +5878,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         water_lines: water_lines_from(&terrain),
         deep_lines: deep_lines_from(world, &terrain)?,
         lode_lines: lode_lines_from(world, &terrain, &climate)?,
+        vestige_lines: vestige_lines_from(world, &terrain)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),

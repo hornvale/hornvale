@@ -204,6 +204,14 @@ Glaciated strata lie in the cover over 2235 cells — the ice left its mark.
 The land's lode is dominantly salt, found across 32% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
 
+## The Vestige
+
+The underworld's residue marks 1% of the land — the buried palimpsest of ages before.
+0 abandoned delvings and 122 buried undercities lie beneath the land.
+117 layers of that residue are still venerated against 6 forgotten — memory still holds most of the ground.
+1 pre-human gate-scars still weep dread into the deep.
+The residue's dominant hazard is structural collapse — 122 layers so afflicted.
+
 ## Deep Time
 
 The frost retreated: at the glacial maximum (day -243500000), ice advanced over 18% of the land.
