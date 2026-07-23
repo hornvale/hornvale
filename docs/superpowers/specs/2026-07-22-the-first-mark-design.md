@@ -175,19 +175,22 @@ verb used must leave every committed artifact byte-identical to today's —
 the additive-latent construction guarantees it (zero added term). Test on
 seed 42, as with prior additive-latent seams.
 
-**Save-format flag (G3, leads):** persisting the mark means a saved world may
-now carry **player-authored facts** in its ledger. This touches the save-
-format contract:
-- Does play write into the **canonical** `World.ledger`, or a **separate
-  play-save / branch**? (Recommendation: fold into `World.ledger` via an
-  explicit `--out`, so a "played" world is still just `World`; the *input*
-  world is never mutated in place.)
-- Do player-authored facts need a **provenance marker** (a source tag) so the
-  butterfly-reader — and contradiction-checking — can distinguish "the world
-  did this" from "the player did this"? (Likely yes; this is additive to the
-  Fact envelope and must be epoch-clean.)
-- No stream-consumption-order change: player facts are appended post-genesis,
-  consuming no genesis draws.
+**Save-format decision (settled — flagged and approved at G3, 2026-07-22):**
+persisting the mark means a saved world may now carry **player-authored
+facts** in its ledger. Resolved:
+- Play writes into `World.ledger` via an explicit `possess --world w --out
+  w2`. A "played" world is still just `World { seed, registry, ledger }`
+  (same serialization boundary, quantize-at-emit unchanged); **the input
+  world is never mutated in place**. A separate play-save/branch format was
+  considered and set aside — a played world staying an ordinary `World`
+  keeps every existing tool (almanac, `why`, map) working over it for free.
+- Player-authored facts **carry a provenance/source marker** distinguishing
+  "the world did this" from "the player did this", for the butterfly-reader
+  and for contradiction-checking. The marker is **additive** to the Fact
+  envelope and must be **epoch-clean** (the exact shape is a plan-time
+  decision; see followups).
+- **No stream-consumption-order change:** player facts are appended
+  post-genesis, consuming no genesis draws.
 
 ## Error handling
 
