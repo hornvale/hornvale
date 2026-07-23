@@ -582,3 +582,7 @@ cargo fmt
 git add -A
 git commit -m "docs(the-first-mark): chronicle, retro, registry flips, artifact freshness sweep"
 ```
+
+---
+
+**STATUS: SHIPPED 2026-07-23** — closed as *The First Mark* (chronicle `book/src/chronicle/the-first-mark.md`). Mechanic pivoted to direct social consequence mid-campaign (decision-ledger #6). All 6 tasks complete.

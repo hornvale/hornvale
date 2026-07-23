@@ -260,3 +260,7 @@ for the others once this foundation lands:
 - Idea-registry rows UNI-32..37 created/flipped; if this resolves or moves an
   open-questions bet, re-score that chapter (0030).
 - One-page retrospective (`docs/retrospectives/`).
+
+---
+
+**STATUS: SHIPPED 2026-07-23** — see the chronicle and retrospective. Registry: UNI-32 / UNI-34 → shipped.
