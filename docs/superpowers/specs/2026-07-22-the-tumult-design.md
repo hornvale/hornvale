@@ -1,182 +1,186 @@
-# The Tumult — Living-Community C3, Slice 1: The Sandpile
+# The Tumult — Living-Community C3, Slice 1: Predation
 
-**Status:** design (G3 review)
+**Status:** design (G3 re-review — the model was reframed after slice-1's crowding sandpile was falsified)
 **Program:** The Living Community engine (campaign 3 of ~5), conflict-as-criticality (SOC-criticality)
-**Slice:** the bare sandpile — crowding drives displacement onto occupied land; the cascade is the avalanche; the conflict-size distribution is the falsification metric. A genesis epoch.
-**Base:** origin/main @d9f6a55e (contains The Sundering @6ede5833).
+**Slice:** predation — conflict is driven by *coveting value* down a *strength* gradient, not by crowding. A genesis epoch.
+**Base:** origin/main @d9f6a55e (contains The Sundering).
 
 ---
 
 ## 1. The payoff
 
-Conflict that no one floored. Today the deep-history bake carries a raid mechanic that never
-fires — a displaced people always finds empty ground, so raids, flees, and resettles all
-measure **zero** (The Sundering). This slice supplies the missing ingredient — **crowding** —
-and lets war *emerge*: when the habitable land fills, a people driven off its cell by the ice
-or by hunger can no longer flee to vacant ground, so it takes an **occupied** cell instead,
-and the evicted occupant must in turn find a home — a **cascade** rippling across the moving-sea
-connection graph, the Sea-Peoples' collapse in miniature.
+Groups take what other groups have — and not because they ran out of room. The Sea Peoples, the
+warfare between Amerindian nations with a continent of land to spare, the Europeans who took
+cleared and cultivated indigenous fields rather than break wilderness: none of these are
+scarcity. They are **covetousness for specific value** — a fertile valley, a mine, a flock, a
+fishing ground — pursued **down a strength gradient**: the strong take from the weaker, and the
+displaced, now desperate, take from someone weaker still. Shit rolls downhill.
 
-The tell that this is genuine *self-organized criticality* and not noise is the **shape of the
-cascade-size distribution**. A pile of sand fed one grain at a time avalanches at every
-scale — mostly tiny, rarely enormous — a power law (Richardson's scale-free war sizes). If the
-emergent conflict sizes obey a power law, the dynamics self-organized to the critical point on
-their own. If instead they form a bell curve or a single catastrophic spike, the bare sandpile
-is **falsified**, and that failure is the honest motive for the richer drivers (cohesion,
-grievance) that later slices add. The census-floor tool The Sounding used to *force* raids
-becomes, here, the instrument that *tests* whether they self-organize.
+This slice makes the deep-history bake fight over *value*, not *space*. A community raids the
+reachable neighbour whose land is worth more than its own, **when it is strong enough to win** —
+regardless of whether empty land exists. Taking a settled place is not a last resort; it is
+often the *prize*, because pioneering unknown ground is a gamble (no local knowledge, no proven
+crops) and a rival's holding comes already made to work. The loser is driven off and, still
+carrying some strength, rolls onto a weaker neighbour — a cascade across the moving-sea graph.
 
-## 2. Context — the program, and the keystone The Sundering handed over
+## 2. Context — the falsified first design, and the reframe
 
-The Living Community (C1) grew settlements from a deep history; The Connection Graph (C2 s1)
-derived the transport topology; The Sundering (C2 s2) routed the dynamics over a time-varying
-version of it. Each measured the same thing about conflict: **there is none**, because the
-world has vacant land to spare — a frozen-out community migrates to empty ground rather than
-fight (C1), and even under the moving sea raids/flees/resettles stay at zero (The Sundering).
-The Sundering's closing finding named the lever precisely: the diaspora's *volume* — and its
-conflict — is a matter of **crowding/pressure**, handed to this campaign.
+Slice-1's *first* design modelled conflict as a **crowding sandpile**: a displaced people
+raids only when no vacant land is reachable, and the cascade is the avalanche; the goal was a
+power-law size distribution. It was built and measured, and it **falsified honestly**: seed-42
+fires *zero* cascades (the world never crowds), and where cascades do occur they run away to the
+depth cap — a truncation artifact, not a power law. The diagnosis (six ideonomy passes, ledger
+#7–#8): the world sits sub-critical (no crowding → no conflict) or super-critical (runaway),
+never at the critical point, because **the model had a drive but no dissipation, and — more
+fundamentally — density was never the driver.**
 
-SOC-criticality is a multi-slice campaign. This is **slice 1: the bare sandpile** — the minimal
-mechanism that could produce a power law. Deferred to later slices, by design: **cohesion**
-(ʿasabiyya rising under adversity and decaying in comfort — a second slow variable), **grievance
-/ feud** (a fold over the ledger of past raids crossing a collective-liability threshold),
-**shock-timing** (seasonal/astronomical modulation of when the pile is perturbed), and built
-roads / diffuse coupling.
+The reframe: conflict is a **driven-dissipative predation system** on a **value field**, ordered
+by **strength**. Value accumulates (growth on good land), concentrates (the strong dominate the
+weak), and dissipates (war is lossy; the broken die; toppled powers release what they held).
+Self-organized criticality is the *signature* of such a system at its edge — so this slice stops
+*engineering* for a power law and instead models the real drivers, then **measures** whether they
+self-organize. Grounding: kleptoparasitism (the skua robs the puffin), the protection racket /
+Danegeld (milk the productive, don't destroy them), Ibn Khaldun's and Turchin's secular cycle,
+and the dominance hierarchies of schools, prisons, and captive animals.
 
 ## 3. Architecture (constitutional layering)
 
-- **`windows/worldgen` — `history_bake.rs`** (the bake). The cascade lives here, in the two
-  places a displaced community currently vanishes for want of vacant land:
-  `step_community` (a climate-shock eviction with no reachable vacant cell → Famine) and
-  `raid` (an evicted community with no vacant refuge → lost). Both become: **displace the
-  nearest occupied cell over the graph, and recurse on the evicted occupant** — a bounded
-  cascade. The cascade tallies its size into the `BakeCensus`.
-- **`windows/lab`** — the falsification metric: a census metric over the baked skeleton (or the
-  `BakeCensus`) reporting the cascade-size distribution and a power-law goodness measure, plus
-  the calibration/gate that adjudicates it.
-- **`domains/*`** — unchanged; the cascade is a composition-root dynamic over the existing
-  history data model and the topology graph. No new domain, no new predicate required (a
-  cascade is a sequence of the existing `Fled`/`Ended::By` occupation records).
+Everything the mechanism needs is already in the bake — this is a **rewiring**, not a new
+subsystem:
 
-**Derived-vs-committed.** The cascade produces ordinary occupation records (a raid closes the
-evicted community with `Fled`/`ended_by = By(displacer)`, opens its refoundation elsewhere) —
-the same committed shapes C1 already emits. **No new committed field, no new predicate.** The
-cascade-size distribution is *read back* from the committed skeleton for the metric; it need not
-be committed itself.
+- **`windows/worldgen` — `history_bake.rs`.** The conflict logic in `step_community`/`raid` is
+  rewritten. Strength reads the `Community`'s existing `population` and `tech`; coveted value
+  reads the existing per-cell `capacity` field (which already folds the Demesne's per-axis supply
+  and the Confluence's freshwater term — a cell's worth). The moving-sea era graph gives reach.
+  The `nearest_occupied` helper (slice-1 T1) becomes the raid-target finder; the `relocate`
+  recursion (T2) becomes the roll-downhill cascade; the `BakeCensus` cascade histogram (T1) is
+  the falsification instrument; `history_for` (T3) is the measurement entry point. All reused.
+- **`windows/lab` / `windows/worldgen/tests`** — the falsification metric (cascade-size
+  distribution) and the preregistered gates.
+- **No new domain, no new committed field/predicate/stream label.** A raid is a chain of the
+  existing `CauseOfEnd::Fled` / `Ended::By` occupation records; strength and value are read from
+  state already present.
 
-## 4. The mechanism — the cascade
+## 4. The mechanism — predation
 
-### 4.1 The drive to criticality
+### 4.1 Strength and value (both already present)
 
-The slow drive already exists: population growth (logistic toward capacity) and daughter
-founding multiply communities until the habitable graph **saturates**. No new drive is added.
-Whether seed-42's bake reaches saturation is **measured** (§8): if cascades fire at volume, the
-drive suffices; if not, the density is calibrated (founding density / `SETTLERS_PER_CAPACITY` /
-bake span) — a fidelity knob brought to Nathan, never a floor. The Sundering's sundered
-landmasses already concentrate peoples (isolation → local saturation), so cascades are expected
-to ignite on the small, full landmasses first.
+- **Strength** of a community — its capacity to win a raid — is `population` scaled by a tech
+  factor (Iron beats Bronze beats Neolithic; monotone, already tracked as `TechHorizon`).
+  Heterogeneous strength is the fuel; equals do not prey on each other.
+- **Coveted value** of a cell is its `capacity` (the existing per-cell worth). A community covets
+  a neighbour whose cell is worth more than its own — the fertile valley, the mine.
 
-### 4.2 The relaxation — displacement onto occupied territory
+### 4.2 The raid rule (deterministic — the new trigger, density dropped)
 
-The single new rule: **a community that must relocate and finds no vacant habitable cell
-reachable over the era graph displaces the nearest *occupied* cell instead of collapsing.** It
-raids the occupant (the existing `raid` seize/flee shapes), takes the site, and the evicted
-occupant re-enters the same relocation logic — which may again find no vacant cell and displace
-*its* nearest occupied neighbour, and so on. The recursion is the avalanche; it terminates when
-a displaced community either reaches vacant land, or is absorbed (a small remnant lost when the
-whole reachable component is full). Applied at both current dead-ends:
+Decoupled from pressure entirely. Each epoch, after growth, a community scans its **reachable
+occupied neighbours** (over the era graph) and raids the best target that satisfies both:
+1. **Covetousness** — the target's cell value exceeds the raider's own (there is something to gain).
+2. **Dominance** — the raider's strength exceeds the target's by a margin (it can win).
 
-- `step_community`, climate-shock branch (`eff == 0`, `nearest_dest` → `None`): today → Famine;
-  now → displace nearest occupied, cascade.
-- `raid`, evicted-community branch (`nearest_dest` → `None`): today → lost; now → displace
-  nearest occupied, cascade.
+The best target is the most valuable such cell (tie-broken deterministically by strength then
+`CellId`). No target that meets both conditions ⇒ no raid this epoch. **Crowding is never the
+trigger.** (The pre-existing climate paths are unchanged: a cell turned hostile by the ice still
+drives *migration* to a refuge or death; over-capacity still starves — those are not conflict.)
 
-"Nearest occupied" is resolved by graph distance with the same total, deterministic tie-break
-the existing `raid_target`/`nearest_dest` use (`f64::total_cmp`, ascending `CellId`).
+### 4.3 The outcome, and dissipation (the fix that was missing)
 
-### 4.3 Boundedness and determinism (Lorenz-safe)
+A raid resolves deterministically and **lossily**:
+- The raider **seizes** the coveted site (conquest of immobile land): it takes the cell; the loser
+  is driven off (`Fled`, `ended_by = By(raider)`).
+- **War is lossy** — a fraction of the combined population is destroyed in the taking (not merely
+  transferred). This is the primary dissipation: value leaves the system.
+- The displaced loser, still carrying its (reduced) strength, **rolls downhill** — it re-enters
+  the raid rule against *its* weaker neighbours, cascading. Each hop it loses more (the war-loss
+  and the journey), so a displaced remnant that falls below a **viable minimum dies** rather than
+  cascading forever — the second dissipation, and the natural avalanche cutoff.
 
-- **Bounded cascade depth.** A hard cap on cascade length guards non-termination and the
-  size-risk (a runaway cascade cannot exceed the occupied-cell count; the cap is a measured
-  ceiling, per the Sounding's OOM lesson). The cap is high enough not to clip real avalanches
-  (measured in the cost gate).
-- **Deterministic, seed-replayed, no forward-integration.** The trigger is the *committed*,
-  seed-replayed climate eras and deterministic over-pressure — **never** a stochastic forward
-  integration of a chaotic pressure variable (the Lorenz guard-rail: the cascade reads the
-  world's state, it does not integrate a chaotic ODE). The cascade order is a total function of
-  the frozen epoch state (graph distance + `total_cmp`), so same seed ⇒ byte-identical skeleton.
-  No new seed draw beyond the existing raid path's.
+The cascade size is the number of displacements in one relaxation (the existing histogram). The
+branching ratio — does one raid trigger on average more or fewer than one downhill raid — is what
+determines sub-critical / critical / super-critical, and whether the strength-and-value gradients
+**self-tune it toward one** (criticality) is the slice's open question, measured not assumed.
 
-### 4.4 The cascade-size tally
+### 4.4 Determinism (Lorenz-safe)
 
-Each relaxation records its **size** — the number of displacements in one cascade — into the
-`BakeCensus` (a new histogram/tally field, read back by the metric). This is the raw material of
-the falsification test.
+Groups do not *choose* — the raid is a total, deterministic function of the frozen epoch state
+(strength, value, graph reach, `f64::total_cmp` / `CellId` tie-breaks). No agent decision, no new
+seed draw, no stochastic forward-integration of a chaotic pressure variable (the raid reads
+state; it does not integrate an ODE). Bounded cascade depth. Same seed ⇒ byte-identical skeleton.
 
-## 5. The falsification metric (the headline)
+## 5. The falsification metric (headline) — SOC as a measured consequence
 
-A `windows/lab` metric reports, over the bake, the **distribution of cascade sizes**, and a
-gate adjudicates its shape:
+The cascade-size distribution is measured over a seed sample and its shape adjudicated:
+- **Power law** (heavy-tailed over ≥ ~1.5 decades) ⇒ the predation system self-organized to
+  criticality — the payoff.
+- **Bell / spike / geometric / no conflict** ⇒ documented falsification, diagnosing the next
+  missing ingredient (the explicit dominance hierarchy and its collapse-release; or cohesion).
 
-- **Power law** (many small, rare large; a heavy tail over ~1.5 decades) — SOC confirmed; the
-  bare sandpile self-organized to criticality.
-- **Bell curve / single spike / no cascades** — falsified; recorded as the honest finding that
-  crowding + cascade alone are insufficient, motivating cohesion/grievance (later slices).
+Unlike the first design, we do **not** engineer toward the power law — value × strength drives the
+raids, dissipation bounds them, and the shape is whatever emerges. Either outcome ships.
 
-The metric is preregistered on a named axis (the log-log slope / a heavy-tail test over the
-cascade-size histogram), measured across a seed sample, not a single world. **Either outcome
-ships** — a confirmed power law is the payoff; a documented falsification is a real result that
-sharpens the next slice. This is the measure-don't-narrate spine of the campaign.
+## 6. Scope — what is slice 1, and what is the next slice (a G3 decision)
 
-## 6. The epoch
+**Recommended slice 1 (this spec):** the minimal driven-dissipative predation model of §4 —
+value × strength raiding, lossy war, the viable-minimum death, and the roll-downhill cascade.
+This is the honest first measurement of "does covetous predation with real dissipation
+self-organize?"
 
-A genesis epoch. The cascade changes which communities survive and where, so the committed
-skeleton moves: **byte-identity vs the prior main deliberately breaks; the census regenerates on
-lefford** (decision 0063 — carve-out, authorized at G6). No new committed field, no new stream
-label (the cascade uses the existing `history/bake` draws), no new predicate — a cascade is a
-chain of the existing `Fled` occupation records. The seed-42 keystone refreezes at merge.
+**Deferred to the next slice (flagged for Nathan at G3):** the **explicit dominance hierarchy**
+— tribute/subordination links (extraction that *milks* rather than evicts, the Danegeld), and the
+**collapse-release** (toppling a dominant frees its whole subordinate network as one large
+avalanche — the richest dissipation and the clearest power-law source). If slice-1's lossy
+dissipation proves insufficient (falsified), this is the diagnosed next lever. Also deferred:
+captives/enslavement (taking people as the prize), revenge/grievance (a fold over the raid
+ledger), status/prestige and sacred motives. *If Nathan wants the dominance hierarchy in slice 1,
+the spec expands to include the subordinate-link + collapse-release; the recommendation is to
+measure the minimal model first.*
 
-## 7. Determinism
+## 7. The epoch
 
-Same seed + pins ⇒ byte-identical skeleton. The cascade is a total function of the frozen epoch
-state (graph distance, `f64::total_cmp` tie-breaks, no `HashMap`/RNG, no wall-clock). Triggers
-are seed-replayed (committed eras) and deterministic (over-pressure); no chaotic forward
-integration (Lorenz guard-rail). Bounded cascade depth. The cascade-size tally quantizes only at
-any emit boundary.
+A genesis epoch: the conflict rewrite changes which communities survive and where, so the
+committed skeleton moves — byte-identity breaks, the census regenerates on lefford (0063 —
+carve-out, authorized at G6), the seed-42 keystone refreezes at merge. No new committed field,
+predicate, or stream label.
 
 ## 8. Success criteria — measure, don't narrate
 
-1. **Conflict fires at volume.** With crowding, raids/flees/resettles rise from zero to a
-   genuine signal — cascades occur. If they do *not* (the world never saturates on seed-42),
-   that is a density-calibration finding brought to Nathan, not a floor.
-2. **The map is not depopulated (the recurring risk).** Cascades must not empty the world:
-   alive-at-`now` stays in the walkable band and the collapse (Famine) share stays under a
-   preregistered ceiling. Runaway cascades that starve the map are a fidelity finding for
-   Nathan, never patched with a floor.
+1. **Conflict fires on value, not crowding.** Raids occur on seed-42 (which never crowded) —
+   proving the driver is value × strength, not density. If conflict is still inert, the raid
+   rule's margins are a calibration finding for Nathan (a fidelity carve-out), not a floor.
+2. **The map is not depopulated.** Lossy war + downhill cascades must not empty the world:
+   alive-at-`now` stays in the walkable band and the Famine/war-loss share stays under a
+   preregistered ceiling. Runaway depopulation is a fidelity finding, never floored.
 3. **The falsification metric (headline).** The cascade-size distribution is measured and its
-   shape adjudicated (power law vs bell/spike) across a seed sample. Power law ⇒ SOC confirmed;
-   otherwise ⇒ documented falsification. Both ship.
-4. **A cost gate** bounds the cascade wall-time and the maximum cascade depth actually reached
-   (measured, per the Sounding's OOM lesson).
+   shape adjudicated (power law vs bell/spike/geometric), across a seed sample. Both outcomes
+   ship; a falsification diagnoses the next slice.
+4. **A cost gate** bounds the conflict bake wall-time and the max cascade depth reached.
 
 ## 9. Non-goals (§9 — read before assuming scope)
 
-- **Cohesion (ʿasabiyya)** — a second slow variable (rise under adversity, decay in comfort) —
-  a later slice.
-- **Grievance / feud** — a fold over the ledger of past raids crossing a collective-liability
-  threshold — a later slice.
-- **Shock-timing** — seasonal/astronomical modulation of the perturbation — a later slice.
-- **Built roads / diffuse coupling** — the connection-graph program's later slices.
-- **A new committed field, predicate, or stream label** — the cascade uses the existing raid/
-  occupation shapes and draws.
+- **Crowding / density as a conflict trigger** — dropped; it was never the driver.
+- **The explicit dominance hierarchy + tribute/extraction + collapse-release** — the next slice
+  (unless promoted at G3).
+- **Captives/enslavement, revenge/grievance, status/prestige, sacred motives** — later slices.
+- **Cohesion (ʿasabiyya)** — the secular-cycle regulator — a later slice.
+- **A new committed field, predicate, or stream label** — the raid uses existing record shapes.
 
 ## 10. Definition of Done (per CLAUDE.md)
 
-- The cascade replaces both no-vacant dead-ends in `history_bake.rs`; bounded depth;
-  deterministic; the `BakeCensus` tallies cascade sizes.
-- The three §8 gates plus the cost gate pass (or the falsification is documented, labelled).
+- `step_community`/`raid` rewritten to value × strength predation (density dropped); lossy war +
+  viable-minimum death + roll-downhill; deterministic + bounded; the histogram tallies cascade sizes.
+- The §8 gates plus the cost gate pass (or the falsification is documented, labelled).
 - Census regenerated on lefford (authorized at G6); the census-close cascade re-pinned; the
-  seed-42 keystone refrozen from main's tip.
-- Chronicle, retrospective, book freshness sweep, Confidence Gradient re-score (the
-  conflict/SOC bet moves from `raw`), registry flip (SOC-criticality → elaborated/slice-1), full
-  gate + artifact drift.
+  seed-42 keystone refrozen.
+- Chronicle, retrospective (including the crowding→predation reframe and the six-pass ideonomy
+  pivot), book freshness sweep, Confidence Gradient re-score (the SOC bet moves), registry flip
+  (SOC-criticality → elaborated/slice-1 with the measured result), full gate + artifact drift.
+
+## 11. What is salvaged from the falsified first design
+
+The falsified crowding build (commits through `f8f52397` on this branch) is **not discarded** —
+its infrastructure is exactly what this model needs: `nearest_occupied` (raid-target finder),
+`relocate` (the roll-downhill recursion), the `BakeCensus` cascade histogram, `history_for` (the
+measurement entry point), and the gate scaffolding all carry forward. What changes is the raid
+**trigger** (crowding/no-vacant → value × covetousness) and the raid **decision** (displace-only-
+when-forced → prey-on-the-weaker-for-gain), plus the two dissipations (lossy war, viable-minimum
+death). The plan will edit forward from the current branch state, not revert it.
