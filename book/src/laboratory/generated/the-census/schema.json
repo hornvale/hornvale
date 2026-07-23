@@ -414,6 +414,54 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with a cave (The Lode, spec §5; MAP-10's lab candidate)",
+      "kind": "numeric",
+      "name": "cave-fraction",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with an ore deposit (The Lode, spec §5)",
+      "kind": "numeric",
+      "name": "deposit-density",
+      "rung": "terrain"
+    },
+    {
+      "doc": "The most common land ore commodity by cell count (The Lode, spec §5); Absent where no land cell has a deposit",
+      "kind": "categorical",
+      "name": "dominant-commodity",
+      "rung": "terrain"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.1,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Mean ore grade [0,1] over land cells with a deposit (The Lode, spec §5); 0.0 where no land cell has a deposit",
+      "kind": "numeric",
+      "name": "mean-ore-grade",
+      "rung": "terrain"
+    },
+    {
       "doc": "The most common land biome by cell count, kebab-case",
       "kind": "categorical",
       "name": "dominant-land-biome",
@@ -1887,7 +1935,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x49288b1a592a2a8b"
+    "fnv1a64": "0x5de8a0afd9627350"
   },
   "schema_version": 1,
   "study": {
