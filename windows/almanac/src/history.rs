@@ -162,6 +162,23 @@ struct Layer {
 /// ledger's `is-occupation` index and keeps only those whose `occ-site`
 /// matches. Ordered by `(founded, entity-id)` via `f64::total_cmp` — total and
 /// deterministic.
+///
+/// The Vestige (Task 1) lifted this exact decode into
+/// `windows/worldgen::history_emit::{occupation_records, occupations_at}` so
+/// a future consumer (the Vestige layer itself) doesn't have to re-derive it.
+/// This window's copy stays independent rather than delegating to that
+/// lifted version: `hornvale-worldgen` already depends on `hornvale-almanac`
+/// (it reuses this window's prose renderers — `render_diurnal_range_line`,
+/// `render_weather_line`, `render_life_history_line`, the pantheon-block
+/// types — when assembling its own reports), so `almanac -> worldgen` would
+/// close a dependency cycle (confirmed: `cargo check -p hornvale-almanac`
+/// reports "cyclic package dependency" the moment that edge is added). If
+/// this duplication is ever worth removing, it needs a decision to invert or
+/// break the existing `worldgen -> almanac` edge first — out of scope here.
+/// The two decoders are kept in lockstep by copying verbatim in both
+/// directions and by `windows/worldgen/tests/history_emit.rs`'s
+/// `occupation_records_round_trip_every_committed_field`, which checks the
+/// lifted decoder against every `Value` shape `emit_history` commits.
 fn layers_at(world: &World, site: CellId) -> Vec<Layer> {
     let mut layers: Vec<Layer> = world
         .ledger
