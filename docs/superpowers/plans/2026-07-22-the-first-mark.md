@@ -4,7 +4,7 @@
 
 **Goal:** A player possessing an agent can commit a consequential act that biases a latent NPC tension past its threshold, watch the consequence fire a tick later, persist that mark to a saved world, and trace the consequence back to their own hand.
 
-**Architecture:** Extend `windows/vessel` so the possess session commits the *first player-authored facts* (an opposed `provoke`/`soothe` disposition vocabulary) into its already-owned ledger clone. Those facts feed an **additive, threshold-gated** term into one existing NPC drive (`liveness.rs`, the `>= act` seam), so an unplayed world is byte-identical by construction. On the next `wait` tick the tipped drive commits its discrete consequence. `possess --out` saves the evolved `World`; `why`/`recount` (which already renders provenance) is the butterfly-reader.
+**Architecture:** Extend `windows/vessel` so the possess session commits the *first player-authored facts* (an opposed `provoke`/`soothe` disposition vocabulary) into its already-owned ledger clone. Those facts accumulate as an NPC's **grievance toward the player** (a pure additive fold, gated at a fixed hostility threshold — decision-ledger #6, direct social consequence), so an un-provoked NPC has grievance 0 and an unplayed world is byte-identical by construction. On the next `wait` tick an NPC past the threshold commits a discrete, idempotent `turned-hostile` consequence. `possess --out` saves the evolved `World`; `why`/`recount` (which already renders provenance) is the butterfly-reader.
 
 **Tech Stack:** Rust 2024, std-only (serde + serde_json). Randomness via the kernel `Seed`/`Stream`. No new crates.
 
@@ -13,7 +13,7 @@
 Copied verbatim from the spec and the crate contracts; every task's requirements implicitly include these:
 
 - **A player mark is an ordinary fact in the world's own vocabulary.** No player-only *storage*; player facts are `Fact`s distinguished only by their existing `provenance: String` field (e.g. `"player: provoke"`). No change to the `Fact` envelope.
-- **Presence biases latent tensions; never manufactures them.** The bias is an **additive** term on an existing drive, **gated at the existing `act` threshold**. No player fact → zero added term → **byte-identical** arbitration.
+- **Direct social consequence (decision-ledger #6).** The mark accumulates an NPC's **grievance toward the player** — a pure additive fold over `disposition-shift` facts, gated at a fixed `HOSTILITY_THRESHOLD`. It does NOT tip an ambient drive (a world at rest has no latent ambient tension; "bias not manufacture" governs *ambient* drama, deferred). No player fact → grievance 0 → **byte-identical** to an unplayed world. The homeostatic drive arbitration (`liveness.rs`) is left untouched.
 - **Byte-identity contract:** seed 42 with no act verb used must leave every committed artifact byte-identical to `main` (drift check). New predicates are additive (safe, like a new stream label); registered in the session's registry extension exactly as `AGENT_AT` already is (`session.rs:90`).
 - **Determinism / Lorenz guard-rail:** the forward step commits a **discrete** fact (quantized at emit via `Ledger::commit`); reload re-derives from the fact trace, never from a quantized float checkpoint. Never seed a forward-integrator from persisted floats.
 - **No `HashMap`/`HashSet`** (`BTreeMap`/`BTreeSet`/`Vec` only); **no wall-clock time**. Every `pub` item carries a one-line doc comment and, if it exposes a primitive at a boundary, a `type-audit:` tag.
@@ -24,7 +24,7 @@ Copied verbatim from the spec and the crate contracts; every task's requirements
 ## File Structure
 
 - `windows/vessel/src/session.rs` — the verb loop. Add `provoke`/`soothe` verbs, register the disposition predicate, expose the final ledger+registry for persistence. *(modify)*
-- `windows/vessel/src/liveness.rs` — the drive layer. Add the additive, threshold-gated bias term sourced from player disposition facts. *(modify)*
+- `windows/vessel/src/session.rs` — the grievance fold + hostility gate + the `wait`-tick firing (direct social consequence). The homeostatic drive layer (`liveness.rs`) is left untouched. *(the grievance fold may live here or in a small helper module — follow the existing fold pattern)*
 - `windows/vessel/src/lib.rs` — the run driver; may need to surface the played `World`. *(modify)*
 - `cli/src/main.rs` — `cmd_possess` gains `--out` to save the played world. *(modify)*
 - `windows/vessel/tests/possession_moves.rs` — existing possession test file; add act/bias/consequence/persistence/why tests. *(modify)*
@@ -163,88 +163,106 @@ git commit -m "feat(vessel): the first player-authored fact (provoke/soothe disp
 
 ---
 
-## Task 2: The additive, threshold-gated bias
+## Task 2: The grievance fold + hostility gate
 
 **Files:**
-- Modify: `windows/vessel/src/liveness.rs` (the drive value used against the `>= act` seek threshold, `:136`–`:159`)
+- Modify: `windows/vessel/src/session.rs` (a pure grievance fold + a threshold accessor)
 - Test: `windows/vessel/tests/possession_moves.rs`
 
-**Interfaces:**
-- Consumes: the drive value in `[0, 1]` and its `act` threshold (`liveness.rs:154`); the session ledger (to read `DISPOSITION_SHIFT` facts about an NPC); `Ledger::find` / `facts_about`.
-- Produces: a pure helper `fn disposition_bias(ledger: &Ledger, npc: EntityId) -> f64` returning the net signed player pressure (Σ of `disposition-shift` objects, scaled), and its addition into the arbitrated drive **before** the `>= act` comparison.
+**Mechanic (owner decision, decision-ledger #6 — direct social consequence):** the mark does NOT tip an ambient drive. Antagonizing an NPC accumulates *their grievance toward the player* (Σ of that NPC's `disposition-shift` objects). When grievance reaches a fixed hostility threshold, the NPC is hostile. An un-provoked NPC has grievance 0 — byte-identical to an unplayed world by construction. There is **no seed-42 drive calibration**; the threshold is a game-design constant.
 
-- [ ] **Step 1: Write the failing test (bias tips a latent drive, not a cold one)**
+**Interfaces:**
+- Consumes: Task 1's `DISPOSITION_SHIFT` facts (object `+1.0` provoke / `-1.0` soothe, one per NPC per day per direction); `Ledger::facts_about(entity)` / `find`; the co-located-NPC lookup `colocated_npc` (added in Task 1); `Npc.entity` (EntityId), `Npc.label`.
+- Produces:
+  - `pub(crate) fn grievance(ledger: &hornvale_kernel::Ledger, npc: EntityId) -> f64` — the net signed player pressure on `npc` (Σ `disposition-shift` `Value::Number` objects × `GRIEVANCE_GAIN`).
+  - `pub const GRIEVANCE_GAIN: f64 = 1.0;` and `pub const HOSTILITY_THRESHOLD: f64 = 3.0;` (three net provokes, across three days, turns a neutral NPC hostile).
+  - `pub(crate) fn would_turn_hostile(&self, who: &str) -> bool` on `Session` — `grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD` for the named co-located NPC.
+
+- [ ] **Step 1: Write the failing test**
 
 ```rust
-// windows/vessel/tests/possession_moves.rs
+// windows/vessel/tests/possession_moves.rs  (use the real helpers: Session::start, world())
 #[test]
-fn provoke_tips_a_latent_drive_but_not_a_cold_one() {
-    // A latent NPC: its danger/aggression drive sits just below `act`.
-    let world = test_world(42);
-    // cold case: provoke an NPC whose drive is far from threshold -> no firing
-    let mut cold = Session::possess(&world, 0.0);
-    cold.handle("provoke stranger"); // choose a cold NPC by name/helper
-    assert!(!cold.drive_would_fire("stranger"), "a cold drive stays below act");
+fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
+    let w = world();
+    // An un-provoked NPC is never hostile (grievance 0).
+    let mut a = Session::start(&w, 0.0);
+    assert!(!a.would_turn_hostile("<npc-label>"), "un-provoked NPC is neutral");
 
-    // latent case: provoke the near-threshold NPC -> fires
-    let mut hot = Session::possess(&world, 0.0);
-    hot.handle("provoke sentry"); // the seeded near-threshold NPC
-    assert!(hot.drive_would_fire("sentry"), "provoke tips a latent drive past act");
+    // Provoking across three days climbs grievance past the threshold.
+    let mut b = Session::start(&w, 0.0);
+    b.handle("provoke <npc-label>"); // day 0: grievance 1
+    b.handle("wait");
+    b.handle("provoke <npc-label>"); // day 1: grievance 2
+    b.handle("wait");
+    assert!(!b.would_turn_hostile("<npc-label>"), "two provokes is below threshold");
+    b.handle("provoke <npc-label>"); // day 2: grievance 3
+    assert!(b.would_turn_hostile("<npc-label>"), "three provokes crosses the threshold");
+
+    // soothe pulls back below the threshold (intent vs outcome).
+    b.handle("wait");
+    b.handle("soothe <npc-label>"); // day 3: grievance 2
+    assert!(!b.would_turn_hostile("<npc-label>"), "soothe pulls the NPC back below hostile");
 }
 ```
 
-`drive_would_fire(name)` is a **test-only** accessor (behind `#[cfg(test)]` or a `pub(crate)` used by the test) that returns whether the arbitrated drive (with bias) is `>= act` for the named co-located NPC. It exists to make the threshold observable; production code reads the same value.
+Replace `<npc-label>` with a real co-located settled NPC's label — discover it by reading how `possession_moves.rs` already names NPCs (or add a one-line probe: print `session.npc_labels()` — reuse an existing accessor if present, else read `derive_npcs`). Pick one the possessed agent is co-located with at day 0 so `provoke` resolves without moving.
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `cargo test -p hornvale-vessel --test possession_moves provoke_tips`
-Expected: FAIL — no bias term, no `drive_would_fire`.
+Run: `cargo test -p hornvale-vessel --test possession_moves grievance_accumulates` (timeout 3600000)
+Expected: FAIL — no `grievance` / `would_turn_hostile`.
 
-- [ ] **Step 3: Add the additive bias helper**
+- [ ] **Step 3: Implement the fold + gate**
 
 ```rust
-/// The net player pressure on `npc`, folded from committed disposition-shift
-/// facts (The First Mark). Additive and bounded: each provoke/soothe nudges
-/// the target drive by `DISPOSITION_GAIN`; with no player facts this is 0.0,
-/// so arbitration is byte-identical to an unplayed world by construction.
-pub(crate) fn disposition_bias(ledger: &Ledger, npc: EntityId) -> f64 {
-    let net: f64 = ledger
+/// How hard one provoke/soothe leans on an NPC's grievance toward the player.
+pub const GRIEVANCE_GAIN: f64 = 1.0;
+/// Net grievance at which a neutral NPC turns hostile toward the player —
+/// three net provokes (one per day, so three days of antagonism). A
+/// game-design constant, not an empirical drive value.
+pub const HOSTILITY_THRESHOLD: f64 = 3.0;
+
+/// An NPC's grievance toward the possessing player: the additive fold over
+/// their committed `disposition-shift` facts (The First Mark, direct social
+/// consequence). Zero with no player facts, so an unplayed world is
+/// byte-identical by construction.
+pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
+    ledger
         .facts_about(npc)
-        .filter(|f| f.predicate == crate::session::DISPOSITION_SHIFT)
+        .filter(|f| f.predicate == DISPOSITION_SHIFT)
         .map(|f| match f.object { Value::Number(n) => n, _ => 0.0 })
-        .sum();
-    net * DISPOSITION_GAIN
+        .sum::<f64>()
+        * GRIEVANCE_GAIN
 }
-
-/// How hard one provoke/soothe leans on a drive. Tuned so a *single* act
-/// tips a drive already within one gain-step of `act` (a latent tension) and
-/// leaves a cold drive (far below `act`) below it — bias, not manufacture.
-pub(crate) const DISPOSITION_GAIN: f64 = /* set in Step 4 against the seed-42 seam */ 0.15;
 ```
-
-At the seek-threshold comparison (`liveness.rs:154`, `drive >= act`), add the bias to the drive value being compared for the aggression/danger axis the consequence rides:
 
 ```rust
-let biased = (drive + disposition_bias(ledger, npc.id)).clamp(0.0, 1.0);
-let fires = biased >= act;
+/// Would the named co-located NPC be hostile to the player right now
+/// (grievance at or past `HOSTILITY_THRESHOLD`)?
+pub(crate) fn would_turn_hostile(&self, who: &str) -> bool {
+    self.colocated_npc(who)
+        .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
+        .unwrap_or(false)
+}
 ```
 
-- [ ] **Step 4: Calibrate `DISPOSITION_GAIN` against seed 42 and run**
+Place `grievance` where the session's other pure folds live (or in `liveness.rs` if that is where such folds belong — follow the existing pattern); keep `would_turn_hostile` on `Session`.
 
-Inspect the danger/aggression drive values of the seeded NPCs at day 0 (add a temporary `eprintln!` or a throwaway test) to find one NPC within one gain-step of `act` (the "sentry", latent) and one far below (the "stranger", cold). Set `DISPOSITION_GAIN` (and, if needed, pick which named NPCs the test targets) so the latent one crosses on a single `provoke` and the cold one does not. This is the "soft clay" of the slice; document the chosen values in the const's doc comment.
+- [ ] **Step 4: Run to verify it passes**
 
-Run: `cargo test -p hornvale-vessel --test possession_moves provoke_tips`
+Run: `cargo test -p hornvale-vessel --test possession_moves grievance_accumulates`
 Expected: PASS.
 
-- [ ] **Step 5: Byte-identity property — no player fact, identical arbitration**
+- [ ] **Step 5: Byte-identity — un-provoked grievance is exactly zero**
 
 ```rust
 #[test]
-fn no_disposition_fact_means_zero_bias() {
-    let world = test_world(42);
-    let s = Session::possess(&world, 0.0);
-    for npc in s.npc_ids() { // pub(crate)/test accessor listing NPC entity ids
-        assert_eq!(hornvale_vessel::liveness::disposition_bias(s.ledger_ref(), npc), 0.0);
+fn unprovoked_npcs_have_zero_grievance() {
+    let w = world();
+    let s = Session::start(&w, 0.0);
+    for npc in s.npc_entities() { // reuse/add a pub(crate) accessor listing NPC EntityIds
+        assert_eq!(hornvale_vessel::session::grievance(s.ledger_ref(), npc), 0.0);
     }
 }
 ```
@@ -255,71 +273,91 @@ Expected: PASS.
 - [ ] **Step 6: fmt + commit**
 
 ```bash
-cargo fmt
-git add windows/vessel/src/liveness.rs windows/vessel/tests/possession_moves.rs
-git commit -m "feat(vessel): additive, threshold-gated disposition bias (bias not manufacture)"
+cargo fmt && cargo clippy -p hornvale-vessel --all-targets -- -D warnings
+git add windows/vessel/src/session.rs windows/vessel/tests/possession_moves.rs
+git commit -m "feat(vessel): grievance fold + hostility gate (direct social consequence)"
 ```
 
 ---
 
-## Task 3: The consequence fires (one-hop forward integration)
+## Task 3: The hostile act fires (one-hop forward integration)
 
 **Files:**
-- Modify: `windows/vessel/src/session.rs` (the `wait` tick path, `:336`–`:389`), `windows/vessel/src/liveness.rs` (the tick that commits the fired consequence)
+- Modify: `windows/vessel/src/session.rs` (the `wait` tick path, `:336`–`:389`)
 - Test: `windows/vessel/tests/the_first_mark.rs` *(create)*
 
 **Interfaces:**
-- Consumes: `wait`'s NPC tick (`DriveMovements`, `session.rs:338`); the biased `fires` flag from Task 2.
-- Produces: when a biased drive fires, the tick commits its **discrete** consequence fact (the drive's existing action — e.g. an `agent-at` move toward the player, or the drive's `act` outcome) with a provenance that names the player cause, e.g. `"drive:danger (player-provoked)"`.
+- Consumes: `grievance` / `HOSTILITY_THRESHOLD` (Task 2); the `wait` tick (`session.rs:338`); the possessed agent's own `EntityId` (the target the NPC turns hostile *toward*).
+- Produces:
+  - A registered **functional** predicate `pub const TURNED_HOSTILE: &str = "turned-hostile";` (an NPC turns hostile once; functional per subject → idempotent), registered beside `DISPOSITION_SHIFT`.
+  - On the `wait` tick: any co-located NPC whose `grievance >= HOSTILITY_THRESHOLD` and who has no existing `turned-hostile` fact commits one — `subject = npc.entity`, `object = Value::Entity(<possessed agent id>)`, `provenance = "player-provoked"`, `day = Some(self.day.day)`.
+  - `pub fn committed_hostility_count(&self) -> usize` (mirrors `committed_disposition_count`).
 
 - [ ] **Step 1: Write the failing end-to-end test**
 
 ```rust
-// windows/vessel/tests/the_first_mark.rs  (new file)
+// windows/vessel/tests/the_first_mark.rs  (new)
 use hornvale_vessel::{Session, Turn};
-mod common; // reuse test_world if factored; else inline build_world(Seed(42), ..)
+mod common; // provide `world()` (reuse possession_moves' helper pattern; inline build if simpler)
 
 #[test]
-fn provoke_then_wait_fires_a_consequence_that_would_not_fire_unprovoked() {
-    let world = common::test_world(42);
+fn provoked_npc_turns_hostile_on_the_next_wait_but_an_unprovoked_one_does_not() {
+    let w = common::world();
 
-    // control: wait without provoking -> the latent drive does NOT fire
-    let mut control = Session::possess(&world, 0.0);
-    control.handle("wait");
-    let control_consequences = control.committed_consequence_count();
+    // control: only waits, never provokes -> no hostility
+    let mut control = Session::start(&w, 0.0);
+    for _ in 0..4 { control.handle("wait"); }
+    assert_eq!(control.committed_hostility_count(), 0, "no provocation, no hostility");
 
-    // treatment: provoke the latent NPC, then wait -> it DOES fire
-    let mut treat = Session::possess(&world, 0.0);
-    treat.handle("provoke sentry");
+    // treatment: antagonize across three days, then wait -> the NPC turns hostile
+    let mut treat = Session::start(&w, 0.0);
+    treat.handle("provoke <npc-label>");
     treat.handle("wait");
-    let treat_consequences = treat.committed_consequence_count();
-
-    assert!(treat_consequences > control_consequences,
-        "the provoked latent tension fired a consequence the control did not");
+    treat.handle("provoke <npc-label>");
+    treat.handle("wait");
+    treat.handle("provoke <npc-label>");
+    treat.handle("wait"); // grievance 3 crosses threshold; the tick fires the consequence
+    assert_eq!(treat.committed_hostility_count(), 1, "the provoked NPC turned hostile");
 }
 ```
-
-`committed_consequence_count()` counts the consequence facts (e.g. `agent-at` facts tagged with the player-provoked provenance, or the drive's action predicate). Add it beside `committed_agent_at_count` (`session.rs:173`).
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `cargo test -p hornvale-vessel --test the_first_mark`
-Expected: FAIL — the consequence path isn't wired / accessor missing.
+Run: `cargo test -p hornvale-vessel --test the_first_mark` (timeout 3600000)
+Expected: FAIL — no `turned-hostile` firing / accessor.
 
-- [ ] **Step 3: Wire the firing into the tick**
+- [ ] **Step 3: Register the predicate and fire it on the tick**
 
-In the drive tick, when `fires` is true *because of* the bias (i.e. `biased >= act` while `drive < act`), commit the drive's existing action outcome and stamp its provenance to record the player cause:
+Register in `Session::start` beside `DISPOSITION_SHIFT`:
 
 ```rust
-let provoked = drive < act && biased >= act;
-if fires {
-    // ... existing action commit (the agent-at move / act outcome) ...
-    let provenance = if provoked { "drive:danger (player-provoked)" } else { "drive:danger" };
-    // use `provenance` on the committed consequence Fact
+registry.register_predicate(TURNED_HOSTILE, true, "an NPC turned hostile toward the possessing player");
+```
+
+In the `wait` handler, after the existing NPC drive tick, fold the firing in:
+
+```rust
+// The First Mark: a grievance past the hostility threshold fires a discrete,
+// idempotent hostile-act consequence (functional predicate → commits once).
+let player = self.agent_entity(); // the possessed agent's EntityId
+for npc in self.npcs.iter() {
+    if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
+        && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
+    {
+        let fact = Fact {
+            subject: npc.entity,
+            predicate: TURNED_HOSTILE.to_string(),
+            object: Value::Entity(player),
+            place: None,
+            day: Some(self.day.day),
+            provenance: "player-provoked".to_string(),
+        };
+        self.ledger.commit(fact, &self.registry).expect("turned-hostile is registered and finite");
+    }
 }
 ```
 
-Keep the consequence **discrete** (one committed fact), quantized at emit by `Ledger::commit`. No continuous chaotic state is checkpointed.
+Adapt `self.agent_entity()` / `self.npcs` to the real field/accessor names in `session.rs` (the possessed agent and the NPC list already exist). Keep the firing **discrete** and **idempotent** (the functional predicate + the `value_of` guard).
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -331,13 +369,14 @@ Expected: PASS.
 ```rust
 #[test]
 fn same_action_trace_is_byte_identical() {
-    let world = common::test_world(42);
+    let w = common::world();
     let run = |script: &[&str]| {
-        let mut s = Session::possess(&world, 0.0);
+        let mut s = Session::start(&w, 0.0);
         for line in script { s.handle(line); }
         s.session_ledger_json()
     };
-    let script = ["provoke sentry", "wait", "wait"];
+    let script = ["provoke <npc-label>", "wait", "provoke <npc-label>", "wait",
+                  "provoke <npc-label>", "wait"];
     assert_eq!(run(&script), run(&script), "same seed + same trace -> identical ledger");
 }
 ```
@@ -348,9 +387,9 @@ Expected: PASS.
 - [ ] **Step 6: fmt + commit**
 
 ```bash
-cargo fmt
-git add windows/vessel/src/session.rs windows/vessel/src/liveness.rs windows/vessel/tests/the_first_mark.rs
-git commit -m "feat(vessel): a provoked latent tension fires a consequence (one-hop integration)"
+cargo fmt && cargo clippy -p hornvale-vessel --all-targets -- -D warnings
+git add windows/vessel/src/session.rs windows/vessel/tests/the_first_mark.rs
+git commit -m "feat(vessel): a grieved NPC turns hostile on the next wait (one-hop consequence)"
 ```
 
 ---

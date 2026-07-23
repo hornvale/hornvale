@@ -56,15 +56,25 @@ ideonomy convergence (decision-ledger #2).
    query any tool could make. A player-authored fact is *just a fact*,
    contradiction-checked against the same registry.
 
-2. **Presence biases latent tensions; it never manufactures them.** The
-   bugbear troop was already hungry and already near the village in the
-   prior; the player's arrival *raises the probability that an already-loaded
-   tension fires*, and hands them the controls while it does. It never spawns
-   a tension that was not latent. Mechanically this is the **additive,
-   threshold-gated** shape of the additive-latent byte-identity pattern: the
-   bias is an additive signal on an existing latent quantity, gated at a
-   threshold, so a world with no player action is **unchanged by
-   construction**. (See *Determinism*.)
+2. **The invariant "bias latent tensions, never manufacture them" governs
+   *ambient* drama — and the slice's consequence is *direct social*, which is
+   a different, legitimate channel.** (Owner decision 2026-07-22, decision-
+   ledger #6, after the day-0 seed-42 world proved to have *no* latent ambient
+   tension to tip.) Two channels:
+   - **Ambient** (deferred): the bugbear troop was already hungry and near the
+     village; presence only *raises the probability an already-loaded tension
+     fires*, never spawns one. This is the "bias not manufacture" rule — it
+     protects the world's *self-generated* drama from being faked.
+   - **Direct social** (this slice): antagonizing an NPC accumulates *their
+     grievance toward the player* until they act on it. This is not forbidden
+     "manufacture" — it is the player's own direct social causation ("you can
+     irritate people / upset the local balance", the founding brainstorm),
+     the purest case of presence-induces-forward-integration: **nothing
+     evolves without the player**, so an un-provoked NPC is **byte-identical
+     by construction** (zero player facts → zero grievance). Mechanically
+     still the **additive, threshold-gated** shape (Σ disposition-shift facts,
+     gated at a hostility threshold), but the accumulated quantity is
+     player-authored, not an ambient drive.
 
 3. **Irreversibility within a life.** The mark, once made, does not undo.
    Permanence is the mechanic. (No in-session undo of committed facts.)
@@ -99,12 +109,14 @@ who leaves marks. The loop:
    working names `provoke` / `soothe` — each committing **one ordinary fact**
    (an affect/disposition shift on that NPC) into the session-owned ledger.
    This is the **first player-authored fact**.
-3. **The bubble integrates.** The player's committed fact feeds an
-   **additive, threshold-gated bias** on one already-latent NPC tension
-   (e.g. an aggression or flight drive already near its threshold in the
-   prior). If the bias tips it past threshold, the tension **fires** and
-   commits its own discrete consequence fact on the next `wait` tick —
-   forward integration, one hop.
+3. **The bubble integrates.** Each disposition-shift fact adds to the NPC's
+   **grievance toward the player** (`grievance(npc) = Σ disposition-shift
+   objects × gain`, accumulating across days — one shift per NPC per day per
+   direction, so repeated antagonism *over waits* climbs). When grievance
+   crosses a **hostility threshold**, the NPC's disposition turns hostile and
+   they commit a discrete **hostile-act** consequence fact on the next `wait`
+   tick — forward integration, one hop. An un-provoked NPC has grievance 0 and
+   never turns: the consequence is 100% the player's own social wake.
 4. **Release.** The mark **persists**: the player-authored facts and the
    consequence they triggered survive being put down and picked back up
    (reload). *(How persistence is stored is the campaign's central
@@ -114,10 +126,10 @@ who leaves marks. The loop:
    `player act → bias → threshold crossing → consequence`, rendered as
    diegetic recounting by the historiography window.
 
-Success = a player, in one sitting, can provoke an NPC, watch a latent
-tension fire a hop later *because* of it, put the world down, pick it back
-up with the mark intact, and trace the whole causal chain back to their own
-deed.
+Success = a player, in one sitting, can antagonize an NPC across a few waits,
+watch that NPC turn hostile and act *because* of it, put the world down, pick
+it back up with the mark intact, and trace the whole causal chain back to
+their own deed.
 
 ## Components
 
@@ -126,13 +138,17 @@ deed.
   commits a single disposition-shift fact into the session-owned ledger
   (`session.rs:60`, `:89`). This is the seam `session.rs:517`–`:520` reserves.
 
-- **The bias + firing seam (`domains` drive layer + `windows/vessel`).** The
-  NPC drive tick (`DriveMovements`, `liveness.rs`) already arbitrates
-  homeostatic drives against fields and commits `agent-at` divergences. Add
-  an **additive term** to one drive's pressure sourced from the player's
-  disposition-shift facts, **gated at the existing decision threshold**. No
-  player fact → zero added term → identical arbitration (byte-identity by
-  construction — the Alarm/Wilding lineage of the additive-latent pattern).
+- **The grievance + hostility seam (`windows/vessel`).** A pure fold
+  `grievance(ledger, npc) = Σ (disposition-shift objects) × gain`, and a
+  threshold gate: when `grievance ≥ HOSTILITY_THRESHOLD` the NPC turns
+  hostile. `HOSTILITY_THRESHOLD` is a **game-design constant** (how much net
+  antagonism turns a neutral NPC — e.g. 3 provokes), not an empirical drive
+  value, so there is no seed-42 calibration to chase. Kept standalone rather
+  than hijacking the homeostatic drive arbitration (`DriveMovements`,
+  `liveness.rs`) — simpler and lower-risk. No player fact → grievance 0 →
+  never hostile → identical to an unplayed world (the Alarm-lineage
+  additive-latent pattern at its cleanest: an empty player-fact set changes
+  nothing).
 
 - **Persistence (kernel save-format + cli).** Today the session ledger is a
   clone, never written back (`session.rs:59`); `session_ledger_json`
@@ -159,11 +175,12 @@ from quantized ledger floats; a chaotic checkpoint needs its own full-
 precision format.* This campaign stays inside the guard-rail by **keeping
 the integration shallow and discrete**:
 
-- The bias is an **additive term on an existing drive pressure**, gated at an
-  existing **threshold**. The forward step commits a **discrete** outcome
+- Grievance is an **additive fold over discrete player facts**, gated at a
+  **fixed threshold**. The forward step commits a **discrete** hostile-act
   fact (a threshold crossing), not a continuous chaotic trajectory. Discrete
   facts quantize at emit like every other fact; there is no chaotic float
-  checkpoint to preserve.
+  checkpoint to preserve. (The homeostatic drive arbitration is untouched by
+  this slice, so its chaotic dynamics never enter the player-caused path.)
 - **Re-derivation on reload replays from the fact trace, not from quantized
   state.** The player's action facts are the lossless record; the world is
   re-derived from seed + those committed facts. This respects the guard-rail
@@ -208,13 +225,13 @@ facts** in its ledger. Resolved:
 - **Determinism of the mark:** same seed + same action trace → byte-identical
   session ledger and persisted world (`committed_*_count` + serialized
   ledger).
-- **The firing is real:** a property test that the additive bias, above
-  threshold, tips a *latent* (near-threshold) tension and does nothing to a
-  cold one — proving bias-not-manufacture.
+- **The firing is real, and player-caused:** grievance accumulated past
+  `HOSTILITY_THRESHOLD` (across enough provokes over waits) turns an NPC
+  hostile and fires the consequence; an **un-provoked** NPC has grievance 0
+  and never turns — the consequence is 100% the player's own social wake, and
+  `soothe` can pull an NPC back below the threshold (intent vs outcome).
 - **Persistence round-trips:** `possess --world w --out w2`; reload `w2`; the
   mark's facts are present and `why` reconstructs the chain.
-- **Intent≠outcome exists:** at least one seed where `soothe` still tips a
-  tension the "wrong" way (the opposed vocabulary earns its keep).
 
 ## Out of scope (indexed, not lost)
 
