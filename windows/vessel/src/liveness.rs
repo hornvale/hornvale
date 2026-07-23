@@ -849,6 +849,139 @@ pub fn believed_water(
         .map(|(_, r)| r)
 }
 
+/// A memo of the PRIMARY-AFRAID emission `(entity, day) → arousal` (`0.0` when
+/// the creature's Danger drive does NOT win — no emission). The Phantom's
+/// re-derivation asks "was this emitter primary-afraid on that past day?" the
+/// same way for many creatures and many cells within a single tick; each such
+/// verdict is an `affect_of` (a full arbitration with an A* plan), so the
+/// re-derivation without a memo re-computes the SAME verdict hundreds of times.
+///
+/// The memo is APPEND-ONLY and never invalidated **within a single ledger
+/// snapshot**: over a fixed `frozen`, `affect_of(entity, day)` is a pure
+/// function, so caching it is exactly caching that function — byte-identical to
+/// the un-memoized read by construction. We therefore scope one memo to each
+/// tick (where the ledger is fixed): `DriveMovements::step` builds one over its
+/// `frozen`, and `run_simulation` (the lab's headless sim) builds one per tick
+/// for its post-tick affect reads. This collapses the dominant within-tick
+/// re-derivation to O(roster × distinct-days) while keeping the verdict provably
+/// identical to a fresh `affect_of` (day quantized to its bit pattern, which
+/// recurs exactly across the `agent-at` days that key it).
+///
+/// It also caches the per-time EMITTER SCAN — which roster members could ever
+/// raise an alarm and where, plus their position timelines — since that scan is
+/// identical for every creature's `believed_hazard` at a given time over the
+/// same fixed ledger (built once per tick instead of once per creature).
+#[derive(Default)]
+pub struct PrimaryAfraidMemo {
+    /// `(entity, day-bits) → emitted arousal` (`0.0` = not primary-afraid).
+    afraid: std::collections::BTreeMap<(EntityId, u64), f64>,
+    /// `t-day-bits → the emitter scan` over the (tick-fixed) roster and ledger.
+    scans: std::collections::BTreeMap<u64, EmitterScan>,
+}
+
+impl PrimaryAfraidMemo {
+    /// An empty memo — one per tick (the ledger is fixed there; see the type doc).
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+/// The tick-fixed scan of a roster: the members that could EVER emit an alarm
+/// (with their committed position timelines) and the union of cells any of their
+/// alarms could reach. Shared across every creature's re-derivation at one time.
+struct EmitterScan {
+    /// The ever-terrain-afraid members and their day-sorted position timelines.
+    emitters: Vec<(Npc, Vec<(f64, RoomAddr)>)>,
+    /// Every cell within one hop of some emitter's frightening position.
+    alarm_source_cells: std::collections::BTreeSet<RoomAddr>,
+}
+
+/// Scan `roster` for the members ever on terrain frightening to them (the only
+/// possible alarm emitters), building each one's day-sorted position timeline
+/// (day ≤ `t`) and the union of cells their alarms could reach. Pure over
+/// `(roster, ledger, terrain, t)`; cached per `t` in [`PrimaryAfraidMemo`].
+fn build_emitter_scan(
+    roster: &[Npc],
+    ledger: &Ledger,
+    terrain: &dyn Terrain,
+    t: WorldTime,
+) -> EmitterScan {
+    let mut emitters: Vec<(Npc, Vec<(f64, RoomAddr)>)> = Vec::new();
+    let mut alarm_source_cells: std::collections::BTreeSet<RoomAddr> =
+        std::collections::BTreeSet::new();
+    for m in roster {
+        let mettle = mettle_factor(m.boldness);
+        let frightening =
+            |room: &RoomAddr| threat_field(room, &m.threat_niche, terrain) * mettle >= DANGER_ACT;
+        let mut timeline: Vec<(f64, RoomAddr)> = ledger
+            .find(AGENT_AT)
+            .filter(|f| f.subject == m.entity)
+            .filter_map(|f| {
+                let d = f.day.filter(|d| *d <= t.day)?;
+                match &f.object {
+                    Value::Text(s) => Some((d, room_from_text(s))),
+                    _ => None,
+                }
+            })
+            .collect();
+        // Sort by day (stable: equal days keep commit order, matching
+        // `agent_position`'s last-committed-≤-day read on the monotonic timeline).
+        timeline.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut ever = false;
+        let mut note_halo = |p: &RoomAddr| {
+            alarm_source_cells.insert(p.clone());
+            for n in p.neighbors() {
+                alarm_source_cells.insert(n);
+            }
+        };
+        if frightening(&m.home) {
+            ever = true;
+            note_halo(&m.home);
+        }
+        for (_, p) in &timeline {
+            if frightening(p) {
+                ever = true;
+                note_halo(p);
+            }
+        }
+        if ever {
+            emitters.push((m.clone(), timeline));
+        }
+    }
+    EmitterScan {
+        emitters,
+        alarm_source_cells,
+    }
+}
+
+/// The arousal a roster member EMITTED as an alarm on `day` — its Danger drive's
+/// arousal if it was **primary-afraid** (`affect_of`'s object is Danger with
+/// arousal ≥ `DANGER_ACT`), else `0.0`. Memoized per `(entity, day)` over the
+/// fixed `frozen` (see [`PrimaryAfraidMemo`]); on a miss it computes the one
+/// alarm-free `affect_of` that `alarm_field` and the re-derivation share. The
+/// inner `affect_of` reads an EMPTY band, so its own `believed_hazard` is
+/// emitter-free and never re-enters this path (the recursion break).
+fn emitter_arousal(
+    afraid: &mut std::collections::BTreeMap<(EntityId, u64), f64>,
+    frozen: &Ledger,
+    npc: &Npc,
+    day: WorldTime,
+    terrain: &dyn Terrain,
+) -> f64 {
+    let key = (npc.entity, day.day.to_bits());
+    if let Some(&v) = afraid.get(&key) {
+        return v;
+    }
+    let affect = affect_of(frozen, npc, &[], day, terrain);
+    let v = if affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT {
+        affect.arousal
+    } else {
+        0.0
+    };
+    afraid.insert(key, v);
+    v
+}
+
 /// Belief (L1): the ground the creature has stood on that FRIGHTENS it — a pure
 /// fold over its committed `agent-at` history ∩ frightening-truth, the inverted
 /// twin of [`believed_water`] (a SET it plans *around*, not a target it plans
@@ -872,11 +1005,25 @@ pub fn believed_water(
 /// collapses back to any-visit — The Haunt's exact set, byte-identical.
 ///
 /// THE RECURSION BREAK: the tick passes the FULL population as `roster`;
-/// [`affect_of`] passes its `band`; and `alarm_field`'s internal `affect_of`
-/// passes `&[]` — so the alarm-field replay always sees an empty roster,
-/// terrain-only, and never re-enters the transient path. Deterministic: the
-/// most-recent verdict per cell accumulates into a `BTreeMap` (max day wins,
-/// verdict order-independent), yielded sorted.
+/// [`affect_of`] passes its `band`; and the transient re-derivation's own
+/// primary-fear read passes `&[]` — so an empty roster re-derives no alarm and
+/// never re-enters the transient path. Deterministic: the most-recent day per
+/// cell accumulates into a `BTreeMap` (max day wins), the verdict is
+/// order-independent, and the shunned set is yielded sorted.
+///
+/// # Cost — the re-derivation is cheap on the settled worlds (spec §3)
+///
+/// Naively re-deriving [`alarm_field`] per visited cell is ruinous (an A* plan
+/// per roster member per cell). Instead we precompute, ONCE, each roster
+/// member that is EVER on terrain frightening to it (the only creatures that can
+/// emit) and its committed position timeline (a `partition_point` gives its
+/// position at any past day). A cell's transient alarm is then the clamped sum
+/// of the arousals of just those emitters whose position on that day lies within
+/// the cell's one-hop halo — the SAME quantity `alarm_field` computes, but
+/// evaluated only where an emitter actually stood, so an emitter-free world
+/// (seed 42) pays nothing beyond the terrain fold. `affect_of` (to confirm an
+/// emitter's Danger drive WINS) runs only for a terrain-afraid member standing
+/// beside the very cell being judged — rare.
 pub fn believed_hazard(
     ledger: &Ledger,
     npc: &Npc,
@@ -884,30 +1031,122 @@ pub fn believed_hazard(
     terrain: &dyn Terrain,
     roster: &[Npc],
 ) -> std::collections::BTreeSet<RoomAddr> {
-    // Keep, per visited cell, the (latest-day, frightened-verdict) pair; a cell
-    // is shunned iff its LATEST visit ≤ t was frightened.
-    let mut latest: std::collections::BTreeMap<RoomAddr, (f64, bool)> =
-        std::collections::BTreeMap::new();
+    // A lone read builds its own throwaway memo (a single re-derivation gains
+    // nothing from caching); the hot sim paths thread a shared one.
+    let mut memo = PrimaryAfraidMemo::new();
+    believed_hazard_memo(ledger, npc, t, terrain, roster, &mut memo)
+}
+
+/// [`believed_hazard`] sharing a caller-owned [`PrimaryAfraidMemo`] across the
+/// many re-derivations of a single tick (the whole cost win — see the type doc).
+pub fn believed_hazard_memo(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    roster: &[Npc],
+    memo: &mut PrimaryAfraidMemo,
+) -> std::collections::BTreeSet<RoomAddr> {
+    // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
+    // visit, so a later safe visit clears an earlier phantom (the staleness rule).
+    let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
     for f in ledger.find(AGENT_AT).filter(|f| f.subject == npc.entity) {
         if let Some(fday) = f.day.filter(|d| *d <= t.day)
             && let Value::Text(s) = &f.object
         {
-            let room = room_from_text(s);
-            // Recompute only when this visit is strictly newer than the one on
-            // record (ties keep the first — the verdict is identical anyway).
-            let newer = latest.get(&room).map(|(d, _)| fday > *d).unwrap_or(true);
-            if newer {
-                let frightened =
-                    frightened_at(&room, npc, terrain, WorldTime { day: fday }, roster, ledger);
-                latest.insert(room, (fday, frightened));
-            }
+            latest
+                .entry(room_from_text(s))
+                .and_modify(|d| {
+                    if fday > *d {
+                        *d = fday;
+                    }
+                })
+                .or_insert(fday);
         }
     }
-    latest
-        .into_iter()
-        .filter(|(_, (_, frightened))| *frightened)
-        .map(|(room, _)| room)
-        .collect()
+
+    // The emitter scan (which members could ever raise an alarm, their position
+    // timelines, and the cells any alarm could reach) is IDENTICAL for every
+    // creature's re-derivation at this time over this ledger — build it once and
+    // cache it per `t` (see [`PrimaryAfraidMemo`]).
+    let tbits = t.day.to_bits();
+    memo.scans
+        .entry(tbits)
+        .or_insert_with(|| build_emitter_scan(roster, ledger, terrain, t));
+    // Disjoint field borrows: the scan (read) and the affect memo (write).
+    let PrimaryAfraidMemo { afraid, scans } = memo;
+    let scan = &scans[&tbits];
+
+    // The emitter's committed position AT `day`: the latest entry with day ≤ it,
+    // else its home (the pre-history fallback) — `agent_position` over the
+    // precomputed timeline.
+    let position_at = |m: &Npc, timeline: &[(f64, RoomAddr)], day: f64| -> RoomAddr {
+        let idx = timeline.partition_point(|(d, _)| *d <= day);
+        if idx == 0 {
+            m.home.clone()
+        } else {
+            timeline[idx - 1].1.clone()
+        }
+    };
+
+    let mut shunned: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    if scan.emitters.is_empty() {
+        // The emitter-free common case (every settled world): no transient alarm
+        // is possible, so the verdict is The Haunt's terrain-only `frightened_at`
+        // (the one source of truth for the formula). Terrain is time-invariant,
+        // so the most-recent-visit rule collapses to any-visit — byte-identical.
+        for (cell, day) in latest {
+            if frightened_at(&cell, npc, terrain, WorldTime { day }, &[], ledger) {
+                shunned.insert(cell);
+            }
+        }
+        return shunned;
+    }
+    for (cell, day) in latest {
+        let terrain_threat = threat_field(&cell, &npc.threat_niche, terrain);
+        // THE TERRAIN SHORTCUT (free win): if TERRAIN alone already frightens the
+        // creature here, the cell is shunned no matter what the alarm adds (the
+        // alarm is additive, ≥ 0), so skip the alarm re-derivation entirely. Only
+        // a terrain-BELOW-act cell can be tipped over by a remembered alarm —
+        // exactly where the phantom lives. (The most-recent-visit verdict is
+        // unchanged: a terrain-frightened latest visit still shuns.)
+        if feels_frightening(terrain_threat, 0.0, npc.boldness) {
+            shunned.insert(cell);
+            continue;
+        }
+        // The re-derived transient alarm at (cell, day): the clamped sum of the
+        // arousals of emitters primary-afraid on `day` whose position lies in the
+        // cell's one-hop halo — exactly `alarm_field(day).get(cell)`. A cell
+        // outside `alarm_source_cells` can receive no alarm at ANY day (no
+        // emitter is ever frightening within one hop of it), so it is judged
+        // terrain-only — the byte-identity pre-filter that keeps the settled
+        // worlds cheap even when a distant beast occasionally treads hazard.
+        let mut alarm = 0.0_f64;
+        if scan.alarm_source_cells.contains(&cell) {
+            let mut sources = cell.neighbors().to_vec();
+            sources.push(cell.clone());
+            for (m, timeline) in &scan.emitters {
+                let pos = position_at(m, timeline, day);
+                if !sources.contains(&pos) {
+                    continue;
+                }
+                // Necessary condition (cheap) before the expensive confirmation.
+                if threat_field(&pos, &m.threat_niche, terrain) * mettle_factor(m.boldness)
+                    < DANGER_ACT
+                {
+                    continue;
+                }
+                // Confirm the emitter's Danger drive WINS (primary-afraid) via the
+                // memoized, alarm-free `affect_of` — the same read `alarm_field`
+                // performs, cached per `(emitter, day)` over this fixed ledger.
+                alarm += emitter_arousal(afraid, ledger, m, WorldTime { day }, terrain);
+            }
+        }
+        if feels_frightening(terrain_threat, alarm.clamp(0.0, 1.0), npc.boldness) {
+            shunned.insert(cell);
+        }
+    }
+    shunned
 }
 
 /// The BAND's water belief for `npc` (The Tidings; anchoring split per
@@ -1924,10 +2163,21 @@ fn frightened_at(
     roster: &[Npc],
     frozen: &Ledger,
 ) -> bool {
-    let transient = ALARM_SCALE * alarm_at(room, day, roster, terrain, frozen);
-    ((threat_field(room, &npc.threat_niche, terrain) + transient) * mettle_factor(npc.boldness))
-        .clamp(0.0, 1.0)
-        >= DANGER_ACT
+    feels_frightening(
+        threat_field(room, &npc.threat_niche, terrain),
+        alarm_at(room, day, roster, terrain, frozen),
+        npc.boldness,
+    )
+}
+
+/// The felt-threat verdict — `(terrain_threat + ALARM_SCALE·alarm) ×
+/// mettle_factor ≥ DANGER_ACT`, clamped. The ONE formula [`frightened_at`] and
+/// [`believed_hazard`]'s fast path share, so the memory and the live Danger
+/// drive never disagree about what ground is frightening. `alarm` is the already
+/// clamped alarm-field value at the cell (`0.0` for terrain-only).
+/// type-audit: bare-ok(ratio: terrain_threat), bare-ok(ratio: alarm), bare-ok(ratio: boldness)
+fn feels_frightening(terrain_threat: f64, alarm: f64, boldness: f64) -> bool {
+    ((terrain_threat + ALARM_SCALE * alarm) * mettle_factor(boldness)).clamp(0.0, 1.0) >= DANGER_ACT
 }
 
 impl<'a> Danger<'a> {
@@ -2454,6 +2704,22 @@ pub fn affect_of(
     day: WorldTime,
     terrain: &dyn Terrain,
 ) -> Affect {
+    let mut memo = PrimaryAfraidMemo::new();
+    affect_of_memo(frozen, npc, band, day, terrain, &mut memo)
+}
+
+/// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
+/// headless sim, whose per-tick affect reads over one post-tick ledger fold the
+/// SAME emitters' primary-fear across every creature; the memo collapses those
+/// re-derivations to one `affect_of` per `(emitter, day)`.
+pub fn affect_of_memo(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    day: WorldTime,
+    terrain: &dyn Terrain,
+    memo: &mut PrimaryAfraidMemo,
+) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
         .find(DRANK)
@@ -2478,7 +2744,7 @@ pub fn affect_of(
     // frightened creature ⇒ byte-identical). The roster is this call's `band`;
     // `alarm_field` invokes `affect_of` with `band = &[]`, so its replay reads
     // a terrain-only memory and the transient re-derivation never recurses.
-    let believed_hazard = believed_hazard(frozen, npc, day, terrain, band);
+    let believed_hazard = believed_hazard_memo(frozen, npc, day, terrain, band, memo);
     let view = Perceived {
         position: pos,
         drive,
@@ -2602,26 +2868,52 @@ pub fn alarm_field(
     terrain: &dyn Terrain,
     day: WorldTime,
 ) -> std::collections::BTreeMap<RoomAddr, f64> {
+    let mut memo = PrimaryAfraidMemo::new();
+    alarm_field_memo(frozen, npcs, terrain, day, &mut memo)
+}
+
+/// [`alarm_field`] sharing a caller-owned [`PrimaryAfraidMemo`] so its
+/// primary-afraid reads coincide with the tick's re-derivation reads over the
+/// same `frozen` — one `affect_of` per `(emitter, day)` for the whole tick.
+/// type-audit: bare-ok(ratio: return)
+pub fn alarm_field_memo(
+    frozen: &Ledger,
+    npcs: &[Npc],
+    terrain: &dyn Terrain,
+    day: WorldTime,
+    memo: &mut PrimaryAfraidMemo,
+) -> std::collections::BTreeMap<RoomAddr, f64> {
     let mut field: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
     for npc in npcs {
-        // The ALARM-FREE read (the build invariant): `affect_of` senses only the
-        // terrain hazards, never borrowed alarm — so emission is terrain-sourced
-        // by construction and the wave terminates.
+        let pos = agent_position(frozen, npc, day);
+        // THE CHEAP GATE (The Phantom perf, byte-identical). A creature can be
+        // primary-afraid ONLY if its OWN terrain threat there crosses act — the
+        // alarm-free Danger urgency is `threat_field × mettle_factor`, and
+        // `object == Danger` requires it ≥ act. So a creature on safe ground can
+        // never be an emitter; skip the EXPENSIVE `affect_of` (full arbitration,
+        // an A* plan-home) for it. This is a NECESSARY condition, not the
+        // decision — a terrain-afraid creature still goes through `affect_of`
+        // below to confirm Danger WINS. It is what keeps the re-derived transient
+        // memory (`believed_hazard` folds this per visited cell) cheap on the
+        // emitter-free common case: no hazard underfoot ⇒ no `affect_of` at all.
+        if threat_field(&pos, &npc.threat_niche, terrain) * mettle_factor(npc.boldness) < DANGER_ACT
+        {
+            continue;
+        }
+        // The ALARM-FREE, memoized primary-afraid read (the build invariant):
+        // `affect_of` senses only the terrain hazards, never borrowed alarm — so
+        // emission is terrain-sourced by construction and the wave terminates.
         // The Tidings: an EMPTY band — the field reads each creature's intrinsic
-        // affect (its own home-anchored belief), not band-shared belief.
-        // Belief-sharing is orthogonal to terrain-fear emission, and `&[]`
-        // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly, so
-        // the alarm field is unchanged by this campaign.
-        let affect = affect_of(frozen, npc, &[], day, terrain);
-        let primary_afraid =
-            affect.object == Some(DriveKind::Danger) && affect.arousal >= DANGER_ACT;
-        if !primary_afraid {
+        // affect (its own home-anchored belief), not band-shared belief. `&[]`
+        // reproduces `affect_of`'s pre-Tidings (bandless) behaviour exactly.
+        // `magnitude` is the emitter's Danger arousal, or `0.0` when it is not
+        // primary-afraid (no emission).
+        let magnitude = emitter_arousal(&mut memo.afraid, frozen, npc, day, terrain);
+        if magnitude <= 0.0 {
             continue;
         }
         // Stamp the emitter's felt-threat magnitude on its cell and the one-hop
         // halo (its three edge-neighbours), accumulating across emitters.
-        let magnitude = affect.arousal;
-        let pos = agent_position(frozen, npc, day);
         *field.entry(pos.clone()).or_insert(0.0) += magnitude;
         for n in pos.neighbors() {
             *field.entry(n).or_insert(0.0) += magnitude;
@@ -2742,12 +3034,24 @@ impl<'a> TickSystem for DriveMovements<'a> {
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         let mut out: Vec<Fact> = Vec::new();
+        // One primary-afraid memo for the whole step: `frozen` is fixed here, so
+        // every emitter's `(entity, day)` verdict — read by the alarm field AND by
+        // each creature's `believed_hazard` re-derivation — is computed once (see
+        // `PrimaryAfraidMemo`). Byte-identical: a cache of a pure function over a
+        // fixed ledger.
+        let mut afraid_memo = PrimaryAfraidMemo::new();
         // THE ALARM: build the per-tick alarm field ONCE, from the frozen
         // population, before advancing any creature — it is fixed across the whole
         // interval (the next-tick wave). Built alarm-free (via `affect_of`), so
         // emission is terrain-sourced and the wave terminates; the per-step Danger
         // drive below then reads it at each creature's cell.
-        let alarm = alarm_field(frozen, &self.npcs, self.terrain, self.from);
+        let alarm = alarm_field_memo(
+            frozen,
+            &self.npcs,
+            self.terrain,
+            self.from,
+            &mut afraid_memo,
+        );
         for npc in &self.npcs {
             let mut pos = agent_position(frozen, npc, self.from);
             let mut day = self.from.day;
@@ -2793,7 +3097,14 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // the most-recent-visit staleness clears a disproven fear. Empty for
             // a never-frightened creature ⇒ every planner edge stays `1`, byte-
             // identical (no primary-afraid emitter on the settled worlds).
-            let believed_hazard = believed_hazard(frozen, npc, self.from, self.terrain, &self.npcs);
+            let believed_hazard = believed_hazard_memo(
+                frozen,
+                npc,
+                self.from,
+                self.terrain,
+                &self.npcs,
+                &mut afraid_memo,
+            );
             let mut visited: std::collections::BTreeSet<RoomAddr> =
                 std::collections::BTreeSet::new();
             visited.insert(pos.clone());
@@ -5741,6 +6052,263 @@ mod tests {
         assert!(
             control_path.contains(&x),
             "the never-frightened control blunders straight through X"
+        );
+    }
+
+    #[test]
+    fn the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe() {
+        // THE PHANTOM, end-to-end through the real DriveMovements tick (spec §e2e):
+        // a creature alarm-frightened at a now-SAFE cell X — where a herd-mate B
+        // briefly panicked beside it — plans its LATER journeys to water AROUND X,
+        // shunning ground that is no longer dangerous (the phobia, a fear of
+        // nothing). A control that never stood at X blunders straight through. And
+        // once the creature safely REVISITS X (the alarm long gone), the detour
+        // ceases — the fear disproved. UNLIKE THE SHUN, X carries NO terrain
+        // hazard: the danger is transient, re-derived from B's committed PAST
+        // position, and gone by planning time.
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+
+        // Geometry (as THE SHUN): the straight S→W path, X an interior cell not
+        // adjacent to either endpoint (so standing at S/W is never frightening).
+        let start = raddr(1.0);
+        let c1 = start.neighbors()[0].clone();
+        let c2 = c1
+            .neighbors()
+            .iter()
+            .find(|n| **n != start)
+            .unwrap()
+            .clone();
+        let c3 = c2
+            .neighbors()
+            .iter()
+            .find(|n| **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let water = c3
+            .neighbors()
+            .iter()
+            .find(|n| **n != c2 && **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let empty = std::collections::BTreeSet::new();
+        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
+        assert!(straight.len() >= 4, "need a path with an interior cell");
+        let path_cells: Vec<RoomAddr> = straight
+            .iter()
+            .map(|a| match a {
+                Action::MoveTo(r) => r.clone(),
+                _ => unreachable!("plan_to_room emits only MoveTo"),
+            })
+            .collect();
+        let x = path_cells[1].clone(); // interior, distance 2 from start
+        let p0 = path_cells[0].clone(); // X's on-path predecessor (distance 1)
+        let p2 = path_cells[2].clone(); // X's on-path successor (distance 3)
+        assert!(
+            !start.neighbors().contains(&x) && !water.neighbors().contains(&x),
+            "X must be interior (not adjacent to start or water)"
+        );
+
+        // The emitter's cell D: X's OFF-path neighbour (not p0, not p2). Its own
+        // neighbour E carries the hazard, so B — standing at the SAFE cell D beside
+        // the hazard — is primary-afraid (anticipatory) and its one-hop alarm halo
+        // covers X. E is two hops from X, so X itself stays terrain-SAFE (a pure
+        // phantom, not a Haunt).
+        let d_cell = x
+            .neighbors()
+            .iter()
+            .find(|n| **n != p0 && **n != p2)
+            .expect("X has a third, off-path neighbour")
+            .clone();
+        let hazard_e = d_cell
+            .neighbors()
+            .iter()
+            .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
+            .expect("D has a hazard neighbour off the path")
+            .clone();
+        let far = raddr(-1.0);
+        let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
+
+        // A steady mortal; home == start so homing does not pull it off course.
+        let npc_at = |entity: EntityId| Npc {
+            entity,
+            home: start.clone(),
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: BOLDNESS_STEADY,
+            threat_niche: mortal_threat_niche(),
+            label: "wanderer".into(),
+        };
+        // The herd-mate B: knows water (so it beelines and settles, bounded), and
+        // is the transient alarm source when standing at D.
+        let emitter_npc = |entity: EntityId| Npc {
+            entity,
+            home: far.clone(),
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: BOLDNESS_STEADY,
+            threat_niche: mortal_threat_niche(),
+            label: "herd-mate".into(),
+        };
+
+        // Guard: every cell on the straight path is terrain-SAFE — the phantom is
+        // a fear of nothing, never a static Haunt (empty-roster verdict is FALSE).
+        let dummy = npc_at(EntityId::new(1).unwrap());
+        let empty_ledger = Ledger::default();
+        for cell in [&start, &p0, &x, &p2, &water] {
+            assert!(
+                !frightened_at(
+                    cell,
+                    &dummy,
+                    &terrain,
+                    WorldTime { day: 1.0 },
+                    &[],
+                    &empty_ledger
+                ),
+                "path cell {cell:?} must be terrain-safe (no static hazard)"
+            );
+        }
+
+        // Sanity: the phantom forms exactly at X. Terrain-only memory is empty
+        // (X is safe ground); with the roster, the re-derived PAST alarm — B at D
+        // on day 0.35 — makes X remembered-dangerous though it is now safe.
+        {
+            let mut fl = Ledger::default();
+            let a = fl.mint_entity();
+            commit_agent_at(&mut fl, &reg, a, &water, 0.30);
+            commit_agent_at(&mut fl, &reg, a, &x, 0.35);
+            commit_agent_at(&mut fl, &reg, a, &start, 0.40);
+            let b = fl.mint_entity();
+            commit_agent_at(&mut fl, &reg, b, &d_cell, 0.35);
+            commit_agent_at(&mut fl, &reg, b, &far, 0.40);
+            let an = npc_at(a);
+            let bn = emitter_npc(b);
+            assert!(
+                believed_hazard(&fl, &an, WorldTime { day: 1.0 }, &terrain, &[]).is_empty(),
+                "terrain-only memory is empty — X is a fear of nothing"
+            );
+            let hz = believed_hazard(
+                &fl,
+                &an,
+                WorldTime { day: 1.0 },
+                &terrain,
+                std::slice::from_ref(&bn),
+            );
+            assert_eq!(
+                hz.into_iter().collect::<Vec<_>>(),
+                vec![x.clone()],
+                "the phantom: X is remembered-dangerous, re-derived from B's past panic"
+            );
+        }
+
+        // Run one rememberer (+ the herd-mate B) forward over a multi-cycle window.
+        // `remember` seeds the frightened visit to X (day 0.35, B beside it);
+        // `disprove` adds a later SAFE revisit (day 2.35, B long gone).
+        let run = |remember: bool, disprove: bool| -> (Ledger, EntityId, f64) {
+            let from_day = if disprove { 3.0 } else { 1.0 };
+            let mut ledger = Ledger::default();
+            let a = ledger.mint_entity();
+            commit_agent_at(&mut ledger, &reg, a, &water, 0.30); // knows water
+            if remember {
+                commit_agent_at(&mut ledger, &reg, a, &x, 0.35); // frightened by B's alarm
+            }
+            if disprove {
+                commit_agent_at(&mut ledger, &reg, a, &x, 2.35); // SAFE revisit (B gone)
+            }
+            commit_agent_at(
+                &mut ledger,
+                &reg,
+                a,
+                &start,
+                if disprove { 2.40 } else { 0.40 },
+            );
+            let mut npcs = vec![npc_at(a)];
+            if remember {
+                // B: knows water, panics beside X at 0.35, gone to far ground by
+                // 0.40 — so X is SAFE at planning time. Only present when there is
+                // a memory to re-derive (the control needs no alarm source).
+                let b = ledger.mint_entity();
+                commit_agent_at(&mut ledger, &reg, b, &water, 0.29);
+                commit_agent_at(&mut ledger, &reg, b, &d_cell, 0.35);
+                commit_agent_at(&mut ledger, &reg, b, &far, 0.40);
+                npcs.push(emitter_npc(b));
+            }
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime { day: from_day },
+                to: WorldTime { day: 60.0 }, // several thirst cycles (act/rise ≈ 5.7 days)
+                params: SUSTENANCE,
+                terrain: &terrain,
+            };
+            let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
+            (next, a, from_day)
+        };
+
+        // The committed positions the tick EMITTED (day ≥ from), decoded to rooms.
+        let walked = |ledger: &Ledger, e: EntityId, from_day: f64| -> Vec<RoomAddr> {
+            ledger
+                .find(AGENT_AT)
+                .filter(|f| f.subject == e)
+                .filter(|f| f.day.map(|d| d >= from_day).unwrap_or(false))
+                .filter_map(|f| match &f.object {
+                    Value::Text(s) => Some(room_from_text(s)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let drinks =
+            |ledger: &Ledger, e: EntityId| ledger.find(DRANK).filter(|f| f.subject == e).count();
+
+        let (frightened_led, fe, ffrom) = run(true, false);
+        let (control_led, ce, cfrom) = run(false, false);
+        let (disproved_led, de, dfrom) = run(true, true);
+
+        let frightened_path = walked(&frightened_led, fe, ffrom);
+        let control_path = walked(&control_led, ce, cfrom);
+        let disproved_path = walked(&disproved_led, de, dfrom);
+
+        // Everyone reaches water — the phantom-shunning creature is NEVER trapped
+        // (the memory penalty is finite, a preference, not a wall).
+        assert!(
+            drinks(&frightened_led, fe) >= 1,
+            "the frightened creature still reaches water (the detour is finite)"
+        );
+        assert!(drinks(&control_led, ce) >= 1, "the control reaches water");
+        assert!(
+            drinks(&disproved_led, de) >= 1,
+            "after the disproof the creature still reaches water"
+        );
+
+        // (a) THE PHANTOM: later journeys DETOUR around the now-safe X, where a
+        // never-alarmed control goes straight THROUGH it.
+        assert!(
+            !frightened_path.contains(&x),
+            "the phantom: routes AROUND ground where a passed alarm once frightened it"
+        );
+        assert!(
+            control_path.contains(&x),
+            "the never-alarmed control blunders straight through the safe X"
+        );
+        // (b) THE DISPROOF: once X is safely revisited, the most-recent visit is
+        // safe, the phantom clears, and the detour ceases — through X again.
+        assert!(
+            disproved_path.contains(&x),
+            "the disproof: a safe revisit clears the phantom — X is braved again"
         );
     }
 
