@@ -175,6 +175,51 @@ fn into_played_world_never_mutates_the_input_world() {
     assert_eq!(before, after, "the input world is never mutated in place");
 }
 
+/// The campaign's riskiest cross-task seam, proven rather than reasoned:
+/// reload a played world into a *fresh* session and wait again — the
+/// persisted `turned-hostile` consequence must NOT double-fire. It holds by
+/// two independent mechanisms: `register_predicate` is idempotent on an
+/// identical def (re-registering the persisted predicates does not panic),
+/// and `next_entity` is serialized, so the re-derived NPCs mint fresh, higher
+/// ids and carry grievance 0 (their `disposition-shift` facts point at the old
+/// ids), leaving the persisted consequence the only one.
+#[test]
+fn a_reloaded_played_world_does_not_re_fire_the_consequence_on_a_fresh_wait() {
+    let w = world();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}"));
+    s.handle("wait"); // grievance 3 crosses the threshold; the consequence fires
+    let played = s.into_played_world(w.seed);
+
+    // round-trip through JSON exactly as save/load would.
+    let json = serde_json::to_string(&played).unwrap();
+    let reloaded: hornvale_kernel::World = serde_json::from_str(&json).unwrap();
+    assert_eq!(
+        reloaded.ledger.find("turned-hostile").count(),
+        1,
+        "the played world carries exactly one consequence"
+    );
+
+    // Start a NEW session on the reloaded world and wait again.
+    let (mut s2, _opening) = Session::start(&reloaded, &PossessOpts::default()).unwrap();
+    let before = s2.committed_hostility_count();
+    s2.handle("wait");
+    s2.handle("wait");
+    assert_eq!(
+        before, 1,
+        "the persisted consequence is present in the reloaded session"
+    );
+    assert_eq!(
+        s2.committed_hostility_count(),
+        1,
+        "waiting on a reloaded played world never re-fires a duplicate consequence"
+    );
+}
+
 /// The butterfly-reader: `why` must recount the SESSION's evolving ledger —
 /// the one holding the just-committed player facts and the fired
 /// consequence — not the frozen input world, or the player's own hand
