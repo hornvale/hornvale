@@ -26,7 +26,8 @@ pub struct WorldComponents {
     pub biosphere: ComponentStore<KindId, BiosphereTraits>,
     /// Peopled psychology.
     pub psyche: ComponentStore<KindId, MindVector>,
-    /// Community psychology — carried only by `Settled` kinds.
+    /// Community psychology — carried by minded *social* kinds (`Gregarious`
+    /// or `Settled`; the settling peoples today). See decision 0068.
     pub society: ComponentStore<KindId, SocietyVector>,
     /// Peopled perception.
     pub perception: ComponentStore<KindId, PerceptionVector>,
@@ -147,7 +148,7 @@ pub enum ComponentTag {
     Biosphere,
     /// Peopled psychology.
     Psyche,
-    /// Community psychology — `Settled` kinds only.
+    /// Community psychology — minded social kinds (decision 0068).
     Society,
     /// Peopled perception.
     Perception,
@@ -275,16 +276,21 @@ fn check_integrity(
             )));
         }
     }
-    // The Cloister: society ⟺ Settled. Every Settled kind carries a society
-    // vector; no non-Settled kind does (a Solitary carries a mind but no society).
-    let settled: std::collections::BTreeSet<KindId> = biosphere
+    // The Cloister (decision 0068 refines 0067): society ⟺ minded ∧ social.
+    // A society-mind is carried by every MINDED kind that lives socially
+    // (`Gregarious` or `Settled`) — the sociality axis, NOT sedentism: a
+    // nomadic band is social without settling. A `Solitary` minded kind (a
+    // dragon) carries a mind but no society; a mindless social herd carries
+    // neither. Extensionally the Settled peoples today (no minded Gregarious
+    // kind yet), but the gate no longer welds society-mind onto settlement.
+    let social_minded: std::collections::BTreeSet<KindId> = biosphere
         .iter()
-        .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+        .filter(|(k, b)| b.social_form.is_social() && psyche.contains(k))
         .map(|(k, _)| *k)
         .collect();
-    if !society.ids().copied().eq(settled.iter().copied()) {
+    if !society.ids().copied().eq(social_minded.iter().copied()) {
         return Err(BuildError::MalformedKind(
-            "society vector key-set must equal the Settled key-set".into(),
+            "society vector key-set must equal the minded-and-social key-set".into(),
         ));
     }
     // Forward-proto coherence: count each family label's membership, then
@@ -658,10 +664,11 @@ mod tests {
     }
 
     #[test]
-    fn integrity_rejects_a_non_settled_kind_carrying_society() {
-        // The Cloister: society ⟺ Settled. A Solitary kind (a dragon) must
-        // not carry a society vector; give red-dragon a bogus society row
-        // through the public constructor and expect a loud rejection.
+    fn integrity_rejects_a_solitary_kind_carrying_society() {
+        // society ⟺ minded ∧ social (decision 0068). A Solitary kind (a
+        // dragon) is minded but NOT social, so it must not carry a society
+        // vector; give red-dragon a bogus society row through the public
+        // constructor and expect a loud rejection.
         let biosphere = biosphere_registry();
         let psyche = psyche_registry();
         let mut society = society_registry();
@@ -686,6 +693,45 @@ mod tests {
             ComponentStore::new(),
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn integrity_accepts_a_minded_gregarious_kind_carrying_society() {
+        // Decision 0068: society gates on sociality, not sedentism. A minded
+        // Gregarious kind (a pack — the animal analog of a nomadic band) lives
+        // socially, so it MAY carry a society vector though it is not Settled.
+        // Under the old `society ⟺ Settled` rule this rejected; it must now pass.
+        let mut biosphere = biosphere_registry();
+        let mut psyche = psyche_registry();
+        let mut society = society_registry();
+        let perception = perception_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        let new_kind = KindId("pack-mind");
+        let mind = *psyche.iter().next().expect("at least one minded kind").1;
+        psyche.insert(new_kind, mind);
+        let soc = *society.iter().next().expect("at least one society row").1;
+        society.insert(new_kind, soc);
+        let mut body = biosphere.iter().next().expect("a biosphere row").1.clone();
+        body.social_form = hornvale_species::SocialForm::Gregarious;
+        biosphere.insert(new_kind, body);
+
+        let result = check_integrity(
+            &biosphere,
+            &psyche,
+            &society,
+            &perception,
+            &articulation,
+            &lexicon,
+            &family_proto(),
+            &family_of,
+        );
+        assert!(
+            result.is_ok(),
+            "a minded Gregarious kind may carry society: {result:?}"
+        );
     }
 
     #[test]

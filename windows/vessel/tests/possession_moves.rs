@@ -336,6 +336,87 @@ fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
 }
 
 #[test]
+fn provoke_commits_one_player_authored_disposition_fact() {
+    // THE FIRST PLAYER-AUTHORED FACT: `provoke` commits a disposition-shift
+    // fact about a co-located NPC into the session-owned ledger, distinct
+    // from every fact the world's own systems commit (the `player:`
+    // provenance is what tells the two apart). The possessed agent's own
+    // settlement guarantees a co-located NPC at the starting room
+    // (the-quickening T3 review), so no `go` is needed first.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let before = session.committed_disposition_count();
+    let turn = session.handle("provoke");
+    let after = session.committed_disposition_count();
+    match turn {
+        Turn::Out(s) => assert!(
+            s.to_lowercase().contains("provoke") || s.contains("bristle"),
+            "diegetic acknowledgement, got: {s}"
+        ),
+        Turn::Released(s) => panic!("expected Out, got Released({s})"),
+    }
+    assert_eq!(after, before + 1, "exactly one disposition fact committed");
+}
+
+#[test]
+fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
+    // SAME-DAY DEDUP IS INTENTIONAL: one disposition shift per (NPC, day,
+    // direction) — escalation is gated on time passing (a `wait`), not on
+    // repeating the verb. Two `provoke`s on the same NPC with no
+    // intervening `wait` produce a byte-identical `Fact` envelope, so
+    // `Ledger::commit` returns `Ok(false)` (idempotent no-op) the second
+    // time: `committed_disposition_count` must not double-count, and the
+    // narration must be honest that nothing further landed.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(s) => panic!("provoke never releases: {s}"),
+    };
+
+    let first = out_text(session.handle("provoke"));
+    assert_eq!(
+        session.committed_disposition_count(),
+        1,
+        "the first provoke commits one fact"
+    );
+    assert!(
+        first.to_lowercase().contains("provoke") || first.contains("bristle"),
+        "the first provoke is the effect narration: {first}"
+    );
+
+    let second = out_text(session.handle("provoke"));
+    assert_eq!(
+        session.committed_disposition_count(),
+        1,
+        "a same-day repeat is a ledger no-op: the count must not double-count"
+    );
+    assert!(
+        second.contains("already"),
+        "a same-day repeat must not claim a fresh effect: {second}"
+    );
+    assert_ne!(
+        first, second,
+        "the repeat narration must differ from the effect narration"
+    );
+}
+
+#[test]
+fn possession_with_no_act_leaves_session_ledger_unchanged() {
+    // BYTE-IDENTITY GUARD: a read-only verb (`look`) must commit nothing —
+    // the session ledger is byte-identical to a fresh, untouched session.
+    let w = world();
+    let a = Session::start(&w, &PossessOpts::default())
+        .unwrap()
+        .0
+        .session_ledger_json();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let _ = s.handle("look"); // a read-only verb
+    assert_eq!(a, s.session_ledger_json(), "read-only verbs commit nothing");
+}
+
+#[test]
 fn a_wild_beast_walks_away_from_water_and_is_observed() {
     // THE WILDING, LIVE — the settled tests' inverse. `PossessOpts::wild_agents`
     // (on by default) appends the world's wild beast agents to the peopled
@@ -385,4 +466,67 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
         "a wild beast placed away from water committed at least one real walk"
     );
     assert!(!out.is_empty(), "the wait narrates the world's motion");
+}
+
+/// The seed-42 settled NPC guaranteed co-located with the possessed agent at
+/// `PossessOpts::default()`'s starting room (day 0.5, before any `go`) — see
+/// `probe_colocated_npc_label_at_day_zero` in this file's history and the
+/// task-2 report for how this was discovered. It never walks (the
+/// on-water flagship settlement's peoples drink in place), so it stays
+/// co-located across every `wait` in these tests too.
+const GRIEVANCE_NPC: &str = "bugbear of Qvooshtvoagootao";
+
+#[test]
+fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
+    // THE GRIEVANCE FOLD (Task 2, direct social consequence, not an ambient
+    // drive tip): an un-provoked NPC carries zero grievance and is never
+    // hostile.
+    let w = world();
+    let (a, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    assert!(
+        !a.would_turn_hostile(GRIEVANCE_NPC),
+        "un-provoked NPC is neutral"
+    );
+
+    // Provoking across three distinct days climbs grievance past the
+    // threshold. Same-day repeats dedup (Task 1), so each provoke here is
+    // separated by a `wait` — three distinct days of antagonism.
+    let (mut b, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    b.handle("wait");
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    b.handle("wait");
+    assert!(
+        !b.would_turn_hostile(GRIEVANCE_NPC),
+        "two provokes is below threshold"
+    );
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    assert!(
+        b.would_turn_hostile(GRIEVANCE_NPC),
+        "three provokes crosses the threshold"
+    );
+
+    // soothe pulls back below the threshold (intent vs outcome).
+    b.handle("wait");
+    b.handle(&format!("soothe {GRIEVANCE_NPC}")); // day 3.5: grievance 2
+    assert!(
+        !b.would_turn_hostile(GRIEVANCE_NPC),
+        "soothe pulls the NPC back below hostile"
+    );
+}
+
+#[test]
+fn unprovoked_npcs_have_zero_grievance() {
+    // BYTE-IDENTITY GUARD: with no player facts, every derived NPC's
+    // grievance fold is exactly zero — an unplayed world (or a session that
+    // never provokes/soothes) is byte-identical by construction.
+    let w = world();
+    let s = Session::start(&w, &PossessOpts::default()).unwrap().0;
+    for label in s.npc_labels() {
+        assert_eq!(
+            s.npc_grievance(label),
+            Some(0.0),
+            "un-provoked NPC {label} must carry exactly zero grievance"
+        );
+    }
 }

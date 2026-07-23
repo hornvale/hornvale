@@ -14,7 +14,7 @@ use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    RESTED, SUSTENANCE, Terrain, affect_of, derive_npcs, waking_offset,
+    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo, derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -89,11 +89,24 @@ pub fn run_simulation(
         // Sample each creature at a representative WAKING moment of the day just
         // simulated — not midnight, where a diurnal creature is asleep (The
         // Slumber): distress is a waking state, so the metric reads it while up.
+        // One primary-afraid memo for this tick's reads: `ledger` is fixed across
+        // them, so an emitter's `(entity, day)` fear verdict — folded by EVERY
+        // creature's `believed_hazard` (The Phantom) — is re-derived once, not
+        // once per creature per cell. Byte-identical: a cache of a pure function
+        // over a fixed ledger (see `PrimaryAfraidMemo`).
+        let mut afraid_memo = PrimaryAfraidMemo::new();
         for (i, npc) in npcs.iter().enumerate() {
             let now = WorldTime {
                 day: (day - 1.0) + waking_offset(npc.activity),
             };
-            traces[i].push(affect_of(&ledger, npc, npcs, now, terrain));
+            traces[i].push(affect_of_memo(
+                &ledger,
+                npc,
+                npcs,
+                now,
+                terrain,
+                &mut afraid_memo,
+            ));
         }
     }
     traces

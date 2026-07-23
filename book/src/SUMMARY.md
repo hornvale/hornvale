@@ -237,8 +237,11 @@
 - [The Sundering](./chronicle/the-sundering.md)
 - [The Solitary Tongue](./chronicle/the-solitary-tongue.md)
 - [The Lode](./chronicle/the-lode.md)
+- [The First Mark](./chronicle/the-first-mark.md)
 - [The Cloister](./chronicle/the-cloister.md)
 - [The Vestige](./chronicle/the-vestige.md)
+- [The Phantom](./chronicle/the-phantom.md)
+- [The Excursion](./chronicle/the-excursion.md)
 
 # Appendix: The Frontier
 
