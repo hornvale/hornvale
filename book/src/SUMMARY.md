@@ -239,6 +239,7 @@
 - [The First Mark](./chronicle/the-first-mark.md)
 - [The Cloister](./chronicle/the-cloister.md)
 - [The Phantom](./chronicle/the-phantom.md)
+- [The Excursion](./chronicle/the-excursion.md)
 
 # Appendix: The Frontier
 
