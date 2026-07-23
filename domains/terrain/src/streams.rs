@@ -44,6 +44,11 @@ hornvale_kernel::stream_labels! {
         /// Lithology sub-cell patchiness noise (The Ground, spec §2). Hash-noise
         /// only — never consumed as a `Stream`; no draw-order/save-format contract.
         LITHOLOGY = "lithology" => "lithology sub-cell hash-noise (hash-noise only; no stream draws)";
+        /// Subsurface-features point-process noise (The Lode, spec §6).
+        /// Hash-noise only — never consumed as a `Stream`; no draw-order /
+        /// save-format contract. A NEW label — existing consumption order is
+        /// untouched.
+        FEATURES = "features" => "subsurface features point-process hash-noise (hash-noise only; no stream draws)";
         /// Terrane draws (Sculpting, spec §3): count, then per terrane a host
         /// craton index, rim bearing, size, age. A NEW label — existing stream
         /// consumption order is untouched (epoch v3 save-format contract).

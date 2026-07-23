@@ -23,7 +23,9 @@ use hornvale_kernel::{
     RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
-use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use hornvale_terrain::{
+    BandKind, Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, TerrainPins,
+};
 use std::cell::RefCell;
 use std::sync::OnceLock;
 // The profiler measures wall-clock stage durations for a committed diagnostic
@@ -605,6 +607,37 @@ pub fn soil_of(
             &mat.soil_depth,
         )
     })
+}
+
+/// The canonical deposit query: terrain's derived deposits, overlaid with the
+/// one climate-coupled ore (laterite — bauxite/nickel from hot+wet weathering)
+/// where terrain has no stronger primary. The soil-projection seam (The Ground)
+/// applied to ore. (The Lode, spec §4.)
+pub fn deposit_of(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    geo: &Geosphere,
+    cell: hornvale_kernel::CellId,
+) -> Option<Deposit> {
+    if let Some(d) = terrain.deposit_at(cell) {
+        return Some(d); // a primary/areal deposit wins
+    }
+    if terrain.is_ocean(cell) {
+        return None;
+    }
+    let _ = geo;
+    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+    let wet = climate.moisture_at(cell) > 0.6;
+    if hot && wet {
+        return Some(Deposit {
+            process: DepositProcess::Lateritic,
+            commodity: Commodity::Bauxite,
+            depth: BandKind::Regolith,
+            grade: 0.4,
+            tonnage: 0.6,
+        });
+    }
+    None
 }
 
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
@@ -2233,6 +2266,25 @@ pub fn soil_order_name(order: hornvale_terrain::SoilOrder) -> &'static str {
     }
 }
 
+/// Human-readable commodity name (The Lode, spec §5): lowercase, for almanac
+/// prose and census categorical values — a pure naming projection, no new
+/// draws.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn commodity_name(commodity: Commodity) -> &'static str {
+    use Commodity::*;
+    match commodity {
+        Copper => "copper",
+        Gold => "gold",
+        LeadZinc => "lead-zinc",
+        Iron => "iron",
+        Salt => "salt",
+        Coal => "coal",
+        Gems => "gems",
+        Tin => "tin",
+        Bauxite => "bauxite",
+    }
+}
+
 /// Land-cell karst-hydrology share above which "karst country" is a notable
 /// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
 /// threshold, not a physical constant.
@@ -2368,6 +2420,83 @@ pub fn deep_lines_from(
         let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
             "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+        ));
+    }
+    Ok(lines)
+}
+
+/// The Lode's headline lines for the almanac: the dominant ore commodity
+/// (and any other notable commodities) across the land, the cave-country
+/// share, and any regions where a cave and an ore deposit coincide (The
+/// Lode, spec §4/§5). Reads the canonical [`deposit_of`] query — terrain's
+/// primary deposits overlaid with the climate-coupled laterite — so the
+/// almanac and the census agree on what counts as ore. A pure projection
+/// over the world's single sculpted terrain/climate: no new draws. Empty
+/// for a landless world, or for land with neither caves nor ore.
+/// type-audit: bare-ok(prose: return)
+pub fn lode_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<String>, BuildError> {
+    let _ = world; // no world-level refinement today; kept for signature symmetry with deep_lines_from
+    let geo = terrain.geosphere();
+    let (mut land, mut cave_land, mut ore_land, mut colocated) = (0usize, 0usize, 0usize, 0usize);
+    let mut commodities: std::collections::BTreeMap<Commodity, usize> =
+        std::collections::BTreeMap::new();
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let has_cave = terrain.cave_at(cell).is_some();
+        if has_cave {
+            cave_land += 1;
+        }
+        if let Some(deposit) = deposit_of(terrain, climate, geo, cell) {
+            ore_land += 1;
+            *commodities.entry(deposit.commodity).or_insert(0) += 1;
+            if has_cave {
+                colocated += 1;
+            }
+        }
+    }
+    if land == 0 || (ore_land == 0 && cave_land == 0) {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = Vec::new();
+    if ore_land > 0 {
+        // Ties break to the lower-declared variant, same as ground_lines_from.
+        let dominant = commodities
+            .iter()
+            .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+            .map(|(&c, _)| c)
+            .expect("ore_land > 0 guarantees at least one commodity count");
+        lines.push(format!(
+            "The land's lode is dominantly {}, found across {:.0}% of it.",
+            commodity_name(dominant),
+            ore_land as f64 / land as f64 * 100.0
+        ));
+        let others: Vec<&'static str> = commodities
+            .keys()
+            .copied()
+            .filter(|&c| c != dominant)
+            .map(commodity_name)
+            .collect();
+        if !others.is_empty() {
+            lines.push(format!("Notable ore: {}.", others.join(", ")));
+        }
+    }
+    if cave_land > 0 {
+        lines.push(format!(
+            "{:.0}% of the land is cave country.",
+            cave_land as f64 / land as f64 * 100.0
+        ));
+    }
+    if colocated > 0 {
+        lines.push(format!(
+            "{colocated} cells hold both cave and ore — the deep worked twice."
         ));
     }
     Ok(lines)
@@ -5578,6 +5707,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         ground_lines: ground_lines_from(&terrain, &climate),
         water_lines: water_lines_from(&terrain),
         deep_lines: deep_lines_from(world, &terrain)?,
+        lode_lines: lode_lines_from(world, &terrain, &climate)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
@@ -7469,6 +7599,61 @@ mod tests {
         assert!(
             land_orders.len() >= 2,
             "soil felt monolithic: {land_orders:?}"
+        );
+    }
+
+    #[test]
+    fn deposit_of_overlays_laterite_and_passes_through_primary_deposits() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let mut saw_primary_passthrough = false;
+        let mut saw_laterite_overlay = false;
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                assert_eq!(deposit_of(&terrain, &climate, geo, cell), None);
+                continue;
+            }
+            let combined = deposit_of(&terrain, &climate, geo, cell);
+            match terrain.deposit_at(cell) {
+                Some(primary) => {
+                    assert_eq!(
+                        combined,
+                        Some(primary),
+                        "a primary deposit must pass through unchanged at {cell:?}"
+                    );
+                    saw_primary_passthrough = true;
+                }
+                None => {
+                    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+                    let wet = climate.moisture_at(cell) > 0.6;
+                    if hot && wet {
+                        assert_eq!(
+                            combined,
+                            Some(Deposit {
+                                process: DepositProcess::Lateritic,
+                                commodity: Commodity::Bauxite,
+                                depth: BandKind::Regolith,
+                                grade: 0.4,
+                                tonnage: 0.6,
+                            }),
+                            "a hot+wet land cell with no primary deposit gets a laterite overlay at {cell:?}"
+                        );
+                        saw_laterite_overlay = true;
+                    } else {
+                        assert_eq!(combined, None);
+                    }
+                }
+            }
+        }
+        assert!(
+            saw_laterite_overlay,
+            "seed 42 has no hot+wet land cell without a primary deposit to overlay"
+        );
+        assert!(
+            saw_primary_passthrough,
+            "seed 42 has no land cell with a primary deposit to pass through"
         );
     }
 

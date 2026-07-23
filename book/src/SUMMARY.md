@@ -235,6 +235,7 @@
 - [The Haunt](./chronicle/the-haunt.md)
 - [The Sundering](./chronicle/the-sundering.md)
 - [The Solitary Tongue](./chronicle/the-solitary-tongue.md)
+- [The Lode](./chronicle/the-lode.md)
 
 # Appendix: The Frontier
 

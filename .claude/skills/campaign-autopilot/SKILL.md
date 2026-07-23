@@ -61,6 +61,33 @@ check:** a nontrivial `Q` whose ledger entry shows zero passes means you
 skipped this step — the `ideonomy passes / overturns` field is required and
 non-zero, not optional.
 
+## Verify generated-artifact and tool-behavior claims
+
+Before writing "this generated output won't change (much)" or "this tool
+behaves this way on failure" into a spec, plan, or ledger entry: run the
+actual command and cite its real output, not a claim inferred from
+reasoning about what should happen. This recurred four times across
+three campaigns in one session (PROC-18, PROC-19, and PROC-12 twice — the
+second time inside PROC-12's own *correction* of the first instance)
+before being named here: each claim was plausible, stated with
+confidence, and wrong, caught only when a subagent later reproduced it
+empirically.
+
+**The check:** any sentence of the shape "X will/won't happen" or "the
+diff is only Y" about a generated file, a tool's documented behavior, or
+git's own merge/conflict handling needs a command-and-output pair next to
+it before it goes in the spec — at drafting time, not review time.
+"Regenerated it and diffed: `<result>`" is a verification. "This should
+only touch two rows" is not, however confident the reasoning sounds.
+
+**Why drafting time, not just G2/G3 self-review:** every one of the four
+instances was caught by a *reviewer*, never the drafting session — the
+self-review step already existed and still missed all four, because it
+checked the spec's internal consistency, not whether its claims about
+external systems had been verified at all. Fold this into G2's own
+self-review pass explicitly; don't rely on it being implied by "spec
+consistency."
+
 ## Capture discipline
 
 **Invariant: no idea dies in conversation.** Before any gate auto-passes,
@@ -139,3 +166,4 @@ ratification. Re-engage only when he says so.
 | "Automating the merge too would be consistent" | G3, G6, and the carve-outs are constitutionally manual. Never automate them. |
 | "I just recommended, but Nathan hasn't weighed in — the next move isn't mine" | Under autopilot the recommendation IS the decision: run ideonomy to convergence, adopt, ledger, keep moving. Nathan reviews at G3. |
 | "Writing to the idea registry mid-brainstorm without asking feels presumptive" | Capture is pre-authorized — recording ideas without asking is this skill's core mandate. |
+| "This diff/behavior claim is obviously right, no need to check" | PROC-18, PROC-19, and PROC-12 (twice) were all exactly this confident and all wrong. Run the command before writing the claim. |
