@@ -86,6 +86,7 @@ pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
+pub mod vestige;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -106,6 +107,7 @@ pub use history_emit::{
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
+pub use vestige::{HazardKind, SealState, Valence, Vestige, VestigeKind, vestige_from_occupation};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
