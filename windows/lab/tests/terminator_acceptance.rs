@@ -176,19 +176,32 @@ fn locked_worlds_recover_ambient_presiding_belief_after_the_terminator_fix() {
          a_frozen_sky_never_heads_a_cyclic_pantheon); breakdown: {breakdown:?}"
     );
 
-    // Pinned to the MEASURED falsification (module doc): the fix did not
-    // restore Ambient presiding religion on this 9-seed sample. If this
-    // ever moves, it means either the presiding-belief mechanism changed
-    // (update deliberately, with a doc note) or a genuine regression in
-    // the shipped fix (investigate before touching these numbers).
+    // RE-PINNED to the recovery, deliberately (2026-07-23). The original pin
+    // recorded the falsification: the terminator fix did NOT restore Ambient
+    // presiding religion (0/9 ambient, 9/9 eternal), because a founder-floor
+    // goblin of population 1 committed its Eternal (celestial-body) pantheon
+    // first in ledger order, ahead of the world's tide-derived Ambient belief.
+    //
+    // *The Sundering* (the moving-sea epoch; `history` commit e7389e1a et al.)
+    // moved sea level across deep-time eras, shifting locked worlds' biome
+    // exposure and species placement — and on all 9 locked seeds the
+    // tide-derived **Ambient** belief now presides (9/9 ambient, 0/9 eternal).
+    // This is the preregistered payoff finally achieved (indirectly, via
+    // placement rather than a presiding-selection rework): locked worlds — with
+    // no rising-and-setting body — now head a tide/Ambient pantheon. The
+    // `cyclic == 0` physical invariant (asserted above) still holds, so the
+    // mechanism still discriminates correctly; this is a genuine improvement in
+    // the direction the battery is named for, not a degenerate flip. The
+    // Sundering re-pinned its commit-gate and census twins but missed this
+    // heavy-tier (`#[ignore]`d) pin; re-synced here.
     assert_eq!(
-        ambient, 0,
-        "locked-world Ambient recovery MOVED from the pinned falsification (0/{n}): {breakdown:?} \
-         — if this is a genuine improvement (e.g. a later campaign reworked presiding-belief \
-         selection), update this pin deliberately with a doc note; do not silently widen it"
+        ambient, n,
+        "locked-world Ambient recovery MOVED from the re-pinned recovery ({n}/{n}): {breakdown:?} \
+         — if this drops, a later campaign changed placement or presiding-belief selection; \
+         investigate before re-pinning (a drop is the payoff regressing)"
     );
     assert_eq!(
-        eternal, n,
-        "locked-world Eternal share MOVED from the pinned falsification ({n}/{n}): {breakdown:?}"
+        eternal, 0,
+        "locked-world Eternal share MOVED from the re-pinned recovery (0/{n}): {breakdown:?}"
     );
 }
