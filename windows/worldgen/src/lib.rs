@@ -3680,11 +3680,14 @@ fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
 /// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
 /// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
 /// blending two 0.5s (or reading either directly) always yields 0.5.
-pub fn voice_params(psych: &hornvale_species::MindVector) -> hornvale_language::VoiceParams {
+pub fn voice_params(
+    mind: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
+) -> hornvale_language::VoiceParams {
     hornvale_language::VoiceParams {
-        formality: (status_register(psych.status_basis) + psych.deliberation_latency) / 2.0,
-        repetition: sociality_register(psych.sociality),
-        epithet_density: status_register(psych.status_basis),
+        formality: (status_register(society.status_basis) + mind.deliberation_latency) / 2.0,
+        repetition: sociality_register(society.sociality),
+        epithet_density: status_register(society.status_basis),
     }
 }
 
@@ -3692,9 +3695,9 @@ pub fn voice_params(psych: &hornvale_species::MindVector) -> hornvale_language::
 /// §7): honorifics are drawn only for a rank-based status basis — the
 /// goblin baseline — matching `voice_params`' epithet-density reading of
 /// the same field.
-pub fn morph_options(psych: &hornvale_species::MindVector) -> hornvale_language::MorphOptions {
+pub fn morph_options(society: &hornvale_species::SocietyVector) -> hornvale_language::MorphOptions {
     hornvale_language::MorphOptions {
-        honorifics: psych.status_basis == hornvale_species::StatusBasis::Rank,
+        honorifics: society.status_basis == hornvale_species::StatusBasis::Rank,
     }
 }
 
@@ -4306,7 +4309,7 @@ fn build_to(
             .get(name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(
-            wc.psyche
+            wc.society
                 .get(&KindId(name))
                 .expect("peopled pass over a fauna kind"),
         );
@@ -4462,10 +4465,15 @@ fn build_to(
                 threat,
             };
             // Mind + speech sourced from the world's component set (ECS c3):
-            // psychology from `wc.psyche`, the role vocabulary from
-            // `wc.lexicon`, both keyed by the kind's `KindId` label.
+            // psychology from `wc.psyche`, society from `wc.society`, the role
+            // vocabulary from `wc.lexicon`, all keyed by the kind's `KindId`
+            // label.
             let psych_v = wc
                 .psyche
+                .get(&KindId(name))
+                .expect("peopled pass over a fauna kind");
+            let society_v = wc
+                .society
                 .get(&KindId(name))
                 .expect("peopled pass over a fauna kind");
             let lex = wc
@@ -4475,8 +4483,8 @@ fn build_to(
             let psych = hornvale_culture::PsychSummary {
                 threat_response: psych_v.threat_response,
                 time_horizon: psych_v.time_horizon,
-                communal: psych_v.sociality == hornvale_species::Sociality::Communal,
-                rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
+                communal: society_v.sociality == hornvale_species::Sociality::Communal,
+                rank_status: society_v.status_basis == hornvale_species::StatusBasis::Rank,
                 vocabulary: hornvale_culture::RoleVocabulary {
                     worker_override: lex.worker_override.map(str::to_string),
                     warrior: lex.warrior.to_string(),
@@ -4512,7 +4520,7 @@ fn build_to(
             let namer = namers
                 .get(name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(psych_v);
+            let morph = morph_options(society_v);
             let lexicon = lexicons
                 .get(name)
                 .expect("a lexicon was built for every placed species");
@@ -4776,11 +4784,15 @@ fn species_genesis(
                 .articulation
                 .get(kind)
                 .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let sociality = match p.sociality {
+            let society = wc
+                .society
+                .get(kind)
+                .expect("a Settled people carries a society vector (integrity-checked)");
+            let sociality = match society.sociality {
                 Sociality::Hierarchic => "hierarchic",
                 Sociality::Communal => "communal",
             };
-            let status = match p.status_basis {
+            let status = match society.status_basis {
                 StatusBasis::Rank => "rank",
                 StatusBasis::Knowledge => "knowledge",
                 StatusBasis::Generosity => "generosity",
@@ -4798,7 +4810,7 @@ fn species_genesis(
                 &world.registry,
             )?;
             world.ledger.commit(
-                sfact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
+                sfact(id, IN_GROUP_RADIUS, Value::Number(society.in_group_radius)),
                 &world.registry,
             )?;
             world.ledger.commit(
@@ -5591,6 +5603,11 @@ fn rendered_pantheon_of(
             .find(|(k, _)| k.0 == species)
             .map(|(_, p)| p)
             .expect("peopled pass over a fauna kind"),
+        wc.society
+            .iter()
+            .find(|(k, _)| k.0 == species)
+            .map(|(_, s)| s)
+            .expect("peopled pass over a fauna kind"),
     );
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
     Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
@@ -6089,6 +6106,7 @@ mod tests {
         let shrunk_wc = WorldComponents::from_stores(
             shrunk_biosphere,
             wc.psyche.clone(),
+            wc.society.clone(),
             wc.perception.clone(),
             wc.articulation.clone(),
             wc.lexicon.clone(),
@@ -6298,6 +6316,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
             hornvale_language::family_proto(),
             family_of,
             ComponentStore::new(),
@@ -6364,6 +6383,10 @@ mod tests {
             [(g, *hornvale_species::psyche_registry().get(&g).unwrap())]
                 .into_iter()
                 .collect();
+        let society: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::society_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
         let perception: ComponentStore<KindId, _> =
             [(g, *hornvale_species::perception_registry().get(&g).unwrap())]
                 .into_iter()
@@ -6387,6 +6410,7 @@ mod tests {
         let wc = crate::components::WorldComponents::from_stores(
             biosphere,
             psyche,
+            society,
             perception,
             articulation,
             lexicon,
@@ -7724,6 +7748,10 @@ mod tests {
             .psyche
             .get(&kind)
             .expect("peopled pass over a fauna kind");
+        let society_v = wc
+            .society
+            .get(&kind)
+            .expect("peopled pass over a fauna kind");
         let lex = wc
             .lexicon
             .get(&kind)
@@ -7731,8 +7759,8 @@ mod tests {
         let psych = hornvale_culture::PsychSummary {
             threat_response: psych_v.threat_response,
             time_horizon: psych_v.time_horizon,
-            communal: psych_v.sociality == hornvale_species::Sociality::Communal,
-            rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
+            communal: society_v.sociality == hornvale_species::Sociality::Communal,
+            rank_status: society_v.status_basis == hornvale_species::StatusBasis::Rank,
             vocabulary: hornvale_culture::RoleVocabulary {
                 worker_override: lex.worker_override.map(str::to_string),
                 warrior: lex.warrior.to_string(),
@@ -7899,6 +7927,7 @@ mod tests {
             [(KindId("test-beast"), "test-beast")].into_iter().collect();
         let wc = WorldComponents::from_stores(
             biosphere,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
@@ -8084,7 +8113,11 @@ mod tests {
     #[test]
     fn goblin_voice_params_are_the_baseline() {
         let psy = hornvale_species::psyche_registry();
-        let v = voice_params(psy.get(&KindId("goblin")).unwrap());
+        let soc = hornvale_species::society_registry();
+        let v = voice_params(
+            psy.get(&KindId("goblin")).unwrap(),
+            soc.get(&KindId("goblin")).unwrap(),
+        );
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 

@@ -66,15 +66,19 @@ fn settled_kinds_are_exactly_the_four_peoples() {
 
 #[test]
 fn the_dragons_have_a_solitary_mind() {
-    use hornvale_species::{Sociality, StatusBasis, psyche_registry};
+    use hornvale_species::{psyche_registry, society_registry};
     let psy = psyche_registry();
     for name in ["white-dragon", "red-dragon", "black-dragon"] {
         let m = psy.get(&KindId(name)).expect("dragon mind");
         assert_eq!(m.threat_response, 0.95, "{name} stands, never flees");
-        assert_eq!(m.in_group_radius, 0.05, "{name} is utterly insular");
         assert_eq!(m.time_horizon, 0.90, "{name} is a patient hoarder");
-        assert_eq!(m.sociality, Sociality::Hierarchic);
-        assert_eq!(m.status_basis, StatusBasis::Rank);
+        // The Cloister: a dragon is minded but Solitary — it carries no
+        // society vector at all (sociality/status_basis/in_group_radius
+        // moved to `SocietyVector`, carried only by `Settled` kinds).
+        assert!(
+            society_registry().get(&KindId(name)).is_none(),
+            "{name} carries no society vector"
+        );
     }
     // A dragon is Solitary — it carries a mind but must NOT be Settled, so it
     // never enters settlement genesis (Task 3's re-key).

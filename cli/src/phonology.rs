@@ -41,12 +41,20 @@ pub fn render_phonology() -> String {
     // dragons carry a mind but no speech), so skip any non-speaker. `iter()` is
     // `KindId`-ascending, byte-identical to the old registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();
-    for (kind, psych) in hornvale_species::psyche_registry().iter() {
+    for (kind, _) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
             continue;
         }
         let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
+        // The Cloister: `sample_names_for` needs only the society vector.
+        // Since this loop covers every minded speaker (dragons included since
+        // The Solitary Tongue), a Solitary carries no society row — resolve
+        // the goblin baseline for it, mirroring genesis's mixed-consumer rule.
+        let society = hornvale_species::society_registry()
+            .get(kind)
+            .copied()
+            .unwrap_or(hornvale_species::SocietyVector::baseline());
 
         doc.push_str(&format!("## {}\n\n", capitalize(species)));
 
@@ -79,7 +87,7 @@ pub fn render_phonology() -> String {
 
         doc.push_str("### Sample names\n\n");
         doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
-        for (name_kind, name) in sample_names_for(&world, species, psych) {
+        for (name_kind, name) in sample_names_for(&world, species, &society) {
             doc.push_str(&format!(
                 "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
                 name_kind,
@@ -101,11 +109,11 @@ pub fn render_phonology() -> String {
 pub(crate) fn sample_names_for(
     world: &World,
     species: &str,
-    psych: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(psych);
+    let morph = world_builder::morph_options(society);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -243,14 +251,18 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, psych) = psyche
+        let (kind, _) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
         let species = kind.0;
+        let society = hornvale_species::society_registry()
+            .get(kind)
+            .copied()
+            .unwrap_or(hornvale_species::SocietyVector::baseline());
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(psych);
+        let morph = world_builder::morph_options(&society);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");
@@ -274,11 +286,15 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, psych) = psyche
+        let (kind, _) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
-        let samples = sample_names_for(&world, kind.0, psych);
+        let society = hornvale_species::society_registry()
+            .get(kind)
+            .copied()
+            .unwrap_or(hornvale_species::SocietyVector::baseline());
+        let samples = sample_names_for(&world, kind.0, &society);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {
             assert!(

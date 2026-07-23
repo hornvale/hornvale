@@ -326,6 +326,7 @@ fn world_level_population_conserves_against_total_capacity() {
     let wc = hornvale_worldgen::WorldComponents::from_stores(
         biosphere,
         psyche,
+        hornvale_species::society_registry(),
         hornvale_species::perception_registry(),
         hornvale_language::articulation_registry(),
         hornvale_language::lexicon_registry(),

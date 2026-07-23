@@ -26,12 +26,18 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     // speaking peoples; skip the minded solitaries (dragons) — a superset of the
     // speakers in the psyche registry since The Eremite.
     let speakers = hornvale_language::articulation_registry();
-    for (kind, psych) in hornvale_species::psyche_registry().iter() {
+    for (kind, _) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
             continue;
         }
         let species = kind;
-        for (_, name) in crate::phonology::sample_names_for(&world, species.0, psych) {
+        // The Cloister: a Solitary speaker (a dragon) carries no society
+        // vector — resolve the goblin baseline, same as the phonology page.
+        let society = hornvale_species::society_registry()
+            .get(kind)
+            .copied()
+            .unwrap_or(hornvale_species::SocietyVector::baseline());
+        for (_, name) in crate::phonology::sample_names_for(&world, species.0, &society) {
             let path = out_dir.join(audio_filename(&name.espeak));
             if path.exists() {
                 kept += 1;
