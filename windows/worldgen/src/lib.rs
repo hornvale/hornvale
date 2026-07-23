@@ -3653,6 +3653,117 @@ pub fn build_world_to(
     build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
+/// Assemble the deep-history bake's inputs (carrying capacity, river
+/// proximity, the paleoclimate eras and their per-era connection graphs, and
+/// the peopled roster) from an already-built `world`/`terrain`/`climate` and
+/// run the bake, returning the raw diagnostic [`History`]. The SOLE place
+/// this assembly is written: [`history_for`] (the standalone measurement
+/// entry point) and the settlement stage below both route through this, the
+/// settlement stage passing its own hoisted terrain/climate (The Single
+/// Sculpt — no re-sculpt, no re-entrant stage profiling) rather than a fresh
+/// rebuild.
+fn bake_history_from(
+    seed: Seed,
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+) -> Result<History, BuildError> {
+    let geo = terrain.geosphere();
+
+    // The same peopled-roster resolution the settlement stage performs (an
+    // unpinned world places every settling species; a `--species` pin
+    // narrows to one, rejecting a non-settling fauna kind).
+    let species_set: Vec<&'static str> = match &settlement_pins.species {
+        None => wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+            .map(|(k, _)| k.0)
+            .collect(),
+        Some(name) => {
+            let resolved = resolve_kind(wc, name)?;
+            if !is_settled(wc, resolved) {
+                return Err(BuildError::Pins(format!(
+                    "'{name}' is not a settling people (a biosphere-only fauna kind)"
+                )));
+            }
+            vec![resolved]
+        }
+    };
+
+    let suitability =
+        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
+    let capacity =
+        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
+    let paleo = paleoclimate_from(world, terrain)?;
+    let cfg = history_bake::BakeConfig::default_millennia();
+    let eras = bake_eras(world, terrain, &cfg)?;
+    let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
+        .iter()
+        .map(|era| {
+            crate::graph_derive::connection_graph_at(
+                geo,
+                elevation,
+                era.sea_level,
+                &current,
+                &[],
+                &crate::graph_derive::GraphConfig::default(),
+            )
+        })
+        .collect();
+    Ok(history_bake::bake(
+        seed,
+        geo,
+        &capacity,
+        &river_prox,
+        &eras,
+        &paleo.refugia,
+        &peoples,
+        &cfg,
+        &graphs,
+    ))
+}
+
+/// Build a world just deep enough for the deep-history bake ([`BuildDepth::Terrain`])
+/// and run it, returning the raw diagnostic [`History`] (its cascade-size
+/// histogram, read back via [`cascade_sizes`]) — The Tumult T3's measurement
+/// entry point. Reconstructs terrain/climate off the built world exactly as
+/// [`terrain_of`]/[`climate_from`] do (the same on-demand reconstruction
+/// pattern this file already uses throughout, e.g. every `*_lines_from`
+/// view), then delegates the bake-input assembly to [`bake_history_from`] —
+/// so its output is byte-identical to the settlement stage's own bake, which
+/// routes through the same function over its already-built (not re-derived)
+/// terrain/climate.
+pub fn history_for(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+) -> Result<History, BuildError> {
+    let world = build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        BuildDepth::Terrain,
+    )?;
+    let terrain = terrain_of(&world)?;
+    let climate = climate_from(&world, &terrain)?;
+    bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)
+}
+
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
 /// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
 /// The only depth-dependent behavior is early `return Ok(world)` between
@@ -3831,80 +3942,25 @@ fn build_to(
     // niche-differentiated stack still lives in `demography_report` for the
     // Lab's coexistence-stack readout, which this rewire leaves untouched.
     //
-    // The bake reads three composition-root fields: the shared base carrying
-    // capacity (`carrying_inputs_of` → `demography::carrying_capacity`, the
-    // Confluence's freshwater-near-rivers term riding it), the paleoclimate
-    // habitability series it replays (`bake_eras` — per-era snowline masks,
-    // day-axis re-based onto the bake window), and the refugia mask
-    // (`PaleoRecord.refugia`, habitable through the glacial maximum — the
-    // migration preference). The peopled roster is `species_set` in its
-    // `KindId` order. Same seed + pins ⇒ byte-identical `History` ⇒
+    // The Tumult (T3): the bake-input assembly (carrying capacity, river
+    // proximity, the paleoclimate eras + per-era connection graphs, and the
+    // peopled roster) and the `bake` call itself now live in the single
+    // `bake_history_from` function, given THIS stage's own hoisted
+    // `terrain`/`climate` (The Single Sculpt — no re-sculpt, no re-entrant
+    // `stage(..)` profiling). The standalone measurement entry point
+    // `history_for` (which `tests/history_tumult.rs` calls directly) routes
+    // through the same function over its own freshly-built
+    // `BuildDepth::Terrain` world instead, so both call sites' assembly is
+    // written exactly once. Same seed + pins ⇒ byte-identical `History` ⇒
     // byte-identical committed skeleton (the bake draws only under the
     // isolated `history/genesis/<people>` and `history/bake` streams).
-    let suitability = hornvale_demography::carrying_capacity(
-        geo,
-        &carrying_inputs_of(geo, &terrain, &climate),
-    );
-    // `carrying_capacity` is a dimensionless suitability (~[0, 1.7]); the bake
-    // reasons in headcounts (`pressure = population / eff_capacity`, genesis
-    // pop 10). Scale the suitability into a per-cell headcount capacity so a
-    // maximal-suitability cell supports ~a few hundred settlers and genesis
-    // communities start comfortable rather than instantly over-pressure.
-    // Tuned (with the genesis founding density below) to land seed-42's live
-    // settlement count in the walkable band — the quality gate in
-    // `tests/history_placement.rs`.
-    let capacity =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
-    // River proximity, exposed as a DISTINCT bake weighting factor (Task 5b):
-    // the same field `carrying_inputs_of` folds into K, passed separately so
-    // the bake's site-picking paths (genesis, daughter founding, migration)
-    // can bias toward fresh water directly — restoring The Confluence's
-    // near-river condensation, which the epoch (Task 5a) diluted when
-    // daughter/climate spreading chose cells without regard to rivers.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
-    let river_prox =
-        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
-    let paleo = paleoclimate_from(&world, &terrain)?;
-    let cfg = history_bake::BakeConfig::default_millennia();
-    let eras = bake_eras(&world, &terrain, &cfg)?;
-    let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
-    // The Sundering (the moving sea): one geography graph per era. A cell is
-    // ocean in era E iff elevation < era.sea_level(E); the glacial low-stand
-    // exposes the shelf as land bridges to island refugia (the diaspora
-    // crosses), the rising sea drowns them (the peoples sunder). Adjacency +
-    // sailing lanes only, empty settlement slice. Derived per era, never
-    // committed.
-    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
-    let elevation = &terrain.globe().elevation;
-    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
-        .iter()
-        .map(|era| {
-            crate::graph_derive::connection_graph_at(
-                geo,
-                elevation,
-                era.sea_level,
-                &current,
-                &[],
-                &crate::graph_derive::GraphConfig::default(),
-            )
-        })
-        .collect();
-    let history = history_bake::bake(
-        seed,
-        geo,
-        &capacity,
-        &river_prox,
-        &eras,
-        &paleo.refugia,
-        &peoples,
-        &cfg,
-        &graphs,
-    );
+    let history = bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)?;
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
     // scenario constant. `present_day` (windows/almanac) reads it back.
+    let cfg = history_bake::BakeConfig::default_millennia();
     history_emit::emit_now(&mut world, world_entity, cfg.end_year)?;
 
     // Pair each alive settlement `emit_history` just committed (tagged
