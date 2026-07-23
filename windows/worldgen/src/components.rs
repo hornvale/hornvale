@@ -11,7 +11,7 @@
 #![warn(missing_docs)]
 
 use hornvale_kernel::{ComponentStore, KindId};
-use hornvale_species::{BiosphereTraits, PerceptionVector, PsychVector};
+use hornvale_species::{BiosphereTraits, MindVector, PerceptionVector};
 
 use crate::BuildError;
 
@@ -25,7 +25,7 @@ pub struct WorldComponents {
     /// Universal body component — the canonical entity set.
     pub biosphere: ComponentStore<KindId, BiosphereTraits>,
     /// Peopled psychology.
-    pub psyche: ComponentStore<KindId, PsychVector>,
+    pub psyche: ComponentStore<KindId, MindVector>,
     /// Peopled perception.
     pub perception: ComponentStore<KindId, PerceptionVector>,
     /// Peopled phonology (language-owned).
@@ -95,7 +95,7 @@ impl WorldComponents {
     #[allow(clippy::too_many_arguments)]
     pub fn from_stores(
         biosphere: ComponentStore<KindId, BiosphereTraits>,
-        psyche: ComponentStore<KindId, PsychVector>,
+        psyche: ComponentStore<KindId, MindVector>,
         perception: ComponentStore<KindId, PerceptionVector>,
         articulation: ComponentStore<KindId, hornvale_language::ArticulationVector>,
         lexicon: ComponentStore<KindId, hornvale_language::speech::Lexicon>,
@@ -206,7 +206,7 @@ impl WorldComponents {
 /// singleton family stays its own proto).
 fn check_integrity(
     biosphere: &ComponentStore<KindId, BiosphereTraits>,
-    psyche: &ComponentStore<KindId, PsychVector>,
+    psyche: &ComponentStore<KindId, MindVector>,
     perception: &ComponentStore<KindId, PerceptionVector>,
     articulation: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     lexicon: &ComponentStore<KindId, hornvale_language::speech::Lexicon>,

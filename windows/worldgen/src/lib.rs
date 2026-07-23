@@ -655,7 +655,7 @@ pub fn deposit_of(
 /// Identity-ish at the goblin baseline; deterministic in `p`.
 pub fn species_carrying_input(
     base: hornvale_demography::CarryingInput,
-    p: &hornvale_species::PsychVector,
+    p: &hornvale_species::MindVector,
 ) -> hornvale_demography::CarryingInput {
     // Long-horizon peoples value reliable water more; bold (high threat-
     // response) peoples tolerate hostile ground better (lower effective
@@ -3680,7 +3680,7 @@ fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
 /// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
 /// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
 /// blending two 0.5s (or reading either directly) always yields 0.5.
-pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language::VoiceParams {
+pub fn voice_params(psych: &hornvale_species::MindVector) -> hornvale_language::VoiceParams {
     hornvale_language::VoiceParams {
         formality: (status_register(psych.status_basis) + psych.deliberation_latency) / 2.0,
         repetition: sociality_register(psych.sociality),
@@ -3692,7 +3692,7 @@ pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language:
 /// §7): honorifics are drawn only for a rank-based status basis — the
 /// goblin baseline — matching `voice_params`' epithet-density reading of
 /// the same field.
-pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language::MorphOptions {
+pub fn morph_options(psych: &hornvale_species::MindVector) -> hornvale_language::MorphOptions {
     hornvale_language::MorphOptions {
         honorifics: psych.status_basis == hornvale_species::StatusBasis::Rank,
     }

@@ -40,12 +40,12 @@ pub struct Npc {
     /// `activity` is (the perception/psych pattern). A per-NPC datum because
     /// co-derived NPCs may be different species with different niches.
     pub temperature_niche: ConditionResponse,
-    /// The species' `PsychVector.deliberation_latency`: slides the arbitration
+    /// The species' `MindVector.deliberation_latency`: slides the arbitration
     /// rule between *grab* (myopic, serve the loudest need) and *weigh* (the
     /// full weighted sum) — psychology's first runtime job (spec §6). Threaded
     /// from `psyche_registry` at derivation.
     pub deliberation_latency: f64,
-    /// The species' `PsychVector.time_horizon`: how far ahead the creature
+    /// The species' `MindVector.time_horizon`: how far ahead the creature
     /// plans (∈ [0,1]) — psychology's SECOND runtime dial (spec §6). A
     /// foresighted creature pre-empts a projectable stock drive, engaging it
     /// before its urgency crosses `act` (see `Drive::anticipation_lead`);
@@ -66,7 +66,7 @@ pub struct Npc {
     /// branched on a diet type. Threaded from the species' authored
     /// `biosphere_registry` at derivation, beside the metabolic class.
     pub niche: ResourceVector,
-    /// The species' `PsychVector.threat_response` (flee 0 ↔ stand 1), read at
+    /// The species' `MindVector.threat_response` (flee 0 ↔ stand 1), read at
     /// CREATURE scope as its boldness (The Mettle): scales the Danger drive's
     /// felt threat — `× 2·(1 − boldness)`, centered on `0.5` (steady/inert), so
     /// a coward (`< 0.5`) fears more and a bold creature (`> 0.5`) fears less.
@@ -1813,7 +1813,7 @@ pub struct Danger<'a> {
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
-/// dial is centered on (The Mettle). `PsychVector.threat_response` uses `0.5` as
+/// dial is centered on (The Mettle). `MindVector.threat_response` uses `0.5` as
 /// its flee/stand midpoint, and the goblin (and every psyche-less beast) sits
 /// here, so this baseline keeps them byte-identical.
 const BOLDNESS_STEADY: f64 = 0.5;
@@ -2066,7 +2066,7 @@ pub fn decide(view: &Perceived, home: &RoomAddr, p: &DriveParams, budget: usize)
 /// "how this mind decides" bundle [`arbitrate`] reads, distinct from what the
 /// creature perceives (`view`/`drives`), the world frame (`home`/`budget`), and
 /// the hysteresis carry (`incoming: Mode`). Bundling the two dials (endowment,
-/// from the species `PsychVector`) with the two per-tick gates (`helpless`,
+/// from the species `MindVector`) with the two per-tick gates (`helpless`,
 /// `awake`) is the tidy every drive campaign flagged.
 /// type-audit: bare-ok(ratio: latency), bare-ok(ratio: horizon), bare-ok(flag: helpless), bare-ok(flag: awake)
 #[derive(Clone, Copy, Debug, PartialEq)]

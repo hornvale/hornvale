@@ -101,7 +101,7 @@ pub fn render_phonology() -> String {
 pub(crate) fn sample_names_for(
     world: &World,
     species: &str,
-    psych: &hornvale_species::PsychVector,
+    psych: &hornvale_species::MindVector,
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);

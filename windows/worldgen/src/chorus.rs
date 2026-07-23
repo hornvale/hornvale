@@ -31,7 +31,7 @@ use hornvale_language::{
     Observability, OrderPolicy, Requirement, SchemaId, SlotKind, Stance, SubFrame, account_of,
     admitted, lexemes_for, schema_table, schemas::Manner, select_lexeme, select_schema,
 };
-use hornvale_species::{ActivityCycle, PerceptionVector, PsychVector, Sociality, StatusBasis};
+use hornvale_species::{ActivityCycle, MindVector, PerceptionVector, Sociality, StatusBasis};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The authored observability table (build-state; spec §3.2): what it
@@ -191,7 +191,7 @@ pub fn schema_prior(
 /// plus `0.5` when `sociality` is `Hierarchic`. Roster (measured, plan
 /// header): goblin/hobgoblin `2.5`, bugbear `2.0`, kobold `1.0`.
 /// type-audit: bare-ok(ratio: return)
-pub fn beta_of(psych: &PsychVector) -> f64 {
+pub fn beta_of(psych: &MindVector) -> f64 {
     let base = match psych.status_basis {
         StatusBasis::Knowledge => 1.0,
         StatusBasis::Rank => 2.0,
@@ -771,7 +771,7 @@ pub fn doctrine_params_of(folk: &AccountParams) -> AccountParams {
 /// this is the doctrine analog of [`beta_of`], never folded into
 /// [`doctrine_params_of`].
 /// type-audit: bare-ok(ratio: return)
-pub fn doctrine_beta_of(psych: &PsychVector) -> f64 {
+pub fn doctrine_beta_of(psych: &MindVector) -> f64 {
     beta_of(psych) + 0.5
 }
 

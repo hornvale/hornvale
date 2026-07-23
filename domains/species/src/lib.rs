@@ -142,7 +142,7 @@ pub enum SocialForm {
 /// requires its own campaign.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PsychVector {
+pub struct MindVector {
     /// How a society answers threat: flee 0 ↔ stand 1.
     pub threat_response: f64,
     /// How slowly decisions are made (idle this campaign; banked).
@@ -739,7 +739,7 @@ pub struct BiosphereTraits {
 // (articulation, lexicon, family proto) lives in `hornvale_language`.
 
 impl Component for BiosphereTraits {}
-impl Component for PsychVector {}
+impl Component for MindVector {}
 impl Component for PerceptionVector {}
 
 /// The universal biosphere component, authored directly (one row per kind).
@@ -941,11 +941,11 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
 /// four settling, speaking peoples (goblin is the baseline: scalars 0.5,
 /// default enum variants).
 /// type-audit: bare-ok(identifier-text)
-pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
+pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
     [
         (
             KindId("goblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.5,
                 deliberation_latency: 0.5,
                 in_group_radius: 0.5,
@@ -956,7 +956,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         ),
         (
             KindId("kobold"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.7,
                 in_group_radius: 0.2,
@@ -967,7 +967,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         ),
         (
             KindId("hobgoblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.7,
                 deliberation_latency: 0.6,
                 in_group_radius: 0.3,
@@ -978,7 +978,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         ),
         (
             KindId("bugbear"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.4,
                 in_group_radius: 0.3,
@@ -992,7 +992,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         // profile (per-chromatic differentiation is a deferred refinement).
         (
             KindId("white-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,            // an apex — stands, never flees
                 deliberation_latency: 0.5,        // banked dial, baseline
                 in_group_radius: 0.05,            // "us" = self; utterly solitary
@@ -1003,7 +1003,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         ),
         (
             KindId("red-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
                 in_group_radius: 0.05,
@@ -1014,7 +1014,7 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         ),
         (
             KindId("black-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
                 in_group_radius: 0.05,
