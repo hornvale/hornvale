@@ -31,6 +31,40 @@ const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 /// type-audit: bare-ok(identifier-text)
 pub const DISPOSITION_SHIFT: &str = "disposition-shift";
 
+/// How hard one committed `disposition-shift` fact leans on an NPC's
+/// grievance toward the possessing player (The First Mark, direct social
+/// consequence — decision-ledger #6: the first slice's consequence is
+/// direct social, not an ambient drive tip). A game-design coefficient, not
+/// a tuned physical constant.
+/// type-audit: bare-ok(ratio)
+pub const GRIEVANCE_GAIN: f64 = 1.0;
+
+/// Net grievance at which a neutral NPC turns hostile toward the player —
+/// three net provokes, one per day (same-day repeats dedup, Task 1), so
+/// three distinct days of antagonism. A game-design constant, not an
+/// empirical drive value: this mechanic never reads or perturbs the
+/// homeostatic drive layer (`liveness.rs`), and there is no seed-42
+/// calibration behind it.
+/// type-audit: bare-ok(ratio)
+pub const HOSTILITY_THRESHOLD: f64 = 3.0;
+
+/// An NPC's grievance toward the possessing player: the additive fold over
+/// their committed `disposition-shift` facts (The First Mark, direct social
+/// consequence). Zero with no player facts, so an unplayed world — or a
+/// session that never provokes/soothes this NPC — is byte-identical to that
+/// zero by construction.
+pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
+    ledger
+        .facts_about(npc)
+        .filter(|f| f.predicate == DISPOSITION_SHIFT)
+        .map(|f| match f.object {
+            Value::Number(n) => n,
+            _ => 0.0,
+        })
+        .sum::<f64>()
+        * GRIEVANCE_GAIN
+}
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -210,6 +244,42 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn committed_disposition_count(&self) -> usize {
         self.ledger.find(DISPOSITION_SHIFT).count()
+    }
+
+    /// Would the named co-located NPC be hostile to the player right now
+    /// (their grievance fold at or past `HOSTILITY_THRESHOLD`)? A pure read
+    /// — never commits anything. `who` resolves exactly as `provoke`/
+    /// `soothe` do (`colocated_npc`): empty selects the sole co-located
+    /// NPC, else a numeric id or a case-insensitive label substring; an
+    /// unresolved (not-here) `who` reads as not-hostile rather than
+    /// erroring. This mechanic's whole consequence is Task 3's; this task
+    /// stops at the gate.
+    /// type-audit: bare-ok(identifier-text: who), bare-ok(flag: return)
+    pub fn would_turn_hostile(&self, who: &str) -> bool {
+        self.colocated_npc(who)
+            .map(|npc| grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD)
+            .unwrap_or(false)
+    }
+
+    /// A named NPC's current grievance fold toward the player (test
+    /// accessor: the byte-identity guard that an unprovoked NPC's grievance
+    /// is exactly zero). Unlike `would_turn_hostile`, this resolves among
+    /// ALL derived NPCs, not only co-located ones — grievance is a ledger
+    /// fold over that NPC's own facts, not a proximity check — matched by
+    /// numeric id or case-insensitive label substring; `None` if no derived
+    /// NPC matches `who`.
+    /// type-audit: bare-ok(identifier-text: who), bare-ok(diagnostic-value: return)
+    pub fn npc_grievance(&self, who: &str) -> Option<f64> {
+        who.parse::<u64>()
+            .ok()
+            .and_then(|id| self.npcs.iter().find(|n| n.entity.0.get() == id))
+            .or_else(|| {
+                let needle = who.to_lowercase();
+                self.npcs
+                    .iter()
+                    .find(|n| n.label.to_lowercase().contains(&needle))
+            })
+            .map(|npc| grievance(&self.ledger, npc.entity))
     }
 
     /// The session's owned, evolving ledger, serialized — a determinism

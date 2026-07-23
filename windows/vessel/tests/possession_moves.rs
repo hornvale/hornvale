@@ -467,3 +467,66 @@ fn a_wild_beast_walks_away_from_water_and_is_observed() {
     );
     assert!(!out.is_empty(), "the wait narrates the world's motion");
 }
+
+/// The seed-42 settled NPC guaranteed co-located with the possessed agent at
+/// `PossessOpts::default()`'s starting room (day 0.5, before any `go`) — see
+/// `probe_colocated_npc_label_at_day_zero` in this file's history and the
+/// task-2 report for how this was discovered. It never walks (the
+/// on-water flagship settlement's peoples drink in place), so it stays
+/// co-located across every `wait` in these tests too.
+const GRIEVANCE_NPC: &str = "bugbear of Qvooshtvoagootao";
+
+#[test]
+fn grievance_accumulates_across_waits_and_crosses_the_hostility_threshold() {
+    // THE GRIEVANCE FOLD (Task 2, direct social consequence, not an ambient
+    // drive tip): an un-provoked NPC carries zero grievance and is never
+    // hostile.
+    let w = world();
+    let (a, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    assert!(
+        !a.would_turn_hostile(GRIEVANCE_NPC),
+        "un-provoked NPC is neutral"
+    );
+
+    // Provoking across three distinct days climbs grievance past the
+    // threshold. Same-day repeats dedup (Task 1), so each provoke here is
+    // separated by a `wait` — three distinct days of antagonism.
+    let (mut b, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    b.handle("wait");
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    b.handle("wait");
+    assert!(
+        !b.would_turn_hostile(GRIEVANCE_NPC),
+        "two provokes is below threshold"
+    );
+    b.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    assert!(
+        b.would_turn_hostile(GRIEVANCE_NPC),
+        "three provokes crosses the threshold"
+    );
+
+    // soothe pulls back below the threshold (intent vs outcome).
+    b.handle("wait");
+    b.handle(&format!("soothe {GRIEVANCE_NPC}")); // day 3.5: grievance 2
+    assert!(
+        !b.would_turn_hostile(GRIEVANCE_NPC),
+        "soothe pulls the NPC back below hostile"
+    );
+}
+
+#[test]
+fn unprovoked_npcs_have_zero_grievance() {
+    // BYTE-IDENTITY GUARD: with no player facts, every derived NPC's
+    // grievance fold is exactly zero — an unplayed world (or a session that
+    // never provokes/soothes) is byte-identical by construction.
+    let w = world();
+    let s = Session::start(&w, &PossessOpts::default()).unwrap().0;
+    for label in s.npc_labels() {
+        assert_eq!(
+            s.npc_grievance(label),
+            Some(0.0),
+            "un-provoked NPC {label} must carry exactly zero grievance"
+        );
+    }
+}
