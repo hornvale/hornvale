@@ -9,7 +9,7 @@
 //! convention: same world, same bytes — no draws, no mutation.
 
 use crate::terrain_of;
-use crate::vestige::{Valence, Vestige, VestigeKind, vestiges_at};
+use crate::vestige::{Valence, Vestige, VestigeKind, vestiges_field};
 use hornvale_kernel::{CellMap, NearestCellIndex, World};
 
 /// Raster width, pixels (equirectangular → height is half). Matches the
@@ -73,15 +73,15 @@ fn most_dread(stack: &[Vestige]) -> Option<&Vestige> {
 /// precomputed table. Computing per-cell first (not per pixel, as
 /// `NearestCellIndex`-based lenses elsewhere do) matters here because
 /// `vestiges_at` rescans the ledger's committed occupation history on every
-/// call — precomputing over cells keeps that cost independent of
-/// [`MAP_WIDTH`].
+/// call — so this builds the whole palimpsest field with one scan via
+/// [`vestiges_field`] and then reads each cell's stack out of it, keeping the
+/// cost independent of both [`MAP_WIDTH`] and the number of cells scanned.
 fn residue_pixels(world: &World, terrain: &hornvale_terrain::GeneratedTerrain) -> Vec<u8> {
     let geo = terrain.geosphere();
-    let colors = CellMap::from_fn(geo, |cell| {
-        match most_dread(&vestiges_at(world, terrain, cell)) {
-            Some(v) => vestige_color(v.kind, v.valence),
-            None => EMPTY_BASE,
-        }
+    let field = vestiges_field(world, terrain);
+    let colors = CellMap::from_fn(geo, |cell| match most_dread(field.get(cell)) {
+        Some(v) => vestige_color(v.kind, v.valence),
+        None => EMPTY_BASE,
     });
     let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
     let index = NearestCellIndex::new(geo);

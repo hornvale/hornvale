@@ -316,6 +316,31 @@ pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
     v
 }
 
+/// Every occupation, grouped by `site`, each cell's vec ordered
+/// oldest-founded-first — the batched sibling of [`occupations_at`]: one
+/// [`occupation_records`] scan for the whole world instead of one per cell.
+/// Built for The Vestige's per-world field derivations
+/// ([`crate::vestige::vestiges_field`]) and the coming census, where calling
+/// `occupations_at` per cell would rescan the ledger `O(cells)` times. Each
+/// cell's vec is sorted with the exact same comparator `occupations_at` uses
+/// (`founded` via `f64::total_cmp`, ties broken by the occupation entity's
+/// id), so a cell's entry here is byte-for-byte identical to what
+/// `occupations_at(world, cell)` would produce.
+pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
+    let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
+    for occ in occupation_records(world) {
+        by_cell.entry(occ.site).or_default().push(occ);
+    }
+    for occs in by_cell.values_mut() {
+        occs.sort_by(|a, b| {
+            a.founded
+                .total_cmp(&b.founded)
+                .then(a.community.0.cmp(&b.community.0))
+        });
+    }
+    by_cell
+}
+
 /// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
 /// describe — enough of it to render prose and derive flesh. The fields a
 /// derived readout never needs (`community`/`lineage`/`deity`/`tongue`) are

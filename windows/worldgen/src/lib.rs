@@ -104,13 +104,14 @@ pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
     emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
-    occupations_at, present_day, ruins_of_people, stratigraphy, sundered_landmasses, territories,
+    occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
+    sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
 pub use vestige::{
     HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
-    vestige_from_occupation, vestiges_at,
+    vestige_from_occupation, vestiges_at, vestiges_field,
 };
 
 /// Errors from building a world.
@@ -1013,10 +1014,13 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
 
 /// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
 /// subsurface palimpsest radiates: the MAX dread over the cell's vestige
-/// stack ([`vestiges_at`]; an empty stack reads `0.0`), already `[0, 1]` (each
-/// [`Vestige::dread`] is authored in-range, so no field-wide normalization is
-/// needed here — max, not sum, because dread is a warning signal a wanderer
-/// SENSES, not an additive hazard load). Derived from committed history
+/// stack ([`vestiges_at`]'s per-cell semantics; an empty stack reads `0.0`),
+/// already `[0, 1]` (each [`Vestige::dread`] is authored in-range, so no
+/// field-wide normalization is needed here — max, not sum, because dread is a
+/// warning signal a wanderer SENSES, not an additive hazard load). Built over
+/// [`vestiges_field`] (one ledger scan for the whole world) rather than
+/// calling `vestiges_at` per cell, which would rescan the ledger's committed
+/// occupation history once per cell. Derived from committed history
 /// (occupation records) and terrain (the pre-human gate-scar presence test):
 /// no seed, no facts, byte-identical across calls. EXPOSED but not yet
 /// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
@@ -1024,13 +1028,11 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
 /// type-audit: bare-ok(ratio: return)
 pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let terrain = terrain_of(world)?;
-    let geo = terrain.geosphere();
-    Ok(hornvale_kernel::CellMap::from_fn(geo, |cell| {
-        vestiges_at(world, &terrain, cell)
-            .iter()
-            .map(|v| v.dread)
-            .fold(0.0, f64::max)
-    }))
+    let field = vestiges_field(world, &terrain);
+    Ok(hornvale_kernel::CellMap::from_fn(
+        terrain.geosphere(),
+        |cell| field.get(cell).iter().map(|v| v.dread).fold(0.0, f64::max),
+    ))
 }
 
 /// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER

@@ -3,9 +3,9 @@
 //! (settlement-abandonment history + terrain): no live mutation, no committed
 //! facts, no metaphysics — the door and its dread, not the entity.
 
-use crate::history_emit::{occupations_at, present_day};
+use crate::history_emit::{occupations_at, occupations_by_cell, present_day};
 use hornvale_history::record::{CauseOfEnd, Function, Notability, OccupationRecord};
-use hornvale_kernel::{CellId, World, math};
+use hornvale_kernel::{CellId, CellMap, World, math};
 use hornvale_terrain::GeneratedTerrain;
 
 /// What a residue site is, by maker → purpose.
@@ -179,6 +179,36 @@ pub fn vestiges_at(world: &World, terrain: &GeneratedTerrain, cell: CellId) -> V
     layers
 }
 
+/// The whole world's palimpsest field, one layer-stack per cell — the
+/// batched sibling of [`vestiges_at`] the per-cell dread field and residue
+/// lens now build over. `vestiges_at` calls `occupations_at`, which rescans
+/// the entire ledger (`occupation_records`) on every call; asking for it once
+/// per cell in a `CellMap::from_fn` loop is `O(cells × occupations)` ledger
+/// reconstructions. This instead scans the ledger exactly once
+/// ([`occupations_by_cell`]) and reads `present_day` once, so the whole field
+/// costs `O(occupations + cells)`. Per cell, the stack is built in the exact
+/// same order `vestiges_at` produces (the pre-human layer first, if any, then
+/// that cell's occupations oldest-founded-first via
+/// [`vestige_from_occupation`]) — so `vestiges_field(world, terrain).get(cell)`
+/// is byte-for-byte identical to `&vestiges_at(world, terrain, cell)` for
+/// every cell (see this module's `vestiges_field_matches_vestiges_at_per_cell`
+/// test).
+pub fn vestiges_field(world: &World, terrain: &GeneratedTerrain) -> CellMap<Vec<Vestige>> {
+    let now = present_day(world);
+    let by_cell = occupations_by_cell(world);
+    let geo = terrain.geosphere();
+    CellMap::from_fn(geo, |cell| {
+        let mut layers = Vec::new();
+        if let Some(prehuman) = prehuman_vestige(terrain, cell) {
+            layers.push(prehuman);
+        }
+        if let Some(occs) = by_cell.get(&cell) {
+            layers.extend(occs.iter().map(|occ| vestige_from_occupation(occ, now)));
+        }
+        layers
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,7 +286,7 @@ mod tests {
         assert_eq!(v.hazard, HazardKind::Pestilent);
     }
 
-    use crate::{SettlementPins, SkyChoice, build_world, terrain_of};
+    use crate::{SettlementPins, SkyChoice, build_world, occupation_records, terrain_of};
     use hornvale_astronomy::SkyPins;
     use hornvale_kernel::Seed;
     use hornvale_terrain::TerrainPins;
@@ -366,5 +396,40 @@ mod tests {
             stack.iter().all(|v| v.founded_day.is_some()),
             "with no pre-human layer, every entry is a people occupation"
         );
+    }
+
+    #[test]
+    fn vestiges_field_matches_vestiges_at_per_cell() {
+        // The batched, one-scan field must be byte-identical, cell by cell,
+        // to the per-cell path it replaces in the hot loops (`vestige_dread`,
+        // the residue lens) — same ordering (pre-human first, then
+        // oldest-founded-first occupations), same values.
+        let (world, terrain) = seed_42_world_and_terrain();
+        let field = vestiges_field(&world, &terrain);
+
+        // The pre-human fixture cell (a breached/forgotten gate-scar).
+        assert_eq!(
+            field.get(DEEP_ANCIENT_NUMINOUS_CELL),
+            &vestiges_at(&world, &terrain, DEEP_ANCIENT_NUMINOUS_CELL),
+            "the pre-human fixture cell must match"
+        );
+        // A shallow cell with no pre-human layer at all.
+        assert_eq!(
+            field.get(SHALLOW_YOUNG_CELL),
+            &vestiges_at(&world, &terrain, SHALLOW_YOUNG_CELL),
+            "a cell with no pre-human layer must match"
+        );
+        // A sample of cells that actually carry people occupations, so the
+        // grouped-by-site path is checked against populated stacks too, not
+        // just the two fixture cells above.
+        let occupied_cells: std::collections::BTreeSet<CellId> =
+            occupation_records(&world).iter().map(|o| o.site).collect();
+        for cell in occupied_cells.into_iter().take(25) {
+            assert_eq!(
+                field.get(cell),
+                &vestiges_at(&world, &terrain, cell),
+                "occupied cell {cell:?} must match between the batched and per-cell paths"
+            );
+        }
     }
 }
