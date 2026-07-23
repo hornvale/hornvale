@@ -325,6 +325,20 @@ struct Bake<'a> {
     tally: BakeCensus,
 }
 
+/// The outcome of [`Bake::relocate`]ing a homeless people.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Relocation {
+    /// Found a home (possibly by displacing occupants); `cascade` = the number
+    /// of occupied cells this relocation displaced (0 = reached vacant land).
+    Settled {
+        /// Occupied cells displaced to reach this home (0 = vacant land).
+        cascade: u32,
+    },
+    /// Vanished — no vacant cell and no occupied cell reachable (an isolated
+    /// remnant), or truncated at the depth cap.
+    Lost,
+}
+
 /// The river-proximity suitability multiplier for a cell (Task 5b): a cell on
 /// a river (`prox` ≈ 1) is `1.0 + RIVER_SITE_WEIGHT` times as attractive as one
 /// far from water (`prox` ≈ 0). Full precision; used to bias all three
@@ -444,26 +458,32 @@ impl<'a> Bake<'a> {
     }
 
     /// Relocate a homeless people (evicted by climate or raid) to a new home,
-    /// cascading when there is no vacant land. Returns the cascade size — the
-    /// number of OCCUPIED cells this relocation displaced (0 if it reached
-    /// vacant land directly). The Sea-Peoples avalanche: no vacant cell ⇒ take
-    /// the nearest occupied cell (raid it), and its evicted occupant relocates
-    /// in turn. Bounded by `CASCADE_DEPTH_CAP` (a truncated cascade drops the
-    /// last remnant).
+    /// cascading when there is no vacant land. `predecessor` is the id of the
+    /// community that just closed and is relocating (used to attribute the new
+    /// occupation's `Founding::From` to its specific forebear, not the lineage
+    /// ancestor — `lineage` stays reserved for the `open` lineage argument).
+    /// Returns the outcome: [`Relocation::Settled`] (with the cascade size —
+    /// the number of OCCUPIED cells this relocation displaced, 0 if it reached
+    /// vacant land directly) or [`Relocation::Lost`] (no vacant and no
+    /// occupied cell reachable, or the depth cap truncated the chain). The
+    /// Sea-Peoples avalanche: no vacant cell ⇒ take the nearest occupied cell
+    /// (raid it), and its evicted occupant relocates in turn. Bounded by
+    /// `CASCADE_DEPTH_CAP` (a truncated cascade drops the last remnant).
     #[allow(clippy::too_many_arguments)]
     fn relocate(
         &mut self,
         people: KindId,
         pop: f64,
         lineage: EntityId,
+        predecessor: EntityId,
         offset: f64,
         from: CellId,
         era: &EraClimate,
         year: f64,
         depth: u32,
-    ) -> u32 {
+    ) -> Relocation {
         if depth >= CASCADE_DEPTH_CAP {
-            return 0; // truncated — the last remnant is lost (bounded-size guard)
+            return Relocation::Lost; // truncated — the last remnant is lost (bounded-size guard)
         }
         // Vacant land reachable? Then no conflict — settle there.
         if let Some(dest) = self.nearest_dest(era, from) {
@@ -472,25 +492,26 @@ impl<'a> Bake<'a> {
                 dest,
                 year,
                 pop,
-                Founding::From(lineage),
+                Founding::From(predecessor),
                 Some(lineage),
                 offset,
             );
             self.touch(new_idx, year);
-            return 0;
+            return Relocation::Settled { cascade: 0 };
         }
         // No vacant land — displace the nearest occupied cell (the avalanche).
         let Some(victim) = self.nearest_occupied(from) else {
-            return 0; // nothing vacant AND nothing occupied reachable — lost
+            return Relocation::Lost; // nothing vacant AND nothing occupied reachable — lost
         };
         let victim_site = self.communities[victim].site;
-        let (v_people, v_pop, v_lineage, v_offset) = {
+        let (v_people, v_pop, v_lineage, v_offset, v_id) = {
             let c = &self.communities[victim];
             (
                 self.records[c.record].people,
                 c.population,
                 c.lineage,
                 c.tech_offset,
+                c.id,
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
@@ -501,7 +522,7 @@ impl<'a> Bake<'a> {
             victim_site,
             year,
             pop,
-            Founding::From(lineage),
+            Founding::From(predecessor),
             Some(lineage),
             offset,
         );
@@ -510,17 +531,25 @@ impl<'a> Bake<'a> {
         self.touch(new_idx, year);
         self.tally.raided += 1;
         self.tally.fled += 1;
-        // The evicted occupant cascades onward.
-        1 + self.relocate(
+        // The evicted occupant cascades onward, founded from its own (the
+        // victim's) community id.
+        let victim_cascade = match self.relocate(
             v_people,
             v_pop * MIGRATE_SURVIVAL,
             v_lineage,
+            v_id,
             v_offset,
             victim_site,
             era,
             year,
             depth + 1,
-        )
+        ) {
+            Relocation::Settled { cascade } => cascade,
+            Relocation::Lost => 0,
+        };
+        Relocation::Settled {
+            cascade: 1 + victim_cascade,
+        }
     }
 
     /// The wealthiest alive community adjacent to `site` (raid target),
@@ -640,26 +669,26 @@ impl<'a> Bake<'a> {
         // if there is none — displace the nearest occupied cell and let that
         // occupant cascade onward (the Sea-Peoples avalanche).
         if eff == 0.0 {
-            let (record, pop, lineage, offset) = {
+            let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
-                (c.record, c.population, c.lineage, c.tech_offset)
+                (c.record, c.population, c.lineage, c.tech_offset, c.id)
             };
             let people = self.records[record].people;
             self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
-            let size = self.relocate(
+            match self.relocate(
                 people,
                 pop * MIGRATE_SURVIVAL,
                 lineage,
+                migrant_id,
                 offset,
                 site,
                 era,
                 year,
                 0,
-            );
-            if size == 0 {
-                self.tally.migrated += 1;
-            } else {
-                self.tally.record_cascade(size);
+            ) {
+                Relocation::Settled { cascade: 0 } => self.tally.migrated += 1,
+                Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
+                Relocation::Lost => self.tally.collapsed += 1,
             }
             return;
         }
@@ -693,10 +722,10 @@ impl<'a> Bake<'a> {
         self.touch(raider, year);
 
         // The raided community flees its site.
-        let (people, remaining, lineage, offset) = {
+        let (people, remaining, lineage, offset, target_id) = {
             let c = &self.communities[target];
             let people = self.records[c.record].people;
-            (people, c.population, c.lineage, c.tech_offset)
+            (people, c.population, c.lineage, c.tech_offset, c.id)
         };
         let raider_id = self.communities[raider].id;
         let flee_site = self.communities[target].site;
@@ -706,11 +735,12 @@ impl<'a> Bake<'a> {
         // Refound on the nearest vacant habitable cell (excluding the site it
         // just abandoned); with none, displace the nearest occupied cell and
         // cascade (the Sea-Peoples avalanche).
-        let size = self.relocate(people, remaining, lineage, offset, flee_site, era, year, 0);
-        if size == 0 {
-            self.tally.resettled += 1;
-        } else {
-            self.tally.record_cascade(size);
+        match self.relocate(
+            people, remaining, lineage, target_id, offset, flee_site, era, year, 0,
+        ) {
+            Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
+            Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
+            Relocation::Lost => {}
         }
     }
 
@@ -996,6 +1026,98 @@ mod tests {
             nearest_occupied(&graph, &node_index, CellId(0)),
             Some(expected_idx),
             "expected the nearer occupied cell (hops_3={hops_3}, hops_20={hops_20})"
+        );
+    }
+
+    #[test]
+    fn relocate_founds_from_the_specific_predecessor_not_the_lineage_ancestor() {
+        // Regression for a review finding on `relocate`: a 2nd-generation
+        // relocation must attribute `founded_from` to the community that JUST
+        // closed (its specific predecessor), not to the lineage's original
+        // ancestor. A 1st-generation move can't distinguish the two (a
+        // genesis community is its own lineage root), so this drives TWO
+        // successive relocations of the same lineage and checks the second.
+        use hornvale_kernel::ReferenceElevation;
+
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+        let people = KindId("goblin");
+
+        let mut bake = Bake {
+            graphs: &graphs,
+            cur_graph: 0,
+            capacity: &capacity,
+            river_prox: &river_prox,
+            refugia: &refugia,
+            records: Vec::new(),
+            communities: Vec::new(),
+            node_index: BTreeMap::new(),
+            next_id: 1,
+            stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tally: BakeCensus::default(),
+        };
+
+        // Genesis: R1 opens at cell 5. A genesis community is its own
+        // lineage root.
+        let r1_idx = bake.open(
+            people,
+            CellId(5),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(5)),
+            None,
+            0.0,
+        );
+        let r1_id = bake.communities[r1_idx].id;
+        let lineage = bake.communities[r1_idx].lineage;
+        assert_eq!(r1_id, lineage, "genesis community is its own lineage root");
+
+        // First migration: R1 closes and relocates to vacant land, founded
+        // from R1's own id — which equals `lineage` here, so this move alone
+        // can't distinguish the bug from the fix.
+        bake.close(r1_idx, 100.0, CauseOfEnd::Migrated, Ended::Nature);
+        let outcome1 = bake.relocate(people, 9.0, lineage, r1_id, 0.0, CellId(5), &era, 100.0, 0);
+        let r2_idx = match outcome1 {
+            Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
+            other => panic!("expected a direct settle onto vacant land: {other:?}"),
+        };
+        let r2_id = bake.communities[r2_idx].id;
+        let r2_site = bake.communities[r2_idx].site;
+        assert_eq!(
+            bake.records[bake.communities[r2_idx].record].founded_from,
+            Founding::From(r1_id)
+        );
+
+        // Second migration: R2 closes and relocates again. Its predecessor is
+        // R2's OWN id — distinct from the lineage root (R1's id) — so this is
+        // the case that catches the bug: the buggy code named `lineage`
+        // (R1), the fix names R2.
+        bake.close(r2_idx, 200.0, CauseOfEnd::Migrated, Ended::Nature);
+        let outcome2 = bake.relocate(people, 8.0, lineage, r2_id, 0.0, r2_site, &era, 200.0, 0);
+        let r3_idx = match outcome2 {
+            Relocation::Settled { cascade: 0 } => bake.communities.len() - 1,
+            other => panic!("expected a direct settle onto vacant land: {other:?}"),
+        };
+        let founded_from = bake.records[bake.communities[r3_idx].record].founded_from;
+        assert_eq!(
+            founded_from,
+            Founding::From(r2_id),
+            "must name the specific predecessor (R2), not the lineage ancestor"
+        );
+        assert_ne!(
+            founded_from,
+            Founding::From(lineage),
+            "must NOT be the lineage ancestor (R1) for a 2nd-generation move"
         );
     }
 
