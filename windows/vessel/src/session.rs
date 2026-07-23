@@ -265,9 +265,10 @@ impl<'w> Session<'w> {
     }
 
     /// How many `turned-hostile` facts the session's owned ledger has
-    /// committed — zero until a co-located NPC's grievance first crosses
-    /// `HOSTILITY_THRESHOLD` on a `wait` tick (test accessor: The First
-    /// Mark's one-hop forward integration).
+    /// committed — zero until an NPC (co-located when the grievance was
+    /// *earned*, not necessarily when the threshold is crossed) first has
+    /// its grievance cross `HOSTILITY_THRESHOLD` on a `wait` tick (test
+    /// accessor: The First Mark's one-hop forward integration).
     /// type-audit: bare-ok(count: return)
     pub fn committed_hostility_count(&self) -> usize {
         self.ledger.find(TURNED_HOSTILE).count()
@@ -519,12 +520,26 @@ impl<'w> Session<'w> {
                 // The First Mark, one-hop forward integration: after the NPC
                 // drive tick settles, any co-located-or-not NPC whose
                 // grievance has crossed the hostility threshold commits its
-                // (functional, so idempotent) `turned-hostile` fact — a
-                // discrete social consequence of the player's own acts, not
-                // an ambient drive. Iterating `self.npcs` in its existing
-                // (derivation) order keeps the commit sequence deterministic.
+                // `turned-hostile` fact — a discrete social consequence of
+                // the player's own acts, not an ambient drive. Iterating
+                // `self.npcs` in its existing (derivation) order keeps the
+                // commit sequence deterministic.
                 let player = self.agent_entity();
                 for npc in self.npcs.iter() {
+                    // The `value_of(...).is_none()` check below is the SOLE
+                    // idempotency guarantee for this fact, not a second
+                    // layer atop `TURNED_HOSTILE`'s `functional: true`
+                    // registration: `Ledger::commit` only dedups via an
+                    // exact full-envelope match, and `day` advances every
+                    // tick, so a later-day re-fire is never an exact dup;
+                    // and the functional flag only rejects a *different*
+                    // object for the same subject/predicate, but `object`
+                    // here is always the same constant `player`, so that
+                    // flag can never trip either. Remove this guard and the
+                    // loop silently refires (a new `turned-hostile` fact,
+                    // same subject/predicate/object, only `day` differing)
+                    // on every subsequent `wait` the NPC is still past
+                    // threshold for.
                     if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
                         && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
                     {
