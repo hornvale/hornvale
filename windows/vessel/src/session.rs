@@ -576,6 +576,17 @@ impl<'w> Session<'w> {
     /// a co-located NPC. `sign` is +1 (provoke) / -1 (soothe). The fact
     /// carries a `player:` provenance so a reader (and contradiction
     /// checking) can tell it from every fact a world system commits.
+    ///
+    /// Same-day dedup is intentional, not a bug: exactly one disposition
+    /// shift lands per (NPC, day, direction) — escalating a mark on the same
+    /// NPC the same day requires time to pass first (a `wait`), not
+    /// repeating the verb. Because `self.day` only advances on `wait`, a
+    /// same-day repeat of `provoke` (or `soothe`) on the same NPC produces a
+    /// byte-identical `Fact` envelope, and `Ledger::commit`'s idempotent
+    /// dedup (`Ok(false)` = identical fact already present, nothing
+    /// appended) makes it a true no-op. The narration below reads that
+    /// return value rather than assuming success, so the player is never
+    /// told a mark landed when the ledger disagrees.
     fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
         let Some(npc) = self.colocated_npc(who) else {
             return Turn::Out("There is no one here to provoke or soothe.".to_string());
@@ -591,11 +602,20 @@ impl<'w> Session<'w> {
             day: Some(self.day.day),
             provenance: format!("player: {verb}"),
         };
-        self.ledger
+        let appended = self
+            .ledger
             .commit(fact, &self.registry)
             .expect("disposition-shift is registered and finite");
-        let felt = if sign >= 0 { "bristles" } else { "eases" };
-        Turn::Out(format!("You {verb} {label}. They {felt}."))
+        if appended {
+            let felt = if sign >= 0 { "bristles" } else { "eases" };
+            Turn::Out(format!("You {verb} {label}. They {felt}."))
+        } else if sign >= 0 {
+            Turn::Out(format!(
+                "You round on {label} again, but the moment already holds all the edge it will take today."
+            ))
+        } else {
+            Turn::Out(format!("{label} is already as eased as they'll be today."))
+        }
     }
 
     /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):

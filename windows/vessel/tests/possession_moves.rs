@@ -359,6 +359,50 @@ fn provoke_commits_one_player_authored_disposition_fact() {
 }
 
 #[test]
+fn a_repeat_same_day_provoke_is_a_ledger_no_op_and_the_narration_says_so() {
+    // SAME-DAY DEDUP IS INTENTIONAL: one disposition shift per (NPC, day,
+    // direction) — escalation is gated on time passing (a `wait`), not on
+    // repeating the verb. Two `provoke`s on the same NPC with no
+    // intervening `wait` produce a byte-identical `Fact` envelope, so
+    // `Ledger::commit` returns `Ok(false)` (idempotent no-op) the second
+    // time: `committed_disposition_count` must not double-count, and the
+    // narration must be honest that nothing further landed.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+
+    let out_text = |t: Turn| match t {
+        Turn::Out(s) => s,
+        Turn::Released(s) => panic!("provoke never releases: {s}"),
+    };
+
+    let first = out_text(session.handle("provoke"));
+    assert_eq!(
+        session.committed_disposition_count(),
+        1,
+        "the first provoke commits one fact"
+    );
+    assert!(
+        first.to_lowercase().contains("provoke") || first.contains("bristle"),
+        "the first provoke is the effect narration: {first}"
+    );
+
+    let second = out_text(session.handle("provoke"));
+    assert_eq!(
+        session.committed_disposition_count(),
+        1,
+        "a same-day repeat is a ledger no-op: the count must not double-count"
+    );
+    assert!(
+        second.contains("already"),
+        "a same-day repeat must not claim a fresh effect: {second}"
+    );
+    assert_ne!(
+        first, second,
+        "the repeat narration must differ from the effect narration"
+    );
+}
+
+#[test]
 fn possession_with_no_act_leaves_session_ledger_unchanged() {
     // BYTE-IDENTITY GUARD: a read-only verb (`look`) must commit nothing —
     // the session ledger is byte-identical to a fresh, untouched session.
