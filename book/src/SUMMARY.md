@@ -240,6 +240,7 @@
 - [The First Mark](./chronicle/the-first-mark.md)
 - [The Cloister](./chronicle/the-cloister.md)
 - [The Vestige](./chronicle/the-vestige.md)
+- [The Lookup](./chronicle/the-lookup.md)
 - [The Phantom](./chronicle/the-phantom.md)
 - [The Excursion](./chronicle/the-excursion.md)
 
