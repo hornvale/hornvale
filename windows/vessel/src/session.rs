@@ -48,6 +48,14 @@ pub const GRIEVANCE_GAIN: f64 = 1.0;
 /// type-audit: bare-ok(ratio)
 pub const HOSTILITY_THRESHOLD: f64 = 3.0;
 
+/// The one-hop forward integration (The First Mark): an NPC whose grievance
+/// crosses `HOSTILITY_THRESHOLD` commits this fact toward the possessing
+/// player. Functional per subject — an NPC turns hostile once, so the `wait`
+/// tick's firing (guarded by `Ledger::value_of`) is idempotent by
+/// construction, not by a separate dedup check.
+/// type-audit: bare-ok(identifier-text)
+pub const TURNED_HOSTILE: &str = "turned-hostile";
+
 /// An NPC's grievance toward the possessing player: the additive fold over
 /// their committed `disposition-shift` facts (The First Mark, direct social
 /// consequence). Zero with no player facts, so an unplayed world — or a
@@ -162,6 +170,16 @@ impl<'w> Session<'w> {
                 "an agent's disposition was shifted by the possessing player",
             )
             .expect("DISPOSITION_SHIFT registers identically every session");
+        // The consequence of the mark above (The First Mark, one-hop forward
+        // integration): functional (an NPC turns hostile once — the second
+        // commit attempt is a guaranteed no-op, not just a discouraged one).
+        registry
+            .register_predicate(
+                TURNED_HOSTILE,
+                true,
+                "an NPC turned hostile toward the possessing player",
+            )
+            .expect("TURNED_HOSTILE registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
@@ -244,6 +262,28 @@ impl<'w> Session<'w> {
     /// type-audit: bare-ok(count: return)
     pub fn committed_disposition_count(&self) -> usize {
         self.ledger.find(DISPOSITION_SHIFT).count()
+    }
+
+    /// How many `turned-hostile` facts the session's owned ledger has
+    /// committed — zero until a co-located NPC's grievance first crosses
+    /// `HOSTILITY_THRESHOLD` on a `wait` tick (test accessor: The First
+    /// Mark's one-hop forward integration).
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_hostility_count(&self) -> usize {
+        self.ledger.find(TURNED_HOSTILE).count()
+    }
+
+    /// The possessed agent's own stable identity as a ledger `EntityId` — the
+    /// object a hostile NPC's `turned-hostile` fact points at. The `Agent`
+    /// struct itself is never committed to the ledger (derived fresh each
+    /// session, spec's reversibility rule), but its `AgentId` is a
+    /// deterministic, seed-derived `u64` (`mint_flagship`'s stream draw), so
+    /// it is a stable, collision-free identity to reference AS an object —
+    /// this never asserts the player has facts of their own, only that an
+    /// NPC's own fact points at them.
+    fn agent_entity(&self) -> EntityId {
+        EntityId::new(self.agent.id.0)
+            .expect("a minted agent id is a seeded stream draw, never exactly zero")
     }
 
     /// Would the named co-located NPC be hostile to the player right now
@@ -476,6 +516,31 @@ impl<'w> Session<'w> {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
                 self.ledger = next;
+                // The First Mark, one-hop forward integration: after the NPC
+                // drive tick settles, any co-located-or-not NPC whose
+                // grievance has crossed the hostility threshold commits its
+                // (functional, so idempotent) `turned-hostile` fact — a
+                // discrete social consequence of the player's own acts, not
+                // an ambient drive. Iterating `self.npcs` in its existing
+                // (derivation) order keeps the commit sequence deterministic.
+                let player = self.agent_entity();
+                for npc in self.npcs.iter() {
+                    if grievance(&self.ledger, npc.entity) >= HOSTILITY_THRESHOLD
+                        && self.ledger.value_of(npc.entity, TURNED_HOSTILE).is_none()
+                    {
+                        let fact = Fact {
+                            subject: npc.entity,
+                            predicate: TURNED_HOSTILE.to_string(),
+                            object: Value::Entity(player),
+                            place: None,
+                            day: Some(self.day.day),
+                            provenance: "player-provoked".to_string(),
+                        };
+                        self.ledger
+                            .commit(fact, &self.registry)
+                            .expect("turned-hostile is registered and finite");
+                    }
+                }
                 // Re-absorb the (possibly changed) here into knowledge; the
                 // possessed agent's own scenery is still read from the
                 // frozen `self.world`, so this cannot change day-0 output.
