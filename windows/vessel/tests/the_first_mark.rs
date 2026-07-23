@@ -174,3 +174,49 @@ fn into_played_world_never_mutates_the_input_world() {
     let after = serde_json::to_string(&w).unwrap();
     assert_eq!(before, after, "the input world is never mutated in place");
 }
+
+/// The butterfly-reader: `why` must recount the SESSION's evolving ledger —
+/// the one holding the just-committed player facts and the fired
+/// consequence — not the frozen input world, or the player's own hand
+/// (and its fallout) would be invisible to the very verb built to trace it.
+#[test]
+fn why_traces_the_fired_consequence_back_to_the_players_hand() {
+    let w = world();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 0.5: grievance 1
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 1.5: grievance 2
+    s.handle("wait");
+    s.handle(&format!("provoke {GRIEVANCE_NPC}")); // day 2.5: grievance 3
+    s.handle("wait"); // grievance 3 crosses the threshold; the tick fires the consequence
+
+    let text = out_text(s.handle(&format!("why {GRIEVANCE_NPC}")));
+    assert!(
+        text.contains("player: provoke"),
+        "the recount names the player's own act; got: {text}"
+    );
+    assert!(
+        text.to_lowercase().contains("provoked"),
+        "the fired consequence's provenance ('player-provoked') is traceable too; got: {text}"
+    );
+}
+
+/// Control: an un-provoked NPC's recount is its ordinary history — `why`
+/// never fabricates a player-authored chain where none was played.
+#[test]
+fn why_over_an_unprovoked_npc_names_no_player_hand() {
+    let w = world();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    s.handle("wait");
+    s.handle("wait");
+
+    let text = out_text(s.handle(&format!("why {GRIEVANCE_NPC}")));
+    assert!(
+        !text.contains("player: provoke"),
+        "no provocation was played; got: {text}"
+    );
+    assert!(
+        !text.contains("player-provoked"),
+        "no consequence fired; got: {text}"
+    );
+}
