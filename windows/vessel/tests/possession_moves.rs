@@ -336,6 +336,43 @@ fn why_resolves_by_numeric_id_and_reports_an_unknown_target() {
 }
 
 #[test]
+fn provoke_commits_one_player_authored_disposition_fact() {
+    // THE FIRST PLAYER-AUTHORED FACT: `provoke` commits a disposition-shift
+    // fact about a co-located NPC into the session-owned ledger, distinct
+    // from every fact the world's own systems commit (the `player:`
+    // provenance is what tells the two apart). The possessed agent's own
+    // settlement guarantees a co-located NPC at the starting room
+    // (the-quickening T3 review), so no `go` is needed first.
+    let w = world();
+    let (mut session, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let before = session.committed_disposition_count();
+    let turn = session.handle("provoke");
+    let after = session.committed_disposition_count();
+    match turn {
+        Turn::Out(s) => assert!(
+            s.to_lowercase().contains("provoke") || s.contains("bristle"),
+            "diegetic acknowledgement, got: {s}"
+        ),
+        Turn::Released(s) => panic!("expected Out, got Released({s})"),
+    }
+    assert_eq!(after, before + 1, "exactly one disposition fact committed");
+}
+
+#[test]
+fn possession_with_no_act_leaves_session_ledger_unchanged() {
+    // BYTE-IDENTITY GUARD: a read-only verb (`look`) must commit nothing —
+    // the session ledger is byte-identical to a fresh, untouched session.
+    let w = world();
+    let a = Session::start(&w, &PossessOpts::default())
+        .unwrap()
+        .0
+        .session_ledger_json();
+    let (mut s, _opening) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let _ = s.handle("look"); // a read-only verb
+    assert_eq!(a, s.session_ledger_json(), "read-only verbs commit nothing");
+}
+
+#[test]
 fn a_wild_beast_walks_away_from_water_and_is_observed() {
     // THE WILDING, LIVE — the settled tests' inverse. `PossessOpts::wild_agents`
     // (on by default) appends the world's wild beast agents to the peopled

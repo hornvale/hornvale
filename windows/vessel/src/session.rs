@@ -9,7 +9,9 @@ use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
-use hornvale_kernel::{ConceptRegistry, EntityId, Ledger, RoomAddr, World, WorldTime, tick};
+use hornvale_kernel::{
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Value, World, WorldTime, tick,
+};
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
 /// How many NPCs a session derives (spec §4: a small authored constant, not
@@ -24,6 +26,11 @@ const WILD_COUNT: usize = 4;
 /// unlocks (spec §3.2; the Global Constraints' closed-strings list).
 const CONSULT_FALLBACK: &str = "The Book holds more for the initiated.";
 
+/// The player-authored disposition-shift predicate (The First Mark): the
+/// first fact the possessing player, not a world system, ever commits.
+/// type-audit: bare-ok(identifier-text)
+pub const DISPOSITION_SHIFT: &str = "disposition-shift";
+
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
@@ -36,6 +43,8 @@ verbs:
   npcs             the derived NPCs sharing this world (label, id)
   why <who>        recount an NPC's dated history (by label or id)
   needs            read the felt state of anyone sharing this room
+  provoke [who]    shift a co-located NPC's disposition, your own mark
+  soothe [who]     ease a co-located NPC's disposition, your own mark
   write <sentence> speak a line of Common; you absorb what it says, written
                    into your own margin
   consult          read the Book's Reckoning at your own day, and whatever
@@ -108,6 +117,17 @@ impl<'w> Session<'w> {
         registry
             .register_predicate(EATEN, false, "an agent ate (eased its hunger) on a day")
             .expect("EATEN registers identically every session");
+        // The player's disposition mark — the first player-authored predicate.
+        // Non-functional (a subject may be provoked and later soothed; each is
+        // one dated fact). Additive: registering a new predicate perturbs
+        // nothing already committed.
+        registry
+            .register_predicate(
+                DISPOSITION_SHIFT,
+                false,
+                "an agent's disposition was shifted by the possessing player",
+            )
+            .expect("DISPOSITION_SHIFT registers identically every session");
         // Guarantee the possessed agent's OWN settlement contributes a
         // derived NPC (the-quickening T3 review): otherwise no NPC is ever
         // co-located with the player and the observation payoff can't fire.
@@ -184,6 +204,14 @@ impl<'w> Session<'w> {
         self.ledger.find(DRANK).count()
     }
 
+    /// How many player disposition-shift facts the session's owned ledger
+    /// has committed — zero until the first `provoke`/`soothe` (test
+    /// accessor: The First Mark's one-fact-per-act guard).
+    /// type-audit: bare-ok(count: return)
+    pub fn committed_disposition_count(&self) -> usize {
+        self.ledger.find(DISPOSITION_SHIFT).count()
+    }
+
     /// The session's owned, evolving ledger, serialized — a determinism
     /// accessor: same seed + same waits must yield the same bytes (test
     /// accessor: T3's determinism test).
@@ -244,6 +272,8 @@ impl<'w> Session<'w> {
             "npcs" => Turn::Out(self.list_npcs()),
             "why" => Turn::Out(self.why(rest)),
             "needs" => Turn::Out(self.needs()),
+            "provoke" => self.act_on_disposition(rest, 1),
+            "soothe" => self.act_on_disposition(rest, -1),
             "write" => Turn::Out(self.write(rest)),
             "consult" => Turn::Out(self.consult()),
             "enter" | "exit" => Turn::Out(
@@ -511,6 +541,63 @@ impl<'w> Session<'w> {
         hornvale_historiography::recount(&evolved, entity)
     }
 
+    /// Every derived NPC sharing the possessed agent's current room — the
+    /// co-located lookup `needs` and `provoke`/`soothe` both build on.
+    fn colocated_npcs(&self) -> Vec<&Npc> {
+        self.npcs
+            .iter()
+            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
+            .collect()
+    }
+
+    /// Resolve `who` to one co-located NPC (The First Mark): an empty
+    /// argument selects the first NPC sharing this room (the common case —
+    /// a lone co-located NPC needs no name), otherwise `who` is matched as a
+    /// numeric entity id or a case-insensitive substring of an NPC's label,
+    /// mirroring `why`'s resolution but restricted to NPCs actually here.
+    fn colocated_npc(&self, who: &str) -> Option<&Npc> {
+        let here = self.colocated_npcs();
+        let who = who.trim();
+        if who.is_empty() {
+            return here.into_iter().next();
+        }
+        who.parse::<u64>()
+            .ok()
+            .and_then(|id| here.iter().find(|n| n.entity.0.get() == id).copied())
+            .or_else(|| {
+                let needle = who.to_lowercase();
+                here.iter()
+                    .find(|n| n.label.to_lowercase().contains(&needle))
+                    .copied()
+            })
+    }
+
+    /// Commit the first player-authored fact: a signed disposition shift on
+    /// a co-located NPC. `sign` is +1 (provoke) / -1 (soothe). The fact
+    /// carries a `player:` provenance so a reader (and contradiction
+    /// checking) can tell it from every fact a world system commits.
+    fn act_on_disposition(&mut self, who: &str, sign: i8) -> Turn {
+        let Some(npc) = self.colocated_npc(who) else {
+            return Turn::Out("There is no one here to provoke or soothe.".to_string());
+        };
+        let entity = npc.entity;
+        let label = npc.label.clone();
+        let verb = if sign >= 0 { "provoke" } else { "soothe" };
+        let fact = Fact {
+            subject: entity,
+            predicate: DISPOSITION_SHIFT.to_string(),
+            object: Value::Number(sign as f64),
+            place: None,
+            day: Some(self.day.day),
+            provenance: format!("player: {verb}"),
+        };
+        self.ledger
+            .commit(fact, &self.registry)
+            .expect("disposition-shift is registered and finite");
+        let felt = if sign >= 0 { "bristles" } else { "eases" };
+        Turn::Out(format!("You {verb} {label}. They {felt}."))
+    }
+
     /// The felt-state read (the-wanting T4, spec §4.5 as corrected by G4):
     /// diegetic prose for every CO-LOCATED NPC's drive, never a raw number.
     /// Deliberately reads the NPCs, not the possessed agent — the player's
@@ -521,11 +608,7 @@ impl<'w> Session<'w> {
     /// real fold over its own committed history, so its felt state is
     /// meaningful the moment the drive model exists.
     fn needs(&self) -> String {
-        let here: Vec<&Npc> = self
-            .npcs
-            .iter()
-            .filter(|npc| agent_position(&self.ledger, npc, self.day) == self.agent.position)
-            .collect();
+        let here = self.colocated_npcs();
         if here.is_empty() {
             return "No one else is here to read.".to_string();
         }
