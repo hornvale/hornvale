@@ -37,9 +37,11 @@ pub fn render_phonology() -> String {
     ));
 
     // Speaker-only: the phonology page needs language, so it covers exactly the
-    // speaking peoples. Since The Eremite the psyche registry is a superset (the
-    // dragons carry a mind but no speech), so skip any non-speaker. `iter()` is
-    // `KindId`-ascending, byte-identical to the old registry-then-filter order.
+    // minded kinds that speak. The psyche registry can hold a minded non-speaker,
+    // so skip any kind absent from the articulation registry; the four peoples
+    // and the three dragons (speakers since The Solitary Tongue) are all covered.
+    // `iter()` is `KindId`-ascending, byte-identical to the old
+    // registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();
     for (kind, _) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {

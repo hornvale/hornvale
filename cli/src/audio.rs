@@ -23,8 +23,10 @@ pub(crate) fn cmd_voice(args: &[String]) -> Result<(), String> {
     let world = World::new(Seed(crate::phonology::REFERENCE_SEED));
     let (mut written, mut kept) = (0u32, 0u32);
     // Speaker-only: `sample_names_for` needs language, so cover exactly the
-    // speaking peoples; skip the minded solitaries (dragons) — a superset of the
-    // speakers in the psyche registry since The Eremite.
+    // minded kinds that speak. The psyche registry can hold a minded
+    // non-speaker, so skip any kind absent from the articulation registry; the
+    // four peoples and the three dragons (speakers since The Solitary Tongue)
+    // are all covered.
     let speakers = hornvale_language::articulation_registry();
     for (kind, _) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
