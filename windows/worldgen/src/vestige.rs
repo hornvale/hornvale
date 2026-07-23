@@ -7,7 +7,6 @@ use crate::history_emit::{occupations_at, present_day};
 use hornvale_history::record::{CauseOfEnd, Function, Notability, OccupationRecord};
 use hornvale_kernel::{CellId, World, math};
 use hornvale_terrain::GeneratedTerrain;
-use hornvale_terrain::crust::sphere_fbm01;
 
 /// What a residue site is, by maker → purpose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -135,53 +134,16 @@ pub fn vestige_from_occupation(occ: &OccupationRecord, now: f64) -> Vestige {
     }
 }
 
-/// Winning-craton age above which crust counts as ancient enough to have
-/// witnessed the pre-human deep (`[0,1]`, `GeneratedTerrain::crust_age_at`'s
-/// scale).
-/// type-audit: bare-ok(ratio)
-const ANCIENT_CRUST_AGE: f64 = 0.8;
-
-/// Spatial frequency for the pre-human presence noise. Distinct from The
-/// Lode's cave (5.0) and deposit (7.0) frequencies sampled off the same
-/// seed, so the three point processes decorrelate on the sphere.
-/// type-audit: bare-ok(ratio)
-const PREHUMAN_FREQ: f64 = 11.0;
-
-/// fBm octaves for the pre-human presence noise (matches The Lode's caves/deposits).
-/// type-audit: bare-ok(count)
-const PREHUMAN_OCTAVES: u32 = 4;
-
-/// Presence threshold for the pre-human noise test: `sphere_fbm01`
-/// compresses variance toward 0.5 (see `domains/terrain/src/crust.rs`), so
-/// this is not a small absolute probability but is still sparse relative to
-/// the ancient-crust population it gates within — at seed 42 it selects 1 of
-/// ~1900 ancient-crust cells.
-/// type-audit: bare-ok(ratio)
-const PREHUMAN_PRESENCE_THRESHOLD: f64 = 0.30;
-
 /// A rare pre-human gate-scar, if this cell's deep crust is old enough and
-/// the shared hash-noise presence test fires. Pure and deterministic: no
-/// draws, no facts, no epoch — reuses The Lode's FEATURES noise seed
-/// (`GeneratedTerrain::globe().features_noise_seed()`) exactly as
-/// `cave_at`/`deposit_at` do, so no new stream label is introduced. Ocean
-/// cells never qualify (nothing pre-human is legible under open water in
-/// this model). `founded_day` is `None`: pre-human residue predates the
-/// narrated (people) timeline entirely.
+/// the shared hash-noise presence test fires
+/// (`GeneratedTerrain::prehuman_scar_at`, mirroring `cave_at`/`deposit_at`'s
+/// pattern). Pure and deterministic: no draws, no facts, no epoch — the
+/// presence gate reuses The Lode's FEATURES noise seed, so no new stream
+/// label is introduced. Ocean cells never qualify (nothing pre-human is
+/// legible under open water in this model). `founded_day` is `None`:
+/// pre-human residue predates the narrated (people) timeline entirely.
 pub fn prehuman_vestige(terrain: &GeneratedTerrain, cell: CellId) -> Option<Vestige> {
-    if terrain.is_ocean(cell) {
-        return None;
-    }
-    if terrain.crust_age_at(cell) <= ANCIENT_CRUST_AGE {
-        return None;
-    }
-    let pos = terrain.geosphere().position(cell);
-    let noise = sphere_fbm01(
-        terrain.globe().features_noise_seed(),
-        pos,
-        PREHUMAN_FREQ,
-        PREHUMAN_OCTAVES,
-    );
-    if noise >= PREHUMAN_PRESENCE_THRESHOLD {
+    if !terrain.prehuman_scar_at(cell) {
         return None;
     }
     Some(Vestige {
@@ -315,15 +277,21 @@ mod tests {
     }
 
     /// Found by an exploratory scan of seed 42's terrain: ancient continental
-    /// crust (`crust_age_at` ~0.992, well past [`ANCIENT_CRUST_AGE`]) whose
-    /// presence noise (~0.277) falls below [`PREHUMAN_PRESENCE_THRESHOLD`] —
-    /// the one pre-human hit among that seed's ~1900 ancient-crust cells.
+    /// crust (`crust_age_at` ~0.992, well past terrain's ancient-crust
+    /// threshold) whose presence noise (~0.277) falls below terrain's
+    /// pre-human scar threshold (`GeneratedTerrain::prehuman_scar_at`) — the
+    /// one pre-human hit among that seed's ~1900 ancient-crust cells.
     const DEEP_ANCIENT_NUMINOUS_CELL: CellId = CellId(21966);
 
     /// A land cell at seed 42 whose crust falls short of the ancient
     /// threshold (`crust_age_at` ~0.716) — fails the age gate regardless of
     /// the noise draw.
     const SHALLOW_YOUNG_CELL: CellId = CellId(5);
+
+    /// Terrain's ancient-crust threshold, mirrored here only for these
+    /// fixture assertions (`GeneratedTerrain::prehuman_scar_at`'s internal
+    /// gate; see `domains/terrain/src/provider.rs`'s `ANCIENT_CRUST_AGE`).
+    const ANCIENT_CRUST_AGE_FOR_TEST: f64 = 0.8;
 
     #[test]
     fn a_deep_ancient_cell_can_yield_a_prehuman_gate_scar() {
@@ -333,7 +301,7 @@ mod tests {
             "the fixture cell must be land"
         );
         assert!(
-            terrain.crust_age_at(DEEP_ANCIENT_NUMINOUS_CELL) > ANCIENT_CRUST_AGE,
+            terrain.crust_age_at(DEEP_ANCIENT_NUMINOUS_CELL) > ANCIENT_CRUST_AGE_FOR_TEST,
             "the fixture cell must be ancient"
         );
         let v = prehuman_vestige(&terrain, DEEP_ANCIENT_NUMINOUS_CELL)
@@ -349,7 +317,7 @@ mod tests {
     fn a_shallow_young_cell_yields_no_prehuman_vestige() {
         let (_world, terrain) = seed_42_world_and_terrain();
         assert!(
-            terrain.crust_age_at(SHALLOW_YOUNG_CELL) <= ANCIENT_CRUST_AGE,
+            terrain.crust_age_at(SHALLOW_YOUNG_CELL) <= ANCIENT_CRUST_AGE_FOR_TEST,
             "the fixture cell must fall short of the ancient threshold"
         );
         assert_eq!(prehuman_vestige(&terrain, SHALLOW_YOUNG_CELL), None);

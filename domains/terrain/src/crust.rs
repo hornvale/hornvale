@@ -120,14 +120,8 @@ impl SphereFbm {
 /// orthogonal coordinate-plane slices (the `coast_render` construction).
 ///
 /// Random-access convenience form; a hot per-cell loop with a fixed seed
-/// should build a [`SphereFbm`] once and reuse it. Public (beyond this
-/// crate) so a composition-root consumer can reuse an existing noise seed
-/// (e.g. `TectonicGlobe::features_noise_seed`) for its own point process
-/// instead of drawing a new one — see `windows/worldgen::vestige`'s
-/// pre-human residue gate, which reuses The Lode's FEATURES seed rather
-/// than adding a new stream label.
-/// type-audit: pending(wave-2: p), bare-ok(ratio: frequency), bare-ok(count: octaves), bare-ok(ratio: return)
-pub fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
+/// should build a [`SphereFbm`] once and reuse it.
+pub(crate) fn sphere_fbm01(seed: Seed, p: [f64; 3], frequency: f64, octaves: u32) -> f64 {
     SphereFbm::new(seed, frequency, octaves).sample(p)
 }
 
