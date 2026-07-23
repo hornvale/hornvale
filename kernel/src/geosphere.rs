@@ -31,6 +31,11 @@ pub struct Geosphere {
     level: u32,
     /// Unit-sphere position per cell, indexed by `CellId`.
     positions: Vec<[f64; 3]>,
+    /// Geographic coordinate per cell, indexed by `CellId`. Precomputed at
+    /// construction (`asin(z)` / `atan2(y, x)` of `positions`) so `coord` is a
+    /// lookup instead of a transcendental pair per call — bit-identical to
+    /// recomputing it, since it is the same expression on the same position.
+    coords: Vec<GeoCoord>,
     /// Adjacent cells per cell, ascending, indexed by `CellId`.
     neighbors: Vec<Vec<CellId>>,
 }
@@ -206,9 +211,20 @@ impl Geosphere {
             (positions, faces) = subdivide(positions, faces);
         }
         let neighbors = build_neighbors(positions.len(), &faces);
+        // Precompute the geographic coordinate once per cell. This is the exact
+        // expression `coord` used to evaluate per call, on the same stored
+        // position, so every consumer receives a bit-identical GeoCoord.
+        let coords = positions
+            .iter()
+            .map(|&[x, y, z]| GeoCoord {
+                latitude: math::asin(z).to_degrees(),
+                longitude: math::atan2(y, x).to_degrees(),
+            })
+            .collect();
         Geosphere {
             level,
             positions,
+            coords,
             neighbors,
         }
     }
@@ -238,11 +254,7 @@ impl Geosphere {
 
     /// The geographic coordinate of a cell.
     pub fn coord(&self, id: CellId) -> GeoCoord {
-        let [x, y, z] = self.positions[id.0 as usize];
-        GeoCoord {
-            latitude: math::asin(z).to_degrees(),
-            longitude: math::atan2(y, x).to_degrees(),
-        }
+        self.coords[id.0 as usize]
     }
 
     /// The cells adjacent to `id`, in ascending `CellId` order.
@@ -369,6 +381,35 @@ impl NearestCellIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn coord_cache_bit_equals_recomputation_at_every_cell() {
+        // The cached `coord` must be bit-for-bit identical to recomputing
+        // asin(z)/atan2(y, x) from the stored position — the byte-identity
+        // contract that lets the cache replace the per-call transcendentals
+        // (The Lookup). Compared on raw bits so a last-ULP drift fails loudly.
+        for level in 0..=5 {
+            let geo = Geosphere::new(level);
+            for id in geo.cells() {
+                let [x, y, z] = geo.position(id);
+                let expected = GeoCoord {
+                    latitude: crate::math::asin(z).to_degrees(),
+                    longitude: crate::math::atan2(y, x).to_degrees(),
+                };
+                let got = geo.coord(id);
+                assert_eq!(
+                    got.latitude.to_bits(),
+                    expected.latitude.to_bits(),
+                    "latitude drift at level {level}, cell {id:?}"
+                );
+                assert_eq!(
+                    got.longitude.to_bits(),
+                    expected.longitude.to_bits(),
+                    "longitude drift at level {level}, cell {id:?}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn base_icosahedron_has_twelve_unit_cells() {
