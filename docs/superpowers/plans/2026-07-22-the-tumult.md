@@ -1,408 +1,307 @@
-# The Tumult (The Sandpile) Implementation Plan
+# The Tumult (Predation) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make conflict emerge from crowding: when a displaced community finds no vacant cell reachable over the era graph, it displaces the nearest *occupied* cell and the evicted occupant cascades — the Sea-Peoples avalanche — and the cascade-size distribution is measured against a power law.
+**Goal:** Make conflict emerge from *coveting value down a strength gradient*, not from crowding: a community raids the reachable neighbour whose land it covets when it can win; lossy war and the death of broken remnants supply the dissipation; the displaced roll downhill; the cascade-size distribution is measured against a power law.
 
-**Architecture:** A recursive `relocate` in `history_bake.rs` replaces the two no-vacant dead-ends (`step_community`'s Famine, `raid`'s "lost"); a `nearest_occupied` helper mirrors `nearest_dest`'s graph BFS; the `BakeCensus` gains a log-binned cascade-size histogram; a worldgen entry point exposes the baked `History` per seed; a heavy-tier test adjudicates the histogram's shape (power law vs bell/spike).
+**Architecture:** Rewrite `history_bake.rs`'s conflict logic. Strength = `population × tech`; coveted value = the existing per-cell `capacity`. A new `maybe_raid` (covet + dominance, deterministic) replaces the `pressure >= 1.0` trigger; the climate path reverts to migrate-or-die; `relocate` becomes the conflict-driven roll-downhill (displace a *beatable* occupant, die below a viable minimum). SOC is *measured*, not engineered. Salvages T1–T3 infra (`nearest_occupied`, `relocate`, the cascade histogram, `history_for`, the gate scaffolding) — this plan **edits forward from the current branch**, it does not revert it.
 
-**Tech Stack:** Rust 2024, `hornvale-worldgen` (`history_bake.rs`), `hornvale-history`, kernel `CellId`/`CellMap`, `hornvale-topology`. `cargo nextest` + doctests; `make gate` / `make gate-full`.
+**Tech Stack:** Rust 2024, `hornvale-worldgen` (`history_bake.rs`), `hornvale-history`, kernel. `cargo nextest` + doctests; `make gate` / `make gate-full`.
 
 ## Global Constraints
 
-- **Determinism (constitutional):** same seed + pins ⇒ byte-identical skeleton. `BTreeMap`/`BTreeSet`/`Vec` only — no `HashMap`/`HashSet`. Every float compare via `f64::total_cmp`. No RNG beyond the kernel `Seed`/`Stream`; no wall-clock. **No new seed draw** beyond the existing raid path.
-- **Lorenz-safe:** triggers are the seed-replayed committed climate eras (`eff == 0`) and deterministic over-pressure (`pressure >= 1.0`) — NEVER a stochastic forward-integration of a chaotic pressure variable. The cascade READS the frozen epoch state; it does not integrate an ODE.
-- **Bounded cascade depth:** a `const CASCADE_DEPTH_CAP: u32` guards non-termination and the size-risk; measured by the cost gate, high enough not to clip real avalanches.
-- **No new committed field, predicate, or stream label.** A cascade is a chain of the existing `CauseOfEnd::Fled` occupation records with `ended_by = Ended::By(displacer)`. The cascade histogram lives in the (uncommitted, diagnostic) `BakeCensus`.
-- **type-audit:** new primitives at a `pub` boundary carry a `type-audit:` verdict tag.
-- **measure-don't-narrate:** every gate is a real assertion with a mutation-testable failure; thresholds are floors/ceilings clear of the measured value. The power-law metric is a falsification headline — **either outcome ships** (power law = SOC confirmed; bell/spike/no-cascades = documented falsification). Depopulation or an inert world is a fidelity finding for Nathan, never a floor.
-- **Census regen is LOCAL on `lefford` (0063); macOS cannot commit census goldens** — census regen + keystone refreeze happen at the G6 close.
+- **Determinism (constitutional):** same seed + pins ⇒ byte-identical skeleton. `BTreeMap`/`BTreeSet`/`Vec` only. Every float compare via `f64::total_cmp`. No RNG beyond kernel `Seed`/`Stream`; no wall-clock. **No new seed draw.** The raid is a total, deterministic function of frozen epoch state (no agent choice).
+- **Lorenz-safe:** the raid reads state (strength, value, graph reach); it does NOT forward-integrate a chaotic pressure variable. Bounded cascade depth (`CASCADE_DEPTH_CAP`, exists).
+- **Density dropped:** crowding/pressure is NEVER a conflict trigger. Pressure governs only growth (logistic) and Famine (collapse). The raid trigger is covetousness (`capacity(target) > capacity(raider)`) + dominance (`strength(raider) > strength(target) × RAID_MARGIN`).
+- **No new committed field, predicate, or stream label.** A raid is a chain of existing `CauseOfEnd::Fled` / `Ended::By` records; strength/value read existing state.
+- **type-audit:** new pub-boundary primitives carry a `type-audit:` verdict tag. New consts (`RAID_MARGIN`, `WAR_LOSS`, `VIABLE_MIN`, tech weights) are `f64`/count → tagged.
+- **measure-don't-narrate:** every gate is a real assertion; the power-law metric is a falsification headline — **either outcome ships**. If conflict stays inert or the map depopulates, that is a calibration finding for Nathan (fidelity carve-out), never a floor.
+- **Census regen is LOCAL on `lefford` (0063)** — census regen + keystone refreeze at the G6 close.
 
 ---
 
 ## File Structure
 
-- `windows/worldgen/src/history_bake.rs` — **modified.** Add `const CASCADE_DEPTH_CAP`; add `nearest_occupied`; add the recursive `relocate` (returns cascade size); reroute `step_community`'s `eff == 0` branch and `raid`'s evicted-community branch through it; add a `cascade_hist: [u64; CASCADE_BINS]` (log-binned) to `BakeCensus` + a `record_cascade(size)` tally + a `pub fn cascade_sizes()` reader.
-- `windows/worldgen/src/lib.rs` — **modified.** Extract the bake-input assembly + `bake()` call at the settlement stage into `pub fn history_for(seed, sky, terrain_pins, settlement_pins, wc) -> Result<History, BuildError>` (returning the diagnostic `History`); `build_world_to` calls it. This is the measurement entry point (no committed field).
-- `windows/worldgen/tests/history_bake.rs` — **modified.** Unit tests: `nearest_occupied`; the cascade fires + terminates + tallies on a crowded fixture; the all-vacant case is unchanged (no cascade).
-- `windows/worldgen/tests/history_tumult.rs` — **created.** The preregistered gates: conflict-fires-at-volume; not-depopulated; the power-law falsification metric (heavy-tier over a seed sample).
-- `windows/worldgen/tests/history_gates.rs` — **modified (if drift).** Re-pin `MIGRATION_FLOOR`/others if the epoch moves them (labelled), per the census-close discipline at G6; light re-measure here.
-- `cli/tests/graph_cost.rs` — **modified.** A heavy-tier cost gate bounding the cascade bake wall-time + the max cascade depth actually reached.
+- `windows/worldgen/src/history_bake.rs` — **modified.** Add `fn strength(&self, idx) -> f64` (population × tech weight) + tech-weight consts; add `const RAID_MARGIN`, `WAR_LOSS`, `VIABLE_MIN`; add `fn maybe_raid(&mut self, idx, era, year)` (the covet+dominance opportunistic raid, lossy plunder); rewrite `step_community` (climate path → migrate-or-die; drop the `pressure >= 1.0` raid; grow then `maybe_raid`); repurpose `relocate`'s displace branch to pick a *beatable weaker* occupant (dominance) and die below `VIABLE_MIN`. Remove the now-dead `raid`/`raid_target` (or repurpose) as the plan directs.
+- `windows/worldgen/tests/history_bake.rs` — **modified.** Value-driven-raid-fires-with-land-to-spare; lossy; the conflict cascade fires + dissipates + terminates; byte-identity stays green.
+- `windows/worldgen/tests/history_tumult.rs` — **modified.** Re-point `conflict_fires_at_volume` at the value-driven raids (seed-42 now fights); the power-law metric re-adjudicated on the new model.
+- `windows/worldgen/tests/history_gates.rs` / `history_placement.rs` — **re-measure** (re-pin if a floor moved, labelled).
+- `cli/tests/graph_cost.rs` — **modified.** The conflict-bake cost gate (reuse the T4 shape).
 
-Close (G6, `closing-a-campaign`): census regen on lefford, cascade re-pins, keystone refreeze, artifact drift, chronicle, retrospective, Confidence Gradient re-score (SOC bet moves from `raw`), registry flip (SOC-criticality → elaborated/slice-1), full gate.
+Close (G6, `closing-a-campaign`): census regen on lefford, cascade re-pins, keystone refreeze, artifact drift, chronicle (incl. the crowding→predation reframe), retrospective, Confidence Gradient re-score, registry flip (SOC-criticality → elaborated/slice-1 with the measured result), full gate.
 
 ---
 
-### Task 1: `nearest_occupied` + the cascade histogram field
+### Task 1: Predation — strength, coveted value, and the raid rule
 
 **Files:**
 - Modify: `windows/worldgen/src/history_bake.rs`
 - Test: `windows/worldgen/tests/history_bake.rs`
 
 **Interfaces:**
-- Consumes: `traversable_neighbors(&ConnectionGraph, CellId) -> Vec<CellId>` (existing); `self.node_index: BTreeMap<CellId, usize>`; `self.cur() -> &ConnectionGraph`.
-- Produces: `fn nearest_occupied(&self, from: CellId) -> Option<usize>` (community index of the nearest occupied cell over the era graph, excluding `from`, BFS layers, lowest-`CellId` tie-break); `const CASCADE_DEPTH_CAP: u32 = 256`; `const CASCADE_BINS: usize = 12`; `BakeCensus.cascade_hist: [u64; CASCADE_BINS]`; `BakeCensus::record_cascade(&mut self, size: u32)`; `pub fn cascade_sizes(&self) -> [u64; CASCADE_BINS]`.
+- Consumes: `self.communities[idx].{population, tech, site}`; `self.capacity: &CellMap<f64>`; `traversable_neighbors(self.cur(), site)`; `self.node_index`; `TechHorizon` (`Neolithic < Bronze < Iron < Classical`); `relocate` (T2 repurposes it).
+- Produces: `fn strength(&self, idx: usize) -> f64`; `const RAID_MARGIN: f64`; `const WAR_LOSS: f64`; `const VIABLE_MIN: f64`; `fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64)`.
 
-- [ ] **Step 1: Write the `nearest_occupied` unit test (failing).**
+- [ ] **Step 1: Write the value-driven-raid test (failing).**
 
-Add to `windows/worldgen/tests/history_bake.rs` a test that builds a small graph + a `Bake` with two occupied cells and asserts `nearest_occupied` returns the nearer one, excluding the origin. Since `Bake` is private, put this in a `#[cfg(test)] mod tests` block at the bottom of `history_bake.rs` (like `traversable_neighbors`' tests):
-
-```rust
-#[test]
-fn nearest_occupied_finds_the_closest_occupied_cell_over_the_graph() {
-    // full-land graph over Geosphere::new(1); occupy cells 3 and 20; from cell 0,
-    // whichever is fewer graph-hops away wins (lowest CellId breaks a tie).
-    let geo = Geosphere::new(1);
-    let graph = full_land_graph(&geo); // test helper already in the integration file — mirror it here
-    // ... construct a minimal Bake with node_index = {CellId(3)->0, CellId(20)->1} ...
-    // assert nearest_occupied(CellId(0)) is the index whose cell is fewer hops from 0.
-}
-```
-
-(The implementer constructs the minimal `Bake` the same way the file's other private-method tests do; if no such harness exists, assert `nearest_occupied`'s BFS/tie-break logic against a hand-built `node_index` and graph. Keep the assertion on graph-hop distance + lowest-`CellId` tie-break.)
-
-- [ ] **Step 2: Run — expect a compile failure** (`nearest_occupied` not defined).
-
-Run: `cargo test -p hornvale-worldgen --lib nearest_occupied 2>&1 | tail -15`
-Expected: FAIL — `cannot find function/method nearest_occupied`.
-
-- [ ] **Step 3: Implement `nearest_occupied` + the histogram field.**
-
-In `history_bake.rs`, add near `nearest_dest`:
-
-```rust
-/// The nearest OCCUPIED cell to `from` (excluding `from`), by breadth-first
-/// graph-hop distance over the era graph; within the nearest layer, lowest
-/// `CellId` — total & deterministic. Returns the occupying community's index,
-/// or `None` if no occupied cell is reachable. The Tumult's Sea-Peoples
-/// cascade displaces this cell when no vacant land is reachable.
-fn nearest_occupied(&self, from: CellId) -> Option<usize> {
-    let mut visited: BTreeSet<CellId> = BTreeSet::new();
-    visited.insert(from);
-    let mut frontier: Vec<CellId> = vec![from];
-    while !frontier.is_empty() {
-        let mut next: Vec<CellId> = Vec::new();
-        let mut hits: Vec<(CellId, usize)> = Vec::new();
-        for &c in &frontier {
-            for n in traversable_neighbors(self.cur(), c) {
-                if visited.insert(n) {
-                    next.push(n);
-                    if let Some(&idx) = self.node_index.get(&n) {
-                        hits.push((n, idx));
-                    }
-                }
-            }
-        }
-        if !hits.is_empty() {
-            hits.sort_by(|a, b| a.0.cmp(&b.0)); // lowest CellId in the nearest layer
-            return Some(hits[0].1);
-        }
-        frontier = next;
-    }
-    None
-}
-```
-
-Add the constants and the histogram. `CASCADE_BINS = 12` covers sizes 1, 2, 3-4, 5-8, … up to 2^10+ (log2 bins). Add to `BakeCensus`:
-
-```rust
-/// Log-binned histogram of cascade sizes (# displacements in one relaxation):
-/// bin i counts cascades whose size falls in [2^i, 2^(i+1)). The raw material
-/// of The Tumult's power-law falsification metric. Not committed (diagnostic).
-/// type-audit: bare-ok(count: cascade_hist)
-pub cascade_hist: [u64; CASCADE_BINS],
-```
-
-(Add `CASCADE_BINS` to the `BakeCensus` derive's `Default` — `[u64; N]` is `Default`/`Copy` for `N <= 32` via const generics; if the derive rejects it, implement `Default` by hand.) Add methods:
-
-```rust
-impl BakeCensus {
-    /// Record one completed cascade of `size` displacements into the log-binned
-    /// histogram (size 0 — a relocation that reached vacant land — is not a
-    /// cascade and is not recorded).
-    fn record_cascade(&mut self, size: u32) {
-        if size == 0 { return; }
-        let bin = (31 - size.leading_zeros()).min(CASCADE_BINS as u32 - 1) as usize;
-        self.cascade_hist[bin] += 1;
-    }
-}
-
-/// The cascade-size histogram off a baked history (bin i = sizes [2^i, 2^(i+1))).
-pub fn cascade_sizes(h: &History) -> [u64; CASCADE_BINS] {
-    h.tally.cascade_hist
-}
-```
-
-- [ ] **Step 4: Run — expect PASS.**
-
-Run: `cargo test -p hornvale-worldgen --lib nearest_occupied 2>&1 | tail -15`
-Expected: the `nearest_occupied` test PASSES; the crate compiles (histogram field added).
-
-- [ ] **Step 5: Commit.**
-
-```bash
-cargo fmt
-git add windows/worldgen/src/history_bake.rs windows/worldgen/tests/history_bake.rs
-git commit -m "feat(history): nearest_occupied + cascade-size histogram scaffolding (the-tumult T1)"
-```
-
----
-
-### Task 2: The cascade — `relocate` replaces the no-vacant dead-ends
-
-**Files:**
-- Modify: `windows/worldgen/src/history_bake.rs`
-- Test: `windows/worldgen/tests/history_bake.rs`
-
-**Interfaces:**
-- Consumes: `nearest_dest`, `nearest_occupied`, `open`, `close`, `touch`, `record_cascade` (Task 1); `MIGRATE_SURVIVAL`, `RAID_SEIZE` (existing consts); `CauseOfEnd::{Fled, Migrated}`, `Ended::By`, `Founding::From`.
-- Produces: `fn relocate(&mut self, people: KindId, pop: f64, lineage: EntityId, offset: f64, from: CellId, era: &EraClimate, year: f64, depth: u32) -> u32` (returns the cascade size = number of displacements caused).
-
-- [ ] **Step 1: Write the cascade test (failing).**
-
-Add to `windows/worldgen/tests/history_bake.rs` a test on a FULLY-OCCUPIED small world: seed communities on every habitable cell, then an era turns one cell hostile so its community must relocate — with no vacant land it must displace, cascading. Assert (a) a cascade fires (`census(&h).cascade_hist` has a nonzero bin, or `raided`/`fled` rise above the all-vacant baseline), (b) the bake terminates (no hang — the depth cap holds), (c) determinism (same seed → identical records).
+Add to `history_bake.rs`'s `#[cfg(test)] mod tests`: a fixture with **land to spare** (mostly vacant), a STRONG community on POOR land adjacent (over the graph) to a WEAKER community on RICH land. Assert the strong one RAIDS the weak-rich one (`census(&h).raided > 0`) — proving conflict fires on value×strength *with vacant land available* (density is not the trigger). Construct via a small direct `Bake` or a saturating-optional fixture; keep it deterministic.
 
 ```rust
 #[test]
-fn a_full_world_cascades_when_a_cell_turns_hostile() {
-    // Geosphere::new(1); all cells habitable+vacant at genesis, seed MANY
-    // communities so the graph saturates; then a glacial era makes one cell
-    // hostile with NO vacant refuge, forcing displacement onto occupied land.
-    // (construct via the fixture pattern in this file; capacity/eras chosen so
-    // the world fills and one cell then evicts with nowhere vacant.)
-    // asserts: some cascade_hist bin > 0; bake returns (terminates); byte-identical twice.
+fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
+    // Geosphere::new(1); MOST cells vacant+habitable. Seed a STRONG community
+    // (high pop, higher tech) on a LOW-capacity cell adjacent to a WEAK
+    // community (low pop) on a HIGH-capacity cell. Bake a few epochs.
+    // Assert census.raided > 0 (conflict fired despite vacant land everywhere).
+    // ... construct, bake, assert ...
 }
 ```
 
-- [ ] **Step 2: Run — expect FAIL** (no cascade yet: the community collapses/is-lost instead of displacing).
+- [ ] **Step 2: Run — expect FAIL** (current code raids only under `pressure >= 1.0`; with land to spare nobody is over-pressure, so `raided == 0`).
 
-Run: `cargo test -p hornvale-worldgen --test history_bake a_full_world_cascades 2>&1 | tail -20`
-Expected: FAIL — cascade histogram is all-zero (current code collapses at the dead-end).
+Run: `cargo test -p hornvale-worldgen --test history_bake a_strong_community_raids 2>&1 | tail -20`
+Expected: FAIL — `raided` is 0.
 
-- [ ] **Step 3: Implement `relocate` + reroute the two dead-ends.**
+- [ ] **Step 3: Implement `strength` + `maybe_raid` + rewrite `step_community`.**
 
-Add the recursive helper:
+Add the strength function and consts:
 
 ```rust
-/// Relocate a homeless people (evicted by climate or raid) to a new home,
-/// cascading when there is no vacant land. Returns the cascade size — the
-/// number of OCCUPIED cells this relocation displaced (0 if it reached vacant
-/// land directly). The Sea-Peoples avalanche: no vacant cell ⇒ take the nearest
-/// occupied cell (raid it), and its evicted occupant relocates in turn.
-/// Bounded by `CASCADE_DEPTH_CAP` (a truncated cascade drops the last remnant).
-#[allow(clippy::too_many_arguments)]
-fn relocate(
-    &mut self, people: KindId, pop: f64, lineage: EntityId, offset: f64,
-    from: CellId, era: &EraClimate, year: f64, depth: u32,
-) -> u32 {
-    if depth >= CASCADE_DEPTH_CAP {
-        return 0; // truncated — the last remnant is lost (bounded-size guard)
+/// The tech multiplier on raw population when reckoning a community's raiding
+/// strength — Iron beats Bronze beats Neolithic. Monotone in `TechHorizon`.
+fn tech_weight(t: TechHorizon) -> f64 {
+    match t {
+        TechHorizon::Neolithic => 1.0,
+        TechHorizon::Bronze => 1.5,
+        TechHorizon::Iron => 2.25,
+        TechHorizon::Classical => 3.0,
     }
-    // Vacant land reachable? Then no conflict — settle there.
-    if let Some(dest) = self.nearest_dest(era, from) {
-        let new_idx = self.open(people, dest, year, pop, Founding::From(lineage), Some(lineage), offset);
-        self.touch(new_idx, year);
-        return 0;
+}
+
+/// A community's raiding strength: population scaled by its tech horizon.
+/// Heterogeneous strength is the fuel of predation; equals do not prey.
+fn strength(&self, idx: usize) -> f64 {
+    let c = &self.communities[idx];
+    c.population * tech_weight(c.tech)
+}
+
+/// How much stronger a raider must be than its target to attack (dominance
+/// margin). Save-format constant. type-audit: bare-ok(ratio)
+const RAID_MARGIN: f64 = 1.5;
+/// Fraction of the loser's population destroyed in a raid (war is lossy — the
+/// primary dissipation). type-audit: bare-ok(ratio)
+const WAR_LOSS: f64 = 0.3;
+/// Population below which a broken/displaced remnant dies out rather than
+/// cascading further (the avalanche cutoff — the second dissipation).
+/// type-audit: bare-ok(count)
+const VIABLE_MIN: f64 = 2.0;
+```
+
+Add `maybe_raid` (opportunistic, covet + dominance, lossy plunder):
+
+```rust
+/// Opportunistic predation (The Tumult): a community raids the reachable
+/// occupied neighbour whose land is worth MORE than its own (covetousness)
+/// and that it can beat (dominance) — decoupled from its own crowding. It
+/// plunders (seizes population; a fraction is destroyed — lossy war); if the
+/// target is broken below `VIABLE_MIN` it is driven off (`Fled`) and rolls
+/// downhill via `relocate`. Deterministic: most-valuable target, tie-broken by
+/// weakest then lowest `CellId`.
+fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
+    let raider_site = self.communities[raider].site;
+    let raider_str = self.strength(raider);
+    let raider_val = *self.capacity.get(raider_site);
+    let mut best: Option<(usize, f64, f64, CellId)> = None; // (target_idx, value, strength, cell)
+    for n in traversable_neighbors(self.cur(), raider_site) {
+        let Some(&t) = self.node_index.get(&n) else { continue };
+        let t_val = *self.capacity.get(n);
+        let t_str = self.strength(t);
+        if t_val <= raider_val { continue; }                 // covet only BETTER land
+        if raider_str <= t_str * RAID_MARGIN { continue; }   // dominance: can win
+        let better = match best {
+            None => true,
+            Some((_, bv, bs, bc)) => t_val.total_cmp(&bv)
+                .then(bs.total_cmp(&t_str))   // among equal value, the WEAKEST
+                .then(bc.cmp(&n))             // then lowest CellId
+                .is_lt(),
+        };
+        if better { best = Some((t, t_val, t_str, n)); }
     }
-    // No vacant land — displace the nearest occupied cell (the avalanche).
-    let Some(victim) = self.nearest_occupied(from) else {
-        return 0; // nothing vacant AND nothing occupied reachable — lost
-    };
-    let victim_site = self.communities[victim].site;
-    let (v_people, v_pop, v_lineage, v_offset) = {
-        let c = &self.communities[victim];
-        (self.records[c.record].people, c.population, c.lineage, c.tech_offset)
-    };
-    // The homeless people takes the victim's site (open BEFORE close so
-    // node_index[victim_site] points at the new occupant; close then sees the
-    // cell already re-indexed and does not free it).
-    let new_idx = self.open(people, victim_site, year, pop, Founding::From(lineage), Some(lineage), offset);
-    let displacer_id = self.communities[new_idx].id;
-    self.close(victim, year, CauseOfEnd::Fled, Ended::By(displacer_id));
-    self.touch(new_idx, year);
+    let Some((target, _, _, _)) = best else { return };
     self.tally.raided += 1;
-    self.tally.fled += 1;
-    // The evicted occupant cascades onward.
-    1 + self.relocate(v_people, v_pop * MIGRATE_SURVIVAL, v_lineage, v_offset, victim_site, era, year, depth + 1)
+    let seized = self.communities[target].population * RAID_SEIZE;
+    let loss = self.communities[target].population * WAR_LOSS;
+    self.communities[raider].population += seized;
+    self.communities[target].population -= seized + loss;
+    self.touch(raider, year);
+    // Broken below viability ⇒ driven off, rolls downhill; else survives (weakened).
+    if self.communities[target].population < VIABLE_MIN {
+        let (people, remaining, lineage, offset, target_id) = {
+            let c = &self.communities[target];
+            (self.records[c.record].people, c.population.max(0.0), c.lineage, c.tech_offset, c.id)
+        };
+        let raider_id = self.communities[raider].id;
+        let flee_site = self.communities[target].site;
+        self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
+        self.tally.fled += 1;
+        match self.relocate(people, remaining, lineage, target_id, offset, flee_site, era, year, 0) {
+            Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
+            Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
+            Relocation::Lost => self.tally.collapsed += 1,
+        }
+    }
 }
 ```
 
-In `step_community`, the `eff == 0` branch (currently lines ~475-502) becomes:
+Rewrite `step_community`: revert the climate path to migrate-or-die (no crowding-cascade), drop the `pressure >= 1.0` raid, and grow-then-`maybe_raid`:
 
 ```rust
-if eff == 0.0 {
-    let (record, pop, lineage, offset) = {
-        let c = &self.communities[idx];
-        (c.record, c.population, c.lineage, c.tech_offset)
-    };
-    let people = self.records[record].people;
-    self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
-    let size = self.relocate(people, pop * MIGRATE_SURVIVAL, lineage, offset, site, era, year, 0);
-    if size == 0 { self.tally.migrated += 1; } else { self.tally.record_cascade(size); }
-    return;
+fn step_community(&mut self, idx: usize, era: &EraClimate, year: f64) {
+    if !self.communities[idx].alive { return; }
+    let site = self.communities[idx].site;
+    let eff = self.eff_capacity(era, site);
+    // Climate eviction: migrate to a vacant refuge, or starve. (No conflict here.)
+    if eff == 0.0 {
+        let (record, pop, lineage, offset, migrant_id) = {
+            let c = &self.communities[idx];
+            (c.record, c.population, c.lineage, c.tech_offset, c.id)
+        };
+        let people = self.records[record].people;
+        match self.nearest_dest(era, site) {
+            Some(dest) => {
+                self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
+                let ni = self.open(people, dest, year, pop * MIGRATE_SURVIVAL, Founding::From(migrant_id), Some(lineage), offset);
+                self.touch(ni, year);
+                self.tally.migrated += 1;
+            }
+            None => { self.close(idx, year, CauseOfEnd::Famine, Ended::Nature); self.tally.collapsed += 1; }
+        }
+        return;
+    }
+    let pressure = self.communities[idx].population * NEED / eff;
+    if pressure >= COLLAPSE_PRESSURE {
+        self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
+        self.tally.collapsed += 1;
+        return;
+    }
+    self.grow(idx, era, year, pressure);
+    // Opportunistic predation — decoupled from pressure (density is NOT the trigger).
+    if self.communities[idx].alive {
+        self.maybe_raid(idx, era, year);
+    }
 }
 ```
 
-In `raid`, the evicted-community refound (currently lines ~544-558, `if let Some(dest) = nearest_dest ... resettled ... else lost`) becomes:
+Delete the now-unused `raid` and `raid_target` (or leave `raid_target` if `nearest_occupied`/`maybe_raid` fully replace it — remove dead code to keep clippy clean).
 
-```rust
-let size = self.relocate(people, remaining, lineage, offset, flee_site, era, year, 0);
-if size == 0 { self.tally.resettled += 1; } else { self.tally.record_cascade(size); }
-```
-
-(Remove the old `open`/`nearest_dest` block that `relocate` now subsumes; keep the seize + close-target-Fled that precedes it.)
-
-- [ ] **Step 4: Run — expect PASS.**
+- [ ] **Step 4: Run — expect PASS** (+ existing tests green).
 
 Run: `cargo test -p hornvale-worldgen --test history_bake 2>&1 | tail -25`
-Expected: `a_full_world_cascades_when_a_cell_turns_hostile` PASSES; the existing all-land no-op / byte-identity / displacement tests still PASS.
+Expected: `a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare` PASSES; `same_seed_bakes_byte_identical_history` and the all-land/displacement tests still PASS.
 
 - [ ] **Step 5: Commit.**
 
 ```bash
 cargo fmt
 git add windows/worldgen/src/history_bake.rs windows/worldgen/tests/history_bake.rs
-git commit -m "feat(history): the Sea-Peoples cascade — displace occupied land when none is vacant (the-tumult T2)"
+git commit -m "feat(history): predation — raid for coveted value down a strength gradient, density dropped (the-tumult T1)"
 ```
 
 ---
 
-### Task 3: The measurement entry point + the falsification gates
+### Task 2: The conflict-driven roll-downhill (dissipation + cutoff)
 
 **Files:**
-- Modify: `windows/worldgen/src/lib.rs` (extract `history_for`)
-- Create: `windows/worldgen/tests/history_tumult.rs`
-- Re-measure: `windows/worldgen/tests/history_gates.rs` (light — re-pin if the epoch moved a floor)
+- Modify: `windows/worldgen/src/history_bake.rs`
+- Test: `windows/worldgen/tests/history_bake.rs`
 
 **Interfaces:**
-- Consumes: `bake`, `census`, `cascade_sizes`, `History`, `BakeCensus` (worldgen); `Seed`, `SkyPins`, `TerrainPins`, `SettlementPins`, `SkyChoice`, `WorldComponents`, `build_world_to`, `BuildDepth`.
-- Produces: `pub fn history_for(seed: Seed, sky: &SkyPins, sky_choice: SkyChoice, terrain: &TerrainPins, settlement: &SettlementPins, wc: &WorldComponents) -> Result<History, BuildError>` — assembles the bake inputs (the same terrain/climate/paleoclimate/capacity/river/eras/refugia/graphs the bake call site builds) and returns the diagnostic `History`.
+- Consumes: `relocate` (existing, from T2 of the first design — its displace branch), `nearest_occupied`, `strength`, `VIABLE_MIN`, `WAR_LOSS`.
+- Produces: `relocate` modified so its displace branch targets a *beatable weaker* occupant (dominance), applies war-loss per hop, and returns `Relocation::Lost` when the roller falls below `VIABLE_MIN` (the cutoff).
 
-- [ ] **Step 1: Extract `history_for` from the bake call site.**
+- [ ] **Step 1: Write the cascade-dissipates test (failing).**
 
-In `lib.rs`, factor the bake-input assembly + `history_bake::bake(...)` call (the block that produces `let history = ...` at the settlement stage) into `pub fn history_for(...) -> Result<History, BuildError>`, and have the existing call site call it. Verify byte-identity is preserved: `cargo test -p hornvale-worldgen --test history_byte_identity` stays green.
+Add a test: a displaced strong-ish group rolls downhill through a chain of progressively weaker occupied neighbours, losing population each hop, until a remnant falls below `VIABLE_MIN` and DIES (the cascade terminates by dissipation, not only by the depth cap). Assert: a cascade fires (`cascade_hist` populated), it terminates well short of `CASCADE_DEPTH_CAP`, and the total population strictly decreases across the chain (lossy). Deterministic.
 
-- [ ] **Step 2: Write the conflict-fires + not-depopulated gates (failing until measured).**
+- [ ] **Step 2: Run — expect FAIL** (current `relocate` displaces the nearest occupant regardless of strength and never dies below a viable minimum — cascades run to the cap).
 
-Create `windows/worldgen/tests/history_tumult.rs`:
+- [ ] **Step 3: Modify `relocate`'s displace branch.**
 
-```rust
-use hornvale_astronomy::SkyPins;
-use hornvale_kernel::Seed;
-use hornvale_terrain::TerrainPins;
-use hornvale_worldgen::{SettlementPins, SkyChoice, WorldComponents, cascade_sizes, census, history_for};
+In `relocate` (the existing recursion): (a) at entry, if `pop < VIABLE_MIN` return `Relocation::Lost` (the remnant died — the cutoff); (b) the displace branch chooses, among reachable occupied cells, the nearest the roller can BEAT (`strength_of_roller > strength(occupant) × RAID_MARGIN` — dominance; shit rolls *downhill*, onto the weaker), not merely the nearest occupied; if none beatable, `Relocation::Lost` (nowhere weaker to go — it dissipates); (c) apply `WAR_LOSS` to the roller's `pop` on each displacement hop (lossy). The victim is closed `Fled`/`By(displacer)` and recurses (open-before-close ordering unchanged). The roller's strength must be recomputed from its carried `pop` (it has no live community during the roll — pass strength as a value or compute from `pop × tech_weight` using the carried tech).
 
-fn hist(seed: Seed) -> [u64; 12] {
-    let wc = WorldComponents::assemble().expect("registries");
-    let h = history_for(seed, &SkyPins::default(), SkyChoice::Generated,
-        &TerrainPins::default(), &SettlementPins::default(), &wc).expect("bakes");
-    cascade_sizes(&h)
-}
+(Note: `relocate` already carries `people, pop, lineage, predecessor, offset`; add the carried `tech` or compute the roller's strength from `pop` and a carried tech horizon so the dominance test works mid-roll.)
 
-/// Gate — conflict FIRES. With crowding, cascades occur (raids rise from the
-/// pre-Tumult zero). If the world never saturates, this is a density-calibration
-/// finding for Nathan, not a floor. Floor set below the measured value (Step 4).
-const MIN_CASCADES: u64 = 0; // set in Step 4
-#[test]
-fn conflict_fires_at_volume() {
-    let total: u64 = hist(Seed(42)).iter().sum();
-    assert!(total >= MIN_CASCADES,
-        "conflict inert: only {total} cascades on seed 42 (floor {MIN_CASCADES}) — the world is not \
-         saturating; a density-calibration finding, not a floor to lower.");
-}
-```
+- [ ] **Step 4: Run — expect PASS** (+ byte-identity + Task-1 raid test green).
 
-And the depopulation gate (reuse `census(&h)` for alive/collapsed, or the existing `emergent_settlement_count_stays_in_the_sane_band` in `history_placement.rs` — assert the cascade does not empty the map).
+Run: `cargo test -p hornvale-worldgen --test history_bake 2>&1 | tail -25`
 
-- [ ] **Step 3: Write the power-law falsification metric (heavy-tier, the headline).**
-
-```rust
-/// The falsification HEADLINE (heavy: pools cascades over a seed sample and
-/// adjudicates the size distribution). A power law (roughly linear log-count vs
-/// log-size with negative slope over ≥ the middle bins) confirms self-organized
-/// criticality; a bell/spike/empty distribution FALSIFIES the bare sandpile
-/// (recorded as the honest result motivating cohesion/grievance). Either ships.
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
-    let mut agg = [0u64; 12];
-    for s in 1..=30u64 {
-        let h = hist(Seed(s));
-        for (a, b) in agg.iter_mut().zip(h.iter()) { *a += b; }
-    }
-    let total: u64 = agg.iter().sum();
-    assert!(total > 0, "no cascades across the sample — the world never saturates (falsified/inert)");
-    // Adjudicate: fit log-count vs log-bin over the populated bins; a power law
-    // reads a negative slope with a heavy tail (fill the exact test + the pinned
-    // slope/decades in Step 4 from the MEASURED distribution — power law OR the
-    // documented bell/spike falsification; do NOT tune to force "power law").
-    eprintln!("SUNDER-TUMULT cascade histogram (pooled 1..=30): {agg:?}");
-}
-```
-
-- [ ] **Step 4: Measure and set thresholds / adjudicate the shape.**
-
-Build seed-42 (and the 1..=30 sample) with `--nocapture`; read the cascade counts. Set `MIN_CASCADES` clear below the measured seed-42 total. Inspect the pooled histogram: if it is heavy-tailed (a power law), pin the shape assertion (e.g. monotone-decreasing log-counts with a negative log-log slope over the middle bins) and record the measured slope; **if it is a bell/spike/empty, do NOT force it — assert the measured reality and record the falsification** (the bare sandpile is insufficient; motivates cohesion/grievance). If seed-42 shows NO cascades at all (the world never saturates), reply `DONE_WITH_CONCERNS` with the census — a density-calibration decision for Nathan (founding density / capacity / bake span), which is a fidelity carve-out.
-
-- [ ] **Step 5: Re-measure the existing seed-42 gates; re-pin if a floor moved.**
-
-Run `cargo test -p hornvale-worldgen --test history_gates --test history_placement`. If the epoch moved `MIGRATION_FLOOR`/`MAX_REGION_OVERLAP`/the band and a phenomenon still fires, re-pin (labelled `// The Tumult (the sandpile) re-pin: …`). If a phenomenon goes inert or the map depopulates, STOP and report (fidelity carve-out).
-
-- [ ] **Step 6: Run to green, commit.**
+- [ ] **Step 5: Commit.**
 
 ```bash
 cargo fmt
-git add windows/worldgen/src/lib.rs windows/worldgen/tests/history_tumult.rs windows/worldgen/tests/history_gates.rs
-git commit -m "test(history): cascade-fires + not-depopulated + power-law falsification gates (the-tumult T3)"
+git add windows/worldgen/src/history_bake.rs windows/worldgen/tests/history_bake.rs
+git commit -m "feat(history): the roll-downhill dissipates — displace the beatable, die below viable (the-tumult T2)"
 ```
 
 ---
 
-### Task 4: The cascade cost gate (heavy tier)
+### Task 3: Re-measure the falsification gates on the predation model
+
+**Files:**
+- Modify: `windows/worldgen/tests/history_tumult.rs`
+- Re-measure: `windows/worldgen/tests/history_gates.rs`, `history_placement.rs`
+
+- [ ] **Step 1: Re-point `conflict_fires_at_volume` at the predation raids.**
+
+`conflict_fires_at_volume` now asserts seed-42's `census.raided` (or the cascade total) rises from ZERO — proving conflict fires on **value × strength** where the crowding model fired nothing. Set `MIN` clear below the measured value (Step 3). If seed-42 STILL fires no conflict, that is a raid-margin calibration finding for Nathan (fidelity carve-out), reported `DONE_WITH_CONCERNS` — do NOT lower a floor to hide it.
+
+- [ ] **Step 2: Keep the not-depopulated + power-law gates; re-adjudicate the shape.**
+
+`cascades_do_not_depopulate_the_world` unchanged in intent (lossy war + downhill must not empty the map; ceiling above measured). The heavy `cascade_sizes_are_measured_and_the_shape_adjudicated` re-runs on the predation model: **measure the pooled histogram and REPORT it; do NOT tune toward power-law.** If heavy-tailed → pin a measured shape (SOC confirmed). If bell/spike/geometric → assert only the honest floor and reply `DONE_WITH_CONCERNS` with the histogram (documented falsification → diagnoses the dominance-hierarchy next slice). Either ships.
+
+- [ ] **Step 3: Measure and set thresholds.**
+
+Build seed-42 + the 1..=30 sample via `history_for`; print `census` (raided/fled/collapsed/alive) + the pooled cascade histogram. Set the `conflict_fires` floor below measured; adjudicate the shape per Step 2. If conflict is inert or the map depopulates, `DONE_WITH_CONCERNS` with the numbers (a calibration decision for Nathan on `RAID_MARGIN`/`WAR_LOSS`/`VIABLE_MIN`).
+
+- [ ] **Step 4: Re-pin the existing seed-42 gates if a floor moved (labelled), commit.**
+
+Run `history_gates`/`history_placement`; re-pin moved floors (`// The Tumult (predation) re-pin: …`) if the phenomenon still fires; STOP and report if it goes inert / depopulates.
+
+```bash
+cargo fmt
+git add windows/worldgen/tests/history_tumult.rs windows/worldgen/tests/history_gates.rs
+git commit -m "test(history): re-measure conflict-fires-on-value + power-law falsification on predation (the-tumult T3)"
+```
+
+---
+
+### Task 4: The conflict-bake cost gate (heavy tier)
 
 **Files:**
 - Modify: `cli/tests/graph_cost.rs`
 
-- [ ] **Step 1: Add the cost + max-depth check (heavy-tier).**
+- [ ] **Step 1: Update/confirm the heavy cost gate** builds seed-42 to `BuildDepth::Settlements` (now the predation bake) under budget, and (if instrumented) the max cascade depth stays below `CASCADE_DEPTH_CAP` (a real avalanche is not clipped — with the viable-minimum cutoff it should terminate well short). Reuse the existing `graph_cost.rs` heavy test shape (rename to `tumult_predation_bake_stays_within_budget`).
 
-Following `graph_cost.rs`'s build helper and the `heavy:` ignore-reason token, build seed-42 to `BuildDepth::Settlements` (which now runs the cascading bake), time it, and assert the wall-time stays under budget. If `history_for` exposes the max cascade depth reached (add a `max_cascade_depth: u32` to `BakeCensus`, tallied in `relocate`), also assert it stays below `CASCADE_DEPTH_CAP` (a real avalanche is not being clipped).
-
-```rust
-#[test]
-#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn tumult_cascade_bake_stays_within_budget() {
-    let start = std::time::Instant::now();
-    let _w = /* build seed-42 to BuildDepth::Settlements — copy graph_cost.rs's build helper */;
-    let elapsed = start.elapsed();
-    assert!(elapsed.as_secs() < 60,
-        "the cascading bake regressed: {elapsed:?} to build seed-42 settlements (budget 60s)");
-}
-```
-
-- [ ] **Step 2: Run it (opt-in).**
-
-Run: `cargo test -p hornvale --test graph_cost -- --ignored tumult_cascade 2>&1 | tail -15`
-Expected: PASS within budget; note the max cascade depth if instrumented (if it hits `CASCADE_DEPTH_CAP`, the cap is clipping real avalanches — raise it, or report if that signals a runaway).
-
-- [ ] **Step 3: Commit.**
+- [ ] **Step 2: Run it (opt-in), commit.**
 
 ```bash
-cargo fmt && git add cli/tests/graph_cost.rs windows/worldgen/src/history_bake.rs
-git commit -m "test(cli): cascading-bake wall-time + max-depth cost gate, heavy tier (the-tumult T4)"
+cargo test -p hornvale --test graph_cost -- --ignored tumult 2>&1 | tail -15
+cargo fmt && git add cli/tests/graph_cost.rs
+git commit -m "test(cli): predation-bake wall-time + max-depth cost gate, heavy tier (the-tumult T4)"
 ```
 
 ---
 
 ## Close (G6 — `closing-a-campaign`, Nathan-authorized)
 
-Census regen on `lefford` (0063); census-close cascade re-pins (`rows.csv` → `golden-pins.sql` + `calibration.rs` via `make census-check`, then `branches_family`/`gathering`); seed-42 keystone refreeze from main's tip; artifact-drift regen; DoD docs (chronicle, retrospective, freshness sweep, Confidence Gradient re-score — the SOC bet moves from `raw`, registry flip SOC-criticality → elaborated/slice-1-shipped with the measured power-law-or-falsification result); full gate + artifact drift; then fast-forward main.
+Census regen on `lefford` (0063); cascade re-pins; keystone refreeze; artifact drift; DoD docs (chronicle — the crowding→predation reframe + the six-pass ideonomy pivot; retrospective; freshness sweep; Confidence Gradient re-score; registry flip SOC-criticality → elaborated/slice-1 with the measured power-law-or-falsification result + the deferred dominance-hierarchy/cohesion/captives/grievance rows); full gate + artifact drift; fast-forward main.
 
 ---
 
 ## Self-Review
 
-**Spec coverage:** §4.2 cascade → Task 2 (`relocate` at both dead-ends). §4.1 drive/crowding → measured (Task 3 gates). §4.3 boundedness/determinism → Task 1/2 (`CASCADE_DEPTH_CAP`, deterministic BFS/tie-breaks) + Task 4 (max-depth). §4.4 tally → Task 1 (histogram). §5 falsification metric → Task 3. §8 gates (fires / not-depopulated / power-law / cost) → Task 3 + Task 4. §6 epoch (no new committed field) → the cascade uses existing `Fled` records; census/keystone at close. §9 non-goals — no cohesion/grievance/shock/roads introduced.
+**Spec coverage:** §4.1 strength+value → Task 1 (`strength`, `capacity`). §4.2 raid rule (covet+dominance, density dropped) → Task 1 (`maybe_raid`, `step_community` rewrite). §4.3 lossy war + viable-death + roll-downhill → Task 1 (WAR_LOSS/plunder) + Task 2 (the downhill dissipation). §4.4 determinism → Tasks 1–2 (total_cmp, no new draw, bounded). §5 falsification metric → Task 3. §8 gates → Task 3 + Task 4. §7 epoch (no new field) → existing Fled records; census at close. §9 non-goals — no dominance-hierarchy/tribute/captives/grievance/cohesion introduced. §11 salvage → edits forward (relocate, histogram, history_for, nearest_occupied reused).
 
-**Placeholder scan:** `MIN_CASCADES` and the power-law shape assertion are measured-then-set in Task 3 Step 4 (measure-don't-narrate requires it — the epoch's values can't be known before it runs), with the adjudication procedure specified. The `history_for` extraction and the "copy graph_cost.rs's build helper" reference concrete existing code. No other TBDs.
+**Placeholder scan:** `RAID_MARGIN`/`WAR_LOSS`/`VIABLE_MIN`/tech weights are named starting values (calibrated by measurement in Task 3, per measure-don't-narrate); the `conflict_fires` floor + the power-law shape are measured-then-set/adjudicated in Task 3. No TBDs.
 
-**Type consistency:** `relocate(KindId, f64, EntityId, f64, CellId, &EraClimate, f64, u32) -> u32` used at both call sites; `nearest_occupied(CellId) -> Option<usize>` consistent; `cascade_hist: [u64; CASCADE_BINS]` with `CASCADE_BINS = 12` matched by the `[u64; 12]` test signatures; `history_for(...) -> Result<History, BuildError>` produced in Task 3 Step 1 and consumed by the gates. `record_cascade(u32)` / `cascade_sizes(&History) -> [u64; 12]` consistent.
+**Type consistency:** `strength(idx) -> f64` used in `maybe_raid` and `relocate`'s dominance test; `maybe_raid(usize, &EraClimate, f64)` called from `step_community`; `relocate` keeps its `Relocation::{Settled{cascade}, Lost}` return; the consts are `f64`. `census`/`cascade_sizes`/`history_for` reused from T1/T3 unchanged.
