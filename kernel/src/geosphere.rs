@@ -298,32 +298,84 @@ impl Geosphere {
 const BAND_COUNT: usize = 30;
 /// Height of one band, degrees.
 const BAND_DEGREES: f64 = 180.0 / BAND_COUNT as f64;
+/// Longitude buckets within each latitude band (A1: the 2-D grid). Combined
+/// with the ±1 latitude bands, this windows the scan to a small neighborhood
+/// instead of three full latitude rings.
+const LON_BUCKETS: usize = 60;
+/// Width of one longitude bucket, degrees.
+const LON_DEGREES: f64 = 360.0 / LON_BUCKETS as f64;
+/// Safety factor on the measured max edge length when sizing the longitude
+/// window: icosphere triangles are near-equilateral so the covering radius is
+/// below the longest edge, but the margin absorbs triangle-shape irregularity
+/// and bucket-edge slack. Widening only costs a little scan; under-covering
+/// would silently change a result, so err wide. Pinned by the equality test.
+const COVER_MARGIN: f64 = 1.5;
 
 /// Dot product of two unit vectors.
 fn dot3(a: [f64; 3], b: [f64; 3]) -> f64 {
     a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
-/// Latitude-band index for pixel→cell lookups: cells bucketed into 30
-/// bands of 6° (built in ascending cell order, so lookups are
-/// deterministic). Searching the query's band ± 1 always contains the
-/// nearest cell center at level ≥ 4 (which lies within ~2.5°).
+/// Latitude band of a coordinate (degrees), north (0) to south.
+fn lat_band(latitude: f64) -> usize {
+    (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1)
+}
+
+/// Longitude bucket of a coordinate (degrees, `(-180, 180]`).
+fn lon_bucket(longitude: f64) -> usize {
+    (((longitude + 180.0) / LON_DEGREES) as usize).min(LON_BUCKETS - 1)
+}
+
+/// A latitude-banded index for pixel→cell lookups, with a longitude window
+/// that skips the dot product for far-away cells. Cells sit in 30 bands of 6°
+/// (ascending `CellId`); a query scans its band ± 1 but computes a dot only for
+/// cells whose longitude bucket is within a 1/cos(lat)-widened window of the
+/// query — the true nearest (and any equal-distance tie-partner) always lies
+/// inside it by the measured coverage bound; near the poles the window
+/// saturates to the full ring, i.e. the earlier band-only scan. Returns the
+/// bit-identical cell the full band scan did (same max dot, same
+/// first-in-scan-order tie-break) — pinned by an all-levels equality test.
 #[derive(Debug, Clone)]
 pub struct NearestCellIndex {
-    /// One bucket of cells per latitude band, north to south.
-    bands: Vec<Vec<CellId>>,
+    /// Cells by `band * LON_BUCKETS + lon_bucket`, ascending `CellId` within
+    /// each bucket. A query visits only the buckets in its band ± 1 × longitude
+    /// window (the speed), and a `(band, CellId)` tie-break key reproduces the
+    /// band scan's first-in-scan-order winner regardless of bucket visit order
+    /// (the correctness).
+    grid: Vec<Vec<CellId>>,
+    /// Angular coverage bound in degrees: `COVER_MARGIN ×` the mesh's longest
+    /// cell-to-neighbor edge. The nearest cell to any query lies within the
+    /// covering radius (below the longest edge), so a longitude window of
+    /// `ceil(cover_deg / cos(lat) / LON_DEGREES) + 1` buckets provably contains
+    /// it — and any equal-distance tie-partner too, so skipping out-of-window
+    /// cells never changes a result. Bigger at coarser levels → saturates to a
+    /// full-ring scan.
+    cover_deg: f64,
 }
 
 impl NearestCellIndex {
-    /// Bucket every cell of `geo` by latitude.
+    /// Bucket every cell of `geo` by (latitude band, longitude bucket),
+    /// ascending `CellId`, and measure the coverage bound from the longest
+    /// cell-to-neighbor edge.
     pub fn new(geo: &Geosphere) -> NearestCellIndex {
-        let mut bands = vec![Vec::new(); BAND_COUNT];
+        let mut grid = vec![Vec::new(); BAND_COUNT * LON_BUCKETS];
+        let mut max_edge = 0.0_f64;
         for cell in geo.cells() {
-            let latitude = geo.coord(cell).latitude;
-            let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-            bands[band].push(cell);
+            let c = geo.coord(cell);
+            grid[lat_band(c.latitude) * LON_BUCKETS + lon_bucket(c.longitude)].push(cell);
+            let p = geo.position(cell);
+            for &n in geo.neighbors(cell) {
+                // Unit vectors; clamp guards acos's domain against fp drift.
+                let ang = math::acos(dot3(p, geo.position(n)).clamp(-1.0, 1.0));
+                if ang > max_edge {
+                    max_edge = ang;
+                }
+            }
         }
-        NearestCellIndex { bands }
+        NearestCellIndex {
+            grid,
+            cover_deg: max_edge.to_degrees() * COVER_MARGIN,
+        }
     }
 
     /// The cell nearest a coordinate (degrees), by maximum dot product.
@@ -332,26 +384,13 @@ impl NearestCellIndex {
     /// type-audit: pending(wave-1)
     pub fn nearest(&self, geo: &Geosphere, latitude: f64, longitude: f64) -> CellId {
         let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
+        let cos_lat = math::cos(lat);
         let target = [
-            math::cos(lat) * math::cos(lon),
-            math::cos(lat) * math::sin(lon),
+            cos_lat * math::cos(lon),
+            cos_lat * math::sin(lon),
             math::sin(lat),
         ];
-        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
-        let lo = band.saturating_sub(1);
-        let hi = (band + 1).min(BAND_COUNT - 1);
-        let mut best = CellId(0);
-        let mut best_dot = f64::NEG_INFINITY;
-        for cells in &self.bands[lo..=hi] {
-            for &cell in cells {
-                let d = dot3(geo.position(cell), target);
-                if d > best_dot {
-                    best_dot = d;
-                    best = cell;
-                }
-            }
-        }
-        best
+        self.scan_at(geo, target, latitude, longitude, cos_lat)
     }
 
     /// The cell nearest a unit-sphere position, by maximum dot product. Because
@@ -360,17 +399,70 @@ impl NearestCellIndex {
     /// type-audit: pending(wave-1)
     pub fn nearest_to_position(&self, geo: &Geosphere, pos: [f64; 3]) -> CellId {
         let latitude = math::asin(pos[2]).to_degrees();
-        let band = (((90.0 - latitude) / BAND_DEGREES) as usize).min(BAND_COUNT - 1);
+        let longitude = math::atan2(pos[1], pos[0]).to_degrees();
+        // cos(lat) = sqrt(1 - z²) on the unit sphere — no transcendental.
+        let cos_lat = (1.0 - pos[2] * pos[2]).max(0.0).sqrt();
+        self.scan_at(geo, pos, latitude, longitude, cos_lat)
+    }
+
+    /// Shared windowed scan given the query's target vector, latitude,
+    /// longitude (all degrees), and cos(lat).
+    fn scan_at(
+        &self,
+        geo: &Geosphere,
+        target: [f64; 3],
+        latitude: f64,
+        longitude: f64,
+        cos_lat: f64,
+    ) -> CellId {
+        let band = lat_band(latitude);
         let lo = band.saturating_sub(1);
         let hi = (band + 1).min(BAND_COUNT - 1);
+        let cl = cos_lat.abs().max(1e-6);
+        let cover_rad = self.cover_deg.to_radians();
+        let k = (self.cover_deg / cl / LON_DEGREES).ceil() as usize + 1;
+        // Near the poles the `cover / cos(lat)` linearization underestimates the
+        // longitude reach (a cell 180° away in longitude is only a few degrees
+        // away angularly), so it would wrongly exclude the true nearest. Guard:
+        // when the query is within ~2× the coverage radius of a pole, scan the
+        // full ring — exactly the original band-only scan. Elsewhere the
+        // linearization is accurate and the window is a safe superset.
+        let full_ring = cl < 2.0 * cover_rad || 2 * k + 1 >= LON_BUCKETS;
+        let ql = lon_bucket(longitude);
+        // Visit only the in-window buckets (the speed). The winner is the max
+        // dot; on an exact tie, the lexicographically smallest `(band, CellId)`
+        // — which reproduces the full band scan's first-in-scan-order winner
+        // (bands lo→hi, ascending CellId within band) regardless of the order
+        // buckets are visited here. Every max/tie cell is in-window by the
+        // coverage bound, so restricting to the window cannot change the result.
         let mut best = CellId(0);
         let mut best_dot = f64::NEG_INFINITY;
-        for cells in &self.bands[lo..=hi] {
-            for &cell in cells {
-                let d = dot3(geo.position(cell), pos);
-                if d > best_dot {
-                    best_dot = d;
-                    best = cell;
+        let mut best_key = (usize::MAX, u32::MAX);
+        macro_rules! scan_bucket {
+            ($b:expr, $l:expr) => {
+                for &cell in &self.grid[$b * LON_BUCKETS + $l] {
+                    let d = dot3(geo.position(cell), target);
+                    let key = ($b, cell.0);
+                    // Exact-equality tie detection is intentional: it selects
+                    // the same cell the band scan's strict-`>` first hit did.
+                    #[allow(clippy::float_cmp)]
+                    let tie = d == best_dot;
+                    if d > best_dot || (tie && key < best_key) {
+                        best_dot = d;
+                        best = cell;
+                        best_key = key;
+                    }
+                }
+            };
+        }
+        for b in lo..=hi {
+            if full_ring {
+                for l in 0..LON_BUCKETS {
+                    scan_bucket!(b, l);
+                }
+            } else {
+                for dl in 0..=2 * k {
+                    scan_bucket!(b, (ql + dl + LON_BUCKETS - k) % LON_BUCKETS);
                 }
             }
         }
@@ -381,6 +473,77 @@ impl NearestCellIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The reference: the earlier full-band scan (band ± 1, ALL longitudes,
+    /// ascending CellId within each band, first-in-scan-order tie-break). The
+    /// A1 grid must return this exact cell for every query.
+    fn band_scan(
+        geo: &Geosphere,
+        buckets: &[Vec<CellId>],
+        latitude: f64,
+        longitude: f64,
+    ) -> CellId {
+        let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
+        let target = [
+            crate::math::cos(lat) * crate::math::cos(lon),
+            crate::math::cos(lat) * crate::math::sin(lon),
+            crate::math::sin(lat),
+        ];
+        let band = lat_band(latitude);
+        let lo = band.saturating_sub(1);
+        let hi = (band + 1).min(BAND_COUNT - 1);
+        let mut best = CellId(0);
+        let mut best_dot = f64::NEG_INFINITY;
+        for bucket in &buckets[lo..=hi] {
+            for &cell in bucket {
+                let d = dot3(geo.position(cell), target);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn a1_grid_matches_the_full_band_scan_over_a_dense_sweep() {
+        // Every level the mesh is built at (2–6 across renders, room, scene,
+        // the climate provider, and the census). The equality assertion IS the
+        // coverage proof: an under-covering window would return a different
+        // cell than the band scan and fail here. Level 2 is the coarse case
+        // where the covering radius is largest and the window saturates.
+        for level in [2u32, 3, 4, 5, 6] {
+            let geo = Geosphere::new(level);
+            let index = NearestCellIndex::new(&geo);
+            // Reference latitude buckets, built once (ascending CellId).
+            let mut buckets = vec![Vec::new(); BAND_COUNT];
+            for c in geo.cells() {
+                buckets[lat_band(geo.coord(c).latitude)].push(c);
+            }
+            // A render-like equirectangular sweep of query points.
+            let (nlat, nlon) = (90usize, 180usize);
+            for iy in 0..nlat {
+                let lat = 90.0 - (iy as f64 + 0.5) * 180.0 / nlat as f64;
+                for ix in 0..nlon {
+                    let lon = -180.0 + (ix as f64 + 0.5) * 360.0 / nlon as f64;
+                    assert_eq!(
+                        index.nearest(&geo, lat, lon),
+                        band_scan(&geo, &buckets, lat, lon),
+                        "A1 grid disagreed at level {level}, lat {lat:.3}, lon {lon:.3}"
+                    );
+                }
+            }
+            // Every cell center must resolve to its own cell (self-dot = 1).
+            for c in geo.cells() {
+                assert_eq!(
+                    index.nearest_to_position(&geo, geo.position(c)),
+                    c,
+                    "A1 grid: cell {c:?} did not resolve to itself at level {level}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn coord_cache_bit_equals_recomputation_at_every_cell() {
