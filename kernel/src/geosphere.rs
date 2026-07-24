@@ -545,6 +545,52 @@ mod tests {
         }
     }
 
+    /// Position-target band scan — the reference for `nearest_to_position`
+    /// (raw unit vector as the target, not lat/lon-derived).
+    fn band_scan_pos(geo: &Geosphere, buckets: &[Vec<CellId>], pos: [f64; 3]) -> CellId {
+        let band = lat_band(math::asin(pos[2].clamp(-1.0, 1.0)).to_degrees());
+        let lo = band.saturating_sub(1);
+        let hi = (band + 1).min(BAND_COUNT - 1);
+        let mut best = CellId(0);
+        let mut best_dot = f64::NEG_INFINITY;
+        for bucket in &buckets[lo..=hi] {
+            for &cell in bucket {
+                let d = dot3(geo.position(cell), pos);
+                if d > best_dot {
+                    best_dot = d;
+                    best = cell;
+                }
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn a1_grid_tie_break_matches_band_scan_at_edge_midpoints() {
+        // Edge midpoints are exactly equidistant (equal dot) from their two
+        // endpoint cells — they force the dot-product tie the dense equirect
+        // sweep never hits, exercising the (band, CellId) tie-key. The A1 grid
+        // must pick the same cell the band scan's first-in-scan-order does.
+        for level in [2u32, 3, 4, 5, 6] {
+            let geo = Geosphere::new(level);
+            let index = NearestCellIndex::new(&geo);
+            let mut buckets = vec![Vec::new(); BAND_COUNT];
+            for c in geo.cells() {
+                buckets[lat_band(geo.coord(c).latitude)].push(c);
+            }
+            for c in geo.cells() {
+                for &n in geo.neighbors(c) {
+                    let mid = slerp_mid(geo.position(c), geo.position(n));
+                    assert_eq!(
+                        index.nearest_to_position(&geo, mid),
+                        band_scan_pos(&geo, &buckets, mid),
+                        "tie-break mismatch at level {level}, edge {c:?}-{n:?}"
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn coord_cache_bit_equals_recomputation_at_every_cell() {
         // The cached `coord` must be bit-for-bit identical to recomputing
