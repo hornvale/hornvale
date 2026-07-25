@@ -209,39 +209,62 @@ git commit -m "feat(history): predation — raid for coveted value down a streng
 
 ---
 
-### Task 2: The conflict-driven roll-downhill (dissipation + cutoff)
+### Task 2: The roll-downhill as one rule, plus the two slice-1 inhibitions
+
+> **REVISED after the T1 measurement and Nathan's G3 amendment (ledger #13).** The original Task 2
+> made `relocate` vacant-first with a beatable-weaker displace branch. T1 measured `cascade_hist`
+> all-zero — 69 of 71 losers reach vacant land at the first hop — so the branching ratio was zero
+> **by construction, not by physics**, and spec §5's open question could not be asked. Amended spec
+> §4.3 replaces the vacant-first special case with a single best-value comparison. Read spec §4.1,
+> §4.2a, §4.3 and §5 before starting; the spec governs where this plan and it disagree.
 
 **Files:**
 - Modify: `windows/worldgen/src/history_bake.rs`
 - Test: `windows/worldgen/tests/history_bake.rs`
 
 **Interfaces:**
-- Consumes: `relocate` (existing, from T2 of the first design — its displace branch), `nearest_occupied`, `strength`, `VIABLE_MIN`, `WAR_LOSS`.
-- Produces: `relocate` modified so its displace branch targets a *beatable weaker* occupant (dominance), applies war-loss per hop, and returns `Relocation::Lost` when the roller falls below `VIABLE_MIN` (the cutoff).
+- Consumes: `relocate`, `strength`, `tech_weight`, `tech_for`, `eff_capacity`, `traversable_neighbors`, `node_index`, `VIABLE_MIN`, `WAR_LOSS`, `RAID_MARGIN`, `BakeConfig`.
+- Produces: `const SETTLED_PREMIUM: f64`; a unified best-value option scan in `relocate`; a no-spoils veto and (conditionally) a disposition veto in `maybe_raid`.
 
-- [ ] **Step 1: Write the cascade-dissipates test (failing).**
+**Ship this as three commits with a seed-42 census between each** — every inhibition gate can only
+*reduce* conflict and the premium is the only riser, so bundling them destroys Task 3's ability to
+attribute a change to a cause (spec §4.2a's sequencing warning).
 
-Add a test: a displaced strong-ish group rolls downhill through a chain of progressively weaker occupied neighbours, losing population each hop, until a remnant falls below `VIABLE_MIN` and DIES (the cascade terminates by dissipation, not only by the depth cap). Assert: a cascade fires (`cascade_hist` populated), it terminates well short of `CASCADE_DEPTH_CAP`, and the total population strictly decreases across the chain (lossy). Deterministic.
+- [ ] **Step 1 (commit a): the unified rule + the settled premium.**
 
-- [ ] **Step 2: Run — expect FAIL** (current `relocate` displaces the nearest occupant regardless of strength and never dies below a viable minimum — cascades run to the cap).
+Write the failing test first: a displaced people with a *rich, beatable* held neighbour and a
+*marginal vacant* cell both reachable must take the held one and cascade. Under vacant-first it
+settles the empty cell and `cascade_hist` stays zero.
 
-- [ ] **Step 3: Modify `relocate`'s displace branch.**
+Then replace `relocate`'s vacant-first branch with **one** comparison over every reachable cell:
+vacant cells score `eff_capacity`, held cells score `eff_capacity × (1 + SETTLED_PREMIUM)` and are
+admissible only when `roller_strength > strength(holder) × RAID_MARGIN`. Take the best; nothing
+admissible ⇒ `Relocation::Lost`. Apply `WAR_LOSS` to the roller on each displacement hop (lossy);
+keep the `pop < VIABLE_MIN` entry cutoff and `CASCADE_DEPTH_CAP`. The roller has no live community
+mid-roll, so compute its strength from the carried `pop` and `tech_for(year + offset)` — `relocate`
+already carries `offset`, so **no new parameter is needed**.
 
-In `relocate` (the existing recursion): (a) at entry, if `pop < VIABLE_MIN` return `Relocation::Lost` (the remnant died — the cutoff); (b) the displace branch chooses, among reachable occupied cells, the nearest the roller can BEAT (`strength_of_roller > strength(occupant) × RAID_MARGIN` — dominance; shit rolls *downhill*, onto the weaker), not merely the nearest occupied; if none beatable, `Relocation::Lost` (nowhere weaker to go — it dissipates); (c) apply `WAR_LOSS` to the roller's `pop` on each displacement hop (lossy). The victim is closed `Fled`/`By(displacer)` and recurses (open-before-close ordering unchanged). The roller's strength must be recomputed from its carried `pop` (it has no live community during the roll — pass strength as a value or compute from `pop × tech_weight` using the carried tech).
+Two defects from the T1 review are in these exact lines and must be fixed here:
+- a victim whose own relocation returns `Lost` inside the recursion is dropped with **no tally**,
+  while the top level maps `Lost → collapsed` — a community vanishes uncounted, biasing Task 3;
+- the cascade path currently has **no test coverage** at all (T1 deleted the only test exercising
+  the displace branch). The new test must also cover the `CASCADE_DEPTH_CAP` bound.
 
-(Note: `relocate` already carries `people, pop, lineage, predecessor, offset`; add the carried `tech` or compute the roller's strength from `pop` and a carried tech horizon so the dominance test works mid-roll.)
+- [ ] **Step 2 (commit b): the no-spoils veto.**
 
-- [ ] **Step 4: Run — expect PASS** (+ byte-identity + Task-1 raid test green).
+A target already starving against its own effective capacity has nothing to contend over ⇒ skip it
+as a raid candidate, however weak it is. Uses population and pressure already live in the bake.
 
-Run: `cargo test -p hornvale-worldgen --test history_bake 2>&1 | tail -25`
+- [ ] **Step 3 (commit c): the disposition veto — CONDITIONAL.**
 
-- [ ] **Step 5: Commit.**
+A people whose `PsychVector.threat_response` falls below a threshold never raids. `bake()` takes
+`peoples: &[KindId]` and has no psych access; `windows/worldgen/src/chorus.rs` does the per-species
+lookup via `wc.psyche.get_by_label`. **Nathan's condition: land this only if the lookup threads
+cleanly** — a field on `BakeConfig` plus a call-site lookup. If it needs more than that, STOP,
+defer it to the `SOC-inhibition` registry row, and say so in the report. Do not contort the
+interface.
 
-```bash
-cargo fmt
-git add windows/worldgen/src/history_bake.rs windows/worldgen/tests/history_bake.rs
-git commit -m "feat(history): the roll-downhill dissipates — displace the beatable, die below viable (the-tumult T2)"
-```
+- [ ] **Step 4: report the census after each commit** (`grew, founded, migrated, raided, fled, collapsed, resettled, records_total, alive_at_now, cascade_hist`) so Task 3 can attribute.
 
 ---
 
