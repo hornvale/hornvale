@@ -73,7 +73,12 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
             Value::Number(n) => n,
             _ => 0.0,
         })
-        .sum::<f64>()
+        // `Iterator::sum::<f64>()` folds from `-0.0` (the float additive
+        // identity that Rust's stdlib picks so an all-negative-zero sum
+        // stays negative), so an NPC with no disposition-shift facts would
+        // otherwise serialize as `-0.0` rather than the plain `0.0` the doc
+        // comment above promises. Fold from an explicit `0.0` instead.
+        .fold(0.0, |acc, n| acc + n)
         * GRIEVANCE_GAIN
 }
 
