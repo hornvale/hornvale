@@ -1450,7 +1450,7 @@ Prepend to `windows/vessel/src/purview.rs`:
 use crate::{Knowledge, VesselError, liveness};
 use hornvale_kernel::{Ledger, RoomAddr, RoomId, World, WorldTime};
 use hornvale_locale::LocaleContext;
-use hornvale_scene::{Mark, SurroundsScene, surrounds_scene};
+use hornvale_scene::{Mark, SurroundsScene, surrounds_scene_in};
 
 /// The chart's sense radius, in BFS rings. A constant this slice; the seam
 /// for a per-species radius is `Agent::perception` (EXP-3), untouched here.
@@ -1481,7 +1481,11 @@ pub fn purview_scene(
         face: position.face,
         path: position.path[..keep.min(position.path.len())].to_vec(),
     };
-    let mut scene = surrounds_scene(world, &centre, PURVIEW_RADIUS, at)
+    // `surrounds_scene_in`, NOT `surrounds_scene`: the session already holds a
+    // built `LocaleContext`, and building a fresh one costs ~1.2 s (measured)
+    // against ~2 ms of actual per-cell work. `map` runs every turn, so the
+    // convenience wrapper would make the verb unusable.
+    let mut scene = surrounds_scene_in(world, ctx, &centre, PURVIEW_RADIUS, at)
         .map_err(|e| VesselError::Build(e.to_string()))?;
 
     // Every room this session has walked, as an address.
