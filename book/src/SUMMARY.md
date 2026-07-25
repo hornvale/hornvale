@@ -242,8 +242,10 @@
 - [The Vestige](./chronicle/the-vestige.md)
 - [The Lookup](./chronicle/the-lookup.md)
 - [The Bearing](./chronicle/the-bearing.md)
+- [The Retainer](./chronicle/the-retainer.md)
 - [The Phantom](./chronicle/the-phantom.md)
 - [The Excursion](./chronicle/the-excursion.md)
+- [The Snapshot](./chronicle/the-snapshot.md)
 
 # Appendix: The Frontier
 

@@ -21,7 +21,7 @@ use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
 use hornvale_terrain::GeneratedTerrain;
 pub use hornvale_terrain::WaterKind;
-use hornvale_worldgen::{climate_of, terrain_of};
+use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
 
 /// The versioned semantic schema this window emits (save-format class; a
@@ -155,8 +155,9 @@ pub struct LocaleContext {
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
     pub fn build(world: &World) -> Result<LocaleContext, LocaleError> {
-        let climate = climate_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
+        let climate =
+            climate_from(world, &terrain).map_err(|e| LocaleError::Build(e.to_string()))?;
         let index = NearestCellIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
         let budget = StrangenessBudget::build(world.seed, &climate, &terrain);
@@ -174,6 +175,20 @@ impl LocaleContext {
     /// type-audit: bare-ok(count)
     pub fn globe_level(&self) -> u32 {
         self.globe_level
+    }
+
+    /// The cached terrain provider — the reuse seam so a caller (e.g. the
+    /// vessel window's `observable`) can pass it into `sky_report_from`
+    /// instead of re-deriving it (The Retainer).
+    pub fn terrain(&self) -> &GeneratedTerrain {
+        &self.terrain
+    }
+
+    /// The cached climate provider — the reuse seam so a caller (e.g. the
+    /// vessel window's `observable`) can pass it into `sky_report_from`
+    /// instead of re-deriving it (The Retainer).
+    pub fn climate(&self) -> &GeneratedClimate {
+        &self.climate
     }
 
     /// The world's placed exotic sites, for findability (derived, not stored).

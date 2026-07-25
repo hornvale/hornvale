@@ -212,6 +212,63 @@ carries three failure modes on one axis — the data can go undrawn (The Lens),
 ungrounded (The Reckoning), or drawn-but-illegible (The Gyre) — none a seam
 failure, all invisible to everything but a human looking at the picture.
 
+[The Snapshot](./chronicle/the-snapshot.md) moved the seam onto an axis it had
+never been tested on. Every layer before it was a **query**: a client asks the
+world about a place or a day window and receives a document describing what is
+there. `vessel/session/v1` is an **emit** — one document per committed turn of
+an interactive session, and not a view *of* the world but a view *from* an
+agent inside it, which means the interesting part is what it must withhold. It
+carries the redaction boundary in its own shape: channels grouped by how the
+agent came to hold what it holds, rather than fields tagged with provenance, so
+a pane that reads one channel does not decline to look outside it but cannot.
+The seam held on the new axis, and was proved the honest way — by moving the
+one pane that already existed off the prose interface and onto the document,
+where it printed the same bytes it printed before, rather than by adding a
+second pane that nothing could contradict.
+
+The campaign also refines the golden rule [The Shadow
+Track](./chronicle/the-shadow-track.md) had just sharpened, and the tension is
+worth stating rather than smoothing: that campaign concluded a committed golden
+is the right instrument only for a value the client *recomputes*, and this one
+committed a golden for a document its client merely *parses*. The distinction
+that survives both is not who reads the artifact but what the artifact pins.
+The Shadow Track's dead golden pinned a *client contract* the end-to-end wasm
+fixture already pinned better. This one pins something no client-side test can
+reach: `vessel/session/v1` is declared save-format-class, so a change in what
+its bytes *mean* is an epoch event, and the committed fixture is the tripwire
+that makes such a change arrive as a reviewable diff instead of arriving
+silently — its own failure message names the epoch decision. An in-process
+determinism test catches nondeterminism; only a golden held across code changes
+catches a meaning that moved. It earned its keep on the day it was written, by
+exposing a negative zero that had been folded into every unprovoked NPC's
+grievance for months and was invisible to the equality test that guarded it.
+And it carries a tie no end-to-end fixture could express: the newest channel in
+the newest schema asserted byte-identical against the *oldest* committed golden
+in the book, the published seed-42 possession transcript. The end-to-end check
+exists too — the wasm smoke driver asserts the schema tag, every channel, and
+narration equality against the real binary — so the campaign holds two
+instruments rather than one duplicated. The cost The Shadow Track warned of was
+still paid: the fixture needed a rebaseline during the final fix wave, and any
+second copy of a document must be regenerated whenever the document
+deliberately changes, with a rubber-stamped regeneration as the standing
+hazard. Here the regeneration *was* the instrument working, and what forced it
+belongs to this bet's own tally. A schema is a contract about shape, and shape
+does not include **range**: the agent id was faithfully declared, faithfully
+transported, faithfully parsed, and quietly truncated on arrival, because
+JSON's one numeric type is a float and the producer's identifier is a
+full-width 64-bit integer — wrong by 296 for seed 42, and wrong for nearly
+every world. It printed correctly, which is why it survived three separate
+per-task reviews: the integer, the WebAssembly boundary, and the TypeScript
+annotation each sat in a different file, and no single-file review holds two at
+once. The three failure modes above are invisible to everything but a human
+looking at the picture; this fourth one is invisible to anything smaller than
+the whole seam — and unlike them it is *mechanizable*, since nothing in the
+ladder yet checks that an integer crossing into JSON fits a double. So the rule
+the two campaigns jointly support: **a golden for a value the client
+recomputes, or for a save-format-class document whose meaning changes are epoch
+events; the end-to-end fixture for a document the client merely parses.** Where
+neither holds, a second committed copy is only a thing to drift.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

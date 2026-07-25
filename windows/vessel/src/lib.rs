@@ -8,12 +8,17 @@ mod focalize;
 mod knowledge;
 pub mod liveness;
 mod session;
+pub mod snapshot;
 pub mod streams;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
 pub use focalize::*;
 pub use knowledge::*;
 pub use session::Session;
+pub use snapshot::{
+    KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
+    SensedChannel, SessionSnapshot, SocialEntry, snapshot_json,
+};
 pub use streams::stream_labels;
 pub use vantage::*;
 
