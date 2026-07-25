@@ -865,7 +865,7 @@ pub fn demography_report_with_beta(
     floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
 }
 
@@ -977,7 +977,7 @@ const CARNIVORE_THRESHOLD: f64 = 0.5;
 pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
@@ -1052,7 +1052,7 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
@@ -1109,7 +1109,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
@@ -1858,7 +1858,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(diurnal_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(diurnal_lines_from(&terrain, &climate))
 }
 
 /// [`diurnal_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -1976,7 +1978,9 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(seas_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(seas_lines_from(&terrain, &climate))
 }
 
 /// [`seas_lines`] from a PRE-BUILT terrain and climate — the body without the
@@ -2039,7 +2043,9 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
 pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(rains_lines_from(&terrain, &climate))
 }
 
 /// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2131,10 +2137,9 @@ pub fn sky_phrase(
 /// observation.
 /// type-audit: bare-ok(prose: return)
 pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(firmament_lines_from(
-        &terrain_of(world)?,
-        &climate_of(world)?,
-    ))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(firmament_lines_from(&terrain, &climate))
 }
 
 /// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
@@ -2330,7 +2335,9 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// world.
 /// type-audit: bare-ok(prose: return)
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(ground_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(ground_lines_from(&terrain, &climate))
 }
 
 /// [`ground_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -3403,7 +3410,7 @@ pub fn exposure_of(
     let wc = WorldComponents::assemble()?;
     let name = resolve_kind(&wc, species)?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let settled = settled_cells(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
@@ -5181,7 +5188,7 @@ pub fn world_name(world: &World) -> Option<String> {
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
     let terrain = terrain_of(world).ok()?;
-    let climate = climate_of(world).ok()?;
+    let climate = climate_from(world, &terrain).ok()?;
     world_name_in_from(world, wc, &terrain, &climate)
 }
 
@@ -5287,9 +5294,20 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
+    sky_report_from(world, time, &terrain, &climate)
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<SkyReport, BuildError> {
+    let mut report = sky_of(world)?.sky_at(time);
     let cell = hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -5868,7 +5886,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 })?,
+        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),

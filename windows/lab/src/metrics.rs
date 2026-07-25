@@ -15,10 +15,9 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
-    accounts_from, build_world_from_components, build_world_to, climate_from, climate_of,
-    commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
-    observed_phenomena_as_in_from, rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
-    vestiges_field,
+    accounts_from, build_world_from_components, build_world_to, climate_from, commodity_name,
+    flagship_of, language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from,
+    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of, vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -72,7 +71,7 @@ impl WorldView {
         };
         let terrain = terrain_of(&world)?;
         let globe = hornvale_terrain::summarize(terrain.globe());
-        let climate = climate_of(&world)?;
+        let climate = climate_from(&world, &terrain)?;
         Ok(WorldView {
             world,
             system: sky.system().clone(),

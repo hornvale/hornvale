@@ -264,8 +264,8 @@ pub fn tiles_scene(world: &World, width: u32) -> Result<TilesScene, SceneError> 
     let height = width / 2;
     let terrain =
         hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let climate =
-        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let climate = hornvale_worldgen::climate_from(world, &terrain)
+        .map_err(|e| SceneError::Build(e.to_string()))?;
     // Two indices, not one: terrain and climate each carry their own
     // geosphere, and today both happen to share the same cell level, so one
     // index could in principle serve both. Keeping them separate is

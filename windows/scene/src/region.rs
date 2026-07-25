@@ -315,8 +315,8 @@ pub fn tiles_region_scene(
     addr.validate()?;
     let terrain =
         hornvale_worldgen::terrain_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
-    let climate =
-        hornvale_worldgen::climate_of(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    let climate = hornvale_worldgen::climate_from(world, &terrain)
+        .map_err(|e| SceneError::Build(e.to_string()))?;
     let t_index = NearestCellIndex::new(terrain.geosphere());
     let c_index = NearestCellIndex::new(climate.geosphere());
     let biomes = climate.biome_map();

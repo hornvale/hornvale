@@ -11,7 +11,9 @@ the committed transcript to prove it.
 
 Nothing is consulted but the seed. The module *cannot* consult anything
 else — its WebAssembly imports object is empty: no network, no clock, no
-DOM. Five exports, memory in, prose out.
+DOM. Seven exports, memory in, prose out — and beside the prose, since [The
+Snapshot](../chronicle/the-snapshot.md), the same turn's structured emit, which
+is what the transcript you read below is now rendered from.
 
 ## The Demo
 

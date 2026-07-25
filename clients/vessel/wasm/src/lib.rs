@@ -1,11 +1,11 @@
-//! The Casement's wasm seam: the possess/vessel loop behind five raw
+//! The Casement's wasm seam: the possess/vessel loop behind raw
 //! `extern "C"` exports, for the project book's live-possession exhibit
 //! (spec: docs/superpowers/specs/2026-07-13-the-casement-design.md).
 //!
-//! The module imports **nothing** — no clock, no network, no DOM. Five
-//! exports, memory in, prose out; that emptiness is the exhibit's
-//! one-line sandbox audit. No wasm-bindgen: strings cross as (ptr, len)
-//! pairs over the module's linear memory.
+//! The module imports **nothing** — no clock, no network, no DOM. Memory
+//! in, prose (and the structured `vessel/session/v1` snapshot) out; that
+//! emptiness is the exhibit's one-line sandbox audit. No wasm-bindgen:
+//! strings cross as (ptr, len) pairs over the module's linear memory.
 #![warn(missing_docs)]
 
 use hornvale_astronomy::SkyPins;
@@ -31,11 +31,29 @@ static mut STATE: Option<Possession> = None;
 static mut OUT: String = String::new();
 /// The input buffer JS writes UTF-8 command bytes into.
 static mut INBUF: [u8; 4096] = [0; 4096];
+/// The current turn's `vessel/session/v1` JSON, which JS reads via
+/// `hv_snapshot_ptr`/`hv_snapshot_len`. Empty when there is no live
+/// possession, or when the snapshot read itself failed — the client then
+/// degrades to the prose transcript rather than to a blank pane.
+static mut SNAPSHOT: String = String::new();
 
 /// Replace the output text.
 fn set_out(text: String) {
     let out_ptr = &raw mut OUT;
     unsafe { *out_ptr = text }
+}
+
+/// Replace the snapshot buffer from the live possession, if any; empty if
+/// there is none, or if the snapshot read itself failed.
+fn set_snapshot() {
+    let state_ptr = &raw const STATE;
+    let json = unsafe { &*state_ptr }
+        .as_ref()
+        .and_then(|p| p.session.snapshot().ok())
+        .map(|snap| hornvale_vessel::snapshot_json(&snap))
+        .unwrap_or_default();
+    let snapshot_ptr = &raw mut SNAPSHOT;
+    unsafe { *snapshot_ptr = json };
 }
 
 /// Tear down the current possession: session first, then its world.
@@ -48,6 +66,8 @@ fn teardown() {
         // session borrowing it was dropped on the line above.
         drop(unsafe { Box::from_raw(world) });
     }
+    let snapshot_ptr = &raw mut SNAPSHOT;
+    unsafe { (*snapshot_ptr).clear() };
 }
 
 /// Build the world for `seed` (default pins, generated sky, day 0) and
@@ -85,6 +105,7 @@ pub extern "C" fn hv_start(seed: u64) -> i32 {
             let state_ptr = &raw mut STATE;
             unsafe { *state_ptr = Some(Possession { world, session }) };
             set_out(opening);
+            set_snapshot();
             0
         }
         Err(e) => {
@@ -120,7 +141,7 @@ pub extern "C" fn hv_handle(len: usize) -> i32 {
     let Some(p) = (unsafe { (&mut *state_ptr).as_mut() }) else {
         return -3;
     };
-    match p.session.handle(line) {
+    let result = match p.session.handle(line) {
         Turn::Out(s) => {
             set_out(s);
             0
@@ -129,7 +150,9 @@ pub extern "C" fn hv_handle(len: usize) -> i32 {
             set_out(s);
             1
         }
-    }
+    };
+    set_snapshot();
+    result
 }
 
 /// Pointer to the current output text (UTF-8, `hv_out_len` bytes).
@@ -144,4 +167,20 @@ pub extern "C" fn hv_out_ptr() -> *const u8 {
 pub extern "C" fn hv_out_len() -> usize {
     let out_ptr = &raw const OUT;
     unsafe { (&(*out_ptr)).len() }
+}
+
+/// Pointer to the current turn's snapshot JSON (UTF-8, `hv_snapshot_len`
+/// bytes). Zero-length means "no snapshot this turn" — no live possession,
+/// or the snapshot read itself failed.
+#[unsafe(no_mangle)]
+pub extern "C" fn hv_snapshot_ptr() -> *const u8 {
+    let snapshot_ptr = &raw const SNAPSHOT;
+    unsafe { (&(*snapshot_ptr)).as_ptr() }
+}
+
+/// Length in bytes of the current turn's snapshot JSON.
+#[unsafe(no_mangle)]
+pub extern "C" fn hv_snapshot_len() -> usize {
+    let snapshot_ptr = &raw const SNAPSHOT;
+    unsafe { (&(*snapshot_ptr)).len() }
 }

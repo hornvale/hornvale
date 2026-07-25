@@ -4,6 +4,7 @@
 // Constructed per container element — nothing module-level holds session
 // state, so a future page can mount two casements (the diptych).
 import { parseSeed, seedFromSearch, type WorkerResponse } from "./protocol.ts";
+import { narrationOf, parseSnapshot } from "./snapshot.ts";
 import { splitResponse } from "./transcript.ts";
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -73,14 +74,16 @@ function mount(container: HTMLElement): void {
     if (msg.type === "started") {
       live = true;
       transcript.replaceChildren();
-      append("casement-prose", msg.text);
+      const snap = parseSnapshot(msg.snapshot);
+      append("casement-prose", snap ? narrationOf(snap) : msg.text);
       setIdle("Possessed. The world stands still; only you move.");
     } else if (msg.type === "error") {
       live = false;
       append("casement-error", msg.text);
       setIdle("The casement is shut. Try another seed.");
     } else {
-      append("casement-prose", msg.text);
+      const snap = parseSnapshot(msg.snapshot);
+      append("casement-prose", snap ? narrationOf(snap) : msg.text);
       if (msg.released) live = false;
       setIdle(live ? "" : "Released. Possess again — any seed is a world.");
     }
