@@ -21,6 +21,7 @@
 - **Every task that adds or changes a `pub` item with a primitive field must run the type audit before committing:**
   `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
   It is default-deny (any untagged pub-boundary primitive fails) and CI-enforced, and it is a **separate tool outside the workspace** — `make gate` does not run it, so a green `cargo test` proves nothing about it. The only valid `bare-ok` classes are the eleven in `tools/type-audit/src/tag.rs`: `ratio`, `count`, `index`, `constructor-edge`, `envelope`, `identifier-text`, `prose`, `artifact`, `diagnostic-value`, `render-internal`, `flag`. Anything else fails, including plausible-sounding inventions like `identifier` or `quantity`. Ratified meanings are in decision 0028. Precedents this campaign relies on: a numeric id → `index`; a schema-string const → `identifier-text` (as `ROOM_SCHEMA` and `TILES_SCHEMA` do); a name/label/key → `identifier-text`; rendered text → `prose`; a serialized blob → `artifact`; a bare day → `waiver(decision-0014: day)`.
+  **A tag line must be ONE `///` line.** The parser reads only the single line following `type-audit:` and does not continue across wrapped `///` lines — a wrapped tag fails as `malformed verdict: ""`, and because a parse error short-circuits that struct's coverage check, it can also *hide* genuinely untagged fields until the wrap is fixed. Let the line run long; `cargo fmt` does not reflow doc comments.
 - **Commit gate:** `make gate` (fmt + clippy + nextest + doctests). Iterate with `cargo test -p hornvale-vessel` and run the full gate once, at the end.
 
 ---
@@ -212,9 +213,7 @@ pub struct SessionSnapshot {
 }
 
 /// The possessed agent's own identity.
-/// type-audit: bare-ok(index: agent), bare-ok(index: room),
-/// bare-ok(count: population), bare-ok(identifier-text: species),
-/// bare-ok(identifier-text: settlement)
+/// type-audit: bare-ok(index: agent), bare-ok(index: room), bare-ok(count: population), bare-ok(identifier-text: species), bare-ok(identifier-text: settlement)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SelfChannel {
     /// The agent's deterministic minted id.
@@ -244,8 +243,7 @@ pub struct SensedChannel {
 }
 
 /// A co-located creature, as read from presence.
-/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label),
-/// bare-ok(prose: felt)
+/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label), bare-ok(prose: felt)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PresentEntry {
     /// The creature's ledger entity id.
@@ -277,8 +275,7 @@ pub struct KnownEntry {
 /// A creature's committed standing toward the player. Placeless and
 /// entity-keyed, so it survives leaving the room — the reason this is its
 /// own channel rather than part of `sensed`.
-/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label),
-/// bare-ok(ratio: grievance), bare-ok(flag: hostile)
+/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label), bare-ok(ratio: grievance), bare-ok(flag: hostile)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SocialEntry {
     /// The creature's ledger entity id.
