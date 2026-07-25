@@ -18,6 +18,9 @@ pub use region::*;
 mod surrounds;
 pub use surrounds::*;
 
+mod surrounds_ascii;
+pub use surrounds_ascii::*;
+
 /// The schema identifier this crate emits.
 /// type-audit: bare-ok(identifier-text)
 pub const TILES_SCHEMA: &str = "scene/tiles/v1";
