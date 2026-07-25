@@ -104,15 +104,15 @@ const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
 /// a new cell (the rest is lost on the journey).
 const MIGRATE_SURVIVAL: f64 = 0.9;
-/// Fraction of a raided community's population the raider seizes (plunder).
-const RAID_SEIZE: f64 = 0.5;
 /// How much stronger a raider must be than its target to attack (the dominance
 /// margin). A save-format constant: changing it re-fights every world's
 /// history.
 const RAID_MARGIN: f64 = 1.5;
-/// Fraction of the loser's population destroyed outright in a raid — war is
-/// lossy, and this is the primary dissipation that keeps predation from
-/// merely shuffling people around.
+/// Fraction of population destroyed outright in a raid — applied to the raider
+/// AND the loser alike, because spec §4.3's war is lossy in the *combined*
+/// population: value leaves the system rather than being transferred. This is
+/// the primary dissipation, and it is what makes a serial raider grind itself
+/// down instead of snowballing.
 const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
@@ -220,8 +220,8 @@ pub struct BakeCensus {
     pub founded: u64,
     /// Migration events (a community relocated off a cell turned hostile).
     pub migrated: u64,
-    /// Raid events (a community seized a weaker neighbour's population to take
-    /// its better land).
+    /// Raid events (a community conquered a weaker neighbour's better land,
+    /// moving onto the seized site).
     pub raided: u64,
     /// Flee events (a raided community abandoned its site).
     pub fled: u64,
@@ -741,10 +741,18 @@ impl<'a> Bake<'a> {
     /// Opportunistic predation (The Tumult): a community raids the reachable
     /// occupied neighbour whose land is worth MORE than its own (covetousness)
     /// and whose strength it can beat by `RAID_MARGIN` (dominance) — decoupled
-    /// from its own crowding. It plunders (seizing a fraction of the loser's
-    /// population, and destroying another fraction outright — war is lossy);
-    /// if the target is broken below `VIABLE_MIN` it is driven off (`Fled`,
-    /// `ended_by = By(raider)`) and rolls downhill via [`Bake::relocate`].
+    /// from its own crowding.
+    ///
+    /// The outcome is **conquest of immobile land**, not plunder (spec §4.3).
+    /// The prize is the cell: war destroys `WAR_LOSS` of *each* side's
+    /// population, the raider abandons its own poorer site (`Migrated`,
+    /// `Ended::Nature` — an orderly, self-directed move) and reopens on the
+    /// seized cell, and the loser is driven off on EVERY raid (`Fled`,
+    /// `ended_by = By(raider)`), rolling downhill via [`Bake::relocate`] with
+    /// whatever strength it has left. Taking *people* would be captives, an
+    /// explicit spec §9 non-goal. The raider's old cell falls vacant — it left
+    /// its poor land for the prize — and is therefore itself a candidate
+    /// refuge for the remnant it just displaced.
     ///
     /// Deterministic and draw-free: it picks the most valuable such target,
     /// tie-broken by the weakest, then the lowest `CellId` (`f64::total_cmp`
@@ -785,36 +793,70 @@ impl<'a> Bake<'a> {
         };
 
         self.tally.raided += 1;
-        let seized = self.communities[target].population * RAID_SEIZE;
-        let loss = self.communities[target].population * WAR_LOSS;
-        self.communities[raider].population += seized;
-        self.communities[target].population -= seized + loss;
-        self.touch(raider, year);
+        let prize = self.communities[target].site;
+        let (raider_people, raider_id, raider_lineage, raider_offset) = {
+            let c = &self.communities[raider];
+            (
+                self.records[c.record].people,
+                c.id,
+                c.lineage,
+                c.tech_offset,
+            )
+        };
+        let (loser_people, loser_id, loser_lineage, loser_offset) = {
+            let c = &self.communities[target];
+            (
+                self.records[c.record].people,
+                c.id,
+                c.lineage,
+                c.tech_offset,
+            )
+        };
 
-        // Broken below viability ⇒ driven off, rolling downhill; otherwise it
-        // survives on its land, weakened, and may be raided again.
-        if self.communities[target].population < VIABLE_MIN {
-            let (people, remaining, lineage, offset, target_id) = {
-                let c = &self.communities[target];
-                (
-                    self.records[c.record].people,
-                    c.population.max(0.0),
-                    c.lineage,
-                    c.tech_offset,
-                    c.id,
-                )
-            };
-            let raider_id = self.communities[raider].id;
-            let flee_site = self.communities[target].site;
-            self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
-            self.tally.fled += 1;
-            match self.relocate(
-                people, remaining, lineage, target_id, offset, flee_site, era, year, 0,
-            ) {
-                Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
-                Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
-                Relocation::Lost => self.tally.collapsed += 1,
-            }
+        // War is lossy on BOTH sides: a fraction of the combined population is
+        // destroyed in the taking, not transferred (spec §4.3).
+        self.communities[raider].population *= 1.0 - WAR_LOSS;
+        self.communities[target].population *= 1.0 - WAR_LOSS;
+        let raider_pop = self.communities[raider].population;
+        let loser_pop = self.communities[target].population;
+
+        // Sequence the index bookkeeping so the one-alive-per-site invariant
+        // holds at every step and no cell ever points at a dead community.
+        // `close` frees a cell only when the closing community is the one
+        // indexed there, so closing BOTH sides first leaves the raider's old
+        // cell vacant (it left) and the prize vacant, and the `open` that
+        // follows re-indexes the prize onto its new, living occupant.
+        self.close(raider, year, CauseOfEnd::Migrated, Ended::Nature);
+        self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
+        self.tally.fled += 1;
+        let seat = self.open(
+            raider_people,
+            prize,
+            year,
+            raider_pop,
+            Founding::From(raider_id),
+            Some(raider_lineage),
+            raider_offset,
+        );
+        self.touch(seat, year);
+
+        // The displaced loser rolls downhill, still carrying its (reduced)
+        // strength — the cascade. Its own former site is now the raider's, so
+        // it relocates away from `prize`.
+        match self.relocate(
+            loser_people,
+            loser_pop,
+            loser_lineage,
+            loser_id,
+            loser_offset,
+            prize,
+            era,
+            year,
+            0,
+        ) {
+            Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
+            Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
+            Relocation::Lost => self.tally.collapsed += 1,
         }
     }
 
