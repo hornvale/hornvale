@@ -188,3 +188,49 @@ fn an_unplaced_species_still_gets_a_total_reasoned_exposure_map() {
     let lex = lexicon_of(&w, "kobold").unwrap();
     assert_eq!(lex.entries().count(), exposures.len());
 }
+
+#[test]
+fn a_kind_without_perception_fails_loudly_instead_of_borrowing_goblin_eyes() {
+    // Before The Vigil, `exposure_of` resolved a hardcoded goblin baseline for
+    // any kind with no perception row — so a bear classified colour as though
+    // it saw like a goblin, and the dictionary printed "night-vision 0.5" as a
+    // claim about dragons. The baseline is gone: no speaker lacks perception
+    // (check_integrity enforces speech ⊆ perception), so the only kinds that
+    // reach this path are plain fauna, and they must fail loudly.
+    let w = world();
+    let err = exposure_of(&w, "owlbear").expect_err("plain fauna carries no perception");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("owlbear") && msg.contains("perception"),
+        "the error must name the kind and the missing component, got {msg}"
+    );
+}
+
+#[test]
+fn a_dragon_perceives_with_its_own_eyes_not_the_goblins() {
+    // The load-bearing consequence: a dragon's exposure is now classified from
+    // ITS vector. At the draconic clade value the hue ladder sits at depth 2,
+    // so blue is a perceptual gap for a dragon exactly as it is for a kobold —
+    // and unlike the goblin, whose depth-4 ladder lexicalizes it.
+    let w = world();
+    let dragon = exposure_of(&w, "red-dragon").unwrap();
+    let goblin = exposure_of(&w, "goblin").unwrap();
+    assert!(
+        matches!(
+            dragon.get("blue"),
+            Some(ExposureClass::Unknown {
+                reason: GapReason::Perceptual(_)
+            })
+        ),
+        "blue is a perceptual gap for a dragon, got {:?}",
+        dragon.get("blue")
+    );
+    assert!(
+        matches!(goblin.get("blue"), Some(ExposureClass::Steeped)),
+        "the goblin still lexicalizes blue — the dragon's gap is its own"
+    );
+    assert!(
+        matches!(dragon.get("starlit"), Some(ExposureClass::Steeped)),
+        "the full luminance ladder opens at the draconic clade eye"
+    );
+}

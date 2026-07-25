@@ -2888,11 +2888,14 @@ fn observe_with_sources(
     sources: &[&dyn PhenomenaSource],
 ) -> Result<Vec<Phenomenon>, BuildError> {
     // Source the kind's perception from the world's component set (ECS c3),
-    // keyed by its `KindId` label.
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
+    // keyed by its `KindId` label. Fails loudly for a kind that carries no
+    // perception (plain fauna): before The Vigil this was an `.expect`, so the
+    // REPL's `phenomena --as owlbear` panicked the process.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
     let day = observation_time(world, perception.activity)?;
     Ok(observe(
         sources,
@@ -3310,26 +3313,19 @@ fn exposure_of_impl(
 
     let species = name;
     // Source perception from the world's component set (ECS c3), keyed by the
-    // kind's `KindId` label. Since The Solitary Tongue, a speaker (an
-    // articulation-registry kind) is no longer necessarily a perceiver — the
-    // three dragons speak but do not (yet) perceive (perception stays the
-    // four peoples, deferred). A non-perceiving speaker falls back to the
-    // goblin baseline (`Diurnal`, 0.5/0.5) purely as this classifier's input
-    // — a neutral stand-in, not a claim the dragon actually perceives that
-    // way — so its color/body/kin exposure still classifies instead of
-    // panicking on a missing component that is legitimately absent.
-    const NON_PERCEIVING_SPEAKER_BASELINE: hornvale_species::PerceptionVector =
-        hornvale_species::PerceptionVector {
-            activity: hornvale_species::ActivityCycle::Diurnal,
-            night_vision: 0.5,
-            sky_attention: 0.5,
-        };
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .copied()
-        .unwrap_or(NON_PERCEIVING_SPEAKER_BASELINE);
-    let depths = pack_depths(&perception);
+    // kind's `KindId` label. Since The Vigil every minded speaker perceives
+    // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
+    // for every kind that can reach a lexicon. `exposure_of` is public and
+    // `resolve_kind` accepts any biosphere kind, so a caller may still pass
+    // plain fauna — which fails loudly here rather than silently classifying
+    // colour as though a bear saw like a goblin. Mirrors the same failure in
+    // `chorus::account_params_from`.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
+    let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =

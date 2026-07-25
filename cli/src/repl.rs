@@ -299,9 +299,11 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     if world.registry.concept(concept).is_none() {
                         writeln!(output, "unknown concept '{concept}'")?;
                     } else {
-                        // Speaker-only: fauna and the minded solitaries (dragons)
-                        // never speak, so `lexicon_of` is undefined for them; the
-                        // articulation registry is keyed by exactly the speakers.
+                        // Speaker-only: plain fauna never speaks, so
+                        // `lexicon_of` is undefined for it; the articulation
+                        // registry is keyed by exactly the speakers — the four
+                        // peoples and, since The Solitary Tongue, the three
+                        // dragons.
                         for species in hornvale_language::articulation_registry()
                             .ids()
                             .map(|k| k.0)
