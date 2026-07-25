@@ -481,9 +481,9 @@ Add to `session.rs`'s existing test module:
 Run: `cargo test -p hornvale-vessel --lib session::tests::the_opening_snapshot`
 Expected: compile error — no method `snapshot` on `Session`, no field `turn`.
 
-- [ ] **Step 3: Add the turn counter**
+- [ ] **Step 3: Add the turn counter and the last-text field**
 
-In `session.rs`, add to the `Session` struct beside `day`:
+In `session.rs`, add both to the `Session` struct beside `day`:
 
 ```rust
     /// Commits since the possession began; 0 is the opening. Advanced by
@@ -491,15 +491,34 @@ In `session.rs`, add to the `Session` struct beside `day`:
     /// which turn it describes.
     /// type-audit: bare-ok(count: turn)
     turn: u64,
+    /// This turn's rendered text, exactly as the prose ABI returned it —
+    /// the opening at `start`, then each verb's own response. The snapshot
+    /// carries it verbatim so that EVERY pane, transcript included, is a
+    /// pure projection of one snapshot; a client forced to read the turn
+    /// text from a second channel would break that, which is the campaign's
+    /// central claim.
+    /// type-audit: bare-ok(prose: last_text)
+    last_text: String,
 ```
 
-Initialize it to `0` in `Session::start`'s constructor literal, and increment it at the top of `handle` once the line is known non-empty — inside the `match verb` arm order, immediately before the match, guarded so the `""` arm does not count:
+Initialize `turn: 0` and `last_text` to the opening string in `Session::start` (the opening is already computed there — store a clone of it).
+
+In `handle`, increment the counter for a non-empty line and record the outcome's text. `handle` returns `Turn::Out(String)` or `Turn::Released(String)`, so capture the result before returning it:
 
 ```rust
         if !verb.is_empty() {
             self.turn += 1;
         }
+        let turn = match verb {
+            // ... the existing match, unchanged ...
+        };
+        self.last_text = match &turn {
+            Turn::Out(s) | Turn::Released(s) => s.clone(),
+        };
+        turn
 ```
+
+**Why `last_text` and not "always the room block":** `describe_here()` (session.rs:427) renders `"[room {id}, day {day}]\n{prose}\nWays on: {dirs}."` — the transcript's room block — but only `look`, `go`, `back`, and the opening use it. `whoami`, `examine`, `knows`, `needs`, and `wait` return entirely different text. If `narration.prose` were always the room block, Task 5's transcript pane would print the room description on a `whoami` turn instead of the answer, which is a visible regression Task 5 Step 7 forbids. Recording the actual turn text is what makes the transcript a faithful projection.
 
 - [ ] **Step 4: Add `day()` and `snapshot()`**
 
@@ -517,6 +536,8 @@ In `session.rs`, beside the other accessors:
     /// CLI never does, so its measured per-turn cost is unchanged.
     pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
         let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        // The noun catalog comes from the focalizer; the PROSE comes from
+        // `last_text` (this turn's real response), not from here.
         let focalized = self.focalizer.render(&vantage);
 
         let terrain = LocaleTerrain::with_fields(
@@ -586,7 +607,7 @@ In `session.rs`, beside the other accessors:
             known: KnownChannel { entries },
             social,
             narration: Narration {
-                prose: focalized.prose,
+                prose: self.last_text.clone(),
                 nouns: focalized
                     .nouns
                     .into_iter()
@@ -606,9 +627,34 @@ use crate::snapshot::{
 };
 ```
 
-**Note on `RoomAddr::pack()`:** confirm the exact name and return type before writing this line (`kernel/src/room.rs` defines `RoomId` as the packed form). If packing is infallible, drop the `map_err` and the `?`. If the method is named differently, use that name — the assertion in Step 1's test must match.
+**`RoomAddr::pack()` is confirmed** (`kernel/src/room.rs:285`): `pub fn pack(&self) -> Result<RoomId, RoomAddrError>` — fallible, failing past `MAX_DEPTH` or on an invalid face/digit. So the `map_err(...)?` above is correct as written; keep it. `RoomId` is a tuple struct, so `.0` is the `u64`.
 
-**Note on `narration.prose` vs the opening:** `Session::start` returns the opening text, which is `describe_here()` — prose plus the `Ways on:` line. `focalized.prose` is only the passage. If Step 5 shows the assertion failing on the `Ways on:` suffix, that is the real contract question: make `narration.prose` carry exactly what the transcript prints by calling the same `describe_here()` the opening and `look` use, rather than `focalizer.render`. Prefer that — Task 3's byte-identity test against the committed transcript is the whole point, and it must compare like with like.
+**Add one more test**, which is the guard for the design decision in Step 3 — that `narration.prose` tracks the *verb's own response*, not the room block:
+
+```rust
+    #[test]
+    fn narration_follows_the_verb_not_the_room() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.handle("whoami");
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.narration.prose.starts_with("A "),
+            "after `whoami` the narration is the whoami answer, not the room block: {:?}",
+            snap.narration.prose
+        );
+        assert!(
+            !snap.narration.prose.starts_with("[room "),
+            "the room block must NOT be substituted for a verb's own response"
+        );
+        session.handle("look");
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.narration.prose.starts_with("[room "),
+            "after `look` the narration IS the room block"
+        );
+    }
+```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
