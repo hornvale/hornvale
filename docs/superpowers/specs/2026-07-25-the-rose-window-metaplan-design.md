@@ -1,7 +1,7 @@
 # The Rose Window: A Program Metaplan — Design
 
 **Date:** 2026-07-25
-**Status:** Awaiting G3 review (brainstorming session; four ideonomy passes, converged)
+**Status:** Amended 2026-07-25 (Amendment 1, §1a — owner-decided; two further ideonomy passes). Body below predates it where marked.
 **Parent spec:** `2026-07-05-hornvale-longterm-plan-design.md` (Constitution §3.5 "The Game" and §7's deferral of graphical clients); `2026-07-11-the-walk-metaplan-design.md` (the game layer's spine — this drains its RENDER arc)
 **Worktree:** `the-rose-window` (branch `the-rose-window`), off `main` at `3caf9055`
 **Autopilot:** engaged (G3/G6 hard stops; ledger at `.superpowers/sdd/decision-ledger.md`)
@@ -38,7 +38,238 @@ This metaplan fixes the spine, the load-bearing laws, the sequencing, and
 the evidence. Each campaign named in §6 gets its own spec → plan → execution
 cycle.
 
+## 1a. Amendment 1 (2026-07-25) — the fine layer is relational
+
+**Status of this amendment:** owner-decided in conversation, 2026-07-25. It
+settles both of §10's open forks (items 1 and 4), supersedes §6.3, reframes §9's
+risk 2, and narrows §2's claim about the program's identity. Read it before the
+sections it supersedes; those carry inline pointers back here.
+
+### 1a.1 The correction that forced the rest
+
+The metaplan prices the program as a *rendering* surface — "situated and
+spatial," the two empty rungs. The owner's restatement of purpose reorders it:
+
+> The main purpose of the text interface is as a substrate for the linguistic,
+> economic, behavioral complexity. That's how we talk to characters, read
+> letters, research magic, learn languages, reverse-engineer magic artifacts.
+
+Under that purpose the tile grid was answering a question nobody asked. Walk the
+named activities and the requirement is the same shape every time — **who is
+present, who can hear, whether you are alone, what you can reach, whether there
+is light, and for how long** — plus one the seating chart of any banquet makes
+obvious: **position is a social statement.** Not one of those is metric. None
+asks how many squares away a thing is.
+
+So the fine layer is not a weaker grid. It is the substrate for audience,
+privacy, access, and social signification — capabilities Hornvale does not have
+today at any granularity finer than the room, which is too coarse to distinguish
+a whispered confidence from an announcement. This makes the program a **sim
+campaign with a rendering consequence**, not a rendering campaign with a sim
+cost, which is the project's own stated order.
+
+### 1a.2 §10 item 4 — is a tile a longer `RoomAddr` path? **No.**
+
+The metaplan's stated cost (cross-parent neighbour lookup) is real but
+survivable. The disqualifying cost is different: `RoomAddr { face: u8, path:
+Vec<u8> }` means a tile-as-longer-path is **the same Rust type as a room**, and
+`RoomId` is a frozen save-format contract (`kernel/src/room.rs:33`). A tile
+position would therefore be expressible wherever a room position is — including
+`AGENT_AT` — and §3.1's central claim, "byte-identical **by construction**,"
+would degrade to byte-identical by policy. Risk 4 (persistence-tier drift) would
+stop being structurally impossible and become something a tag has to police.
+
+A distinct fine-layer type makes the two-tier law compiler-enforced. The depth
+budget is genuinely available (~29 digits); the idea is affordable, elegant, and
+still wrong, because it spends the one type distinction the position law rests
+on. `CLIENT-tiles-as-deeper-rooms` is **rejected**, with this as the reason.
+
+### 1a.3 §10 item 1 — prose primacy: **resolved by construction**
+
+Adopt `CLIENT-relational-fine-layer` as the fine layer, with `CLIENT-alive-map`
+as the map pane's epistemic frame. Prose and picture then render **one relational
+structure two ways**, so they cannot compete as rival accounts; and the map, being
+the agent's own remembered artifact, carries no truth claim prose must defend
+against. `CLIENT-discovery-pane` is *additive*, not a resolution, and stays a
+Campaign 4 candidate. `CLIENT-as-instrument` is a separate question about
+decision 0059's ordering and remains open.
+
+### 1a.4 The pipeline
+
+1. The room's shape is derived from its seed.
+2. Its **immovable objects** are placed by a constraint solve, with all
+   randomness from that same seed and named parameters.
+3. **Creatures** are placed in a relational space that maps to and from the grid.
+4. Creatures reason in **relations** (`the couch`, `the north doorway`),
+   **anchors** (nameable places), and **goals** (`as close as I can get to that
+   fish`) — never in coordinates. Goals are an optimization over the space, which
+   is `kernel/src/astar.rs`'s existing job: a new `SearchSpace`, not a new
+   planner (§4.5 already says this).
+
+The mapping is deliberately **asymmetric**. Relational → grid is a *solve* (many
+squares satisfy "near the couch"); grid → relational is a *classification* (given
+a square, read off which relations hold). The round trip is therefore not the
+identity: a creature placed "near the couch" may also turn out to be "behind the
+pillar." Those **incidental relations** are the emergent payoff — accidental
+cover, blocked sightlines, awkward seating — and they are why the next item is a
+decision rather than an optimization.
+
+### 1a.5 Derived geometry is causal (owner decision)
+
+**Incidental relations may gate outcomes.** A creature is genuinely concealed
+because the solver put a pillar between it and the guard, and that is the point.
+
+The consequence is accepted deliberately: **the placement algorithm becomes a
+determinism contract** and changing it needs an epoch. The mitigation is that
+committed facts are never retro-changed — when geometry matters, the *fact* is
+committed (a conversation happened; these three could hear it), so history
+survives an epoch and only future outcomes differ. Worlds are reproducible
+**within** an epoch, not across one.
+
+The owner expects to burn through many epochs. Two consequences follow, and both
+are cheap now and expensive later:
+
+**(a) Split the epoch by blast radius.** Declare two narrow, versioned labels
+from the first commit rather than one:
+
+```
+  label                  governs                   changes    blast radius
+  --------------------   -----------------------   --------   -------------------
+  room/furnishing/vN     WHAT objects a room has   rarely     large (contents move)
+  room/layout/vN         WHERE the solver puts     often      small (future only;
+                         them                                  history is committed)
+```
+
+There are only 20 seed-derivation labels workspace-wide today and most carry no
+version suffix; `room/child` and `room/face` already exist and are structural,
+so they must never move. Epoch *granularity* is decided when a label is declared,
+not when it is bumped — put the churn in the small-radius layer on purpose.
+
+The player-facing consequence should be stated rather than discovered: across a
+layout epoch, **history survives but remembered places rearrange.** Events are
+durable; rooms are not.
+
+**(b) Pin invariants, not values.** Every epoch moves the values preregistered
+studies pin, and decision 0016's guard exists to stop a study being edited to
+match its new result — so frequent epochs mean frequent owner calls unless the
+pins are epoch-durable. The precedent is in the tree: the health null-control
+abandoned `prevalence < 0.02` for the *invariant* the metric means (chronicity
+stays zero; every distress run recovers), explicitly because loosening the number
+would have been the seed-shopping the decision forbids. Anything the layout
+epochs touch should be pinned as ordering, sign, family membership, or
+"stays zero" — never as a value.
+
+### 1a.6 The autonomy ladder — supersedes §6.3
+
+"Authored templates *or* a constraint solver" was a false fork. They are rungs,
+each a superset of the last, and **the relational layer is identical at every
+rung** because it reads objects and relations, never how they were placed:
+
+```
+  rung  what places things              legibility   variety   culture    when
+  ----  -----------------------------   ----------   -------   --------   -----
+   1    authored template, seeded pick  guaranteed   low       explicit   now
+   2    template + seeded variation     high         medium    explicit   now
+   3    constraint solve                tuned        high      implicit   later
+   4    solve + historical wear         tuned        high      emergent   later
+   5    creatures arrange their own     unknown      total     emergent   someday
+```
+
+**Start at rung 1–2.** It is the only band whose legibility is *guaranteed*
+rather than tuned, which is exactly what risk 2 is anxious about, and it is
+constitutionally native: decision 0009 ("models author, dice roll") permits
+offline authoring whose output is committed and drift-checked.
+
+Template reuse is **more** accurate, not less. Real vernacular architecture is
+templated; a people's houses look alike, and that is what makes them a people's
+houses. A settlement whose rooms share a layout vocabulary is culture made
+visible — a signal a per-room solver would destroy by making everything unique.
+
+§6.3's "the intra-room grid, producer-side, derived from pins and noise; the
+largest piece" is superseded by a materially smaller campaign: the relational
+layer plus rung-1/2 furnishing. Rungs 4–5 are not decoration — Alexander's
+argument that places made all at once are dead puts the quality being chased at
+the *top* of this ladder — but they are later.
+
+### 1a.7 Risk 2 reframed, not removed
+
+The relational layer does not remove the aesthetic problem; it **moves** it, from
+"make derived terrain look right" to "make solved arrangements stable and
+readable." Three corrections to how §9's risk 2 should be discharged:
+
+- **Sightlines is the named criterion.** Theatre has solved derived blocking for
+  four centuries — a script states relations, a production solves them into
+  positions, and the blocking is binding for that run — and the criterion it
+  converged on is whether the audience can see who matters. "Every principal
+  distinguishable from the viewpoint" is testable, and risk 2 asked for criteria
+  as named constants. Extends `CLIENT-choreographer`, which already reaches for
+  theatre but stops before taking its criterion.
+- **Solve from scratch; never incrementally.** Carrying state between solves for
+  stability makes the layout path-dependent — the same constraints can settle
+  into different minima depending on how you got there, which is a determinism
+  hazard wearing a stability fix's clothes. Stability must come from constraints
+  being tight.
+- **The seed fills exactly the residual degrees of freedom.** Parametric CAD's
+  hard-won lesson is that under-constrained sketches are the ones that wobble,
+  and the tool's job is to report the DOF. Adopting that makes "how much variety
+  does this room have" a number to assert on rather than a vibe.
+
+### 1a.8 What earns an object its place, and what furnishing reads
+
+**Affordance, not decoration.** An object belongs in a room because it affords an
+activity the interface exists to serve — a workbench gives "research an artifact"
+a *place*, a hearth makes "who is gathered here" meaningful, a desk is where a
+letter is read. This keeps rooms from filling with scenery nobody can act on and
+supplies the relational vocabulary for free.
+
+**Furnishing reads world-time, not just the room seed.** Nothing in the metaplan
+lets a room change across deep time: a tavern in a thriving settlement and the
+same tavern three centuries into its ruin would furnish identically. The input is
+`(room seed, settlement state at t, history)` — which is also the first obvious
+consumer for The Vestige's residue and forgotten-fraction metrics.
+
+### 1a.9 The discipline that keeps this a language and not a catalogue
+
+The pattern-language reading is deliberate (Alexander, *A Pattern Language* /
+*The Timeless Way of Building*): patterns are stated as relations, indexed by
+what people *do*, authored and small while the buildings they generate are many
+and large. That is "models author, dice roll" and `World { seed, ledger }` in
+another domain — a compression scheme, which is always a theory of what matters.
+
+The cautionary half is the one to write down. When software borrowed Alexander,
+design patterns became a *catalogue of solutions* rather than a generative
+language, and that is when the idea died. **A template vocabulary is a pattern
+language only if the composition rules carry the weight** — which patterns
+complete which, what must be adjacent to what, what a culture's grammar permits.
+If a later spec's substance turns out to be template *count*, it has gone wrong;
+if it is adjacency and composition, it is right.
+
+**One standing caution, unresolved.** Alexander's "A City is Not a Tree" argues
+real places are semi-lattices — overlapping, non-hierarchical — while `RoomAddr`
+is literally a quadtree. The project already pays that tax as an engineering
+annoyance (cross-parent neighbour lookup, punted on at face boundaries) without
+naming it as a modelling error. The relational layer *is* a semi-lattice, which
+is an argument for treating it as the truth and the quadtree as an index over it.
+Not a decision this amendment takes; a tension later work should expect.
+
+### 1a.10 What this leaves open
+
+- Which rung within 1–2, and the object/affordance catalogue's first contents.
+- `CLIENT-as-instrument` (§10 item 3's neighbour): whether the client is
+  promoted to an instrument, against decision 0059's "the Book is primary."
+- §10 item 5: the program name `the-rose-window` is still provisional.
+- New decisions owed to `docs/decisions/`, beyond §11's three: **derived geometry
+  is causal**, and **epoch granularity is declared, not discovered** (the
+  two-label split). Numbers unminted here to avoid colliding with parallel
+  sessions.
+
+---
+
 ## 2. The spine: the first situated *spatial* surface
+
+> **Narrowed by Amendment 1 (§1a.1):** the program is a sim campaign with a
+> rendering consequence, not the reverse. The conjunction below still holds; it
+> is no longer the whole identity.
 
 Walking the sibling set — atlas, Orrery, Casement, almanac, Book, REPL, Lab,
 and the unbuilt TUI viewer — every existing surface is one of two things: a
@@ -340,6 +571,10 @@ is the eviction policy, and its eager neighbour-ring fetch is the prefetch.
 "floor" or chunk is a **path prefix at some depth**. The ambiguity is in the
 word, not the model, and specs should name the depth they mean.
 
+> **SETTLED by Amendment 1 (§1a.2): NO.** A tile is not a longer path — it
+> would be the same type as a room, so the two-tier law would stop being
+> compiler-enforced. The fork below is kept for its reasoning.
+
 **Open fork, to be settled before the grid is designed** (§10): a tile may
 simply be a *longer path*. `RoomId` packs into a u64 with room for ~29
 digits, so one more refinement level is one more digit, and the two-tier
@@ -431,6 +666,10 @@ client work at all; measurable the day it lands; the subsystem the tutorial
 teaches best.
 
 ### 6.3 Campaign 3 — The Ground (the tile layer)
+
+> **SUPERSEDED by Amendment 1 (§1a.6).** Replaced by a materially smaller
+> campaign: the relational fine layer plus rung-1/2 authored furnishing. The
+> text below describes the abandoned grid-first shape.
 
 The intra-room grid, producer-side, derived from pins and noise; the object
 graph; creature binding with a settlement-scoped home range. The largest
@@ -535,7 +774,9 @@ the three near-free panes.
 1. **Prose primacy (leads G3 — see §10).** A permanently visible map pane
    demotes focalized prose, which Constitution §3.5 and `RENDER-4` make
    primary. Layout is not a preference the constitution can enforce.
-2. **Determinism is not legibility.** The fine-layer placement derivation
+2. **Determinism is not legibility.** *(Reframed by Amendment 1 §1a.7: the
+   problem moves rather than vanishing — sightlines is the named criterion,
+   solving is from-scratch, and the seed fills the residual DOF.)* The fine-layer placement derivation
    needs an aesthetic criterion — readable, plausible, uncrowded — and this
    project has a documented habit of shipping the first without the second:
    `MAP-68` The Overworld shipped "correct but the first-pass LOOK is not yet
@@ -556,6 +797,9 @@ the three near-free panes.
 5. **Cold start** (§5), unmitigated today.
 
 ## 10. Flagged for G3 — owner decisions, not autopilot's
+
+> **Items 1 and 4 are SETTLED** by Amendment 1 (§1a.3 and §1a.2). Items 2, 3
+> and 5 remain open.
 
 1. **Prose primacy.** Four candidate resolutions are captured and *none is
    adopted*, in ascending order of how structurally each solves it: a
