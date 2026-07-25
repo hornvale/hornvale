@@ -33,21 +33,24 @@
 
 ---
 
-## Task 1: Extract the invertible world ↔ tile mapping
+## Task 1: The invertible world ↔ tile mapping, with the voxel sign corrected
 
-A pure refactor. **No behaviour changes; every existing test must stay green without modification.** The deliverable is that the `(dx, dy) → world` convention is stated in exactly one place and its inverse is derived from it, instead of being re-derived by hand in `clampPan` and `maybeRecenter`.
+Two things that must land together: the `(dx, dy) → world` convention becomes a single exported, invertible, style-aware pair, **and** the voxel branch's sign is corrected. They are one task because correcting the sign without first consolidating the three sites that encode it would leave two of them wrong, and consolidating without correcting ships a known-wrong constant.
+
+**Work in the step order given.** Steps 3–5 extract the pair while deliberately *preserving* the old (wrong) sign, and re-run the suite to prove the extraction changed no behaviour; only then does Step 7 correct it. That intermediate state is never committed — the single commit at the end carries the corrected form.
 
 **Files:**
 - Modify: `src/views/mapView.ts` (add two exported functions near `MAP_VOXEL_EXTENT`; rewrite `worldPointForOffset`, `clampPan`, `maybeRecenter`)
-- Test: `src/views/mapView.test.ts` (add one new `describe` block)
+- Test: `src/views/mapView.test.ts` (add one new `describe` block; update three tests in `describe("camera pan/zoom (The Excursion)")`)
 
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
 - Produces:
-  - `export function worldPointForTileOffset(style: MapStyle, dx: number, dy: number): [number, number, number]`
+  - `export function worldPointForTileOffset(style: MapStyle, dx: number, dy: number): [number, number, number]` — after this task, `worldPointForTileOffset("voxel", 0, 1)` returns `[0, 0, MAP_VOXEL_EXTENT]`
   - `export function tileOffsetForWorldPoint(style: MapStyle, x: number, y: number, z: number): { dx: number; dy: number }`
+  - test helpers `slopedRegionAt(tile, samples?)` and `meshNamed(view, addr)`, in the new `describe` block — Task 2 reuses both.
 
-  Task 2 changes the sign *inside* these; Task 3 does not touch them.
+  Task 2 does not touch either exported function.
 
 - [ ] **Step 1: Write the failing round-trip test**
 
@@ -127,15 +130,9 @@ Insert immediately after the `MAP_VOXEL_EXTENT` declaration (currently around li
  * increasing `row` runs toward `-y`, and `+dy` must too. Same invariant,
  * opposite signs, because the two styles orient the node grid differently.
  *
- * Do not "unify" these into one sign. That reintroduces the seam.
- *
- * NOTE (Task 1 only): the voxel arm below is deliberately still the WRONG
- * pre-Selvage `-1`, so this task is a pure refactor with no behaviour
- * change. Task 2 corrects it to `+1`, and that one character is the whole
- * fix — which is the point of routing every call site through here. Delete
- * this note when correcting it. */
+ * Do not "unify" these into one sign. That reintroduces the seam. */
 function secondAxisSign(style: MapStyle): number {
-  return style === "voxel" ? -1 : -1;
+  return style === "voxel" ? 1 : -1;
 }
 
 /** The world-space point for a same-face tile offset `(dx, dy)` from the
@@ -178,7 +175,7 @@ export function tileOffsetForWorldPoint(
 }
 ```
 
-The `-1 : -1` expression is deliberately redundant rather than collapsed to a bare `-1`: it keeps Task 1 a behaviour-preserving refactor while making Task 2's diff a single visible character on the voxel arm. `tsc` does not object to it.
+**For Steps 3–6 only, type `-1` on the voxel arm** (`style === "voxel" ? -1 : -1`) so the extraction preserves today's behaviour and the existing suite proves it. Step 7 corrects it to `1`. Do not commit the intermediate form.
 
 - [ ] **Step 4: Route the three call sites through the pair**
 
@@ -237,7 +234,7 @@ Replace `maybeRecenter`'s body (currently around lines 510–517) with:
 
 Also update `clampPan`'s own doc comment (the line reading "converts `mapRing.ts`'s tile-unit bounds to world units and the active style's plane (X–Z for voxel, X–Y for pixel)") to end with: "…via `worldPointForTileOffset`, so it can never disagree with where the meshes actually sit."
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to confirm the extraction changed nothing**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -245,39 +242,9 @@ npm test 2>&1 | tee /tmp/selvage-t1.txt
 npm run build 2>&1 | tail -5
 ```
 
-Expected: PASS — the two new tests pass, and **every pre-existing test passes unmodified**. If any pre-existing test changed status, this step is not a pure refactor; stop and report rather than editing the test.
+Expected: PASS — the two new tests pass, and **every pre-existing test passes unmodified**. This is the checkpoint that proves the extraction is behaviour-preserving before Step 7 changes behaviour on purpose. If any pre-existing test changed status here, the extraction is wrong; stop and report rather than editing the test. **Do not commit yet.**
 
-- [ ] **Step 6: Commit**
-
-```bash
-cd ~/.config/superpowers/worktrees/orrery/the-selvage
-git add src/views/mapView.ts src/views/mapView.test.ts
-git commit -m "refactor(map): state the world<->tile mapping once, as an invertible pair
-
-clampPan and maybeRecenter each open-coded the inverse of
-worldPointForOffset with the second-axis sign inlined, so the three could
-drift apart silently. Route all of them through an exported
-worldPointForTileOffset / tileOffsetForWorldPoint pair, with a round-trip
-test to keep them honest.
-
-Pure refactor: the (wrong) pre-Selvage voxel sign is preserved verbatim
-and every existing test passes unmodified. The correction is the next
-commit."
-```
-
----
-
-## Task 2: Correct the voxel `dy` sign
-
-**Files:**
-- Modify: `src/views/mapView.ts` (`secondAxisSign`, one character)
-- Test: `src/views/mapView.test.ts` (add continuity tests; update three tests that encode the old sign)
-
-**Interfaces:**
-- Consumes: `worldPointForTileOffset(style, dx, dy)` and `tileOffsetForWorldPoint(style, x, y, z)` from Task 1.
-- Produces: no new exports. After this task, `worldPointForTileOffset("voxel", 0, 1)` returns `[0, 0, MAP_VOXEL_EXTENT]`.
-
-- [ ] **Step 1: Write the failing continuity tests**
+- [ ] **Step 6: Write the failing continuity tests**
 
 Add to the `describe("world <-> tile offset mapping (The Selvage)", ...)` block created in Task 1. This needs `RegionScene`, `TileId`, `tileKey`, and `THREE`, all already imported at the top of the file.
 
@@ -364,7 +331,7 @@ Add to the `describe("world <-> tile offset mapping (The Selvage)", ...)` block 
   });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 7: Run the tests to verify they fail**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -373,7 +340,7 @@ npx vitest run src/views/mapView.test.ts 2>&1 | tee /tmp/selvage-t2.txt
 
 Expected: the "within a tile" test PASSES (the builder was always right); the "dy=+1 neighbour abuts" test FAILS — `neighbourSpan.min` is about `-3` where `originSpan.max` is about `1`, because the neighbour is mounted on the wrong side.
 
-- [ ] **Step 3: Correct the sign**
+- [ ] **Step 8: Correct the sign**
 
 In `src/views/mapView.ts`, change `secondAxisSign` to:
 
@@ -385,7 +352,7 @@ function secondAxisSign(style: MapStyle): number {
 
 and delete the `// NOTE: voxel's -1 is the pre-Selvage value…` comment added in Task 1 (its doc comment above already carries the real explanation).
 
-- [ ] **Step 4: Run the tests — expect three pre-existing failures**
+- [ ] **Step 9: Run the tests — expect three pre-existing failures**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -394,7 +361,7 @@ npx vitest run src/views/mapView.test.ts 2>&1 | tee /tmp/selvage-t2.txt
 
 Expected: both new tests PASS. Three pre-existing tests in the `describe("camera pan/zoom (The Excursion)")` block now fail, because they encode the old sign in their *setup manoeuvre*. This is correct and expected — fix them in Step 5. If any test outside that block fails, stop and report.
 
-- [ ] **Step 5: Update the three tests that encode the old sign**
+- [ ] **Step 10: Update the three tests that encode the old sign**
 
 All three are in `describe("camera pan/zoom (The Excursion)", ...)`.
 
@@ -457,7 +424,7 @@ to
     expect(v.camera.position.z).toBeCloseTo(ISO_CAMERA_DISTANCE + 1 * MAP_VOXEL_EXTENT);
 ```
 
-- [ ] **Step 6: Run the full suite and the typecheck**
+- [ ] **Step 11: Run the full suite and the typecheck**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -467,7 +434,7 @@ npm run build 2>&1 | tail -5
 
 Expected: all PASS.
 
-- [ ] **Step 7: Mutation-verify the continuity test**
+- [ ] **Step 12: Mutation-verify the continuity test**
 
 Temporarily set `secondAxisSign`'s voxel arm back to `-1`, run only the new test, confirm it goes RED, then restore `1`.
 
@@ -478,7 +445,7 @@ npx vitest run src/views/mapView.test.ts -t "abuts the origin tile" 2>&1 | tail 
 
 Expected with `-1`: FAIL. Expected with `1` restored: PASS. A test that passes under both signs measures nothing — if that happens, stop and report rather than proceeding.
 
-- [ ] **Step 8: Run the map e2e tests**
+- [ ] **Step 13: Run the map e2e tests**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -487,7 +454,7 @@ npm run build && npx playwright test --grep "excursion|diorama|map rung" 2>&1 | 
 
 Expected: PASS. These are The Excursion's pan, zoom, clamp, and recenter tests — the regression guard for Task 1's inverse-mapping rework.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 14: Commit**
 
 ```bash
 cd ~/.config/superpowers/worktrees/orrery/the-selvage
@@ -513,7 +480,7 @@ move with it; their pixel-style expectations are untouched."
 
 ---
 
-## Task 3: The plinth
+## Task 2: The plinth
 
 **Files:**
 - Modify: `src/views/worldMesh.ts` (`buildVoxelHeightfieldGeometry`)
@@ -778,20 +745,22 @@ Delete the throwaway spec afterwards.
 
 | Spec section | Task |
 |---|---|
-| §3 The sign fix is three changes, not one | Tasks 1 and 2 |
-| §4 The plinth | Task 3, Steps 1–5 |
-| §4.3 The floor value | Task 3, Steps 3 and 6 — the margin is derived as one band rather than a second named constant (a refinement on the spec's `MAP_VOXEL_SLAB_MARGIN`, which would have been an arbitrary number); `MAP_VOXEL_FLOOR_M` is the spec's `MAP_VOXEL_FLOOR_Y` expressed in metres, converted at the call site like every other elevation constant in this file |
+| §3 The sign fix is three changes, not one | Task 1, Steps 3–4 (consolidation) and Step 8 (correction) |
+| §4 The plinth | Task 2, Steps 1–5 |
+| §4.3 The floor value | Task 2, Steps 3 and 6 — the margin is derived as one band rather than a second named constant (a refinement on the spec's `MAP_VOXEL_SLAB_MARGIN`, which would have been an arbitrary number); `MAP_VOXEL_FLOOR_M` is the spec's `MAP_VOXEL_FLOOR_Y` expressed in metres, converted at the call site like every other elevation constant in this file |
 | §4.4 Plinth colour | No task — the existing `VOXEL_CLIFF_DARKEN` path already colours every wall this way, and the plinth is emitted through the same `emit` closure. Nothing to change is the correct implementation of "keep the existing convention" |
-| §5 Write the invariant down | Task 1, Step 3 (`secondAxisSign`'s doc comment) and Task 3, Step 4 (the builder's) |
-| §6 Testing — continuity invariant | Task 2, Steps 1 and 7 (including the mutation check) |
+| §5 Write the invariant down | Task 1, Step 3 (`secondAxisSign`'s doc comment) and Task 2, Step 4 (the builder's) |
+| §6 Testing — continuity invariant | Task 1, Steps 6 and 12 (including the mutation check) |
 | §6 Testing — round trip | Task 1, Step 1 |
-| §6 Testing — plinth | Task 3, Steps 1 and 7 |
+| §6 Testing — plinth | Task 2, Steps 1 and 7 |
 | §6 Testing — visual pass | Controller-only section |
-| §6 Testing — existing e2e stays green | Task 2, Step 8 |
+| §6 Testing — existing e2e stays green | Task 1, Step 13 |
 | §7 Non-goals | No tasks, by construction |
 
 **Placeholder scan.** No TBDs, no "add error handling", no "similar to Task N". Every code step carries the code.
 
-**Type consistency.** `worldPointForTileOffset` and `tileOffsetForWorldPoint` are named identically in Tasks 1, 2, and 3. `secondAxisSign` is private throughout. `floorY` is the option name in the builder, the test, and the `mapView` call site. `MAP_VOXEL_FLOOR_M` is used once, defined once. `slopedRegionAt` and `meshNamed` are defined in Task 2, Step 1 and reused in Task 3, Step 7 — both live in the same `describe` block, so the reuse resolves.
+**Type consistency.** `worldPointForTileOffset` and `tileOffsetForWorldPoint` are named identically in both tasks. `secondAxisSign` is private throughout. `floorY` is the option name in the builder, its tests, and the `mapView` call site. `MAP_VOXEL_FLOOR_M` is defined once and used once.
 
-**One known cross-task dependency to watch:** Task 3, Step 7 uses `slopedRegionAt` and `meshNamed` from Task 2, Step 1. If Task 3 is executed before Task 2, that step will not compile. Execute in order.
+**One known cross-task dependency to watch:** Task 2, Step 7 uses the `slopedRegionAt` and `meshNamed` helpers defined in Task 1, Step 6, and adds its test to the same `describe` block. Execute in order.
+
+**Why the two tasks are not three.** An earlier draft split Task 1 into a pure refactor and a separate sign correction. That forced a placeholder constant (`style === "voxel" ? -1 : -1`) into a committed intermediate state — a construct any reviewer would rightly flag as a defect. Keeping the refactor and the correction in one task preserves the behaviour-preserving checkpoint (Step 5) without ever committing the placeholder.
