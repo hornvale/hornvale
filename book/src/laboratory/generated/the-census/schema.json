@@ -462,6 +462,52 @@
       "rung": "terrain"
     },
     {
+      "buckets": [
+        0.0,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "doc": "Fraction of land cells with a non-empty vestige stack (The Vestige, spec §9.2)",
+      "kind": "numeric",
+      "name": "vestige-density",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Over land cells with a non-empty vestige stack, the fraction whose most-dread layer is Forgotten rather than Venerated (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "kind": "numeric",
+      "name": "forgotten-fraction",
+      "rung": "full"
+    },
+    {
+      "doc": "The most common hazard kind among land-cell vestiges by layer count (The Vestige, spec §9.2); Absent where no land cell bears a vestige",
+      "kind": "categorical",
+      "name": "dominant-hazard",
+      "rung": "full"
+    },
+    {
+      "buckets": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8
+      ],
+      "doc": "Mean warning_legibility over every land-cell vestige layer (The Vestige, spec §9.2); 0.0 where no land cell bears a vestige",
+      "kind": "numeric",
+      "name": "mean-warning-legibility",
+      "rung": "full"
+    },
+    {
       "doc": "The most common land biome by cell count, kebab-case",
       "kind": "categorical",
       "name": "dominant-land-biome",
@@ -1935,7 +1981,7 @@
   },
   "rows": {
     "count": 1000,
-    "fnv1a64": "0x5de8a0afd9627350"
+    "fnv1a64": "0xf92e84a7d8fc7168"
   },
   "schema_version": 1,
   "study": {
