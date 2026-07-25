@@ -89,8 +89,11 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
     }
 
     let mut out = String::new();
+    // Interpolate `lens`, never a literal: the caption's whole job is to name
+    // which lens you are wearing, so a hardcoded name would make every render
+    // through a second lens caption a lie.
     out.push_str(&format!(
-        "[lens: terrain · depth {} · radius {} · lattice-aligned, not north-up]\n",
+        "[lens: {lens} · depth {} · radius {} · lattice-aligned, not north-up]\n",
         scene.depth, scene.radius
     ));
 
@@ -224,6 +227,25 @@ mod tests {
             out.contains("ways on: E, Nw"),
             "the exits are the orientation hint, since the chart is not north-up: {out}"
         );
+    }
+
+    #[test]
+    fn the_caption_names_whichever_registered_lens_was_asked_for() {
+        // Registry-driven rather than hardcoded, so this gains real teeth the
+        // moment a second lens is registered: a caption that named a literal
+        // would then lie about which lens produced the picture.
+        let s = scene(vec![cell(0, 0, 0, true, "here", 2)]);
+        for lens in SURROUNDS_LENSES {
+            let caption = render_surrounds_ascii(&s, lens, &[])
+                .lines()
+                .next()
+                .expect("a render always opens with its caption")
+                .to_string();
+            assert!(
+                caption.contains(&format!("lens: {lens}")),
+                "the caption must name the lens it was asked for, got: {caption}"
+            );
+        }
     }
 
     #[test]
