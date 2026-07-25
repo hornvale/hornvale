@@ -12,14 +12,15 @@
 //! bake draws under (`domains/history/src/streams.rs`).
 //!
 //! **The one invariant that matters most (measure-don't-narrate):**
-//! displacement — communities fleeing and resettling — must GENUINELY fire,
-//! at volume, driven by the era mask changing under the communities, never by
-//! a floor. When the glacial era turns a community's cell hostile it migrates
-//! into the shrinking habitable refugia; the refugia crowd, per-community
-//! pressure crosses 1.0, and raids (hence flees and resettlements) fire as a
-//! consequence of the paleoclimate swing. There is no minimum anywhere in
-//! this file: if displacement comes out inert, the era swing / thresholds /
-//! seeding are wrong, not the measurement.
+//! conflict — communities raiding, fleeing and resettling — must GENUINELY
+//! fire, at volume. Conflict here is PREDATION, not congestion (The Tumult):
+//! a community raids a reachable neighbour whose land is worth more than its
+//! own and whose strength it can beat, whether or not either of them is
+//! crowded. Crowding governs only growth (logistic) and Famine (collapse at
+//! `COLLAPSE_PRESSURE`); a hostile era mask evicts a community to a vacant
+//! refuge or starves it, and never itself starts a fight. There is no minimum
+//! anywhere in this file: if conflict comes out inert, the raid margin /
+//! value gradient / seeding are wrong, not the measurement.
 //!
 //! Determinism: every arithmetic op stays in full `f64` precision (quantize
 //! only at the emit boundary, which is Task 4 — not here); the genesis draws
@@ -96,16 +97,26 @@ fn nearest_occupied(
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
 /// Base per-epoch growth rate, damped logistically by `(1 - pressure)` so a
-/// community asymptotes at its cell's effective capacity and — in a stable
-/// era — never crosses into the raid regime on its own. Only a mask change
-/// (migration into low-capacity refugia) pushes pressure past 1.0.
+/// community asymptotes at its cell's effective capacity. Crowding is a growth
+/// term only: it no longer starts fights (The Tumult), it merely decides how
+/// big a community gets and, past `COLLAPSE_PRESSURE`, whether it starves.
 const GROWTH_RATE: f64 = 0.2;
 /// Fraction of a community's population that survives an orderly migration to
 /// a new cell (the rest is lost on the journey).
 const MIGRATE_SURVIVAL: f64 = 0.9;
-/// Fraction of a raided community's population the raider seizes; the
-/// remainder flees with the community to a new site.
+/// Fraction of a raided community's population the raider seizes (plunder).
 const RAID_SEIZE: f64 = 0.5;
+/// How much stronger a raider must be than its target to attack (the dominance
+/// margin). A save-format constant: changing it re-fights every world's
+/// history.
+const RAID_MARGIN: f64 = 1.5;
+/// Fraction of the loser's population destroyed outright in a raid — war is
+/// lossy, and this is the primary dissipation that keeps predation from
+/// merely shuffling people around.
+const WAR_LOSS: f64 = 0.3;
+/// Population below which a broken, displaced remnant dies out rather than
+/// cascading further — the avalanche cutoff, and the second dissipation.
+const VIABLE_MIN: f64 = 2.0;
 /// Pressure at or above which a community starves out (Famine). `pub` so
 /// the demography calibration (`windows/lab`) can express the aggregate
 /// population-conservation ceiling: no live community exceeds this pressure,
@@ -209,7 +220,8 @@ pub struct BakeCensus {
     pub founded: u64,
     /// Migration events (a community relocated off a cell turned hostile).
     pub migrated: u64,
-    /// Raid events (a crowded community seized a neighbour's population).
+    /// Raid events (a community seized a weaker neighbour's population to take
+    /// its better land).
     pub raided: u64,
     /// Flee events (a raided community abandoned its site).
     pub fled: u64,
@@ -361,6 +373,17 @@ fn tech_for(year: f64) -> TechHorizon {
     }
 }
 
+/// The tech multiplier on raw population when reckoning a community's raiding
+/// strength — Iron beats Bronze beats Neolithic. Monotone in `TechHorizon`.
+fn tech_weight(t: TechHorizon) -> f64 {
+    match t {
+        TechHorizon::Neolithic => 1.0,
+        TechHorizon::Bronze => 1.5,
+        TechHorizon::Iron => 2.25,
+        TechHorizon::Classical => 3.0,
+    }
+}
+
 impl<'a> Bake<'a> {
     /// Mint a fresh, never-reused entity id.
     fn mint(&mut self) -> EntityId {
@@ -457,18 +480,21 @@ impl<'a> Bake<'a> {
         nearest_occupied(self.cur(), &self.node_index, from)
     }
 
-    /// Relocate a homeless people (evicted by climate or raid) to a new home,
-    /// cascading when there is no vacant land. `predecessor` is the id of the
-    /// community that just closed and is relocating (used to attribute the new
-    /// occupation's `Founding::From` to its specific forebear, not the lineage
-    /// ancestor — `lineage` stays reserved for the `open` lineage argument).
-    /// Returns the outcome: [`Relocation::Settled`] (with the cascade size —
-    /// the number of OCCUPIED cells this relocation displaced, 0 if it reached
-    /// vacant land directly) or [`Relocation::Lost`] (no vacant and no
-    /// occupied cell reachable, or the depth cap truncated the chain). The
-    /// Sea-Peoples avalanche: no vacant cell ⇒ take the nearest occupied cell
-    /// (raid it), and its evicted occupant relocates in turn. Bounded by
-    /// `CASCADE_DEPTH_CAP` (a truncated cascade drops the last remnant).
+    /// Relocate a homeless people (a remnant driven off its land by a raid) to
+    /// a new home, cascading when there is no vacant land. `predecessor` is the
+    /// id of the community that just closed and is relocating (used to
+    /// attribute the new occupation's `Founding::From` to its specific
+    /// forebear, not the lineage ancestor — `lineage` stays reserved for the
+    /// `open` lineage argument). Returns the outcome: [`Relocation::Settled`]
+    /// (with the cascade size — the number of OCCUPIED cells this relocation
+    /// displaced, 0 if it reached vacant land directly) or
+    /// [`Relocation::Lost`] (the remnant died, nothing was reachable, or the
+    /// depth cap truncated the chain). The roll-downhill: no vacant cell ⇒
+    /// take the nearest occupied cell, and its evicted occupant relocates in
+    /// turn. Bounded twice — by `VIABLE_MIN` (a remnant too small to hold any
+    /// land dies out instead of founding a peopleless occupation: the
+    /// dissipation of spec §4.3) and by `CASCADE_DEPTH_CAP` (a truncated
+    /// cascade drops the last remnant).
     #[allow(clippy::too_many_arguments)]
     fn relocate(
         &mut self,
@@ -484,6 +510,12 @@ impl<'a> Bake<'a> {
     ) -> Relocation {
         if depth >= CASCADE_DEPTH_CAP {
             return Relocation::Lost; // truncated — the last remnant is lost (bounded-size guard)
+        }
+        if pop < VIABLE_MIN {
+            // The remnant is too small to hold land anywhere: it dies out
+            // rather than founding a peopleless occupation (spec §4.3's
+            // viable-minimum death — the second dissipation).
+            return Relocation::Lost;
         }
         // Vacant land reachable? Then no conflict — settle there.
         if let Some(dest) = self.nearest_dest(era, from) {
@@ -552,23 +584,12 @@ impl<'a> Bake<'a> {
         }
     }
 
-    /// The wealthiest alive community adjacent to `site` (raid target),
-    /// tie-broken by lowest `CellId`. `None` if no occupied neighbour.
-    fn raid_target(&self, site: CellId) -> Option<usize> {
-        let mut best: Option<(usize, f64, CellId)> = None;
-        for n in traversable_neighbors(self.cur(), site) {
-            if let Some(&idx) = self.node_index.get(&n) {
-                let pop = self.communities[idx].population;
-                let better = match best {
-                    None => true,
-                    Some((_, bp, bc)) => pop.total_cmp(&bp).then(bc.cmp(&n)).is_gt(),
-                };
-                if better {
-                    best = Some((idx, pop, n));
-                }
-            }
-        }
-        best.map(|(idx, _, _)| idx)
+    /// A community's raiding strength: its population scaled by its tech
+    /// horizon. Heterogeneous strength is the fuel of predation — equals do
+    /// not prey on one another.
+    fn strength(&self, idx: usize) -> f64 {
+        let c = &self.communities[idx];
+        c.population * tech_weight(c.tech)
     }
 
     /// Open a new occupation record + live community at `site`, and return the
@@ -656,8 +677,13 @@ impl<'a> Bake<'a> {
         }
     }
 
-    /// Resolve one community for one epoch (grow / found / migrate / raid /
-    /// collapse). Newly opened communities are processed the following epoch.
+    /// Resolve one community for one epoch (migrate / collapse / grow / raid).
+    /// Newly opened communities are processed the following epoch.
+    ///
+    /// Crowding is not a conflict trigger (The Tumult): it feeds the logistic
+    /// growth term and, past `COLLAPSE_PRESSURE`, starves the community. A
+    /// cell turned hostile evicts its community to a vacant refuge or kills
+    /// it — a climate eviction never starts a fight, and never cascades.
     fn step_community(&mut self, idx: usize, era: &EraClimate, year: f64) {
         if !self.communities[idx].alive {
             return;
@@ -665,30 +691,32 @@ impl<'a> Bake<'a> {
         let site = self.communities[idx].site;
         let eff = self.eff_capacity(era, site);
 
-        // The cell turned hostile: relocate to the nearest vacant refuge, or —
-        // if there is none — displace the nearest occupied cell and let that
-        // occupant cascade onward (the Sea-Peoples avalanche).
+        // Climate eviction: migrate to a vacant refuge, or starve. No conflict.
         if eff == 0.0 {
             let (record, pop, lineage, offset, migrant_id) = {
                 let c = &self.communities[idx];
                 (c.record, c.population, c.lineage, c.tech_offset, c.id)
             };
             let people = self.records[record].people;
-            self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
-            match self.relocate(
-                people,
-                pop * MIGRATE_SURVIVAL,
-                lineage,
-                migrant_id,
-                offset,
-                site,
-                era,
-                year,
-                0,
-            ) {
-                Relocation::Settled { cascade: 0 } => self.tally.migrated += 1,
-                Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
-                Relocation::Lost => self.tally.collapsed += 1,
+            match self.nearest_dest(era, site) {
+                Some(dest) => {
+                    self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
+                    let new_idx = self.open(
+                        people,
+                        dest,
+                        year,
+                        pop * MIGRATE_SURVIVAL,
+                        Founding::From(migrant_id),
+                        Some(lineage),
+                        offset,
+                    );
+                    self.touch(new_idx, year);
+                    self.tally.migrated += 1;
+                }
+                None => {
+                    self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
+                    self.tally.collapsed += 1;
+                }
             }
             return;
         }
@@ -698,49 +726,95 @@ impl<'a> Bake<'a> {
         if pressure >= COLLAPSE_PRESSURE {
             self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
             self.tally.collapsed += 1;
-        } else if pressure >= 1.0 {
-            self.raid(idx, era, year);
-        } else {
-            self.grow(idx, era, year, pressure);
+            return;
+        }
+
+        self.grow(idx, era, year, pressure);
+
+        // Opportunistic predation — decoupled from this community's own
+        // crowding (density is NOT the trigger).
+        if self.communities[idx].alive {
+            self.maybe_raid(idx, era, year);
         }
     }
 
-    /// A crowded community raids its wealthiest occupied neighbour: it seizes a
-    /// fraction of that community's population; the raided community flees
-    /// (closing with `Fled`, `ended_by = By(raider)`) and refounds on the
-    /// nearest vacant habitable cell, or is lost if none.
-    fn raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
-        let site = self.communities[raider].site;
-        let Some(target) = self.raid_target(site) else {
-            return; // nothing to raid; the community simply persists this epoch.
+    /// Opportunistic predation (The Tumult): a community raids the reachable
+    /// occupied neighbour whose land is worth MORE than its own (covetousness)
+    /// and whose strength it can beat by `RAID_MARGIN` (dominance) — decoupled
+    /// from its own crowding. It plunders (seizing a fraction of the loser's
+    /// population, and destroying another fraction outright — war is lossy);
+    /// if the target is broken below `VIABLE_MIN` it is driven off (`Fled`,
+    /// `ended_by = By(raider)`) and rolls downhill via [`Bake::relocate`].
+    ///
+    /// Deterministic and draw-free: it picks the most valuable such target,
+    /// tie-broken by the weakest, then the lowest `CellId` (`f64::total_cmp`
+    /// throughout), and never touches the epoch stream — so adding predation
+    /// shifts no downstream draw.
+    fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
+        let raider_site = self.communities[raider].site;
+        let raider_str = self.strength(raider);
+        let raider_val = *self.capacity.get(raider_site);
+        // (target index, that cell's value, the target's strength, its cell)
+        let mut best: Option<(usize, f64, f64, CellId)> = None;
+        for n in traversable_neighbors(self.cur(), raider_site) {
+            let Some(&t) = self.node_index.get(&n) else {
+                continue;
+            };
+            let t_val = *self.capacity.get(n);
+            let t_str = self.strength(t);
+            if t_val <= raider_val {
+                continue; // covet only BETTER land
+            }
+            if raider_str <= t_str * RAID_MARGIN {
+                continue; // dominance: only a fight it can win
+            }
+            let better = match best {
+                None => true,
+                Some((_, bv, bs, bc)) => t_val
+                    .total_cmp(&bv) // the MOST valuable land
+                    .then(bs.total_cmp(&t_str)) // among equal value, the WEAKEST
+                    .then(bc.cmp(&n)) // then the lowest CellId
+                    .is_gt(),
+            };
+            if better {
+                best = Some((t, t_val, t_str, n));
+            }
+        }
+        let Some((target, _, _, _)) = best else {
+            return; // nothing worth taking, or nothing beatable
         };
-        self.tally.raided += 1;
 
+        self.tally.raided += 1;
         let seized = self.communities[target].population * RAID_SEIZE;
+        let loss = self.communities[target].population * WAR_LOSS;
         self.communities[raider].population += seized;
-        self.communities[target].population -= seized;
+        self.communities[target].population -= seized + loss;
         self.touch(raider, year);
 
-        // The raided community flees its site.
-        let (people, remaining, lineage, offset, target_id) = {
-            let c = &self.communities[target];
-            let people = self.records[c.record].people;
-            (people, c.population, c.lineage, c.tech_offset, c.id)
-        };
-        let raider_id = self.communities[raider].id;
-        let flee_site = self.communities[target].site;
-        self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
-        self.tally.fled += 1;
-
-        // Refound on the nearest vacant habitable cell (excluding the site it
-        // just abandoned); with none, displace the nearest occupied cell and
-        // cascade (the Sea-Peoples avalanche).
-        match self.relocate(
-            people, remaining, lineage, target_id, offset, flee_site, era, year, 0,
-        ) {
-            Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
-            Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
-            Relocation::Lost => {}
+        // Broken below viability ⇒ driven off, rolling downhill; otherwise it
+        // survives on its land, weakened, and may be raided again.
+        if self.communities[target].population < VIABLE_MIN {
+            let (people, remaining, lineage, offset, target_id) = {
+                let c = &self.communities[target];
+                (
+                    self.records[c.record].people,
+                    c.population.max(0.0),
+                    c.lineage,
+                    c.tech_offset,
+                    c.id,
+                )
+            };
+            let raider_id = self.communities[raider].id;
+            let flee_site = self.communities[target].site;
+            self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
+            self.tally.fled += 1;
+            match self.relocate(
+                people, remaining, lineage, target_id, offset, flee_site, era, year, 0,
+            ) {
+                Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
+                Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
+                Relocation::Lost => self.tally.collapsed += 1,
+            }
         }
     }
 

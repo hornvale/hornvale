@@ -48,19 +48,23 @@ fn peoples() -> Vec<KindId> {
 }
 
 /// A small test world with a genuine, *oscillating* glacial swing — the
-/// honest driver of displacement at volume:
+/// honest driver of climate displacement at volume:
 ///
 /// - Warm eras: the lowland majority is habitable; the refuge cluster is not.
 ///   Communities settle and grow toward the lowland's high capacity.
 /// - Glacial eras: the lowlands turn hostile and the refuge cluster becomes
 ///   the only habitable land. Every lowland community must migrate INTO the
-///   low-capacity refuge, arriving OVER its capacity — pressure crosses 1.0
-///   and raids (hence flees and resettlements) fire.
+///   low-capacity refuge, arriving over its capacity.
 ///
 /// The mask oscillates warm/glacial across four glacial cycles, so the
 /// concentration event — and the displacement it drives — recurs, exactly
 /// as a real paleoclimate's era-variance would. Nothing here is a floor:
 /// remove the swing (make every era warm) and displacement goes to zero.
+///
+/// Capacity is UNIFORM within each of the two regions (refuge 60, lowland
+/// 120), so this world has no value gradient between neighbours — after The
+/// Tumult that makes it the negative control for predation as well as the
+/// positive one for climate displacement: crowding alone starts no fights.
 ///
 /// Refuge cells are habitable ONLY in glacial eras, so they sit vacant when a
 /// glacial onset drives migrants in — that vacancy is what lets the migrants
@@ -181,8 +185,13 @@ fn different_seeds_diverge() {
 }
 
 #[test]
-fn the_workload_fires_displacement_at_volume() {
-    // measure-don't-narrate: the phenomenon the campaign exists on MUST fire.
+fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
+    // measure-don't-narrate: the era swing MUST genuinely displace communities
+    // — and (The Tumult re-point) it must do so WITHOUT starting a war. The
+    // crowding trigger this test used to assert is retired: conflict is
+    // predation on a value gradient, and this world has none (both regions are
+    // internally flat), so the honest reading of this fixture is climate
+    // displacement at volume with zero raids. Equals do not prey.
     let (geo, cap, river, eras, refugia) = fixture(42);
     let people = peoples();
     let cfg = BakeConfig::default_millennia();
@@ -199,24 +208,99 @@ fn the_workload_fires_displacement_at_volume() {
         &graphs,
     );
     let c = census(&h);
-    assert!(c.fled + c.resettled > 50, "displacement inert: {c:?}");
+    // Displacement at volume: the mask genuinely evicts communities, over and
+    // over, across the four glacial cycles.
+    assert!(c.migrated > 50, "climate displacement inert: {c:?}");
     assert!(
         c.collapsed > 0 && c.alive_at_now > 0,
         "expected some collapses and some survivors: {c:?}"
     );
-    // measure-don't-narrate: `fled` and `raided` are incremented in lockstep
-    // (every raid closes with a flee), so their sum above overstates the
-    // independent signal. Pin the causal MECHANISM directly: migration fires
-    // (the era mask is genuinely displacing communities), raids fire, and
-    // every flee is the raid's consequence, not a floor.
-    assert!(
-        c.migrated > 0,
-        "no migration — the era mask isn't displacing anyone: {c:?}"
-    );
-    assert!(c.raided > 0, "no raids fired: {c:?}");
+    // The negative control: no cell here is worth more than its neighbour, so
+    // covetousness never has a target and no raid may fire — however crowded
+    // the refuge gets. Density is NOT a conflict trigger.
     assert_eq!(
-        c.fled, c.raided,
-        "flee must be the consequence of a raid: {c:?}"
+        c.raided, 0,
+        "a value-flat world must start no fights (density is not the trigger): {c:?}"
+    );
+    assert_eq!(c.fled, 0, "no raid, so nobody may be driven off: {c:?}");
+}
+
+/// A world with LAND TO SPARE and a sharp value gradient — the fixture that
+/// isolates predation from crowding. Every cell is habitable in every era (the
+/// mask never evicts anyone), capacity steps 20 → 100 from cell to cell (so a
+/// community can sit on poor land beside much richer land), and no cell is so
+/// poor that a genesis (pop 10) or daughter (pop 8) community starts anywhere
+/// near the crowding thresholds. Nothing here can ever reach `pressure >= 1.0`,
+/// so any conflict this world produces is driven by coveted VALUE down a
+/// STRENGTH gradient, never by density.
+fn land_to_spare_fixture() -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
+    let geo = Geosphere::new(1); // 42 cells
+    let capacity = CellMap::from_fn(&geo, |c| 20.0 + 20.0 * f64::from(c.0 % 5));
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = CellMap::from_fn(&geo, |_| false);
+    let era = EraClimate {
+        day: 0.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |_| true),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    (geo, capacity, river_prox, vec![era], refugia)
+}
+
+#[test]
+fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
+    // The Tumult's founding claim: conflict is predation, not congestion. In a
+    // world where nobody is crowded and nobody is evicted, raids must STILL
+    // fire — a community that can beat its neighbour takes the better land.
+    let (geo, cap, river, eras, refugia) = land_to_spare_fixture();
+    // Two peoples, not four: the map must stay demonstrably under-occupied, so
+    // that "there was nowhere else to go" is never available as an explanation.
+    let people = vec![KindId("goblin"), KindId("kobold")];
+    let cfg = BakeConfig {
+        start_year: 0.0,
+        end_year: 500.0,
+        epoch_years: 25.0,
+    };
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    let h = bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    );
+    let c = census(&h);
+    // (a) Climate displaced nobody: every cell is habitable in every era.
+    assert_eq!(
+        c.migrated, 0,
+        "the mask must never evict anyone here: {c:?}"
+    );
+    // (b) Land genuinely to spare: most of the map is still empty at `now`.
+    assert!(
+        (c.alive_at_now as usize) * 2 < geo.cell_count(),
+        "fixture must leave land to spare (alive {} of {} cells): {c:?}",
+        c.alive_at_now,
+        geo.cell_count()
+    );
+    // (c) …and conflict fired anyway — coveted value down a strength gradient.
+    assert!(c.raided > 0, "no raid fired with land to spare: {c:?}");
+    // (d) The raid had teeth: a beaten neighbour was broken off its land, not
+    //     merely counted. (`collapsed` here is that remnant dying out below
+    //     `VIABLE_MIN`, a consequence of the raid — not a famine.)
+    assert!(
+        c.fled > 0,
+        "no neighbour was ever driven off its land: {c:?}"
     );
 }
 
@@ -224,10 +308,10 @@ fn the_workload_fires_displacement_at_volume() {
 /// neighbours) that genesis fills completely, surrounded by permanently
 /// uninhabitable land. Once the cluster is full there is nowhere vacant, so
 /// when a final era turns cell 0 hostile its community cannot migrate to
-/// vacant land — it must DISPLACE an occupied neighbour, and that neighbour
-/// cascades onward (the Sea-Peoples avalanche). Two eras: a long warm span
-/// that lets the cluster saturate and stabilise, then a hostile span that
-/// evicts cell 0 with no vacant refuge anywhere.
+/// vacant land at all. Two eras: a long warm span that lets the cluster
+/// saturate and stabilise, then a hostile span that evicts cell 0 with no
+/// vacant refuge anywhere. Capacity is uniform across the cluster, so there
+/// is nothing to covet either — the trapped community has no way out.
 fn saturating_fixture() -> (
     Geosphere,
     CellMap<f64>,
@@ -266,7 +350,7 @@ fn saturating_fixture() -> (
 }
 
 #[test]
-fn a_full_world_cascades_when_a_cell_turns_hostile() {
+fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     let (geo, cap, river, eras, refugia) = saturating_fixture();
     let people = peoples();
     let cfg = BakeConfig {
@@ -287,24 +371,21 @@ fn a_full_world_cascades_when_a_cell_turns_hostile() {
         &graphs,
     );
     let c = census(&h);
-    // (a) a cascade fired: some log2 bin of the histogram is populated, and the
-    //     per-displacement raid/flee tallies rose (a cascade of size N raids and
-    //     flees N times as it walks the saturated graph).
+    // (a) The Tumult re-point: a climate eviction is NOT a war. With no vacant
+    //     refuge the trapped community starves where it stands — it does not
+    //     take a neighbour's land, so no raid, no flight, no avalanche. (The
+    //     crowding cascade this test used to assert was the falsified model:
+    //     displacement-by-congestion is retired; conflict is predation.)
+    assert!(c.collapsed > 0, "the trapped community must starve: {c:?}");
+    assert_eq!(c.raided, 0, "a climate eviction must start no fight: {c:?}");
+    assert_eq!(c.fled, 0, "no raid, so nobody may be driven off: {c:?}");
     assert!(
-        c.cascade_hist.iter().any(|&b| b > 0),
-        "no cascade recorded — the hostile cell found vacant land instead of \
-         displacing: {c:?}"
+        c.cascade_hist.iter().all(|&b| b == 0),
+        "climate eviction must never cascade: {c:?}"
     );
-    assert!(
-        c.raided > 0 && c.fled > 0,
-        "a cascade must raid and flee per displacement: {c:?}"
-    );
-    // (b) the bake TERMINATED — reaching this line proves the depth cap held
-    //     (a runaway cascade would hang, not return). Guard the bound too.
-    assert!(
-        c.raided <= u64::from(hornvale_worldgen::history_bake::CASCADE_DEPTH_CAP) * 4,
-        "cascade did not respect the depth cap: {c:?}"
-    );
+    // (b) The world was not emptied by the eviction — the rest of the cluster
+    //     lives on, so this is a targeted death, not a collapse of everything.
+    assert!(c.alive_at_now > 0, "the world must not be emptied: {c:?}");
     // (c) determinism: same seed → byte-identical skeleton.
     let h2 = bake(
         Seed(42),
@@ -319,7 +400,7 @@ fn a_full_world_cascades_when_a_cell_turns_hostile() {
     );
     assert_eq!(
         h.records, h2.records,
-        "cascade must be deterministic (same seed → identical records)"
+        "the bake must be deterministic (same seed → identical records)"
     );
 }
 
