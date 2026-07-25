@@ -134,6 +134,19 @@ vacant-first special case, which was never in this spec: under vacant-first a ro
 marginal empty cell to a rich held one, the branching ratio is zero *by construction* rather than
 by physics, and §5's open question cannot be asked.
 
+**Locality is part of the rule, not an afterthought.** "Re-enters the raid rule" also inherits the
+raid rule's *neighbourhood*: a raider scans its traversable neighbours, so a roller's comparison is
+scoped the same way. The scan walks the era graph outward and stops at the **first ring that
+contains an admissible option**, choosing the best value *within that ring* — the codebase's own
+existing idiom (both `nearest_dest` and the occupied-cell search are nearest-first BFS with
+deterministic tie-breaks). A people may still migrate a long way when its whole neighbourhood is
+full, but it never crosses a continent for a marginally better cell, and the settled premium
+decides between a vacant and a held cell **at the same distance**, which is the only place it
+should decide. A scan over *every* reachable cell — briefly specified here and measured — drops the
+distance term entirely: the occupied set drifts toward the globe's high-capacity cells, foundings
+inflate, and the world-level population-conservation gate breaches. That is a defect of this
+spec, not of the mechanism.
+
 **The strategy is emergent, not enumerated.** A strong remnant preys — it beats holders, and proven
 ground scores higher. A weak one flees to the empties — it beats nobody, so held cells never enter
 its option set at all. "Shit rolls downhill" falls out of the strength gradient; there is no
