@@ -982,6 +982,28 @@ fn emitter_arousal(
     v
 }
 
+/// The Haunt/Phantom hazard memory, split by PROVENANCE — the one fold, read
+/// two ways. `shunned` is what the PLANNER routes around (both provenances);
+/// `dread` is the TRANSIENT subset alone, the ground a creature's own reading
+/// of the present terrain calls safe and only a remembered alarm makes
+/// frightening. The Shudder's load-bearing distinction: a felt term reading
+/// `shunned` would drift the canonical world (wild fauna carry a non-empty
+/// static set on seed 42), while `dread` is EMPTY there by construction — no
+/// primary-afraid emitter, so the emitter-free fast path returns before a
+/// single entry is recorded.
+/// type-audit: bare-ok(ratio: dread)
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct HazardMemory {
+    /// Every remembered-frightening cell, both provenances — the planner's
+    /// finite route-cost set (exactly the historical `believed_hazard`).
+    pub shunned: std::collections::BTreeSet<RoomAddr>,
+    /// The TRANSIENT subset, keyed to the remembered ALARM magnitude at that
+    /// cell: ground whose terrain alone never crossed `DANGER_ACT`, tipped over
+    /// it only by the re-derived alarm of a herd that has long since moved on.
+    /// A subset of `shunned`'s keys. Empty ⇒ no phobia (the settled worlds).
+    pub dread: std::collections::BTreeMap<RoomAddr, f64>,
+}
+
 /// Belief (L1): the ground the creature has stood on that FRIGHTENS it — a pure
 /// fold over its committed `agent-at` history ∩ frightening-truth, the inverted
 /// twin of [`believed_water`] (a SET it plans *around*, not a target it plans
@@ -1024,6 +1046,9 @@ fn emitter_arousal(
 /// (seed 42) pays nothing beyond the terrain fold. `affect_of` (to confirm an
 /// emitter's Danger drive WINS) runs only for a terrain-afraid member standing
 /// beside the very cell being judged — rare.
+///
+/// The planner half of [`hazard_memory`]; the transient half is
+/// [`HazardMemory::dread`].
 pub fn believed_hazard(
     ledger: &Ledger,
     npc: &Npc,
@@ -1031,14 +1056,14 @@ pub fn believed_hazard(
     terrain: &dyn Terrain,
     roster: &[Npc],
 ) -> std::collections::BTreeSet<RoomAddr> {
-    // A lone read builds its own throwaway memo (a single re-derivation gains
-    // nothing from caching); the hot sim paths thread a shared one.
-    let mut memo = PrimaryAfraidMemo::new();
-    believed_hazard_memo(ledger, npc, t, terrain, roster, &mut memo)
+    hazard_memory(ledger, npc, t, terrain, roster).shunned
 }
 
 /// [`believed_hazard`] sharing a caller-owned [`PrimaryAfraidMemo`] across the
 /// many re-derivations of a single tick (the whole cost win — see the type doc).
+///
+/// The planner half of [`hazard_memory_memo`]; the transient half is
+/// [`HazardMemory::dread`].
 pub fn believed_hazard_memo(
     ledger: &Ledger,
     npc: &Npc,
@@ -1047,6 +1072,34 @@ pub fn believed_hazard_memo(
     roster: &[Npc],
     memo: &mut PrimaryAfraidMemo,
 ) -> std::collections::BTreeSet<RoomAddr> {
+    hazard_memory_memo(ledger, npc, t, terrain, roster, memo).shunned
+}
+
+/// [`hazard_memory_memo`] with a throwaway memo — a lone read gains nothing
+/// from caching (the hot sim paths thread a shared one).
+pub fn hazard_memory(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    roster: &[Npc],
+) -> HazardMemory {
+    let mut memo = PrimaryAfraidMemo::new();
+    hazard_memory_memo(ledger, npc, t, terrain, roster, &mut memo)
+}
+
+/// The ONE hazard fold (see [`believed_hazard`] for the belief, the staleness
+/// rule and the cost argument), returning BOTH provenances as a
+/// [`HazardMemory`] and sharing a caller-owned [`PrimaryAfraidMemo`] across the
+/// many re-derivations of a single tick.
+pub fn hazard_memory_memo(
+    ledger: &Ledger,
+    npc: &Npc,
+    t: WorldTime,
+    terrain: &dyn Terrain,
+    roster: &[Npc],
+    memo: &mut PrimaryAfraidMemo,
+) -> HazardMemory {
     // Most-recent visit per cell (day ≤ t): the cell is judged at its LATEST
     // visit, so a later safe visit clears an earlier phantom (the staleness rule).
     let mut latest: std::collections::BTreeMap<RoomAddr, f64> = std::collections::BTreeMap::new();
@@ -1089,18 +1142,21 @@ pub fn believed_hazard_memo(
         }
     };
 
-    let mut shunned: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+    let mut mem = HazardMemory::default();
     if scan.emitters.is_empty() {
         // The emitter-free common case (every settled world): no transient alarm
         // is possible, so the verdict is The Haunt's terrain-only `frightened_at`
         // (the one source of truth for the formula). Terrain is time-invariant,
         // so the most-recent-visit rule collapses to any-visit — byte-identical.
+        // It is also why `dread` is empty on every settled world: this returns
+        // BEFORE any dread is ever recorded, so byte-identity costs not one
+        // instruction.
         for (cell, day) in latest {
             if frightened_at(&cell, npc, terrain, WorldTime { day }, &[], ledger) {
-                shunned.insert(cell);
+                mem.shunned.insert(cell);
             }
         }
-        return shunned;
+        return mem;
     }
     for (cell, day) in latest {
         let terrain_threat = threat_field(&cell, &npc.threat_niche, terrain);
@@ -1111,7 +1167,8 @@ pub fn believed_hazard_memo(
         // exactly where the phantom lives. (The most-recent-visit verdict is
         // unchanged: a terrain-frightened latest visit still shuns.)
         if feels_frightening(terrain_threat, 0.0, npc.boldness) {
-            shunned.insert(cell);
+            // STATIC provenance: present danger, not a phantom — shunned only.
+            mem.shunned.insert(cell);
             continue;
         }
         // The re-derived transient alarm at (cell, day): the clamped sum of the
@@ -1142,11 +1199,19 @@ pub fn believed_hazard_memo(
                 alarm += emitter_arousal(afraid, ledger, m, WorldTime { day }, terrain);
             }
         }
-        if feels_frightening(terrain_threat, alarm.clamp(0.0, 1.0), npc.boldness) {
-            shunned.insert(cell);
+        // Hoisted so the value RECORDED as dread is byte-for-byte the value that
+        // produced the verdict — the memory and the feeling must not disagree.
+        let alarm = alarm.clamp(0.0, 1.0);
+        if feels_frightening(terrain_threat, alarm, npc.boldness) {
+            // TRANSIENT provenance by construction: control only reaches here
+            // when terrain ALONE did not frighten (the shortcut above `continue`d
+            // otherwise), so a cell shunned here is shunned BECAUSE of a
+            // remembered alarm. That is the whole isolation — no second pass.
+            mem.shunned.insert(cell.clone());
+            mem.dread.insert(cell, alarm);
         }
     }
-    shunned
+    mem
 }
 
 /// The BAND's water belief for `npc` (The Tidings; anchoring split per
@@ -4305,6 +4370,110 @@ mod tests {
         assert!(
             believed_hazard(&ledger, &c, now, &terrain, &roster).contains(&x),
             "without a corrective revisit, the phantom is still shunned"
+        );
+    }
+
+    #[test]
+    fn hazard_memory_splits_static_from_transient() {
+        // PROVENANCE. Two shunned cells for two different reasons:
+        //   H — frightening for its own TERRAIN (The Haunt). Shunned, NOT dreaded:
+        //       the present cell already frightens the creature, so there is
+        //       nothing remembered-but-absent about it.
+        //   X — terrain-SAFE, tipped over `act` only by emitter B's re-derived
+        //       alarm (The Phantom). Shunned AND dreaded, carrying the remembered
+        //       alarm magnitude.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let ns = d_cell.neighbors();
+        let hazard = ns[0].clone(); // E: frightens the emitter B (and A, if A stands there)
+        let x = ns[1].clone(); // X: terrain-safe, inside B's one-hop halo
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        // Emitter B: beside X on day 0.5 (primary-afraid — E is its neighbour).
+        let b_e = ledger.mint_entity();
+        let b = haunt_npc(b_e, d_cell.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        // A (coward) stood on BOTH the transient cell X and the terrain hazard E.
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &hazard, 0.5);
+
+        let mem = hazard_memory(&ledger, &a, WorldTime { day: 10.0 }, &terrain, &[b]);
+        assert!(mem.shunned.contains(&x), "the phantom cell is shunned");
+        assert!(
+            mem.shunned.contains(&hazard),
+            "the terrain hazard is shunned"
+        );
+        assert!(
+            mem.dread.contains_key(&x),
+            "the phantom cell is DREADED (transient provenance): {:?}",
+            mem.dread
+        );
+        assert!(
+            !mem.dread.contains_key(&hazard),
+            "a terrain hazard is not a phantom — it is present danger, not memory"
+        );
+        assert!(
+            mem.dread[&x] > 0.0,
+            "the dread carries the remembered alarm magnitude"
+        );
+    }
+
+    #[test]
+    fn hazard_memory_dread_is_empty_with_an_empty_roster() {
+        // THE STRUCTURAL GUARANTEE, asserted: an empty roster ⇒ an empty emitter
+        // scan ⇒ an empty dread map. This one fact is simultaneously The
+        // Phantom's recursion base case, seed 42's byte-identity, and the block
+        // on superstition contagion (the emission read is bandless).
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let hazard = d_cell.neighbors()[0].clone();
+        let x = d_cell.neighbors()[1].clone();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
+        commit_agent_at(&mut ledger, &reg, a_e, &hazard, 0.5);
+
+        let mem = hazard_memory(&ledger, &a, WorldTime { day: 10.0 }, &terrain, &[]);
+        assert!(
+            mem.dread.is_empty(),
+            "no roster ⇒ no phantom: {:?}",
+            mem.dread
+        );
+        assert!(
+            mem.shunned.contains(&hazard),
+            "the terrain memory is unaffected by the empty roster"
+        );
+    }
+
+    #[test]
+    fn believed_hazard_is_hazard_memory_shunned() {
+        // The wrapper is exactly the shunned half — the old entry point keeps
+        // its meaning, so The Haunt's planner reads what it always read.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let hazard = d_cell.neighbors()[0].clone();
+        let x = d_cell.neighbors()[1].clone();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        let b_e = ledger.mint_entity();
+        let b = haunt_npc(b_e, d_cell.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.5);
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.5);
+
+        let now = WorldTime { day: 10.0 };
+        let roster = [b];
+        assert_eq!(
+            believed_hazard(&ledger, &a, now, &terrain, &roster),
+            hazard_memory(&ledger, &a, now, &terrain, &roster).shunned
         );
     }
 
