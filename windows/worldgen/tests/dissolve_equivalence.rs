@@ -14,14 +14,21 @@ fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
     // biosphere = the canonical entity set (all 16 kinds today).
     assert_eq!(wc.biosphere.len(), 16);
-    // Nested capacities (The Eremite): perception ⊆ psyche — the peoples carry
-    // both, the three dragons carry a mind but no perception — and psyche ⊆
-    // biosphere.
+    // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
+    // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
+    // Vigil the dragons perceive too, so perception and psyche coincide at
+    // seven; the subset assertion is kept (not replaced by equality) because a
+    // future non-speaking perceiver — an owl with eyes and no words — must
+    // stay expressible.
     for k in wc.perception.ids() {
         assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
     }
     assert_eq!(wc.psyche.len(), 7, "four peoples + three minded dragons");
-    assert_eq!(wc.perception.len(), 4, "perception is the four peoples");
+    assert_eq!(
+        wc.perception.len(),
+        7,
+        "the four peoples + the three dragons perceive (The Vigil)"
+    );
     for k in wc.psyche.ids() {
         assert!(
             wc.biosphere.contains(k),

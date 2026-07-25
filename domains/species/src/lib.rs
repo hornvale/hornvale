@@ -207,6 +207,19 @@ pub struct PerceptionVector {
     pub sky_attention: f64,
 }
 
+/// The draconic clade's night-sky acuity. Authored once for the whole clade
+/// rather than per kind: `night_vision` is the only perception dimension that
+/// reaches language (it alone drives `pack_depths`' hue ladder), so a
+/// per-dragon value would give each dragon its own hue inventory and fragment
+/// the shared frozen Draconic tongue — the cognates section admits only
+/// concepts rooted in *every* daughter. A future dragon inherits this by
+/// construction; a deliberately divergent-eyed dragon must override it, which
+/// is exactly when someone should have to decide whether the shared tongue
+/// still holds. At this value the hue ladder yields depth 2, so Draconic
+/// lexicalizes `dark`, `light`, and `red` — and nothing else (spec: The Vigil).
+/// type-audit: bare-ok(ratio)
+pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
+
 /// A species' condition-tolerance profile: one response curve per v1
 /// environmental axis. v1 fixes the four axes; a later campaign generalizes
 /// to an open axis registry.
@@ -1087,8 +1100,12 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
     .collect()
 }
 
-/// The peopled perception component — authored directly, present only for the
-/// four peoples (goblin is the baseline: diurnal, 0.5/0.5).
+/// The perception component — authored directly, present for every minded
+/// SPEAKING kind: the four peoples (goblin is the baseline: diurnal, 0.5/0.5)
+/// and the three chromatic dragons (The Vigil). Since The Vigil the enforced
+/// lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added without a
+/// row here fails `check_integrity` at load rather than silently perceiving
+/// like a goblin.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
     [
@@ -1122,6 +1139,42 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 activity: ActivityCycle::Nocturnal,
                 night_vision: 0.7,
                 sky_attention: 0.3,
+            },
+        ),
+        // The Vigil: the three chromatic dragons perceive. One clade eye
+        // (`DRACONIC_NIGHT_VISION`), three ecological schedules — `activity`
+        // read off each kind's already-authored `ConditionNiche.insolation`
+        // optimum, and `sky_attention` low across the clade because the
+        // dimension means CELESTIAL vs terrestrial attention, not aerialness:
+        // `perception_lens.ambient = 1.5 - sky_attention`, and a hunting
+        // dragon on the wing looks DOWN.
+        (
+            KindId("white-dragon"),
+            PerceptionVector {
+                // polar, insolation optimum 0.05 — twilight-dominated light
+                activity: ActivityCycle::Crepuscular,
+                night_vision: DRACONIC_NIGHT_VISION,
+                // the open polar sky, the most of the three
+                sky_attention: 0.3,
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            PerceptionVector {
+                // open volcanic terrain, insolation optimum 0.20 — high sun
+                activity: ActivityCycle::Diurnal,
+                night_vision: DRACONIC_NIGHT_VISION,
+                sky_attention: 0.25,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            PerceptionVector {
+                // shaded lowland swamp, insolation optimum 0.10 — ambush
+                activity: ActivityCycle::Nocturnal,
+                night_vision: DRACONIC_NIGHT_VISION,
+                // canopy, no sky: the most ground-attentive kind in the roster
+                sky_attention: 0.15,
             },
         ),
     ]
@@ -1355,9 +1408,10 @@ mod tests {
         let fam_ids: Vec<_> = fam.ids().collect();
         assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
 
-        // The Eremite: capacities nest (perception ⊆ psyche). The peoples carry
-        // both; the three dragons carry a mind (psyche) but no perception, so
-        // the two stores no longer share one key-set.
+        // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
+        // psyche, and since The Vigil every minded SPEAKER also perceives, so
+        // the two stores again share one key-set — seven kinds, not the four
+        // peoples.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
@@ -1365,7 +1419,11 @@ mod tests {
             );
         }
         assert_eq!(psy.len(), 7, "four peoples + three minded dragons");
-        assert_eq!(per.len(), 4, "perception is the four peoples");
+        assert_eq!(
+            per.len(),
+            7,
+            "perception is the four peoples + the three dragons (The Vigil)"
+        );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
         }
@@ -1485,6 +1543,45 @@ mod tests {
         let k = per.get(&KindId("kobold")).unwrap();
         assert_eq!(k.activity, ActivityCycle::Nocturnal);
         assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
+    }
+
+    #[test]
+    fn draconic_perception_is_one_clade_eye_and_three_schedules() {
+        let per = perception_registry();
+        // The clade eye: night_vision is the ONLY perception dimension that
+        // reaches language (sole input to `pack_depths`), so every dragon
+        // shares one value — a per-dragon value would give each dragon its own
+        // hue inventory and fragment the shared Draconic tongue.
+        for name in ["white-dragon", "red-dragon", "black-dragon"] {
+            let d = per
+                .get(&KindId(name))
+                .unwrap_or_else(|| panic!("{name} carries a perception row"));
+            assert_eq!(
+                d.night_vision, DRACONIC_NIGHT_VISION,
+                "{name} shares the clade eye"
+            );
+            assert!(
+                d.sky_attention < 0.6,
+                "{name} is a ground-scanning predator, not sky-rapt"
+            );
+        }
+        // The ecological schedule: activity is read off each kind's own
+        // authored insolation optimum, so the three differ.
+        assert_eq!(
+            per.get(&KindId("red-dragon")).unwrap().activity,
+            ActivityCycle::Diurnal,
+            "red-dragon: insolation optimum 0.20, open volcanic high sun"
+        );
+        assert_eq!(
+            per.get(&KindId("black-dragon")).unwrap().activity,
+            ActivityCycle::Nocturnal,
+            "black-dragon: insolation optimum 0.10, shaded swamp ambush"
+        );
+        assert_eq!(
+            per.get(&KindId("white-dragon")).unwrap().activity,
+            ActivityCycle::Crepuscular,
+            "white-dragon: insolation optimum 0.05, polar twilight"
+        );
     }
 
     #[test]
@@ -1611,17 +1708,20 @@ mod tests {
         ] {
             let d = bio.get(&KindId(name)).unwrap();
             // The Eremite: the three dragons are MINDED fauna — a solitary
-            // psyche, but no perception or speech (deferred). Every other
-            // menagerie kind carries neither capacity.
+            // psyche. Since The Vigil they also perceive (one clade eye,
+            // three schedules — see `draconic_perception_is_one_clade_eye_
+            // and_three_schedules`). Every other menagerie kind carries
+            // neither capacity.
             let is_dragon = matches!(name, "white-dragon" | "red-dragon" | "black-dragon");
             assert_eq!(
                 psy.contains(&KindId(name)),
                 is_dragon,
                 "{name}: only the dragons among the menagerie carry a mind"
             );
-            assert!(
-                !per.contains(&KindId(name)),
-                "{name} is fauna: no perception"
+            assert_eq!(
+                per.contains(&KindId(name)),
+                is_dragon,
+                "{name}: only the dragons among the menagerie perceive (The Vigil)"
             );
             // `Mass` has no PartialOrd, so read the raw kilograms rather
             // than comparing against `Mass::new(0.0)`.
