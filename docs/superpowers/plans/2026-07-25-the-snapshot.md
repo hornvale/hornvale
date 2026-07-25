@@ -401,7 +401,7 @@ The harvest. It must live in `session.rs`: it reads private fields (`day`, `npcs
 
 **Files:**
 - Modify: `windows/vessel/src/session.rs`
-- Test: inline `#[cfg(test)] mod tests` in `session.rs` (the file already has one)
+- Test: inline `#[cfg(test)] mod tests` in `session.rs` — **create it**; the file has no unit-test module today (its tests live in `windows/vessel/tests/session.rs`, an integration test, which cannot see the private fields `snapshot()` reads). Follow the `seam_world()` convention already used in `agent.rs`, `knowledge.rs`, and `focalize.rs`.
 
 **Interfaces:**
 - Consumes: Task 1's `SessionSnapshot` and channel structs; the existing private `Session` fields; `crate::liveness::affect_of`; the private `felt_phrase`, `colocated_npcs`, `grievance`, and the `HOSTILITY_THRESHOLD` constant.
