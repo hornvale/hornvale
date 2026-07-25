@@ -162,8 +162,8 @@ const DAUGHTER_POP: f64 = 8.0;
 const RIVER_SITE_WEIGHT: f64 = 2.0;
 /// Hard cap on a single relaxation cascade's BFS depth (displacement chain
 /// length) — a safety bound against a pathological unbounded chain, not a
-/// physical parameter. The Sea-Peoples cascade (a later task) reads this;
-/// Task 1 only reserves the constant.
+/// physical parameter. [`Bake::relocate`] reads it: a roll-downhill that
+/// reaches this depth drops its last remnant rather than recursing further.
 /// type-audit: bare-ok(count)
 pub const CASCADE_DEPTH_CAP: u32 = 256;
 /// Number of log2 bins in [`BakeCensus::cascade_hist`]: bin `i` counts
@@ -209,8 +209,11 @@ pub struct History {
     tally: BakeCensus,
 }
 
-/// A tally of the events a bake resolved — the falsification instrument. The
-/// campaign lives or dies on `fled + resettled` firing at volume.
+/// A tally of the events a bake resolved — the falsification instrument. Under
+/// The Tumult's predation model the load-bearing counts are `raided`/`fled`
+/// (conflict must fire on a *value* gradient, in worlds with land to spare, and
+/// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
+/// redistribute the world, not depopulate it).
 /// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BakeCensus {
@@ -259,9 +262,11 @@ pub fn census(h: &History) -> BakeCensus {
 }
 
 /// The cascade-size histogram off a baked history (bin `i` = sizes
-/// `[2^i, 2^(i+1))`). Scaffolding for The Tumult's Sea-Peoples cascade
-/// (a later task) — always all-zero until that task's cascade resolution
-/// starts calling [`BakeCensus::record_cascade`].
+/// `[2^i, 2^(i+1))`). Filled by [`BakeCensus::record_cascade`], which
+/// [`Bake::maybe_raid`] calls for every raid whose displaced loser had to
+/// evict someone in turn. It stays all-zero on an unsaturated world — there,
+/// every remnant finds vacant land at the first hop, so no relaxation chains —
+/// which is a measurement of the branching ratio, not missing scaffolding.
 /// type-audit: bare-ok(count: return)
 pub fn cascade_sizes(h: &History) -> [u64; CASCADE_BINS] {
     h.tally.cascade_hist
@@ -474,8 +479,9 @@ impl<'a> Bake<'a> {
     /// graph currently being stepped. Delegates to the free [`nearest_occupied`]
     /// function so the BFS/tie-break logic is unit-testable against a
     /// hand-built graph + `node_index` without constructing a full `Bake`.
-    /// The Tumult's Sea-Peoples cascade displaces this cell when no vacant
-    /// land is reachable.
+    /// [`Bake::relocate`] displaces this cell's occupant when no vacant land is
+    /// reachable — it is the roll-downhill's next victim, and the step that
+    /// turns a single raid into a chained cascade.
     fn nearest_occupied(&self, from: CellId) -> Option<usize> {
         nearest_occupied(self.cur(), &self.node_index, from)
     }
@@ -698,8 +704,13 @@ impl<'a> Bake<'a> {
                 (c.record, c.population, c.lineage, c.tech_offset, c.id)
             };
             let people = self.records[record].people;
+            // A refuge is only a refuge for a band big enough to hold it: a
+            // migrant whose arriving population would fall below `VIABLE_MIN`
+            // starves on the road instead of refounding, exactly as `relocate`
+            // rules for a displaced remnant. Without this the refound would
+            // `open` at `peak_population == 0` — a peopleless settlement.
             match self.nearest_dest(era, site) {
-                Some(dest) => {
+                Some(dest) if pop * MIGRATE_SURVIVAL >= VIABLE_MIN => {
                     self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
                     let new_idx = self.open(
                         people,
@@ -713,7 +724,7 @@ impl<'a> Bake<'a> {
                     self.touch(new_idx, year);
                     self.tally.migrated += 1;
                 }
-                None => {
+                _ => {
                     self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
                     self.tally.collapsed += 1;
                 }
@@ -739,9 +750,19 @@ impl<'a> Bake<'a> {
     }
 
     /// Opportunistic predation (The Tumult): a community raids the reachable
-    /// occupied neighbour whose land is worth MORE than its own (covetousness)
-    /// and whose strength it can beat by `RAID_MARGIN` (dominance) — decoupled
-    /// from its own crowding.
+    /// occupied neighbour whose land is worth MORE than its own **this era**
+    /// (covetousness) and whose strength it can beat by `RAID_MARGIN`
+    /// (dominance) — decoupled from its own crowding.
+    ///
+    /// Value is [`Bake::eff_capacity`], never raw capacity: what a cell is
+    /// worth to a conqueror is what it will actually yield under this era's
+    /// ice/habitability mask. Reading raw capacity would let a community on
+    /// good land covet a neighbour whose cell just turned hostile — abandoning
+    /// a living site for ground worth nothing, preferentially at exactly the
+    /// era-mask flips displacement is measured on. Since `maybe_raid` only runs
+    /// for a raider whose own effective capacity is non-zero, requiring the
+    /// prize to be strictly *more* valuable also excludes every zero-factor
+    /// cell for free.
     ///
     /// The outcome is **conquest of immobile land**, not plunder (spec §4.3).
     /// The prize is the cell: war destroys `WAR_LOSS` of *each* side's
@@ -754,24 +775,38 @@ impl<'a> Bake<'a> {
     /// its poor land for the prize — and is therefore itself a candidate
     /// refuge for the remnant it just displaced.
     ///
+    /// A raider whose post-war population would fall below `VIABLE_MIN`
+    /// declines the fight: dominance is a *ratio*, so nothing else bounds a
+    /// raider's absolute size, and a sub-viable seat would `open` with
+    /// `peak_population == 0` — a peopleless settlement, which the shipped
+    /// no-peopleless-settlements invariant forbids.
+    ///
     /// Deterministic and draw-free: it picks the most valuable such target,
     /// tie-broken by the weakest, then the lowest `CellId` (`f64::total_cmp`
-    /// throughout), and never touches the epoch stream — so adding predation
-    /// shifts no downstream draw.
+    /// throughout), and never touches the epoch stream — `maybe_raid` itself
+    /// consumes no draw. It does change which communities exist and how
+    /// pressured they are, so the *sequence* of `grow`'s `DAUGHTER_PROB` draws
+    /// downstream does move; that is the genesis epoch spec §7 declares, not a
+    /// break in byte-identity for a fixed physics.
     fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
         let raider_site = self.communities[raider].site;
+        // Too small to seat itself after the war it is contemplating: decline,
+        // before any tally moves (see the `VIABLE_MIN` note above).
+        if self.communities[raider].population * (1.0 - WAR_LOSS) < VIABLE_MIN {
+            return;
+        }
         let raider_str = self.strength(raider);
-        let raider_val = *self.capacity.get(raider_site);
+        let raider_val = self.eff_capacity(era, raider_site);
         // (target index, that cell's value, the target's strength, its cell)
         let mut best: Option<(usize, f64, f64, CellId)> = None;
         for n in traversable_neighbors(self.cur(), raider_site) {
             let Some(&t) = self.node_index.get(&n) else {
                 continue;
             };
-            let t_val = *self.capacity.get(n);
+            let t_val = self.eff_capacity(era, n);
             let t_str = self.strength(t);
             if t_val <= raider_val {
-                continue; // covet only BETTER land
+                continue; // covet only land that is BETTER *this era*
             }
             if raider_str <= t_str * RAID_MARGIN {
                 continue; // dominance: only a fight it can win

@@ -3,6 +3,7 @@
 //! made executable — displacement must GENUINELY fire, at volume, driven by
 //! the paleoclimate era swing, never by a floor (measure-don't-narrate).
 
+use hornvale_history::record::{CauseOfEnd, Ended, Founding};
 use hornvale_kernel::{CellId, CellMap, Geosphere, KindId, ReferenceElevation, Seed};
 use hornvale_paleoclimate::EraClimate;
 use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
@@ -61,10 +62,15 @@ fn peoples() -> Vec<KindId> {
 /// as a real paleoclimate's era-variance would. Nothing here is a floor:
 /// remove the swing (make every era warm) and displacement goes to zero.
 ///
-/// Capacity is UNIFORM within each of the two regions (refuge 60, lowland
-/// 120), so this world has no value gradient between neighbours — after The
-/// Tumult that makes it the negative control for predation as well as the
-/// positive one for climate displacement: crowding alone starts no fights.
+/// Capacity is uniform WITHIN each region (refuge 60, lowland 120) but the two
+/// regions are adjacent, so a 60→120 gradient does run along their boundary and
+/// a refuge-dweller genuinely covets its lowland neighbour. What makes this the
+/// negative control for predation is the era mask, not flatness: refuge and
+/// lowland are habitable in DISJOINT eras, and the epoch snapshot is taken
+/// before any migration, so a low-value community is never stepped while an
+/// occupied high-value neighbour is still indexed. Covetousness therefore never
+/// finds a live target, and `raided` stays 0 however crowded the refuge gets —
+/// crowding alone starts no fights.
 ///
 /// Refuge cells are habitable ONLY in glacial eras, so they sit vacant when a
 /// glacial onset drives migrants in — that vacancy is what lets the migrants
@@ -99,7 +105,9 @@ fn fixture(
     let refugia = CellMap::from_fn(&geo, |c| refuge.contains(&c));
 
     // Refuge capacity is well below the lowland's, so a lowland community
-    // carrying a near-lowland-capacity population lands over-capacity and raids.
+    // driven into the refuge by a glacial onset arrives over-capacity — the
+    // pressure that drives the growth damping and, at the extreme, famine.
+    // It never drives a raid: crowding is not a conflict trigger.
     let capacity = CellMap::from_fn(&geo, |c| if refuge.contains(&c) { 60.0 } else { 120.0 });
 
     // Warm ⇒ lowlands (non-refuge) habitable; glacial ⇒ refuge habitable.
@@ -215,9 +223,11 @@ fn the_workload_fires_climate_displacement_at_volume_without_conflict() {
         c.collapsed > 0 && c.alive_at_now > 0,
         "expected some collapses and some survivors: {c:?}"
     );
-    // The negative control: no cell here is worth more than its neighbour, so
-    // covetousness never has a target and no raid may fire — however crowded
-    // the refuge gets. Density is NOT a conflict trigger.
+    // The negative control. The 60→120 gradient along the refuge/lowland
+    // boundary is real, but the mask makes the two regions habitable in
+    // DISJOINT eras and the epoch snapshot precedes migration, so covetousness
+    // never finds a LIVE occupant on the richer side. No raid may fire —
+    // however crowded the refuge gets. Density is NOT a conflict trigger.
     assert_eq!(
         c.raided, 0,
         "a value-flat world must start no fights (density is not the trigger): {c:?}"
@@ -295,12 +305,33 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     );
     // (c) …and conflict fired anyway — coveted value down a strength gradient.
     assert!(c.raided > 0, "no raid fired with land to spare: {c:?}");
-    // (d) The raid had teeth: a beaten neighbour was broken off its land, not
-    //     merely counted. (`collapsed` here is that remnant dying out below
-    //     `VIABLE_MIN`, a consequence of the raid — not a famine.)
+    // (d) The raid had teeth, and it was a CONQUEST OF LAND rather than a
+    //     bookkeeping event: some occupation ended `Fled` at a named raider's
+    //     hand, and that same raider seated a new occupation ON THE VERY CELL
+    //     it drove the loser off. Checked against the records, not the tally:
+    //     `raided` and `fled` are incremented unconditionally and adjacently in
+    //     `maybe_raid`, so an `assert!(c.fled > 0)` here would be implied by (c)
+    //     and could never fail on its own.
+    //     The seat must be a DISTINCT occupation opened at the very moment the
+    //     loser ended: without those two guards the loser's own record can
+    //     satisfy the predicate whenever the loser happens to be a daughter of
+    //     the community that later raided it (mutation-verified — moving the
+    //     raider's `open` back onto its own cell must, and does, redden this).
+    let conquest = h.records.iter().any(|loser| {
+        loser.cause == Some(CauseOfEnd::Fled)
+            && match loser.ended_by {
+                Ended::By(raider) => h.records.iter().any(|seat| {
+                    seat.founded_from == Founding::From(raider)
+                        && seat.site == loser.site
+                        && seat.community != loser.community
+                        && Some(seat.founded) == loser.ended
+                }),
+                Ended::Nature => false,
+            }
+    });
     assert!(
-        c.fled > 0,
-        "no neighbour was ever driven off its land: {c:?}"
+        conquest,
+        "no raider ever seated itself on the cell it drove a neighbour off: {c:?}"
     );
 }
 
