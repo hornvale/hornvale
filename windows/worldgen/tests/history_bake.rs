@@ -337,7 +337,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
 }
 
 /// An ESCARPMENT: capacity falls off in steps with graph distance from cell 0
-/// (100 at the crown, 20 at the rim), every cell habitable in every era. Two
+/// (200 at the crown, 20 at the rim), every cell habitable in every era. Two
 /// properties matter:
 ///
 /// - **Neighbours differ in value**, everywhere and always, so covetousness has
@@ -351,6 +351,18 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
 /// Under the vacant-first rule it always pioneers and the branching ratio is
 /// zero by construction; under the one-comparison rule the rich holding wins
 /// whenever the roller can win the fight, and the relaxation chains.
+///
+/// **The escarpment needs room to relax LOCALLY.** Spec §4.3's rule is
+/// nearest-ring, not global, so a chained relaxation is a *neighbourhood*
+/// event: the loser's own first ring has to hold a beatable, richer holding.
+/// At `Geosphere::new(1)` (42 cells, ~5 rings from pole to pole) a displaced
+/// people's first ring is most of the interesting world and the escarpment is
+/// only four steps wide, so the fixture measured cascades only on some seeds —
+/// an instrument too coarse for a local rule, not a physics finding. The same
+/// escarpment on `Geosphere::new(2)` (162 cells) with the gradient run out to
+/// the sphere's full radius instead of flattening after four hops gives it the
+/// rings it needs; the geometry, the arithmetic (20 per step) and the
+/// assertions are unchanged.
 fn escarpment_fixture() -> (
     Geosphere,
     CellMap<f64>,
@@ -358,10 +370,10 @@ fn escarpment_fixture() -> (
     Vec<EraClimate>,
     CellMap<bool>,
 ) {
-    let geo = Geosphere::new(1); // 42 cells
+    let geo = Geosphere::new(2); // 162 cells
     let capacity = CellMap::from_fn(&geo, |c| {
-        let hops = geo.hops_between(CellId(0), c, 16).unwrap_or(4).min(4);
-        100.0 - 20.0 * hops as f64
+        let hops = geo.hops_between(CellId(0), c, 32).unwrap_or(9);
+        (200.0 - 20.0 * hops as f64).max(20.0)
     });
     let river_prox = CellMap::from_fn(&geo, |_| 0.0);
     let refugia = CellMap::from_fn(&geo, |_| false);

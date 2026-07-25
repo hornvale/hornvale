@@ -271,9 +271,9 @@ pub fn census(h: &History) -> BakeCensus {
 /// The cascade-size histogram off a baked history (bin `i` = sizes
 /// `[2^i, 2^(i+1))`). Filled by [`BakeCensus::record_cascade`], which
 /// [`Bake::maybe_raid`] calls for every raid whose displaced loser had to evict
-/// someone in turn. A displaced people takes the best home it can get —
-/// marginal vacant ground or a rich holding it can beat (see
-/// [`Bake::best_home`]) — so an all-zero histogram now means the losers of this
+/// someone in turn. A displaced people takes the best home in the nearest ring
+/// that offers it one — marginal vacant ground or a rich holding it can beat
+/// (see [`Bake::best_home`]) — so an all-zero histogram now means the losers of this
 /// world's raids were too weak to displace anybody, a measurement of the
 /// branching ratio rather than an artifact of the rule.
 /// type-audit: bare-ok(count: return)
@@ -474,51 +474,86 @@ impl<'a> Bake<'a> {
         Self::factor(era, cell) > 0.0 && !self.node_index.contains_key(&cell)
     }
 
-    /// The nearest vacant habitable cell to `from` (excluding `from` itself),
-    /// by breadth-first hop distance. Within the nearest layer, refugial cells
-    /// win over non-refugial, then lowest `CellId` — a total, deterministic
-    /// order. `None` if the whole reachable graph is full or hostile.
-    fn nearest_dest(&self, era: &EraClimate, from: CellId) -> Option<CellId> {
+    /// Walk the era graph outward from `from` in breadth-first **rings** and
+    /// stop at the first ring `pick` finds something in. Ring `d` is exactly
+    /// the set of cells at graph distance `d` from `from`; `from` itself is
+    /// never offered. Traversal passes *through* cells `pick` rejects, so a
+    /// people whose whole neighbourhood is unusable still reaches the ring
+    /// beyond it — this is a widening search, not a one-ring scan.
+    ///
+    /// **Determinism.** Ring membership is a graph property (a full ring is
+    /// consumed before the next is expanded), and each ring is handed to
+    /// `pick` as an ascending, deduplicated `CellId` slice, so neither the
+    /// discovery order within a ring nor the order edges were added can reach
+    /// the result. `pick` is still responsible for a total order among the
+    /// cells of the one ring it accepts.
+    ///
+    /// This is the file's nearest-first idiom, shared by the two searches that
+    /// need it — [`Bake::nearest_dest`] (a migrant's refuge) and
+    /// [`Bake::best_home`] (a displaced people's roll-downhill).
+    fn nearest_ring<T>(
+        &self,
+        from: CellId,
+        mut pick: impl FnMut(&[CellId]) -> Option<T>,
+    ) -> Option<T> {
         let mut visited: BTreeSet<CellId> = BTreeSet::new();
         visited.insert(from);
         let mut frontier: Vec<CellId> = vec![from];
         while !frontier.is_empty() {
-            let mut next: Vec<CellId> = Vec::new();
-            let mut candidates: Vec<CellId> = Vec::new();
+            // A BTreeSet, so the ring reaches `pick` in ascending CellId order
+            // however its cells were discovered.
+            let mut ring: BTreeSet<CellId> = BTreeSet::new();
             for &c in &frontier {
                 for n in traversable_neighbors(self.cur(), c) {
                     if visited.insert(n) {
-                        next.push(n);
-                        if self.vacant_habitable(era, n) {
-                            candidates.push(n);
-                        }
+                        ring.insert(n);
                     }
                 }
             }
-            if !candidates.is_empty() {
-                // Refugial first (survival through the glacial maximum is the
-                // point of a migration), then river-adjacent as a tie-break
-                // (Task 5b — bias toward water among otherwise-equal refuges),
-                // then lowest CellId — total & deterministic (`f64::total_cmp`).
-                candidates.sort_by(|a, b| {
-                    let ra = *self.refugia.get(*a);
-                    let rb = *self.refugia.get(*b);
-                    let pa = *self.river_prox.get(*a);
-                    let pb = *self.river_prox.get(*b);
-                    rb.cmp(&ra).then(pb.total_cmp(&pa)).then(a.cmp(b))
-                });
-                return Some(candidates[0]);
+            let next: Vec<CellId> = ring.into_iter().collect();
+            if let Some(found) = pick(&next) {
+                return Some(found);
             }
             frontier = next;
         }
         None
     }
 
+    /// The nearest vacant habitable cell to `from` (excluding `from` itself),
+    /// by breadth-first hop distance. Within the nearest layer, refugial cells
+    /// win over non-refugial, then lowest `CellId` — a total, deterministic
+    /// order. `None` if the whole reachable graph is full or hostile.
+    fn nearest_dest(&self, era: &EraClimate, from: CellId) -> Option<CellId> {
+        self.nearest_ring(from, |ring| {
+            let mut candidates: Vec<CellId> = ring
+                .iter()
+                .copied()
+                .filter(|&n| self.vacant_habitable(era, n))
+                .collect();
+            if candidates.is_empty() {
+                return None;
+            }
+            // Refugial first (survival through the glacial maximum is the
+            // point of a migration), then river-adjacent as a tie-break
+            // (Task 5b — bias toward water among otherwise-equal refuges),
+            // then lowest CellId — total & deterministic (`f64::total_cmp`).
+            candidates.sort_by(|a, b| {
+                let ra = *self.refugia.get(*a);
+                let rb = *self.refugia.get(*b);
+                let pa = *self.river_prox.get(*a);
+                let pb = *self.river_prox.get(*b);
+                rb.cmp(&ra).then(pb.total_cmp(&pa)).then(a.cmp(b))
+            });
+            Some(candidates[0])
+        })
+    }
+
     /// The best home a homeless people can take from `from` — spec §4.3's
-    /// **one comparison over every reachable cell**, and the whole of the
-    /// roll-downhill's decision. Every cell reachable over the era graph
-    /// (excluding `from`, which the people has just been driven off and which
-    /// its displacer now holds) is scored once:
+    /// **one comparison**, and the whole of the roll-downhill's decision. The
+    /// scan walks the era graph outward from `from` (which the people has just
+    /// been driven off and which its displacer now holds) and **stops at the
+    /// first ring that contains an admissible option**, taking the best value
+    /// within that ring. Within a ring:
     ///
     /// - a **vacant** habitable cell scores its effective capacity;
     /// - a **held** habitable cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
@@ -530,18 +565,23 @@ impl<'a> Bake<'a> {
     /// - a cell the era's mask has made uninhabitable is worth nothing to
     ///   anybody and is not an option at all.
     ///
-    /// The best score wins, tie-broken by the WEAKEST defender (vacant land
-    /// defends with 0) and then the lowest `CellId` — the same total,
-    /// deterministic chain [`Bake::maybe_raid`] uses, `f64::total_cmp`
-    /// throughout. `None` means nothing at all is admissible.
+    /// The best score in the accepted ring wins, tie-broken by the WEAKEST
+    /// defender (vacant land defends with 0) and then the lowest `CellId` —
+    /// the same total, deterministic chain [`Bake::maybe_raid`] uses,
+    /// `f64::total_cmp` throughout. `None` means nothing is admissible
+    /// anywhere reachable.
+    ///
+    /// **Locality is part of the rule** (spec §4.3): "re-enters the raid rule"
+    /// inherits the raid rule's *neighbourhood* as well as its comparison, so
+    /// the settled premium decides between a vacant and a held cell **at the
+    /// same distance** — the only place it should decide — and a remnant never
+    /// crosses a continent for a marginally better cell. It is nonetheless a
+    /// *widening* search ([`Bake::nearest_ring`]): a people whose whole
+    /// neighbourhood is full or hostile still migrates as far as it must.
     ///
     /// There is no `if migrating else raiding` branch here: a strong remnant
     /// preys because held ground scores higher, a weak one pioneers because
-    /// held ground never enters its option set. The scan is wider than a
-    /// seated raider's (which sees only its own neighbours) for the reason
-    /// spec §4.3 gives — a seated people is comparing against what it already
-    /// holds and is going nowhere, while a homeless one is already on the move
-    /// and holds nothing.
+    /// held ground never enters its option set.
     fn best_home(
         &self,
         people: KindId,
@@ -553,56 +593,45 @@ impl<'a> Bake<'a> {
         // The durable inhibition is a property of the people, not of any one
         // candidate: a timid people simply never sees held ground as an option.
         let can_fight = can_fight && self.takes_the_initiative(people);
-        let mut best: Option<HomeOption> = None;
-        let mut visited: BTreeSet<CellId> = BTreeSet::new();
-        visited.insert(from);
-        let mut frontier: Vec<CellId> = vec![from];
-        while !frontier.is_empty() {
-            let mut next: Vec<CellId> = Vec::new();
-            for &c in &frontier {
-                for n in traversable_neighbors(self.cur(), c) {
-                    if !visited.insert(n) {
-                        continue;
-                    }
-                    next.push(n);
-                    if Self::factor(era, n) <= 0.0 {
-                        continue; // the ice has made it worthless to everyone
-                    }
-                    let value = self.eff_capacity(era, n);
-                    let (score, defender, holder) = match self.node_index.get(&n) {
-                        None => (value, 0.0, None),
-                        Some(&h) => {
-                            let hs = self.strength(h);
-                            if !can_fight || strength <= hs * RAID_MARGIN {
-                                continue; // not a fight this people can win, or survive winning
-                            }
-                            if !self.has_spoils(era, h) {
-                                continue; // a husk: nothing to take (spec §4.2a)
-                            }
-                            (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
+        self.nearest_ring(from, |ring| {
+            let mut best: Option<HomeOption> = None;
+            for &n in ring {
+                if Self::factor(era, n) <= 0.0 {
+                    continue; // the ice has made it worthless to everyone
+                }
+                let value = self.eff_capacity(era, n);
+                let (score, defender, holder) = match self.node_index.get(&n) {
+                    None => (value, 0.0, None),
+                    Some(&h) => {
+                        let hs = self.strength(h);
+                        if !can_fight || strength <= hs * RAID_MARGIN {
+                            continue; // not a fight this people can win, or survive winning
                         }
-                    };
-                    let better = match best {
-                        None => true,
-                        Some(b) => score
-                            .total_cmp(&b.score) // the MOST valuable home
-                            .then(b.defender.total_cmp(&defender)) // among equals, the WEAKEST held
-                            .then(b.cell.cmp(&n)) // then the lowest CellId
-                            .is_gt(),
-                    };
-                    if better {
-                        best = Some(HomeOption {
-                            cell: n,
-                            score,
-                            defender,
-                            holder,
-                        });
+                        if !self.has_spoils(era, h) {
+                            continue; // a husk: nothing to take (spec §4.2a)
+                        }
+                        (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
                     }
+                };
+                let better = match best {
+                    None => true,
+                    Some(b) => score
+                        .total_cmp(&b.score) // the MOST valuable home
+                        .then(b.defender.total_cmp(&defender)) // among equals, the WEAKEST held
+                        .then(b.cell.cmp(&n)) // then the lowest CellId
+                        .is_gt(),
+                };
+                if better {
+                    best = Some(HomeOption {
+                        cell: n,
+                        score,
+                        defender,
+                        holder,
+                    });
                 }
             }
-            frontier = next;
-        }
-        best
+            best
+        })
     }
 
     /// Relocate a homeless people (a remnant driven off its land by a raid) to
@@ -617,9 +646,9 @@ impl<'a> Bake<'a> {
     /// depth cap truncated the chain).
     ///
     /// The roll-downhill is spec §4.3's "re-enters the raid rule", taken
-    /// literally: [`Bake::best_home`] makes ONE comparison over every reachable
-    /// cell, and if the winner is held, its occupant is evicted and relocates
-    /// in turn. War is lossy on both sides of that eviction exactly as it is in
+    /// literally: [`Bake::best_home`] makes ONE comparison, over the nearest
+    /// ring that holds anything admissible at all, and if the winner is held,
+    /// its occupant is evicted and relocates in turn. War is lossy on both sides of that eviction exactly as it is in
     /// [`Bake::maybe_raid`], so a chain dissipates fast: each hop costs the
     /// roller `WAR_LOSS` and the victim `WAR_LOSS` plus the journey, and each
     /// victim is by construction at least `RAID_MARGIN` times weaker than the
@@ -1611,8 +1640,15 @@ mod tests {
         // rival's holding comes already made to work. With the premium at 0
         // the roller takes the equally-rich EMPTY cell (no defender) and the
         // branching ratio collapses again.
+        //
+        // Cells 18 and 20 are BOTH direct neighbours of cell 0 — the same ring.
+        // That is deliberate and is the whole point of spec §4.3's locality
+        // clause: the premium decides between a vacant and a held cell *at the
+        // same distance*, which is the only place it should decide. Put the
+        // empty rich cell further out and distance, not the premium, would be
+        // doing the work.
         let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| {
-            if c == CellId(20) || c == CellId(30) {
+            if c == CellId(20) || c == CellId(18) {
                 RICH
             } else {
                 POOR
@@ -1669,6 +1705,126 @@ mod tests {
         assert_eq!(
             bake.records[bake.communities[seated].record].people,
             KindId("kobold")
+        );
+    }
+
+    #[test]
+    fn a_roller_takes_a_near_home_over_a_richer_distant_one() {
+        // Spec §4.3's locality clause. The scan stops at the FIRST ring that
+        // offers anything admissible, so a remnant never crosses a landmass
+        // for a better cell: ten times the capacity, three hops away, loses to
+        // marginal land next door. Against an unrestricted scan over the whole
+        // connected component this test fails — the roller seats itself on
+        // CellId(30) instead, and the occupied set of a real world drifts
+        // toward the globe's high-capacity cells.
+        let (geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(30) { RICH } else { POOR });
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            50.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            0,
+        );
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 0 },
+            "vacant land was available next door — no conflict was needed"
+        );
+        let seat = bake
+            .communities
+            .iter()
+            .find(|c| c.alive)
+            .expect("the roller must have settled somewhere")
+            .site;
+        assert!(
+            geo.neighbors(CellId(0)).contains(&seat),
+            "the roller must settle in the nearest ring, not cross the world for CellId(30): sat on {seat:?}"
+        );
+        // Within that ring every cell is equally poor and equally undefended,
+        // so the CellId tie-break decides — a total, deterministic order.
+        assert_eq!(seat, CellId(12), "the ring's tie-break must be total");
+    }
+
+    #[test]
+    fn a_roller_widens_its_search_past_an_unusable_neighbourhood() {
+        // The other half of spec §4.3's locality clause, and what separates it
+        // from a naive one-ring scan: the search WIDENS. With the first two
+        // rings turned uninhabitable there is nothing admissible near at all,
+        // so the roller keeps walking outward and settles in the third ring —
+        // a people whose whole neighbourhood is unusable still migrates as far
+        // as it must. (Capacity is uniform, so nothing but distance orders the
+        // options; an unrestricted scan takes the globally lowest `CellId`,
+        // which sits a ring further out again.)
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| POOR);
+        let blocked: BTreeSet<CellId> = geo
+            .cells()
+            .filter(|&c| matches!(geo.hops_between(CellId(0), c, 16), Some(1 | 2)))
+            .collect();
+        let era = EraClimate {
+            habitable: CellMap::from_fn(&geo, |c| !blocked.contains(&c)),
+            ..era
+        };
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            50.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            0,
+        );
+        assert_eq!(outcome, Relocation::Settled { cascade: 0 });
+        let seat = bake
+            .communities
+            .iter()
+            .find(|c| c.alive)
+            .expect("the roller must have settled somewhere")
+            .site;
+        assert_eq!(
+            geo.hops_between(CellId(0), seat, 16),
+            Some(3),
+            "the roller must widen its search to the nearest usable ring, and stop there: sat on {seat:?}"
         );
     }
 
