@@ -88,6 +88,15 @@ const VIABLE_MIN: f64 = 2.0;
 /// A named starting value, not a fitted one. A save-format constant: changing
 /// it re-fights every world's history.
 const SETTLED_PREMIUM: f64 = 0.25;
+/// Pressure at or above which a community has NO SPOILS: it already eats
+/// everything its own land yields, so there is no surplus for a conqueror to
+/// take and nothing to contend over (spec §4.2a's momentary inhibition). One
+/// is the natural threshold and not a fitted one — it is exactly where the
+/// logistic growth term `1 + GROWTH_RATE × (1 - pressure)` stops being
+/// positive, i.e. where the file's own model says the land no longer feeds
+/// the people on it. Well below `COLLAPSE_PRESSURE`: a community can be
+/// worthless to a raider long before it starves out altogether.
+const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// Pressure at or above which a community starves out (Famine). `pub` so
 /// the demography calibration (`windows/lab`) can express the aggregate
 /// population-conservation ceiling: no live community exceeds this pressure,
@@ -530,6 +539,9 @@ impl<'a> Bake<'a> {
                             if !can_fight || strength <= hs * RAID_MARGIN {
                                 continue; // not a fight this people can win, or survive winning
                             }
+                            if !self.has_spoils(era, h) {
+                                continue; // a husk: nothing to take (spec §4.2a)
+                            }
                             (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
                         }
                     };
@@ -685,6 +697,25 @@ impl<'a> Bake<'a> {
         Relocation::Settled {
             cascade: 1 + victim_cascade,
         }
+    }
+
+    /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
+    /// inhibition, the momentary one. A community whose pressure has reached
+    /// `NO_SPOILS_PRESSURE` is already consuming its cell's whole effective
+    /// yield: there is no surplus to seize, so it is not a candidate however
+    /// weak it is and however rich its ground. A cell the era has made
+    /// worthless (`eff_capacity == 0.0`) has no spoils either, by the same
+    /// reading.
+    ///
+    /// A veto, not a preference: it is a conjunct in both candidate loops (the
+    /// seated raider's in [`Bake::maybe_raid`] and the roller's in
+    /// [`Bake::best_home`]), so inhibitions compose without interacting. On the
+    /// roller's side it is also what blocks the pathological regress of
+    /// remnants preying on remnants all the way down.
+    fn has_spoils(&self, era: &EraClimate, idx: usize) -> bool {
+        let c = &self.communities[idx];
+        let eff = self.eff_capacity(era, c.site);
+        eff > 0.0 && c.population * NEED / eff < NO_SPOILS_PRESSURE
     }
 
     /// A community's raiding strength: its population scaled by its tech
@@ -849,7 +880,11 @@ impl<'a> Bake<'a> {
     /// Opportunistic predation (The Tumult): a community raids the reachable
     /// occupied neighbour whose land is worth MORE than its own **this era**
     /// (covetousness) and whose strength it can beat by `RAID_MARGIN`
-    /// (dominance) — decoupled from its own crowding.
+    /// (dominance) — decoupled from its own crowding. Predation is
+    /// `motive × capability × inhibition` (spec §4.2a): the inhibitions are
+    /// conjoined vetoes in this candidate loop, so they compose without
+    /// interacting, and each can only ever *reduce* conflict. See
+    /// [`Bake::has_spoils`].
     ///
     /// Value is [`Bake::eff_capacity`], never raw capacity: what a cell is
     /// worth to a conqueror is what it will actually yield under this era's
@@ -907,6 +942,9 @@ impl<'a> Bake<'a> {
             }
             if raider_str <= t_str * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
+            }
+            if !self.has_spoils(era, t) {
+                continue; // inhibition: a starving neighbour is a husk (spec §4.2a)
             }
             let better = match best {
                 None => true,
@@ -1341,10 +1379,9 @@ mod tests {
 
     /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
     /// with a full-land graph and every cell habitable in the single era.
-    /// `capacity` is `POOR` everywhere except the cells listed in `rich`, which
-    /// get `RICH` — the value gradient the roll-downhill tests need.
+    /// `capacity_of` paints the value gradient the conflict tests need.
     fn cascade_world(
-        rich: &[CellId],
+        capacity_of: impl Fn(CellId) -> f64,
     ) -> (
         Geosphere,
         Vec<ConnectionGraph>,
@@ -1356,7 +1393,7 @@ mod tests {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
         let graphs = vec![full_land_graph(&geo)];
-        let capacity = CellMap::from_fn(&geo, |c| if rich.contains(&c) { RICH } else { POOR });
+        let capacity = CellMap::from_fn(&geo, capacity_of);
         let river_prox = CellMap::from_fn(&geo, |_| 0.0);
         let refugia = CellMap::from_fn(&geo, |_| false);
         let era = EraClimate {
@@ -1407,7 +1444,8 @@ mod tests {
         // pioneering — and the holder it evicts rolls onward. Under the
         // vacant-first rule this returns `cascade: 0` and no cascade is ever
         // recorded.
-        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let (_geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
 
         // A weak community sits on the one rich cell; a strong people is
@@ -1494,8 +1532,13 @@ mod tests {
         // rival's holding comes already made to work. With the premium at 0
         // the roller takes the equally-rich EMPTY cell (no defender) and the
         // branching ratio collapses again.
-        let (_geo, graphs, capacity, river_prox, refugia, era) =
-            cascade_world(&[CellId(20), CellId(30)]);
+        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| {
+            if c == CellId(20) || c == CellId(30) {
+                RICH
+            } else {
+                POOR
+            }
+        });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
 
         // Cell 20 is rich AND held by a beatable community; cell 30 is rich
@@ -1556,7 +1599,8 @@ mod tests {
         // raiding` branch. A remnant too weak to clear the dominance margin
         // never sees the held cell in its option set at all, so it pioneers —
         // the same one rule, a different outcome.
-        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let (_geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
 
         let holder = bake.open(
@@ -1618,7 +1662,8 @@ mod tests {
         // truncated — and that lost victim MUST be counted (a Task-1 review
         // defect: the recursion dropped it silently while the top-level call
         // mapped `Lost` to `collapsed`, so communities vanished uncounted).
-        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let (_geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
 
         let holder = bake.open(
@@ -1698,6 +1743,119 @@ mod tests {
                 .iter()
                 .any(|c| c.alive && c.lineage == holder_lineage),
             "the truncated victim must be gone from the world"
+        );
+    }
+
+    #[test]
+    fn a_starving_target_is_not_worth_raiding() {
+        // Inhibition 1 of spec §4.2a (momentary): a community already eating
+        // everything its own land yields has no surplus to contend over, so it
+        // is not a raid candidate however weak and however rich its ground.
+        // Both arms are identical but for the target's population — the veto
+        // is the ONLY thing that differs, and the fed arm proves the fixture
+        // really does reach a raid.
+        let probe = Geosphere::new(1);
+        let target_cell = probe.neighbors(CellId(0))[0];
+        let raid_with_target_pop = |target_pop: f64| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+            // The raider: strong, on land worth less than its neighbour's.
+            let raider = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                200.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            bake.open(
+                KindId("goblin"),
+                target_cell,
+                0.0,
+                target_pop,
+                Founding::Genesis(target_cell),
+                None,
+                0.0,
+            );
+            bake.maybe_raid(raider, &era, 0.0);
+            bake.tally.raided
+        };
+
+        // Fed (pressure 0.45): covetousness and dominance both hold, and the
+        // raid fires — so nothing but the veto can explain the other arm.
+        assert_eq!(
+            raid_with_target_pop(50.0),
+            1,
+            "a target with a surplus must be raided"
+        );
+        // Starving (pressure 1.0, on capacity 110): same covetousness, same
+        // dominance, nothing to take.
+        assert_eq!(
+            raid_with_target_pop(110.0),
+            0,
+            "a target already eating its whole yield has no spoils to take"
+        );
+    }
+
+    #[test]
+    fn a_roller_will_not_displace_a_starving_holder() {
+        // The same veto, on the roll-downhill's side of the one rule — this is
+        // the arm that blocks spec §4.2a's "pathological regress of remnants
+        // preying on remnants all the way down".
+        let roll_against_holder_pop = |holder_pop: f64| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+            bake.open(
+                KindId("goblin"),
+                CellId(20),
+                0.0,
+                holder_pop,
+                Founding::Genesis(CellId(20)),
+                None,
+                0.0,
+            );
+            let roller = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                200.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let (r_id, r_lineage) = (
+                bake.communities[roller].id,
+                bake.communities[roller].lineage,
+            );
+            bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+            bake.relocate(
+                KindId("kobold"),
+                200.0,
+                r_lineage,
+                r_id,
+                0.0,
+                CellId(0),
+                &era,
+                0.0,
+                0,
+            )
+        };
+
+        // Fed holder (pressure 0.4 on RICH land): the roller takes it.
+        assert_eq!(
+            roll_against_holder_pop(40.0),
+            Relocation::Settled { cascade: 1 },
+            "a holder with a surplus is worth displacing"
+        );
+        // Starving holder (pressure 1.0 on the same RICH land): the roller
+        // pioneers the marginal empties instead of taking a husk.
+        assert_eq!(
+            roll_against_holder_pop(RICH),
+            Relocation::Settled { cascade: 0 },
+            "a starving holder has nothing worth rolling over"
         );
     }
 
