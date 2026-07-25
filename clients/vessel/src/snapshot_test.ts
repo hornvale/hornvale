@@ -7,7 +7,7 @@ const FIXTURE = JSON.stringify({
   schema: "vessel/session/v1",
   turn: 0,
   day: 0.5,
-  self: { agent: 1, species: "bugbear", settlement: "X", population: 118, room: 7 },
+  self: { agent: "1", species: "bugbear", settlement: "X", population: 118, room: 7 },
   sensed: {
     room: {
       schema: "locale/room/v2",

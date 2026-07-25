@@ -264,11 +264,6 @@ impl<'w> Session<'w> {
         &self.ctx
     }
 
-    /// The frozen day this possession observes.
-    pub fn day(&self) -> WorldTime {
-        self.day
-    }
-
     /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
     /// channel (The Snapshot spec §3). Never commits, never advances the
     /// turn counter, and costs nothing on turns where no caller asks: the
@@ -335,6 +330,10 @@ impl<'w> Session<'w> {
                     .agent
                     .position
                     .pack()
+                    // `RoomAddrError` implements `Debug` but not `Display`, so
+                    // `{e:?}` is the only rendering available here — the same
+                    // choice `windows/locale`'s `LocaleError::Unaddressable`
+                    // makes for the identical error type.
                     .map_err(|e| VesselError::Build(format!("{e:?}")))?
                     .0,
             },
@@ -533,9 +532,11 @@ impl<'w> Session<'w> {
             "release" | "quit" => Turn::Released("You let go.".to_string()),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
-        self.last_text = match &turn {
-            Turn::Out(s) | Turn::Released(s) => s.clone(),
-        };
+        if !verb.is_empty() {
+            self.last_text = match &turn {
+                Turn::Out(s) | Turn::Released(s) => s.clone(),
+            };
+        }
         turn
     }
 
@@ -1161,6 +1162,39 @@ mod tests {
         assert_eq!(session.snapshot().unwrap().turn, 1);
         session.handle("whoami");
         assert_eq!(session.snapshot().unwrap().turn, 2);
+    }
+
+    #[test]
+    fn an_unprovoked_npcs_grievance_is_not_negative_zero() {
+        // Names the invariant `grievance`'s own fold comment explains: a
+        // revert to `.sum::<f64>()` (which folds from `-0.0`) would only show
+        // up as a large fixture diff without this assertion (The Snapshot
+        // chronicle).
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        for npc in &session.npcs {
+            let g = grievance(&session.ledger, npc.entity);
+            assert_eq!(g, 0.0);
+            assert!(
+                !g.is_sign_negative(),
+                "an unprovoked NPC's grievance must be plain 0.0, not -0.0"
+            );
+        }
+    }
+
+    #[test]
+    fn a_blank_line_clobbers_neither_turn_nor_narration() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.handle("whoami");
+        let before = session.snapshot().unwrap();
+        session.handle("");
+        let after = session.snapshot().unwrap();
+        assert_eq!(before.turn, after.turn, "a blank line commits no turn");
+        assert_eq!(
+            before.narration.prose, after.narration.prose,
+            "a blank line must not clobber the last verb's own narration"
+        );
     }
 
     #[test]

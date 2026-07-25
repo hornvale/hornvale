@@ -97,7 +97,7 @@ with the original wording still visible, because a campaign that corrected its
 own design is a more useful record than one that appears to have been right
 from the start.
 
-The first two were the same error twice: the design described data that did not
+The first was a case of the design describing data that did not
 exist. It gave the snapshot a top-level `felt` channel on the assumption that
 the possessed agent has an affect to read — and it does not. The player has no
 drive layer and no affect layer at all. What the design mistook for the

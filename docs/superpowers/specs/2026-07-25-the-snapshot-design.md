@@ -57,7 +57,7 @@ per-decision notes):
 ```
 {
   "schema": "vessel/session/v1",
-  "turn":   3,                     // commits since possession began
+  "turn":   3,                     // advances per non-empty verb line, not per commit
   "day":    0.5,                   // WorldTime, quantized at emit
 
   "self":   { "agent": 7225590595188407000,
@@ -180,9 +180,13 @@ governs rather than reimplemented in a function that could forget one.
 
 - `pub struct SessionSnapshot` and its channel structs, each field documented
   (`#![warn(missing_docs)]` is workspace-wide).
-- `pub fn snapshot(session: &Session) -> Result<SessionSnapshot, VesselError>`
-  — a pure read over accessors that already exist. **No new seed draws, so
-  the stream manifest is unchanged.**
+- ~~`pub fn snapshot(session: &Session) -> Result<SessionSnapshot, VesselError>`~~
+  **Amended (final review fix wave, 2026-07-25):** shipped as a method,
+  `Session::snapshot(&self) -> Result<SessionSnapshot, VesselError>`, in
+  `session.rs`, not a free function in the `snapshot` module — that module
+  holds only the channel types and `snapshot_json`. Still a pure read over
+  accessors that already exist. **No new seed draws, so the stream manifest
+  is unchanged.**
 - `pub fn snapshot_json(snap: &SessionSnapshot) -> String` — ~~hand-rolled
   serialization in the house style~~, with every float through
   `hornvale_kernel::quantize` at the emit boundary and nowhere else.
@@ -192,10 +196,19 @@ governs rather than reimplemented in a function that could forget one.
   one-line `serde_json::to_string`. The quantize-at-emit-only requirement is
   unchanged and is what the attributes discharge.
 
-`Session::handle` is untouched. The snapshot is taken *after* a turn commits,
-by the caller, so the turn path costs nothing when nobody asks for one — the
-measured 0.46 ms `look` and 1.15 ms movement figures must not regress for the
-CLI, which never asks.
+~~`Session::handle` is untouched.~~ **Amended (final review fix wave,
+2026-07-25):** it is touched — `handle` gains a `turn` counter increment and
+a `last_text` assignment (guarded to non-empty verb lines only, so a blank
+line clobbers neither the counter nor the last narration). The snapshot
+*read* is still taken *after* a turn commits, by the caller, so ~~the turn
+path costs nothing when nobody asks for one~~ **Amended:** the turn path
+costs one `u64` increment and one short `String` clone per turn, whether or
+not any caller ever asks for a snapshot. That cost is small against the
+measured 0.46 ms `look` and 1.15 ms movement figures, so the conclusion (no
+CLI regression) survives — but "costs nothing" overstated it. **§7's
+`scripts/timed.sh` turn-cost ledger step was not performed**; the cost above
+was accepted analytically (the increment/clone argument, weighed against the
+measured per-turn figures) rather than measured directly.
 
 ## 5. The wasm ABI
 

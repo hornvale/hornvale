@@ -111,6 +111,23 @@ fn the_fixture_is_taken_at_the_transcript_s_own_day() {
 }
 
 #[test]
+fn the_embedded_room_carries_its_own_pinned_schema_tag() {
+    // `sensed.room` embeds `locale/room/v2` verbatim (spec §3: one schema,
+    // one owner). Nothing else in this test file asserts the tag, so a
+    // future room epoch would otherwise surface only as an 18 KB fixture
+    // diff in `v1_bytes_are_pinned` above — assert it by name instead.
+    let world = world();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
+    let snap = session.snapshot().unwrap();
+    assert_eq!(
+        snap.sensed.room.schema,
+        hornvale_locale::ROOM_SCHEMA,
+        "the embedded room's schema tag moved — a room epoch should fail by \
+         name here, not as an opaque fixture diff"
+    );
+}
+
+#[test]
 fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
     // Some worlds generate no settlement at all, so there is no flagship to
     // mint and no snapshot to take; the refusal must be the sim's own

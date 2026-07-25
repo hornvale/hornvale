@@ -21,7 +21,9 @@ export interface Snapshot {
   turn: number;
   day: number;
   self: {
-    agent: number;
+    // A decimal string, not a number: the sim emits a uniform 64-bit draw
+    // that JS's IEEE-754 `number` cannot hold losslessly above 2^53.
+    agent: string;
     species: string;
     settlement: string;
     population: number;
@@ -62,7 +64,11 @@ export function narrationOf(snap: Snapshot): string {
  * snapshot carries no `ways` field on purpose: `locale/room/v2` already
  * owns exits, and two representations of one truth would drift. */
 export function waysOf(snap: Snapshot): { dir: string; room: number }[] {
-  return snap.sensed.room.exits
+  // `?? []` tolerates a restructured room (a future `locale/room/v2` epoch
+  // that renames or drops `exits`) rather than throwing on
+  // `undefined.filter` — the client degrades to no ways on instead of
+  // crashing the pane.
+  return (snap.sensed.room?.exits ?? [])
     .filter((e) => e.kind === "Edge" && typeof e.direction === "object")
     .map((e) => ({
       dir: (e.direction as { Compass: string }).Compass,

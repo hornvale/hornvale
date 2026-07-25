@@ -9,11 +9,24 @@
 //! `vessel/session/v2`, and nothing is ever renamed.
 
 use hornvale_locale::Locale;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 
 /// The schema tag every snapshot carries.
 /// type-audit: bare-ok(identifier-text)
 pub const SESSION_SCHEMA: &str = "vessel/session/v1";
+
+/// Serialize a `u64` as its decimal text rather than a JSON number. JSON has
+/// no int64 type, and JavaScript's `number` is an IEEE-754 double: lossy
+/// above 2^53. A uniform 64-bit draw like `AgentId` routinely exceeds that
+/// (seed 42's `7225590595188407000` round-trips through `JSON.parse` as
+/// `7225590595188407296`, and two ids within 2048 of each other collapse to
+/// the same JS number). Emitting the exact decimal digits as a string side-
+/// steps the lossy conversion; the Rust field stays `u64` in memory and this
+/// only governs the emit boundary. Private: not a `pub` API boundary, so it
+/// carries no `type-audit:` tag of its own.
+fn u64_as_decimal_string<S: Serializer>(x: &u64, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&x.to_string())
+}
 
 /// One committed turn, as the client sees it.
 /// type-audit: bare-ok(identifier-text: schema), bare-ok(count: turn), waiver(decision-0014: day)
@@ -21,7 +34,10 @@ pub const SESSION_SCHEMA: &str = "vessel/session/v1";
 pub struct SessionSnapshot {
     /// Schema tag (`vessel/session/v1`).
     pub schema: String,
-    /// Commits since the possession began; 0 is the opening.
+    /// Advances by one for every non-empty verb line since the possession
+    /// began; 0 is the opening. Not a commit count — it also advances for
+    /// verbs that commit nothing (`look`, `whoami`, `help`, an unknown
+    /// verb).
     pub turn: u64,
     /// The frozen day this turn observes, in absolute standard days.
     #[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]
@@ -33,7 +49,9 @@ pub struct SessionSnapshot {
     pub sensed: SensedChannel,
     /// What the agent has come to know, accumulated across the walk.
     pub known: KnownChannel,
-    /// Committed, placeless, per-creature standing toward the player.
+    /// Committed, placeless, per-creature standing toward the player. **Not
+    /// knowledge-gated**: this folds over every NPC the session derived, not
+    /// only those the agent has encountered (see `SocialEntry`'s doc).
     pub social: Vec<SocialEntry>,
     /// The sim's own rendering. Carried verbatim: prose is the
     /// constitutional primary and the client never re-derives it.
@@ -44,7 +62,12 @@ pub struct SessionSnapshot {
 /// type-audit: bare-ok(index: agent), bare-ok(index: room), bare-ok(count: population), bare-ok(identifier-text: species), bare-ok(identifier-text: settlement)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SelfChannel {
-    /// The agent's deterministic minted id.
+    /// The agent's deterministic minted id. Serializes as a decimal
+    /// **string**, not a JSON number: JSON has no int64 type, and this is a
+    /// uniform 64-bit draw (`AgentId`) that routinely exceeds the 2^53 a JS
+    /// `number` can hold losslessly (see `u64_as_decimal_string`). The Rust
+    /// type stays `u64`; only the emitted JSON shape differs.
+    #[serde(serialize_with = "u64_as_decimal_string")]
     pub agent: u64,
     /// The species whose perception this agent carries.
     pub species: String,
@@ -103,6 +126,19 @@ pub struct KnownEntry {
 /// A creature's committed standing toward the player. Placeless and
 /// entity-keyed, so it survives leaving the room — the reason this is its
 /// own channel rather than part of `sensed`.
+///
+/// **Membership is world truth, not knowledge-gated.** `social` folds over
+/// every NPC the session derived, whether or not the agent has ever
+/// encountered them — for seed 42 that is every derived NPC (7 entries) while
+/// `sensed.present` (who is actually co-located right now) has 1. A
+/// world-truth pane is a cheat pane: the redaction boundary this schema makes
+/// structural is real for `sensed` vs. `known` vs. `social` as *channels*,
+/// but nothing here narrows `social`'s membership to what the agent actually
+/// knows. The first pane that renders `social` must filter it against
+/// `known` (or an equivalent knowledge gate) itself; narrowing membership
+/// later changes no field's shape, so it is not an epoch event, but until
+/// some caller does the filtering, rendering this channel unfiltered ships a
+/// cheat pane.
 /// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label), bare-ok(ratio: grievance), bare-ok(flag: hostile)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SocialEntry {
