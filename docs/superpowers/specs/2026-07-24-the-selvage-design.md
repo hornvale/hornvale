@@ -1,8 +1,8 @@
 # The Selvage — Design
 
-**Ticket:** hornvale/orrery — idea-registry row (MAP-nn) added at close, following MAP-65..68 and MAP-70's convention; the ID is computed against the registry at close, not reserved now.
+**Ticket:** hornvale/orrery MAP-71 (idea-registry row added at close, following MAP-65..68 and MAP-70's convention)
 **Date:** 2026-07-24
-**Status:** Draft — awaiting G3 review
+**Status:** Shipped 2026-07-24 (campaign *The Selvage*, registry MAP-71)
 **Parent contracts:** hornvale-repo idea-registry rows MAP-67 (The Diorama — the `MapStyle` switch, the fixed-isometric camera, `buildVoxelHeightfieldGeometry`) and MAP-70 (The Excursion — the same-face neighbour ring, the stable-origin coordinate frame, the pan clamp and recenter hysteresis this campaign must keep intact). Both in `book/src/frontier/idea-registry.md` in the `hornvale` repo, not the orrery one. Also `windows/scene/src/region.rs` (`RegionAddr::node_units`, `param`) for the tile-node parameterisation this campaign's central argument rests on.
 **Upstream work required: none.** Orrery-only. No wasm change, no producer change, no save-format surface. `world-wasm` stays at v12.
 
@@ -176,6 +176,19 @@ geometry.
 
 **The ring's outer boundary.** Nothing is behind the plinth, so it becomes the
 slab's side — which is the desired outcome, not a tolerated one.
+
+**Correction, added at close.** The clause *"the camera is fixed"* is false as
+implemented, and the final whole-branch review caught it. `MapControls` keeps
+position and aim in step by measuring their separation, moving the aim, then
+restoring the separation — but `clampPan` moves the aim directly and leaves
+the position alone, so every frame a drag presses against the pan limit, the
+separation grows and the isometric angle shears, without bound. The argument
+above therefore does not stand on its own premise. The plinth is nonetheless
+safe, and only because of the belt-and-braces choice recorded in the next
+paragraph: all four edges are emitted, not the two a fixed camera can see. If
+that is ever economised down to two, the camera anchoring must be fixed
+first. The shear itself is pre-existing (The Excursion) and is carried as a
+follow-up, reframed there as one defect with three symptoms.
 
 **On "unconditional".** Only a tile's `+x` and `+z` edge plinths are ever
 visible; the `−x` and `−z` ones face away and are culled every frame. Emitting

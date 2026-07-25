@@ -212,6 +212,28 @@ carries three failure modes on one axis — the data can go undrawn (The Lens),
 ungrounded (The Reckoning), or drawn-but-illegible (The Gyre) — none a seam
 failure, all invisible to everything but a human looking at the picture.
 
+[The Selvage](./chronicle/the-selvage.md) added a fourth, and it is the one
+that reaches furthest back toward the producer. A map tile's samples crossed
+the seam correctly, were parsed correctly, and were drawn correctly — and the
+client still assembled two adjacent tiles at the wrong edges, because the
+*geometric convention* that makes them assemblable appears nowhere in the
+document they arrive in. The producer walks a parameter across a tile to lay
+out its rows, and that same parameter counts the tiles; so a tile's row axis
+and the tile grid's own axis must run the same way, and a tile's last row of
+samples is bit-identically its neighbour's first. Every word of that is true
+of the contract and none of it is *in* the contract: the client had to
+re-derive it from the producer's source, got the sign backwards on one axis,
+and produced a discontinuity that could not exist on the real planet. So the
+data can also go **drawn-but-mis-assembled** — each document faithful, the
+composition of two documents wrong. The bet is unharmed (nothing crossed the
+seam incorrectly) but its scope is now clearer: a versioned scene document
+carries values and says nothing about the geometry that relates one document
+to the next, and a consumer holding several at once is re-deriving that
+relationship whether or not anyone wrote it down. The check this suggests is
+cheap and not yet practiced — a contract that ships more than one tile should
+state its own adjacency convention, rather than leaving each consumer to
+reconstruct it from the generator.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

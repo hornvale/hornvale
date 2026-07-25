@@ -244,6 +244,7 @@
 - [The Bearing](./chronicle/the-bearing.md)
 - [The Phantom](./chronicle/the-phantom.md)
 - [The Excursion](./chronicle/the-excursion.md)
+- [The Selvage](./chronicle/the-selvage.md)
 
 # Appendix: The Frontier
 

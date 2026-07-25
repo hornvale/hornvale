@@ -8,6 +8,8 @@
 
 **Tech Stack:** TypeScript, three.js `^0.166`, Vite, Vitest, Playwright. No new dependencies.
 
+**Status:** Complete — shipped 2026-07-24 (campaign *The Selvage*, registry MAP-71).
+
 **Spec:** `docs/superpowers/specs/2026-07-24-the-selvage-design.md` (in the `hornvale` repo; this plan's code lives in the `orrery` repo).
 
 ## Global Constraints
