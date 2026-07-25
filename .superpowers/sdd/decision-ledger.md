@@ -209,3 +209,38 @@ planned passed *before* the wiring existed (an empty field for want of an
 empty memory) — it now asserts the dread is non-empty first. · *capture:*
 retrospective — a "felt" test must not write the extinction into its own
 fixture, and liveness fixtures carry a day/night trap.
+
+#12 [G5] — **Correction to #10: the cost falsification was overstated.** T4
+re-measured and the picture changed. On the REAL worlds the campaign is a
+strict no-op: `health_report` is **bit-identical** pre/post on seeds 0, 1, 2,
+7, 42 — every field to the last printed digit, including the whole `by_cause`
+map — because those worlds are emitter-free and the fold's fast path returns
+before any dread is recorded. The probe timings that looked like a 1.5×
+regression (352.9 s pre → 527.9 s post) did not reproduce: a confirming re-run
+on the post tree read **330.7 s**, faster than pre. This box runs parallel
+campaign sessions, so wall-clock under load is not a reliable signal at this
+resolution. · *Standing:* #10's *measurement* is retracted as noise-dominated;
+what survives is the *structural* claim that emitter-bearing scenarios simulate
+more steps because creatures now flee what they remember, which is the
+behaviour the campaign exists to add. The spec's "no measurable change"
+hypothesis is upheld for every real world and unmeasured for the synthetic
+harness. Re-score the Cost section accordingly at close — do not carry #10's
+1.43× figure into the chronicle.
+
+#13 [G5] — **Inherited red commit gate — NOT this campaign's, and it blocks
+close.** 32 failures, all one error: `rows.csv header does not match study
+'the-census' schema` (missing `vestige-density`, `forgotten-fraction`,
+`dominant-hazard`, `mean-warning-legibility`). Attributed to **The Vestige**
+(`1a7d4378`, which registered those four census metrics); the fixture was last
+re-pinned at `a634848f` (The Lode). Verified three ways: the implementer
+reproduced the identical 32 at HEAD with its working tree stashed; `origin/main`
+has not moved since the branch point (0 commits); and the controller reproduced
+the failures in the main checkout with no campaign code present at all. The
+Shudder's diff touches `windows/vessel/src/liveness.rs` and the regenerated
+type-audit report — neither can reach a census schema. · *Decision:* the fix is
+`HV_CENSUS=1 bash scripts/regenerate-artifacts.sh`, which is a **carve-out
+requiring Nathan's explicit authorization** — escalated at G6, not taken
+unilaterally. The resulting value drift belongs to The Vestige's chronicle, not
+The Shudder's. This is the recurrence the memory `all-metrics-census-owes-a-
+regen-per-added-metric` predicts: nothing in the gate re-runs the census, so
+the debt accrues silently until the next campaign trips over it.
