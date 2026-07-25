@@ -68,7 +68,12 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         );
     }
 
-    // Place every non-seam cell. row = -w; col = 2v + (up ? 0 : 1).
+    // Place every non-seam cell. row = -w; col = 2v + (up ? 0 : 1) + w. The
+    // `+ w` term cancels the lattice's row offset: an up-triangle's
+    // horizontal-edge neighbour below it (row + 1, col + 1 in the un-sheared
+    // formula) would otherwise land down-and-to-the-right instead of
+    // directly below, drawing a breadth-first ball as a right-leaning
+    // parallelogram rather than the symmetric hexagon it actually is.
     let mut placed: BTreeMap<(i64, i64), char> = BTreeMap::new();
     let mut seams = 0usize;
     for c in &scene.cells {
@@ -77,7 +82,7 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
             continue;
         };
         let row = -w;
-        let col = 2 * v + i64::from(!up);
+        let col = 2 * v + i64::from(!up) + w;
         let g = terrain_glyph(scene, c);
         let g = if c.state == "remembered" { faded(g) } else { g };
         placed.insert((row, col), g);
