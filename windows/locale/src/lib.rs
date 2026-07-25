@@ -177,6 +177,20 @@ impl LocaleContext {
         self.globe_level
     }
 
+    /// The cached terrain provider — the reuse seam so a caller (e.g. the
+    /// vessel window's `observable`) can pass it into `sky_report_from`
+    /// instead of re-deriving it (The Retainer).
+    pub fn terrain(&self) -> &GeneratedTerrain {
+        &self.terrain
+    }
+
+    /// The cached climate provider — the reuse seam so a caller (e.g. the
+    /// vessel window's `observable`) can pass it into `sky_report_from`
+    /// instead of re-deriving it (The Retainer).
+    pub fn climate(&self) -> &GeneratedClimate {
+        &self.climate
+    }
+
     /// The world's placed exotic sites, for findability (derived, not stored).
     pub fn strange_sites(&self) -> Vec<StrangeSite> {
         self.budget.sites()

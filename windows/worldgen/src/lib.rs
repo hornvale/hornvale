@@ -5294,9 +5294,20 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
+    sky_report_from(world, time, &terrain, &climate)
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<SkyReport, BuildError> {
+    let mut report = sky_of(world)?.sky_at(time);
     let cell = hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
