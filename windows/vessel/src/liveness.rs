@@ -6644,6 +6644,207 @@ mod tests {
         );
     }
 
+    #[test]
+    fn the_shudder_is_felt_on_the_phantom_then_discharged_then_disproven() {
+        // THE SHUDDER, end-to-end: the full arc The Phantom could only plan, in
+        // the SAME world it could only route around.
+        //   (1) FELT       — standing on X, where herd-mate B once panicked
+        //                    beside it, the creature reads Danger though X's own
+        //                    terrain is safe and B is long gone. Fear of nothing
+        //                    present.
+        //   (2) DISCHARGED — it is not stuck: its affect is not a distress label,
+        //                    and the drive offers a step OFF X, not a Hold.
+        //   (3) DISPROVEN  — having stood there and come to no harm, the cell
+        //                    leaves both the shunned set and the dread map: the
+        //                    fear the avoidance had been protecting is undone by
+        //                    the one experience that can undo it.
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(AGENT_AT, false, "pos").unwrap();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        reg.register_predicate(RESTED, false, "rested").unwrap();
+        reg.register_predicate(EATEN, false, "eaten").unwrap();
+
+        // GEOMETRY — copied verbatim from
+        // `the_phantom_detours_around_a_passed_alarm_then_relearns_the_ground_safe`
+        // above: the straight S→W path, X an interior cell, D its off-path
+        // neighbour, E the hazard beside D (so X itself is terrain-SAFE and the
+        // only thing that ever frightened anyone there was B's passing panic).
+        let start = raddr(1.0);
+        let c1 = start.neighbors()[0].clone();
+        let c2 = c1
+            .neighbors()
+            .iter()
+            .find(|n| **n != start)
+            .unwrap()
+            .clone();
+        let c3 = c2
+            .neighbors()
+            .iter()
+            .find(|n| **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let water = c3
+            .neighbors()
+            .iter()
+            .find(|n| **n != c2 && **n != c1 && **n != start)
+            .unwrap()
+            .clone();
+        let empty = std::collections::BTreeSet::new();
+        let straight = plan_to_room(&start, &water, PLAN_BUDGET, &empty).expect("reachable");
+        assert!(straight.len() >= 4, "need a path with an interior cell");
+        let path_cells: Vec<RoomAddr> = straight
+            .iter()
+            .map(|a| match a {
+                Action::MoveTo(r) => r.clone(),
+                _ => unreachable!("plan_to_room emits only MoveTo"),
+            })
+            .collect();
+        let x = path_cells[1].clone(); // interior, distance 2 from start
+        let p0 = path_cells[0].clone();
+        let p2 = path_cells[2].clone();
+        let d_cell = x
+            .neighbors()
+            .iter()
+            .find(|n| **n != p0 && **n != p2)
+            .expect("X has a third, off-path neighbour")
+            .clone();
+        let hazard_e = d_cell
+            .neighbors()
+            .iter()
+            .find(|n| **n != x && **n != p0 && **n != p2 && **n != start && **n != water)
+            .expect("D has a hazard neighbour off the path")
+            .clone();
+        let far = raddr(-1.0);
+        let terrain = PlantedTerrain::hazard([water.clone()], [(hazard_e.clone(), 0.8)]);
+
+        let npc_at = |entity: EntityId, home: RoomAddr, label: &str| Npc {
+            entity,
+            home,
+            resource: water.clone(),
+            species: "goblin".into(),
+            activity: hornvale_species::ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            niche: default_diet_niche(),
+            boldness: BOLDNESS_STEADY,
+            threat_niche: mortal_threat_niche(),
+            label: label.into(),
+        };
+
+        // THE TIMING (the trap T3 charted): the fixture sits in DAYLIGHT at a
+        // low-thirst hour. A sleeping Diurnal emitter pursues rest, not fear, and
+        // emits nothing; by a late day thirst has saturated and wins arbitration
+        // outright, drowning the shudder out.
+        let mut ledger = Ledger::default();
+        // B: primary-afraid at D (beside the hazard E) on day 0.45, and far away
+        // by 0.55 — so at `now` the ground is unremarkable and B is long gone.
+        let b_e = ledger.mint_entity();
+        let b = npc_at(b_e, far.clone(), "herd-mate");
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        commit_agent_at(&mut ledger, &reg, b_e, &far, 0.55);
+        // A: stood at X while B panicked beside it — and has NOT moved since. It
+        // gets no safe revisit before `now`: that revisit is exactly the staleness
+        // disproof, so granting one early would empty the memory before the test
+        // could feel anything. Homed AT X, so the walk that discharges the dread
+        // also brings it back to the ground it fears.
+        let a_e = ledger.mint_entity();
+        let a = npc_at(a_e, x.clone(), "rememberer");
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
+
+        let now = WorldTime { day: 0.6 };
+        let band = [a.clone(), b.clone()];
+
+        // (1) FELT.
+        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        assert_eq!(
+            felt.object,
+            Some(DriveKind::Danger),
+            "the rememberer is afraid on now-safe ground: {felt:?}"
+        );
+        assert!(felt.arousal >= DANGER_ACT, "and it is FELT: {felt:?}");
+        assert!(
+            threat_field(&x, &a.threat_niche, &terrain) * mettle_factor(a.boldness) < DANGER_ACT,
+            "X's PRESENT terrain is not frightening — the fear is memory, not sense"
+        );
+
+        // (2) DISCHARGED — a feeling with an outlet, not a pathology.
+        assert!(
+            !matches!(
+                felt.label,
+                AffectLabel::Lost | AffectLabel::Frustrated | AffectLabel::Helpless
+            ),
+            "dread with an outlet is wariness, not distress: {felt:?}"
+        );
+        let memory = hazard_memory(&ledger, &a, now, &terrain, &band);
+        assert!(
+            memory.dread.contains_key(&x),
+            "fixture check: X really is a phantom, not a Haunt: {:?}",
+            memory.dread
+        );
+        let danger = Danger {
+            terrain: &terrain,
+            threat_niche: a.threat_niche,
+            boldness: a.boldness,
+            alarm: None,
+            dread: Some(&memory.dread),
+        };
+        assert!(
+            matches!(
+                danger.affordance(&view_at(x.clone()), PLAN_BUDGET),
+                Some(Action::MoveTo(_))
+            ),
+            "it has somewhere to go — the dread is dischargeable"
+        );
+
+        // (3) DISPROVEN — the real tick. A steps off X (the discharge), and its
+        // homeward walk carries it back onto the ground it feared, with no emitter
+        // anywhere near: the most-recent verdict at X is SAFE, and the phantom
+        // leaves BOTH halves of the memory.
+        let sys = DriveMovements {
+            npcs: band.to_vec(),
+            from: now,
+            to: WorldTime { day: now.day + 1.0 },
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let next =
+            hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).expect("tick");
+        let walked: Vec<RoomAddr> = next
+            .find(AGENT_AT)
+            .filter(|f| f.subject == a_e)
+            .filter(|f| f.day.map(|d| d >= now.day).unwrap_or(false))
+            .filter_map(|f| match &f.object {
+                Value::Text(s) => Some(room_from_text(s)),
+                _ => None,
+            })
+            .collect();
+        // The discharge, in the walk itself: the very first thing A does is leave
+        // X. And the disproof is EARNED, not stipulated — the homeward pull brings
+        // it back to stand on the feared ground while nothing is there to fear.
+        assert_eq!(
+            walked.first(),
+            Some(&p0),
+            "the first step of the tick is OFF the haunted cell: {walked:?}"
+        );
+        assert!(
+            walked[1..].contains(&x),
+            "and it comes back to stand there unharmed — the experience that \
+             disproves the fear: {walked:?}"
+        );
+        let after = hazard_memory(&next, &a, WorldTime { day: now.day + 1.0 }, &terrain, &band);
+        assert!(
+            !after.dread.contains_key(&x),
+            "standing there unharmed disproves the dread: {:?}",
+            after.dread
+        );
+        assert!(
+            !after.shunned.contains(&x),
+            "and clears the shun with it — the phobia is falsifiable"
+        );
+    }
+
     /// A synthetic elevation + fresh-water field for pure tests: planted
     /// heights, INFINITY elsewhere (INFINITY = "never chosen downhill" —
     /// mirrors `LocaleTerrain`'s undescribable-room fallback), and a planted
