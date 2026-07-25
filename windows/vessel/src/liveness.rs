@@ -2128,7 +2128,7 @@ const ALARM_SCALE: f64 = 1.0;
 /// fear, so two species flee different cells), then scaled by its `boldness`
 /// (The Mettle) — a bold creature fears less, so its weaker veto lets it cross
 /// ground a timid one flees.
-/// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: alarm)
+/// type-audit: bare-ok(ratio: boldness), bare-ok(ratio: alarm), bare-ok(ratio: dread)
 pub struct Danger<'a> {
     /// The hazard field this drive senses (the cell it stands in and the three
     /// neighbours it may flee to) — like [`Thermal`]'s terrain.
@@ -2148,6 +2148,16 @@ pub struct Danger<'a> {
     /// ADDITIVELY into the felt threat, scaled by [`ALARM_SCALE`]. `None` ⇒ no
     /// contagion — the current (pre-Alarm) behaviour, byte-identical.
     pub alarm: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
+    /// The remembered DREAD map (The Shudder): the TRANSIENT subset of this
+    /// creature's hazard memory — cells whose present terrain is safe but where
+    /// a herd's alarm once frightened it — keyed to the remembered alarm
+    /// magnitude. Read at the creature's OWN cell and folded into the same
+    /// additive slot as [`Danger::alarm`], because it IS an alarm term: the
+    /// alarm as it was, not as it is. `None` ⇒ no phobia — byte-identical.
+    /// Provenance is the only difference from `alarm`: that one is SENSED
+    /// (present, external, a per-tick field), this one is BELIEVED (past,
+    /// internal, a fold over committed history).
+    pub dread: Option<&'a std::collections::BTreeMap<RoomAddr, f64>>,
 }
 
 /// The boldness at which fear is felt AS IS (unscaled) — the steady baseline the
@@ -2252,6 +2262,23 @@ impl<'a> Danger<'a> {
     fn threat_at(&self, room: &RoomAddr) -> f64 {
         threat_value(&self.threat_niche, &self.terrain.hazards(room))
     }
+
+    /// The remembered dread at `room` (`0.0` when unremembered or `None`).
+    /// type-audit: bare-ok(ratio: return)
+    fn dread_at(&self, room: &RoomAddr) -> f64 {
+        self.dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
+    }
+
+    /// The creature's total felt threat at `room` — present terrain PLUS
+    /// remembered dread, the field `serviceability` and the flee gradient read.
+    /// Unlike the borrowed alarm (whose halo always lies within one hop of
+    /// terrain that genuinely frightens its emitter, so a terrain gradient
+    /// always exists), dread sits on now-SAFE ground: without it in the
+    /// gradient a dreading creature has nowhere to go and reads `Lost`.
+    /// type-audit: bare-ok(ratio: return)
+    fn felt_threat_at(&self, room: &RoomAddr) -> f64 {
+        self.threat_at(room) + ALARM_SCALE * self.dread_at(room)
+    }
 }
 
 impl<'a> Drive for Danger<'a> {
@@ -2275,7 +2302,13 @@ impl<'a> Drive for Danger<'a> {
             .and_then(|field| field.get(&view.position))
             .copied()
             .unwrap_or(0.0);
-        let felt = base + ALARM_SCALE * borrowed;
+        // THE SHUDDER: the REMEMBERED alarm at this cell joins the BORROWED one
+        // in the same additive slot — the dread is an alarm term, so it needs no
+        // scale of its own. Feeding back the very magnitude that recorded the
+        // memory reproduces the verdict that created it: the memory and the
+        // feeling agree.
+        let remembered = self.dread_at(&view.position);
+        let felt = base + ALARM_SCALE * (borrowed + remembered);
         (felt * mettle_factor(self.boldness)).clamp(0.0, 1.0)
     }
     fn act_threshold(&self) -> f64 {
@@ -2285,7 +2318,7 @@ impl<'a> Drive for Danger<'a> {
         // Flee: step to the safest neighbour (by THIS creature's threat niche),
         // or `None` when boxed in by threat on every side (cornered → Frustrated).
         // A flow drive needs no plan (no A*), so `budget` is unused.
-        flee_step(&view.position, self.terrain, &self.threat_niche).map(Action::MoveTo)
+        flee_step(&view.position, self.terrain, &self.threat_niche, self.dread).map(Action::MoveTo)
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Danger
@@ -2300,8 +2333,11 @@ impl<'a> Drive for Danger<'a> {
         // NEGATIVE into worse danger, so a move that serves another drive but
         // raises threat is penalised and the arbitration routes around the hazard.
         // No consume — Drink/Rest/Eat do not ease fear.
+        // The gradient is over FELT threat (terrain PLUS remembered dread, The
+        // Shudder), so a creature standing on now-safe ground it only REMEMBERS
+        // as frightening is served by stepping off it.
         match action {
-            Action::MoveTo(n) => self.threat_at(&view.position) - self.threat_at(n),
+            Action::MoveTo(n) => self.felt_threat_at(&view.position) - self.felt_threat_at(n),
             Action::Drink | Action::Rest | Action::Eat => 0.0,
         }
     }
@@ -2311,14 +2347,25 @@ impl<'a> Drive for Danger<'a> {
     }
 }
 
-/// The flee gradient step: the neighbour of LOWEST felt threat (for this creature's
-/// threat niche), or `None` when no neighbour is strictly safer than `from`
-/// itself (boxed in — the creature holds, cornered). The sign-flip of
+/// The flee gradient step: the neighbour of LOWEST FELT threat — present terrain
+/// (for this creature's threat niche) PLUS the remembered `dread` at each cell
+/// (The Shudder) — or `None` when no neighbour is strictly safer than `from`
+/// itself (boxed in — the creature holds, cornered). The dread term is what lets
+/// a creature flee ground that is frightening only in MEMORY: a phantom cell is
+/// now-safe, so terrain alone offers no gradient to step down. The sign-flip of
 /// [`comfort_step`] / [`forage_step`]: minimize threat rather than thermal
 /// deviation or maximize food; same three-neighbour scan and
 /// `total_cmp`-then-ascending-`RoomAddr` tie-break.
-fn flee_step(from: &RoomAddr, terrain: &dyn Terrain, niche: &ThreatNiche) -> Option<RoomAddr> {
-    let threat = |room: &RoomAddr| threat_value(niche, &terrain.hazards(room));
+fn flee_step(
+    from: &RoomAddr,
+    terrain: &dyn Terrain,
+    niche: &ThreatNiche,
+    dread: Option<&std::collections::BTreeMap<RoomAddr, f64>>,
+) -> Option<RoomAddr> {
+    let threat = |room: &RoomAddr| {
+        threat_value(niche, &terrain.hazards(room))
+            + ALARM_SCALE * dread.and_then(|m| m.get(room)).copied().unwrap_or(0.0)
+    };
     let mut best: Option<(RoomAddr, f64)> = None;
     for n in from.neighbors() {
         let t = threat(&n);
@@ -2848,6 +2895,7 @@ pub fn affect_of_memo(
         // this is the read `alarm_field` builds over, so it MUST NOT see borrowed
         // alarm (else secondary transmission, a self-sustaining stampede).
         alarm: None,
+        dread: None,
     };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
@@ -3265,6 +3313,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     // catches the alarm and flees. Empty on the settled worlds
                     // (no primary distress) ⇒ byte-identical.
                     alarm: Some(&alarm),
+                    dread: None,
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -4527,6 +4576,7 @@ mod tests {
                 threat_niche: npc.threat_niche,
                 boldness: npc.boldness,
                 alarm: None,
+                dread: None,
             };
             let drive_afraid = drive.urgency(&view_at(cell.clone())) >= DANGER_ACT;
             assert_eq!(
@@ -6863,6 +6913,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         assert_eq!(
             danger.urgency(&view_at(scary)),
@@ -6874,6 +6925,94 @@ mod tests {
             0.0,
             "a cell far from any threat is safe"
         );
+    }
+
+    #[test]
+    fn danger_urgency_reads_remembered_dread_on_now_safe_ground() {
+        // THE SHUDDER: a cell with NO hazard anywhere near it — present threat 0 —
+        // frightens a creature that remembers a herd's alarm there. Fear of
+        // nothing present. `None` dread on the same cell reads calm, so the term
+        // is additive-latent: byte-identical wherever the map is empty.
+        let safe = raddr(-1.0); // neither it nor its neighbours carry any hazard
+        let t = PlantedTerrain::hazard(std::iter::empty(), std::iter::empty());
+        let mut dread = std::collections::BTreeMap::new();
+        dread.insert(safe.clone(), 0.8);
+
+        let calm = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+            dread: None,
+        };
+        assert_eq!(
+            calm.urgency(&view_at(safe.clone())),
+            0.0,
+            "without the memory the ground is unremarkable"
+        );
+
+        let haunted = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+            dread: Some(&dread),
+        };
+        let felt = haunted.urgency(&view_at(safe));
+        assert_eq!(
+            felt, 0.8,
+            "the remembered alarm is felt as the alarm it was"
+        );
+        assert!(felt >= DANGER_ACT, "and it crosses act — the drive engages");
+    }
+
+    #[test]
+    fn danger_discharges_dread_by_stepping_off_the_haunted_cell() {
+        // THE AFFORDANCE (spec §2, ledger #1). A phantom cell is now-SAFE ground,
+        // so terrain offers no gradient to flee down: without a dread-aware
+        // serviceability the creature would Hold and read `Lost` — a distress
+        // tick for a feature that is a feeling, not a pathology. With it, every
+        // neighbour is an improvement and the creature steps off.
+        let here = raddr(-1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), std::iter::empty());
+        let mut dread = std::collections::BTreeMap::new();
+        dread.insert(here.clone(), 0.8);
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+            dread: Some(&dread),
+        };
+        let view = view_at(here.clone());
+        let step = danger
+            .affordance(&view, PLAN_BUDGET)
+            .expect("dread on flat ground still offers a step off it");
+        let Action::MoveTo(to) = step else {
+            panic!("fleeing is a MoveTo");
+        };
+        assert!(here.neighbors().contains(&to), "it steps to a neighbour");
+        assert!(
+            danger.serviceability(&Action::MoveTo(to), &view, PLAN_BUDGET) > 0.0,
+            "stepping off the dreaded cell positively serves the drive"
+        );
+    }
+
+    #[test]
+    fn danger_without_dread_is_unchanged_on_flat_ground() {
+        // The byte-identity half of the same seam: `dread: None` on hazard-free
+        // ground still offers NO flee step (nowhere is strictly safer) — today's
+        // behaviour exactly.
+        let here = raddr(-1.0);
+        let t = PlantedTerrain::hazard(std::iter::empty(), std::iter::empty());
+        let danger = Danger {
+            terrain: &t,
+            threat_niche: mortal_threat_niche(),
+            boldness: BOLDNESS_STEADY,
+            alarm: None,
+            dread: None,
+        };
+        assert_eq!(danger.affordance(&view_at(here), PLAN_BUDGET), None);
     }
 
     #[test]
@@ -6895,6 +7034,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         assert_eq!(
             danger.affordance(&view_at(here.clone()), PLAN_BUDGET),
@@ -6914,6 +7054,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         assert_eq!(
             danger_boxed.affordance(&view_at(here), PLAN_BUDGET),
@@ -6941,6 +7082,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         let view = view_at(here);
         // Toward safety: positive (0.5 − 0.1).
@@ -6972,6 +7114,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         let view = Perceived {
@@ -7012,6 +7155,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         assert_eq!(
             danger.urgency(&view_at(cell)),
@@ -7032,6 +7176,7 @@ mod tests {
                 threat_niche: mortal_threat_niche(),
                 boldness,
                 alarm: None,
+                dread: None,
             }
             .urgency(&v)
         };
@@ -7068,6 +7213,7 @@ mod tests {
                 threat_niche: mortal_threat_niche(),
                 boldness: BOLDNESS_STEADY,
                 alarm,
+                dread: None,
             }
             .urgency(&view_at(cell.clone()))
         };
@@ -7099,6 +7245,7 @@ mod tests {
                 threat_niche: mortal_threat_niche(),
                 boldness,
                 alarm: Some(&map),
+                dread: None,
             }
             .urgency(&view_at(cell.clone()))
         };
@@ -7127,6 +7274,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: Some(&map),
+            dread: None,
         }
         .urgency(&view_at(cell.clone()));
         let terrain_only = Danger {
@@ -7134,6 +7282,7 @@ mod tests {
             threat_niche: mortal_threat_niche(),
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         }
         .urgency(&view_at(cell.clone()));
         // With ALARM_SCALE = 1.0 and steady boldness: 0.2 + 0.5 = 0.7.
@@ -7528,12 +7677,14 @@ mod tests {
             threat_niche: cold_adapted,
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         let shrugs = Danger {
             terrain: &t,
             threat_niche: warm_adapted,
             boldness: BOLDNESS_STEADY,
             alarm: None,
+            dread: None,
         };
         assert!(
             fears.urgency(&v) > shrugs.urgency(&v),
@@ -7605,12 +7756,14 @@ mod tests {
             threat_niche: herbivore,
             boldness: 0.0,
             alarm: None,
+            dread: None,
         };
         let hunter = Danger {
             terrain: &t,
             threat_niche: apex,
             boldness: 0.0,
             alarm: None,
+            dread: None,
         };
         assert!(
             quarry.urgency(&v) > 0.0,
