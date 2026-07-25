@@ -30,6 +30,27 @@ pub struct RoomAddr {
     pub path: Vec<u8>,
 }
 
+/// A room's exact position in its base face's triangular lattice: the
+/// componentwise-minimum barycentric corner (the *lattice base point*) plus
+/// the triangle's orientation. Integer-only, so two rooms on the same base
+/// face have an exact, cross-platform-stable relative offset — this is what
+/// lets a situated chart place cells without a transcendental. `a + b + c`
+/// is `scale - 1` for an up triangle and `scale - 2` for a down one.
+/// type-audit: bare-ok(index: a), bare-ok(index: b), bare-ok(index: c), bare-ok(flag: up), bare-ok(count: scale)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FaceLattice {
+    /// Lattice base coordinate on barycentric axis 0.
+    pub a: i64,
+    /// Lattice base coordinate on barycentric axis 1.
+    pub b: i64,
+    /// Lattice base coordinate on barycentric axis 2.
+    pub c: i64,
+    /// Whether this triangle points the same way as its base face.
+    pub up: bool,
+    /// The lattice scale at this depth, `1 << depth`.
+    pub scale: i64,
+}
+
 /// Packed, serialized form of a `RoomAddr` — a frozen save-format contract.
 /// Layout: bits `[0,5)` = face; bits `[5,64)` = a leading-1 sentinel then 2
 /// bits per digit, root digit first.
@@ -279,6 +300,25 @@ impl RoomAddr {
     /// type-audit: bare-ok(count)
     pub fn depth(&self) -> u32 {
         self.path.len() as u32
+    }
+
+    /// This room's exact face-local lattice position. Integer-only — no
+    /// transcendental enters it, so a chart placed from these coordinates is
+    /// byte-identical across platforms. Face-LOCAL: two rooms on different
+    /// base faces have no meaningful relative offset, and a consumer must
+    /// compare `face` before differencing.
+    pub fn face_lattice(&self) -> FaceLattice {
+        let (scale, tri) = bary_triple(&self.path);
+        let a = tri[0][0].min(tri[1][0]).min(tri[2][0]);
+        let b = tri[0][1].min(tri[1][1]).min(tri[2][1]);
+        let c = tri[0][2].min(tri[1][2]).min(tri[2][2]);
+        FaceLattice {
+            a,
+            b,
+            c,
+            up: a + b + c == scale - 1,
+            scale,
+        }
     }
 
     /// Pack to the `u64` `RoomId` contract. Fails past `MAX_DEPTH`.
@@ -1066,5 +1106,83 @@ mod tests {
                 path: vec![]
             }
         );
+    }
+
+    #[test]
+    fn the_base_face_is_a_single_up_triangle() {
+        let root = RoomAddr {
+            face: 3,
+            path: vec![],
+        };
+        let l = root.face_lattice();
+        assert_eq!(l.scale, 1);
+        assert_eq!((l.a, l.b, l.c), (0, 0, 0));
+        assert!(
+            l.up,
+            "the undivided base face has the face's own orientation"
+        );
+        assert_eq!(l.a + l.b + l.c, l.scale - 1);
+    }
+
+    #[test]
+    fn the_lattice_base_distinguishes_up_from_down() {
+        // Child digits 0..3 subdivide a triangle into three corner children (up)
+        // and one central child (down).
+        for digit in 0..3u8 {
+            let r = RoomAddr {
+                face: 0,
+                path: vec![digit],
+            };
+            let l = r.face_lattice();
+            assert!(l.up, "corner child {digit} keeps the parent's orientation");
+            assert_eq!(l.a + l.b + l.c, l.scale - 1);
+        }
+        let centre = RoomAddr {
+            face: 0,
+            path: vec![3],
+        };
+        let l = centre.face_lattice();
+        assert!(!l.up, "the central child is inverted");
+        assert_eq!(l.a + l.b + l.c, l.scale - 2);
+    }
+
+    #[test]
+    fn edge_neighbours_are_lattice_adjacent() {
+        // A room deep inside a base face: all three neighbours share its face,
+        // and each differs from it by exactly one unit on exactly one axis.
+        let room = RoomAddr {
+            face: 0,
+            path: vec![3, 0, 3, 1, 3, 2],
+        };
+        let me = room.face_lattice();
+        let mut same_face = 0;
+        for n in room.neighbors() {
+            if n.face != room.face {
+                continue;
+            }
+            same_face += 1;
+            let l = n.face_lattice();
+            assert_eq!(l.scale, me.scale, "neighbours sit at the same depth");
+            assert_ne!(
+                l.up, me.up,
+                "an edge-neighbour has the opposite orientation"
+            );
+            let d = [l.a - me.a, l.b - me.b, l.c - me.c];
+            let want = if me.up { -1 } else { 1 };
+            let moved: Vec<i64> = d.iter().copied().filter(|&x| x != 0).collect();
+            assert_eq!(moved, vec![want], "exactly one axis steps by {want}: {d:?}");
+        }
+        assert_eq!(same_face, 3, "this room is interior; no seam expected");
+    }
+
+    #[test]
+    fn the_lattice_scale_matches_the_depth() {
+        for depth in 0..8u32 {
+            let r = RoomAddr {
+                face: 11,
+                path: vec![2; depth as usize],
+            };
+            assert_eq!(r.face_lattice().scale, 1i64 << depth);
+        }
     }
 }
