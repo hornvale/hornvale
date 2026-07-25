@@ -229,6 +229,7 @@ dependencies = [
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",
+ "hornvale-scene",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",

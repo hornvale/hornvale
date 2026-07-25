@@ -381,6 +381,22 @@ impl<'w> Session<'w> {
             .collect()
     }
 
+    /// This session's chart, `zoom_out` rungs coarser than the walk depth.
+    /// Reads only — the chart never mutates the session.
+    /// type-audit: bare-ok(count: zoom_out)
+    pub fn purview(&self, zoom_out: u32) -> Result<hornvale_scene::SurroundsScene, VesselError> {
+        crate::purview_scene(
+            self.world,
+            &self.ctx,
+            &self.agent.position,
+            &self.knowledge,
+            &self.npcs,
+            &self.ledger,
+            self.day,
+            zoom_out,
+        )
+    }
+
     /// One verb, one response. `Turn::Released` ends the possession.
     /// type-audit: bare-ok(prose: line)
     pub fn handle(&mut self, line: &str) -> Turn {
