@@ -721,20 +721,30 @@ fn narration_is_byte_identical_to_the_published_transcript() {
 }
 
 #[test]
-fn a_session_that_never_started_is_an_error_not_a_panic() {
-    // `Session::start` on a settlement-free world refuses; there is no
-    // snapshot to take, and the refusal must be the sim's own error.
-    let bare = hornvale_worldgen::build_world(
-        Seed(43),
-        &Default::default(),
-        hornvale_worldgen::SkyChoice::Generated,
-        &Default::default(),
-        &Default::default(),
-    )
-    .expect("seed 43 builds a world");
+fn a_settlement_free_world_refuses_possession_rather_than_panicking() {
+    // Some worlds generate no settlement at all, so there is no flagship to
+    // mint and no snapshot to take; the refusal must be the sim's own
+    // error. SCOUTED, never hardcoded: which seeds are settlement-free is a
+    // worldgen output that moves, and hardcoding one is exactly the bug that
+    // left `make vessel-check` red on main (Task 4 fixes the same mistake in
+    // drive.mjs — do not reintroduce it here).
+    let refused = (43u64..80).find_map(|seed| {
+        let w = hornvale_worldgen::build_world(
+            Seed(seed),
+            &Default::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &Default::default(),
+            &Default::default(),
+        )
+        .expect("the world builds even with no settlement");
+        Session::start(&w, &PossessOpts::default())
+            .err()
+            .map(|e| (seed, e))
+    });
+    let (seed, err) = refused.expect("some seed in 43..80 has no settlement");
     assert!(
-        Session::start(&bare, &PossessOpts::default()).is_err(),
-        "seed 43 has no settlement to mint from, so possession refuses"
+        matches!(err, hornvale_vessel::VesselError::NoSettlement),
+        "seed {seed} refused for the wrong reason: {err}"
     );
 }
 ```
