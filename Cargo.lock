@@ -183,6 +183,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-kernel",
+ "hornvale-locale",
  "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-worldgen",
