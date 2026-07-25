@@ -2,7 +2,7 @@
 
 **Campaign:** The Shudder
 **Date:** 2026-07-24
-**Status:** draft (G3)
+**Status:** shipped (2026-07-25)
 **Registry:** PSY-11 (the threat/fear engine) — the reserved *visceral felt
 phobia*, the felt half of The Phantom
 
@@ -203,6 +203,21 @@ walk** — The Phantom's sharpest lesson is that a feature whose cost scales wit
 sim length must be measured on the longest sim in the suite, and its
 byte-identical, possession-walk-clean version still detonated there.
 
+**Re-scored at close (2026-07-25).** The hypothesis is **upheld for every real
+world, and by a stronger argument than a stopwatch**: `health_report` is
+*bit-identical* pre/post on seeds 0, 1, 2, 7 and 42 — every field, including the
+whole `by_cause` map — so on emitter-free worlds the campaign is a strict no-op,
+exactly as the fast-path argument predicts. It is **unmeasured for the synthetic
+emitter-bearing scenarios**, where creatures that remember an alarm now feel it
+and step off, so more sim steps genuinely run; that is the behaviour the campaign
+exists to add, not overhead. An intermediate reading of 364 s → 522 s on the
+health battery was recorded mid-campaign as a 1.43× regression and **retracted**:
+it did not reproduce (a confirming run came back faster than pre-campaign), and
+this box runs parallel campaign sessions, so wall-clock at that resolution is
+noise. The durable lesson: when the output is bit-identical and the new work sits
+behind an early return, that is a structural no-cost proof no loaded-machine
+timing can overturn.
+
 ## Success criteria
 
 - **The dread map is the transient subset.** A planted history where a
@@ -256,6 +271,37 @@ Plus, from the ideonomy passes:
 - **The sanctuary** — the proseasis: a cell remembered as where fear *lifted*,
   read as comfort. The memory form of The Alarm's reserved reassurance, and a
   member of PSY-11's reserved experiential-memory family.
+
+## Decisions (promoted from the campaign ledger at close)
+
+The scratch ledger (`.superpowers/sdd/`, gitignored) is not the durable record;
+these are the decisions worth keeping.
+
+1. **Felt AND fled, not felt alone** — dread enters `urgency` (so it colours
+   `Affect`) *and* `serviceability`/`flee_step` (so it has an outlet). Settled by
+   precedent, not taste: `loneliness_from_plan` already establishes that a felt
+   state with no actionable pull is made dormant rather than allowed to register
+   as distress. See §2.
+2. **Contact dread, not anticipatory** — the fork is about *persistence*, not
+   space: contact dread's loop closes on arrival, anticipatory dread's cannot.
+   Anticipatory dread is PSY-11's already-reserved longer-reach gradient, and it
+   ships with time-decay or not at all. See §4.
+3. **The fear must stay falsifiable** — the named principle governing further
+   work on this engine; it declined self-reinforcing dread and anticipatory dread
+   with one argument. Left as a spec principle rather than a decision record
+   (G3 call), enforced in the suite by
+   `believed_hazard_clears_a_disproven_phantom` as its tripwire. See §4.
+4. **No new constant** — the dread rides `ALARM_SCALE`, because it *is* an alarm
+   term. A discount would silently create cells the planner shuns but the
+   creature cannot feel, breaking the memory/feeling agreement the module
+   enforces elsewhere. A fading discount is reserved, paired with time-decay.
+5. **`Danger.dread`, not a `Perceived` field** — mirroring The Alarm's precedent;
+   `Perceived` has 42 literal constructions, and the provenance line is honest
+   (the view carries belief the *planner* reads; the drive carries fields it
+   *senses*, and dread is sensed-as-if-present).
+6. **No superstition contagion, structurally** — the emission read is bandless,
+   so its dread map is empty by construction. No flag, no guard. The gate comment
+   in `alarm_field_memo` now says so, to stop a later edit opening it silently.
 
 ## Flagged items (G3)
 

@@ -246,6 +246,7 @@
 - [The Phantom](./chronicle/the-phantom.md)
 - [The Excursion](./chronicle/the-excursion.md)
 - [The Snapshot](./chronicle/the-snapshot.md)
+- [The Shudder](./chronicle/the-shudder.md)
 
 # Appendix: The Frontier
 

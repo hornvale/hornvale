@@ -1,5 +1,11 @@
 # The Shudder — Implementation Plan
 
+**Status: COMPLETE (shipped 2026-07-25).** T1 `0573f507`, T2 `6ea6ea7d`,
+T3 `8db525e0`, T4 `331a9dd0`. Byte-identical (artifacts clean, no scoped
+drift) and bit-identical population health on all five null-control seeds.
+Two of this plan's test fixtures were inert as written and were corrected
+during execution — see the retrospective.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use
 > `superpowers:subagent-driven-development` to implement this plan task-by-task
 > (and `dispatching-hornvale-subagents` for every dispatch). Steps use checkbox
