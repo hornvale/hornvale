@@ -29,7 +29,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -55,6 +55,11 @@ pub enum SceneError {
     RegionSamplesOutOfRange(u32),
     /// Surrounds query: `radius` must be 0..=MAX_SURROUNDS_RADIUS.
     SurroundsRadiusOutOfRange(u32),
+    /// Surrounds query: a neighbourhood cell's address could not be packed
+    /// to a room id (see `RoomAddr::pack`); the `RoomAddrError` debug is
+    /// carried. Mirrors `LocaleError::Unaddressable` — fail fast rather
+    /// than mint a meaningless `room: 0`.
+    SurroundsUnaddressable(String),
 }
 
 impl std::fmt::Display for SceneError {
@@ -84,6 +89,9 @@ impl std::fmt::Display for SceneError {
             }
             SceneError::SurroundsRadiusOutOfRange(r) => {
                 write!(f, "--radius {r} is outside 0..={MAX_SURROUNDS_RADIUS}")
+            }
+            SceneError::SurroundsUnaddressable(e) => {
+                write!(f, "surrounds neighbourhood cell is unaddressable: {e}")
             }
         }
     }

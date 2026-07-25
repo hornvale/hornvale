@@ -5,7 +5,7 @@
 //! overlays what it alone knows.
 
 use crate::{Feature, SceneError, features_of};
-use hornvale_kernel::{RoomAddr, World, WorldTime, quantize};
+use hornvale_kernel::{RoomAddr, World, WorldTime};
 use hornvale_locale::{Locale, LocaleContext};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -24,6 +24,18 @@ pub const MAX_SURROUNDS_RADIUS: u32 = 8;
 /// contract: changing one mints `scene/surrounds/v2`.
 /// type-audit: bare-ok(identifier-text)
 pub const RELIEF_LEGEND: [&str; 6] = ["abyss", "shelf", "lowland", "upland", "highland", "alpine"];
+
+/// `Locale::biome` renders in `locale/room/v2`'s own prose convention
+/// (space-separated words, e.g. `"temperate grassland"` — see
+/// `hornvale_locale`'s private `biome_name`), while `biome_legend` here
+/// (like `scene/tiles/v1`'s) uses `hornvale_climate::Biome::name`'s
+/// kebab-case identifier convention (`"temperate-grassland"`). The two
+/// conventions differ only in the separator, so this translates a locale's
+/// prose name into the identifier `biome_index` is keyed by — without this,
+/// every multi-word biome would fail the lookup below.
+fn locale_biome_identifier(prose_name: &str) -> String {
+    prose_name.replace(' ', "-")
+}
 
 /// Elevation (m) to an index into [`RELIEF_LEGEND`].
 /// type-audit: bare-ok(index: return)
@@ -160,11 +172,20 @@ pub struct SurroundsScene {
     pub legend: Vec<LegendEntry>,
 }
 
-/// Build the `scene/surrounds/v1` document for `room` at `radius` rings.
-/// Fog-free: every cell but the observer's is `"sensed"`.
+/// Build the `scene/surrounds/v1` document for `room` at `radius` rings,
+/// reusing a `LocaleContext` the caller already built. Fog-free: every cell
+/// but the observer's is `"sensed"`.
+///
+/// Prefer this over [`surrounds_scene`] whenever a `LocaleContext` is
+/// already in hand (e.g. a session-owning caller building one chart per
+/// player turn): measured in release, `LocaleContext::build` costs ~1.19 s
+/// against ~2 ms of this function's own per-cell work, so building a fresh
+/// context per call would make a radius-0 chart cost the same as a
+/// radius-8 one.
 /// type-audit: bare-ok(count: radius)
-pub fn surrounds_scene(
+pub fn surrounds_scene_in(
     world: &World,
+    ctx: &LocaleContext,
     room: &RoomAddr,
     radius: u32,
     at: WorldTime,
@@ -172,7 +193,6 @@ pub fn surrounds_scene(
     if radius > MAX_SURROUNDS_RADIUS {
         return Err(SceneError::SurroundsRadiusOutOfRange(radius));
     }
-    let ctx = LocaleContext::build(world).map_err(|e| SceneError::Build(e.to_string()))?;
     let here = ctx
         .describe(room, at)
         .map_err(|e| SceneError::Build(e.to_string()))?;
@@ -220,7 +240,10 @@ pub fn surrounds_scene(
         } else {
             Some(addr.face_lattice())
         };
-        let key = addr.pack().map(|r| r.0).unwrap_or(0);
+        let key = addr
+            .pack()
+            .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?
+            .0;
         let mut marks = marks_by_room.get(&key).cloned().unwrap_or_default();
         marks.sort_by(|a, b| a.salience.cmp(&b.salience).then(a.noun.cmp(&b.noun)));
         cells.push(SurroundsCell {
@@ -231,7 +254,9 @@ pub fn surrounds_scene(
             up: lat.map(|l| l.up),
             seam,
             state: if is_here { "here" } else { "sensed" }.to_string(),
-            biome: *biome_index.get(&locale.biome).unwrap_or(&0),
+            biome: *biome_index
+                .get(&locale_biome_identifier(&locale.biome))
+                .expect("every biome is in the catalog"),
             water: u32::from(locale.fields.water.index()),
             relief: relief_band(locale.fields.elevation_m),
             regime: is_here.then(|| locale.regime.descriptor.clone()),
@@ -245,16 +270,21 @@ pub fn surrounds_scene(
 
     let legend = legend_of(&cells, &here, catalog);
 
+    let observer_room = room
+        .pack()
+        .map_err(|e| SceneError::SurroundsUnaddressable(format!("{e:?}")))?
+        .0;
+
     Ok(SurroundsScene {
         schema: SURROUNDS_SCHEMA.to_string(),
         seed: world.seed.0,
-        day: quantize(at.day),
+        day: at.day,
         observer: SurroundsObserver {
-            room: room.pack().map(|r| r.0).unwrap_or(0),
+            room: observer_room,
             face: room.face,
             depth: room.depth(),
-            latitude: quantize(here.latitude),
-            longitude: quantize(here.longitude),
+            latitude: here.latitude,
+            longitude: here.longitude,
         },
         radius,
         depth: room.depth(),
@@ -268,6 +298,24 @@ pub fn surrounds_scene(
         cells,
         legend,
     })
+}
+
+/// Build the `scene/surrounds/v1` document for `room` at `radius` rings.
+/// Fog-free: every cell but the observer's is `"sensed"`.
+///
+/// Builds a fresh `LocaleContext` per call — a caller that already holds
+/// one (or that will make more than one surrounds query, e.g. once per
+/// player turn) should call [`surrounds_scene_in`] instead and hold the
+/// context itself, since the rebuild dominates this function's cost.
+/// type-audit: bare-ok(count: radius)
+pub fn surrounds_scene(
+    world: &World,
+    room: &RoomAddr,
+    radius: u32,
+    at: WorldTime,
+) -> Result<SurroundsScene, SceneError> {
+    let ctx = LocaleContext::build(world).map_err(|e| SceneError::Build(e.to_string()))?;
+    surrounds_scene_in(world, &ctx, room, radius, at)
 }
 
 /// Settlement marks keyed by the packed room id their coordinates fall in at
@@ -344,7 +392,7 @@ fn legend_of(
 /// Serialize a `SurroundsScene` to compact JSON (mirrors `scene_json`).
 /// type-audit: bare-ok(artifact: return)
 pub fn surrounds_json(scene: &SurroundsScene) -> String {
-    serde_json::to_string_pretty(scene).expect("a surrounds scene serializes")
+    serde_json::to_string(scene).expect("a surrounds scene serializes")
 }
 
 #[cfg(test)]
@@ -408,6 +456,11 @@ mod tests {
         assert!(!here[0].seam);
     }
 
+    // The flagship observer's own neighbourhood never crosses a base face at
+    // radius 4 (a coincidence of where seed 42 places its village) — so this
+    // test alone never enters the `if c.seam` branch. It stays as coverage
+    // of the no-seam case; `a_seam_observer_carries_no_coordinate_on_seam_cells`
+    // below is the real seam-handling test.
     #[test]
     fn every_non_seam_cell_carries_a_lattice_coordinate_and_seam_cells_carry_none() {
         let w = world();
@@ -417,6 +470,57 @@ mod tests {
                 assert!(c.u.is_none() && c.v.is_none() && c.w.is_none() && c.up.is_none());
             } else {
                 assert!(c.u.is_some() && c.v.is_some() && c.w.is_some() && c.up.is_some());
+            }
+        }
+    }
+
+    /// An observer verified to sit near a base-face seam (latitude -10°,
+    /// longitude 0°, depth 12 lands on face 14), whose radius-4 neighbourhood
+    /// genuinely crosses onto neighbouring faces — the real coverage for the
+    /// seam branch the sibling test above never reaches. Uses the same
+    /// lat/lon -> unit-sphere conversion as the `observer` helper above.
+    #[test]
+    fn a_seam_observer_carries_no_coordinate_on_seam_cells() {
+        let w = world();
+        let (la, lo) = ((-10.0_f64).to_radians(), 0.0_f64.to_radians());
+        let seam_observer = RoomAddr::containing(
+            [
+                hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
+                hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
+                hornvale_kernel::math::sin(la),
+            ],
+            12,
+        );
+        assert_eq!(
+            seam_observer.face, 14,
+            "fixture observer must land on the verified face"
+        );
+        let s = surrounds_scene(&w, &seam_observer, 4, WorldTime { day: 0.0 }).unwrap();
+        assert_eq!(s.cells.len(), 31, "no cell was dropped");
+
+        let seam_count = s.cells.iter().filter(|c| c.seam).count();
+        assert_ne!(
+            seam_count, 0,
+            "fixture observer must actually see seam cells, or this test is vacuous again"
+        );
+        assert_eq!(
+            seam_count, 12,
+            "verified fixture: 12 of 31 cells are seam cells at radius 4"
+        );
+
+        for c in &s.cells {
+            if c.seam {
+                assert!(
+                    c.u.is_none() && c.v.is_none() && c.w.is_none() && c.up.is_none(),
+                    "seam cell {} carries a lattice coordinate",
+                    c.room
+                );
+            } else {
+                assert!(
+                    c.u.is_some() && c.v.is_some() && c.w.is_some() && c.up.is_some(),
+                    "non-seam cell {} is missing a lattice coordinate",
+                    c.room
+                );
             }
         }
     }
