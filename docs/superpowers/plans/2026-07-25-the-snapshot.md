@@ -714,8 +714,27 @@ fn world() -> World {
 /// The same script the committed transcript walks, up to its first `go`.
 const SCRIPT: &[&str] = &["look", "examine sky", "whoami"];
 
+/// Day **0**, not `PossessOpts::default()`'s noon.
+///
+/// This is load-bearing for `narration_is_byte_identical_to_the_published_transcript`:
+/// the committed transcript is produced by `scripts/regenerate-artifacts.sh`
+/// running `hornvale possess --world … --script …` with **no `--day` flag**,
+/// and the CLI's `parse_possess_day` defaults to `"0"` (cli/src/main.rs:393).
+/// `describe_here` interpolates that day straight into the room header, so the
+/// transcript reads `[room 738918402, day 0]`. `PossessOpts::default()` is
+/// `day: 0.5` (a deliberate choice so a bare `wait 1` lands at noon again), and
+/// using it here would render `day 0.5` and fail the comparison against a
+/// transcript that is not wrong — only taken at a different hour.
+fn opts() -> PossessOpts {
+    PossessOpts {
+        day: hornvale_kernel::WorldTime { day: 0.0 },
+        echo: false,
+        wild_agents: true,
+    }
+}
+
 fn snapshots(world: &World) -> Vec<String> {
-    let (mut session, _) = Session::start(world, &PossessOpts::default()).expect("seed 42 possesses");
+    let (mut session, _) = Session::start(world, &opts()).expect("seed 42 possesses");
     let mut out = vec![snapshot_json(&session.snapshot().unwrap())];
     for line in SCRIPT {
         session.handle(line);
@@ -762,13 +781,21 @@ fn narration_is_byte_identical_to_the_published_transcript() {
     let opening = &body[..body.find("\n> ").expect("the transcript has a prompt line")];
 
     let world = world();
-    let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+    let (session, _) = Session::start(&world, &opts()).unwrap();
     let snap = session.snapshot().unwrap();
     assert_eq!(
         snap.narration.prose.trim_end(),
         opening.trim_end(),
         "narration.prose must be the transcript's own opening, byte for byte"
     );
+}
+
+#[test]
+fn the_fixture_is_taken_at_the_transcript_s_own_day() {
+    // A guard on the guard: if someone later switches `opts()` to
+    // `PossessOpts::default()`, the byte-identity test above starts failing
+    // for a reason that looks like worldgen drift but isn't. Pin the intent.
+    assert_eq!(opts().day.day, 0.0, "the committed transcript is a day-0 recording");
 }
 
 #[test]
