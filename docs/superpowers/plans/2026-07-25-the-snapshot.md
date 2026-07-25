@@ -18,6 +18,7 @@
 - **No new seed draws.** This campaign adds no `Stream` derivation, so `stream_labels()` and the generated stream manifest are unchanged.
 - **Schema string is exactly `vessel/session/v1`.** Additive changes are free; a meaning change mints `v2`; nothing is ever renamed (save-format contract).
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the project's most common review finding.
+- **`clients/vessel` is formatted by `deno fmt`, not `cargo fmt`, and `make vessel-check` runs `deno fmt --check` over the whole client — including `wasm/drive.mjs`.** Any task that edits a file under `clients/vessel/` (JS, TS, or `.mjs`) must leave `deno fmt --check` clean there. Note the trap: running bare `deno fmt` formats every file in the project, so it can pull unrelated files into your diff — format, then check that your diff contains only your own files, rather than reverting the formatting itself.
 - **Every task that adds or changes a `pub` item with a primitive field must run the type audit before committing:**
   `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
   It is default-deny (any untagged pub-boundary primitive fails) and CI-enforced, and it is a **separate tool outside the workspace** — `make gate` does not run it, so a green `cargo test` proves nothing about it. The only valid `bare-ok` classes are the eleven in `tools/type-audit/src/tag.rs`: `ratio`, `count`, `index`, `constructor-edge`, `envelope`, `identifier-text`, `prose`, `artifact`, `diagnostic-value`, `render-internal`, `flag`. Anything else fails, including plausible-sounding inventions like `identifier` or `quantity`. Ratified meanings are in decision 0028. Precedents this campaign relies on: a numeric id → `index`; a schema-string const → `identifier-text` (as `ROOM_SCHEMA` and `TILES_SCHEMA` do); a name/label/key → `identifier-text`; rendered text → `prose`; a serialized blob → `artifact`; a bare day → `waiver(decision-0014: day)`.
@@ -929,7 +930,10 @@ Expected: builds; `book/src/gallery/vessel.wasm` is refreshed (gitignored per de
 // worldgen moved. 43 and 45 are both settlement-free today.
 let other = null;
 for (let seed = 43n; seed < 60n; seed++) {
-  if (hv_start(seed) === 0) { other = seed; break; }
+  if (hv_start(seed) === 0) {
+    other = seed;
+    break;
+  }
 }
 assert.notEqual(other, null, "some seed in 43..60 is possessable");
 assert.notEqual(readOut(), golden, "a different seed is a different world");
