@@ -5886,7 +5886,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 })?,
+        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
