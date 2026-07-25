@@ -42,13 +42,10 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
     let art = hornvale_language::articulation_registry();
     let lex = hornvale_language::lexicon_registry();
-    // The Solitary Tongue: the three chromatic dragons now speak (a frozen
-    // Draconic tongue) though they do not perceive (perception stays the four
-    // peoples, deferred). Articulation and lexicon are keyed to exactly the
-    // MINDED kinds — the psyche key-set (four peoples + three dragons, 7) —
-    // which is now a STRICT SUPERSET of the four-people perception key-set;
-    // perception ⊆ articulation holds, articulation == perception no longer
-    // does.
+    // The Solitary Tongue gave the three chromatic dragons a frozen Draconic
+    // tongue; The Vigil gave them eyes. Articulation and lexicon are keyed to
+    // exactly the MINDED kinds — the psyche key-set (four peoples + three
+    // dragons, 7) — and perception now coincides with them.
     let minded: Vec<_> = wc.psyche.ids().collect();
     assert_eq!(
         art.ids().collect::<Vec<_>>(),
@@ -60,12 +57,14 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         minded,
         "lexicon must key exactly the minded kinds (peoples + dragons)"
     );
-    // perception (the four peoples) is a subset of articulation (the seven
-    // minded speakers) — a dragon speaks but does not (yet) perceive.
-    for kind in wc.perception.ids() {
+    // The Vigil: every speaker perceives (the enforced chain speech ⊆
+    // perception). Asserted in this direction, not as equality: a future
+    // non-speaking perceiver must stay expressible, and `check_integrity`
+    // permits it.
+    for kind in art.ids() {
         assert!(
-            art.contains(kind),
-            "perceiving kind {kind:?} must also speak (perception ⊆ articulation)"
+            wc.perception.contains(kind),
+            "speaking kind {kind:?} must also perceive (speech ⊆ perception)"
         );
     }
     // A non-minded kind (ordinary fauna) carries no lexicon.
