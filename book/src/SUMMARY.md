@@ -247,6 +247,7 @@
 - [The Excursion](./chronicle/the-excursion.md)
 - [The Selvage](./chronicle/the-selvage.md)
 - [The Snapshot](./chronicle/the-snapshot.md)
+- [The Shudder](./chronicle/the-shudder.md)
 
 # Appendix: The Frontier
 
