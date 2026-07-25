@@ -277,6 +277,7 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
         start_year: 0.0,
         end_year: 500.0,
         epoch_years: 25.0,
+        ..BakeConfig::default_millennia()
     };
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
     let h = bake(
@@ -474,6 +475,7 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
         start_year: 0.0,
         end_year: 1200.0,
         epoch_years: 25.0,
+        ..BakeConfig::default_millennia()
     };
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
     let h = bake(

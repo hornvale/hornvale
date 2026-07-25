@@ -97,6 +97,21 @@ const SETTLED_PREMIUM: f64 = 0.25;
 /// the people on it. Well below `COLLAPSE_PRESSURE`: a community can be
 /// worthless to a raider long before it starves out altogether.
 const NO_SPOILS_PRESSURE: f64 = 1.0;
+/// `threat_response` (flee 0 ↔ stand 1) at or above which a people takes the
+/// initiative at all — spec §4.2a's durable inhibition. Authored species data,
+/// never drawn.
+///
+/// **Disclosure on the value.** This gate's stated purpose is to make raiding
+/// heterogeneous *across peoples*; a threshold that admits the whole roster, or
+/// vetoes the whole roster, is inert by construction and buys nothing. 0.6 is
+/// chosen to sit between the registry's declared baseline temperament (goblin,
+/// 0.5) and the assertive peoples (hobgoblin 0.7, kobold and bugbear 0.8), so
+/// exactly one of the four settling peoples declines to raid. That is a choice
+/// about what the gate *means*, made against the authored roster — not one
+/// fitted to a measured outcome; the cascade metric was not consulted in
+/// picking it. A save-format constant: changing it re-fights every world's
+/// history.
+const RAID_DISPOSITION_MIN: f64 = 0.6;
 /// Pressure at or above which a community starves out (Famine). `pub` so
 /// the demography calibration (`windows/lab`) can express the aggregate
 /// population-conservation ceiling: no live community exceeds this pressure,
@@ -151,10 +166,13 @@ pub const CASCADE_DEPTH_CAP: u32 = 256;
 /// 5-8, … up to 2^11+.
 const CASCADE_BINS: usize = 12;
 
-/// Configuration for a deep-history bake: the span of years to simulate and
-/// the epoch step. Years are bare `f64` (absolute, no wall-clock).
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years)
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// Configuration for a deep-history bake: the span of years to simulate, the
+/// epoch step, and the authored per-people disposition the raid rule's durable
+/// inhibition reads. Years are bare `f64` (absolute, no wall-clock). Not
+/// `Copy`: `disposition` is an owned map, and the config is always passed by
+/// reference.
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition)
+#[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
     pub start_year: f64,
@@ -162,15 +180,24 @@ pub struct BakeConfig {
     pub end_year: f64,
     /// The step between epochs, in years.
     pub epoch_years: f64,
+    /// Each people's `threat_response` (flee 0 ↔ stand 1) — authored species
+    /// data, never drawn, looked up by the composition root and handed in here
+    /// because the bake reads only kernel types. A people below
+    /// `RAID_DISPOSITION_MIN` never takes the initiative (spec §4.2a's durable
+    /// inhibition); a people ABSENT from the map is not vetoed, so a bake given
+    /// no disposition data behaves exactly as it did before the gate existed.
+    pub disposition: BTreeMap<KindId, f64>,
 }
 
 impl BakeConfig {
-    /// The default bake span: two millennia in 25-year epochs.
+    /// The default bake span: two millennia in 25-year epochs, with no
+    /// authored disposition (nobody vetoed — the composition root fills it in).
     pub fn default_millennia() -> BakeConfig {
         BakeConfig {
             start_year: 0.0,
             end_year: 2000.0,
             epoch_years: 25.0,
+            disposition: BTreeMap::new(),
         }
     }
 }
@@ -310,6 +337,10 @@ struct Bake<'a> {
     river_prox: &'a CellMap<f64>,
     /// Cells habitable through the glacial maximum (migration preference).
     refugia: &'a CellMap<bool>,
+    /// Each people's authored `threat_response`, borrowed off the
+    /// [`BakeConfig`] — the durable inhibition [`Bake::takes_the_initiative`]
+    /// reads.
+    disposition: &'a BTreeMap<KindId, f64>,
     /// Every occupation record, in commit order.
     records: Vec<OccupationRecord>,
     /// Every community's live state, in commit order (dead ones retained).
@@ -492,8 +523,10 @@ impl<'a> Bake<'a> {
     /// - a **vacant** habitable cell scores its effective capacity;
     /// - a **held** habitable cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
     ///   — proven ground is worth more — and is admissible only when the roller
-    ///   clears `RAID_MARGIN` over its holder, and only when the roller could
-    ///   still seat itself after the war it would have to fight (`can_fight`);
+    ///   clears `RAID_MARGIN` over its holder, only when the roller could still
+    ///   seat itself after the war it would have to fight (`can_fight`), and
+    ///   only when spec §4.2a's inhibitions ([`Bake::takes_the_initiative`],
+    ///   [`Bake::has_spoils`]) do not veto it;
     /// - a cell the era's mask has made uninhabitable is worth nothing to
     ///   anybody and is not an option at all.
     ///
@@ -511,11 +544,15 @@ impl<'a> Bake<'a> {
     /// and holds nothing.
     fn best_home(
         &self,
+        people: KindId,
         era: &EraClimate,
         from: CellId,
         strength: f64,
         can_fight: bool,
     ) -> Option<HomeOption> {
+        // The durable inhibition is a property of the people, not of any one
+        // candidate: a timid people simply never sees held ground as an option.
+        let can_fight = can_fight && self.takes_the_initiative(people);
         let mut best: Option<HomeOption> = None;
         let mut visited: BTreeSet<CellId> = BTreeSet::new();
         visited.insert(from);
@@ -621,8 +658,13 @@ impl<'a> Bake<'a> {
         // peopleless settlement, which the shipped invariant forbids). It can
         // still pioneer.
         let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
-        let Some(home) = self.best_home(era, from, roller_strength(pop, offset, year), can_fight)
-        else {
+        let Some(home) = self.best_home(
+            people,
+            era,
+            from,
+            roller_strength(pop, offset, year),
+            can_fight,
+        ) else {
             return Relocation::Lost; // nothing vacant, nothing beatable — lost
         };
         let Some(victim) = home.holder else {
@@ -696,6 +738,26 @@ impl<'a> Bake<'a> {
         };
         Relocation::Settled {
             cascade: 1 + victim_cascade,
+        }
+    }
+
+    /// Whether a people takes the initiative at all — spec §4.2a's
+    /// **disposition** inhibition, the durable one. A people whose authored
+    /// `threat_response` (flee 0 ↔ stand 1) falls below `RAID_DISPOSITION_MIN`
+    /// never raids, however strong it is on paper; a people with no authored
+    /// disposition is not vetoed, so a bake handed no data behaves exactly as
+    /// it did before the gate existed.
+    ///
+    /// This is the gate that makes raiding heterogeneous ACROSS peoples, and it
+    /// buys an asymmetric aversion structure for free: A declines B while B
+    /// raids A, because each people gates on its own trait and never on the
+    /// pair. Like [`Bake::has_spoils`] it is a conjunct in both candidate
+    /// loops — a timid people driven off its land pioneers rather than rolling
+    /// over a holder it could have beaten.
+    fn takes_the_initiative(&self, people: KindId) -> bool {
+        match self.disposition.get(&people) {
+            None => true,
+            Some(&d) => d >= RAID_DISPOSITION_MIN,
         }
     }
 
@@ -922,6 +984,11 @@ impl<'a> Bake<'a> {
     /// break in byte-identity for a fixed physics.
     fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
         let raider_site = self.communities[raider].site;
+        // The durable inhibition: a timid people never takes the initiative,
+        // so it never enters the candidate loop at all.
+        if !self.takes_the_initiative(self.records[self.communities[raider].record].people) {
+            return;
+        }
         // Too small to seat itself after the war it is contemplating: decline,
         // before any tally moves (see the `VIABLE_MIN` note above).
         if self.communities[raider].population * (1.0 - WAR_LOSS) < VIABLE_MIN {
@@ -1106,6 +1173,7 @@ pub fn bake(
         capacity,
         river_prox,
         refugia,
+        disposition: &cfg.disposition,
         records: Vec::new(),
         communities: Vec::new(),
         node_index: BTreeMap::new(),
@@ -1315,6 +1383,7 @@ mod tests {
             capacity: &capacity,
             river_prox: &river_prox,
             refugia: &refugia,
+            disposition: no_disposition(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -1412,6 +1481,14 @@ mod tests {
     /// Prime land in [`cascade_world`] — ten times a poor cell's worth.
     const RICH: f64 = 100.0;
 
+    /// The disposition map a hand-built [`Bake`] uses when the test is not
+    /// about disposition: empty, so nobody is vetoed (the same fail-open the
+    /// composition root sees when a people carries no psyche).
+    fn no_disposition() -> &'static BTreeMap<KindId, f64> {
+        static NONE: BTreeMap<KindId, f64> = BTreeMap::new();
+        &NONE
+    }
+
     /// A hand-built [`Bake`] over [`cascade_world`]'s inputs, with an empty
     /// record set and a fixed stream.
     fn hand_bake<'a>(
@@ -1419,6 +1496,7 @@ mod tests {
         capacity: &'a CellMap<f64>,
         river_prox: &'a CellMap<f64>,
         refugia: &'a CellMap<bool>,
+        disposition: &'a BTreeMap<KindId, f64>,
     ) -> Bake<'a> {
         Bake {
             graphs,
@@ -1426,6 +1504,7 @@ mod tests {
             capacity,
             river_prox,
             refugia,
+            disposition,
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -1446,7 +1525,7 @@ mod tests {
         // recorded.
         let (_geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
-        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         // A weak community sits on the one rich cell; a strong people is
         // driven off cell 0 (poor land) and must find a home.
@@ -1539,7 +1618,7 @@ mod tests {
                 POOR
             }
         });
-        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         // Cell 20 is rich AND held by a beatable community; cell 30 is rich
         // and empty. Equal capacity — only the premium separates them.
@@ -1601,7 +1680,7 @@ mod tests {
         // the same one rule, a different outcome.
         let (_geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
-        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let holder = bake.open(
             KindId("goblin"),
@@ -1664,7 +1743,7 @@ mod tests {
         // mapped `Lost` to `collapsed`, so communities vanished uncounted).
         let (_geo, graphs, capacity, river_prox, refugia, era) =
             cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
-        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
         let holder = bake.open(
             KindId("goblin"),
@@ -1759,7 +1838,7 @@ mod tests {
         let raid_with_target_pop = |target_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
                 cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
-            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             // The raider: strong, on land worth less than its neighbour's.
             let raider = bake.open(
                 KindId("kobold"),
@@ -1807,7 +1886,7 @@ mod tests {
         let roll_against_holder_pop = |holder_pop: f64| {
             let (_geo, graphs, capacity, river_prox, refugia, era) =
                 cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
-            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
             bake.open(
                 KindId("goblin"),
                 CellId(20),
@@ -1856,6 +1935,121 @@ mod tests {
             roll_against_holder_pop(RICH),
             Relocation::Settled { cascade: 0 },
             "a starving holder has nothing worth rolling over"
+        );
+    }
+
+    #[test]
+    fn a_timid_people_does_not_raid_however_strong_it_is() {
+        // Inhibition 2 of spec §4.2a (durable): a people whose authored
+        // `threat_response` falls below `RAID_DISPOSITION_MIN` never takes the
+        // initiative, however strong it is on paper. Both arms are the same
+        // world with the same populations — only the raider's disposition
+        // differs — and the third arm pins the fail-open contract for a people
+        // with no authored psyche at all.
+        let probe = Geosphere::new(1);
+        let target_cell = probe.neighbors(CellId(0))[0];
+        let raid_with_disposition = |disposition: BTreeMap<KindId, f64>| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, &disposition);
+            let raider = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                200.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            bake.open(
+                KindId("goblin"),
+                target_cell,
+                0.0,
+                50.0,
+                Founding::Genesis(target_cell),
+                None,
+                0.0,
+            );
+            bake.maybe_raid(raider, &era, 0.0);
+            bake.tally.raided
+        };
+
+        let bold: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.9)].into_iter().collect();
+        assert_eq!(
+            raid_with_disposition(bold),
+            1,
+            "a people that stands its ground raids when motive and capability are there"
+        );
+        let timid: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.2)].into_iter().collect();
+        assert_eq!(
+            raid_with_disposition(timid),
+            0,
+            "a people that flees does not take the initiative, however strong"
+        );
+        assert_eq!(
+            raid_with_disposition(BTreeMap::new()),
+            1,
+            "a people with no authored disposition is not vetoed (fail-open)"
+        );
+    }
+
+    #[test]
+    fn a_timid_people_driven_off_its_land_flees_rather_than_rolling_over_a_holder() {
+        // The same durable veto on the roll-downhill's side of the one rule: a
+        // timid people driven off its land takes the marginal empties rather
+        // than someone else's holding. Asymmetry falls out for free — a bold
+        // neighbour would have rolled over the very same holder.
+        let roll_with_disposition = |disposition: BTreeMap<KindId, f64>| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, &disposition);
+            bake.open(
+                KindId("goblin"),
+                CellId(20),
+                0.0,
+                5.0,
+                Founding::Genesis(CellId(20)),
+                None,
+                0.0,
+            );
+            let roller = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                50.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let (r_id, r_lineage) = (
+                bake.communities[roller].id,
+                bake.communities[roller].lineage,
+            );
+            bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+            bake.relocate(
+                KindId("kobold"),
+                50.0,
+                r_lineage,
+                r_id,
+                0.0,
+                CellId(0),
+                &era,
+                0.0,
+                0,
+            )
+        };
+
+        let bold: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.9)].into_iter().collect();
+        assert_eq!(
+            roll_with_disposition(bold),
+            Relocation::Settled { cascade: 1 },
+            "a bold remnant rolls over the holder it can beat"
+        );
+        let timid: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.2)].into_iter().collect();
+        assert_eq!(
+            roll_with_disposition(timid),
+            Relocation::Settled { cascade: 0 },
+            "a timid remnant pioneers instead — the same rule, a different people"
         );
     }
 

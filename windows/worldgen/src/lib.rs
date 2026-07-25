@@ -3701,9 +3701,17 @@ fn bake_history_from(
     let river_prox =
         hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
     let paleo = paleoclimate_from(world, terrain)?;
-    let cfg = history_bake::BakeConfig::default_millennia();
+    let mut cfg = history_bake::BakeConfig::default_millennia();
     let eras = bake_eras(world, terrain, &cfg)?;
     let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    // The Tumult §4.2a's durable inhibition is authored psychology, so the
+    // composition root — the only layer that may read the species registries —
+    // resolves it here and hands the bake plain kernel types. A people whose
+    // psyche is missing is simply absent from the map and is not vetoed.
+    cfg.disposition = peoples
+        .iter()
+        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
+        .collect();
     let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
