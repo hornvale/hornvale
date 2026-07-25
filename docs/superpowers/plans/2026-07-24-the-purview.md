@@ -872,7 +872,10 @@ mod tests {
             depth: 12,
             orientation: "lattice".to_string(),
             biome_legend: vec!["tundra".to_string()],
-            water_legend: crate::hornvale_terrain_legend(),
+            water_legend: ["ocean", "salt-basin", "river", "dry-land"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             relief_legend: crate::RELIEF_LEGEND.iter().map(|s| s.to_string()).collect(),
             cells,
             legend: vec![],
@@ -961,18 +964,7 @@ mod tests {
 }
 ```
 
-Add this small helper to `windows/scene/src/surrounds.rs` so the tests above can build a legend without reaching into the terrain crate:
-
-```rust
-/// The water legend as owned strings — a test and client convenience.
-/// type-audit: bare-ok(identifier-text: return)
-pub fn hornvale_terrain_legend() -> Vec<String> {
-    hornvale_terrain::WaterKind::LEGEND
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-}
-```
+The test spells the water legend out literally rather than calling into the terrain crate. That is deliberate: if `WaterKind::LEGEND` ever changes, this test's expectations should break loudly rather than silently follow along — the glyph table is keyed to those exact names.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -1057,7 +1049,6 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
     // Place every non-seam cell. row = -w; col = 2v + (up ? 0 : 1).
     let mut placed: BTreeMap<(i64, i64), char> = BTreeMap::new();
     let mut seams = 0usize;
-    let mut observer_col = 0i64;
     for c in &scene.cells {
         let (Some(v), Some(w), Some(up)) = (c.v, c.w, c.up) else {
             seams += 1;
@@ -1065,9 +1056,6 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
         };
         let row = -w;
         let col = 2 * v + i64::from(!up);
-        if c.state == "here" {
-            observer_col = col;
-        }
         let g = terrain_glyph(scene, c);
         let g = if c.state == "remembered" { faded(g) } else { g };
         placed.insert((row, col), g);
@@ -1094,7 +1082,6 @@ pub fn render_surrounds_ascii(scene: &SurroundsScene, lens: &str, ways: &[String
             out.push_str(line.trim_end());
             out.push('\n');
         }
-        let _ = observer_col;
     }
 
     if !ways.is_empty() {
@@ -1735,13 +1722,17 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
 fn drawing_the_map_never_moves_the_world() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
-    let day = session.agent().position.clone();
+    let where_i_stand = session.agent().position.clone();
     let facts = session.committed_agent_at_count();
     for _ in 0..5 {
         session.handle("map");
         session.handle("map out 2");
     }
-    assert_eq!(session.agent().position, day, "map does not move the agent");
+    assert_eq!(
+        session.agent().position,
+        where_i_stand,
+        "map does not move the agent"
+    );
     assert_eq!(
         session.committed_agent_at_count(),
         facts,
