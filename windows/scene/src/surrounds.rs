@@ -25,18 +25,6 @@ pub const MAX_SURROUNDS_RADIUS: u32 = 8;
 /// type-audit: bare-ok(identifier-text)
 pub const RELIEF_LEGEND: [&str; 6] = ["abyss", "shelf", "lowland", "upland", "highland", "alpine"];
 
-/// `Locale::biome` renders in `locale/room/v2`'s own prose convention
-/// (space-separated words, e.g. `"temperate grassland"` — see
-/// `hornvale_locale`'s private `biome_name`), while `biome_legend` here
-/// (like `scene/tiles/v1`'s) uses `hornvale_climate::Biome::name`'s
-/// kebab-case identifier convention (`"temperate-grassland"`). The two
-/// conventions differ only in the separator, so this translates a locale's
-/// prose name into the identifier `biome_index` is keyed by — without this,
-/// every multi-word biome would fail the lookup below.
-fn locale_biome_identifier(prose_name: &str) -> String {
-    prose_name.replace(' ', "-")
-}
-
 /// Elevation (m) to an index into [`RELIEF_LEGEND`].
 /// type-audit: bare-ok(index: return)
 fn relief_band(elevation_m: f64) -> u32 {
@@ -218,11 +206,6 @@ pub fn surrounds_scene_in(
 
     let origin = room.face_lattice();
     let catalog = hornvale_climate::Biome::catalog();
-    let biome_index: BTreeMap<String, u32> = catalog
-        .iter()
-        .enumerate()
-        .map(|(i, b)| (b.name().to_string(), i as u32))
-        .collect();
 
     // Settlement marks, keyed by the room each settlement's coordinates land
     // in at this depth.
@@ -254,9 +237,10 @@ pub fn surrounds_scene_in(
             up: lat.map(|l| l.up),
             seam,
             state: if is_here { "here" } else { "sensed" }.to_string(),
-            biome: *biome_index
-                .get(&locale_biome_identifier(&locale.biome))
-                .expect("every biome is in the catalog"),
+            biome: catalog
+                .iter()
+                .position(|e| *e == locale.biome_kind)
+                .expect("every biome is in the catalog") as u32,
             water: u32::from(locale.fields.water.index()),
             relief: relief_band(locale.fields.elevation_m),
             regime: is_here.then(|| locale.regime.descriptor.clone()),
@@ -307,6 +291,13 @@ pub fn surrounds_scene_in(
 /// one (or that will make more than one surrounds query, e.g. once per
 /// player turn) should call [`surrounds_scene_in`] instead and hold the
 /// context itself, since the rebuild dominates this function's cost.
+///
+/// The radius bound is checked here too, BEFORE `LocaleContext::build` —
+/// measured in release, that build costs ~1.2 s, so an invalid radius must
+/// fail before it, not after, or rejecting a bad argument would cost as
+/// much as building a whole chart. `surrounds_scene_in` repeats the same
+/// check, since it is public and must validate its own arguments
+/// independently of this wrapper.
 /// type-audit: bare-ok(count: radius)
 pub fn surrounds_scene(
     world: &World,
@@ -314,6 +305,9 @@ pub fn surrounds_scene(
     radius: u32,
     at: WorldTime,
 ) -> Result<SurroundsScene, SceneError> {
+    if radius > MAX_SURROUNDS_RADIUS {
+        return Err(SceneError::SurroundsRadiusOutOfRange(radius));
+    }
     let ctx = LocaleContext::build(world).map_err(|e| SceneError::Build(e.to_string()))?;
     surrounds_scene_in(world, &ctx, room, radius, at)
 }
@@ -551,6 +545,28 @@ mod tests {
         let w = world();
         let e = surrounds_scene(
             &w,
+            &observer(&w),
+            MAX_SURROUNDS_RADIUS + 1,
+            WorldTime { day: 0.0 },
+        )
+        .unwrap_err();
+        assert_eq!(
+            e,
+            SceneError::SurroundsRadiusOutOfRange(MAX_SURROUNDS_RADIUS + 1)
+        );
+    }
+
+    // `surrounds_scene_in` is public and must validate its own arguments
+    // independently of the `surrounds_scene` wrapper's hoisted check above —
+    // this pins that the inner function still rejects on its own, not just
+    // because the wrapper happened to catch it first.
+    #[test]
+    fn the_inner_function_is_bounded_loudly_too() {
+        let w = world();
+        let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
+        let e = surrounds_scene_in(
+            &w,
+            &ctx,
             &observer(&w),
             MAX_SURROUNDS_RADIUS + 1,
             WorldTime { day: 0.0 },

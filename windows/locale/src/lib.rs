@@ -50,6 +50,15 @@ pub struct Locale {
     pub longitude: f64,
     /// Inherited biome name (max-weight corner cell).
     pub biome: String,
+    /// The same inherited biome, as the `hornvale_climate::Biome` enum
+    /// `biome`'s prose string was rendered from. `#[serde(skip)]`: this
+    /// carries no wire bytes, so `locale/room/v2`'s serialized shape is
+    /// unchanged — it exists purely so an in-process consumer (e.g.
+    /// `scene/surrounds/v1`) can index by enum identity instead of
+    /// round-tripping through a string, the way `windows/scene/src/lib.rs`
+    /// and `region.rs` already index tile/region biomes.
+    #[serde(skip)]
+    pub biome_kind: Biome,
     /// Blended continuous fields.
     pub fields: LocaleFields,
     /// The three canonical-grid corner cells and their integer weights.
@@ -251,6 +260,7 @@ impl LocaleContext {
             latitude: quantize(coord.latitude),
             longitude: quantize(coord.longitude),
             biome: biome_name(biome).to_string(),
+            biome_kind: biome,
             fields,
             corners: weights
                 .iter()
