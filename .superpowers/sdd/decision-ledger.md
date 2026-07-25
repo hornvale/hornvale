@@ -177,3 +177,35 @@ falsifiable" stays a spec principle rather than a `docs/decisions/` record; it
 is enforced in the plan by making `believed_hazard_clears_a_disproven_phantom`
 the named tripwire in T1.4, T3.4 and T4's assertion (3). · *ideonomy 0 passes*
 (G4 is a mechanical self-review, not a decision point).
+
+#10 [G5] — **The spec's cost hypothesis is FALSIFIED.** The health battery
+went 364 s (T2 tree) → 522 s (T3 tree), measured back-to-back on the same
+machine by stashing only `liveness.rs`. The emitter-free null controls moved
++3.3% (one added `.shunned.clone()` in `affect_of_memo`); the remaining
+~158 s is entirely on the emitter-bearing scenarios, where creatures that
+remember an alarm now feel it and *step off*, so more sim steps run — and a
+longer walk grows the ledger the belief folds are quadratic in. · *Decision:*
+keep the behaviour, record the falsification, and re-score the spec's Cost
+section at close rather than leaving the hypothesis standing. Not a fidelity
+cut (nothing was approximated away) — an intended behaviour change that costs
+what behaviour costs. **Leads the G6 digest**: the commit gate's critical
+path moves from `walker_battery` (434 s) to `health_calibration` (522 s). ·
+*ideonomy 0 passes* (a measurement, not a design choice; the design question
+it raises — whether the new behaviour is *sane* rather than merely intended —
+is discharged by T4's by-cause/prevalence comparison).
+
+#11 [G5] — **Two plan-fixture bugs, corrected by the implementer, not
+worked around.** (a) The Task-3 test as written gave the rememberer a *safe
+revisit* after the emitter left — which is precisely the disproof The
+Phantom's staleness rule performs, so the memory was empty and the test was
+inert. (b) Its days fell at NIGHT for a Diurnal creature, whose sleeping
+emitter pursues Fatigue, not Danger, so no alarm was ever emitted; and at the
+plan's later day thirst had saturated to 1.0 and won the arbitration outright.
+Fixed by keeping the creature standing where it was frightened (no revisit,
+so no self-disproof) and moving the fixture into daylight at a low-thirst
+hour, with explicit red/green verification against `dread: None`. The
+implementer also hardened `a_dread_afraid_creature_raises_no_alarm`, which as
+planned passed *before* the wiring existed (an empty field for want of an
+empty memory) — it now asserts the dread is non-empty first. · *capture:*
+retrospective — a "felt" test must not write the extinction into its own
+fixture, and liveness fixtures carry a day/night trap.
