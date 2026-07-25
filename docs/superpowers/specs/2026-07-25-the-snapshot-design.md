@@ -1,7 +1,12 @@
 # The Snapshot — Design
 
 **Date:** 2026-07-25
-**Status:** Awaiting G3 review
+**Status:** Shipped. **Amended 2026-07-25 post-implementation** — four §3/§4
+claims were wrong and are corrected in place; each correction is recorded with
+the original claim still visible under
+[§3 What implementation corrected](#what-implementation-corrected-amended-2026-07-25).
+This document is a corrected record, not a revision that pretends it was always
+right.
 **Campaign:** The Snapshot (Campaign 1 of the Rose Window program)
 **Parent spec:** `2026-07-25-the-rose-window-metaplan-design.md` (§3.4 is the law this campaign implements; §6.1 its carve)
 **Worktree:** `the-rose-window` (branch `the-rose-window`), off `main` at `3caf9055`
@@ -45,6 +50,10 @@ field with a provenance marker, **the snapshot is organized by epistemic
 channel**, which makes provenance structural: a pane reads one channel and
 physically cannot see outside it.
 
+The shape below is **as shipped** (corrected 2026-07-25; the four claims the
+original draft got wrong, and why, are recorded immediately after the
+per-decision notes):
+
 ```
 {
   "schema": "vessel/session/v1",
@@ -53,23 +62,23 @@ physically cannot see outside it.
 
   "self":   { "agent": 7225590595188407000,
               "species": "bugbear",
-              "settlement": "Qvooshtvoagootao" },
+              "settlement": "Qvooshtvoagootao",
+              "population": 118,
+              "room": 738918402 },
 
-  "sensed": { "room": <locale/room/v2 object, embedded verbatim>,
-              "sky":  { ... as the almanac's own sky report ... },
-              "ways": [ { "dir": "SE", "room": 738918402 }, ... ],
-              "present": [ { "label": "...", "entity": N } ] },
+  "sensed": { "room": <locale/room/v2 object, embedded verbatim — its
+                       own `exits` are the authoritative ways on>,
+              "sky":  "...",       // the sky provider's own rendering
+              "present": [ { "entity": N, "label": "a goblin",
+                             "felt": "is content" } ] },
 
-  "known":  { "entries": [ { "key": "room/738918402", "value": ... }, ... ] },
+  "known":  { "entries": [ { "key": "room/738918402", "value": "..." }, ... ] },
 
-  "felt":   { "label": "content", "valence": ..., "arousal": ...,
-              "about": "..." },
-
-  "social": [ { "entity": N, "label": "...",
+  "social": [ { "entity": N, "label": "a goblin",
                 "grievance": 0.0, "hostile": false } ],
 
-  "narration": { "prose": "You stand in ...\nWays on: SE, N, SW.",
-                 "nouns": [ ... ] }
+  "narration": { "prose": "<this turn's own response text, verbatim>",
+                 "nouns": [ { "noun": "sky", "datum": "..." }, ... ] }
 }
 ```
 
@@ -99,6 +108,72 @@ not a sense datum — it is `COMMIT`-tier, entity-keyed, placeless (metaplan
 imply it evaporates with presence, which is exactly the confusion the
 metaplan's position law exists to prevent.
 
+### What implementation corrected (amended 2026-07-25)
+
+This section was written before the code. Four of its claims turned out to be
+wrong, and the corrections are recorded here with the original wording quoted
+so the reasoning that produced the error stays visible. All four are
+*subtractions or reattributions*, not scope changes: nothing the spec promised
+went unshipped.
+
+**1. There is no top-level `felt` channel.** The draft's example carried
+
+> `"felt": { "label": "content", "valence": ..., "arousal": ..., "about": "..." }`
+
+as a peer of `sensed` and `social`, on the assumption that the possessed agent
+has an affect to read. **It does not.** The player has no drive layer and no
+affect layer at all — `Session::needs()` reads the *co-located NPCs'* felt
+states via `affect_of`, so what the draft mistook for the player's interior was
+always a presence-gated read of somebody else's. It therefore belongs inside the
+presence-gated channel, and ships as `sensed.present[].felt`: one felt string
+per co-located creature, evaporating with presence exactly as the position law
+requires. A player interior — a drive/affect layer the possessed agent actually
+owns — is a later campaign, and when it exists a top-level `felt` channel is the
+right home for it. The draft was not wrong about the shape; it was wrong about
+whose interior existed.
+
+**2. There is no `ways` field.** The draft's example carried
+
+> `"ways": [ { "dir": "SE", "room": 738918402 }, ... ]`
+
+beside `sensed.room`. But `sensed.room` embeds `locale/room/v2` *verbatim* — the
+very decision recorded three paragraphs above — and that object already carries
+`exits`. `Session::ways()` is not a source of truth; it is only a filter over
+those exits (`ExitKind::Edge` + `Direction::Compass`). Emitting both would put
+two representations of one truth in one document, which is precisely the drift
+the "one schema, one owner" decision exists to prevent. So the snapshot emits
+the exits once and **the client filters**, in `waysOf()` in
+`clients/vessel/src/snapshot.ts`, applying the same two predicates
+`Session::ways()` does. This is the embed decision taken seriously; the draft
+had stated the principle and then violated it in its own example.
+
+**3. `narration.prose` is the turn's own response text, not the focalized room
+block.** The draft's example showed
+
+> `"prose": "You stand in ...\nWays on: SE, N, SW."`
+
+which is `describe_here()`'s output. That would have been a bug. `describe_here()`
+serves only `look`, `go`, `back`, and the opening; `Session` records `last_text`
+— the opening, then each verb's response — and the snapshot carries **that**,
+verbatim. Emitting the room block unconditionally would make the client print
+the room description on a `whoami` turn, i.e. the transcript pane would stop
+being a projection of the session and start being a projection of the *room*.
+Verified empirically over the 13-turn walker script: 8 of those turns return
+text that is not the room block. The prose channel is the transcript, and the
+transcript is what the player was just told.
+
+**4. Serialization is serde-derive plus quantizing field attributes.** §4 below
+described `snapshot_json` as "hand-rolled serialization in the house style".
+That misidentified the house style. What shipped is `#[derive(Serialize)]` on
+every channel struct with
+`#[serde(serialize_with = "hornvale_kernel::quantize::quantize_serde::f64_field")]`
+on each `f64` — which is what `windows/scene` already does, and therefore *is*
+the house style. The constitutional requirement was never "write the JSON by
+hand"; it was "quantize at the emit boundary and nowhere else", and a
+field-level `serialize_with` attribute discharges that requirement more legibly
+than a hand-rolled writer, because the boundary is declared on the field it
+governs rather than reimplemented in a function that could forget one.
+
 ## 4. The producer
 
 `windows/vessel` gains a `snapshot` module:
@@ -108,9 +183,14 @@ metaplan's position law exists to prevent.
 - `pub fn snapshot(session: &Session) -> Result<SessionSnapshot, VesselError>`
   — a pure read over accessors that already exist. **No new seed draws, so
   the stream manifest is unchanged.**
-- `pub fn snapshot_json(snap: &SessionSnapshot) -> String` — hand-rolled
-  serialization in the house style, with every float through
+- `pub fn snapshot_json(snap: &SessionSnapshot) -> String` — ~~hand-rolled
+  serialization in the house style~~, with every float through
   `hornvale_kernel::quantize` at the emit boundary and nowhere else.
+  **Amended (correction 3, §3):** the serialization is `#[derive(Serialize)]`
+  on each channel struct plus a `quantize_serde::f64_field` `serialize_with`
+  attribute on every `f64`, as `windows/scene` does; `snapshot_json` is a
+  one-line `serde_json::to_string`. The quantize-at-emit-only requirement is
+  unchanged and is what the attributes discharge.
 
 `Session::handle` is untouched. The snapshot is taken *after* a turn commits,
 by the caller, so the turn path costs nothing when nobody asks for one — the
@@ -202,7 +282,9 @@ means to test instead of a geography accident.
    redaction discipline structural rather than conventional, and it is a
    shape that is awkward to change later — a pane written against
    `sensed.ways` cannot be cheaply repointed if the grouping is flattened.
-   Worth a look before it sets.
+   Worth a look before it sets. (**Amended:** `sensed.ways` does not exist —
+   see correction 2. Read the example as `sensed.present`, where the same
+   argument holds unchanged.)
 3. **`social` as a top-level channel** rather than nested under `sensed`
    (§3). The argument is the position law; the cost is that a client wanting
    "everything about who is here" reads two channels.
@@ -217,3 +299,11 @@ a chronicle entry; a freshness sweep of the Casement's chapter; a
 retrospective; and the registry rows `CLIENT-one-snapshot` and
 `CLIENT-redaction-panes` flipped `raw` → `shipped` with **Where** repointed
 at the chronicle.
+
+**Amended on close:** only the one-snapshot row shipped outright. The redaction
+row ships to a *floor* — the schema's channel grouping, which is the redaction
+boundary made structural — and no further: there are no panes beyond the
+transcript, and the knowledge-gated pane that row describes is untouched. It
+therefore carries the registry's partial-ship idiom rather than a plain
+`shipped`, because overclaiming there would misinform the next reader about
+what exists.
