@@ -116,22 +116,22 @@ pub fn run(world: &World, input: impl BufRead, mut output: impl Write) -> std::i
                     });
                 match coords {
                     None => writeln!(output, "usage: biome <latitude> <longitude>")?,
-                    Some((lat, lon)) => match (
-                        world_builder::terrain_of(world),
-                        world_builder::climate_of(world),
-                    ) {
-                        (Ok(terrain), Ok(climate)) => {
-                            let cell = terrain.nearest_cell(lat, lon);
-                            writeln!(
-                                output,
-                                "cell {}: biome {} — {:.0}°C, moisture {:.2}",
-                                cell.0,
-                                climate.biome_at(cell).name(),
-                                climate.mean_temperature_at(cell).get(),
-                                climate.moisture_at(cell)
-                            )?;
-                        }
-                        (Err(e), _) | (_, Err(e)) => writeln!(output, "error: {e}")?,
+                    Some((lat, lon)) => match world_builder::terrain_of(world) {
+                        Ok(terrain) => match world_builder::climate_from(world, &terrain) {
+                            Ok(climate) => {
+                                let cell = terrain.nearest_cell(lat, lon);
+                                writeln!(
+                                    output,
+                                    "cell {}: biome {} — {:.0}°C, moisture {:.2}",
+                                    cell.0,
+                                    climate.biome_at(cell).name(),
+                                    climate.mean_temperature_at(cell).get(),
+                                    climate.moisture_at(cell)
+                                )?;
+                            }
+                            Err(e) => writeln!(output, "error: {e}")?,
+                        },
+                        Err(e) => writeln!(output, "error: {e}")?,
                     },
                 }
             }

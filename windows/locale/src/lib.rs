@@ -21,7 +21,7 @@ use hornvale_climate::{Biome, GeneratedClimate};
 use hornvale_kernel::{CellId, NearestCellIndex, RoomAddr, Seed, World, WorldTime, quantize};
 use hornvale_terrain::GeneratedTerrain;
 pub use hornvale_terrain::WaterKind;
-use hornvale_worldgen::{climate_of, terrain_of};
+use hornvale_worldgen::{climate_from, terrain_of};
 use serde::Serialize;
 
 /// The versioned semantic schema this window emits (save-format class; a
@@ -155,8 +155,9 @@ pub struct LocaleContext {
 impl LocaleContext {
     /// Build the coarse world (climate + terrain + nearest-cell index) once.
     pub fn build(world: &World) -> Result<LocaleContext, LocaleError> {
-        let climate = climate_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
         let terrain = terrain_of(world).map_err(|e| LocaleError::Build(e.to_string()))?;
+        let climate =
+            climate_from(world, &terrain).map_err(|e| LocaleError::Build(e.to_string()))?;
         let index = NearestCellIndex::new(climate.geosphere());
         let globe_level = climate.geosphere().level();
         let budget = StrangenessBudget::build(world.seed, &climate, &terrain);
