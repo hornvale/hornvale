@@ -68,8 +68,16 @@ subsystem:
 - **Strength** of a community — its capacity to win a raid — is `population` scaled by a tech
   factor (Iron beats Bronze beats Neolithic; monotone, already tracked as `TechHorizon`).
   Heterogeneous strength is the fuel; equals do not prey on each other.
-- **Coveted value** of a cell is its `capacity` (the existing per-cell worth). A community covets
-  a neighbour whose cell is worth more than its own — the fertile valley, the mine.
+- **Coveted value** of a cell is its **era-effective** `capacity` (the existing per-cell worth
+  times the era's habitability factor — raw capacity would let a raider conquer ground the ice has
+  just made worthless). A community covets a neighbour whose cell is worth more than its own — the
+  fertile valley, the mine.
+- **The settled-land premium.** A *held* cell is worth more than an empty cell of equal capacity,
+  because §1's reason is real: pioneering unknown ground is a gamble, and a rival's holding comes
+  already made to work. Held cells therefore score `eff_capacity × (1 + SETTLED_PREMIUM)`. This is
+  the only term in the model that *increases* conflict; every inhibition in §4.2a reduces it, and
+  the ratio between them is what makes the branching ratio a measurable quantity rather than a
+  structurally-zero one.
 
 ### 4.2 The raid rule (deterministic — the new trigger, density dropped)
 
@@ -80,8 +88,29 @@ occupied neighbours** (over the era graph) and raids the best target that satisf
 
 The best target is the most valuable such cell (tie-broken deterministically by strength then
 `CellId`). No target that meets both conditions ⇒ no raid this epoch. **Crowding is never the
-trigger.** (The pre-existing climate paths are unchanged: a cell turned hostile by the ice still
-drives *migration* to a refuge or death; over-capacity still starves — those are not conflict.)
+trigger.**
+
+### 4.2a Inhibition — predation's third factor
+
+Predation is `motive × capability × **inhibition**`. §4.2 supplies motive (covetousness) and
+capability (dominance); without a third factor every people that *can* raid *does*, which is both
+unhistorical and — because inhibition is what differs between peoples — throws away the
+heterogeneity that is SOC's stated fuel. Each inhibition is a modular veto in the candidate loop
+(a conjunction, so they compose without interacting). Slice 1 takes the two cheapest:
+
+1. **No spoils** (momentary) — a target already starving against its own carrying capacity has
+   nothing to contend over. Nothing to take ⇒ no raid, however weak it is. This also blocks the
+   pathological regress of remnants preying on remnants all the way down.
+2. **Disposition** (durable) — a people whose `PsychVector.threat_response` (flee 0 ↔ stand 1)
+   falls below a threshold does not raid at all, however strong it is on paper. Authored data, not
+   drawn. This is the gate that makes raiding heterogeneous *across peoples*, and it produces an
+   **asymmetric** aversion structure for free: A declines B while B raids A, because each people
+   gates on its own trait.
+
+The remaining gates (niche-relative value, pairwise aversion, concealment) are §9 non-goals.
+
+(The pre-existing climate paths are unchanged: a cell turned hostile by the ice still drives
+*migration* to a refuge or death; over-capacity still starves — those are not conflict.)
 
 ### 4.3 The outcome, and dissipation (the fix that was missing)
 
@@ -94,6 +123,21 @@ A raid resolves deterministically and **lossily**:
   the raid rule against *its* weaker neighbours, cascading. Each hop it loses more (the war-loss
   and the journey), so a displaced remnant that falls below a **viable minimum dies** rather than
   cascading forever — the second dissipation, and the natural avalanche cutoff.
+
+**"Re-enters the raid rule" is literal — one rule, one substituted baseline.** A raider compares a
+candidate against *what it already holds*; a homeless roller holds nothing, so its baseline is
+*the best thing it can get for free*. The displaced people therefore makes **one** comparison over
+every reachable cell — vacant cells at `eff_capacity`, held cells at
+`eff_capacity × (1 + SETTLED_PREMIUM)` and admitted only when the roller clears the dominance
+margin over the holder — and takes the best; nothing admissible ⇒ it is lost. This replaces the
+vacant-first special case, which was never in this spec: under vacant-first a roller prefers a
+marginal empty cell to a rich held one, the branching ratio is zero *by construction* rather than
+by physics, and §5's open question cannot be asked.
+
+**The strategy is emergent, not enumerated.** A strong remnant preys — it beats holders, and proven
+ground scores higher. A weak one flees to the empties — it beats nobody, so held cells never enter
+its option set at all. "Shit rolls downhill" falls out of the strength gradient; there is no
+`if migrating else raiding` branch anywhere in the mechanism.
 
 The cascade size is the number of displacements in one relaxation (the existing histogram). The
 branching ratio — does one raid trigger on average more or fewer than one downhill raid — is what
@@ -117,6 +161,19 @@ The cascade-size distribution is measured over a seed sample and its shape adjud
 
 Unlike the first design, we do **not** engineer toward the power law — value × strength drives the
 raids, dissipation bounds them, and the shape is whatever emerges. Either outcome ships.
+
+**Disclosure — this metric's mechanism was amended after an unfavourable observation.** Task 1
+shipped and measured first: seed-42 went from 0 raids to 71 with land to spare (the headline), but
+the cascade histogram came back **all-zero**, because 69 of 71 losers found vacant land at the
+first hop. The displaced-relocation rule was then changed (§4.3: one best-value comparison over
+vacant *and* held cells, with the settled-land premium) — a change that raises the branching ratio
+by construction. The justification is spec-fidelity, not the metric: §1 already asserted that a
+rival's holding "comes already made to work", and §4.3 already said the loser "re-enters the raid
+rule", neither of which the vacant-first implementation encoded; under vacant-first the branching
+ratio is structurally zero and §5's open question is unaskable rather than answered. The amendment
+is nonetheless **post-observation** and is labelled as such wherever this result is reported — in
+the Task-3 readout, the chronicle, and the retrospective. The falsification rule is unchanged: the
+measured shape ships whatever it is, and no constant is tuned toward a power law.
 
 ## 6. Scope — what is slice 1, and what is the next slice (a G3 decision)
 
@@ -159,9 +216,22 @@ predicate, or stream label.
 
 - **Crowding / density as a conflict trigger** — dropped; it was never the driver.
 - **The explicit dominance hierarchy + tribute/extraction + collapse-release** — the next slice
-  (unless promoted at G3).
+  (unless promoted at G3). Every *standing relationship* between communities belongs here:
+  tribute/Danegeld, alliance, vassalage, colonial rule, employment. They are deferred for a
+  structural reason, not a scheduling one — a one-shot outcome is already expressible as a
+  `CauseOfEnd`/`Founding` chain in the occupation record, whereas a standing relationship needs a
+  persistent inter-community relation the ledger has no shape for (a save-format change and a real
+  subsystem, whose substrate is the derived typed-edge social graph).
 - **Captives/enslavement, revenge/grievance, status/prestige, sacred motives** — later slices.
 - **Cohesion (ʿasabiyya)** — the secular-cycle regulator — a later slice.
+- **The remaining inhibition gates of §4.2a** — niche-relative value, pairwise aversion, and
+  concealment. Niche-relative value is the notable one: it is arguably a *correctness* fix rather
+  than an enrichment, since the bake takes a single global `capacity` field and thereby asserts
+  every people values every cell identically — a claim the existing `ConditionNiche` contradicts.
+  It is deferred on cost (the bake's capacity input would have to become per-people), not on merit.
+- **The wider contact space** — pillage, rent-seeking, colonization, genocide, assimilation,
+  proselytization, employment, alliance, trade. Raiding is one cell of it; the program frame and
+  its generative kernel (the rivalry of the prize) are captured in the idea registry.
 - **A new committed field, predicate, or stream label** — the raid uses existing record shapes.
 
 ## 10. Definition of Done (per CLAUDE.md)
