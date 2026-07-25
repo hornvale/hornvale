@@ -53,6 +53,8 @@ usage:
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
+  hornvale scene surrounds [--world <PATH>] [--room <ID>] [--radius <N>] [--depth <D>]
+                                                      emit scene/surrounds/v1 JSON to stdout
   hornvale history --world <PATH> --site <CELL>
                           read a site's stratigraphy + flesh (the deep history of one cell)
   hornvale connections --world <PATH> --site <CELL>
@@ -1119,14 +1121,79 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }
+        Some("surrounds") => {
+            let world = load_world(args)?;
+            let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
+            let depth = match flag_value(args, "--depth") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--depth must be a u32: {e}"))?,
+                None => ctx.globe_level() + 6,
+            };
+            let radius = match flag_value(args, "--radius") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--radius must be a u32: {e}"))?,
+                None => 4,
+            };
+            let room = match flag_value(args, "--room") {
+                Some(raw) => {
+                    let id = raw
+                        .parse::<u64>()
+                        .map_err(|e| format!("--room must be a packed room id: {e}"))?;
+                    RoomId(id)
+                        .unpack()
+                        .map_err(|e| format!("--room {id} is not a room id: {e:?}"))?
+                }
+                None => {
+                    // Default: the flagship settlement's room — the ground a
+                    // possession actually starts on.
+                    let v = hornvale_settlement::village_info(&world)
+                        .ok_or("this world has no settlement to centre on")?;
+                    settlement_room(&world, v.id, depth)?
+                }
+            };
+            let scene =
+                hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day: 0.0 })
+                    .map_err(|e| e.to_string())?;
+            println!("{}", hornvale_scene::surrounds_json(&scene));
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
         )),
         None => Err(
-            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
+            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
                 .to_string(),
         ),
     }
+}
+
+/// The room a settlement's coordinates fall in at `depth` — the same lat/lon
+/// → unit-sphere routing `locale --at` uses, so a scene centred on a
+/// settlement lands exactly where a possession mints its agent.
+fn settlement_room(
+    world: &World,
+    id: hornvale_kernel::EntityId,
+    depth: u32,
+) -> Result<RoomAddr, String> {
+    let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return Err("the settlement has no latitude fact".to_string()),
+    };
+    let lon = match world.ledger.value_of(id, hornvale_settlement::LONGITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return Err("the settlement has no longitude fact".to_string()),
+    };
+    let (la, lo) = (lat.to_radians(), lon.to_radians());
+    Ok(RoomAddr::containing(
+        [
+            math::cos(la) * math::cos(lo),
+            math::cos(la) * math::sin(lo),
+            math::sin(la),
+        ],
+        depth,
+    ))
 }
 
 /// Describe a single room as an observable place. Prose by default; `--json`
