@@ -992,7 +992,7 @@ git commit -m "feat(vessel-wasm): expose the session snapshot; scout a possessab
 Create `clients/vessel/src/snapshot_test.ts`:
 
 ```ts
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { narrationOf, parseSnapshot, waysOf } from "./snapshot.ts";
 
 // A minimal fixture in the real schema's shape. Kept small on purpose: the
@@ -1151,7 +1151,7 @@ export interface OutResponse {
 }
 ```
 
-In `worker.ts`, add `hv_snapshot_ptr`/`hv_snapshot_len` to the destructured exports, add a `readSnapshot()` helper mirroring the existing `readOut()`, and include `snapshot: readSnapshot()` in every `started` and `out` message it posts.
+In `worker.ts`: the file declares a `VesselExports` **interface** (worker.ts:11-12 carries `hv_out_ptr(): number; hv_out_len(): number;`) and casts `instance.exports` to it — so add `hv_snapshot_ptr(): number;` and `hv_snapshot_len(): number;` to that interface, add a `readSnapshot(v: VesselExports)` helper mirroring `readOut(v)` (worker.ts:47), and include `snapshot: readSnapshot(v)` in the `started` message (worker.ts:67) and the `out` message (worker.ts:80). Leave the `error` message alone — a failed genesis has no snapshot.
 
 - [ ] **Step 6: Render the transcript through the projection**
 
