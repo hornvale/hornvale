@@ -76,6 +76,7 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
+  map [out N]      the chart of what lies around you (N rungs coarser)
   go <dir>         walk a compass exit (n ne e se s sw w nw)
   examine <thing>  anything look mentions
   back             retrace your last step
@@ -408,6 +409,7 @@ impl<'w> Session<'w> {
         match verb {
             "" => Turn::Out(String::new()),
             "look" => self.out(self.describe_here()),
+            "map" => self.map(rest),
             "go" => self.go(rest),
             "examine" => self.examine(rest),
             "back" => self.back(),
@@ -640,16 +642,79 @@ impl<'w> Session<'w> {
         }
     }
 
+    /// The chart. `map` draws the walk depth; `map out [N]` draws N rungs
+    /// coarser — zoom in this mesh is path truncation, so a coarse chart is
+    /// the same builder one rung up the address space, never an aggregate.
+    /// The real bound on how far out a chart can zoom is not the walk depth
+    /// but `depth - globe_level`: past that, `purview` truncates the address
+    /// above the canonical grid's own refinement and the locale layer has
+    /// nothing to inherit from. That bound is refused here in player-facing
+    /// language, never as the locale layer's internal "canonical grid"
+    /// wording.
+    fn map(&self, rest: &str) -> Turn {
+        let zoom = match rest.split_whitespace().collect::<Vec<_>>().as_slice() {
+            [] => 0u32,
+            ["out"] => 1,
+            ["out", n] => match n.parse::<u32>() {
+                Ok(v) => v,
+                Err(_) => {
+                    return Turn::Out(format!("Zoom out by how much? '{n}' is not a number."));
+                }
+            },
+            _ => return Turn::Out("Say 'map' or 'map out [N]'.".to_string()),
+        };
+        let depth = self.agent.position.depth();
+        let max_zoom = depth.saturating_sub(self.ctx.globe_level());
+        if zoom > max_zoom {
+            return Turn::Out(
+                "There is no coarser rung to show; the chart has reached the bottom of \
+                 the world."
+                    .to_string(),
+            );
+        }
+        let scene = match self.purview(zoom) {
+            Ok(s) => s,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
+        let ways: Vec<String> = self
+            .ways()
+            .iter()
+            .map(|(c, _)| format!("{c:?}").to_uppercase())
+            .collect();
+        Turn::Out(hornvale_scene::render_surrounds_ascii(
+            &scene, "terrain", &ways,
+        ))
+    }
+
+    /// Every noun this lens has surfaced, at either grain: the prose's own
+    /// catalog first (the fine grain wins a collision — prose is primary),
+    /// then the chart's legend. This union IS the attention join.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn lens_nouns(&self) -> Vec<(String, String)> {
+        let mut out: Vec<(String, String)> = match self.focalized() {
+            Ok(f) => f.nouns,
+            Err(_) => Vec::new(),
+        };
+        if let Ok(scene) = self.purview(0) {
+            for e in &scene.legend {
+                if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
+                    out.push((e.noun.clone(), e.datum.clone()));
+                }
+            }
+        }
+        out
+    }
+
     fn examine(&self, noun: &str) -> Turn {
         if noun.is_empty() {
             return Turn::Out("Examine what?".to_string());
         }
-        let f = match self.focalized() {
-            Ok(f) => f,
-            Err(e) => return Turn::Out(format!("error: {e}")),
-        };
         let wanted = noun.to_lowercase();
-        match f.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
+        match self
+            .lens_nouns()
+            .iter()
+            .find(|(n, _)| n.to_lowercase() == wanted)
+        {
             Some((_, detail)) => Turn::Out(detail.clone()),
             None => Turn::Out(format!("You see no {noun} here.")),
         }
