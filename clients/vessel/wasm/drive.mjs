@@ -89,7 +89,10 @@ assert.equal(readOut(), "You let go.");
 // worldgen moved. 43 and 45 are both settlement-free today.
 let other = null;
 for (let seed = 43n; seed < 60n; seed++) {
-  if (hv_start(seed) === 0) { other = seed; break; }
+  if (hv_start(seed) === 0) {
+    other = seed;
+    break;
+  }
 }
 assert.notEqual(other, null, "some seed in 43..60 is possessable");
 assert.notEqual(readOut(), golden, "a different seed is a different world");
