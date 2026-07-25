@@ -18,6 +18,9 @@
 - **No new seed draws.** This campaign adds no `Stream` derivation, so `stream_labels()` and the generated stream manifest are unchanged.
 - **Schema string is exactly `vessel/session/v1`.** Additive changes are free; a meaning change mints `v2`; nothing is ever renamed (save-format contract).
 - **`cargo fmt` is the final step before every commit.** Fmt-gate skips are the project's most common review finding.
+- **Every task that adds or changes a `pub` item with a primitive field must run the type audit before committing:**
+  `cargo run --manifest-path tools/type-audit/Cargo.toml -- check`
+  It is default-deny (any untagged pub-boundary primitive fails) and CI-enforced, and it is a **separate tool outside the workspace** — `make gate` does not run it, so a green `cargo test` proves nothing about it. The only valid `bare-ok` classes are the eleven in `tools/type-audit/src/tag.rs`: `ratio`, `count`, `index`, `constructor-edge`, `envelope`, `identifier-text`, `prose`, `artifact`, `diagnostic-value`, `render-internal`, `flag`. Anything else fails, including plausible-sounding inventions like `identifier` or `quantity`. Ratified meanings are in decision 0028. Precedents this campaign relies on: a numeric id → `index`; a schema-string const → `identifier-text` (as `ROOM_SCHEMA` and `TILES_SCHEMA` do); a name/label/key → `identifier-text`; rendered text → `prose`; a serialized blob → `artifact`; a bare day → `waiver(decision-0014: day)`.
 - **Commit gate:** `make gate` (fmt + clippy + nextest + doctests). Iterate with `cargo test -p hornvale-vessel` and run the full gate once, at the end.
 
 ---
@@ -180,10 +183,11 @@ use hornvale_locale::Locale;
 use serde::Serialize;
 
 /// The schema tag every snapshot carries.
+/// type-audit: bare-ok(identifier-text)
 pub const SESSION_SCHEMA: &str = "vessel/session/v1";
 
 /// One committed turn, as the client sees it.
-/// type-audit: bare-ok(count: turn), bare-ok(quantity: day)
+/// type-audit: bare-ok(count: turn), waiver(decision-0014: day)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SessionSnapshot {
     /// Schema tag (`vessel/session/v1`).
@@ -208,8 +212,9 @@ pub struct SessionSnapshot {
 }
 
 /// The possessed agent's own identity.
-/// type-audit: bare-ok(identifier: agent), bare-ok(identifier: room),
-/// bare-ok(count: population)
+/// type-audit: bare-ok(index: agent), bare-ok(index: room),
+/// bare-ok(count: population), bare-ok(identifier-text: species),
+/// bare-ok(identifier-text: settlement)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SelfChannel {
     /// The agent's deterministic minted id.
@@ -225,6 +230,7 @@ pub struct SelfChannel {
 }
 
 /// The presence-gated channel: true only while the agent stands here.
+/// type-audit: bare-ok(prose: sky)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SensedChannel {
     /// The room, as `locale/room/v2`, embedded verbatim — one schema, one
@@ -238,7 +244,8 @@ pub struct SensedChannel {
 }
 
 /// A co-located creature, as read from presence.
-/// type-audit: bare-ok(identifier: entity), bare-ok(prose: felt)
+/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label),
+/// bare-ok(prose: felt)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PresentEntry {
     /// The creature's ledger entity id.
@@ -270,8 +277,8 @@ pub struct KnownEntry {
 /// A creature's committed standing toward the player. Placeless and
 /// entity-keyed, so it survives leaving the room — the reason this is its
 /// own channel rather than part of `sensed`.
-/// type-audit: bare-ok(identifier: entity), bare-ok(ratio: grievance),
-/// bare-ok(flag: hostile)
+/// type-audit: bare-ok(index: entity), bare-ok(identifier-text: label),
+/// bare-ok(ratio: grievance), bare-ok(flag: hostile)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SocialEntry {
     /// The creature's ledger entity id.
@@ -286,6 +293,7 @@ pub struct SocialEntry {
 }
 
 /// The sim's own rendering of this turn.
+/// type-audit: bare-ok(prose: prose)
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Narration {
     /// The passage the transcript prints, byte-for-byte.
