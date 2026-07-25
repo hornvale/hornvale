@@ -2856,13 +2856,13 @@ pub fn affect_of_memo(
     // frightened creature ⇒ byte-identical). The roster is this call's `band`;
     // `alarm_field` invokes `affect_of` with `band = &[]`, so its replay reads
     // a terrain-only memory and the transient re-derivation never recurses.
-    let believed_hazard = believed_hazard_memo(frozen, npc, day, terrain, band, memo);
+    let memory = hazard_memory_memo(frozen, npc, day, terrain, band, memo);
     let view = Perceived {
         position: pos,
         drive,
         fatigue,
         believed_water: believed,
-        believed_hazard,
+        believed_hazard: memory.shunned.clone(),
         explore_step,
     };
     let thirst = Thirst { params: SUSTENANCE };
@@ -2895,7 +2895,14 @@ pub fn affect_of_memo(
         // this is the read `alarm_field` builds over, so it MUST NOT see borrowed
         // alarm (else secondary transmission, a self-sustaining stampede).
         alarm: None,
-        dread: None,
+        // THE SHUDDER: it DOES see remembered dread, because this is the read the
+        // narration and the health metric observe — a fear that never reaches
+        // `Affect` is not a feeling, only a second behavioural term. Safe against
+        // the same stampede: the alarm-field's emission read passes `band = &[]`,
+        // whose bandless memory has no emitters and therefore an EMPTY dread map,
+        // so a dread-afraid creature can never emit. One structural fact — the
+        // bandless replay — gives termination, byte-identity, and no contagion.
+        dread: Some(&memory.dread),
     };
     // Affiliation (The Belonging): loneliness + the home-step, precomputed once
     // from a single plan home (reused, so the drive's urgency is O(1)).
@@ -3005,8 +3012,13 @@ pub fn alarm_field_memo(
         // `object == Danger` requires it ≥ act. So a creature on safe ground can
         // never be an emitter; skip the EXPENSIVE `affect_of` (full arbitration,
         // an A* plan-home) for it. This is a NECESSARY condition, not the
-        // decision — a terrain-afraid creature still goes through `affect_of`
-        // below to confirm Danger WINS. It is what keeps the re-derived transient
+        // decision — and it stays exact under The Shudder: the read it guards is
+        // the BANDLESS `affect_of`, whose hazard memory has no emitters and
+        // therefore no dread, so its Danger urgency really is `threat_field ×
+        // mettle_factor`. Remembered dread is felt but never emitted; contagious
+        // superstition is reserved. Widening this gate to admit dread-only
+        // creatures would open it. A terrain-afraid creature still goes through
+        // `affect_of` below to confirm Danger WINS. It is what keeps the transient
         // memory (`believed_hazard` folds this per visited cell) cheap on the
         // emitter-free common case: no hazard underfoot ⇒ no `affect_of` at all.
         if threat_field(&pos, &npc.threat_niche, terrain) * mettle_factor(npc.boldness) < DANGER_ACT
@@ -3210,7 +3222,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
             // the most-recent-visit staleness clears a disproven fear. Empty for
             // a never-frightened creature ⇒ every planner edge stays `1`, byte-
             // identical (no primary-afraid emitter on the settled worlds).
-            let believed_hazard = believed_hazard_memo(
+            let memory = hazard_memory_memo(
                 frozen,
                 npc,
                 self.from,
@@ -3278,7 +3290,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     drive,
                     fatigue,
                     believed_water: believed.clone(),
-                    believed_hazard: believed_hazard.clone(),
+                    believed_hazard: memory.shunned.clone(),
                     explore_step,
                 };
                 // BOTH drives now compete: thirst (the drank-fold, on the view)
@@ -3313,7 +3325,13 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     // catches the alarm and flees. Empty on the settled worlds
                     // (no primary distress) ⇒ byte-identical.
                     alarm: Some(&alarm),
-                    dread: None,
+                    // THE SHUDDER: the mover also carries the creature's own
+                    // remembered dread — the transient half of the same fold that
+                    // gave it `believed_hazard`, read at its OWN cell and added
+                    // into the same slot as the sensed alarm. Empty on the settled
+                    // worlds (no emitter ⇒ the fold's fast path records none) ⇒
+                    // byte-identical.
+                    dread: Some(&memory.dread),
                 };
                 // Affiliation (The Belonging): loneliness + home-step, from one
                 // plan home (reused, so urgency is O(1)).
@@ -4523,6 +4541,101 @@ mod tests {
         assert_eq!(
             believed_hazard(&ledger, &a, now, &terrain, &roster),
             hazard_memory(&ledger, &a, now, &terrain, &roster).shunned
+        );
+    }
+
+    #[test]
+    fn affect_of_feels_the_phantom_on_now_safe_ground() {
+        // THE FELT HALF, through the public read the narration and the health
+        // metric both use. A creature standing where a herd's alarm once caught
+        // it reads Danger — on ground whose PRESENT terrain threat is below act.
+        // A never-alarmed control on the same cell reads no danger at all.
+        //
+        // A does NOT revisit X after B leaves: a later SAFE visit is exactly the
+        // staleness disproof `believed_hazard_clears_a_disproven_phantom` pins,
+        // so a revisit would empty the memory and there would be nothing to feel.
+        // A simply never moved — its committed position at `now` is still X.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let ns = d_cell.neighbors();
+        let hazard = ns[0].clone(); // E: frightens the emitter B
+        let x = ns[1].clone(); // X: terrain-safe, in B's halo
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        // B: primary-afraid beside X on day 0.45, then far away by day 0.55.
+        // The days are DAYLIGHT ones (the fractional-day sun is up around noon):
+        // a sleeping Diurnal emitter pursues rest, not fear, and emits nothing.
+        let b_e = ledger.mint_entity();
+        let b = haunt_npc(b_e, d_cell.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
+        // A (coward): stood at X while B panicked beside it, and is there still.
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
+        // C (coward): never stood at X before — it is there now for the first
+        // time, arriving after B is already gone.
+        let c_e = ledger.mint_entity();
+        let mut c = haunt_npc(c_e, x.clone());
+        c.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, c_e, &x, 0.55);
+
+        // Early in the world, so the sustenance drives are quiet and the felt
+        // state reports the fear rather than a louder thirst.
+        let now = WorldTime { day: 0.6 };
+        let band = [a.clone(), b.clone(), c.clone()];
+        let felt = affect_of(&ledger, &a, &band, now, &terrain);
+        assert_eq!(
+            felt.object,
+            Some(DriveKind::Danger),
+            "the rememberer is afraid on now-safe ground: {felt:?}"
+        );
+        assert!(felt.arousal >= DANGER_ACT, "and the fear is felt: {felt:?}");
+        let control = affect_of(&ledger, &c, &band, now, &terrain);
+        assert_ne!(
+            control.object,
+            Some(DriveKind::Danger),
+            "a creature with no memory of this ground feels nothing here: {control:?}"
+        );
+    }
+
+    #[test]
+    fn a_dread_afraid_creature_raises_no_alarm() {
+        // NO SUPERSTITION CONTAGION (spec §3, ledger #6) — and not by a guard:
+        // the emission read is BANDLESS, so its hazard memory has no emitters and
+        // its dread map is empty. A creature shuddering at a phantom is quiet.
+        // Same fixture as above; B is long gone, so the ONLY possible emitter is
+        // A's remembered dread — and the field must be empty at X.
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let d_cell = raddr(1.0);
+        let ns = d_cell.neighbors();
+        let hazard = ns[0].clone();
+        let x = ns[1].clone();
+        let terrain = PlantedTerrain::hazard(std::iter::empty(), [(hazard.clone(), 0.8)]);
+        let b_e = ledger.mint_entity();
+        let b = haunt_npc(b_e, d_cell.clone());
+        commit_agent_at(&mut ledger, &reg, b_e, &d_cell, 0.45);
+        commit_agent_at(&mut ledger, &reg, b_e, &raddr(-1.0), 0.55);
+        let a_e = ledger.mint_entity();
+        let mut a = haunt_npc(a_e, x.clone());
+        a.boldness = 0.0;
+        commit_agent_at(&mut ledger, &reg, a_e, &x, 0.45);
+
+        // A really is dread-afraid here (the same fixture the felt test pins) —
+        // so an empty field at X is the contagion block, not an empty memory.
+        let now = WorldTime { day: 0.6 };
+        assert!(
+            hazard_memory(&ledger, &a, now, &terrain, &[a.clone(), b.clone()])
+                .dread
+                .contains_key(&x),
+            "fixture check: the shudderer must actually dread X"
+        );
+        let field = alarm_field(&ledger, &[a, b], &terrain, now);
+        assert!(
+            !field.contains_key(&x),
+            "remembered dread is felt, never broadcast: {field:?}"
         );
     }
 
