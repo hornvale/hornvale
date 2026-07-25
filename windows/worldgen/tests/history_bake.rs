@@ -335,6 +335,92 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
     );
 }
 
+/// An ESCARPMENT: capacity falls off in steps with graph distance from cell 0
+/// (100 at the crown, 20 at the rim), every cell habitable in every era. Two
+/// properties matter:
+///
+/// - **Neighbours differ in value**, everywhere and always, so covetousness has
+///   something to find without any climate event; and
+/// - **the vacant remainder is the POOR ground** — daughters settle the best
+///   vacant neighbour, so occupation climbs the escarpment and what is left
+///   empty is the rim.
+///
+/// That is the geometry spec §4.3's amended rule is about: a people driven off
+/// the crown can pioneer the marginal rim or take a rich holding it can beat.
+/// Under the vacant-first rule it always pioneers and the branching ratio is
+/// zero by construction; under the one-comparison rule the rich holding wins
+/// whenever the roller can win the fight, and the relaxation chains.
+fn escarpment_fixture() -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
+    let geo = Geosphere::new(1); // 42 cells
+    let capacity = CellMap::from_fn(&geo, |c| {
+        let hops = geo.hops_between(CellId(0), c, 16).unwrap_or(4).min(4);
+        100.0 - 20.0 * hops as f64
+    });
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = CellMap::from_fn(&geo, |_| false);
+    let era = EraClimate {
+        day: 0.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |_| true),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    (geo, capacity, river_prox, vec![era], refugia)
+}
+
+#[test]
+fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
+    // The Tumult's headline instrument, made to move. Task 1 measured a
+    // cascade histogram that was all-zero BY CONSTRUCTION: `relocate` took
+    // vacant land whenever any was reachable, so a displaced people never
+    // displaced anyone in turn and the branching ratio could not even be
+    // asked about. Spec §4.3's amended rule (one comparison over every
+    // reachable cell, held cells carrying the settled premium) is what makes
+    // a chained relaxation possible at all — this test fails, with an
+    // all-zero histogram, against the vacant-first rule.
+    let (geo, cap, river, eras, refugia) = escarpment_fixture();
+    let people = peoples();
+    let cfg = BakeConfig::default_millennia();
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    let h = bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    );
+    let c = census(&h);
+    eprintln!("ESCARPMENT census: {c:?}");
+    // (a) The mask never evicts anyone here: every displacement in this world
+    //     is conflict, not climate.
+    assert_eq!(
+        c.migrated, 0,
+        "the mask must never evict anyone here: {c:?}"
+    );
+    // (b) Conflict fires…
+    assert!(c.raided > 0, "no raid fired on the escarpment: {c:?}");
+    // (c) …and it CHAINS: at least one raid drove a loser onto ground that was
+    //     itself held, which is the displacement the histogram counts.
+    let cascades: u64 = c.cascade_hist.iter().sum();
+    assert!(
+        cascades > 0,
+        "no relaxation chained — the branching ratio is still zero: {c:?}"
+    );
+    // (d) …without emptying the world (dissipation must bound the avalanche,
+    //     not consume the map).
+    assert!(c.alive_at_now > 0, "the cascade emptied the world: {c:?}");
+}
+
 /// A saturating world: a tiny habitable cluster (cell 0 and its direct
 /// neighbours) that genesis fills completely, surrounded by permanently
 /// uninhabitable land. Once the cluster is full there is nowhere vacant, so

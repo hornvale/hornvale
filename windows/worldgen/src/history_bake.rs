@@ -55,44 +55,6 @@ fn traversable_neighbors(graph: &ConnectionGraph, cell: CellId) -> Vec<CellId> {
     ns
 }
 
-/// The nearest OCCUPIED cell to `from` (excluding `from`), by breadth-first
-/// graph-hop distance over `graph`; within the nearest layer, lowest
-/// `CellId` wins — a total, deterministic order (mirrors `nearest_dest`'s
-/// BFS structure). Returns the occupying community's index (`node_index`'s
-/// value), or `None` if no occupied cell is reachable. A free function (not
-/// a `Bake` method) so it is unit-testable against a hand-built graph +
-/// `node_index` without constructing a full `Bake`; [`Bake::nearest_occupied`]
-/// delegates to it over the era graph in force.
-fn nearest_occupied(
-    graph: &ConnectionGraph,
-    node_index: &BTreeMap<CellId, usize>,
-    from: CellId,
-) -> Option<usize> {
-    let mut visited: BTreeSet<CellId> = BTreeSet::new();
-    visited.insert(from);
-    let mut frontier: Vec<CellId> = vec![from];
-    while !frontier.is_empty() {
-        let mut next: Vec<CellId> = Vec::new();
-        let mut hits: Vec<(CellId, usize)> = Vec::new();
-        for &c in &frontier {
-            for n in traversable_neighbors(graph, c) {
-                if visited.insert(n) {
-                    next.push(n);
-                    if let Some(&idx) = node_index.get(&n) {
-                        hits.push((n, idx));
-                    }
-                }
-            }
-        }
-        if !hits.is_empty() {
-            hits.sort_by_key(|a| a.0); // lowest CellId in the nearest layer
-            return Some(hits[0].1);
-        }
-        frontier = next;
-    }
-    None
-}
-
 /// Per-capita resource need. Pressure is `population * NEED / eff_capacity`;
 /// kept an explicit constant so the pressure formula reads as the algorithm.
 const NEED: f64 = 1.0;
@@ -117,6 +79,15 @@ const WAR_LOSS: f64 = 0.3;
 /// Population below which a broken, displaced remnant dies out rather than
 /// cascading further — the avalanche cutoff, and the second dissipation.
 const VIABLE_MIN: f64 = 2.0;
+/// How much more a HELD cell is worth than an empty cell of equal effective
+/// capacity, to a people looking for a home (spec §4.1): pioneering unknown
+/// ground is a gamble, a rival's holding comes already made to work. This is
+/// the only term in the model that *increases* conflict — every inhibition in
+/// spec §4.2a reduces it, and the ratio between them is what makes the
+/// branching ratio a measurable quantity rather than a structurally-zero one.
+/// A named starting value, not a fitted one. A save-format constant: changing
+/// it re-fights every world's history.
+const SETTLED_PREMIUM: f64 = 0.25;
 /// Pressure at or above which a community starves out (Famine). `pub` so
 /// the demography calibration (`windows/lab`) can express the aggregate
 /// population-conservation ceiling: no live community exceeds this pressure,
@@ -263,10 +234,12 @@ pub fn census(h: &History) -> BakeCensus {
 
 /// The cascade-size histogram off a baked history (bin `i` = sizes
 /// `[2^i, 2^(i+1))`). Filled by [`BakeCensus::record_cascade`], which
-/// [`Bake::maybe_raid`] calls for every raid whose displaced loser had to
-/// evict someone in turn. It stays all-zero on an unsaturated world — there,
-/// every remnant finds vacant land at the first hop, so no relaxation chains —
-/// which is a measurement of the branching ratio, not missing scaffolding.
+/// [`Bake::maybe_raid`] calls for every raid whose displaced loser had to evict
+/// someone in turn. A displaced people takes the best home it can get —
+/// marginal vacant ground or a rich holding it can beat (see
+/// [`Bake::best_home`]) — so an all-zero histogram now means the losers of this
+/// world's raids were too weak to displace anybody, a measurement of the
+/// branching ratio rather than an artifact of the rule.
 /// type-audit: bare-ok(count: return)
 pub fn cascade_sizes(h: &History) -> [u64; CASCADE_BINS] {
     h.tally.cascade_hist
@@ -356,6 +329,22 @@ enum Relocation {
     Lost,
 }
 
+/// One scored option in [`Bake::best_home`]'s single comparison: the cell, what
+/// it is worth to a homeless people (the settled premium already applied when
+/// it is held), the strength defending it, and its holder if it has one.
+#[derive(Clone, Copy, Debug)]
+struct HomeOption {
+    /// The cell being scored.
+    cell: CellId,
+    /// Its worth to a homeless people — `eff_capacity`, times
+    /// `1 + SETTLED_PREMIUM` when the cell is held.
+    score: f64,
+    /// The strength defending it (0.0 when the cell is vacant).
+    defender: f64,
+    /// The community holding it, if any — `None` is vacant land.
+    holder: Option<usize>,
+}
+
 /// The river-proximity suitability multiplier for a cell (Task 5b): a cell on
 /// a river (`prox` ≈ 1) is `1.0 + RIVER_SITE_WEIGHT` times as attractive as one
 /// far from water (`prox` ≈ 0). Full precision; used to bias all three
@@ -376,6 +365,16 @@ fn tech_for(year: f64) -> TechHorizon {
     } else {
         TechHorizon::Classical
     }
+}
+
+/// The raiding strength of a HOMELESS people mid-roll. It has no live
+/// community to read a `tech` off, so strength is reckoned from the population
+/// it still carries and the horizon its people has reached this year
+/// (`tech_for(year + offset)`, the same offset the community carried) — the
+/// same `population × tech_weight` reckoning [`Bake::strength`] applies to a
+/// seated one. A displaced people is not disarmed by being displaced.
+fn roller_strength(pop: f64, offset: f64, year: f64) -> f64 {
+    pop * tech_weight(tech_for(year + offset))
 }
 
 /// The tech multiplier on raw population when reckoning a community's raiding
@@ -475,32 +474,114 @@ impl<'a> Bake<'a> {
         None
     }
 
-    /// The nearest OCCUPIED cell to `from` (excluding `from`), over the era
-    /// graph currently being stepped. Delegates to the free [`nearest_occupied`]
-    /// function so the BFS/tie-break logic is unit-testable against a
-    /// hand-built graph + `node_index` without constructing a full `Bake`.
-    /// [`Bake::relocate`] displaces this cell's occupant when no vacant land is
-    /// reachable — it is the roll-downhill's next victim, and the step that
-    /// turns a single raid into a chained cascade.
-    fn nearest_occupied(&self, from: CellId) -> Option<usize> {
-        nearest_occupied(self.cur(), &self.node_index, from)
+    /// The best home a homeless people can take from `from` — spec §4.3's
+    /// **one comparison over every reachable cell**, and the whole of the
+    /// roll-downhill's decision. Every cell reachable over the era graph
+    /// (excluding `from`, which the people has just been driven off and which
+    /// its displacer now holds) is scored once:
+    ///
+    /// - a **vacant** habitable cell scores its effective capacity;
+    /// - a **held** habitable cell scores `eff_capacity × (1 + SETTLED_PREMIUM)`
+    ///   — proven ground is worth more — and is admissible only when the roller
+    ///   clears `RAID_MARGIN` over its holder, and only when the roller could
+    ///   still seat itself after the war it would have to fight (`can_fight`);
+    /// - a cell the era's mask has made uninhabitable is worth nothing to
+    ///   anybody and is not an option at all.
+    ///
+    /// The best score wins, tie-broken by the WEAKEST defender (vacant land
+    /// defends with 0) and then the lowest `CellId` — the same total,
+    /// deterministic chain [`Bake::maybe_raid`] uses, `f64::total_cmp`
+    /// throughout. `None` means nothing at all is admissible.
+    ///
+    /// There is no `if migrating else raiding` branch here: a strong remnant
+    /// preys because held ground scores higher, a weak one pioneers because
+    /// held ground never enters its option set. The scan is wider than a
+    /// seated raider's (which sees only its own neighbours) for the reason
+    /// spec §4.3 gives — a seated people is comparing against what it already
+    /// holds and is going nowhere, while a homeless one is already on the move
+    /// and holds nothing.
+    fn best_home(
+        &self,
+        era: &EraClimate,
+        from: CellId,
+        strength: f64,
+        can_fight: bool,
+    ) -> Option<HomeOption> {
+        let mut best: Option<HomeOption> = None;
+        let mut visited: BTreeSet<CellId> = BTreeSet::new();
+        visited.insert(from);
+        let mut frontier: Vec<CellId> = vec![from];
+        while !frontier.is_empty() {
+            let mut next: Vec<CellId> = Vec::new();
+            for &c in &frontier {
+                for n in traversable_neighbors(self.cur(), c) {
+                    if !visited.insert(n) {
+                        continue;
+                    }
+                    next.push(n);
+                    if Self::factor(era, n) <= 0.0 {
+                        continue; // the ice has made it worthless to everyone
+                    }
+                    let value = self.eff_capacity(era, n);
+                    let (score, defender, holder) = match self.node_index.get(&n) {
+                        None => (value, 0.0, None),
+                        Some(&h) => {
+                            let hs = self.strength(h);
+                            if !can_fight || strength <= hs * RAID_MARGIN {
+                                continue; // not a fight this people can win, or survive winning
+                            }
+                            (value * (1.0 + SETTLED_PREMIUM), hs, Some(h))
+                        }
+                    };
+                    let better = match best {
+                        None => true,
+                        Some(b) => score
+                            .total_cmp(&b.score) // the MOST valuable home
+                            .then(b.defender.total_cmp(&defender)) // among equals, the WEAKEST held
+                            .then(b.cell.cmp(&n)) // then the lowest CellId
+                            .is_gt(),
+                    };
+                    if better {
+                        best = Some(HomeOption {
+                            cell: n,
+                            score,
+                            defender,
+                            holder,
+                        });
+                    }
+                }
+            }
+            frontier = next;
+        }
+        best
     }
 
     /// Relocate a homeless people (a remnant driven off its land by a raid) to
-    /// a new home, cascading when there is no vacant land. `predecessor` is the
-    /// id of the community that just closed and is relocating (used to
-    /// attribute the new occupation's `Founding::From` to its specific
-    /// forebear, not the lineage ancestor — `lineage` stays reserved for the
-    /// `open` lineage argument). Returns the outcome: [`Relocation::Settled`]
-    /// (with the cascade size — the number of OCCUPIED cells this relocation
-    /// displaced, 0 if it reached vacant land directly) or
-    /// [`Relocation::Lost`] (the remnant died, nothing was reachable, or the
-    /// depth cap truncated the chain). The roll-downhill: no vacant cell ⇒
-    /// take the nearest occupied cell, and its evicted occupant relocates in
-    /// turn. Bounded twice — by `VIABLE_MIN` (a remnant too small to hold any
-    /// land dies out instead of founding a peopleless occupation: the
-    /// dissipation of spec §4.3) and by `CASCADE_DEPTH_CAP` (a truncated
-    /// cascade drops the last remnant).
+    /// a new home, cascading when the home it wants is already held.
+    /// `predecessor` is the id of the community that just closed and is
+    /// relocating (used to attribute the new occupation's `Founding::From` to
+    /// its specific forebear, not the lineage ancestor — `lineage` stays
+    /// reserved for the `open` lineage argument). Returns the outcome:
+    /// [`Relocation::Settled`] (with the cascade size — the number of OCCUPIED
+    /// cells this relocation displaced, 0 if it took vacant land) or
+    /// [`Relocation::Lost`] (the remnant died, nothing was admissible, or the
+    /// depth cap truncated the chain).
+    ///
+    /// The roll-downhill is spec §4.3's "re-enters the raid rule", taken
+    /// literally: [`Bake::best_home`] makes ONE comparison over every reachable
+    /// cell, and if the winner is held, its occupant is evicted and relocates
+    /// in turn. War is lossy on both sides of that eviction exactly as it is in
+    /// [`Bake::maybe_raid`], so a chain dissipates fast: each hop costs the
+    /// roller `WAR_LOSS` and the victim `WAR_LOSS` plus the journey, and each
+    /// victim is by construction at least `RAID_MARGIN` times weaker than the
+    /// people that displaced it. A cascade therefore terminates because it runs
+    /// out of strength (`VIABLE_MIN`), not because `CASCADE_DEPTH_CAP` catches
+    /// it — the cap is the safety bound, not the physics.
+    ///
+    /// Every remnant that ends `Lost` inside the chain is tallied as a
+    /// `collapsed` community at the call site that lost it, exactly as the
+    /// top-level caller tallies its own: a community may not vanish from the
+    /// world uncounted.
     #[allow(clippy::too_many_arguments)]
     fn relocate(
         &mut self,
@@ -523,11 +604,20 @@ impl<'a> Bake<'a> {
             // viable-minimum death — the second dissipation).
             return Relocation::Lost;
         }
-        // Vacant land reachable? Then no conflict — settle there.
-        if let Some(dest) = self.nearest_dest(era, from) {
+        // A people that could not seat itself after paying the war loss cannot
+        // take held land at all (it would `open` at `peak_population == 0` — a
+        // peopleless settlement, which the shipped invariant forbids). It can
+        // still pioneer.
+        let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
+        let Some(home) = self.best_home(era, from, roller_strength(pop, offset, year), can_fight)
+        else {
+            return Relocation::Lost; // nothing vacant, nothing beatable — lost
+        };
+        let Some(victim) = home.holder else {
+            // Vacant land won the comparison — no conflict, settle there.
             let new_idx = self.open(
                 people,
-                dest,
+                home.cell,
                 year,
                 pop,
                 Founding::From(predecessor),
@@ -536,12 +626,13 @@ impl<'a> Bake<'a> {
             );
             self.touch(new_idx, year);
             return Relocation::Settled { cascade: 0 };
-        }
-        // No vacant land — displace the nearest occupied cell (the avalanche).
-        let Some(victim) = self.nearest_occupied(from) else {
-            return Relocation::Lost; // nothing vacant AND nothing occupied reachable — lost
         };
-        let victim_site = self.communities[victim].site;
+
+        // Held land won: the roller takes it by force. War is lossy on BOTH
+        // sides here, as in `maybe_raid` — spec §4.3 destroys a fraction of the
+        // COMBINED population, and it is that dissipation (compounding down the
+        // chain) that terminates an avalanche.
+        self.communities[victim].population *= 1.0 - WAR_LOSS;
         let (v_people, v_pop, v_lineage, v_offset, v_id) = {
             let c = &self.communities[victim];
             (
@@ -553,13 +644,13 @@ impl<'a> Bake<'a> {
             )
         };
         // The homeless people takes the victim's site (open BEFORE close so
-        // node_index[victim_site] points at the new occupant; close then sees
+        // node_index[home.cell] points at the new occupant; close then sees
         // the cell already re-indexed and does not free it).
         let new_idx = self.open(
             people,
-            victim_site,
+            home.cell,
             year,
-            pop,
+            pop * (1.0 - WAR_LOSS),
             Founding::From(predecessor),
             Some(lineage),
             offset,
@@ -570,20 +661,26 @@ impl<'a> Bake<'a> {
         self.tally.raided += 1;
         self.tally.fled += 1;
         // The evicted occupant cascades onward, founded from its own (the
-        // victim's) community id.
+        // victim's) community id, carrying what the war and the road left it.
         let victim_cascade = match self.relocate(
             v_people,
             v_pop * MIGRATE_SURVIVAL,
             v_lineage,
             v_id,
             v_offset,
-            victim_site,
+            home.cell,
             era,
             year,
             depth + 1,
         ) {
             Relocation::Settled { cascade } => cascade,
-            Relocation::Lost => 0,
+            Relocation::Lost => {
+                // It died on the road. Count it: the top-level caller maps its
+                // own `Lost` to a collapse, and a community lost deeper in the
+                // chain is no less gone from the world.
+                self.tally.collapsed += 1;
+                0
+            }
         };
         Relocation::Settled {
             cascade: 1 + victim_cascade,
@@ -1151,36 +1248,6 @@ mod tests {
     }
 
     #[test]
-    fn nearest_occupied_finds_the_closest_occupied_cell_over_the_graph() {
-        // full-land graph over Geosphere::new(1); occupy cells 3 and 20; from
-        // cell 0, whichever is fewer graph-hops away wins (lowest CellId
-        // breaks a tie). `nearest_occupied` is a free function (not a `Bake`
-        // method) precisely so this test can hand-build the graph +
-        // `node_index` without constructing a full `Bake`.
-        let geo = Geosphere::new(1);
-        let graph = full_land_graph(&geo);
-
-        let mut node_index: BTreeMap<CellId, usize> = BTreeMap::new();
-        node_index.insert(CellId(3), 0);
-        node_index.insert(CellId(20), 1);
-
-        let hops_3 = geo
-            .hops_between(CellId(0), CellId(3), 16)
-            .expect("cell 3 reachable");
-        let hops_20 = geo
-            .hops_between(CellId(0), CellId(20), 16)
-            .expect("cell 20 reachable");
-        assert_ne!(hops_3, hops_20, "fixture must not tie on hop distance");
-        let expected_idx = if hops_3 < hops_20 { 0 } else { 1 };
-
-        assert_eq!(
-            nearest_occupied(&graph, &node_index, CellId(0)),
-            Some(expected_idx),
-            "expected the nearer occupied cell (hops_3={hops_3}, hops_20={hops_20})"
-        );
-    }
-
-    #[test]
     fn relocate_founds_from_the_specific_predecessor_not_the_lineage_ancestor() {
         // Regression for a review finding on `relocate`: a 2nd-generation
         // relocation must attribute `founded_from` to the community that JUST
@@ -1269,6 +1336,368 @@ mod tests {
             founded_from,
             Founding::From(lineage),
             "must NOT be the lineage ancestor (R1) for a 2nd-generation move"
+        );
+    }
+
+    /// The owned inputs a hand-built [`Bake`] borrows, over `Geosphere::new(1)`
+    /// with a full-land graph and every cell habitable in the single era.
+    /// `capacity` is `POOR` everywhere except the cells listed in `rich`, which
+    /// get `RICH` — the value gradient the roll-downhill tests need.
+    fn cascade_world(
+        rich: &[CellId],
+    ) -> (
+        Geosphere,
+        Vec<ConnectionGraph>,
+        CellMap<f64>,
+        CellMap<f64>,
+        CellMap<bool>,
+        EraClimate,
+    ) {
+        use hornvale_kernel::ReferenceElevation;
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |c| if rich.contains(&c) { RICH } else { POOR });
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let era = EraClimate {
+            day: 0.0,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        };
+        (geo, graphs, capacity, river_prox, refugia, era)
+    }
+
+    /// Marginal land in [`cascade_world`] — a cell worth taking only when
+    /// nothing better is admissible.
+    const POOR: f64 = 10.0;
+    /// Prime land in [`cascade_world`] — ten times a poor cell's worth.
+    const RICH: f64 = 100.0;
+
+    /// A hand-built [`Bake`] over [`cascade_world`]'s inputs, with an empty
+    /// record set and a fixed stream.
+    fn hand_bake<'a>(
+        graphs: &'a [ConnectionGraph],
+        capacity: &'a CellMap<f64>,
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+    ) -> Bake<'a> {
+        Bake {
+            graphs,
+            cur_graph: 0,
+            capacity,
+            river_prox,
+            refugia,
+            records: Vec::new(),
+            communities: Vec::new(),
+            node_index: BTreeMap::new(),
+            next_id: 1,
+            stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tally: BakeCensus::default(),
+        }
+    }
+
+    #[test]
+    fn a_roller_takes_the_rich_held_cell_over_the_marginal_vacant_one() {
+        // Spec §4.3's amended rule, and the whole reason Task 1 measured a
+        // structurally-zero branching ratio: a displaced people compares every
+        // reachable cell in ONE pass. A rich cell held by a beatable neighbour
+        // outbids marginal vacant land, so the roller preys rather than
+        // pioneering — and the holder it evicts rolls onward. Under the
+        // vacant-first rule this returns `cascade: 0` and no cascade is ever
+        // recorded.
+        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+
+        // A weak community sits on the one rich cell; a strong people is
+        // driven off cell 0 (poor land) and must find a home.
+        let holder = bake.open(
+            KindId("goblin"),
+            CellId(20),
+            0.0,
+            5.0,
+            Founding::Genesis(CellId(20)),
+            None,
+            0.0,
+        );
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            50.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            0,
+        );
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 1 },
+            "the roller must displace the rich cell's holder, not settle marginal vacant land"
+        );
+
+        // The rich cell is now held by the roller's people, at its post-war
+        // population, and the holder is dead and driven off.
+        let seated = *bake
+            .node_index
+            .get(&CellId(20))
+            .expect("the rich cell must be occupied");
+        assert_eq!(
+            bake.records[bake.communities[seated].record].people,
+            KindId("kobold"),
+            "the roller must be the one seated on the rich cell"
+        );
+        assert!(
+            (bake.communities[seated].population - 50.0 * (1.0 - WAR_LOSS)).abs() < 1e-9,
+            "the roller must pay the war loss to take held land: {}",
+            bake.communities[seated].population
+        );
+        assert!(
+            !bake.communities[holder].alive,
+            "the holder must be evicted"
+        );
+        assert_eq!(
+            bake.records[bake.communities[holder].record].cause,
+            Some(CauseOfEnd::Fled)
+        );
+        // The evicted holder rolled onward and found marginal vacant land.
+        assert!(
+            bake.communities.iter().any(|c| c.alive
+                && c.site != CellId(20)
+                && c.lineage == bake.communities[holder].lineage),
+            "the evicted holder must have resettled somewhere"
+        );
+        assert_eq!((bake.tally.raided, bake.tally.fled), (1, 1));
+    }
+
+    #[test]
+    fn the_settled_premium_makes_a_held_cell_outbid_an_equal_vacant_one() {
+        // The only term in the model that RAISES conflict (spec §4.1): a held
+        // cell is worth more than an empty cell of equal capacity, because a
+        // rival's holding comes already made to work. With the premium at 0
+        // the roller takes the equally-rich EMPTY cell (no defender) and the
+        // branching ratio collapses again.
+        let (_geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(&[CellId(20), CellId(30)]);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+
+        // Cell 20 is rich AND held by a beatable community; cell 30 is rich
+        // and empty. Equal capacity — only the premium separates them.
+        bake.open(
+            KindId("goblin"),
+            CellId(20),
+            0.0,
+            5.0,
+            Founding::Genesis(CellId(20)),
+            None,
+            0.0,
+        );
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            50.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            0,
+        );
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 1 },
+            "the premium must make the HELD rich cell outbid the equally-rich empty one"
+        );
+        let seated = *bake
+            .node_index
+            .get(&CellId(20))
+            .expect("the held rich cell must have changed hands");
+        assert_eq!(
+            bake.records[bake.communities[seated].record].people,
+            KindId("kobold")
+        );
+    }
+
+    #[test]
+    fn a_weak_roller_flees_to_the_empties_instead_of_preying() {
+        // The emergent half of spec §4.3: there is no `if migrating else
+        // raiding` branch. A remnant too weak to clear the dominance margin
+        // never sees the held cell in its option set at all, so it pioneers —
+        // the same one rule, a different outcome.
+        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+
+        let holder = bake.open(
+            KindId("goblin"),
+            CellId(20),
+            0.0,
+            5.0,
+            Founding::Genesis(CellId(20)),
+            None,
+            0.0,
+        );
+        let holder_id = bake.communities[holder].id;
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            3.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+
+        // Strength 3.0 does not clear 5.0 × RAID_MARGIN, so cell 20 is not an
+        // option however rich it is.
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            3.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            0,
+        );
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 0 },
+            "a roller that beats nobody must pioneer, not prey"
+        );
+        assert_eq!(
+            bake.communities[*bake.node_index.get(&CellId(20)).expect("still held")].id,
+            holder_id,
+            "the holder must be untouched"
+        );
+        assert_eq!((bake.tally.raided, bake.tally.fled), (0, 0));
+    }
+
+    #[test]
+    fn the_depth_cap_truncates_a_cascade_and_the_dropped_remnant_is_tallied() {
+        // Two bounds in one fixture. (a) `CASCADE_DEPTH_CAP` is a hard stop:
+        // at the cap nothing is opened at all. (b) One hop below it, the
+        // displacement still happens and the victim's own relocation is
+        // truncated — and that lost victim MUST be counted (a Task-1 review
+        // defect: the recursion dropped it silently while the top-level call
+        // mapped `Lost` to `collapsed`, so communities vanished uncounted).
+        let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(&[CellId(20)]);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia);
+
+        let holder = bake.open(
+            KindId("goblin"),
+            CellId(20),
+            0.0,
+            5.0,
+            Founding::Genesis(CellId(20)),
+            None,
+            0.0,
+        );
+        let holder_lineage = bake.communities[holder].lineage;
+        let roller = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            50.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let (r_id, r_lineage) = (
+            bake.communities[roller].id,
+            bake.communities[roller].lineage,
+        );
+        bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+        let records_before = bake.records.len();
+
+        // (a) AT the cap: nothing may happen at all.
+        let capped = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            CASCADE_DEPTH_CAP,
+        );
+        assert_eq!(
+            capped,
+            Relocation::Lost,
+            "the depth cap must stop the chain"
+        );
+        assert_eq!(
+            bake.records.len(),
+            records_before,
+            "a capped relocation must open nothing"
+        );
+
+        // (b) ONE HOP below the cap: the roller displaces, and the victim's
+        //     own relocation hits the cap and is lost — and tallied.
+        let outcome = bake.relocate(
+            KindId("kobold"),
+            50.0,
+            r_lineage,
+            r_id,
+            0.0,
+            CellId(0),
+            &era,
+            0.0,
+            CASCADE_DEPTH_CAP - 1,
+        );
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 1 },
+            "the last admissible hop must still displace"
+        );
+        assert_eq!(
+            bake.tally.collapsed, 1,
+            "the truncated victim must be counted as a collapse, not dropped silently"
+        );
+        assert!(
+            !bake
+                .communities
+                .iter()
+                .any(|c| c.alive && c.lineage == holder_lineage),
+            "the truncated victim must be gone from the world"
         );
     }
 
