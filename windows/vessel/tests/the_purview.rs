@@ -2,7 +2,7 @@
 //! attention. If these fail, they are two pipelines wearing one name.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
@@ -136,6 +136,43 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     // The biome is named by both the prose and the chart's legend, so this is
     // not a vacuous pass.
     assert!(shared > 0, "the two grains must actually overlap");
+
+    // `shared > 0` alone would still pass via the regime descriptor (both
+    // grains draw it from the same `Locale::regime.descriptor`) even if the
+    // biome were never a shared noun — which is exactly the bug The Margin
+    // fixed: the chart's legend used to surface the biome's kebab-case slug
+    // (`tropical-seasonal-forest`) while the prose surfaced its spaced name
+    // (`tropical seasonal forest`), so the campaign's sharpest thesis clause
+    // never fired on the most obvious thing on the map. Pin the biome
+    // specifically, using the ground-truth `Locale` (day-independent for
+    // biome in v1) rather than assuming anything about noun ordering.
+    let here_locale = session
+        .context()
+        .describe(&session.agent().position, WorldTime { day: 0.0 })
+        .expect("the observer's own room describes");
+    let biome_noun = here_locale.biome;
+    let biome_chart_entry = chart
+        .legend
+        .iter()
+        .find(|e| e.noun.eq_ignore_ascii_case(&biome_noun))
+        .unwrap_or_else(|| {
+            panic!("the biome noun '{biome_noun}' must be a shared noun in the chart's legend")
+        });
+    let biome_prose_datum = prose
+        .nouns
+        .iter()
+        .find(|(n, _)| n.eq_ignore_ascii_case(&biome_noun))
+        .map(|(_, datum)| datum.clone())
+        .unwrap_or_else(|| panic!("the biome noun '{biome_noun}' must be a prose noun"));
+    let biome_reply = out(session.handle(&format!("examine {biome_noun}")));
+    assert_eq!(
+        biome_reply, biome_prose_datum,
+        "the biome noun must resolve to the prose grain's datum (prose is primary)"
+    );
+    assert_ne!(
+        biome_reply, biome_chart_entry.datum,
+        "the biome noun must not resolve to the chart's datum"
+    );
 }
 
 #[test]

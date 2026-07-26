@@ -150,7 +150,13 @@ every mark and every terrain class the document surfaced, ordered by `noun`.
 It is deliberately the same shape as the noun catalog the prose renderer
 produces, so a consumer can offer one vocabulary over both — the map and the
 prose being two grains of one lens rather than two descriptions that happen
-to agree.
+to agree. A biome's `legend` noun is therefore its **spaced prose name**
+(`tropical seasonal forest`), the same noun the prose renderer uses for it —
+not the kebab-case identifier `biome_legend` indexes into
+(`tropical-seasonal-forest`). `legend` is player-facing text; `biome_legend`
+is the machine-readable index catalog. Using the identifier in `legend`
+would give a player two different examinable nouns for one biome, one per
+grain, defeating the point of a shared catalog (The Margin).
 
 ## Legends and ordering
 
