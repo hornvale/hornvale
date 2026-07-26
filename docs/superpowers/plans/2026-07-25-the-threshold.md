@@ -4,18 +4,31 @@
 
 **Goal:** Make The Hearth's fine layer *live* — a real room derives a real interior, a creature stands at an anchor, and a drive reads a field where it stands.
 
-**Architecture:** Seven tasks in two stages. Stage A builds every piece **byte-identically** — seams, derivation, the fine movement action, occupancy, catch-up — because none of it is read by any outcome. Stage B is one small task that arms it: the Thermal drive reads warmth at the creature's anchor. That is the single boundary at which byte-identity dies, and it is known before any code is written.
+**Architecture:** Eight tasks in two stages. Stage A builds every piece **byte-identically** — seams, derivation, the fine movement action, occupancy — because none of it is read by any outcome. Stage B opens with one small task that arms it: `Thermal::warmth` flips from `None` to `Some`. That is the single boundary at which byte-identity dies, and it is known before any code is written.
 
 **Tech Stack:** Rust 2024, `windows/vessel`, no new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-07-25-the-threshold-design.md`
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (15 entries, nine ideonomy passes, four overturns)
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (17 entries, nine ideonomy passes, four overturns)
 
-## BLOCKING PRECONDITION
+## PRECONDITION — CLEARED 2026-07-26
 
-**The Hearth is not built.** Its branch carries a spec and a plan and zero code commits. Every type this plan consumes — `Interior`, `AnchorId`, `AnchorKind`, `Pattern`, `INVENTORY`, `selection`, `compose`, `route_within` — is *specified* in The Hearth's plan and does not exist.
+**The Hearth is merged** (T1–T6 + close, decision 0075) and absorbed into this
+branch at `5f353f05`. Its blocking precondition — *re-read the real
+`windows/vessel/src/interior/` against this plan's Interfaces before
+dispatching* — **was run, and it paid three times**:
 
-**Do not begin Task 1 until The Hearth has merged.** When it does, re-read its actual `windows/vessel/src/interior/` against this plan's Interfaces blocks before dispatching: this plan was written against The Hearth's spec, and three of its stated interfaces were already found wrong by grounding checks (below).
+1. **`Thermal::warmth: Option<f64>` already exists** and is already folded into
+   urgency, `None` at four live sites. Arming is a `None` → `Some` flip, not a
+   new read path. Task 5 shrank to almost nothing, which is what the
+   one-boundary design wanted.
+2. **`warmth_at(interior, at, budget)` takes a budget** this plan had not
+   specified. It routes internally, so the budget is routing depth.
+3. **The task order was wrong.** Catch-up replays the decide loop, so it can
+   only produce `MoveWithin` if an affordance produces it — catch-up depends on
+   the Thermal within-room branch, which this plan had placed *after* it.
+
+The baseline is frozen and the predictions preregistered — ledger #16.
 
 ## Groundings that corrected the spec
 
@@ -33,7 +46,7 @@ Run against the real tree before writing this plan. Each changed a signature the
 - **Every crate sets `#![warn(missing_docs)]`** — every public item, field and variant gets a doc comment. This codebase's comments explain *why*, at length, and name the campaign. Terse comments beside paragraph-length neighbours are a defect.
 - **Nothing this campaign adds is serialized** (decision 0069). No new predicate, no new fact, no genesis change. If a task finds itself writing a `Fact`, it has gone wrong.
 - **`cargo fmt` is the final step before every commit.** The commit gate is `make gate`.
-- **Stage A must stay byte-identical.** Tasks 1–6 must not move `new --seed 42`, the seed-42 possession galleries, or the health battery. Any drift there is a bug, not a finding — stop and report.
+- **Stage A must stay byte-identical.** Tasks 1–4 must not move `new --seed 42`, the seed-42 possession galleries, or the health battery. Any drift there is a bug, not a finding — stop and report.
 
 ---
 
@@ -58,7 +71,7 @@ Not subagent work. Steps 1 and 2 of the spec's acceptance protocol are worthless
 
 ---
 
-## Stage A — byte-identical
+## Stage A — byte-identical (T1–T4)
 
 ### Task 1: Seams
 
@@ -678,59 +691,33 @@ Same two commands as Task 3, expecting `IDENTICAL`. Nothing reads occupancy yet.
 
 ---
 
-### Task 5: Catch-up
+## Stage B — armed
 
-**Files:** Modify `windows/vessel/src/liveness.rs`
+### Task 5: ARM IT — `Thermal::warmth` flips from `None` to `Some`
 
-**Interfaces:**
-- Produces: `pub fn catch_up(...)`, `pub const CATCH_UP_CAP_DAYS: f64`.
+**This is the one task at which byte-identity dies.** Everything else is already in place; this task's diff is solely responsible for all drift, which is what makes the stratified readout attributable.
 
-**The mechanism** (spec §5): on bubble entry, re-run each occupant's normal decide loop from its pre-entry state, executing only `is_replayable_in_catch_up` actions, then tick normally. **Not "run GOAP"** — the Thermal drive is a flow drive with no planner (Grounding 2); catch-up runs the decide loop, which serves both kinds.
+The Hearth already built the read: `Thermal::warmth: Option<f64>`, folded into urgency as `urgency_of(temp + w)`, with `warmth: None` at every live site. **This task supplies the `Some`** — derive the room's interior, find the creature's anchor, and pass `warmth_at(interior, anchor, budget)`. No new read path, no new field, no drive logic.
 
-- [ ] **Step 1: Write the failing tests**
+**Files:** Modify `windows/vessel/src/liveness.rs` (the four `warmth: None` construction sites; two are in tests)
 
-```rust
-#[test]
-fn catch_up_walks_a_cold_creature_to_the_hearth() {
-    // The artifact this exists to dissolve: without catch-up a creature is
-    // back at the door every time the world looks at it, and therefore never
-    // gets warm.
-}
+- [ ] **Step 1: Write the failing test** — a cold creature standing at a hearth-bearing interior's hearth anchor reads a *lower* thermal urgency than the same creature in a hearthless interior, with ambient temperature held identical.
 
-#[test]
-fn catch_up_commits_nothing() {
-    let before = ledger.len();
-    catch_up(/* a full day of absence */);
-    assert_eq!(ledger.len(), before, "a projection rebuild must be side-effect free");
-}
+- [ ] **Step 2–4:** supply the `Some` at each live site, choosing the routing budget explicitly and documenting it.
 
-#[test]
-fn catch_up_is_order_independent() {
-    // Two creatures caught up toward the same hearth give the same result in
-    // either order. Free today (anchors have no capacity); breaks silently
-    // when capacity or beside(host) arrives.
-}
+- [ ] **Step 5: Measure, do not assert.** Run the health battery and seed-42. **Expect drift, and record it stratified** against ledger #16's preregistration. Any movement in predictions 2 or 3 is outside the prediction and owes a creature-by-creature explanation.
 
-#[test]
-fn beyond_the_cap_catch_up_places_rather_than_replays() {
-    // Exact for short absences, approximate for long ones. The test belongs
-    // AT the crossover, not in the middle of either regime.
-}
-```
-
-- [ ] **Step 2–5:** implement, verify byte-identity (`IDENTICAL` — catch-up moves fine position, which nothing reads yet), commit.
+- [ ] **Step 6: Commit**, with the stratified readout in the message.
 
 ---
 
-## Stage B — the boundary
+### Task 6: The creature crosses the room
 
-### Task 6: Arm it — the Thermal drive reads warmth where it stands
-
-**This is the one task at which byte-identity dies.** Everything else is already in place; this task's diff is solely responsible for all drift.
+The payoff, and the producer catch-up needs. Task 5 makes a creature *warmer where it happens to stand*; this makes it *seek*.
 
 **Files:** Modify `windows/vessel/src/liveness.rs` (the `Thermal` drive)
 
-- [ ] **Step 1: Write the failing test** — a cold creature in a built cold room ends its tick at the hearth, and the warmth there exceeds the warmth where it began; the same creature in a hearthless interior does not move.
+- [ ] **Step 1: Write the failing test** — a cold creature at a hearth-bearing interior's threshold ends its tick nearer the hearth, and the warmth where it ends exceeds the warmth where it began; the same creature in a hearthless interior does not move.
 
 - [ ] **Step 2–4:** give `Thermal::affordance` a within-room branch that compares `warmth_at` across the interior's anchors and returns `Action::MoveWithin`, with `serviceability` scoring it by warmth gained. `comfort_step` (rooms) stays exactly as it is — this is a new branch, not a replacement.
 
@@ -742,7 +729,13 @@ fn beyond_the_cap_catch_up_places_rather_than_replays() {
 
 ---
 
-### Task 7: The paired control
+### Task 7: Catch-up
+
+Moved after Task 6 because it replays the decide loop and therefore needs an affordance that produces `MoveWithin`. Content otherwise as specified in the earlier Task 5 draft: the non-committing replay, the elapsed-time budget, the cap, order-independence, and `catch_up` committing nothing.
+
+---
+
+### Task 8: The paired control
 
 **Files:** Modify `windows/lab/src/health.rs`
 
