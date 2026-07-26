@@ -48,6 +48,18 @@
 //!    diaspora VOLUME (more settled peoples displaced) is a crowding/pressure
 //!    matter deferred to campaign C3, not a Sundering deliverable. The floors
 //!    below are re-scoped clear of the corrected values.
+//!
+//! 4. **C3 (The Tumult) arrived, so amendments 1 and 3 above are HISTORY, not
+//!    current state.** They are kept as the record of why the gates point
+//!    where they do; read them as of their own campaigns. What has changed:
+//!    raids are no longer ≈ 0 (seed 42 measures 76 conquests, where the
+//!    pre-Tumult bake had none), and climate migration is no longer 12 (it
+//!    measures 58 — conquest re-seats communities onto new ground and so
+//!    exposes far more of them to a later era's habitability flip). The two
+//!    signals are deliberately kept apart: `migration_events` counts CLIMATE
+//!    displacement only, conflict displacement is the bake's `raided`/`fled`
+//!    and the cascade histogram (`history_tumult.rs`). Neither floor below
+//!    moved; both were set clear of a cross-seed minimum, and both still are.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;

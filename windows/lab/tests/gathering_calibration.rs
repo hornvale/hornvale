@@ -319,49 +319,74 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// `Bake::capacity`/`Bake::eff_capacity` used when it decided whether each
 /// community survived — no proxy gap remains.
 ///
-/// Each live settlement's peak was set on its own occupied cell (`CELL_ID`,
-/// fixed for a record's whole life — a migration opens a new record rather
-/// than moving the old one), and this capacity field is time-invariant
-/// across eras (only habitability toggles a cell's `eff_capacity` between 0
-/// and its full, era-independent value — see `Bake::eff_capacity`), so the
-/// present-day suitability at that cell is the same value the collapse rule
-/// checked when the peak was set. Restricting the sum to exactly the cells
-/// the live settlements occupy — instead of every cell in the world — makes
-/// the two sides scale with settlement count together, closing defect 1:
+/// Restricting the sum to exactly the cells the live settlements occupy —
+/// instead of every cell in the world — makes the two sides scale with
+/// settlement count together, closing defect 1. The assertion is therefore
 ///
 /// > **Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
 /// > Σ suitability(occupied cells)**
 ///
-/// This is still a generous bound, not an exact one, for one reason that was
-/// already inherent to the guard before this fix and is unrelated to either
-/// defect above: the collapse check runs at the *start* of an epoch on the
-/// pre-growth population — a community can grow past the collapse pressure
-/// in the same epoch its peak is stamped, and only gets closed the
-/// *following* epoch, so an individual peak can exceed its own cell's strict
-/// `COLLAPSE_PRESSURE` bound by at most one epoch's logistic growth step.
+/// **What this does and does NOT establish.** It is tempting to read the
+/// inequality as a sum of per-record bounds, and an earlier revision of this
+/// comment did: it claimed each live settlement's peak was set on its own
+/// occupied cell, so present-day suitability there is the very value the
+/// collapse rule checked when the peak was stamped. **That is false**, for
+/// two independent reasons, and the per-record bound
+/// `peak ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × suitability(own cell)`
+/// does not hold:
 ///
-/// This is the draft placer's instantaneous-conservation invariant carried
-/// forward to the history-accumulated, peak-recording regime, NOT a
-/// weakening: it is the strongest bound the collapse rule permits on a sum
-/// of peaks, built from the exact quantity that rule is defined on, and it
-/// still catches a runaway (population conjured past the collapse threshold
-/// on cells that could never have supported it) or a double-count. It does
-/// NOT catch inflation purely from more settlements existing — that is a
-/// legitimate, non-pathological way for the sum to grow, which is exactly
-/// the defect this correction removes. The lower guard is positivity — a
-/// peopled world never collapses to zero (asserted above). Per ADR 0016 the
-/// ceiling is derived from the model's constants, not fit to the
-/// measurement.
+/// - **A record's peak need not have been grown on that record's cell.**
+///   `Bake::open` stamps `peak_population` from the population the community
+///   carries IN. A seat opened by conquest (`Bake::maybe_raid`) is stamped
+///   with a population grown on the raider's *previous* cell, and the
+///   roll-downhill (`Bake::relocate`) applies no covetousness baseline at all
+///   — a remnant can seat on strictly *poorer* land than it grew on. Under
+///   The Tumult this is not a corner case: predation re-seats communities
+///   constantly.
+/// - **The collapse check lags growth by an epoch.** It runs at the *start*
+///   of an epoch on the pre-growth population, so a community can grow past
+///   the collapse pressure in the same epoch its peak is stamped and only be
+///   closed the following one.
 ///
-/// Measured at seed 42 (the-tumult, 2026-07-25): 203 live settlements,
-/// Σ peak_pop = 14513, Σ suitability(occupied cells) ≈ 171.56, ceiling ≈
-/// 34311.79 (ratio ≈ 0.42 — comfortably inside the collapse pressure, as the
-/// model intends). Breach-detection was verified by hand: scaling
+/// (What *is* true, and is why the occupied-cell scoping is still the right
+/// denominator: a record's `CELL_ID` is fixed for its whole life — a
+/// relocation opens a NEW record rather than moving the old one — and this
+/// capacity field is time-invariant across eras, since only habitability
+/// toggles a cell's `eff_capacity` between 0 and its full, era-independent
+/// value. So the sum is over a well-defined, stable set of cells. It just
+/// isn't a sum of per-record ceilings.)
+///
+/// So this is a **world-scale-runaway detector, not a per-community
+/// over-capacity check**. Both sides are in the bake's own headcount units
+/// and both scale with settlement count, so the ratio is a stable world
+/// statistic that blows up if population is conjured from nothing,
+/// double-counted, or allowed to inflate globally against the ground that
+/// carries it. It cannot localise a single over-capacity community, and it is
+/// not the strongest bound the collapse rule permits — no such bound on a sum
+/// of peaks has been derived. Per ADR 0016 the ceiling is still derived from
+/// the model's constants, not fit to the measurement. The lower guard is
+/// positivity — a peopled world never collapses to zero (asserted above).
+///
+/// **Net effect of the correction, stated plainly: it made this gate LOOSER,
+/// not tighter.** The two changes pull opposite ways and the loosening one
+/// wins. Scoping Σ K to occupied cells tightens (far fewer cells); swapping
+/// the niche-differentiated `per_species_k` proxy for the base
+/// `carrying_capacity` field the bake actually uses loosens by more, because
+/// the proxy undershot per-cell capacity by ~2 orders of magnitude. Ceiling
+/// 12803 → 34312 (×2.68) against an unchanged measured Σ peak_pop of 14513 —
+/// so the gate went from red to green with +136 % headroom instead of −13 %.
+/// Both changes are individually correct (each removes a genuine defect), but
+/// the correction bought headroom; it did not remove looseness. Read a green
+/// here as "no runaway", never as "every community is inside its capacity".
+///
+/// *Observed at seed 42 on 2026-07-25 (the-tumult, before the epoch's final
+/// refreeze — these are a dated reading, not a standing contract; nothing
+/// asserts them and they will drift):* 203 live settlements, Σ peak_pop =
+/// 14513, Σ suitability(occupied cells) ≈ 171.56, ceiling ≈ 34311.79 (ratio
+/// ≈ 0.42). Breach-detection was verified by hand at that reading: scaling
 /// `occupied_suitability` down by 10× (simulating a genuinely over-capacity
-/// world) reddened the assertion as expected
-/// (`committed peak population 14513 exceeded the peak-scoped collapse
-/// ceiling 3431.18 …`), confirming the gate still catches a real breach and
-/// is not vacuously true.
+/// world) reddened the assertion as expected, confirming the gate is not
+/// vacuously true.
 #[test]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
@@ -380,8 +405,12 @@ fn world_level_population_conserves_against_total_capacity() {
     // public expressly so a Lab consumer can recompute this identical field.
     let terrain =
         hornvale_worldgen::terrain_of(&world).expect("reconstruct terrain from committed facts");
-    let climate =
-        hornvale_worldgen::climate_of(&world).expect("reconstruct climate from committed facts");
+    // `climate_from`, not `climate_of`: the latter re-derives terrain
+    // internally, and this test already holds it — the "pass the pre-built
+    // value" idiom (`windows/worldgen/src/lib.rs`), which sculpts once
+    // instead of twice for a byte-identical result.
+    let climate = hornvale_worldgen::climate_from(&world, &terrain)
+        .expect("reconstruct climate from committed facts");
     let geo = terrain.geosphere();
     let suitability = hornvale_demography::carrying_capacity(
         geo,

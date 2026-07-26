@@ -112,10 +112,15 @@ const NO_SPOILS_PRESSURE: f64 = 1.0;
 /// picking it. A save-format constant: changing it re-fights every world's
 /// history.
 const RAID_DISPOSITION_MIN: f64 = 0.6;
-/// Pressure at or above which a community starves out (Famine). `pub` so
-/// the demography calibration (`windows/lab`) can express the aggregate
-/// population-conservation ceiling: no live community exceeds this pressure,
-/// so `Σ pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ capacity`.
+/// Pressure at or above which a community starves out (Famine). `pub` so the
+/// demography calibration (`windows/lab/tests/gathering_calibration.rs`) can
+/// express its world-scale population ceiling, which since The Tumult reads
+/// `Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
+/// Σ suitability(OCCUPIED cells)` — a sum of committed per-record *peaks*
+/// over exactly the cells the live settlements sit on, not instantaneous
+/// population over the whole world. That gate's own doc comment is the
+/// authority on what the inequality does and does not establish (it is a
+/// runaway detector, not a per-community bound); do not restate it here.
 /// type-audit: bare-ok(ratio)
 pub const COLLAPSE_PRESSURE: f64 = 2.0;
 /// Pressure below which a comfortable community may throw off a daughter.
@@ -590,9 +595,12 @@ impl<'a> Bake<'a> {
         strength: f64,
         can_fight: bool,
     ) -> Option<HomeOption> {
-        // The durable inhibition is a property of the people, not of any one
-        // candidate: a timid people simply never sees held ground as an option.
-        let can_fight = can_fight && self.takes_the_initiative(people);
+        // Whether held ground is in this people's option set AT ALL — a
+        // strictly narrower thing than the caller's `can_fight` ("would
+        // survive winning"), so it gets its own name rather than shadowing the
+        // parameter. The durable inhibition is a property of the people, not
+        // of any one candidate: a timid people simply never sees held ground.
+        let may_take_held_land = can_fight && self.takes_the_initiative(people);
         self.nearest_ring(from, |ring| {
             let mut best: Option<HomeOption> = None;
             for &n in ring {
@@ -604,7 +612,7 @@ impl<'a> Bake<'a> {
                     None => (value, 0.0, None),
                     Some(&h) => {
                         let hs = self.strength(h);
-                        if !can_fight || strength <= hs * RAID_MARGIN {
+                        if !may_take_held_land || strength <= hs * RAID_MARGIN {
                             continue; // not a fight this people can win, or survive winning
                         }
                         if !self.has_spoils(era, h) {
@@ -648,7 +656,8 @@ impl<'a> Bake<'a> {
     /// The roll-downhill is spec §4.3's "re-enters the raid rule", taken
     /// literally: [`Bake::best_home`] makes ONE comparison, over the nearest
     /// ring that holds anything admissible at all, and if the winner is held,
-    /// its occupant is evicted and relocates in turn. War is lossy on both sides of that eviction exactly as it is in
+    /// its occupant is evicted and relocates in turn. War is lossy on both
+    /// sides of that eviction exactly as it is in
     /// [`Bake::maybe_raid`], so a chain dissipates fast: each hop costs the
     /// roller `WAR_LOSS` and the victim `WAR_LOSS` plus the journey, and each
     /// victim is by construction at least `RAID_MARGIN` times weaker than the

@@ -7,54 +7,54 @@
 //! question: does the emergent cascade-size distribution obey a power law
 //! (self-organized criticality), or is the bare sandpile falsified?
 //!
-//! ## Measured — an honest, documented falsification
+//! ## What this file measures
 //!
-//! Seed-42 fires ZERO cascades. The census: `grew: 6011, founded: 124,
-//! migrated: 12, raided: 0, fled: 0, collapsed: 1, resettled: 0,
-//! records_total: 151, alive_at_now: 138`. Every climate-driven relocation
-//! on this seed reaches vacant land directly (`cascade == 0`, not recorded
-//! — see `BakeCensus::record_cascade`); no community is ever crowded
-//! enough to raid a neighbour. This is a continuation, not a surprise: the
-//! sibling `history_gates.rs` module docs already recorded "raids ≈ 0" on
-//! this seed's ample-vacant-land regime after The Sundering. The bare
-//! sandpile's trigger (raiding under pressure) simply never fires on this
-//! particular seed at the current founding density and capacity scaling.
+//! Three readings, in ascending cost:
 //!
-//! Pooled over seeds 1..=30 the histogram measures
-//! `[14, 0, 0, 0, 0, 0, 0, 0, 144, 0, 0, 0]` (158 cascades total, via
-//! `cargo test --release -- --ignored --nocapture
-//! cascade_sizes_are_measured_and_the_shape_adjudicated`). That shape is
-//! NOT a power law — it is sharply bimodal with an empty middle: bin zero
-//! (size exactly one displacement) holds fourteen cascades and bin eight
-//! (sizes 256 through 511) holds a hundred forty-four, with nothing at all
-//! in between or beyond. Tracing the recursion in `Bake::relocate` explains
-//! why: a chain that never reaches vacant land keeps raiding until the
-//! depth check `depth >= CASCADE_DEPTH_CAP` (256) truncates it — returning
-//! `Lost` only at the truncation point itself — and every level above that
-//! point still returns `Settled` with its own count plus the level below,
-//! so a truncated chain always bubbles all the way up reporting exactly
-//! `CASCADE_DEPTH_CAP`, landing in the same bin every time. Bin eight's
-//! spike is therefore an artifact of the safety bound, not an organic
-//! large-scale avalanche: once a cascade outgrows a single hop, the
-//! current dynamics show no evidence it ever naturally terminates — it
-//! exhausts every occupied cell reachable within its era's connected
-//! component, and only stops because the hard cap forces it to. There is
-//! no measured middle ground between settling after one raid and running
-//! away until the safety bound intervenes.
+//! 1. `conflict_fires_at_volume` — the histogram is not structurally zero.
+//! 2. `cascades_do_not_depopulate_the_world` — conflict does not consume
+//!    the map: the bake's own `alive_at_now` stays positive and the live
+//!    settlement count stays inside the sane band the epoch gates
+//!    (`history_placement.rs`) already assert on.
+//! 3. `cascade_sizes_are_measured_and_the_shape_adjudicated` (heavy) — the
+//!    HEADLINE: pool cascades over a seed sample and adjudicate the size
+//!    distribution's shape.
 //!
-//! Verdict: the bare sandpile, as currently parameterized, does not
-//! exhibit self-organized criticality. Two independent findings support
-//! this, not one — most seeds never saturate enough to raid at all
-//! (seed-42 measures zero cascades), and on the seeds where a cascade does
-//! start, its size distribution is degenerate rather than heavy-tailed
-//! (the "large cascade" bin is a truncation artifact, not an organic
-//! middle-scale avalanche). Per measure-don't-narrate, this is recorded as
-//! the honest result rather than tuned to force a passing shape assertion;
-//! it motivates cohesion and grievance as the mechanism a future campaign
-//! adds, since raiding alone, under this density regime, is not the
-//! source of emergent criticality. This is a density-calibration finding
-//! for Nathan (founding density, capacity scaling, or bake span), not a
-//! bug in the Task 1/2 cascade mechanism itself.
+//! ## Status of the headline: OPEN, not yet answered
+//!
+//! **The falsification an earlier revision of this comment recorded has
+//! itself been falsified, and is withdrawn rather than restated.** It read,
+//! against Task 1's mechanism: seed 42 fires ZERO cascades; raids are 0;
+//! pooled over seeds 1..=30 the histogram is `[14, 0×7, 144, 0×3]`, sharply
+//! bimodal with an empty middle, and bin eight's spike is an artifact of
+//! `CASCADE_DEPTH_CAP` truncation rather than an organic avalanche. Every
+//! clause of that is now stale. Task 2 replaced the vacant-first rule with
+//! spec §4.3's single comparison and then scoped it to the nearest
+//! ADMISSIBLE RING, so both the trigger rate and the mechanism that produced
+//! the bin-eight spike changed: a chain must now find its next beatable,
+//! richer holding inside the loser's own first ring, which is the very
+//! condition a runaway-to-the-cap chain violated.
+//!
+//! Nothing here re-asserts a shape. The pooled histogram is UNMEASURED on
+//! the present rule; the heavy battery is what measures it, and Task 3's
+//! readout is what adjudicates it.
+//!
+//! *Observed at seed 42 on 2026-07-25, a dated reading rather than a
+//! standing claim (nothing below asserts these numbers, and the epoch has
+//! not had its final refreeze):* `grew: 7466, founded: 196, migrated: 58,
+//! raided: 76, fled: 76, collapsed: 8, resettled: 72, records_total: 417,
+//! alive_at_now: 203, cascade_hist: [1, 0×11]`. Conflict fires at volume —
+//! 76 conquests where the pre-Tumult bake had none — but seed 42 remains a
+//! THIN sample of the quantity the campaign is actually after: of those 76
+//! relaxations exactly one chained past a single hop, so this seed alone
+//! cannot say anything about the tail. Pooling across seeds is now doing
+//! nearly all the work, which is a fact about the instrument and not yet a
+//! finding about the physics.
+//!
+//! Note `migrated: 58` is CLIMATE eviction only. A conquest also closes the
+//! conqueror's abandoned record with cause `migrated`, so the raw
+//! `occ-cause` fact count is higher; `migration_events` (`history_emit.rs`)
+//! excludes those, and `history_gates.rs` pins the distinction.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
@@ -79,14 +79,14 @@ fn hist(seed: Seed) -> [u64; 12] {
 }
 
 /// Gate — conflict FIRES, or the inert state is documented rather than
-/// hidden. Measured seed-42 total: 0 cascades (see the module docs for the
-/// full census) — raiding never triggers on this seed under the current
-/// founding density and capacity scaling, so there is no positive floor to
-/// set clear below a measured value; `MIN_CASCADES` stays at 0, an honest
-/// reflection of the finding rather than a target tuned to force a pass.
-/// This is a density-calibration decision for Nathan, not something this
-/// test forces. `i64` (not `u64`) so the floor comparison stays a real
-/// check rather than a clippy-flagged unsigned-vs-zero tautology.
+/// hidden. `MIN_CASCADES` stays at 0, which is now a WEAK floor rather than
+/// the honest reflection of an inert mechanism it was under Task 1: seed 42
+/// fires cascades (one, at the 2026-07-25 reading in the module docs), so a
+/// positive floor could be set. Raising it is Task 3's call, made against the
+/// pooled sample rather than against this one thin seed — a per-seed count
+/// this small is exactly what a floor should not be pinned to. `i64` (not
+/// `u64`) so the floor comparison stays a real check rather than a
+/// clippy-flagged unsigned-vs-zero tautology.
 const MIN_CASCADES: i64 = 0;
 #[test]
 fn conflict_fires_at_volume() {
@@ -138,19 +138,20 @@ fn cascades_do_not_depopulate_the_world() {
     );
 }
 
-/// The falsification HEADLINE (heavy: pools cascades over a seed sample and
-/// adjudicates the size distribution). A power law (roughly linear log-count
-/// vs log-size with negative slope over the middle bins) would confirm
-/// self-organized criticality; the MEASURED pooled histogram
-/// (`[14, 0, 0, 0, 0, 0, 0, 0, 144, 0, 0, 0]`, printed below) is instead
-/// sharply bimodal with an empty middle — bin 8's spike is an artifact of
-/// `CASCADE_DEPTH_CAP` truncation (see the module docs), not an organic
-/// heavy tail. Per measure-don't-narrate this is recorded as the honest
-/// falsification rather than an invented passing shape assertion: only the
-/// floor that DOES hold (cascades fire somewhere in the sample) is
-/// asserted. The bare sandpile is FALSIFIED as currently parameterized —
-/// the honest result, motivating cohesion/grievance as a future campaign's
-/// addition. This ships.
+/// The HEADLINE instrument (heavy: pools cascades over a seed sample and
+/// prints the size distribution). A power law — roughly linear log-count vs
+/// log-size, negative slope across the middle bins — would confirm
+/// self-organized criticality; a degenerate or empty-middle shape would
+/// falsify the bare sandpile.
+///
+/// **The shape is not adjudicated here, and this doc deliberately states no
+/// verdict.** The pooled histogram an earlier revision recorded
+/// (`[14, 0×7, 144, 0×3]`, read as a `CASCADE_DEPTH_CAP` truncation artifact)
+/// predates Task 2's rule change and is withdrawn — see the module docs. Per
+/// measure-don't-narrate, the only thing asserted is the floor that a shape
+/// reading needs in order to exist at all: cascades fire somewhere in the
+/// sample. Task 3 runs this, reads the printed histogram, and records the
+/// verdict — whichever way it falls.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn cascade_sizes_are_measured_and_the_shape_adjudicated() {

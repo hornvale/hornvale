@@ -359,10 +359,16 @@ fn a_strong_community_raids_a_weaker_richer_neighbour_with_land_to_spare() {
 /// people's first ring is most of the interesting world and the escarpment is
 /// only four steps wide, so the fixture measured cascades only on some seeds —
 /// an instrument too coarse for a local rule, not a physics finding. The same
-/// escarpment on `Geosphere::new(2)` (162 cells) with the gradient run out to
-/// the sphere's full radius instead of flattening after four hops gives it the
-/// rings it needs; the geometry, the arithmetic (20 per step) and the
-/// assertions are unchanged.
+/// escarpment on `Geosphere::new(2)` (162 cells) gives it the rings it needs;
+/// the geometry, the arithmetic (20 per step) and the assertions are
+/// unchanged.
+///
+/// The gradient is DEEPER, not exhaustive: `(200 - 20 × hops).max(20)` falls
+/// for nine hops and then sits on its 20 floor, while the sphere spans twelve
+/// rings from cell 0. So the outer three rings are flat, uniformly poor rim —
+/// which is fine for what the fixture is for (the interesting relaxations
+/// happen on the slope), but it is not the "out to the full radius" an earlier
+/// revision of this comment claimed.
 fn escarpment_fixture() -> (
     Geosphere,
     CellMap<f64>,
