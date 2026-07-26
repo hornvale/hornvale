@@ -19,7 +19,7 @@
 //! prose, byte for byte.
 
 use hornvale_history::flesh::{
-    Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
+    Departure, Durability, Residue, ResidueItem, Structure, residue_of, structures_of,
 };
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
@@ -504,7 +504,17 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
             Some(who) => format!("Its end came by fire — burned by {who}, and never rebuilt."),
             None => "Its end came by fire — burned, and never rebuilt.".to_string(),
         },
-        CauseOfEnd::Migrated => migration_line(index),
+        CauseOfEnd::Migrated => match conquest_victim(world, r) {
+            Some(victim) => {
+                let (who, whence, _) = forebears(world, victim);
+                format!(
+                    "They were not driven from this ground — they left it: in that same \
+                     year they drove the {who} off {whence}, and carried the settlement \
+                     onto the land they had taken."
+                )
+            }
+            None => migration_line(index),
+        },
         CauseOfEnd::Fled => match by {
             Some(who) => format!("They fled — put to flight by {who} — and did not return."),
             None => "They fled the site, and did not return.".to_string(),
@@ -520,9 +530,60 @@ fn ending_sentence(world: &World, r: &OccupationRecord, index: usize) -> String 
     }
 }
 
+/// The occupation this record's people drove off the year it left — i.e. the
+/// evidence that this `Migrated` record is a **conquest-relocation** and not a
+/// climate departure at all. `None` for a climate departure and for every
+/// other cause.
+///
+/// Predation (The Tumult) gave `CauseOfEnd::Migrated` a second producer:
+/// `Bake::maybe_raid` closes the *conqueror's* abandoned record with
+/// `Migrated`/[`Ended::Nature`] — it left its poorer land for the prize — and
+/// reopens it on the seized cell. On seed 42 that is the majority of the
+/// world's `migrated` records, so rendering all of them as the climate line
+/// narrates three quarters of this world's wars as peaceful departures.
+///
+/// The distinction is **query-side and derived**: spec §9 forbids a new cause
+/// variant or a new committed field, and this is the identical fold
+/// `windows/worldgen::migration_events` already applies to the ledger count
+/// (see its doc comment for why the signal is exact). A conquest-relocation is
+/// precisely a `migrated` record that some *other* occupation was driven off
+/// **by**, in the same year: `maybe_raid` closes the victim `Fled`,
+/// `ended-by` the raider's own just-closed record, on the very day the raider
+/// moved. A climate eviction takes vacant ground and has no contemporaneous
+/// victim; the only other producer of an `ended-by` (a cascade hop in
+/// `Bake::relocate`) names the roller's newly *opened* record, whose own
+/// ending falls in a later year.
+///
+/// Determinism: the O-shape index yields commit order, and a conqueror can
+/// have at most one such victim, but the lowest entity id is taken regardless
+/// so the result never depends on iteration order. Days compare with
+/// `f64::total_cmp` — both are the same `year` scalar through the same
+/// quantizing boundary, so they compare exactly, and bare float equality is
+/// banned.
+fn conquest_victim(world: &World, r: &OccupationRecord) -> Option<EntityId> {
+    if r.cause != Some(CauseOfEnd::Migrated) || !matches!(r.ended_by, Ended::Nature) {
+        return None;
+    }
+    let left = r.ended?;
+    world
+        .ledger
+        .query_by_object(&Value::Entity(r.community))
+        .filter(|f| f.predicate == hornvale_history::OCC_ENDED_BY)
+        .map(|f| f.subject)
+        .filter(|&victim| {
+            matches!(
+                number(world, victim, hornvale_history::OCC_ENDED),
+                Some(fell) if left.total_cmp(&fell).is_eq()
+            )
+        })
+        .min_by_key(|e| e.0.get())
+}
+
 /// One of three climate-abandonment endings, cycled by layer index so a deep
 /// re-occupation stack reads as a chronicle. The first variant (index 0, the
 /// deepest layer of any run) always carries the raw cause word "migrated".
+/// Reached only for a genuine climate departure — a conquest-relocation is
+/// filtered out upstream by [`conquest_victim`].
 fn migration_line(index: usize) -> String {
     match index % 3 {
         0 => "In the end the cold drove them on: they migrated away, abandoning the \
@@ -542,7 +603,13 @@ fn migration_line(index: usize) -> String {
 fn render_flesh(world: &World, layer: &Layer, now: f64) -> String {
     let seed = flesh_seed(world, layer.entity);
     let structures = structures_of(&layer.record, seed);
-    let residue = residue_of(&layer.record, now, seed);
+    // A conqueror's abandoned seat is not a climate abandonment, and must not
+    // leave the climate abandonment's assemblage (see `conquest_victim`).
+    let departure = match conquest_victim(world, &layer.record) {
+        Some(_) => Departure::Conquest,
+        None => Departure::Climate,
+    };
+    let residue = residue_of(&layer.record, now, seed, departure);
 
     let mut out = String::new();
     out.push_str("In the grass today\n");
