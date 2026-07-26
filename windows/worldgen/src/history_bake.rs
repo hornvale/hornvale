@@ -1889,6 +1889,178 @@ mod tests {
         assert_eq!((bake.tally.raided, bake.tally.fled), (0, 0));
     }
 
+    /// The three cells of [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s
+    /// strength ladder, in the order the chain takes them. Each is a `Geosphere::new(1)`
+    /// neighbour of the one before it, and all three are neighbours of `CellId(0)`
+    /// (the origin the first roller is driven off), so every hop finds its
+    /// next prize in ring 1 and the widening scan never has to look past it.
+    const LADDER: [CellId; 3] = [CellId(20), CellId(12), CellId(14)];
+
+    /// The people holding the bottom rung of
+    /// [`a_cascade_runs_three_hops_and_dies_of_dissipation`]'s ladder — the one
+    /// the chain spits out, whose survival the two arms flip.
+    const TERMINAL: KindId = KindId("bugbear");
+
+    #[test]
+    fn a_cascade_runs_three_hops_and_dies_of_dissipation() {
+        // The campaign's deliverable IS the cascade-size distribution, so the
+        // multi-hop accumulation has to be exercised directly: the live worlds
+        // measured so far fire only size-1 cascades, which leaves `1 +
+        // victim_cascade` beyond one hop, the roller-side vetoes deeper in a
+        // chain, and — the central physical claim of `Bake::relocate`'s doc —
+        // that a chain ends by DISSIPATION rather than by `CASCADE_DEPTH_CAP`
+        // all unverified. (The sibling depth-cap test reaches the cap only by
+        // being handed `depth = CAP - 1`; that proves the guard, not the
+        // physics.)
+        //
+        // The fixture is a descending strength ladder on `LADDER`: each holder
+        // is beatable by the remnant the hop before it produced, and by nobody
+        // weaker. Capacity picks the route (each rung is worth far more than
+        // the POOR vacant land around it, so the held cell always outbids
+        // pioneering within the ring), and population picks how far the chain
+        // gets. Arithmetic, all at Neolithic weight 1.0 in year 0:
+        //
+        //   hop 1  roller 400 > 120 × RAID_MARGIN  → seats on 20; A carries
+        //          120 × (1-WAR_LOSS) × MIGRATE_SURVIVAL = 75.6
+        //   hop 2  A 75.6 > 20 × RAID_MARGIN       → seats on 12; B carries 12.6
+        //   hop 3  B 12.6 > `weakest` × RAID_MARGIN → seats on 14; C carries
+        //          `weakest` × 0.63
+        //
+        // `weakest` is the one knob, and it straddles the viable minimum:
+        // 3.0 → the last remnant carries 1.89 < VIABLE_MIN and dies on the
+        // road; 4.0 → it carries 2.52 and lives to settle. Everything else
+        // about the two arms is identical, which is what makes the first arm's
+        // termination attributable to dissipation and to nothing else — there
+        // is vacant POOR land in ring 1 of every rung, so a remnant that had
+        // anything left would always have had somewhere to go.
+        let run = |weakest: f64| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|c| match c {
+                // Descending prizes. Each is worth more than POOR × (1 +
+                // SETTLED_PREMIUM), so a held rung always outbids the vacant
+                // cells sharing its ring — and each exceeds its holder's
+                // population, so no rung is a spoils-less husk.
+                c if c == LADDER[0] => 200.0,
+                c if c == LADDER[1] => 100.0,
+                c if c == LADDER[2] => 50.0,
+                _ => POOR,
+            });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+            let holders = [
+                (KindId("goblin"), 120.0),
+                (KindId("hobgoblin"), 20.0),
+                (TERMINAL, weakest),
+            ];
+            for (&cell, &(people, pop)) in LADDER.iter().zip(holders.iter()) {
+                bake.open(people, cell, 0.0, pop, Founding::Genesis(cell), None, 0.0);
+            }
+            let roller = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                400.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let (r_id, r_lineage) = (
+                bake.communities[roller].id,
+                bake.communities[roller].lineage,
+            );
+            bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+            let outcome = bake.relocate(
+                KindId("kobold"),
+                400.0,
+                r_lineage,
+                r_id,
+                0.0,
+                CellId(0),
+                &era,
+                0.0,
+                0,
+            );
+            // Read everything the assertions need out of the borrowed `Bake`
+            // before it dies with this closure's frame: the outcome, the
+            // tallies, who ended up seated on each rung, and whether the
+            // bottom of the ladder is still anywhere in the world.
+            let seated = LADDER.map(|cell| {
+                bake.node_index
+                    .get(&cell)
+                    .map(|&i| bake.records[bake.communities[i].record].people)
+            });
+            let terminal_survived = bake
+                .communities
+                .iter()
+                .any(|c| c.alive && bake.records[c.record].people == TERMINAL);
+            (
+                outcome,
+                (bake.tally.raided, bake.tally.fled, bake.tally.collapsed),
+                seated,
+                terminal_survived,
+            )
+        };
+
+        // ---- Arm 1: the last remnant dissipates below VIABLE_MIN. ----------
+        let (outcome, tally, seated, terminal_survived) = run(3.0);
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 3 },
+            "the chain must accumulate one displacement per hop: three holders \
+             evicted is `1 + (1 + (1 + 0))`, not a single hop and not a \
+             truncated count"
+        );
+        let Relocation::Settled { cascade } = outcome else {
+            unreachable!("asserted Settled above")
+        };
+        assert!(
+            cascade < CASCADE_DEPTH_CAP,
+            "the chain must end on its own, not at the safety bound: {cascade} \
+             reached CASCADE_DEPTH_CAP ({CASCADE_DEPTH_CAP})"
+        );
+        assert_eq!(
+            (tally.0, tally.1),
+            (3, 3),
+            "three hops, three evictions (raided, fled)"
+        );
+        // Each rung is now held by the people one rung UP from it — the
+        // signature of a chain, not of three unrelated raids.
+        assert_eq!(
+            seated,
+            [
+                Some(KindId("kobold")),
+                Some(KindId("goblin")),
+                Some(KindId("hobgoblin")),
+            ],
+            "each rung must be held by the people the hop before it displaced"
+        );
+        // The bottom of the ladder is gone from the world, and counted.
+        assert!(
+            !terminal_survived,
+            "the terminal remnant must be gone: it carried 1.89 < VIABLE_MIN"
+        );
+        assert_eq!(
+            tally.2, 1,
+            "the remnant that died on the road must be tallied, not dropped"
+        );
+
+        // ---- Arm 2: the SAME chain, with a terminal remnant just above ----
+        // VIABLE_MIN. Only `weakest` differs, so the flipped outcome isolates
+        // the viable-minimum floor as the first arm's cause of death.
+        let (outcome, tally, _, terminal_survived) = run(4.0);
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 3 },
+            "the chain is the same length either way — what changes is the fate \
+             of the remnant it spits out"
+        );
+        assert!(
+            terminal_survived,
+            "carrying 2.52 ≥ VIABLE_MIN, the terminal remnant must survive to \
+             settle — proving arm 1's remnant died of dissipation and not of \
+             having nowhere to go"
+        );
+        assert_eq!(tally.2, 0, "nothing was lost on the road in this arm");
+    }
+
     #[test]
     fn the_depth_cap_truncates_a_cascade_and_the_dropped_remnant_is_tallied() {
         // Two bounds in one fixture. (a) `CASCADE_DEPTH_CAP` is a hard stop:
