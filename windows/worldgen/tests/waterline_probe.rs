@@ -328,6 +328,42 @@ fn waterline_probe() {
     }
     println!("   (world has {land_cells} land cells and {sea_cells} ocean cells)");
 
+    // --- Does the EXISTING habitability mask reach every axis? ------------
+    println!("\n-- habitability mask vs the per-axis supply fields");
+    let habitable = climate.habitability();
+    let hab_land = cells
+        .iter()
+        .filter(|&&c| *habitable.get(c) && terrain.elevation_at(c).get() >= 0.0)
+        .count();
+    let hab_sea = cells
+        .iter()
+        .filter(|&&c| *habitable.get(c) && terrain.elevation_at(c).get() < 0.0)
+        .count();
+    println!(
+        "   habitable cells: {hab_land} on land, {hab_sea} at sea (of {land_cells} land / {sea_cells} ocean)"
+    );
+
+    // Per-axis supply at a sample of ocean cells: which axes are non-zero
+    // where the mask says "not habitable"?
+    let base_inputs_nonhab: Vec<hornvale_kernel::CellId> = cells
+        .iter()
+        .copied()
+        .filter(|&c| !*habitable.get(c))
+        .take(3)
+        .collect();
+    println!(
+        "   sample NON-habitable cells, per-species K (should be ~0 if the mask reached every axis):"
+    );
+    for &c in &base_inputs_nonhab {
+        let elev = terrain.elevation_at(c).get();
+        let mut parts: Vec<String> = Vec::new();
+        for name in ["goblin", "xorn", "rust-monster", "twig-blight"] {
+            let t = tag_of(name);
+            parts.push(format!("{name} {:.6}", k_of(t).get(c)));
+        }
+        println!("      cell elev {elev:8.1} m  {}", parts.join("  "));
+    }
+
     // Sanity: confirm the axes the model currently reads.
     println!("\n-- axis basis sanity");
     for axis in [PHOTOSYNTHATE, PLANT_FORAGE, ANIMAL_PREY, DETRITUS, MINERAL] {
