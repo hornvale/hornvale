@@ -767,6 +767,15 @@ pub enum HabitatDomain {
     Aquatic,
     /// At home in both — a shore-dweller, an otter, a crocodilian.
     Amphibious,
+    /// Lives *in the substrate*, which underlies both land and sea floor, and
+    /// is therefore indifferent to the waterline above it. A xorn swims
+    /// through stone; the ocean over its head is not its medium. Shares
+    /// `Amphibious`'s permit-everywhere gate in v1 but makes a different
+    /// claim — `Amphibious` is at home in both media and moves between them;
+    /// `Lithic` is in neither, in a third medium that underlies both. When a
+    /// future campaign gives the substrate its own extent, this gains a real
+    /// gate and `Amphibious` does not.
+    Lithic,
 }
 
 /// The biosphere component: every entity has one. The packer and the
@@ -963,7 +972,10 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
-                habitat_domain: HabitatDomain::Terrestrial,
+                // Ametabolic, burrows through stone: lives IN the substrate,
+                // not on it. rust-monster shares the pure-MINERAL niche but
+                // stays Terrestrial — it walks the surface eating metal.
+                habitat_domain: HabitatDomain::Lithic,
             },
         ),
         (
@@ -1474,20 +1486,28 @@ mod tests {
     }
 
     #[test]
-    fn every_shipped_kind_declares_a_habitat_domain_and_all_are_terrestrial() {
-        // The Waterline v1: the mechanism is general, the content degenerate.
-        // No shipped kind is Aquatic yet — the aquatic roster is the sequel —
-        // so this asserts the ROSTER FACT, and a future marine kind is meant
-        // to fail here and be added deliberately, not slip in unnoticed.
+    fn every_shipped_kind_declares_a_habitat_domain_and_xorn_is_lithic() {
+        // The Waterline v1 (+ Step 0's re-authoring): fifteen kinds are
+        // Terrestrial and xorn alone is Lithic — it burrows through stone
+        // rather than walking on it (rust-monster shares the pure-MINERAL
+        // niche but stays Terrestrial). Asserted BY NAME so a future
+        // re-authoring is a deliberate, visible change rather than a silent
+        // drift in this roster fact.
         let bio = biosphere_registry();
         assert_eq!(bio.len(), 16, "sixteen kinds compete for space");
         for (kind, traits) in bio.iter() {
-            assert_eq!(
-                traits.habitat_domain,
-                HabitatDomain::Terrestrial,
-                "{kind:?} is terrestrial in v1"
-            );
+            let expected = if kind.0 == "xorn" {
+                HabitatDomain::Lithic
+            } else {
+                HabitatDomain::Terrestrial
+            };
+            assert_eq!(traits.habitat_domain, expected, "{kind:?} habitat domain");
         }
+        let terrestrial_count = bio
+            .iter()
+            .filter(|(_, t)| t.habitat_domain == HabitatDomain::Terrestrial)
+            .count();
+        assert_eq!(terrestrial_count, 15, "fifteen kinds are terrestrial");
     }
 
     #[test]

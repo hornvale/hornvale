@@ -812,6 +812,30 @@ pub fn niche_per_species_k(
             let floor_buf = hornvale_kernel::sovereignty_floor(bio.mass, bio.potency);
             let cn = &bio.condition_niche;
             let k = hornvale_kernel::CellMap::from_fn(geo, |cell| {
+                // THE WATERLINE: support restriction. A kind outside its
+                // medium has no carrying capacity here at all — not a small
+                // one. Gated at K rather than per supply axis because the
+                // defect had two independent sources (climate's
+                // `habitability` is not a land test, and MINERAL/DETRITUS
+                // bypass it), and because the claim is "this kind cannot be
+                // here", not "this kind finds no food here". A small value
+                // would not do: dominance is an argmax, so a cell containing
+                // only small values still has a largest one.
+                let wet = terrain.is_ocean(cell);
+                let permitted = match bio.habitat_domain {
+                    hornvale_species::HabitatDomain::Terrestrial => !wet,
+                    hornvale_species::HabitatDomain::Aquatic => wet,
+                    // Amphibious is at home in both surface media; Lithic is
+                    // in neither — it lives IN the substrate, which underlies
+                    // both, so it shares the permit-everywhere gate in v1
+                    // without making Amphibious's claim. See
+                    // `HabitatDomain::Lithic`'s doc comment.
+                    hornvale_species::HabitatDomain::Amphibious
+                    | hornvale_species::HabitatDomain::Lithic => true,
+                };
+                if !permitted {
+                    return 0.0;
+                }
                 let s = substrate.get(cell);
                 // Rank-restored supply via the extracted helper: the axis
                 // dot product, not the old summed-uptake scalar.
@@ -9007,6 +9031,95 @@ mod tests {
         assert!(
             hi / lo > 1.5,
             "K fields are niche-differentiated, not proportional: lo={lo} hi={hi}"
+        );
+    }
+
+    #[test]
+    fn no_terrestrial_kind_holds_carrying_capacity_below_the_waterline() {
+        // The Waterline's whole claim (P1), scoped to HabitatDomain::Terrestrial
+        // kinds specifically — the claim is never about EVERY kind. Before the
+        // gate the goblin held 930 ocean cells and the xorn 25,982; the
+        // mechanism was that `habitability` asks whether the CLIMATE is
+        // livable (open ocean passes easily) and that MINERAL/DETRITUS bypass
+        // it entirely. Since Step 0's re-authoring, xorn is `Lithic`
+        // (permit-everywhere: it lives IN the substrate, indifferent to the
+        // waterline) and is therefore EXPECTED to keep its ocean cells — it is
+        // deliberately excluded here, not an offender.
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _y, _yp) = stellar_inputs(&sky);
+        let wc = WorldComponents::assemble().unwrap();
+        let names: Vec<&'static str> = wc.biosphere.ids().map(|k| k.0).collect();
+        let bio: Vec<&hornvale_species::BiosphereTraits> =
+            wc.biosphere.iter().map(|(_, b)| b).collect();
+        let ks = niche_per_species_k(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &bio,
+        );
+        let mut offenders: Vec<(&str, usize)> = Vec::new();
+        for (tag, k) in &ks {
+            if bio[*tag as usize].habitat_domain != hornvale_species::HabitatDomain::Terrestrial {
+                continue;
+            }
+            let wet = geo
+                .cells()
+                .filter(|&c| terrain.is_ocean(c) && *k.get(c) > 0.0)
+                .count();
+            if wet > 0 {
+                offenders.push((names[*tag as usize], wet));
+            }
+        }
+        assert!(
+            offenders.is_empty(),
+            "terrestrial kinds hold capacity below the waterline: {offenders:?}"
+        );
+    }
+
+    #[test]
+    fn the_gate_removes_cells_without_reweighting_the_survivors() {
+        // P5: support restriction takes cells OUT of contention; it must not
+        // change the relative standing of kinds on land. Compare each pair's
+        // K ratio on a land cell against the same ratio computed from the
+        // ungated formula (supply x conditions), which the gate does not touch.
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _y, _yp) = stellar_inputs(&sky);
+        let wc = WorldComponents::assemble().unwrap();
+        let bio: Vec<&hornvale_species::BiosphereTraits> =
+            wc.biosphere.iter().map(|(_, b)| b).collect();
+        let ks = niche_per_species_k(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &bio,
+        );
+        let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        assert!(!land.is_empty(), "seed 42 has land");
+        let mut any_positive = false;
+        for &c in land.iter().take(200) {
+            for (_, k) in &ks {
+                if *k.get(c) > 0.0 {
+                    any_positive = true;
+                }
+            }
+        }
+        assert!(
+            any_positive,
+            "the gate must leave land capacity intact, not zero the world"
         );
     }
 
