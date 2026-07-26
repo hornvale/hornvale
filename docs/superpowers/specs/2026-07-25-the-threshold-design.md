@@ -11,8 +11,8 @@ Hearth's `Interior`, vocabulary, patterns and fields, none of which exist on
 `main`.
 **Decisions in force:** 0069 (fine position is never serialized), 0072 (derived
 geometry is causal), 0073 (epoch granularity is declared), 0009, 0016.
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (11 entries, six
-ideonomy passes, three overturns).
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (12 entries, seven
+ideonomy passes, four overturns).
 
 ---
 
@@ -82,7 +82,7 @@ pattern is an epoch**: a larger inventory changes selections, changes
 interiors, changes warmth, changes committed drive history. Growth is additive
 to the *inventory* and emphatically not to the *world*.
 
-Neither campaign can see this alone. It is the first item in §10.
+Neither campaign can see this alone. It leads §9.
 
 ## 3. Derivation
 
@@ -140,6 +140,54 @@ Seeded entry — drawing an entry anchor from the room seed — is rejected on
 consume seeded draws, and stream consumption order is a save-format contract
 with its own pin-isolation discipline. The stochastic-looking option is the one
 that costs determinism.
+
+### 4.2 A seam belongs to the room-graph edge, not to the interior
+
+`Threshold` is one *species* of a genus this program had not named: **the seam
+between scales**, the thing that is simultaneously a room-graph edge and an
+anchor. A doorway, a ford and an open field edge are all seams; only the first
+is a threshold.
+
+```
+              NARROW (chokepoint)         BROAD (whole edge)
+  BUILT       doorway, gate  <- common    colonnade  <- rare
+  NATURAL     ford, col      <- exception open edge  <- THE COMMON CASE
+```
+
+Built and natural are **mirror images.** Indoors the default is a chokepoint
+and the wall is impassable; outdoors the entire border is passable and the
+chokepoint is the exception.
+
+The Hearth gives each room **one** `Threshold` anchor, while rooms sit on the
+geodesic mesh with roughly six neighbours. So a built room with two doorways
+already has one anchor for two seams, and an arriving creature is placed at
+"the threshold" regardless of which door it used. That is wrong **indoors as
+well as outdoors** — the wilderness gap was the visible symptom of a modelling
+error in the case The Hearth does model.
+
+**The decomposition.** Interiors own **anchors**; the room graph owns
+**seams**; a seam declares which anchor it lands at in each interior it joins.
+
+- A **narrow** seam lands at a distinguished anchor — the doorway actually
+  used, which is The Hearth's `AnchorKind::Threshold`.
+- A **broad** seam lands at the interior's **hub**. That is the only
+  topologically available answer: without coordinates there is no "nearest
+  anchor to the north edge," and §2.1 of The Hearth forbids reaching for one
+  (*outcomes read topology, never metrics*). The forced answer being the
+  metric-free one is a good sign rather than a compromise.
+
+**This is additive to The Hearth, not a replacement.** It ships
+`AnchorKind::Threshold`; this campaign's seam model *uses* it as the
+narrow-case landing site. Wilderness, having no such anchor, takes the broad
+case. **The Hearth needs no change** — which is why this model is absorbed here
+rather than amended upstream.
+
+**Wilderness therefore needs no threshold pattern at all.** An earlier draft of
+this spec recommended adding a `built: false` threshold-like pattern; that is
+retired as the wrong fix, because it papers over the modelling error by giving
+wilderness a fake doorway. Outdoors a seam is *informational* — a
+classification of where a boundary lies — not *physical*, so modelling it as an
+anchor-object is a category error.
 
 ## 5. Catch-up
 
@@ -296,8 +344,9 @@ Narrower, sharper, and directly checkable.
 
 ## 7. Scope
 
-**In:** `interior_of`; anchor occupancy in the bubble; `MoveWithin(AnchorId)`;
-catch-up with its cap; the movement-precondition test; the acceptance protocol.
+**In:** `interior_of`; anchor occupancy in the bubble; **the seam model** (§4.2 — seams keyed to room-graph edges, narrow and broad);
+`MoveWithin(AnchorId)`; catch-up with its cap; the movement-precondition
+test; the acceptance protocol.
 
 **Out, each with a home:** rendering and any coordinate solve (Campaign 4);
 projective relations and concealment (the vocabulary's third slice); promotion
@@ -312,14 +361,16 @@ visible on arrival).
 
 Produced by this brainstorm, cheap to fix there, expensive to fix after.
 
-1. **BLOCKER — wilderness has no seam anchor.** `the-threshold` carries
-   `built: true`, so `selection(seed, built=false, cold)` returns
-   `[the-water, the-fallen-log]` and **no `Threshold`**. §4.1's arrival rule is
-   undefined exactly where the health battery's fauna live. Fix: a
-   `built: false` threshold-like pattern (a clearing's edge, a game trail), or
-   make `AnchorKind::Threshold` built-agnostic. The Hearth's own
-   `wilderness_draws_natural_patterns_and_no_built_ones` test passes with no
-   threshold and should be strengthened.
+1. ~~**BLOCKER — wilderness has no seam anchor.**~~ **RETIRED** by §4.2. It
+   was real — `the-threshold` carries `built: true`, so
+   `selection(seed, built=false, cold)` returns `[the-water, the-fallen-log]`
+   and no `Threshold` — but the fix this section originally proposed (add a
+   `built: false` threshold-like pattern) was wrong, and the finding was the
+   symptom rather than the disease. Seams belong to room-graph edges; a broad
+   seam lands at the hub; wilderness needs no threshold pattern. **The Hearth
+   requires no change.** Its
+   `wilderness_draws_natural_patterns_and_no_built_ones` test is fine as
+   written, since a wilderness interior legitimately has no threshold.
 2. **Get the inventory near its intended size before this campaign arms
    furnishing** (§2.2). Growth afterwards is an epoch regardless of keying.
 3. **Key the future seeded draw by name, never by position.** v1's `selection`
@@ -347,9 +398,13 @@ Produced by this brainstorm, cheap to fix there, expensive to fix after.
    half of one cut in two, and the cut runs along a seam. The arming trap (§2.2)
    is precisely what a per-campaign review cannot see — the same structural
    lesson The Excursion and The Selvage each paid for.
-3. **[blocker] §8 item 1 is a genuine dependency.** Wilderness needs a seam
-   anchor before this campaign's arrival rule is defined. It is The Hearth's to
-   fix; this spec assumes it.
+3. **[scope grew after G3 was first presented] The seam model (§4.2) was
+   absorbed into this campaign** by owner decision, rather than amending The
+   Hearth's approved spec or deferring it. It began as a wilderness blocker and
+   turned out to be a modelling error affecting built rooms too: one
+   `Threshold` anchor per room, where rooms have ~6 neighbours. Absorbing it is
+   cheap **only because it is additive** — The Hearth's `Threshold` becomes the
+   narrow-case landing site and needs no edit. Worth confirming that reading.
 4. **[parameter] The catch-up cap** (§5.3) is a first-pass tunable whose
    *existence* is load-bearing and whose value is implementation tuning.
 5. **[assumption] Everything here is specced against The Hearth's spec and
