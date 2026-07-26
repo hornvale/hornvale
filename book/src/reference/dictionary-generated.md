@@ -12,9 +12,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Ddoadzhao | /ddoadʒao/ | Mmeadjae | Mmeadjae → no change → Ddoadzhao |
-| `blue` | the color term for blue | Ddoogzhoo | /ddoogʒoo/ | Nmeegjeo | Nmeegjeo → no change → Ddoogzhoo |
+| `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Ddoagdoo | /ddoagdoo/ | Nneangneo | Nneangneo → no change → Ddoagdoo |
-| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
+| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Gdoo | /gdoo/ | Ngnee | Ngnee → no change → Gdoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): black-dragon has no exposure to 'cold' |
@@ -33,7 +33,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `gloom` | the deepest, starless dark | Gdooggoo | /gdooggoo/ | Gwoengngee | Gwoengngee → no change → Gdooggoo |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): black-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): black-dragon has no exposure to 'god' |
-| `green` | the color term for green | Ggaashdao | /ggaaʃdao/ | Ngngaashdae | Ngngaashdae → no change → Ggaashdao |
+| `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Sdaogdaa | /sdaogdaa/ | Spaongnaa | Spaongnaa → no change → Sdaogdaa |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): black-dragon has no exposure to 'hearth' |
@@ -60,14 +60,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
+| `shadow` | cast dark, distinct from open gloom | Ggoa | /ggoa/ | Ngngoa | Ngngoa → no change → Ggoa |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shgoasdoo | /ʃgoasdoo/ | Shkoasdoe | Shkoasdoe → lenition → Shgoasdoo |
 | `sleep` | to rest unconscious | Shdao | /ʃdao/ | Shpao | Shpao → no change → Shdao |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'snow' |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): black-dragon has no exposure to 'spirit' |
 | `star` | a fixed point of light in the night sky | Ddooshgoo | /ddooʃgoo/ | Bweoshgee | Bweoshgee → no change → Ddooshgoo |
-| `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
+| `starlit` | dark faintly lit by stars | Gdoaggao | /gdoaggao/ | Kwoangngae | Kwoangngae → lenition → Gdoaggao |
 | `stone` | rock | Shdaodzhoo | /ʃdaodʒoo/ | Shpaepjeo | Shpaepjeo → no change → Shdaodzhoo |
 | `sun` | the sun | Sgaa | /sgaa/ | Sgaa | Sgaa → no change → Sgaa |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
@@ -83,7 +83,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Ddooddao | /ddooddao/ | Mmoonnae | Mmoonnae → no change → Ddooddao |
 | `wind` | moving air | Dgaa | /dgaa/ | Mngaa | Mngaa → no change → Dgaa |
-| `yellow` | the color term for yellow | Shgoagdoo | /ʃgoagdoo/ | Shgeangnoo | Shgeangnoo → no change → Shgoagdoo |
+| `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 
 ## Bugbear
 
@@ -417,9 +417,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Ddoadjao | /ddoadjao/ | Mmeadjae | Mmeadjae → no change → Ddoadjao |
-| `blue` | the color term for blue | Ddoodjoo | /ddoodjoo/ | Nmeegjeo | Nmeegjeo → no change → Ddoodjoo |
+| `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Ddoaddoo | /ddoaddoo/ | Nneangneo | Nneangneo → no change → Ddoaddoo |
-| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
+| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Ddoo | /ddoo/ | Ngnee | Ngnee → no change → Ddoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): red-dragon has no exposure to 'cold' |
@@ -438,7 +438,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `gloom` | the deepest, starless dark | Djooddoo | /djooddoo/ | Gwoengngee | Gwoengngee → no change → Djooddoo |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): red-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): red-dragon has no exposure to 'god' |
-| `green` | the color term for green | Ddaashdao | /ddaaʃdao/ | Ngngaashdae | Ngngaashdae → no change → Ddaashdao |
+| `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Skaoddaa | /skaoddaa/ | Spaongnaa | Spaongnaa → no change → Skaoddaa |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): red-dragon has no exposure to 'hearth' |
@@ -465,14 +465,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
+| `shadow` | cast dark, distinct from open gloom | Ddoa | /ddoa/ | Ngngoa | Ngngoa → no change → Ddoa |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shkoasdoo | /ʃkoasdoo/ | Shkoasdoe | Shkoasdoe → no change → Shkoasdoo |
 | `sleep` | to rest unconscious | Shkao | /ʃkao/ | Shpao | Shpao → no change → Shkao |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'snow' |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): red-dragon has no exposure to 'spirit' |
 | `star` | a fixed point of light in the night sky | Djooshdoo | /djooʃdoo/ | Bweoshgee | Bweoshgee → no change → Djooshdoo |
-| `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
+| `starlit` | dark faintly lit by stars | Kjoaddao | /kjoaddao/ | Kwoangngae | Kwoangngae → no change → Kjoaddao |
 | `stone` | rock | Shkaokjoo | /ʃkaokjoo/ | Shpaepjeo | Shpaepjeo → no change → Shkaokjoo |
 | `sun` | the sun | Sdaa | /sdaa/ | Sgaa | Sgaa → no change → Sdaa |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
@@ -488,7 +488,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Ddooddao | /ddooddao/ | Mmoonnae | Mmoonnae → no change → Ddooddao |
 | `wind` | moving air | Ddaa | /ddaa/ | Mngaa | Mngaa → no change → Ddaa |
-| `yellow` | the color term for yellow | Shdoaddoo | /ʃdoaddoo/ | Shgeangnoo | Shgeangnoo → no change → Shdoaddoo |
+| `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 
 ## White-dragon
 
@@ -498,9 +498,9 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
 | `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Nnoadzhao | /nnoadʒao/ | Mmeadjae | Mmeadjae → no change → Nnoadzhao |
-| `blue` | the color term for blue | Nnoodzhoo | /nnoodʒoo/ | Nmeegjeo | Nmeegjeo → no change → Nnoodzhoo |
+| `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Nnoangnoo | /nnoaŋnoo/ | Nneangneo | Nneangneo → no change → Nnoangnoo |
-| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
+| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
 | `child` | one's son or daughter | Ngnoo | /ŋnoo/ | Ngnee | Ngnee → no change → Ngnoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): white-dragon has no exposure to 'cold' |
@@ -519,7 +519,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `gloom` | the deepest, starless dark | Ddoongngoo | /ddooŋŋoo/ | Gwoengngee | Gwoengngee → no change → Ddoongngoo |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): white-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): white-dragon has no exposure to 'god' |
-| `green` | the color term for green | Ngngaashdao | /ŋŋaaʃdao/ | Ngngaashdae | Ngngaashdae → no change → Ngngaashdao |
+| `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 | `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
 | `hand` | the manipulating limb-end | Skaongnaa | /skaoŋnaa/ | Spaongnaa | Spaongnaa → no change → Skaongnaa |
 | `hearth` | the fire at the center of a home | — | — | — | gap (experiential): white-dragon has no exposure to 'hearth' |
@@ -546,14 +546,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
-| `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
+| `shadow` | cast dark, distinct from open gloom | Ngngoa | /ŋŋoa/ | Ngngoa | Ngngoa → no change → Ngngoa |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shkoasdoo | /ʃkoasdoo/ | Shkoasdoe | Shkoasdoe → no change → Shkoasdoo |
 | `sleep` | to rest unconscious | Shkao | /ʃkao/ | Shpao | Shpao → no change → Shkao |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'snow' |
 | `spirit` | a lesser or unseen supernatural presence | — | — | — | gap (experiential): white-dragon has no exposure to 'spirit' |
 | `star` | a fixed point of light in the night sky | Ddooshdoo | /ddooʃdoo/ | Bweoshgee | Bweoshgee → no change → Ddooshdoo |
-| `starlit` | dark faintly lit by stars | — | — | — | gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5 |
+| `starlit` | dark faintly lit by stars | Kdoangngao | /kdoaŋŋao/ | Kwoangngae | Kwoangngae → no change → Kdoangngao |
 | `stone` | rock | Shkaokzhoo | /ʃkaokʒoo/ | Shpaepjeo | Shpaepjeo → no change → Shkaokzhoo |
 | `sun` | the sun | Sdaa | /sdaa/ | Sgaa | Sgaa → no change → Sdaa |
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
@@ -569,7 +569,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Nnoonnao | /nnoonnao/ | Mmoonnae | Mmoonnae → no change → Nnoonnao |
 | `wind` | moving air | Nngaa | /nŋaa/ | Mngaa | Mngaa → no change → Nngaa |
-| `yellow` | the color term for yellow | Shdoangnoo | /ʃdoaŋnoo/ | Shgeangnoo | Shgeangnoo → no change → Shdoangnoo |
+| `yellow` | the color term for yellow | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
 
 ## Cognates
 
@@ -580,7 +580,6 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | Concept | Gloss | Proto | Black-dragon | Red-dragon | White-dragon | Descent |
 |---|---|---|---|---|---|---|
 | `blood` | the circulating fluid of a body | *Mmeadjae /mmeadjae/ | Ddoadzhao /ddoadʒao/ | Ddoadjao /ddoadjao/ | Nnoadzhao /nnoadʒao/ | *Mmeadjae → Ddoadzhao / Ddoadjao / Nnoadzhao |
-| `blue` | the color term for blue | *Nmeegjeo /nmeegjeo/ | Ddoogzhoo /ddoogʒoo/ | Ddoodjoo /ddoodjoo/ | Nnoodzhoo /nnoodʒoo/ | *Nmeegjeo → Ddoogzhoo / Ddoodjoo / Nnoodzhoo |
 | `bone` | the rigid frame of a body | *Nneangneo /nneaŋneo/ | Ddoagdoo /ddoagdoo/ | Ddoaddoo /ddoaddoo/ | Nnoangnoo /nnoaŋnoo/ | *Nneangneo → Ddoagdoo / Ddoaddoo / Nnoangnoo |
 | `child` | one's son or daughter | *Ngnee /ŋnee/ | Gdoo /gdoo/ | Ddoo /ddoo/ | Ngnoo /ŋnoo/ | *Ngnee → Gdoo / Ddoo / Ngnoo |
 | `dark` | the color term for black/dark hues | *Bwaobwao /bwaobwao/ | Ddaoddao /ddaoddao/ | Djaodjao /djaodjao/ | Ddaoddao /ddaoddao/ | *Bwaobwao → Ddaoddao / Djaodjao / Ddaoddao |
@@ -592,7 +591,6 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `fire` | flame and heat | *Ngngeasbae /ŋŋeasbae/ | Ggoasdao /ggoasdao/ | Ddoasdao /ddoasdao/ | Ngngoasdao /ŋŋoasdao/ | *Ngngeasbae → Ggoasdao / Ddoasdao / Ngngoasdao |
 | `foot` | the walking limb-end | *Sbeo /sbeo/ | Sdoo /sdoo/ | Sdoo /sdoo/ | Sdoo /sdoo/ | *Sbeo → Sdoo / Sdoo / Sdoo |
 | `gloom` | the deepest, starless dark | *Gwoengngee /gwoeŋŋee/ | Gdooggoo /gdooggoo/ | Djooddoo /djooddoo/ | Ddoongngoo /ddooŋŋoo/ | *Gwoengngee → Gdooggoo / Djooddoo / Ddoongngoo |
-| `green` | the color term for green | *Ngngaashdae /ŋŋaaʃdae/ | Ggaashdao /ggaaʃdao/ | Ddaashdao /ddaaʃdao/ | Ngngaashdao /ŋŋaaʃdao/ | *Ngngaashdae → Ggaashdao / Ddaashdao / Ngngaashdao |
 | `hand` | the manipulating limb-end | *Spaongnaa /spaoŋnaa/ | Sdaogdaa /sdaogdaa/ | Skaoddaa /skaoddaa/ | Skaongnaa /skaoŋnaa/ | *Spaongnaa → Sdaogdaa / Skaoddaa / Skaongnaa |
 | `light` | the color term for white/light hues | *Ngngaeskeo /ŋŋaeskeo/ | Ggaosgoo /ggaosgoo/ | Ddaoskoo /ddaoskoo/ | Ngngaoskoo /ŋŋaoskoo/ | *Ngngaeskeo → Ggaosgoo / Ddaoskoo / Ngngaoskoo |
 | `many` | an indefinitely large count | *Mnoa /mnoa/ | Ddoa /ddoa/ | Ddoa /ddoa/ | Nnoa /nnoa/ | *Mnoa → Ddoa / Ddoa / Nnoa |
@@ -604,16 +602,17 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `parent` | one's father or mother | *Shgea /ʃgea/ | Shgoa /ʃgoa/ | Shdoa /ʃdoa/ | Shdoa /ʃdoa/ | *Shgea → Shgoa / Shdoa / Shdoa |
 | `person` | a person; a member of a people (the autonym root) | *Ngngoaskae /ŋŋoaskae/ | Ggoasgao /ggoasgao/ | Ddoaskao /ddoaskao/ | Ngngoaskao /ŋŋoaskao/ | *Ngngoaskae → Ggoasgao / Ddoaskao / Ngngoaskao |
 | `red` | the color term for red | *Spoa /spoa/ | Sdoa /sdoa/ | Skoa /skoa/ | Skoa /skoa/ | *Spoa → Sdoa / Skoa / Skoa |
+| `shadow` | cast dark, distinct from open gloom | *Ngngoa /ŋŋoa/ | Ggoa /ggoa/ | Ddoa /ddoa/ | Ngngoa /ŋŋoa/ | *Ngngoa → Ggoa / Ddoa / Ngngoa |
 | `sibling` | one's brother or sister | *Shkoasdoe /ʃkoasdoe/ | Shgoasdoo /ʃgoasdoo/ | Shkoasdoo /ʃkoasdoo/ | Shkoasdoo /ʃkoasdoo/ | *Shkoasdoe → Shgoasdoo / Shkoasdoo / Shkoasdoo |
 | `sleep` | to rest unconscious | *Shpao /ʃpao/ | Shdao /ʃdao/ | Shkao /ʃkao/ | Shkao /ʃkao/ | *Shpao → Shdao / Shkao / Shkao |
 | `star` | a fixed point of light in the night sky | *Bweoshgee /bweoʃgee/ | Ddooshgoo /ddooʃgoo/ | Djooshdoo /djooʃdoo/ | Ddooshdoo /ddooʃdoo/ | *Bweoshgee → Ddooshgoo / Djooshdoo / Ddooshdoo |
+| `starlit` | dark faintly lit by stars | *Kwoangngae /kwoaŋŋae/ | Gdoaggao /gdoaggao/ | Kjoaddao /kjoaddao/ | Kdoangngao /kdoaŋŋao/ | *Kwoangngae → Gdoaggao / Kjoaddao / Kdoangngao |
 | `stone` | rock | *Shpaepjeo /ʃpaepjeo/ | Shdaodzhoo /ʃdaodʒoo/ | Shkaokjoo /ʃkaokjoo/ | Shkaokzhoo /ʃkaokʒoo/ | *Shpaepjeo → Shdaodzhoo / Shkaokjoo / Shkaokzhoo |
 | `sun` | the sun | *Sgaa /sgaa/ | Sgaa /sgaa/ | Sdaa /sdaa/ | Sdaa /sdaa/ | *Sgaa → Sgaa / Sdaa / Sdaa |
 | `tree` | a woody plant | *Kjaenngea /kjaenŋea/ | Gzhaodgoa /gʒaodgoa/ | Kjaoddoa /kjaoddoa/ | Kzhaonngoa /kʒaonŋoa/ | *Kjaenngea → Gzhaodgoa / Kjaoddoa / Kzhaonngoa |
 | `two` | the cardinal number 2 | *Shdoonngea /ʃdoonŋea/ | Shdoodgoa /ʃdoodgoa/ | Shdooddoa /ʃdooddoa/ | Shdoonngoa /ʃdoonŋoa/ | *Shdoonngea → Shdoodgoa / Shdooddoa / Shdoonngoa |
 | `water` | the drinkable liquid | *Mmoonnae /mmoonnae/ | Ddooddao /ddooddao/ | Ddooddao /ddooddao/ | Nnoonnao /nnoonnao/ | *Mmoonnae → Ddooddao / Ddooddao / Nnoonnao |
 | `wind` | moving air | *Mngaa /mŋaa/ | Dgaa /dgaa/ | Ddaa /ddaa/ | Nngaa /nŋaa/ | *Mngaa → Dgaa / Ddaa / Nngaa |
-| `yellow` | the color term for yellow | *Shgeangnoo /ʃgeaŋnoo/ | Shgoagdoo /ʃgoagdoo/ | Shdoaddoo /ʃdoaddoo/ | Shdoangnoo /ʃdoaŋnoo/ | *Shgeangnoo → Shgoagdoo / Shdoaddoo / Shdoangnoo |
 
 ### Goblinoid
 
