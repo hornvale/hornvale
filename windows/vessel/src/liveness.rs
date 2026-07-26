@@ -3951,12 +3951,31 @@ pub fn is_movement(a: &Action) -> bool {
 }
 
 /// Whether an action's precondition reads committed state rather than position
-/// alone. Today nothing does; the catch-up invariant test asserts it, so the
-/// first action that changes this fails loudly instead of silently corrupting
-/// a reconstruction.
+/// alone. Today nothing does — every precondition in this file is adjacency or
+/// standing-here — and catch-up (The Threshold) depends on that: it replays a
+/// creature's movement while suppressing the actions that commit facts, which
+/// reconstructs a past that could actually have happened only while no
+/// movement is gated by a committed effect. A barred door needing unbarring
+/// would end it.
+///
+/// **The guard is the exhaustive match, not the test.** An earlier draft took
+/// `_a` and returned a bare `false`, with a test asserting the answer is
+/// `false` for movement actions — which reduces to `assert!(!false)` and
+/// cannot fail for any input. It would have caught a new action only if
+/// whoever added it *remembered* to come here and flip the answer, i.e.
+/// exactly when the guard was not needed. Matching every variant by name
+/// instead means adding one to [`Action`] fails to COMPILE here, which is this
+/// project's usual preference for structural enforcement over discipline.
 /// type-audit: bare-ok(flag: return)
-pub fn precondition_reads_committed_state(_a: &Action) -> bool {
-    false
+pub fn precondition_reads_committed_state(a: &Action) -> bool {
+    match a {
+        // Adjacency in the room graph; nothing committed is read.
+        Action::MoveTo(_) => false,
+        // Adjacency in the anchor graph; likewise.
+        Action::MoveWithin(_) => false,
+        // Standing at the water / at home / on forage — all positional.
+        Action::Drink | Action::Rest | Action::Eat => false,
+    }
 }
 
 /// Whether catch-up (spec §5) may replay this action. Exactly the actions
@@ -10048,5 +10067,26 @@ mod tests {
         assert!(!is_replayable_in_catch_up(&Action::Drink));
         assert!(!is_replayable_in_catch_up(&Action::Rest));
         assert!(!is_replayable_in_catch_up(&Action::Eat));
+    }
+
+    #[test]
+    fn everything_replayable_is_a_movement() {
+        // The trio is three hand-maintained lists over one enum; nothing ties
+        // them together. This is the tie: an action catch-up may replay must
+        // be one whose effect is position, or the partition has drifted.
+        for a in [
+            Action::MoveTo(RoomAddr {
+                face: 0,
+                path: vec![],
+            }),
+            Action::MoveWithin(AnchorId(0)),
+            Action::Drink,
+            Action::Rest,
+            Action::Eat,
+        ] {
+            if is_replayable_in_catch_up(&a) {
+                assert!(is_movement(&a), "{a:?} is replayable but is not a movement");
+            }
+        }
     }
 }
