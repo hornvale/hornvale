@@ -12,6 +12,7 @@ pub mod field;
 pub mod pattern;
 pub mod relation;
 pub mod route;
+pub mod seam;
 
 pub use anchor::{Anchor, AnchorId, AnchorKind, Interior};
 pub use field::{HEARTH_WARMTH, WARMTH_DECAY, warmth_at};
@@ -20,3 +21,4 @@ pub use pattern::{Attach, INVENTORY, Pattern, compose, permits, selection};
 // re-exported under an unambiguous name rather than shadowing either.
 pub use relation::{Rcc8, compose as compose_relations, converse, is_symmetric, is_transitive};
 pub use route::{InteriorSpace, route_within};
+pub use seam::{SeamKind, landing, seam_kind};
