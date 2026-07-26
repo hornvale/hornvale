@@ -4165,6 +4165,12 @@ pub fn plan_to_room(
 /// ledger entity, the same handle every other bubble-scoped map in this
 /// module (the fear memo, the disposition state) keys by — so occupancy
 /// follows suit rather than inventing a parallel identity for the same thing.
+///
+/// Two creatures standing at the same anchor is intentional, not an
+/// oversight: the map is a `BTreeMap<EntityId, AnchorId>`, one entry per
+/// creature, and nothing here enforces exclusivity over the value side. A
+/// hearth crowded with three NPCs is a legitimate occupancy, the same way a
+/// room can hold more than one creature at the coarser scale.
 #[derive(Debug, Default)]
 pub struct Occupancy(std::collections::BTreeMap<EntityId, AnchorId>);
 
@@ -10176,16 +10182,65 @@ mod tests {
         EntityId::new(n).unwrap()
     }
 
+    /// A fixture where a `Narrow` and a `Broad` landing genuinely disagree
+    /// (review finding 1): `built_interior` above has a `Threshold` at index
+    /// 0 and no `Ground` at all, so `seam::landing`'s `Broad` fallback
+    /// (`ids().first()`) lands on that same `Threshold` by coincidence —
+    /// making `a_creature_arrives_at_the_seam_landing` blind to `kind` being
+    /// ignored entirely. Here the `Threshold` leads (index 0) and the
+    /// `Ground` hub trails (index 1), mirroring `seam.rs`'s own
+    /// `the_hub_is_found_by_kind_not_by_index` fixture: `Narrow` must find
+    /// the `Threshold` by kind, `Broad` must find the `Ground` hub by kind,
+    /// and since neither is `ids().first()`-equals-the-other by construction
+    /// here, only a `kind`-respecting `arrive` can pass both assertions at
+    /// once.
+    fn built_interior_with_ground() -> Interior {
+        use crate::interior::AnchorKind;
+        let mut i = Interior::new();
+        let t = i.push(AnchorKind::Threshold, None);
+        let g = i.push(AnchorKind::Ground, None);
+        i.connect(t, g);
+        i
+    }
+
     #[test]
     fn a_creature_arrives_at_the_seam_landing() {
         use crate::interior::AnchorKind;
-        let interior = built_interior();
-        let mut occ = Occupancy::default();
-        occ.arrive(npc_id(1), &interior, SeamKind::Narrow);
-        let at = occ
+        let interior = built_interior_with_ground();
+        let mut narrow = Occupancy::default();
+        narrow.arrive(npc_id(1), &interior, SeamKind::Narrow);
+        let at_narrow = narrow
             .at(npc_id(1))
             .expect("an arrived creature stands somewhere");
-        assert_eq!(interior.anchor(at).kind, AnchorKind::Threshold);
+        assert_eq!(interior.anchor(at_narrow).kind, AnchorKind::Threshold);
+
+        let mut broad = Occupancy::default();
+        broad.arrive(npc_id(2), &interior, SeamKind::Broad);
+        let at_broad = broad
+            .at(npc_id(2))
+            .expect("an arrived creature stands somewhere");
+        assert_eq!(interior.anchor(at_broad).kind, AnchorKind::Ground);
+
+        assert_ne!(
+            at_narrow, at_broad,
+            "the two seam kinds must land at genuinely different anchors, \
+             or this test cannot tell `arrive` from a `kind`-blind stub"
+        );
+    }
+
+    #[test]
+    fn arriving_into_an_empty_interior_is_a_no_op_not_a_panic() {
+        // Review finding 2: `arrive`'s doc comment claims this, but nothing
+        // exercised it — `landing` returns `None` for a zero-anchor
+        // `Interior`, and `arrive`'s `if let Some(at) = ...` must simply skip
+        // the insert rather than unwrap into a panic.
+        let interior = Interior::new();
+        let mut occ = Occupancy::default();
+        occ.arrive(npc_id(1), &interior, SeamKind::Narrow);
+        assert!(
+            occ.at(npc_id(1)).is_none(),
+            "an empty interior has no landing, so arrival records nothing"
+        );
     }
 
     #[test]
@@ -10235,5 +10290,42 @@ mod tests {
             Some(stray),
             "a rejected walk must not move the creature"
         );
+    }
+
+    #[test]
+    fn walking_before_arriving_is_refused() {
+        // Review finding 3: every other test calls `arrive` before `walk`, so
+        // `walk`'s opening `let Some(here) = self.at(who) else { return
+        // false }` — the "hasn't arrived anywhere" branch — had zero
+        // coverage. An accidental `.unwrap_or(some_default_anchor)` in place
+        // of that early return would still pass every other test in this
+        // module.
+        use crate::interior::AnchorKind;
+        let i = built_interior();
+        let mut occ = Occupancy::default();
+        let hearth = i
+            .ids()
+            .iter()
+            .copied()
+            .find(|&a| i.anchor(a).kind == AnchorKind::Hearth)
+            .unwrap();
+        assert!(
+            !occ.walk(npc_id(1), &i, hearth),
+            "a creature that never arrived cannot walk anywhere"
+        );
+        assert!(
+            occ.at(npc_id(1)).is_none(),
+            "a refused walk must not conjure a position out of nothing"
+        );
+    }
+
+    #[test]
+    fn departing_a_creature_that_never_arrived_is_a_no_op() {
+        // Minor finding: `depart` delegates straight to `BTreeMap::remove`,
+        // itself a documented no-op on a missing key, but that delegation was
+        // asserted nowhere in this module.
+        let mut occ = Occupancy::default();
+        occ.depart(npc_id(1));
+        assert!(occ.at(npc_id(1)).is_none());
     }
 }
