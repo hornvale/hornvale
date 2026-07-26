@@ -242,7 +242,10 @@ pub struct BakeCensus {
     pub fled: u64,
     /// Collapse events (a community starved out — Famine).
     pub collapsed: u64,
-    /// Resettle events (a fled community refounded on a vacant habitable cell).
+    /// Resettle events (a displaced community refounded on a vacant habitable
+    /// cell). Counted at every depth of a relaxation, not only at its head: a
+    /// cascade's terminal roller reaches vacant ground exactly as a first-hop
+    /// one does, and is a resettle by the same reading.
     pub resettled: u64,
     /// Total records opened over the whole bake.
     pub records_total: u64,
@@ -729,6 +732,12 @@ impl<'a> Bake<'a> {
                 offset,
             );
             self.touch(new_idx, year);
+            // The resettle is tallied HERE, where it happens, rather than at
+            // the top-level call site: a cascade's terminal roller reaches
+            // vacant land exactly like a first-hop one does, and counting only
+            // the top-level `cascade: 0` outcome under-reported the tally its
+            // own doc comment describes (The Tumult, final review F-2).
+            self.tally.resettled += 1;
             return Relocation::Settled { cascade: 0 };
         };
 
@@ -1141,7 +1150,10 @@ impl<'a> Bake<'a> {
             year,
             0,
         ) {
-            Relocation::Settled { cascade: 0 } => self.tally.resettled += 1,
+            // `resettled` is tallied inside `relocate`, at the vacant-land
+            // branch itself, so every hop that reaches vacant ground counts —
+            // including a cascade's terminal one. Nothing to add here.
+            Relocation::Settled { cascade: 0 } => {}
             Relocation::Settled { cascade } => self.tally.record_cascade(cascade),
             Relocation::Lost => self.tally.collapsed += 1,
         }
@@ -1652,6 +1664,64 @@ mod tests {
             "the evicted holder must have resettled somewhere"
         );
         assert_eq!((bake.tally.raided, bake.tally.fled), (1, 1));
+        // …and the tally must SAY so (The Tumult, final review F-2). This is
+        // the terminal hop of a cascade, not a top-level relocation; while
+        // `resettled` was incremented at `maybe_raid`'s call site only, it went
+        // uncounted and the field under-reported its own doc comment. Seed 42
+        // cannot catch this — its single cascade's victim died on the road
+        // rather than reaching vacant land — so this is the only arm the fix
+        // has.
+        assert_eq!(
+            bake.tally.resettled, 1,
+            "the evicted holder reached vacant land: that is a resettle, at whatever \
+             depth of the cascade it happens"
+        );
+    }
+
+    #[test]
+    fn a_resettle_at_the_head_of_a_relaxation_is_counted_exactly_once() {
+        // The other side of F-2's accounting: moving the `resettled` increment
+        // down into `relocate` must not double-count the ordinary case, where
+        // `maybe_raid`'s loser reaches vacant land in one hop and the top-level
+        // call site used to be what tallied it. One displaced people, one
+        // resettle — restoring the old call-site increment alongside the new
+        // one makes this read 2.
+        let probe = Geosphere::new(1);
+        let target_cell = probe.neighbors(CellId(0))[0];
+        let (_geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == target_cell { 110.0 } else { 100.0 });
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        // A strong raider on land worth less than its neighbour's, and a fed,
+        // beatable target holding the better cell.
+        let raider = bake.open(
+            KindId("kobold"),
+            CellId(0),
+            0.0,
+            200.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        bake.open(
+            KindId("goblin"),
+            target_cell,
+            0.0,
+            50.0,
+            Founding::Genesis(target_cell),
+            None,
+            0.0,
+        );
+        bake.maybe_raid(raider, &era, 0.0);
+
+        assert_eq!(bake.tally.raided, 1, "the fixture must reach a raid");
+        assert_eq!(
+            bake.tally.resettled, 1,
+            "the loser found vacant land in one hop: exactly one resettle"
+        );
+        assert_eq!(
+            bake.tally.cascade_hist, [0u64; CASCADE_BINS],
+            "nobody was displaced onward, so no cascade is recorded"
+        );
     }
 
     #[test]
@@ -1776,8 +1846,10 @@ mod tests {
         });
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
 
-        // Cell 20 is rich AND held by a beatable community; cell 30 is rich
-        // and empty. Equal capacity — only the premium separates them.
+        // Cell 20 is rich AND held by a beatable community; cell 18 is rich
+        // and empty. Equal capacity — only the premium separates them. (The
+        // fixture named cell 30 before the locality fix reshaped it onto the
+        // same ring; the comment lagged. Final review F-6.)
         bake.open(
             KindId("goblin"),
             CellId(20),

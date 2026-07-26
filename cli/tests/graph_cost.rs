@@ -47,8 +47,8 @@ use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
     BuildDepth, CASCADE_DEPTH_CAP, GraphConfig, SettlementPins, SkyChoice, WorldComponents,
-    build_world_to, cascade_sizes, connection_graph_of, history_for, land_route_attempt_count,
-    terrain_of,
+    build_world_to, cascade_sizes, census, connection_graph_of, history_for,
+    land_route_attempt_count, terrain_of,
 };
 // The measurement harness times ONE derivation call for a diagnostic
 // (never sim logic, never a fact, never seeded from wall-clock) -- exempt
@@ -226,6 +226,7 @@ fn tumult_predation_bake_stays_within_budget() {
     )
     .expect("seed 42 bakes for the diagnostic history");
     let hist = cascade_sizes(&h);
+    let raided = census(&h).raided;
     let highest_occupied_bin = hist.iter().rposition(|&count| count > 0);
     let max_size_upper_bound = match highest_occupied_bin {
         Some(bin) => (1u32 << (bin + 1)) - 1,
@@ -235,14 +236,35 @@ fn tumult_predation_bake_stays_within_budget() {
     eprintln!(
         "tumult_predation_bake_stays_within_budget: cascade_hist {hist:?}, highest occupied bin \
          {highest_occupied_bin:?}, max cascade size <= {max_size_upper_bound} (CASCADE_DEPTH_CAP \
-         is {CASCADE_DEPTH_CAP}, budget {CASCADE_SIZE_BUDGET})"
+         is {CASCADE_DEPTH_CAP}, budget {CASCADE_SIZE_BUDGET}), over {raided} conquests"
     );
 
+    // Non-vacuity FIRST (The Tumult, final review F-5). The budget assertion
+    // below reads "max cascade size <= 0 < budget" on an ALL-ZERO histogram and
+    // passes without having looked at anything, so on its own it cannot support
+    // the claim its own message makes. What makes the reading real is that the
+    // relaxation path ran at all: every conquest calls `Bake::relocate` exactly
+    // once, so `raided > 0` means the histogram is a measurement of this
+    // world's cascade sizes rather than the absence of a measurement.
+    //
+    // With that established, an empty histogram is a legitimate outcome and not
+    // a hole: it says every displaced people found a home in one hop, i.e. no
+    // cascade came anywhere near the depth cap — which is exactly what the
+    // budget assertion is here to establish. A floor on the histogram itself is
+    // deliberately NOT asserted: seed 42 pools a single cascade, and pinning
+    // that would freeze the campaign's own falsification (see
+    // `windows/worldgen/tests/history_tumult.rs`).
+    assert!(
+        raided > 0,
+        "predation never fired on seed 42, so the cascade histogram {hist:?} measures \
+         nothing and this budget check would pass vacuously"
+    );
     assert!(
         max_size_upper_bound < CASCADE_SIZE_BUDGET,
         "a relaxation cascade on seed 42 grew to within reach of CASCADE_DEPTH_CAP \
-         ({CASCADE_DEPTH_CAP}): histogram {hist:?} implies a cascade of size up to \
-         {max_size_upper_bound}, budget {CASCADE_SIZE_BUDGET} -- avalanches are supposed to \
-         dissipate against VIABLE_MIN well short of the depth cap, not be silently truncated by it"
+         ({CASCADE_DEPTH_CAP}): histogram {hist:?} over {raided} conquests implies a cascade \
+         of size up to {max_size_upper_bound}, budget {CASCADE_SIZE_BUDGET} -- avalanches are \
+         supposed to dissipate against VIABLE_MIN well short of the depth cap, not be silently \
+         truncated by it"
     );
 }

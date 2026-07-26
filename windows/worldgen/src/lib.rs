@@ -1657,8 +1657,12 @@ pub fn paleoclimate_from(
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
-/// present-era mask is returned and the bake sees a stable world (displacement
-/// then arises only from crowding, never a mask swing).
+/// present-era mask is returned and the bake sees a stable world — no cell
+/// ever flips habitability, so climate displacement cannot fire at all. What
+/// displacement remains is **predation**: The Tumult made crowding a growth
+/// term only (it no longer starts fights), and a raid keys off the *value*
+/// gradient between neighbouring cells, which a frozen mask preserves intact.
+/// A constant-sky world is therefore quiet in migrations and not in conquests.
 ///
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced cell reads below-freezing, hence not habitable),
