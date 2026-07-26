@@ -9,11 +9,13 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-culture",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-religion",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-topology",
 ]
 
 [[package]]
@@ -45,6 +47,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-history"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-kernel"
 version = "0.1.0"
 dependencies = [
@@ -58,6 +67,18 @@ name = "hornvale-language"
 version = "0.1.0"
 dependencies = [
  "hornvale-kernel",
+]
+
+[[package]]
+name = "hornvale-locale"
+version = "0.1.0"
+dependencies = [
+ "hornvale-climate",
+ "hornvale-kernel",
+ "hornvale-terrain",
+ "hornvale-worldgen",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -81,6 +102,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-kernel",
+ "hornvale-locale",
  "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-worldgen",
@@ -110,6 +132,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-topology"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-world-wasm"
 version = "0.1.0"
 dependencies = [
@@ -130,6 +159,7 @@ dependencies = [
  "hornvale-climate",
  "hornvale-culture",
  "hornvale-demography",
+ "hornvale-history",
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-paleoclimate",
@@ -137,6 +167,7 @@ dependencies = [
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
+ "hornvale-topology",
 ]
 
 [[package]]

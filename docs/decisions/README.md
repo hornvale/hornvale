@@ -114,3 +114,7 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0072](0072-derived-geometry-is-causal.md) | Derived geometry is causal | Accepted |
 | [0073](0073-epoch-granularity-is-declared.md) | Epoch granularity is declared, not discovered | Accepted |
 | [0074](0074-capacities-are-a-chain-and-facts-gate-on-components.md) | Capacities are a chain, and species facts gate on components | Accepted |
+| [0075](0075-the-causal-geometry-is-the-anchor-graph.md) | The causal derived geometry is the anchor graph, not the metric layout | Accepted |
+| [0076](0076-the-situated-pole-is-egocentric-and-knowledge-limited.md) | The scene protocol's situated pole is egocentric and knowledge-limited | Accepted |
+| [0077](0077-zoom-in-the-room-mesh-is-path-truncation.md) | Zoom in the room mesh is path truncation; the chart may show a scale the body cannot enter | Accepted |
+| [0078](0078-thresholded-classification-artifacts-are-platform-local.md) | An artifact dominated by thresholded classifications is drift-checked platform-locally, not in CI | Accepted |

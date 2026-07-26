@@ -38,7 +38,14 @@ floored at `0.0`).
 2. **Build each locked seed to `BuildDepth::Terrain`** (the shallowest rung
    carrying the terrain/climate this probe reads) and assemble the real
    `Substrate` field via the shipped `substrate_field` — temperature,
-   moisture, and elevation are already correct and untouched.
+   moisture, and elevation are left untouched, since only insolation is
+   under test. (This step originally called those three axes "already
+   correct." *The Tumult* later found that elevation was not: it was scored
+   against the isostatic reference datum rather than height above sea level,
+   a bug orthogonal to this probe's question but present while it ran. See
+   [Species](../domains/species.md)'s model card. The readings below are
+   therefore a record of the pre-re-datum field, and the dominant-species
+   column in particular would be re-drawn today.)
 3. **Replace only the `insolation` term** with the corrected Locked formula
    above, cell by cell.
 4. **Run the same suitability product `niche_per_species_k` computes**

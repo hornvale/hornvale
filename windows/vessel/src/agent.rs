@@ -108,12 +108,7 @@ pub(crate) fn settlement_position(
         .unwrap_or_else(|e| panic!("settlement-genesis invariant violated: {e}"));
     let lon = number_fact(world, settlement, LONGITUDE)
         .unwrap_or_else(|e| panic!("settlement-genesis invariant violated: {e}"));
-    let (la, lo) = (lat.to_radians(), lon.to_radians());
-    [
-        math::cos(la) * math::cos(lo),
-        math::cos(la) * math::sin(lo),
-        math::sin(la),
-    ]
+    math::unit_sphere_from_lat_lon(lat, lon)
 }
 
 #[cfg(test)]

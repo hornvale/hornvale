@@ -215,6 +215,43 @@ run -p hornvale -- scene tiles-region --world "$wsky" --face 0 --level 3 --ix 4 
 run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-seed-42.json
 run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
+run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
+
+# The Purview's legibility surface (The Margin): the same scene/surrounds/v1
+# chart the JSON export above carries, rendered through --render ascii at
+# three genuinely different seed-42 observers -- the flagship settlement
+# (uniform, kept for continuity with the possession transcript), a coastline
+# half a degree east of Mjoexaenoenoa where the neighbourhood's own room mix
+# reads land against ocean, and a room at latitude -10, longitude 0 that
+# crosses a base-icosahedron face seam.
+#
+# `book/src/gallery/surrounds-seed-42.md` is hand-authored prose, NOT
+# generated here -- edit it directly. Only the three CHARTS it `{{#include}}`s
+# are regenerated, each to its own small file under generated/surrounds-
+# seed-42/, following the `{{#include generated/<study>/...}}` convention the
+# lab pages already use (book/src/laboratory/). This is the fix for the
+# failure mode the previous shape had: the whole page used to be `printf`'d
+# from here, so a direct edit to the committed .md was silently destroyed on
+# the next regen. These chart files are `scene surrounds --render
+# ascii`'s exact, drift-checked output -- excluded from CI's strict
+# byte-drift check (ci.yml) for the same libm-threshold reason as
+# scene-surrounds-seed-42.json, since they render the identical
+# `biome`/`water`/`relief` classifications; the hand-authored .md that
+# includes them carries no such exposure and is checked normally.
+echo "regenerate-artifacts: the legibility surface (the purview, off a possession)" >&2
+mkdir -p book/src/gallery/generated/surrounds-seed-42
+{
+    printf '$ hornvale scene surrounds --world world.json --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/flagship.txt
+{
+    printf '$ hornvale scene surrounds --world world.json --room 897392747 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 897392747 --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/coastline.txt
+{
+    printf '$ hornvale scene surrounds --world world.json --room 724698318 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 724698318 --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/seam.txt
 
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.

@@ -110,9 +110,17 @@ also holds a biosphere-only menagerie (fauna do not settle). Originally each
 people condensed its own carrying field independently; since *The Menagerie*
 cut genesis over onto the competitive niche-K coexistence stack, the peoples
 are packed *together* and a settlement is peopled by whichever people locally
-prevails, with the rest present in its composition — so on seed 42 goblin and
-hobgoblin flagship all sixty-six settlements while kobold and bugbear appear
-as minorities throughout. A `--species NAME` pin restricts the roster to one
+prevails, with the rest present in its composition. Which people prevails
+where moved sharply under *The Tumult*'s elevation re-datum (see
+[Species](./species.md)): with the condition niche's elevation axis finally
+scored above sea level, seed 42's stack resolves 216 settlements with the
+hobgoblin dominant in 212 and the **kobold** — previously dominant nowhere at
+all, its highland optimum having sat above most worlds' highest land — holding
+4 and present in every one of the 216. The goblin, which had shared dominance
+under the broken frame, holds none. The bugbear remains the one people that
+wins no settlement's dominance while being present throughout; its stronghold
+axis is moisture rather than elevation, and the re-datum leaves it exactly
+where it was. A `--species NAME` pin restricts the roster to one
 people; because the stack is competitive, a pinned world is a deterministic
 *restricted-roster* world (that people with no rivals), not an isolated slice
 of the full world. Population for any people draws its
@@ -176,18 +184,51 @@ not a separate tier of state. Because the world is finite and equilibrating,
 displacement is kept perpetually alive without a floor: era-varying
 habitability (glacial advance and retreat) drives sustained migration, and a
 preregistered census gate *aborts the build* if displacement fails to fire at
-volume. On the real, sparsely-peopled world that displacement resolves as
-climate **migration**, not war — vacant land lets a frozen-out community move
-rather than raid — so the ruins are abandonment ruins, and organised conflict
-is deferred to a later campaign of the program. Two measured findings shaped
-the result: the four near-identical goblinoids finally hold **distinct
-territories**, separated by history rather than niche; and re-occupation
-stratigraphy accretes on **marginal, climate-contested** land (repeatedly
-abandoned and resettled), while prime land is held stably by one long
-occupation — the deepest layers mark the *worst* ground, not the best. A site's
-layers and their flesh render through a read-only surface (the `history` CLI
-verb and the almanac); see [The Living
+volume. On the world that campaign measured, displacement resolved as climate
+**migration**, not war — vacant land let a frozen-out community move rather
+than raid — so organised conflict was deferred to a later campaign of the
+program, which has since arrived (see the conflict section below). Two measured
+findings shaped the result: the four near-identical goblinoids finally hold
+**distinct territories**, separated by history rather than niche; and
+re-occupation stratigraphy accretes on **marginal, climate-contested** land
+(repeatedly abandoned and resettled), while prime land is held stably by one
+long occupation — the deepest layers mark the *worst* ground, not the best. A
+site's layers and their flesh render through a read-only surface (the `history`
+CLI verb and the almanac); see [The Living
 Community](../chronicle/the-living-community.md).
+
+**Communities fight over value, not over room (The Tumult).** The history's
+conflict rule was rewritten to drop density entirely. Each epoch, after growth,
+a community scans the occupied cells it can reach across that era's connection
+graph and raids the best one that is both **worth more than its own** (the
+era-effective capacity field, the same one growth reads) and **held by someone
+it can beat** (population scaled by technological horizon, by a margin). Two
+vetoes inhibit it: a target already starving against its own capacity has
+nothing worth taking, and a people whose authored threat response falls below a
+threshold does not raid at all — which makes the aversion structure asymmetric
+with no pairwise machinery, since each people gates on its own trait. On the
+shipped roster the goblin never raids anyone. A raid is a **conquest**: the
+raider takes the cell and the loser is driven off, war destroys a fraction of
+the combined population on both sides rather than transferring it, and the
+displaced people re-enters the same rule with its baseline substituted —
+comparing the nearest ring of cells that offers anything admissible, vacant
+ones at plain value and held ones at a premium because a rival's holding comes
+already made to work. Below a viable minimum a broken remnant dies instead of
+cascading further.
+
+The result is conflict on a world that never crowds: seed 42 resolves **76
+conquests** where every prior model resolved zero, and the map does not empty —
+communities alive at the final year rise from 138 to 203, because conquest
+re-seats and refounds. The campaign's headline, though, is a **falsification**:
+the cascade-size distribution was measured against the project's standing wager
+that emergent conflict would be scale-free, and it is not. Pooled over a hundred
+seeds and 2974 conquests, nothing chains beyond size three; the branching ratio
+is **σ ≈ 0.051** against a critical value of 1, stable across a 3.3× change of
+sample. The distribution is geometric with a hard cutoff, deeply sub-critical.
+The diagnosis is that this slice supplies dissipation without **accumulation** —
+nothing is stored between relaxations whose release could make a large event —
+which is precisely what the deferred dominance-hierarchy slice would add. See
+[The Tumult](../chronicle/the-tumult.md).
 
 **The model card.**
 
@@ -214,8 +255,14 @@ Community](../chronicle/the-living-community.md).
   history run over the (now era-varying) capacity field — grown, migrated, and
   abandoned across ~2000 years — with standing ruins and separated territories
   falling out of the run. See the history-first section above.
+- **Taken, not only grown (The Tumult):** a settlement may also change hands.
+  Conquest is a deterministic function of frozen epoch state — coveted value,
+  relative strength, era reachability, with total-ordered tie-breaks — reading
+  state rather than integrating it, so no new draw and no chaotic forward
+  integration enters the bake. It commits no new fact shape: a conquest is a
+  chain of the occupation record's existing endings and foundings.
 
-Seed 42 under a spinning sky now grows **129 settlements** as the present
+Seed 42 under a spinning sky now grows **203 settlements** as the present
 frame of its derived history (the field-condensation model above supplies the
 substrate the history plays out on; it no longer emits the map). Since [The
 Menagerie](../chronicle/the-menagerie.md) cut genesis over onto the
@@ -224,15 +271,24 @@ kobold, since [The Branches](../chronicle/the-branches.md) gave the
 goblinoids two new members) share the landscape, but history now separates
 them into distinct territories and each holds its own chief settlement: the
 bugbear **Qvooshtvoagootao** (118 souls, tropical-seasonal-forest) is the
-world flagship, with the hobgoblin **Bqoabtoonoagoo** (110), the kobold
-**Roqrrarogxok** (110), and the goblin **Zhvekngokngaknoenoanoaboo** (90)
-each holding their own — real, phonology-drawn names (Campaign Y2-3, The
-Tongues; Campaign 27, The Words). Populations run larger than the equilibrium
-snapshot's, because a settlement's headcount is now something that *grew*
-there over the history rather than a single field readout. The gallery holds
-the exit-demo pair: [The
+world flagship, with the hobgoblin **Mjeaqkeomjaenoagoo** (112,
+tropical-rainforest), the kobold **Roroqrraxoxo** (107,
+tropical-seasonal-forest), and the goblin **Zhvekngokngaknoenoanoaboo** (90,
+temperate-forest) each holding their own — real, phonology-drawn names
+(Campaign Y2-3, The Tongues; Campaign 27, The Words). One selection rule is
+worth stating because it is easy to misread: a *people's* chief settlement is
+not its largest but its **oldest surviving occupation** — the first settlement
+fact that people committed and still holds — while the *world* flagship above
+it is the highest-population site of any people. *The Tumult* made the
+distinction consequential, since a conquest closes the raider's own occupation
+record and reopens it at the seized cell: a raiding people therefore hands its
+chief settlement on far more often than a peaceful one, which is a re-selection
+effect on identity rather than anyone moving house. Populations run larger than
+the equilibrium snapshot's, because a settlement's headcount is now something
+that *grew* there over the history rather than a single field readout. The
+gallery holds the exit-demo pair: [The
 Peoples of Seed 42](../gallery/settlement-seed-42.md) against [its
-tidally-locked twin](../gallery/settlement-seed-42-locked.md) (128
+tidally-locked twin](../gallery/settlement-seed-42-locked.md) (136
 settlements), where habitability's collapse toward the terminator ring
 (Campaign 3c's biome map already predicted it) reshapes the same globe. Chronicle: [4a,
 Placement & Drainage](../chronicle/campaign-4a.md) and [Campaign Y2-0, Firm
@@ -253,4 +309,11 @@ living-community program); and a pinnable flagship-selection override (spec
 migration, abandonment — have since landed:* the field gained a clock in [The
 Living Community](../chronicle/the-living-community.md), which grows the
 present world as the last frame of a derived deep history rather than placing
-it fully formed at genesis.
+it fully formed at genesis. *The transport topology and the conflict have since
+landed too* — the connection graph over a sea that moves with the ice ([The
+Sundering](../chronicle/the-sundering.md)) and value-driven conquest over it
+([The Tumult](../chronicle/the-tumult.md)). What still stands open from this
+list is the **standing relationship** between communities — tribute, alliance,
+vassalage, trade — which, unlike a one-shot conquest, cannot be written as a
+chain of endings and foundings in the occupation record and needs a persistent
+inter-community relation the ledger has no shape for.
