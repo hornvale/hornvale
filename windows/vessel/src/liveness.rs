@@ -6,6 +6,7 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
+use crate::interior::AnchorId;
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
     ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
@@ -1774,8 +1775,10 @@ impl<'a> Drive for Thermal<'a> {
         // doesn't improve comfort). No consume — `Drink` serves it not at all.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
-            // No consume — none of `Drink`/`Rest`/`Eat` serves comfort.
-            Action::Drink | Action::Rest | Action::Eat => 0.0,
+            // No consume — none of `Drink`/`Rest`/`Eat` serves comfort. Fine
+            // movement is not yet wired into any drive's plan (The Threshold
+            // task 6+), so it serves nothing today either.
+            Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
         }
     }
 }
@@ -2434,7 +2437,9 @@ impl<'a> Drive for Danger<'a> {
         // as frightening is served by stepping off it.
         match action {
             Action::MoveTo(n) => self.felt_threat_at(&view.position) - self.felt_threat_at(n),
-            Action::Drink | Action::Rest | Action::Eat => 0.0,
+            // Fine movement is not yet wired into any drive's plan (The
+            // Threshold task 6+), so it eases no fear today either.
+            Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
         }
     }
     fn survival_override(&self, urgency: f64) -> bool {
@@ -2862,6 +2867,13 @@ pub fn arbitrate(
             // Following a gradient toward an UNKNOWN one (normal Searching) —
             // this is also hunger's forage-gradient step (seeking richer ground).
             Action::MoveTo(_) => (AffectLabel::Searching, 0.0),
+            // No drive's `affordance` produces `MoveWithin` yet (The Threshold
+            // task 6+), so no candidate can actually be this arm today; it
+            // exists only to keep the match exhaustive. Treated the same as
+            // the generic MoveTo gradient step (neutral Searching) rather than
+            // inventing fine-movement affect semantics ahead of the task that
+            // wires it up.
+            Action::MoveWithin(_) => (AffectLabel::Searching, 0.0),
         };
         Resolution {
             intent: Intent::Do(chosen),
@@ -3570,6 +3582,15 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         }
                         day = next_act;
                     }
+                    Intent::Do(Action::MoveWithin(_)) => {
+                        // No drive's `affordance` produces `MoveWithin` yet
+                        // (The Threshold task 6+), so this arm is unreachable
+                        // today. It writes no fact and does not advance `day`
+                        // — a genuine no-op, not a stand-in for behaviour —
+                        // and the unconditional `steps >= MAX_STEPS` cap at
+                        // the top of this loop still bounds iteration even if
+                        // it were ever hit.
+                    }
                 }
             }
         }
@@ -3916,6 +3937,35 @@ pub enum Action {
     /// effect: hunger reset) — The Provender's discharge action, the hunger
     /// analogue of `Drink`.
     Eat,
+    /// Walk to another anchor inside the current room (The Threshold).
+    /// Precondition: adjacency in the room's anchor graph. Effect: fine
+    /// position, which is NEVER serialized (decision 0069) — which is what
+    /// makes this the one action catch-up may replay.
+    MoveWithin(AnchorId),
+}
+
+/// Whether an action's effect is position rather than a committed fact.
+/// type-audit: bare-ok(flag: return)
+pub fn is_movement(a: &Action) -> bool {
+    matches!(a, Action::MoveTo(_) | Action::MoveWithin(_))
+}
+
+/// Whether an action's precondition reads committed state rather than position
+/// alone. Today nothing does; the catch-up invariant test asserts it, so the
+/// first action that changes this fails loudly instead of silently corrupting
+/// a reconstruction.
+/// type-audit: bare-ok(flag: return)
+pub fn precondition_reads_committed_state(_a: &Action) -> bool {
+    false
+}
+
+/// Whether catch-up (spec §5) may replay this action. Exactly the actions
+/// whose effects are ephemeral: coarse `MoveTo` writes `agent-at`, and
+/// `Drink`/`Rest`/`Eat` each commit a fact, so only fine movement qualifies.
+/// The partition is "does it commit", not "is it movement".
+/// type-audit: bare-ok(flag: return)
+pub fn is_replayable_in_catch_up(a: &Action) -> bool {
+    matches!(a, Action::MoveWithin(_))
 }
 
 /// The GOAP planning state A* searches: where the agent is and whether it has
@@ -6235,6 +6285,9 @@ mod tests {
                 }
                 Action::Rest | Action::Eat => {
                     unreachable!("plan_to_water never emits Rest or Eat")
+                }
+                Action::MoveWithin(_) => {
+                    unreachable!("plan_to_water never emits MoveWithin (The Threshold task 6+)")
                 }
             }
         }
@@ -9951,5 +10004,49 @@ mod tests {
             beside_the_fire.urgency(&view) < unwarmed.urgency(&view),
             "the additive term can only ease a COLD creature's discomfort"
         );
+    }
+
+    #[test]
+    fn no_movement_precondition_depends_on_a_committing_effect() {
+        // Catch-up (spec §5) replays a creature's movement while suppressing the
+        // actions that commit facts. That is sound only while movement
+        // preconditions are purely positional. If a future action gates movement
+        // — a barred door needing unbarring — catch-up silently reconstructs a
+        // past that could not have happened, and silently is the bad part.
+        //
+        // The check: every action is classified, and every movement action's
+        // precondition is declared positional.
+        for a in [
+            Action::MoveTo(RoomAddr {
+                face: 0,
+                path: vec![],
+            }),
+            Action::MoveWithin(AnchorId(0)),
+            Action::Drink,
+            Action::Rest,
+            Action::Eat,
+        ] {
+            if is_movement(&a) {
+                assert!(
+                    !precondition_reads_committed_state(&a),
+                    "{a:?} is a movement action whose precondition reads committed \
+                     state — catch-up cannot replay it. Either make the \
+                     precondition positional or exclude the action from catch-up."
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn exactly_the_non_committing_actions_are_replayable() {
+        assert!(is_replayable_in_catch_up(&Action::MoveWithin(AnchorId(0))));
+        // Coarse movement writes `agent-at` — replaying it would fabricate history.
+        assert!(!is_replayable_in_catch_up(&Action::MoveTo(RoomAddr {
+            face: 0,
+            path: vec![]
+        })));
+        assert!(!is_replayable_in_catch_up(&Action::Drink));
+        assert!(!is_replayable_in_catch_up(&Action::Rest));
+        assert!(!is_replayable_in_catch_up(&Action::Eat));
     }
 }
