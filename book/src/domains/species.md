@@ -187,7 +187,8 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency — the row every kind carries and the packer and habitat model read)
+potency, social organization, habitat medium — the row every kind carries
+and the packer and habitat model read)
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
@@ -225,6 +226,28 @@ mind-perception-speech chain a kind climbs; the three chromatic dragons climb
 it all the way — each carries a mind, perceives, and speaks — and are absent
 only from Society. A consumer that needs a society reading for a solitary
 kind resolves `SocietyVector::baseline()`, the goblin-equal values.
+
+A third universal biosphere dimension, added by *The Waterline*, is
+**medium** (`HabitatDomain`: `Terrestrial`, `Aquatic`, `Amphibious`, or
+`Lithic`) — which physical substrate a kind's body lives in, gated at the
+carrying-capacity layer rather than left to fall out of the condition-niche
+formula. The gate is a **support restriction**, not a small number: a kind
+outside its medium has *no* carrying capacity in a cell, not a diminished
+one. That distinction matters because dominance is computed as an `argmax`
+over every kind's carrying capacity — a cell where every kind's value is
+merely tiny still has a largest one, so shrinking a misplaced kind's response
+can never remove it from contention, only restricting its support can. Two
+resource axes (mineral deposits, ambient detritus) bypassed climate's
+habitability mask entirely, which is what let land-eating kinds hold
+measurable capacity below sea level before this axis existed. Every one of
+the sixteen shipped kinds is authored `Terrestrial` today, save the xorn,
+which is `Lithic` — it lives *in* the substrate underlying both land and
+seafloor, indifferent to the waterline above it, and so keeps its ocean
+holdings deliberately. No shipped kind is `Aquatic` or `Amphibious` yet: the
+ocean's carrying capacity is empty by construction, not by omission — a
+future aquatic roster is this axis's reason for existing, not a gap it left
+behind.
+
 What the old `Option<PeopledTraits>`
 once guaranteed by the shape of a type — the peopled traits together or none —
 worldgen now enforces as this load-time nested-capacity check across the

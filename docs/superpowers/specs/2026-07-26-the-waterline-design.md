@@ -13,13 +13,18 @@ carrying capacity below sea level. Measured at seed 42:
 ```
                  BEFORE                          AFTER (this campaign)
 kind          land    ocean   total          land    ocean   total
-xorn             7   25,982  25,989             7   25,982  25,989   (Lithic — kept)
+xorn             7   25,982  25,989             7   29,896  29,903   (Lithic — GROWS, see P6)
 rust-monster 8,719    3,914  12,633         8,719        0    8,719   (Terrestrial)
 twig-blight  1,410        0   1,410         1,410        0    1,410   (unaffected)
 goblin         930        0     930           930        0      930   (unaffected)
 
 world: 11,066 land cells / 29,896 ocean cells (sea level = −2,936.17 m)
 ```
+
+Xorn's ocean holding *grows* under the gate rather than staying put: it goes
+from 87% of ocean cells to 100%, because the Terrestrial kinds that used to
+leak onto the seafloor (rust-monster) vacate it, and `argmax` hands their
+former cells to the one kind still contesting them (see P6).
 
 The fix introduces the concept the model lacks — **medium** — as a per-kind
 `HabitatDomain` on `BiosphereTraits`, applied as support restriction at the
@@ -36,7 +41,14 @@ all**. In a sampled cell at −4,120 m:
 goblin 0.000000   twig-blight 0.000000   xorn 0.000485   rust-monster 0.000313
 ```
 
-Only the two mineral feeders leak. Everything else is already excluded.
+At least three kinds leak through this one defect, of which only two are
+visible in the before/after dominance tables above. `xorn` and `rust-monster`
+win an argmax on ocean cells and so show up as measured ocean counts; `otyugh`
+(a `DETRITUS` feeder) held `K > 0` on **all 29,896 ocean cells** pre-gate too,
+but never won an argmax there, so it never appears in a dominance table even
+though it was leaking exactly the same way and the gate fixes it too.
+Dominance tables undercount the defect's true reach — they show who won, not
+who was present.
 
 **Habitability is already a land test**, contrary to this spec's first draft.
 `climate::is_habitable` is:
@@ -201,9 +213,13 @@ depends on K.
 **P1.** After the gate, `rust-monster` holds zero ocean cells (was 3,914) and
 its land count is unchanged at 8,719.
 
-**P2.** `xorn` is **unchanged** at 7 land / 25,982 ocean — it is `Lithic`, and
-rock is rock. Consequently `demesne.rs`'s xorn assertion, which fails under a
-Terrestrial-xorn reading, **passes**.
+**P2.** `xorn`'s own K field is **unchanged** — it is `Lithic`, permit-
+everywhere, and its raw response to a cell never differs before/after the
+gate. Its *dominance* count still moves, because dominance is `argmax` over
+every kind and rust-monster vacates the ocean cells it used to contest (see
+P6: measured 7 land / 29,896 ocean under the gate, up from 25,982). Either
+way, `demesne.rs`'s xorn assertion, which fails under a Terrestrial-xorn
+reading, **passes**.
 
 **P3.** `twig-blight` and `goblin` are unchanged (they already held zero ocean
 cells).
@@ -229,6 +245,17 @@ Anything reading committed facts is unchanged (P4). With the sovereignty
 revision deferred, the shipped change moves only `rust-monster`'s ocean cells
 and xorn's ocean share, so the expected census movement is small or nil —
 verified before any regeneration is requested.
+
+**P7 — SCOPE HELD, MAGNITUDE FALSIFIED.** The *scope* half was right: only
+metrics reading density/dominance moved, and every changed column traces back
+to `rust-monster`'s ocean cells and xorn's ocean share, exactly as predicted —
+nothing that reads a committed fact moved (P4 holds). The *"small or nil"*
+half did not: `the-census`'s `rows.csv` changed on **1000 of 1000 seeds**, and
+`composition-variance` moved on every one of them (the summary's `>= 0.1`
+movement bucket went from 979 to all 1000). A dominance metric turned out far
+more sensitive to which kind wins an argmax than the prediction assumed —
+a narrow mechanical cause (one column of counts moving cell-by-cell) produces
+a population-wide statistical effect once it is aggregated per seed.
 
 ## 6. Blast radius
 

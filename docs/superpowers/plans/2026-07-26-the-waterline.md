@@ -31,7 +31,6 @@
 | `domains/species/src/lib.rs` | `HabitatDomain` enum + `BiosphereTraits` field + 16 authored rows | 2 |
 | `windows/worldgen/src/lib.rs` (`niche_per_species_k`) | the gate | 3 |
 | `windows/worldgen/src/lib.rs` (`mod tests`) | dominance-fallout tests, the `#[ignore]`d target | 4 |
-| `kernel/src/ecology.rs` | sovereignty: gap-closing, renames | 4b |
 | `cli/tests/fixtures/world-seed-42.json` | **unchanged** — measured byte-identical | — |
 | census goldens | Task 6, verify-then-authorize | 6 |
 
@@ -415,7 +414,7 @@ grep -E "^\s+FAIL" /tmp/wl-fallout.txt
 cargo test -p hornvale-worldgen --test waterline_probe -- --nocapture --ignored 2>&1 | sed -n '/dominance by land/,/world has/p'
 ```
 
-Record the new table. **P1** requires the ocean column to be all zeros. **P2** requires xorn's total to collapse to ≤2,904. **P3** is whatever it is — if the goblin still dominates nothing, report that as a finding about the peoples' competitive position; do not tune.
+Record the new table. **P1** requires rust-monster's ocean column to be zero. **P2** requires xorn to be unaffected directly — its own K field must be identical before/after (it is `Lithic`, permit-everywhere); its *dominance* count is expected to move upward instead, as it inherits the ocean cells rust-monster vacates. **P3** is whatever it is — if the goblin still dominates nothing, report that as a finding about the peoples' competitive position; do not tune.
 
 - [ ] **Step 3: Update each reddened assertion to the measured value**
 
@@ -438,105 +437,21 @@ git commit -m "test(the-waterline): re-pin the dominance fallout"
 
 ---
 
-### Task 4b: Sovereignty stops being a floor
+### Task 4b: Sovereignty stops being a floor — DEFERRED
 
-**Files:**
-- Modify: `kernel/src/ecology.rs` (`ConditionResponse::eval`, `sovereignty_floor`)
-- Modify: every caller passing the old `floor` argument
-- Test: `kernel/src/ecology.rs` `mod tests`
+**This task was attempted, built, measured, and then reverted; it does not
+ship in this campaign.** Full account: spec §4.4. Summary: the revision is
+correct on its own terms (it replaces an unconditional floor with real,
+distance-decaying gap-closing, and reproduces today's formula exactly at
+`s = 0`), but it invalidates the β = 2.0 coexistence-diversity calibration —
+that constant was frozen under the old response shape, and under the new one
+mean diversity falls to 1.333 against a preregistered band of [1.5, 3.0] on
+every seed. Fixing that properly needs a re-sweep of β, which is a
+calibration study and its own campaign, not a line of arithmetic bolted onto
+a medium gate.
 
-**Interfaces:**
-- Produces: `eval(field, sovereignty)` — same signature shape, new meaning; `sovereignty(mass, potency)` (renamed from `sovereignty_floor`).
-
-- [ ] **Step 1: Write the failing tests**
-
-```rust
-    #[test]
-    fn a_fully_constrained_creature_is_unchanged_by_sovereignty() {
-        // s = 0 must reproduce the old formula exactly, so the revision is
-        // confined to creatures that should have been buffered all along.
-        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
-        assert_eq!(r.eval(10.0, 0.0), 0.8);
-        let far = r.eval(40.0, 0.0);
-        assert!(far < 1e-6, "a constrained creature vanishes far from optimum, got {far}");
-    }
-
-    #[test]
-    fn sovereignty_widens_the_band_without_raising_the_peak() {
-        // The revision's whole claim: a sovereign creature is no better AT its
-        // optimum, and much better away from it. The old floor did the
-        // opposite — it raised the response everywhere, including at infinity.
-        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
-        assert_eq!(r.eval(10.0, 0.0), r.eval(10.0, 0.9), "the peak is unchanged");
-        assert!(
-            r.eval(30.0, 0.9) > r.eval(30.0, 0.0) * 100.0,
-            "a sovereign creature holds far from its optimum where a constrained one does not"
-        );
-    }
-
-    #[test]
-    fn sovereignty_still_decays_to_nothing_at_distance() {
-        // The property the old floor lacked, and the reason a goblin was a
-        // third at home in the abyss.
-        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
-        let very_far = r.eval(10_000.0, 0.95);
-        assert!(very_far < 1e-6, "even a sovereign creature vanishes eventually, got {very_far}");
-    }
-```
-
-Adapt the literal construction to `ConditionResponse`'s actual field set if it differs.
-
-- [ ] **Step 2: Run and watch them fail**
-
-```bash
-cargo test -p hornvale-kernel sovereignty 2>&1 | tail -20
-```
-
-Expected: `sovereignty_still_decays_to_nothing_at_distance` FAILS — today it plateaus at 0.95.
-
-- [ ] **Step 3: Replace the formula**
-
-```rust
-        let z = (field - self.optimum) * (1.0 - sovereignty) / self.width;
-        let bump = crate::math::exp(-0.5 * z * z);
-        (self.devotion * bump).clamp(0.0, 1.0)
-```
-
-Rename the parameter `floor` → `sovereignty` and update the doc comment to describe gap-closing, not a floor. Rename `sovereignty_floor` → `sovereignty` and update its doc: it returns the fraction of the environmental gap a creature closes for itself, no longer a lower bound. Update `SOVEREIGNTY_FLOOR_MAX` → `SOVEREIGNTY_MAX` and its doc.
-
-- [ ] **Step 4: Fix every caller**
-
-```bash
-cargo build --workspace 2>&1 | grep -E "^error" | head -20
-```
-
-Callers pass `sovereignty_floor(...)` for the three buffered axes and `0.0` for elevation; the `0.0` sites keep their meaning exactly (fully constrained) and need only the rename.
-
-- [ ] **Step 5: Verify world identity — measured to be byte-identical**
-
-```bash
-cargo run -q -p hornvale -- new --seed 42 --out /tmp/wl-t4b.json
-cmp /tmp/wl-t4b.json cli/tests/fixtures/world-seed-42.json && echo IDENTICAL
-cargo test -p hornvale --test lens_purity 2>&1 | tail -3
-```
-
-Expected: IDENTICAL, `lens_purity` green. This was measured with a throwaway before the spec was written; a different result contradicts a measurement and is a finding — stop and report.
-
-- [ ] **Step 6: Verify P6 — the prediction most likely to be wrong**
-
-```bash
-cargo test -p hornvale-worldgen --test waterline_probe -- --nocapture --ignored 2>&1 | sed -n '/dominance by land/,/world has/p'
-cargo test -p hornvale-worldgen --test demesne 2>&1 | tail -5
-```
-
-P6 says xorn (now `Lithic`) keeps its seafloor domain and `demesne.rs` passes. **If xorn is absent from the dominance table, P6 is falsified — report it, do not re-author xorn to rescue it.**
-
-- [ ] **Step 7: Gate and commit** (expect dominance-pin failures; those are Task 5's)
-
-```bash
-cargo fmt && make gate 2>&1 | tail -20
-git add -A && git commit -m "feat(the-waterline): sovereignty closes the gap, it does not raise a floor"
-```
+The implementation is preserved at commit `4f852fd2` (recoverable by SHA) for
+that sequel campaign to cherry-pick rather than re-derive from scratch.
 
 ---
 
