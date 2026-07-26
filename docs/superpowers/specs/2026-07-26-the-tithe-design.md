@@ -105,13 +105,41 @@ asymmetry is already structural in the bake:
 costs nothing and is fully deterministic**. Land tax has always been assessed on area, never on
 the granary, for exactly this reason.
 
+### 4.2a Where tribute lands — the store (this is the accumulator)
+
+**Remittance must NOT be added to the dominant's `population`.** A dominant's cell capacity is
+unchanged by conquest, so population gained from tribute drives
+`pressure = population × NEED / eff` upward until `COLLAPSE_PRESSURE` kills it of Famine: **a
+successful extractor would eat itself**, and the readout would report "accumulation does not chain"
+when the truth is that mass was added to a fixed container. Tribute therefore lands in a new
+per-community scalar:
+
+```
+Community { …, stores: f64 }          // wealth, not bodies
+
+remittance  →  dominant.stores
+strength     =  (population + stores × STORE_WEIGHT) × tech_weight(tech)
+pressure     =  population × NEED / eff          // UNCHANGED — stores never eat
+```
+
+Historically exact: tribute becomes granaries, walls and retainers — strength the *local land does
+not have to feed*. It also gives §1's criticality argument a literal accumulator rather than a
+metaphorical one. `stores` decays slowly (`STORE_DECAY`) so a hoard is not immortal, and it is
+lost with the community when it closes — a dominant's fall releases what it held.
+
+**This generalises beyond the slice.** Tree-finding on "one community's product ending up with
+another" gives seizure (one-shot), tribute (recurring, coerced), **trade** (recurring, voluntary)
+and gift; trade needs this identical `stores` concept, so the accumulator is the shared
+prerequisite for the wider contact program, not a slice-2 local.
+
 `in_group_radius` (insular 0 ↔ expansive 1) lives on `SocietyVector`; wiring concealment and
 secrecy to it is the reading `SOC-information-economy` already argues for.
 
 **Both errors destabilise, in opposite directions.** Under-assess and the subordinate accumulates
-until it can throw off its patron; over-assess and it is crushed. Unlike a fixed rate, this system
-has **no equilibrium** — which is the point, and the direct answer to why the crowding build was
-smooth and raid-free.
+until it can throw off its patron; over-assess and it is crushed. Fixed points do exist — a
+concealment that exactly offsets an over-assessment sits still — so the honest claim is that this
+system has **no *attracting* equilibrium**, unlike a fixed rate. That is the point, and the direct
+answer to why the crowding build was smooth and raid-free.
 
 ### 4.3 Adaptive demand — the oscillator
 
@@ -136,16 +164,32 @@ actually sit at criticality, which is precisely what neither prior build achieve
 - A community has **at most one** patron, and a subordinate may not itself take one. Slice 2's
   relation graph is therefore a set of **one-level stars**, not a tree — depth is the deferred
   chaining lever (§9), so cycles are structurally impossible rather than merely prevented.
+- **A second bid on an already-subordinated community transfers the patronage.** A raider that
+  clears dominance over a community that already has a patron takes over the relation; the old
+  patron simply loses it, and does *not* contest — contesting is the deferred protection lever
+  (§9). Stated explicitly because otherwise the bake's iteration order would decide it silently,
+  which is precisely the class of accident the determinism discipline exists to prevent.
+- **Cardinality is deliberately unbounded**: a dominant may hold any number of subordinates. No
+  arbitrary cap is imposed, because whether a runaway hub forms is exactly the kind of thing this
+  slice should *measure* rather than legislate. The maximum subordinates held by any one community
+  is therefore a reported metric (§8), and a runaway is a finding, not a failure.
 
 ### 4.5 Determinism (Lorenz-safe)
 
 Assessment, remittance, concealment and adaptation are total, deterministic functions of frozen
 epoch state and authored species data. **No new seed draw.** No agent decision — the "guess" is a
 reading of a visible proxy, not a choice. `BTreeMap`/`BTreeSet`/`Vec` only; every float comparison
-via `f64::total_cmp` with a deterministic tie-break. No wall-clock. The adaptation is a bounded
-first-order update on a per-relation scalar, not a chaotic forward-integration; assessment is
-clamped to `[0, eff_capacity × ASSESS_MAX]` so no relation can diverge and no dominant can demand
-more than its subordinate's land could ever produce.
+via `f64::total_cmp` with a deterministic tie-break. No wall-clock. Assessment is clamped to
+`[0, eff_capacity × ASSESS_MAX]`, so no relation diverges and no dominant demands more than its
+subordinate's land could ever produce.
+
+**The adaptive loop needs a bound, and the bound must be verified rather than asserted.** A
+first-order feedback *with delay* — which is exactly what §4.3 is, the delay being the epoch step —
+period-doubles into chaos above a critical gain. This is the precise claim the Lorenz guard-rail
+exists to police, so `ADAPT_RATE` carries a stability bound and a test demonstrating the
+per-relation assessment series converges or oscillates boundedly rather than diverging. Note the
+save-format question is separate and already settled: the whole bake replays from the seed, so
+nothing chaotic is ever resumed from a quantized checkpoint.
 
 ## 5. The falsification metric (headline)
 
@@ -188,7 +232,9 @@ re-deriving that the `Fact` shape itself does not change.
 1. **Subordination fires.** Seed-42 forms tribute relations at volume, on targets the shipped
    covet gate would have ignored — proving branch 2 is new motive, not a relabelling.
 2. **The structure accumulates.** A dominant's strength measurably rises from tribute without it
-   changing cell — the thing predation could not do.
+   changing cell — the thing predation could not do. Specifically: `stores` rise while `pressure`
+   does **not**, so a successful extractor does not starve itself (§4.2a). The maximum subordinates
+   held by any one community is reported alongside.
 3. **The map is not depopulated** and no community is farmed to extinction by tribute alone;
    alive-at-`now` stays in the walkable band.
 4. **The headline (§5)** is measured and adjudicated, with the secular-cycle axis reported
@@ -207,6 +253,15 @@ re-deriving that the `Fact` shape itself does not change.
   sacred motives, cohesion (ʿasabiyya).
 - **The remaining inhibition gates** — niche-relative value, pairwise aversion, concealment-as-
   stealth (see `SOC-inhibition`).
+- **Assessment *staleness*.** §4.2's asymmetry is real over time but *not* at the moment of
+  conquest — the dominance test has just measured the target's strength, so the dominant does know
+  its population then. The stronger model is that information is **fresh at conquest and decays**
+  with epochs since last enforcement, which would give adaptive demand a physical cause rather than
+  a bare feedback constant. Deferred, recorded, and the current §4.2 wording is the simplification
+  it is.
+- **Assessment competence varying by species.** Concealment varies (`in_group_radius`) but
+  assessment does not; wiring the dominant's accuracy to `SocietyVector.sociality` would restore
+  the symmetry and add free heterogeneity. Deferred.
 - **A new `Fact` shape, `CauseOfEnd` variant, or stream label.** One predicate; nothing else.
 
 ## 10. Definition of Done (per CLAUDE.md)
