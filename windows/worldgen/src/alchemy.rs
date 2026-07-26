@@ -218,4 +218,139 @@ mod tests {
             );
         }
     }
+
+    /// `reachable_productions` documents a sort+dedup contract: the result
+    /// is "sorted and deduplicated so the result is deterministic and
+    /// directly comparable between worlds." Feed it several sources whose
+    /// UNION admits every authored production; the production table's own
+    /// declaration order is not alphabetical, so the natural (unsorted)
+    /// iteration order differs from the required output. Assert the
+    /// property itself — strictly increasing adjacent pairs proves both
+    /// sortedness and freedom from duplicates in one shot — rather than a
+    /// hardcoded expected list, so this keeps working as the table grows.
+    #[test]
+    fn reachable_productions_is_sorted_and_deduplicated() {
+        let sources = [
+            substrate_of_life(),
+            substrate_of_commodity(Commodity::Gold, 1.0),
+            substrate_of_commodity(Commodity::Salt, 1.0),
+        ];
+        let names = reachable_productions(&sources);
+
+        assert!(
+            names.len() >= 2,
+            "need at least two reachable productions to exercise ordering: {names:?}"
+        );
+        assert!(
+            names.windows(2).all(|w| w[0] < w[1]),
+            "result must be strictly increasing — sorted and free of duplicates: {names:?}"
+        );
+    }
+
+    /// Build a `Substrate` from its five raw fields, for the table-pinning
+    /// tests below where the expected values are read off the authored
+    /// tables directly.
+    fn substrate(
+        metallic: f64,
+        organic: f64,
+        saline: f64,
+        refractory: f64,
+        purity: f64,
+    ) -> Substrate {
+        Substrate {
+            metallic,
+            organic,
+            saline,
+            refractory,
+            purity,
+        }
+    }
+
+    /// Pin every `Commodity` variant's row in `substrate_of_commodity`'s
+    /// authored table. These rows are authored data with no computation to
+    /// check against — a miscopied or wrongly-grouped row is exactly the
+    /// defect that must not ship silently, so every variant is listed
+    /// explicitly (no catch-all arm) and a later addition to `Commodity`
+    /// must update this table too.
+    #[test]
+    fn substrate_of_commodity_matches_the_authored_table() {
+        let grade = 1.0;
+        let cases: [(Commodity, Substrate); 9] = [
+            (Commodity::Copper, substrate(0.90, 0.00, 0.10, 0.40, 1.0)),
+            (Commodity::Gold, substrate(1.00, 0.00, 0.00, 0.60, 1.0)),
+            (Commodity::LeadZinc, substrate(0.85, 0.00, 0.15, 0.35, 1.0)),
+            (Commodity::Iron, substrate(0.90, 0.00, 0.00, 0.70, 1.0)),
+            (Commodity::Salt, substrate(0.00, 0.00, 1.00, 0.10, 1.0)),
+            (Commodity::Coal, substrate(0.00, 0.90, 0.00, 0.15, 1.0)),
+            (Commodity::Gems, substrate(0.20, 0.00, 0.00, 0.95, 1.0)),
+            (Commodity::Tin, substrate(0.80, 0.00, 0.05, 0.25, 1.0)),
+            (Commodity::Bauxite, substrate(0.60, 0.00, 0.10, 0.50, 1.0)),
+        ];
+        for (commodity, expected) in cases {
+            assert_eq!(
+                substrate_of_commodity(commodity, grade),
+                expected,
+                "{commodity:?}"
+            );
+        }
+    }
+
+    /// Pin every `RockClass` variant's row in `substrate_of_rock`'s authored
+    /// table, grouped by petrological family exactly as the production code
+    /// groups them. Listed one variant at a time (no catch-all arm) so a
+    /// later addition to `RockClass` forces this table to be updated.
+    #[test]
+    fn substrate_of_rock_matches_the_authored_table() {
+        let cases: [(RockClass, Substrate); 19] = [
+            (RockClass::Granite, substrate(0.25, 0.00, 0.00, 0.75, 1.0)),
+            (RockClass::Rhyolite, substrate(0.25, 0.00, 0.00, 0.75, 1.0)),
+            (RockClass::Gabbro, substrate(0.45, 0.00, 0.00, 0.80, 1.0)),
+            (RockClass::Basalt, substrate(0.45, 0.00, 0.00, 0.80, 1.0)),
+            (RockClass::Andesite, substrate(0.45, 0.00, 0.00, 0.80, 1.0)),
+            (RockClass::Sandstone, substrate(0.10, 0.00, 0.00, 0.90, 1.0)),
+            (
+                RockClass::Conglomerate,
+                substrate(0.10, 0.00, 0.00, 0.90, 1.0),
+            ),
+            (RockClass::Chert, substrate(0.10, 0.00, 0.00, 0.90, 1.0)),
+            (RockClass::Quartzite, substrate(0.10, 0.00, 0.00, 0.90, 1.0)),
+            (RockClass::Shale, substrate(0.20, 0.05, 0.05, 0.50, 1.0)),
+            (RockClass::Slate, substrate(0.20, 0.05, 0.05, 0.50, 1.0)),
+            (RockClass::Evaporite, substrate(0.00, 0.00, 1.00, 0.10, 1.0)),
+            (RockClass::Ironstone, substrate(0.85, 0.00, 0.00, 0.70, 1.0)),
+            (
+                RockClass::ReefLimestone,
+                substrate(0.05, 0.10, 0.05, 0.35, 1.0),
+            ),
+            (RockClass::Marble, substrate(0.05, 0.10, 0.05, 0.35, 1.0)),
+            (RockClass::Coal, substrate(0.00, 0.90, 0.00, 0.15, 1.0)),
+            (RockClass::Schist, substrate(0.30, 0.00, 0.00, 0.70, 1.0)),
+            (RockClass::Gneiss, substrate(0.30, 0.00, 0.00, 0.70, 1.0)),
+            (RockClass::Alluvium, substrate(0.15, 0.10, 0.05, 0.40, 1.0)),
+        ];
+        for (rock, expected) in cases {
+            assert_eq!(substrate_of_rock(rock), expected, "{rock:?}");
+        }
+    }
+
+    /// Pin every `SoilOrder` variant's row in `substrate_of_soil`'s authored
+    /// table. Listed one variant at a time (no catch-all arm) so a later
+    /// addition to `SoilOrder` forces this table to be updated.
+    #[test]
+    fn substrate_of_soil_matches_the_authored_table() {
+        let cases: [(SoilOrder, Substrate); 9] = [
+            (SoilOrder::Laterite, substrate(0.55, 0.05, 0.00, 0.50, 1.0)),
+            (SoilOrder::Podzol, substrate(0.10, 0.40, 0.00, 0.25, 1.0)),
+            (SoilOrder::Chernozem, substrate(0.05, 0.60, 0.00, 0.20, 1.0)),
+            (SoilOrder::Aridisol, substrate(0.10, 0.10, 0.60, 0.30, 1.0)),
+            (SoilOrder::Loam, substrate(0.10, 0.45, 0.05, 0.25, 1.0)),
+            (SoilOrder::Andosol, substrate(0.25, 0.35, 0.00, 0.50, 1.0)),
+            (SoilOrder::Leptosol, substrate(0.20, 0.10, 0.00, 0.60, 1.0)),
+            (SoilOrder::Histosol, substrate(0.00, 0.95, 0.00, 0.10, 1.0)),
+            (SoilOrder::Gley, substrate(0.10, 0.50, 0.05, 0.20, 1.0)),
+        ];
+        for (soil, expected) in cases {
+            assert_eq!(substrate_of_soil(soil), expected, "{soil:?}");
+        }
+    }
 }
