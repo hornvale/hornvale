@@ -206,6 +206,95 @@ run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neig
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
 run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
 
+# The Purview's legibility surface (The Margin): the same scene/surrounds/v1
+# chart the JSON export above carries, rendered through --render ascii at
+# three genuinely different seed-42 observers -- the flagship settlement
+# (uniform, kept for continuity with the possession transcript), a coastline
+# half a degree east of Mjoexaenoenoa where the neighbourhood's own room mix
+# reads land against ocean, and a room at latitude -10, longitude 0 that
+# crosses a base-icosahedron face seam. Framing lines are hand-authored (the
+# render replaces the file body, so re-emit them here); the fenced blocks are
+# `scene surrounds --render ascii`'s exact, drift-checked output -- excluded
+# from CI's strict byte-drift check (ci.yml) for the same libm-threshold
+# reason as scene-surrounds-seed-42.json, since it renders the identical
+# `biome`/`water`/`relief` classifications.
+echo "regenerate-artifacts: the legibility surface (the purview, off a possession)" >&2
+{
+    printf '# The Purview, Off a Possession — Seed 42\n\n'
+    printf 'The situated chart `scene/surrounds/v1` describes and `hornvale scene\n'
+    printf 'surrounds --render ascii` draws, addressed outside a possession session --\n'
+    printf 'three genuinely different observers on the world of seed 42, each with the\n'
+    printf 'same 31-cell, radius-4 neighbourhood the possession'\''s own `map` verb draws\n'
+    printf 'from. A CLI producer has no session, so every cell here is `here` or\n'
+    printf '`sensed` -- never `remembered`. A `remembered` cell is written only by a\n'
+    printf 'consumer that owns a possession and therefore knows where its agent has\n'
+    printf 'walked (see [the schema](../reference/scene-surrounds-v1.md)); this page\n'
+    printf 'cannot draw one honestly, so it says so instead of implying a fog no CLI\n'
+    printf 'query can see.\n\n'
+    printf '## Reading the chart\n\n'
+    printf 'The chart is lattice-aligned, never north-up -- see [the schema'\''s note on\n'
+    printf 'why](../reference/scene-surrounds-v1.md#placement-integer-lattice-not-compass-bearing).\n'
+    printf 'Scale is arc, not metres: the simulation defines no planetary radius, and a\n'
+    printf 'depth-12 room'\''s edge subtends roughly 0.015° -- a radius-4 neighbourhood\n'
+    printf 'spans about one five-thousandth of the globe. `@` is always the observer'\''s\n'
+    printf 'own room. Every other glyph is the `terrain` lens'\''s reading of a cell'\''s\n'
+    printf '`water` and `relief` fields (a settlement or agent mark, where one stands,\n'
+    printf 'pre-empts the terrain glyph):\n\n'
+    printf '| Glyph | Meaning |\n'
+    printf '|---|---|\n'
+    printf '| `@` | the observer'\''s own room (`here`) |\n'
+    printf '| `~` | ocean |\n'
+    printf '| `=` | salt-basin |\n'
+    printf '| `+` | river |\n'
+    printf '| `_` | dry land, `abyss` or `shelf` relief |\n'
+    printf '| `.` | dry land, `lowland` relief |\n'
+    printf '| `:` | dry land, `upland` relief |\n'
+    printf '| `^` | dry land, `highland` relief |\n'
+    printf '| `A` | dry land, `alpine` relief |\n'
+    printf '| `#` | a settlement mark |\n'
+    printf '| `&` | an agent mark |\n\n'
+    printf 'A `remembered` cell would draw a faded twin of its glyph instead --\n'
+    printf '`~=+_` fade to `-`, `.` to `,`, `:` to `;`, `^` to `n`, `A` to `a`, `#` to\n'
+    printf '`o`, `&` to `%%` -- but no cell below is ever `remembered`, for the reason\n'
+    printf 'above.\n\n'
+    printf '## The flagship settlement\n\n'
+    printf 'The same ground a possession actually starts on -- room 738918402, the\n'
+    printf 'default when `--room` is omitted. Its radius-4 neighbourhood is all\n'
+    printf 'river/shelf/tropical-seasonal-forest: real ground and zero seams, but a\n'
+    printf 'single biome throughout, which is why the other two observers below earn\n'
+    printf 'their place in this page.\n\n'
+    printf '```text\n'
+    printf '$ hornvale scene surrounds --world world.json --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --render ascii
+    printf '```\n\n'
+    printf '## A coastline east of Mjoexaenoenoa\n\n'
+    printf 'Room 897392747 (face 11, depth 12), half a degree east of the settlement\n'
+    printf 'Mjoexaenoenoa (seen from a different angle in [the transport\n'
+    printf 'topology](./connections-seed-42.md), where it reaches a neighbor by\n'
+    printf 'sea-lane as well as by land). Here the neighbourhood itself is split: ocean\n'
+    printf 'to the south and west, temperate forest to the north and east -- the first\n'
+    printf 'chart on this page where the terrain, not just the observer, reads as\n'
+    printf 'ground meeting water.\n\n'
+    printf '```text\n'
+    printf '$ hornvale scene surrounds --world world.json --room 897392747 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 897392747 --render ascii
+    printf '```\n\n'
+    printf '## A seam, disclosed\n\n'
+    printf 'Room 724698318 -- latitude -10°, longitude 0° at depth 12 -- lands on base\n'
+    printf 'icosahedron face 14, whose radius-4 neighbourhood reaches across a\n'
+    printf 'different face'\''s edge for 12 of its 31 cells. Those cells carry their room\n'
+    printf 'id, state and semantics same as any other -- they are only unplaceable on a\n'
+    printf 'flat chart, because the surface genuinely bends between two base faces and\n'
+    printf 'no flat coordinate can say by how much without inventing one (see [the\n'
+    printf 'schema'\''s seam section](../reference/scene-surrounds-v1.md#seam-cells-real-ground-with-no-honest-place)).\n'
+    printf 'The renderer states the count in its caption rather than dropping the cells\n'
+    printf 'or fabricating a position for them.\n\n'
+    printf '```text\n'
+    printf '$ hornvale scene surrounds --world world.json --room 724698318 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 724698318 --render ascii
+    printf '```\n'
+} > book/src/gallery/surrounds-seed-42.md
+
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
 # But since decision 0063 (The Local Census cut the per-world cost ~285 → ~8

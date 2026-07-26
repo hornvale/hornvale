@@ -54,6 +54,7 @@
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
+- [The Purview, Off a Possession — Seed 42](./gallery/surrounds-seed-42.md)
 
 # The Laboratory
 

@@ -54,7 +54,9 @@ usage:
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
   hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
-                                                      emit scene/surrounds/v1 JSON to stdout
+                            [--render json|ascii]
+                                                      emit scene/surrounds/v1 JSON to stdout, or
+                                                      (--render ascii) the terrain-lens chart
                                                       (--room and --depth are mutually exclusive —
                                                       a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
@@ -1057,8 +1059,11 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// renders the night sky's two star populations, the notable neighbor
 /// stars and the background starfield (scene/neighbors/v1), and `scene
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
-/// (scene/eclipses/v1). Deterministic; CI drift-checks the committed example
-/// scene.
+/// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
+/// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
+/// ascii`) the same `terrain`-lens picture the possession's own `map` verb
+/// draws, via `hornvale_scene::render_surrounds_ascii`. Deterministic; CI
+/// drift-checks the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -1140,6 +1145,15 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                         .to_string(),
                 );
             }
+            // Validated before `load_world`, same discipline as the
+            // --room/--depth guard above: a typo'd render mode should fail
+            // fast without needing a world fixture at all.
+            let render_mode = flag_value(args, "--render").unwrap_or("json");
+            if render_mode != "json" && render_mode != "ascii" {
+                return Err(format!(
+                    "unknown --render mode '{render_mode}'; known modes: json, ascii"
+                ));
+            }
             let world = load_world(args)?;
             let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
             let depth = match flag_value(args, "--depth") {
@@ -1174,7 +1188,34 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             };
             let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
                 .map_err(|e| e.to_string())?;
-            println!("{}", hornvale_scene::surrounds_json(&scene));
+            if render_mode == "ascii" {
+                // The footer names the observer room's own lateral exits,
+                // the same source the possession's `map` verb reads
+                // (`ExitKind::Edge`, excluding the vertical enter/exit scale
+                // changes) — a second, independent exit computation is
+                // exactly how a CLI caption and the possession's would end
+                // up disagreeing.
+                let locale = ctx
+                    .describe(&room, WorldTime { day })
+                    .map_err(|e| e.to_string())?;
+                let ways: Vec<String> = locale
+                    .exits
+                    .iter()
+                    .filter(|e| e.kind == hornvale_locale::ExitKind::Edge)
+                    .filter_map(|e| match e.direction {
+                        hornvale_locale::Direction::Compass(c) => {
+                            Some(format!("{c:?}").to_uppercase())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                print!(
+                    "{}",
+                    hornvale_scene::render_surrounds_ascii(&scene, "terrain", &ways)
+                );
+            } else {
+                println!("{}", hornvale_scene::surrounds_json(&scene));
+            }
             Ok(())
         }
         Some(other) => Err(format!(
@@ -1783,5 +1824,26 @@ mod tests {
         assert!(!err.contains("cannot be combined"), "{err}");
         let err = cmd_scene(&args(&["scene", "surrounds", "--depth", "6"])).unwrap_err();
         assert!(!err.contains("cannot be combined"), "{err}");
+    }
+
+    /// Validated before `load_world` (same discipline as the --room/--depth
+    /// guard just above), so this needs no `--world` fixture either.
+    #[test]
+    fn scene_surrounds_rejects_an_unknown_render_mode() {
+        let err = cmd_scene(&args(&["scene", "surrounds", "--render", "png"])).unwrap_err();
+        assert!(
+            err.contains("unknown --render mode 'png'") && err.contains("json, ascii"),
+            "unexpected error text: {err}"
+        );
+    }
+
+    #[test]
+    fn scene_surrounds_accepts_known_render_modes() {
+        // Neither call reaches the render-mode guard; both must proceed to
+        // `load_world` and fail on the missing world instead.
+        for mode in ["json", "ascii"] {
+            let err = cmd_scene(&args(&["scene", "surrounds", "--render", mode])).unwrap_err();
+            assert!(!err.contains("unknown --render mode"), "{err}");
+        }
     }
 }

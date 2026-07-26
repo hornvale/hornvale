@@ -61,13 +61,18 @@ jobs:
           # noise (The Margin). Byte-identity for this document is still
           # enforced where it can be: the platform-local golden fixtures under
           # `windows/scene/tests/fixtures/` and the in-process determinism
-          # test in the producer's own suite.
+          # test in the producer's own suite. surrounds-seed-42.md carries the
+          # same exposure one grain further out: it is an ASCII *rendering*
+          # of exactly those thresholded `biome`/`water`/`relief` values (via
+          # `--render ascii`), so it inherits the identical platform-local
+          # noise and is excluded for the identical reason.
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
             ':(exclude)book/src/reference/locale-seed-42.json' \
-            ':(exclude)book/src/gallery/scene-surrounds-seed-42.json'
+            ':(exclude)book/src/gallery/scene-surrounds-seed-42.json' \
+            ':(exclude)book/src/gallery/surrounds-seed-42.md'
 
   atlas:
     name: Atlas client

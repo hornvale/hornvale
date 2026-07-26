@@ -278,7 +278,7 @@ schema's stated audience, alongside the CLI) needs BigInt-aware parsing for
 ## Getting one
 
 ```
-hornvale scene surrounds --world <path> [--room <ID>] [--radius <N>] [--depth <D>]
+hornvale scene surrounds --world <path> [--room <ID>] [--radius <N>] [--depth <D>] [--render json|ascii]
 ```
 
 This prints one `scene/surrounds/v1` document to standard output. `--world`
@@ -288,6 +288,15 @@ flagship settlement's own room at `--depth` (default: the walk depth,
 defaults to 4 (31 cells). The committed example,
 [`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
 is produced this way against the seed-42 sky world.
+
+`--render` defaults to `json`, this schema. `--render ascii` renders the
+same document through `hornvale_scene::render_surrounds_ascii`'s `terrain`
+lens — the same renderer a possession's own `map` verb draws from, so the
+CLI can produce the picture outside a session. The footer's `ways on:`
+line is the observer room's own lateral exits (`ExitKind::Edge`), read from
+`hornvale_locale` the same way `map` reads them for the walked room.
+[The gallery page](../gallery/surrounds-seed-42.md) shows several observers
+rendered this way.
 
 ## Determinism
 
