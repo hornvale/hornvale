@@ -4,6 +4,7 @@
 //! The Walk).
 
 mod agent;
+pub mod clock;
 mod focalize;
 pub mod interior;
 mod knowledge;
