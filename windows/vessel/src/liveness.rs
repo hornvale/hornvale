@@ -6,7 +6,7 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
-use crate::interior::{AnchorId, Interior, SeamKind, landing};
+use crate::interior::{AnchorId, Interior, SeamKind, interior_of, landing, seam_kind, warmth_at};
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
     ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
@@ -2978,11 +2978,12 @@ pub fn affect_of_memo(
         niche: npc.temperature_niche,
         terrain,
         day,
-        // No interior: nothing yet derives an `Interior` from a real room and a
-        // creature has no anchor position to read warmth AT (spec §9.1), so the
-        // live drive senses the ambient temperature exactly as it did before
-        // The Hearth. The seam is here; the occupancy that fills it is not.
-        warmth: None,
+        // THE THRESHOLD's arming: the room `pos` is in, ACTUALLY derives an
+        // interior now, and the creature's felt warmth is read at its landing
+        // anchor (`interior_warmth_here`) rather than assumed absent. See that
+        // function's own doc for why "landing" is the right anchor while no
+        // per-tick `Occupancy` is threaded through this snapshot read.
+        warmth: Some(interior_warmth_here(&view.position, terrain)),
     };
     let rest = Fatigue {
         home: npc.home.clone(),
@@ -3183,6 +3184,55 @@ const MOVE_DURATION: f64 = 0.1;
 /// to advance `day` on every iteration, this bounds total work per tick
 /// (termination guarantee, The Foresight T3 review).
 const MAX_STEPS: usize = 10_000;
+
+/// [`warmth_at`]'s node-expansion budget for a REAL derived interior (The
+/// Threshold's arming of The Hearth's `warmth` seam). This is a ROUTING depth
+/// over the anchor graph, not a distance — but the graph it routes is tiny by
+/// construction: `INVENTORY` (`interior/pattern.rs`) authors exactly 9
+/// patterns, so no composed `Interior` can ever hold more than 9 anchors, and
+/// a route between any two of them is at most 8 hops. `64` is not a fresh
+/// guess — it is exactly the budget `interior/field.rs`'s own `warmth_at`
+/// tests already route within (`pattern.rs`'s composition tests use 256 over
+/// the same handful-of-anchors graph), so this reuses a value the interior
+/// layer has already proven safe rather than inventing a new one. At 8×
+/// headroom over the worst-case hop count, no reachable hearth can ever be
+/// silently missed for want of budget.
+const INTERIOR_WARMTH_BUDGET: usize = 64;
+
+/// The interior warmth a creature standing in `pos` feels (The Threshold's
+/// arming): derive the room's interior (`interior_of`) and read [`warmth_at`]
+/// at the anchor a creature crossing INTO the room arrives at (`landing`,
+/// keyed off `seam_kind(terrain.is_built(pos))`) — additive input to
+/// [`Thermal::warmth`].
+///
+/// Neither live call site (`affect_of_memo`'s snapshot read, and
+/// `DriveMovements::step`'s per-tick walk) threads a persisted [`Occupancy`]
+/// through this path: `affect_of_memo` is a stateless re-derivation with
+/// nowhere to carry one, and wiring a real per-tick instance through the walk
+/// so a creature that has WALKED further into the room than the doorway reads
+/// its DEEPER anchor's warmth is a follow-on campaign, not this task's — the
+/// brief is explicit that arming is "no new field, no new read path". So
+/// every creature reached by this function today is, structurally, the "has
+/// not yet arrived anywhere in particular" case, and the landing anchor is
+/// exactly the right answer for it: it is the SAME anchor `Occupancy::arrive`
+/// places a freshly-arrived creature at, so this is the correct reading for
+/// every creature this campaign's `Occupancy` has not yet been asked to
+/// track, not a placeholder standing in for one.
+///
+/// `0.0` — the identity a `None` warmth already reads as — for the
+/// pathological interior with no landing at all (an empty one). `interior_of`
+/// never composes one in practice (even wilderness draws `the-clearing`'s
+/// `Ground` hub — see `interior/derive.rs`'s own tests), so this is
+/// unreachable on a live world, not a silent wrong answer.
+/// type-audit: bare-ok(ratio: return)
+fn interior_warmth_here(pos: &RoomAddr, terrain: &dyn Terrain) -> f64 {
+    let interior = interior_of(pos, terrain);
+    let kind = seam_kind(terrain.is_built(pos));
+    match landing(&interior, kind) {
+        Some(anchor) => warmth_at(&interior, anchor, INTERIOR_WARMTH_BUDGET),
+        None => 0.0,
+    }
+}
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
 /// `provenance` naming why.
@@ -3419,8 +3469,9 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     niche: npc.temperature_niche,
                     terrain: self.terrain,
                     day: WorldTime { day },
-                    // No interior here either — see the note in `affect_of_memo`.
-                    warmth: None,
+                    // THE THRESHOLD's arming — the same `interior_warmth_here`
+                    // read `affect_of_memo` uses, at this tick's current `pos`.
+                    warmth: Some(interior_warmth_here(&pos, self.terrain)),
                 };
                 let rest = Fatigue {
                     home: npc.home.clone(),
@@ -10094,6 +10145,87 @@ mod tests {
         assert!(
             beside_the_fire.urgency(&view) < unwarmed.urgency(&view),
             "the additive term can only ease a COLD creature's discomfort"
+        );
+    }
+
+    #[test]
+    fn a_cold_creature_reads_less_arousal_beside_a_real_hearth_than_in_a_hearthless_room() {
+        // THE THRESHOLD'S ARMING: this is the production path
+        // (`affect_of` → `affect_of_memo` → `interior_warmth_here`), not a
+        // hand-picked `warmth` value like the test above. Two terrains report
+        // the IDENTICAL ambient temperature at the SAME room address — the
+        // only difference between them is `is_built`, which alone decides
+        // whether `interior_of` composes a hearth (a cold BUILT room draws
+        // one; wilderness never does — `interior/pattern.rs`'s INVENTORY has
+        // no wild `Hearth` pattern). Every other drive is pinned to exactly
+        // zero at day 0 (never drank, never ate, never rested, no hazard, and
+        // already standing at home so no loneliness pull), so
+        // `Affect::arousal` — the greatest urgency across every drive
+        // (`arbitrate`) — reduces to exactly the thermal drive's own reading.
+        // Before this task, both runs pass `warmth: None` and read IDENTICAL
+        // arousal; after it, the hearth run must read strictly less.
+        struct FurnishingStub {
+            built: bool,
+        }
+        impl Terrain for FurnishingStub {
+            fn elevation(&self, _r: &RoomAddr) -> f64 {
+                0.0
+            }
+            fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+                false
+            }
+            fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+                // Just past `test_niche`'s tolerance band (optimum 15, width
+                // 10 → band edge at 5.0): deviation 10.5, comfortably inside
+                // the open interval (0, 1) on urgency before AND after a
+                // realistic hearth's fractional-degree warmth is added, so
+                // neither run can saturate at the 0 or 1 clamp for reasons
+                // unrelated to the hearth.
+                4.5
+            }
+            fn is_built(&self, _r: &RoomAddr) -> bool {
+                self.built
+            }
+        }
+
+        let home = raddr(1.0);
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        let npc = Npc {
+            entity: e,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "human".to_string(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: test_niche(),
+            deliberation_latency: 0.5,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            // An EMPTY diet niche: the hunger drive's niche-gate
+            // (`!npc.niche.is_zero()`) never engages it, one fewer drive to
+            // rule out.
+            niche: ResourceVector::new(&[]).unwrap(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: "human".to_string(),
+        };
+        let day = WorldTime { day: 0.0 };
+
+        let hearth_terrain = FurnishingStub { built: true };
+        let wild_terrain = FurnishingStub { built: false };
+
+        let hearth_affect = affect_of(&ledger, &npc, &[], day, &hearth_terrain);
+        let wild_affect = affect_of(&ledger, &npc, &[], day, &wild_terrain);
+
+        assert!(
+            wild_affect.arousal > 0.0,
+            "a room past the tolerance band with no hearth must register SOME \
+             thermal arousal, or this test proves nothing: {wild_affect:?}"
+        );
+        assert!(
+            hearth_affect.arousal < wild_affect.arousal,
+            "a real, derived hearth must ease the felt cold below the \
+             hearthless reading: hearth {hearth_affect:?} vs wild {wild_affect:?}"
         );
     }
 
