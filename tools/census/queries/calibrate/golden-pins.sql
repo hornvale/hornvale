@@ -40,7 +40,12 @@
 -- 13.41), the same reseating that INVERTED the directional claim in
 -- kobold_flagships_are_less_coastal_than_goblin_flagships — a falsified
 -- preregistered hypothesis, deliberately left failing for owner review
--- rather than flipped to match the data.)
+-- rather than flipped to match the data. RESOLVED 2026-07-26: that test is
+-- RETIRED, not flipped — the shipped model predicts a ZERO difference on
+-- that axis, since the bake is niche-blind end to end; the replacement
+-- preregisters the re-selection rate itself against `threat_response` in
+-- windows/lab/tests/disposition_calibration.rs, which is a live-worldgen
+-- battery with no census column and so has no second path here either.)
 --
 -- Counts and exact structural zeroes compare with `computed = pinned`;
 -- quantized means/SMDs compare with `abs(computed - pinned) < 1e-6` (the
@@ -60,10 +65,11 @@
 --     with no single re-pinned literal to duplicate; SQL would just restate
 --     the same predicate the Rust loop already checks every commit, not add
 --     an independent path to a MEASURED value.
---   * kobold_flagships_are_less_coastal_than_goblin_flagships,
---     obliquity_range_is_wider_on_moonless_worlds
---     — directional-only claims (a strict inequality between two computed
+--   * obliquity_range_is_wider_on_moonless_worlds
+--     — a directional-only claim (a strict inequality between two computed
 --     means), no exact literal pinned.
+--     (kobold_flagships_are_less_coastal_than_goblin_flagships stood here
+--     too until it was retired on 2026-07-26 — see the header note above.)
 --   * phonotactic_validity_is_true_for_every_generated_name,
 --     epithet_honorific_is_true_for_goblin_and_false_for_kobold,
 --     name_gloss_true_is_100_percent_row_by_row,

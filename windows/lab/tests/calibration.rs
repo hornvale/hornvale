@@ -451,30 +451,21 @@ fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
     }
 }
 
-#[test]
-fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
-    // Preregistered directional hypothesis (spec §9.1); Task 10 pins exact
-    // counts after measurement.
-    let result = &*DRIFT;
-    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    let rate = |col: usize| {
-        let (mut t, mut n) = (0u32, 0u32);
-        for row in &result.rows {
-            match row.values[col] {
-                MetricValue::Flag(true) => {
-                    t += 1;
-                    n += 1
-                }
-                MetricValue::Flag(false) => n += 1,
-                _ => {}
-            }
-        }
-        f64::from(t) / f64::from(n.max(1))
-    };
-    let goblin = rate(idx("goblin-flagship-coastal"));
-    let kobold = rate(idx("kobold-flagship-coastal"));
-    assert!(kobold < goblin, "kobold {kobold:.3} !< goblin {goblin:.3}");
-}
+// RETIRED (The Tumult, 2026-07-26): `kobold_flagships_are_less_coastal_
+// than_goblin_flagships` — the preregistered directional hypothesis of spec
+// §9.1 — is gone from this file, NOT flipped to match the data. It asserted a
+// kobold−goblin difference the shipped model predicts to be exactly ZERO: the
+// deep-history bake is niche-blind end to end (genesis draws both peoples
+// uniformly from one species-blind capacity ranking, and `ConditionNiche`
+// never enters the bake at all), so there is no mechanism by which a
+// highlander's flagship could sit further from the coast than a lowlander's.
+// It passed pre-campaign by ≈0.5 σ of draw noise and failed after the
+// predation epoch by ≈2.2 σ of the same, and the movement was traced in full
+// to flagship-identity RE-SELECTION rather than anyone relocating. The
+// replacement preregisters the re-selection rate itself, against
+// `threat_response` — the one per-people axis the bake does differentiate —
+// in `tests/disposition_calibration.rs`. Evidence:
+// `.superpowers/sdd/coastal-inversion-investigation.md`.
 
 #[test]
 fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
