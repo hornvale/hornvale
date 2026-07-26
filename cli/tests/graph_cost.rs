@@ -18,6 +18,15 @@
 //! `windows/worldgen/tests/graph_derive.rs`'s
 //! `land_route_attempts_are_bounded_on_the_fixture`.
 //!
+//! `tumult_predation_bake_stays_within_budget` is a second, independent
+//! battery in this file (The Tumult campaign C3 slice 1, Task 4): it bounds
+//! the wall-time of the whole seed-42 `BuildDepth::Settlements` build --
+//! which since The Tumult includes the predation bake (raid/flee/roll-
+//! downhill), not just the moving-sea per-era graphs it originally measured
+//! -- and separately confirms, from the bake's own cascade-size histogram,
+//! that relaxation cascades dissipate on their own and are not being
+//! silently truncated by `CASCADE_DEPTH_CAP`.
+//!
 //! ## Measured (seed 42, `BuildDepth::Settlements`, default `GraphConfig`)
 //!
 //! Recorded once, on this machine (`cargo test --test graph_cost -- --ignored
@@ -37,8 +46,9 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, GraphConfig, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    connection_graph_of, land_route_attempt_count, terrain_of,
+    BuildDepth, CASCADE_DEPTH_CAP, GraphConfig, SettlementPins, SkyChoice, WorldComponents,
+    build_world_to, cascade_sizes, census, connection_graph_of, history_for,
+    land_route_attempt_count, terrain_of,
 };
 // The measurement harness times ONE derivation call for a diagnostic
 // (never sim logic, never a fact, never seeded from wall-clock) -- exempt
@@ -125,23 +135,55 @@ fn connection_graph_cost_is_bounded_on_seed_42() {
 }
 
 /// Wall-time budget for the whole `build_world_to(.., BuildDepth::Settlements)`
-/// call on a seed-42 world, which now includes the moving-sea bake (25
-/// per-era connection-graph derivations via `connection_graph_at`, one per
-/// `CLIMATE_ERAS` era, plus the graph-following bake itself) alongside
-/// everything the existing `connection_graph_cost_is_bounded_on_seed_42`
-/// measures separately. This is a falsification ceiling, not a target: the
-/// present-era graph derivation alone measured ~2.6s (module doc); 25
-/// era-graph derivations plus the bake are expected to land well under 45s.
-const MOVING_SEA_BAKE_BUDGET_SECS: u64 = 45;
+/// call on a seed-42 world. This build derives 25 per-era connection graphs
+/// (the moving-sea bake, `connection_graph_at`, one per `CLIMATE_ERAS` era)
+/// AND runs the deep-history bake across them -- which, since The Tumult,
+/// resolves conflict as opportunistic predation (raid/flee/roll-downhill)
+/// rather than crowding-only migration, alongside everything the existing
+/// `connection_graph_cost_is_bounded_on_seed_42` measures separately.
+///
+/// **Measured** (this machine, `cargo test --test graph_cost -- --ignored
+/// tumult --nocapture`, before this budget was chosen): **6.11s**. Budgeted
+/// at roughly 4.9x that -- a falsification ceiling for a real regression
+/// (predation making the bake itself much costlier, or a much slower/loaded
+/// machine), not a target to approach.
+const PREDATION_BAKE_BUDGET_SECS: u64 = 30;
 
-/// The moving-sea bake cost gate: build seed-42 to `BuildDepth::Settlements`
-/// and assert the WHOLE build (which now derives 25 per-era connection
-/// graphs and bakes across them) stays under budget. Prints the measured
-/// wall-time (`--nocapture`) so a future re-measurement doesn't need to
+/// Upper bound on a single relaxation cascade's SIZE (displacement count),
+/// derived from the highest occupied bin of [`cascade_sizes`]'s log2
+/// histogram (bin `i` covers sizes `[2^i, 2^(i+1))`, so the highest size a
+/// nonempty bin `i` can contain is `2^(i+1) - 1`).
+///
+/// **Measured**: seed 42 alone fires one cascade of size 1 (this machine,
+/// same run as [`PREDATION_BAKE_BUDGET_SECS`]'s measurement) -- a thin
+/// single-seed sample, corroborated by Task 3's pooled measurement over
+/// seeds 1..=100 (`windows/worldgen/tests/history_tumult.rs`'s module
+/// docs): **nothing above size 3** in 2974 conquests. Budgeted at 1/4 of
+/// [`CASCADE_DEPTH_CAP`] (256) rather than a multiple of the measured value,
+/// because the question this asserts is not "how big do cascades get" (that
+/// is Task 3's headline, adjudicated there) but "are they anywhere near
+/// being silently truncated by the cap" -- 64 is >20x the largest cascade
+/// ever observed, while still catching a real regression long before it
+/// would reach 256.
+const CASCADE_SIZE_BUDGET: u32 = CASCADE_DEPTH_CAP / 4;
+
+/// The Tumult's predation-bake cost gate (renamed from the moving-sea
+/// campaign's `moving_sea_bake_stays_within_budget`, which this build now
+/// also exercises): build seed-42 to `BuildDepth::Settlements` and assert
+/// the WHOLE build -- 25 per-era connection graphs plus the predation bake
+/// that resolves raid/flee/roll-downhill across them -- stays under a
+/// wall-time budget. Separately, re-derive the SAME bake via [`history_for`]
+/// (documented byte-identical to the settlement stage's own bake -- see its
+/// doc comment) to read back [`cascade_sizes`] and confirm no relaxation
+/// cascade is anywhere near [`CASCADE_DEPTH_CAP`]: real avalanches on this
+/// model dissipate against `VIABLE_MIN` within a hop or two (Task 3's
+/// pooled measurement: max size 3 in 2974 conquests), so this asserts they
+/// are not secretly being truncated by the depth cap instead. Prints both
+/// measurements (`--nocapture`) so a future re-measurement doesn't need to
 /// re-derive the harness.
 #[test]
 #[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
-fn moving_sea_bake_stays_within_budget() {
+fn tumult_predation_bake_stays_within_budget() {
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
     #[allow(clippy::disallowed_types)] // benchmark harness: measuring the derivation, not sim logic
@@ -160,13 +202,69 @@ fn moving_sea_bake_stays_within_budget() {
     let elapsed = start.elapsed();
 
     eprintln!(
-        "moving_sea_bake_stays_within_budget: {elapsed:?} to build seed-42 to \
-         BuildDepth::Settlements (25 per-era graphs + bake), budget {MOVING_SEA_BAKE_BUDGET_SECS}s"
+        "tumult_predation_bake_stays_within_budget: {elapsed:?} to build seed-42 to \
+         BuildDepth::Settlements (25 per-era graphs + predation bake), budget \
+         {PREDATION_BAKE_BUDGET_SECS}s"
     );
 
     assert!(
-        elapsed.as_secs() < MOVING_SEA_BAKE_BUDGET_SECS,
-        "the 25-era-graph bake regressed: {elapsed:?} to build seed-42 settlements \
-         (budget {MOVING_SEA_BAKE_BUDGET_SECS}s)"
+        elapsed.as_secs() < PREDATION_BAKE_BUDGET_SECS,
+        "the predation-bake build regressed: {elapsed:?} to build seed-42 settlements \
+         (budget {PREDATION_BAKE_BUDGET_SECS}s)"
+    );
+
+    // Re-derive the same bake (byte-identical, per `history_for`'s doc
+    // comment) to read back its cascade-size histogram and confirm the
+    // depth cap is not the reason chains stop.
+    let h = history_for(
+        Seed(42),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &wc,
+    )
+    .expect("seed 42 bakes for the diagnostic history");
+    let hist = cascade_sizes(&h);
+    let raided = census(&h).raided;
+    let highest_occupied_bin = hist.iter().rposition(|&count| count > 0);
+    let max_size_upper_bound = match highest_occupied_bin {
+        Some(bin) => (1u32 << (bin + 1)) - 1,
+        None => 0,
+    };
+
+    eprintln!(
+        "tumult_predation_bake_stays_within_budget: cascade_hist {hist:?}, highest occupied bin \
+         {highest_occupied_bin:?}, max cascade size <= {max_size_upper_bound} (CASCADE_DEPTH_CAP \
+         is {CASCADE_DEPTH_CAP}, budget {CASCADE_SIZE_BUDGET}), over {raided} conquests"
+    );
+
+    // Non-vacuity FIRST (The Tumult, final review F-5). The budget assertion
+    // below reads "max cascade size <= 0 < budget" on an ALL-ZERO histogram and
+    // passes without having looked at anything, so on its own it cannot support
+    // the claim its own message makes. What makes the reading real is that the
+    // relaxation path ran at all: every conquest calls `Bake::relocate` exactly
+    // once, so `raided > 0` means the histogram is a measurement of this
+    // world's cascade sizes rather than the absence of a measurement.
+    //
+    // With that established, an empty histogram is a legitimate outcome and not
+    // a hole: it says every displaced people found a home in one hop, i.e. no
+    // cascade came anywhere near the depth cap — which is exactly what the
+    // budget assertion is here to establish. A floor on the histogram itself is
+    // deliberately NOT asserted: seed 42 pools a single cascade, and pinning
+    // that would freeze the campaign's own falsification (see
+    // `windows/worldgen/tests/history_tumult.rs`).
+    assert!(
+        raided > 0,
+        "predation never fired on seed 42, so the cascade histogram {hist:?} measures \
+         nothing and this budget check would pass vacuously"
+    );
+    assert!(
+        max_size_upper_bound < CASCADE_SIZE_BUDGET,
+        "a relaxation cascade on seed 42 grew to within reach of CASCADE_DEPTH_CAP \
+         ({CASCADE_DEPTH_CAP}): histogram {hist:?} over {raided} conquests implies a cascade \
+         of size up to {max_size_upper_bound}, budget {CASCADE_SIZE_BUDGET} -- avalanches are \
+         supposed to dissipate against VIABLE_MIN well short of the depth cap, not be silently \
+         truncated by it"
     );
 }

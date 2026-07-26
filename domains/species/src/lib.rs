@@ -226,6 +226,37 @@ pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 /// A species' condition-tolerance profile: one response curve per v1
 /// environmental axis. v1 fixes the four axes; a later campaign generalizes
 /// to an open axis registry.
+///
+/// **The elevation frame (The Tumult's re-datum).** The elevation axis is
+/// **height above the world's sea level, in metres** — the value worldgen's
+/// `substrate_field` computes as `elevation_at(cell) − sea_level`. It was
+/// previously the raw `hornvale_kernel::ReferenceElevation`, whose datum is
+/// isostatic (0 m = a reference-thickness crust at equilibrium) and whose
+/// sea level is a *drawn* value differing by ~1.8 km between worlds — so an
+/// authored optimum meant a different altitude on every seed, and the
+/// kobold's 2600 sat ≈ 5200–5900 m above a typical world's sea level, at or
+/// above its highest land. The optima below are authored against the
+/// corrected frame, on named percentiles of the measured distribution of
+/// **settleable land** (land above sea level with non-zero carrying
+/// capacity), pooled over seeds 1..=30, n = 142 595 cells:
+///
+/// | percentile | p15 | p25 | p35 | p50 | p65 | p75 | p85 | p95 |
+/// |---|---:|---:|---:|---:|---:|---:|---:|---:|
+/// | metres above sea level | 142 | 621 | 1004 | 1561 | 2166 | 2651 | 3251 | 4148 |
+///
+/// (All land, ignoring capacity, runs higher — median 2188 m, and a world's
+/// single highest land cell has a median of ≈ 6970 m.)
+///
+/// Three of the four peoples' elevation optima and every fauna kind's were
+/// re-checked against that table and kept: they had always been *written* as
+/// metres above sea level (the otyugh's "50, near sea level", the black
+/// dragon's lowland swamp, the rust monster's sub-sea-level cave), so the
+/// re-datum makes them mean what they say for the first time. Only the two
+/// the table showed misplaced moved — the kobold's stronghold and the
+/// goblin's generalist centre — plus the giant goat, which the kobold's move
+/// displaced. The older "authored within the measured seed-42 land ranges"
+/// note on each helper below refers to the other three axes, whose frames the
+/// re-datum did not touch.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConditionNiche {
     /// Response curve over temperature, axis value in °C.
@@ -235,8 +266,9 @@ pub struct ConditionNiche {
     /// Response curve over insolation, axis value in the annual-mean
     /// insolation unit.
     pub insolation: ConditionResponse,
-    /// Response curve over elevation, axis value in the terrain elevation
-    /// unit.
+    /// Response curve over elevation, axis value in **metres above the
+    /// world's sea level** (see the struct doc for the frame and the
+    /// measured land distribution the optima are authored against).
     pub elevation: ConditionResponse,
 }
 
@@ -245,8 +277,20 @@ pub struct ConditionNiche {
 /// its exclusive, hard-excluding stronghold axis (Task B2b re-authoring: the
 /// original B2 optima wanted cold+low-light cells that are also food-poor on
 /// this world; elevation is a geographically independent axis the lowland
-/// species can't contest). Authored within the measured seed-42 land ranges;
-/// see the species chapter's model card for the ecological rationale.
+/// species can't contest). See the species chapter's model card for the
+/// ecological rationale.
+///
+/// **Elevation re-authored by The Tumult's re-datum** (see [`ConditionNiche`]
+/// for the frame). The old 2600 was in reference-datum units, ≈ 5200–5900 m
+/// above a typical world's sea level — above the highest land on most seeds,
+/// so the stronghold was unoccupiable rather than uncontested and kobold fit
+/// ran ~25× below every other people's *everywhere*. The new 3000 m above sea
+/// level is p79 of settleable land: a genuine top-fifth stake. Measured over
+/// seeds 1..=30, it is the exclusive stronghold the prose claims — kobold is
+/// the best-fit people on every settleable cell above 3000 m (mean fit 0.130
+/// against hobgoblin 0.041, goblin 0.049, bugbear 0.004) while its own fit on
+/// land below 500 m collapses to 0.0065, i.e. hard-excluded from the lowlands
+/// the other three hold.
 fn kobold_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -266,10 +310,10 @@ fn kobold_condition_niche() -> ConditionNiche {
             width: 0.12,
             devotion: 0.80,
         },
-        // HIGHLANDS — its exclusive niche
+        // HIGHLANDS — its exclusive niche. p79 of settleable land.
         elevation: ConditionResponse {
-            optimum: 2600.0,
-            width: 1200.0,
+            optimum: 3000.0,
+            width: 1100.0,
             devotion: 0.95,
         },
     }
@@ -277,10 +321,17 @@ fn kobold_condition_niche() -> ConditionNiche {
 
 /// Goblin condition niche: a warm-marginal GENERALIST with wide tolerance on
 /// every axis (the cosmopolitan weed that fills margins/ecotones between the
-/// three specialists). Authored within the measured seed-42 land ranges (Task
-/// B2b re-authoring keeps this helper's shape, values retuned slightly to sit
-/// alongside the corrected specialists); see the species chapter's model card
-/// for the ecological rationale.
+/// three specialists). See the species chapter's model card for the
+/// ecological rationale.
+///
+/// **Elevation re-authored by The Tumult's re-datum** (see [`ConditionNiche`]
+/// for the frame). A wide, low-devotion curve only reads as *indifferent* if
+/// it is centred on the land it scores: 500 m above sea level is p22 of
+/// settleable land, so the old value made the generalist quietly lowland-
+/// leaning. Recentred on the land median (1500 m ≈ p49), the same width and
+/// devotion now sit flat across the range — measured mean fit on highland
+/// (≥3000 m) rises 0.036 → 0.049 and on lowland (≤500 m) falls 0.066 → 0.060,
+/// i.e. the two ends converge, which is what indifference looks like.
 fn goblin_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -298,19 +349,26 @@ fn goblin_condition_niche() -> ConditionNiche {
             width: 0.30,
             devotion: 0.35,
         },
+        // wide/indifferent, centred on the settleable-land median (p49).
         elevation: ConditionResponse {
-            optimum: 500.0,
+            optimum: 1500.0,
             width: 3000.0,
             devotion: 0.35,
         },
     }
 }
 
-/// Hobgoblin condition niche: temperate, DRIER, mid-elevation open plains —
-/// moisture and elevation separate it from bugbear's wet lowlands and
-/// kobold's highlands (Task B2b re-authoring). Authored within the measured
-/// seed-42 land ranges; see the species chapter's model card for the
-/// ecological rationale.
+/// Hobgoblin condition niche: temperate, DRIER, low-to-mid-elevation open
+/// plains — moisture and elevation separate it from bugbear's wet lowlands
+/// and kobold's highlands (Task B2b re-authoring). See the species chapter's
+/// model card for the ecological rationale.
+///
+/// **Elevation re-checked, not re-authored, under The Tumult's re-datum**
+/// (see [`ConditionNiche`] for the frame). 600 m above sea level is p24 of
+/// settleable land and the ±1400 m band spans p10–p60 — the plains band
+/// between bugbear's lowland (p15) and kobold's highland (p79), which is
+/// exactly what the value was always meant to say. Only the frame it is said
+/// in was wrong; the number survives it unchanged.
 fn hobgoblin_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -330,7 +388,7 @@ fn hobgoblin_condition_niche() -> ConditionNiche {
             width: 0.13,
             devotion: 0.85,
         },
-        // low-mid
+        // low-mid: p24 of settleable land, band p10–p60.
         elevation: ConditionResponse {
             optimum: 600.0,
             width: 1400.0,
@@ -342,9 +400,15 @@ fn hobgoblin_condition_niche() -> ConditionNiche {
 /// Bugbear condition niche: warm-WET LOWLAND forest (rainforest); moisture is
 /// its stronghold axis, insolation stays wide/neutral so it does not fight
 /// the world's warm↔sun coupling the way the original B2 shaded-forest
-/// framing did (Task B2b re-authoring). Authored within the measured seed-42
-/// land ranges; see the species chapter's model card for the ecological
-/// rationale.
+/// framing did (Task B2b re-authoring). See the species chapter's model card
+/// for the ecological rationale.
+///
+/// **Elevation re-checked, not re-authored, under The Tumult's re-datum**
+/// (see [`ConditionNiche`] for the frame). 150 m above sea level is p15 of
+/// settleable land — the lowland stake the prose claims, and the value needed
+/// only the corrected frame to mean it. Measured: bugbear's mean fit on land
+/// below 500 m is 0.264, against 0.0038 above 3000 m — the sharpest
+/// lowland/highland split of the four, as a rainforest species should have.
 fn bugbear_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -364,7 +428,7 @@ fn bugbear_condition_niche() -> ConditionNiche {
             width: 0.40,
             devotion: 0.30,
         },
-        // lowland
+        // lowland: p15 of settleable land.
         elevation: ConditionResponse {
             optimum: 150.0,
             width: 1200.0,
@@ -491,8 +555,17 @@ fn woolly_mammoth_condition_niche() -> ConditionNiche {
 
 /// Giant goat condition niche: ALPINE/HIGHLAND — its exclusive, hard-
 /// excluding stronghold axis is elevation (mirrors the kobold's highlander
-/// shape), cool mountain temperature rather than arctic cold. Authored
-/// within the measured seed-42 land ranges.
+/// shape, one band above it), cool mountain temperature rather than arctic
+/// cold.
+///
+/// **Elevation re-authored by The Tumult's re-datum** (see [`ConditionNiche`]
+/// for the frame). The goat is documented as the alpine ceiling *above* the
+/// kobold highlander; the re-datum moved kobold to 3000 m above sea level, so
+/// leaving the goat at 3000 would have collapsed the two onto one optimum.
+/// 3800 m is p91 of settleable land, against a p95 of 4148 — "near the
+/// measured ceiling" restored as a true claim in the corrected frame. The
+/// cost is the honest one for a ceiling specialist: mean fit over settleable
+/// land falls 0.089 → 0.059.
 fn giant_goat_condition_niche() -> ConditionNiche {
     ConditionNiche {
         temperature: ConditionResponse {
@@ -510,9 +583,10 @@ fn giant_goat_condition_niche() -> ConditionNiche {
             width: 0.12,
             devotion: 0.50,
         },
-        // HIGH MOUNTAIN — its exclusive niche, near the measured ceiling.
+        // HIGH MOUNTAIN — its exclusive niche, near the measured ceiling
+        // (p91 of settleable land; kobold's highland stake sits at p79).
         elevation: ConditionResponse {
-            optimum: 3000.0,
+            optimum: 3800.0,
             width: 900.0,
             devotion: 0.90,
         },

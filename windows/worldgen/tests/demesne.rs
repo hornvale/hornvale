@@ -61,8 +61,15 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     // Monotone in prospectivity at two probe cells: whichever cell has
     // higher prospectivity must have a proportionally higher supply value
     // (field = prospectivity * scale, so equality up to float epsilon).
-    let probe_a = hornvale_kernel::CellId(0);
-    let probe_b = hornvale_kernel::CellId(geo.cells().count() as u32 / 2);
+    // The probes must be LAND cells: since The Tumult's land mask the field
+    // is 0 at sea regardless of the seafloor's (honestly derived, but
+    // unreachable) prospectivity — the first and last land cell in ascending
+    // `CellId` order, a deterministic choice with no float ordering.
+    let land: Vec<hornvale_kernel::CellId> =
+        geo.cells().filter(|c| !terrain.is_ocean(*c)).collect();
+    assert!(land.len() >= 2, "seed 42 must have at least two land cells");
+    let probe_a = land[0];
+    let probe_b = land[land.len() - 1];
     let prospectivity_a = terrain.prospectivity_at(probe_a);
     let prospectivity_b = terrain.prospectivity_at(probe_b);
     let field_a = *field.get(probe_a);
@@ -83,6 +90,87 @@ fn mineral_supply_tracks_prospectivity_spatially() {
             "mineral supply out of range: {v}"
         );
     }
+}
+
+/// THE LAND MASK (The Tumult): every v1 resource-supply axis is *terrestrial*
+/// supply, so every species' niche-K is exactly 0 on every submerged cell —
+/// and the mask is a property of the supply fields, not a decree in the K
+/// assembly (see `DETRITUS_AMBIENT`'s terrestrial-supply frame).
+///
+/// This states explicitly what a bug used to do by accident. Before The
+/// Tumult's elevation re-datum, `ConditionNiche.elevation` was scored against
+/// the raw isostatic `ReferenceElevation`, which put an ocean cell ~4 km from
+/// every authored optimum and so zeroed the seafloor through the *condition*
+/// term. Correcting the datum left ocean cells only ~1100 m below sea level
+/// and exposed two supply axes that never had a mask of their own: `MINERAL`
+/// (a prospectivity read, defined on the seafloor) and `DETRITUS` (a global
+/// constant). Measured at seed 42 with the datum corrected and no mask, the
+/// submerged share of total K was **0.85** for the otyugh, **0.86** for the
+/// rust monster and **0.74** for the xorn — a swamp detritivore, a cave
+/// mineral-eater and a burrowing elemental, each mostly at sea.
+///
+/// MUTATION GUARD: dropping either mask (`mineral_supply_field`'s or
+/// `detritus_supply_field`'s) re-admits exactly those three kinds' seabed K
+/// and this test fails on them by name.
+#[test]
+fn no_species_draws_carrying_capacity_from_the_seafloor() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let world = world_42();
+    let terrain = terrain_of(&world).expect("terrain reconstructs");
+    let climate = hornvale_worldgen::climate_of(&world).expect("climate reconstructs");
+    let geo = terrain.geosphere();
+    let sky = hornvale_worldgen::sky_of(&world).expect("sky reconstructs");
+    let system = sky.system().expect("seed 42 has a generated star system");
+    let insolation = hornvale_astronomy::insolation_rel(&system.star, &system.anchor);
+    let obliquity = system.anchor.obliquity.get();
+    let regime = match system.anchor.rotation {
+        hornvale_astronomy::Rotation::Spinning { day, .. } => {
+            hornvale_climate::RotationRegime::Spinning { day_std: day.get() }
+        }
+        hornvale_astronomy::Rotation::Locked => hornvale_climate::RotationRegime::Locked,
+    };
+
+    let kinds: Vec<KindId> = wc.biosphere.iter().map(|(k, _)| *k).collect();
+    let bios: Vec<&hornvale_species::BiosphereTraits> =
+        wc.biosphere.iter().map(|(_, b)| b).collect();
+    let ks = hornvale_worldgen::niche_per_species_k(
+        geo, &terrain, &climate, obliquity, insolation, &regime, &bios,
+    );
+
+    let submerged: Vec<hornvale_kernel::CellId> =
+        geo.cells().filter(|c| terrain.is_ocean(*c)).collect();
+    assert!(
+        !submerged.is_empty(),
+        "seed 42 must have ocean cells for this test to mean anything"
+    );
+
+    let mut placed_on_land = 0u32;
+    for (tag, k) in &ks {
+        let kind = kinds[*tag as usize].0;
+        let mut wet = 0.0_f64;
+        let mut total = 0.0_f64;
+        for c in geo.cells() {
+            let v = *k.get(c);
+            total += v;
+            if terrain.is_ocean(c) {
+                wet += v;
+            }
+        }
+        assert_eq!(
+            wet, 0.0,
+            "{kind} draws {wet} of its {total} total carrying capacity from submerged cells — \
+             the terrestrial supply axes must be 0 at sea"
+        );
+        if total > 0.0 {
+            placed_on_land += 1;
+        }
+    }
+    // Not a vacuous pass: the mask must not have zeroed the whole roster.
+    assert!(
+        placed_on_land >= 8,
+        "only {placed_on_land} kinds have any carrying capacity at all — the land mask \
+         should zero the seafloor, not the world"
+    );
 }
 
 #[test]

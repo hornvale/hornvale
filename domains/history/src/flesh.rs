@@ -175,8 +175,32 @@ pub struct Residue {
     pub items: Vec<ResidueItem>,
 }
 
+/// Why an occupation whose cause is [`CauseOfEnd::Migrated`] left its ground.
+///
+/// A **derived** distinction, never serialized and never committed. Predation
+/// (The Tumult) gave `Migrated` two producers: the paleoclimate evicting a
+/// people onto vacant refuge ground, and a *conqueror* abandoning its own
+/// poorer seat to move onto the neighbour's ground it has just taken (an
+/// orderly, self-directed move under [`crate::record::Ended::Nature`]). The
+/// committed cause alone therefore no longer says which one a record is — and
+/// it cannot be recovered from the record either, because the evidence is the
+/// *contemporaneous victim*, a fact about some **other** record. So the
+/// caller that holds the whole record set decides and passes the verdict in;
+/// `windows/worldgen::migration_events` performs the identical fold for the
+/// ledger-side count. Ignored for every cause but `Migrated`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Departure {
+    /// The paleoclimate turned the cell hostile: the people walked away over a
+    /// generation, onto vacant ground.
+    Climate,
+    /// The people left of its own accord, in the single season it took a
+    /// neighbour's ground by force, and carried the settlement onto the prize.
+    Conquest,
+}
+
 /// The small, deterministic set of physical remnants an occupation leaves
-/// behind, as of `now`. Keyed by `(people, cause, tenure-age, notability)`.
+/// behind, as of `now`. Keyed by `(people, cause, tenure-age, notability)`,
+/// plus — for a `Migrated` record only — the caller's [`Departure`] verdict.
 ///
 /// The model is **material-durability first** (Task 8b): every ruin — no
 /// matter how ancient — leaves the durable domestic debris archaeology
@@ -192,9 +216,12 @@ pub struct Residue {
 ///
 /// `seed` is the occupation-scoped seed the caller already derived (see the
 /// module doc); this function derives its own [`streams::RESIDUE`] sub-label
-/// from it.
+/// from it. `departure` disambiguates the two producers of
+/// [`CauseOfEnd::Migrated`] (see [`Departure`]) and is ignored for every other
+/// cause; it consumes no draw either way, so the stream a caller hands in is
+/// spent identically whichever verdict it passes.
 /// type-audit: bare-ok(count: now)
-pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed) -> Residue {
+pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed, departure: Departure) -> Residue {
     const HAMLET_POPULATION_CEILING: u32 = 150;
 
     let mut items = Vec::new();
@@ -229,23 +256,38 @@ pub fn residue_of(occ: &OccupationRecord, now: f64, seed: Seed) -> Residue {
                 items.push(ResidueItem::Potsherd);
                 items.push(ResidueItem::Foundation);
             }
-            CauseOfEnd::Migrated => {
-                // Climate abandonment is the real world's dominant end (a cell
-                // the paleoclimate turned hostile, walked away from over a
-                // generation) — and the one that leaves the classic
-                // archaeological hamlet. A young departure leaves a child's
-                // doll in the grass; but for centuries and millennia after,
-                // the durable domestic debris — potsherds where the huts
-                // stood, the turf-lines of a granary, a scatter of worked
-                // stone — is what a searcher still finds.
-                // (Nathan's call, 2026-07-21, archaeological-realism / 8b.)
-                if hamlet_scale {
-                    items.push(ResidueItem::Doll);
+            CauseOfEnd::Migrated => match departure {
+                Departure::Climate => {
+                    // Climate abandonment is the real world's dominant end (a
+                    // cell the paleoclimate turned hostile, walked away from
+                    // over a generation) — and the one that leaves the classic
+                    // archaeological hamlet. A young departure leaves a child's
+                    // doll in the grass; but for centuries and millennia after,
+                    // the durable domestic debris — potsherds where the huts
+                    // stood, the turf-lines of a granary, a scatter of worked
+                    // stone — is what a searcher still finds.
+                    // (Nathan's call, 2026-07-21, archaeological-realism / 8b.)
+                    if hamlet_scale {
+                        items.push(ResidueItem::Doll);
+                    }
+                    items.push(ResidueItem::Potsherd);
+                    items.push(ResidueItem::Foundation);
+                    items.push(ResidueItem::WorkedStone);
                 }
-                items.push(ResidueItem::Potsherd);
-                items.push(ResidueItem::Foundation);
-                items.push(ResidueItem::WorkedStone);
-            }
+                Departure::Conquest => {
+                    // A conqueror's abandoned seat, emptied in the one season
+                    // it took the neighbour's ground: not an abandonment at
+                    // all, a move. Both of the climate assemblage's
+                    // slow-departure marks are therefore absent — nothing was
+                    // left forgotten in the grass (no doll), and no generation
+                    // of winnowing scattered worked stone across the site.
+                    // What stays is what a people carrying its goods to a
+                    // seized seat does not carry: the broken pots, and the
+                    // turf-lines of the dwellings it walked out of.
+                    items.push(ResidueItem::Potsherd);
+                    items.push(ResidueItem::Foundation);
+                }
+            },
         }
     }
 

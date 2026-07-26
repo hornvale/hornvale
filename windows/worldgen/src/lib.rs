@@ -100,7 +100,9 @@ pub use graph_derive::{
     GraphConfig, connection_graph, connection_graph_at, connection_graph_of,
     land_route_attempt_count,
 };
-pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
+pub use history_bake::{
+    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, bake, cascade_sizes, census,
+};
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
     emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
@@ -676,11 +678,48 @@ pub fn species_carrying_input(
     }
 }
 
+/// **The terrestrial-supply frame (The Tumult's land mask).** Every v1
+/// resource-supply axis is *terrestrial* supply: the resource a land-dwelling
+/// forager can reach, defined on cells above the world's sea level and **zero
+/// on submerged cells**. This is a property of the supply fields, not a rule
+/// about who may live where — the roster's habitat comes out of what it eats,
+/// so nothing needs a per-species exemption.
+///
+/// Three of the five axes have always carried this mask implicitly:
+/// `PHOTOSYNTHATE` rides `hornvale_demography::carrying_capacity`, which
+/// returns 0 wherever `CarryingInput.habitable` is false, and
+/// `hornvale_climate::is_habitable` requires `elevation >= sea_level`;
+/// `PLANT_FORAGE` is a scale of that same field; `ANIMAL_PREY` is a
+/// placeholder zero. The two that did not — `MINERAL` (a prospectivity read,
+/// which terrain defines on the seafloor too) and `DETRITUS` (a global
+/// constant) — leaked, and were only *incidentally* masked by a bug: before
+/// The Tumult's elevation re-datum, an ocean cell sat ~4 km from every
+/// authored elevation optimum, so the condition term zeroed the seafloor for
+/// everyone. Correcting the datum put ocean cells only ~1100 m below sea
+/// level and exposed the gap — 85 % of the otyugh's, 86 % of the rust
+/// monster's and 74 % of the xorn's total K landed on the seabed. The mask is
+/// stated here instead, on the supply, where it survives any change to the
+/// condition axes.
+///
+/// **Why the supply term and not the K assembly.** Multiplying assembled K by
+/// a land mask would state "nothing lives in water" as a law of the model —
+/// a law that would have to be *unstated* the day an aquatic kind is
+/// authored. Masking the supply says the narrower, truer thing: *these*
+/// resources are land resources. The roster today is entirely terrestrial
+/// (checked kind by kind at The Tumult: swamp, cave, forest, plains, tundra,
+/// alpine and volcanic kinds; no aquatic or amphibious kind, and the two
+/// wettest — otyugh and black dragon — are swamp-dwellers, i.e. wet *land*),
+/// so masking every axis is correct today. An aquatic kind arrives by
+/// authoring a marine supply axis and a supply field defined on water, not by
+/// an exemption from a global rule; its uptake vector would simply weight an
+/// axis these fields do not touch.
+///
 /// Ambient detritus supply (BIO-35 Stage 1: The Demesne). Dead-matter
 /// resource is treated as broadly available this stage — a small constant
 /// floor, not a spatial field. A real spatial detritus field (litterfall /
 /// carcass turnover) is a later refinement once T2 wires the per-axis dot
-/// product this stage is building toward.
+/// product this stage is building toward. It is the *land* amplitude:
+/// [`detritus_supply_field`] applies it above sea level and 0 below.
 /// type-audit: bare-ok(ratio)
 pub const DETRITUS_AMBIENT: f64 = 0.2;
 
@@ -694,6 +733,10 @@ const FORAGE_FRACTION: f64 = 0.5;
 /// fraction of the NPP-based `base_carrying` (grazable matter tracks primary
 /// production spatially). Pure, deterministic, no RNG — a direct scale of an
 /// already-computed field.
+///
+/// Land-masked transitively, and therefore taking no `terrain`: `base_carrying`
+/// is already 0 on submerged cells (see [`DETRITUS_AMBIENT`]'s terrestrial-
+/// supply frame), and a scale of 0 is 0.
 /// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
 pub fn forage_supply_field(
     geo: &Geosphere,
@@ -702,19 +745,50 @@ pub fn forage_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
+/// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
+/// **0 on submerged cells** — the terrestrial-supply frame stated as a field
+/// rather than as a bare constant, so the detritus axis carries the same land
+/// mask the photosynthate/forage axes already carried through
+/// `carrying_capacity`. Pure, deterministic — a mask, no float ordering.
+/// type-audit: bare-ok(count: return)
+pub fn detritus_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if terrain.is_ocean(c) {
+            0.0
+        } else {
+            DETRITUS_AMBIENT
+        }
+    })
+}
+
 /// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
 /// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
 /// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
 /// in the weighted sum T2 builds (`scale` is the mineral supply amplitude —
 /// the one calibration knob, re-fit in T3). Pure, deterministic — a direct
 /// read, no float ordering involved (`total_cmp`-free).
+///
+/// **Land-masked (The Tumult): 0 on submerged cells.** Terrain derives
+/// prospectivity on the seafloor as readily as on land — it is honest
+/// geology — but it is not supply a land forager can reach, and this is the
+/// terrestrial supply field. See [`DETRITUS_AMBIENT`] for the frame and why
+/// the mask lives here rather than on assembled K.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn mineral_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     scale: f64,
 ) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if terrain.is_ocean(c) {
+            0.0
+        } else {
+            terrain.prospectivity_at(c) * scale
+        }
+    })
 }
 
 /// The mineral supply field's amplitude (BIO-35 Stage 1: The Demesne, task
@@ -769,16 +843,24 @@ pub fn axis_supply(
 /// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
-/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL` read their own T1
-/// supply fields, `DETRITUS` reads the ambient constant, and `ANIMAL_PREY`
-/// is Stage 2's placeholder zero (a later stage's trophic wiring); see
-/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
+/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
+/// own supply fields, and `ANIMAL_PREY` is Stage 2's placeholder zero (a
+/// later stage's trophic wiring); see [`axis_supply`], Type-II-saturated so
+/// intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
 /// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
 /// buffer-able (floored by the species'
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
 /// sovereignty buffers physiology but not geometry.
+///
+/// **K is 0 on every submerged cell** (The Tumult's land mask), and by
+/// construction rather than by decree: all five supply axes are terrestrial
+/// (see [`DETRITUS_AMBIENT`]'s terrestrial-supply frame), so a species whose
+/// whole uptake vector points at land resources has no supply at sea and its
+/// saturated intake is 0 there. Nothing in this assembly special-cases water;
+/// an aquatic kind authored onto a future marine supply axis would get a
+/// non-zero K at sea from this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
 pub fn niche_per_species_k(
     geo: &Geosphere,
@@ -804,6 +886,7 @@ pub fn niche_per_species_k(
     // and shared by every species' dot product.
     let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
     let forage = forage_supply_field(geo, &base_carrying);
+    let detritus = detritus_supply_field(geo, terrain);
 
     species_biosphere
         .iter()
@@ -822,7 +905,7 @@ pub fn niche_per_species_k(
                     (PHOTOSYNTHATE, *base_carrying.get(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
                     (MINERAL, *mineral.get(cell)),
-                    (DETRITUS, DETRITUS_AMBIENT),
+                    (DETRITUS, *detritus.get(cell)),
                     (ANIMAL_PREY, 0.0),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
@@ -1260,7 +1343,11 @@ pub struct Substrate {
     /// Annual-mean top-of-atmosphere insolation, relative to the planet's
     /// global scalar (`hornvale_astronomy::insolation_rel`).
     pub insolation: f64,
-    /// Terrain elevation scalar (meters-scale). Ocean cells included.
+    /// Height above this world's sea level, metres — NOT the raw
+    /// [`hornvale_kernel::ReferenceElevation`], whose isostatic datum sits
+    /// 1.7–3.5 km below sea level and moves from world to world. Negative on
+    /// ocean cells (they are still scored; the supply term is what empties
+    /// them).
     pub elevation: f64,
 }
 
@@ -1313,6 +1400,17 @@ pub fn annual_mean_insolation(
 /// cosine off the substellar point, floored at `0.0` on the night side —
 /// so the terminator ring, not the fixed noon point, reads as the
 /// temperate band.
+///
+/// Elevation is **height above this world's sea level**, not the raw
+/// [`hornvale_kernel::ReferenceElevation`] (The Tumult's re-datum). The
+/// reference datum is isostatic — 0 m is a reference-thickness crust at
+/// equilibrium — so a world's sea level is itself a *drawn* value of that
+/// type (measured range across seeds: −1723 m to −3478 m). Scoring an
+/// authored elevation niche against the raw datum therefore asked "how far
+/// above the isostatic reference?", a quantity that shifts by ~1.8 km
+/// between worlds and means nothing ecologically. Subtracting sea level
+/// makes the axis a fixed, world-independent frame that the authored
+/// optima in `domains/species` can actually name.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
 pub fn substrate_field(
     geo: &Geosphere,
@@ -1322,6 +1420,7 @@ pub fn substrate_field(
     insolation_scalar: f64,
     regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
+    let sea_level = terrain.sea_level();
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
         temperature_c: climate.mean_temperature_at(cell).get(),
         moisture: climate.moisture_at(cell),
@@ -1333,7 +1432,10 @@ pub fn substrate_field(
                 insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
             }
         },
-        elevation: terrain.elevation_at(cell).get(),
+        // The re-datum: `ReferenceElevation - ReferenceElevation` is the
+        // kernel's own typed subtraction, whose output is the signed metre
+        // difference — height above sea level. Negative on ocean cells.
+        elevation: terrain.elevation_at(cell) - sea_level,
     })
 }
 
@@ -1718,8 +1820,12 @@ pub fn paleoclimate_from(
 ///   millennia rather than seeing every era stamped in deep-negative time.
 ///
 /// On the constant sky (no orbital forcing) there is no deep time: a single
-/// present-era mask is returned and the bake sees a stable world (displacement
-/// then arises only from crowding, never a mask swing).
+/// present-era mask is returned and the bake sees a stable world — no cell
+/// ever flips habitability, so climate displacement cannot fire at all. What
+/// displacement remains is **predation**: The Tumult made crowding a growth
+/// term only (it no longer starts fights), and a raid keys off the *value*
+/// gradient between neighbouring cells, which a frozen mask preserves intact.
+/// A constant-sky world is therefore quiet in migrations and not in conquests.
 ///
 /// The `ice` field is left empty on every era: the snowline is already folded
 /// into `habitable` (an iced cell reads below-freezing, hence not habitable),
@@ -4045,6 +4151,125 @@ pub fn build_world_to(
     build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
+/// Assemble the deep-history bake's inputs (carrying capacity, river
+/// proximity, the paleoclimate eras and their per-era connection graphs, and
+/// the peopled roster) from an already-built `world`/`terrain`/`climate` and
+/// run the bake, returning the raw diagnostic [`History`]. The SOLE place
+/// this assembly is written: [`history_for`] (the standalone measurement
+/// entry point) and the settlement stage below both route through this, the
+/// settlement stage passing its own hoisted terrain/climate (The Single
+/// Sculpt — no re-sculpt, no re-entrant stage profiling) rather than a fresh
+/// rebuild.
+fn bake_history_from(
+    seed: Seed,
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+) -> Result<History, BuildError> {
+    let geo = terrain.geosphere();
+
+    // The same peopled-roster resolution the settlement stage performs (an
+    // unpinned world places every settling species; a `--species` pin
+    // narrows to one, rejecting a non-settling fauna kind).
+    let species_set: Vec<&'static str> = match &settlement_pins.species {
+        None => wc
+            .biosphere
+            .iter()
+            .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
+            .map(|(k, _)| k.0)
+            .collect(),
+        Some(name) => {
+            let resolved = resolve_kind(wc, name)?;
+            if !is_settled(wc, resolved) {
+                return Err(BuildError::Pins(format!(
+                    "'{name}' is not a settling people (a biosphere-only fauna kind)"
+                )));
+            }
+            vec![resolved]
+        }
+    };
+
+    let suitability =
+        hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo, terrain, climate));
+    let capacity =
+        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
+    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
+    let river_prox =
+        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
+    let paleo = paleoclimate_from(world, terrain)?;
+    let mut cfg = history_bake::BakeConfig::default_millennia();
+    let eras = bake_eras(world, terrain, &cfg)?;
+    let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
+    // The Tumult §4.2a's durable inhibition is authored psychology, so the
+    // composition root — the only layer that may read the species registries —
+    // resolves it here and hands the bake plain kernel types. A people whose
+    // psyche is missing is simply absent from the map and is not vetoed.
+    cfg.disposition = peoples
+        .iter()
+        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
+        .collect();
+    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
+    let elevation = &terrain.globe().elevation;
+    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
+        .iter()
+        .map(|era| {
+            crate::graph_derive::connection_graph_at(
+                geo,
+                elevation,
+                era.sea_level,
+                &current,
+                &[],
+                &crate::graph_derive::GraphConfig::default(),
+            )
+        })
+        .collect();
+    Ok(history_bake::bake(
+        seed,
+        geo,
+        &capacity,
+        &river_prox,
+        &eras,
+        &paleo.refugia,
+        &peoples,
+        &cfg,
+        &graphs,
+    ))
+}
+
+/// Build a world just deep enough for the deep-history bake ([`BuildDepth::Terrain`])
+/// and run it, returning the raw diagnostic [`History`] (its cascade-size
+/// histogram, read back via [`cascade_sizes`]) — The Tumult T3's measurement
+/// entry point. Reconstructs terrain/climate off the built world exactly as
+/// [`terrain_of`]/[`climate_from`] do (the same on-demand reconstruction
+/// pattern this file already uses throughout, e.g. every `*_lines_from`
+/// view), then delegates the bake-input assembly to [`bake_history_from`] —
+/// so its output is byte-identical to the settlement stage's own bake, which
+/// routes through the same function over its already-built (not re-derived)
+/// terrain/climate.
+pub fn history_for(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+) -> Result<History, BuildError> {
+    let world = build_to(
+        seed,
+        pins,
+        sky,
+        terrain_pins,
+        settlement_pins,
+        wc,
+        BuildDepth::Terrain,
+    )?;
+    let terrain = terrain_of(&world)?;
+    let climate = climate_from(&world, &terrain)?;
+    bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)
+}
+
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
 /// delegates with `BuildDepth::Full`; `build_world_to` forwards its argument.
 /// The only depth-dependent behavior is early `return Ok(world)` between
@@ -4223,80 +4448,25 @@ fn build_to(
     // niche-differentiated stack still lives in `demography_report` for the
     // Lab's coexistence-stack readout, which this rewire leaves untouched.
     //
-    // The bake reads three composition-root fields: the shared base carrying
-    // capacity (`carrying_inputs_of` → `demography::carrying_capacity`, the
-    // Confluence's freshwater-near-rivers term riding it), the paleoclimate
-    // habitability series it replays (`bake_eras` — per-era snowline masks,
-    // day-axis re-based onto the bake window), and the refugia mask
-    // (`PaleoRecord.refugia`, habitable through the glacial maximum — the
-    // migration preference). The peopled roster is `species_set` in its
-    // `KindId` order. Same seed + pins ⇒ byte-identical `History` ⇒
+    // The Tumult (T3): the bake-input assembly (carrying capacity, river
+    // proximity, the paleoclimate eras + per-era connection graphs, and the
+    // peopled roster) and the `bake` call itself now live in the single
+    // `bake_history_from` function, given THIS stage's own hoisted
+    // `terrain`/`climate` (The Single Sculpt — no re-sculpt, no re-entrant
+    // `stage(..)` profiling). The standalone measurement entry point
+    // `history_for` (which `tests/history_tumult.rs` calls directly) routes
+    // through the same function over its own freshly-built
+    // `BuildDepth::Terrain` world instead, so both call sites' assembly is
+    // written exactly once. Same seed + pins ⇒ byte-identical `History` ⇒
     // byte-identical committed skeleton (the bake draws only under the
     // isolated `history/genesis/<people>` and `history/bake` streams).
-    let suitability = hornvale_demography::carrying_capacity(
-        geo,
-        &carrying_inputs_of(geo, &terrain, &climate),
-    );
-    // `carrying_capacity` is a dimensionless suitability (~[0, 1.7]); the bake
-    // reasons in headcounts (`pressure = population / eff_capacity`, genesis
-    // pop 10). Scale the suitability into a per-cell headcount capacity so a
-    // maximal-suitability cell supports ~a few hundred settlers and genesis
-    // communities start comfortable rather than instantly over-pressure.
-    // Tuned (with the genesis founding density below) to land seed-42's live
-    // settlement count in the walkable band — the quality gate in
-    // `tests/history_placement.rs`.
-    let capacity =
-        hornvale_kernel::CellMap::from_fn(geo, |c| *suitability.get(c) * SETTLERS_PER_CAPACITY);
-    // River proximity, exposed as a DISTINCT bake weighting factor (Task 5b):
-    // the same field `carrying_inputs_of` folds into K, passed separately so
-    // the bake's site-picking paths (genesis, daughter founding, migration)
-    // can bias toward fresh water directly — restoring The Confluence's
-    // near-river condensation, which the epoch (Task 5a) diluted when
-    // daughter/climate spreading chose cells without regard to rivers.
-    let water_kind = hornvale_kernel::CellMap::from_fn(geo, |c| terrain.water_kind_at(c));
-    let river_prox =
-        hornvale_terrain::river_proximity(geo, &water_kind, hornvale_terrain::RIVER_REACH);
-    let paleo = paleoclimate_from(&world, &terrain)?;
-    let cfg = history_bake::BakeConfig::default_millennia();
-    let eras = bake_eras(&world, &terrain, &cfg)?;
-    let peoples: Vec<KindId> = species_set.iter().map(|&n| KindId(n)).collect();
-    // The Sundering (the moving sea): one geography graph per era. A cell is
-    // ocean in era E iff elevation < era.sea_level(E); the glacial low-stand
-    // exposes the shelf as land bridges to island refugia (the diaspora
-    // crosses), the rising sea drowns them (the peoples sunder). Adjacency +
-    // sailing lanes only, empty settlement slice. Derived per era, never
-    // committed.
-    let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
-    let elevation = &terrain.globe().elevation;
-    let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
-        .iter()
-        .map(|era| {
-            crate::graph_derive::connection_graph_at(
-                geo,
-                elevation,
-                era.sea_level,
-                &current,
-                &[],
-                &crate::graph_derive::GraphConfig::default(),
-            )
-        })
-        .collect();
-    let history = history_bake::bake(
-        seed,
-        geo,
-        &capacity,
-        &river_prox,
-        &eras,
-        &paleo.refugia,
-        &peoples,
-        &cfg,
-        &graphs,
-    );
+    let history = bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)?;
     emit_history(&mut world, &history)?;
     // Commit the bake's `end_year` as the world's "now" (T8 review gap): the
     // present isn't the latest occupation event (a stochastic bake rarely
     // lands its last draw exactly on the boundary) — it's this fixed
     // scenario constant. `present_day` (windows/almanac) reads it back.
+    let cfg = history_bake::BakeConfig::default_millennia();
     history_emit::emit_now(&mut world, world_entity, cfg.end_year)?;
 
     // Pair each alive settlement `emit_history` just committed (tagged
@@ -6989,9 +7159,12 @@ mod tests {
         // vantage observes one salient phenomenon — re-pin to 1 (measured; a
         // cascade smoke test, the exact belief count is incidental to "the
         // cascade runs").
+        // The Tumult (predation epoch, 2026-07-26): predation reseats the
+        // flagship onto a cell whose vantage observes two salient phenomena —
+        // re-pinned 1 -> 2 on the same "incidental count" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            2
         );
     }
 
