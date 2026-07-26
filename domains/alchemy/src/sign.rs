@@ -78,6 +78,52 @@ mod tests {
         assert!(signs_of(&heavy).heft > signs_of(&light).heft);
     }
 
+    /// `hue` must actually READ causticity, not merely happen to collide on
+    /// the pair of substances above. Holding vitality fixed, a more caustic
+    /// substance must show a strictly brighter hue -- otherwise the "weak and
+    /// misleading" channel would in fact be no channel at all, and the
+    /// collision test above would be vacuously true of a constant.
+    #[test]
+    fn hue_increases_with_causticity_at_fixed_vitality() {
+        let less_caustic = QualityVector {
+            causticity: 0.2,
+            vitality: 0.5,
+            ..QualityVector::default()
+        };
+        let more_caustic = QualityVector {
+            causticity: 0.8,
+            vitality: 0.5,
+            ..QualityVector::default()
+        };
+        assert!(
+            signs_of(&more_caustic).hue > signs_of(&less_caustic).hue,
+            "hue must strictly increase with causticity when vitality is held fixed"
+        );
+    }
+
+    /// `hue` must actually READ vitality, not merely happen to collide on the
+    /// pair of substances above. Holding causticity fixed, a more vital
+    /// substance must show a strictly brighter hue -- the other half of the
+    /// same confound: colour conflates the two axes precisely because it
+    /// tracks BOTH, not because it tracks neither.
+    #[test]
+    fn hue_increases_with_vitality_at_fixed_causticity() {
+        let less_vital = QualityVector {
+            causticity: 0.5,
+            vitality: 0.2,
+            ..QualityVector::default()
+        };
+        let more_vital = QualityVector {
+            causticity: 0.5,
+            vitality: 0.8,
+            ..QualityVector::default()
+        };
+        assert!(
+            signs_of(&more_vital).hue > signs_of(&less_vital).hue,
+            "hue must strictly increase with vitality when causticity is held fixed"
+        );
+    }
+
     /// THE CONFOUND, MECHANIZED. `hue` conflates causticity with vitality, so
     /// a violently caustic mineral and an inert living thing present the SAME
     /// colour. A practitioner reasoning "the root is red, so it treats blood"
