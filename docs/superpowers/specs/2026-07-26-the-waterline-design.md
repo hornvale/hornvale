@@ -134,61 +134,67 @@ cannot be here* — and covers every axis at once, including any added later.
 no new field is derived, and it tracks The Sundering's time-varying sea level
 for free.
 
-### 4.4 Sovereignty stops being a floor
+### 4.4 Sovereignty — attempted, measured, DEFERRED to its own campaign
 
-**A second semantic revision, folded in at the owner's direction.** The two
-changes share one subject — the habitat model meaning what it says — and one
-blast radius, so measuring them together is cheaper and more honest than
-measuring one and then perturbing it with the other.
+**Not shipped in this campaign.** Folded in at the owner's direction, built,
+measured, and then removed when the measurement showed it needs a calibration
+study rather than a code change. The implementation is preserved at commit
+`4f852fd2` (recoverable by SHA) for the sequel to cherry-pick.
 
-`sovereignty_floor(mass, potency)` returns `[0, 0.95]` and is added as an
-unconditional lower bound to every buffer-able condition response:
+**The defect it addresses is real.** `sovereignty_floor(mass, potency)` ∈
+[0, 0.95] is added as an unconditional lower bound to every buffer-able
+condition response:
 
 ```rust
 value = floor + (1 - floor) * devotion * exp(-z^2 / 2)
 ```
 
-Because the floor never decays with distance from the optimum, a goblin retains
-**33.5%** of full habitat response at any temperature, moisture, or insolation
-whatsoever; a red dragon retains **78.5%**. The name says *sovereignty* — the
-capacity to impose your conditions on a place — but the mechanism implements
-**ubiquity**: presence everywhere at reduced strength. The doc says so plainly,
-and calls it a virtue: *"a soft preference that never excludes."*
+The floor never decays with distance from the optimum, so a goblin retains
+**33.5%** of full habitat response at any temperature, moisture or insolation
+whatsoever, and a red dragon **78.5%**. The name says *sovereignty* — imposing
+your conditions on a place — while the mechanism implements **ubiquity**:
+presence everywhere at reduced strength. Its own doc calls that a virtue: *"a
+soft preference that never excludes."*
 
-This is therefore a **revision of a deliberate documented design decision**, not
-a defect repair.
-
-**The replacement.** Sovereignty becomes the fraction of the environmental gap
-a creature closes for itself:
+**The replacement that was built and measured.** Sovereignty as the fraction of
+the environmental gap a creature closes for itself:
 
 ```rust
-value = devotion * exp(-z^2 / 2)      where z = (field - optimum) * (1 - s) / width
+value = devotion * exp(-z^2 / 2)     where z = (field - optimum) * (1 - s) / width
 ```
 
-Equivalently `effective_width = width / (1 - s)`. The two readings — a dragon
-*shifting its optimum* toward local conditions by heating its lair
-(accommodation), and a dragon *tolerating a wider band* (endurance) — are the
-same algebra, so the model does not have to choose between them.
+equivalently `effective_width = width / (1 - s)`. Accommodation (a dragon heats
+its lair, shifting its effective optimum) and endurance (a wider tolerance
+band) are the same algebra. It needs no new tuning constant, drops `floor` from
+`eval`, keeps the buffered-vs-hard axis split for free (elevation passes
+`s = 0`), reproduces today's formula exactly at `s = 0`, and — unlike a floor —
+decays.
 
-Why this form:
+**Why it was deferred — the campaign's most valuable finding.** With the
+revision applied, mean per-claimed-cell coexistence diversity falls to **1.333**
+across five seeds (1.257–1.438) against the preregistered band **[1.5, 3.0]**,
+where monoculture is ~1 and undifferentiated sharing ~4. Every seed fails, and
+not marginally.
 
-- **No new tuning constant.** `sovereignty_floor`'s existing `0.95` ceiling
-  becomes the natural limit (width x 20 at the top), where a `GAIN` multiplier
-  would have been a knob to argue about.
-- **`floor` leaves `eval` entirely** — one fewer parameter — and the
-  buffered-vs-hard axis distinction survives for free: elevation passes `s = 0`.
-- **`s = 0` reproduces today's formula exactly**, so a fully constrained
-  creature is untouched and the change is confined to things that should have
-  been buffered all along.
-- It **decays**. The old floor is *steady* in distance, which is precisely the
-  property that let a goblin be a third at home in the abyss.
-- It is the actual biology: an endotherm literally closes the gap between
-  ambient and body temperature. A 33% floor is not homeostasis.
+The mechanism is now clear: **the coexistence diversity this project calibrated
+β to produce was substantially an artifact of the sovereignty floor.** With the
+floor, a marginal species held K ≈ `floor × conditions` in every cell —
+comparable in magnitude to the well-adapted one — so it took a real share and
+the cell read as diverse. Without it, the marginal species sits at K ≈ 1e-8
+there, its share collapses, and the cell goes to a single winner.
 
-**Renaming.** `eval`'s parameter is renamed `floor` -> `sovereignty`, and
-`sovereignty_floor` -> `sovereignty`. A parameter whose name describes the
-mechanism it no longer implements is exactly the trap that produced this
-defect.
+β = 2.0 was frozen by a 13-seed × 10-β sweep conducted **under the old response
+shape**. Changing the shape invalidates that calibration, so the frozen
+constant no longer means what it was chosen to mean. Fixing this properly
+therefore requires re-sweeping and re-freezing β, which is a calibration study
+and its own campaign — not a line of arithmetic bolted onto a medium gate.
+
+Four tests moved under the revision, two of them un-re-pinnable by discipline:
+`beta_calibration_freeze` (the band above), `demesne`'s material-dominant floor
+(fell to exactly 2, failing `> 2`), `gathering_calibration`'s population
+conservation ceiling, and `session_snapshot`'s golden bytes — the last worth
+noting on its own, since world JSON is byte-identical yet *gameplay* state
+depends on K.
 
 ## 5. Preregistered predictions
 
@@ -202,27 +208,27 @@ Terrestrial-xorn reading, **passes**.
 **P3.** `twig-blight` and `goblin` are unchanged (they already held zero ocean
 cells).
 
-**P4 — MEASURED, and it held for both changes together.** With the medium gate
-*and* gap-closing sovereignty applied, seed 42 is **byte-identical to the
-committed fixture** (`cmp` clean, `lens_purity` passing, 3,553 facts, village
+**P4 — MEASURED, and it held for the gate (and, separately, for the deferred
+sovereignty revision too).** With the medium gate applied, seed 42 is
+**byte-identical to the committed fixture** (`cmp` clean, `lens_purity` passing, 3,553 facts, village
 `Qvooshtvoagootao`). Neither change touches a committed fact: settlement
 placement reads land-filtered attractors, and the habitat model lives
 downstream of the ledger in derived-view territory. **The campaign has no
 save-format exposure.**
 
 **P5.** Land stays fully occupied — every one of the 11,066 land cells has a
-dominant before and after. Measured under gate + gap-closing (xorn still
-`Terrestrial`): rust-monster 8,607, twig-blight 2,348, goblin 111, summing to
-exactly 11,066.
+dominant before and after.
 
-**P6.** Under the intended authoring (xorn `Lithic`), xorn retains its
-seafloor-rock domain and `demesne.rs`'s xorn assertion passes. **Not yet
-measured** — the gap-closing measurement was taken with xorn still
-`Terrestrial`, which took it to zero. This is the prediction most likely to be
-wrong, and it is the first thing the plan verifies after `Lithic` lands.
+**P6 — HELD.** Under the intended authoring (xorn `Lithic`), xorn retains its
+seafloor domain and `demesne.rs` passes. Measured: xorn 29,896 ocean / 7 land
+under the gate alone. Note it now holds **100% of ocean cells**, up from 87%
+before, because it is the only non-`Terrestrial` kind — see §9.
 
 **P7.** Census goldens move only where a Lab metric reads density or dominance.
-Anything reading committed facts is unchanged (P4).
+Anything reading committed facts is unchanged (P4). With the sovereignty
+revision deferred, the shipped change moves only `rust-monster`'s ocean cells
+and xorn's ocean share, so the expected census movement is small or nil —
+verified before any regeneration is requested.
 
 ## 6. Blast radius
 
@@ -277,8 +283,8 @@ call.
 
 ## 10. Non-goals
 
-The aquatic roster; the prey field; freshwater as a medium; re-tuning β; and
-**per-axis sovereignty** — the observation that temperature and moisture are
+The aquatic roster; the prey field; freshwater as a medium; re-tuning β; **the sovereignty revision** (§4.4, deferred with its
+measurement to its own campaign); and **per-axis sovereignty** — the observation that temperature and moisture are
 axes a creature can *accommodate* (build a lair, store water) while insolation
 can only be *endured*, so sovereignty arguably belongs only on the
 accommodation axes. That is a third semantic decision and folding it in would
