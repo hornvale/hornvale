@@ -220,6 +220,23 @@ fn learned_helplessness(last_drank: f64, day: f64) -> bool {
 /// (`0`) leads by none, exactly the pre-anticipation model.
 const ANTICIPATION_HORIZON_DAYS: f64 = 2.0;
 
+/// The day a room's furnishing reads its climate at (The Threshold). Any fixed
+/// day serves; day 0 is the world's own origin and needs no justification
+/// beyond being stable. Changing it is a `room/furnishing/v1` epoch.
+///
+/// SCOPE, stated so it is not discovered later: this freezes furnishing at
+/// ORIGIN climate forever. A room that grows cold over long time never gains a
+/// hearth. That is invisible only because the play window is days to years
+/// while climate drift is paleoclimate-scale — so the interior is a pure
+/// function of the room in SPACE, and frozen in TIME at day 0. When eras
+/// become playable this constant is the thing to revisit.
+pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime { day: 0.0 };
+
+/// Below this mean temperature (°C) a room's people build around a fire.
+/// A first-pass value; changing it is a `room/furnishing/v1` epoch.
+/// type-audit: pending(wave-3)
+pub const FURNISHING_COLD_C: f64 = 5.0;
+
 /// A cell's per-axis HAZARD field in `[0, 1]` (The Bane) — the raw, creature-
 /// INDEPENDENT presence of each kind of hazard, the sources a creature's threat
 /// niche dots against. v1 carries the three axes The Dread's scalar field already
@@ -417,6 +434,26 @@ pub trait Terrain {
     /// `day`.
     fn hazards(&self, _room: &RoomAddr) -> Hazards {
         Hazards::ZERO
+    }
+
+    /// Whether this room carries a built settlement — the signal that decides
+    /// whether its interior draws built patterns or wild ones (The Threshold).
+    /// A room's *culture* is not a property of the room: culture belongs to the
+    /// people whose territory contains it, and a natural room has none. So the
+    /// derivation asks the only question it can answer here — is anyone's
+    /// territory this? Defaults false, so every existing implementation reads
+    /// as wilderness and nothing moves.
+    /// type-audit: bare-ok(flag: return)
+    fn is_built(&self, _room: &RoomAddr) -> bool {
+        false
+    }
+
+    /// Whether warmth matters in this room. Read at a CANONICAL day rather
+    /// than the current one: a room's furnishing must not flicker with the
+    /// seasons, so this is a stable property of the place (The Threshold).
+    /// type-audit: bare-ok(flag: return)
+    fn is_cold(&self, room: &RoomAddr) -> bool {
+        self.temperature(room, FURNISHING_REFERENCE_DAY) < FURNISHING_COLD_C
     }
 
     /// The cell's PREY-PRESENCE field in `[0, 1]` (The Teeth) — the standing
