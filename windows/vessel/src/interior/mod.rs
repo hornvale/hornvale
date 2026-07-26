@@ -7,6 +7,8 @@
 //! outcomes read TOPOLOGY, never metrics (spec §2.1), so a future rendering
 //! solve can be retuned forever without an epoch.
 
+pub mod anchor;
 pub mod relation;
 
+pub use anchor::{Anchor, AnchorId, AnchorKind, Interior};
 pub use relation::{Rcc8, compose, converse, is_symmetric, is_transitive};
