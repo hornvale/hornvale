@@ -12,7 +12,9 @@
 //! never quantizes anything itself.
 
 use crate::{BuildError, History};
-use hornvale_history::record::{CauseOfEnd, Ended, Founding, Function, Notability, TechHorizon};
+use hornvale_history::record::{
+    CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
+};
 use hornvale_kernel::{CellId, EntityId, Fact, KindId, Value, World};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -246,6 +248,210 @@ pub fn emit_now(world: &mut World, subject: EntityId, now: f64) -> Result<(), Bu
         &world.registry,
     )?;
     Ok(())
+}
+
+/// The present frame's day: the latest founding-or-ending recorded anywhere in
+/// the world's deep history — the moment "today" sits at, e.g. for measuring
+/// a ruin's age back from. Deterministic (`f64::total_cmp` over ledger
+/// numbers). Mirrors `windows/almanac::history::present_day`'s read (that
+/// window cannot be depended on here — worldgen is the composition root, so
+/// this is the shared, non-almanac-specific home for the read); a future
+/// cleanup could have the almanac call this one instead of its private copy.
+/// type-audit: bare-ok(count: return)
+pub fn present_day(world: &World) -> f64 {
+    if let Some(now) = world.ledger.find(hornvale_history::HISTORY_NOW).next()
+        && let Value::Number(n) = &now.object
+    {
+        return *n;
+    }
+    // Fallback for a world with no committed `history-now` fact (a save from
+    // before T8, or a synthetic Lab world that never ran the composition-root
+    // bake): approximate the present as the latest committed occupation
+    // event. This UNDERSTATES every ruin's age and tenure by the bake's
+    // post-history stretch (the true present is `BakeConfig::end_year`, not
+    // the last stochastic draw) — see `emit_now` above.
+    let founded = world.ledger.find(hornvale_history::OCC_FOUNDED);
+    let ended = world.ledger.find(hornvale_history::OCC_ENDED);
+    founded
+        .chain(ended)
+        .filter_map(|f| match &f.object {
+            Value::Number(n) => Some(*n),
+            _ => None,
+        })
+        .max_by(|a, b| a.total_cmp(b))
+        .unwrap_or(0.0)
+}
+
+/// Reconstruct every committed occupation from the ledger, in commit order —
+/// the shared decoder both this window (a future consumer, e.g. The Vestige)
+/// and `windows/almanac`'s prose renderer read history back through. Lifted
+/// verbatim from the almanac's private `record_of`/`layers_at` (the working
+/// reconstruction that decodes exactly how [`emit_history`] encoded each
+/// `OCC_*` fact), so a change to the encoding only ever needs one matching
+/// decoder to stay in sync.
+pub fn occupation_records(world: &World) -> Vec<OccupationRecord> {
+    world
+        .ledger
+        .find(hornvale_history::IS_OCCUPATION)
+        .map(|f| f.subject)
+        .filter_map(|id| reconstruct_occupation(world, id))
+        .collect()
+}
+
+/// Occupations on a cell, oldest-founded first (the palimpsest layers a
+/// site's stratigraphy stacks in). Ordered by `founded` via `f64::total_cmp`
+/// (total and deterministic), with the occupation's own entity id (carried in
+/// [`OccupationRecord::community`], the placeholder `reconstruct_occupation`
+/// fills with the minting entity) breaking a same-day tie.
+pub fn occupations_at(world: &World, cell: CellId) -> Vec<OccupationRecord> {
+    let mut v: Vec<OccupationRecord> = occupation_records(world)
+        .into_iter()
+        .filter(|o| o.site == cell)
+        .collect();
+    v.sort_by(|a, b| {
+        a.founded
+            .total_cmp(&b.founded)
+            .then(a.community.0.cmp(&b.community.0))
+    });
+    v
+}
+
+/// Every occupation, grouped by `site`, each cell's vec ordered
+/// oldest-founded-first — the batched sibling of [`occupations_at`]: one
+/// [`occupation_records`] scan for the whole world instead of one per cell.
+/// Built for The Vestige's per-world field derivations
+/// ([`crate::vestige::vestiges_field`]) and the coming census, where calling
+/// `occupations_at` per cell would rescan the ledger `O(cells)` times. Each
+/// cell's vec is sorted with the exact same comparator `occupations_at` uses
+/// (`founded` via `f64::total_cmp`, ties broken by the occupation entity's
+/// id), so a cell's entry here is byte-for-byte identical to what
+/// `occupations_at(world, cell)` would produce.
+pub fn occupations_by_cell(world: &World) -> BTreeMap<CellId, Vec<OccupationRecord>> {
+    let mut by_cell: BTreeMap<CellId, Vec<OccupationRecord>> = BTreeMap::new();
+    for occ in occupation_records(world) {
+        by_cell.entry(occ.site).or_default().push(occ);
+    }
+    for occs in by_cell.values_mut() {
+        occs.sort_by(|a, b| {
+            a.founded
+                .total_cmp(&b.founded)
+                .then(a.community.0.cmp(&b.community.0))
+        });
+    }
+    by_cell
+}
+
+/// Reconstruct the [`OccupationRecord`] an occupation entity's committed facts
+/// describe — enough of it to render prose and derive flesh. The fields a
+/// derived readout never needs (`community`/`lineage`/`deity`/`tongue`) are
+/// filled with inert placeholders (the entity's own id), matching the
+/// almanac's original convention. `None` if the entity is missing a
+/// load-bearing fact or names a people outside the biosphere roster.
+fn reconstruct_occupation(world: &World, entity: EntityId) -> Option<OccupationRecord> {
+    let people_label = world.ledger.text_of(entity, hornvale_history::OCC_PEOPLE)?;
+    let people = resolve_people(people_label)?;
+    let site = CellId(occ_number(world, entity, hornvale_history::OCC_SITE)? as u32);
+    let founded = occ_number(world, entity, hornvale_history::OCC_FOUNDED)?;
+    let ended = occ_number(world, entity, hornvale_history::OCC_ENDED);
+    let peak_population = occ_number(world, entity, hornvale_history::OCC_PEAK)? as u32;
+    let tech = parse_tech(world.ledger.text_of(entity, hornvale_history::OCC_TECH)?)?;
+    let function = parse_function(
+        world
+            .ledger
+            .text_of(entity, hornvale_history::OCC_FUNCTION)?,
+    )?;
+    let cause = world
+        .ledger
+        .text_of(entity, hornvale_history::OCC_CAUSE)
+        .and_then(parse_cause);
+    let notability = parse_notability(
+        world
+            .ledger
+            .text_of(entity, hornvale_history::OCC_NOTABILITY)?,
+    )?;
+    let ended_by = match world
+        .ledger
+        .value_of(entity, hornvale_history::OCC_ENDED_BY)
+    {
+        Some(Value::Entity(e)) => Ended::By(*e),
+        _ => Ended::Nature,
+    };
+    let founded_from = match world
+        .ledger
+        .value_of(entity, hornvale_history::OCC_FOUNDED_FROM)
+    {
+        Some(Value::Entity(e)) => Founding::From(*e),
+        Some(Value::Number(cell)) => Founding::Genesis(CellId(*cell as u32)),
+        _ => Founding::Genesis(site),
+    };
+
+    Some(OccupationRecord {
+        people,
+        community: entity,
+        lineage: entity,
+        site,
+        founded,
+        ended,
+        peak_population,
+        tech,
+        function,
+        deity: None,
+        tongue: None,
+        cause,
+        ended_by,
+        founded_from,
+        notability,
+    })
+}
+
+/// A functional `Number` object read back as an `f64`.
+/// type-audit: bare-ok(count: return)
+fn occ_number(world: &World, entity: EntityId, predicate: &str) -> Option<f64> {
+    match world.ledger.value_of(entity, predicate) {
+        Some(Value::Number(n)) => Some(*n),
+        _ => None,
+    }
+}
+
+fn parse_tech(label: &str) -> Option<TechHorizon> {
+    Some(match label {
+        "neolithic" => TechHorizon::Neolithic,
+        "bronze" => TechHorizon::Bronze,
+        "iron" => TechHorizon::Iron,
+        "classical" => TechHorizon::Classical,
+        _ => return None,
+    })
+}
+
+fn parse_function(label: &str) -> Option<Function> {
+    Some(match label {
+        "agrarian" => Function::Agrarian,
+        "mine" => Function::Mine,
+        "trade" => Function::Trade,
+        "cult" => Function::Cult,
+        "fort" => Function::Fort,
+        _ => return None,
+    })
+}
+
+fn parse_cause(label: &str) -> Option<CauseOfEnd> {
+    Some(match label {
+        "famine" => CauseOfEnd::Famine,
+        "burned" => CauseOfEnd::Burned,
+        "plague" => CauseOfEnd::Plague,
+        "fled" => CauseOfEnd::Fled,
+        "migrated" => CauseOfEnd::Migrated,
+        _ => return None,
+    })
+}
+
+fn parse_notability(label: &str) -> Option<Notability> {
+    Some(match label {
+        "backwater" => Notability::Backwater,
+        "common" => Notability::Common,
+        "seat" => Notability::Seat,
+        _ => return None,
+    })
 }
 
 /// The dominant people per region: every cell an alive occupation (a
@@ -593,5 +799,45 @@ fn pearson(xs: &[f64], ys: &[f64]) -> f64 {
         0.0
     } else {
         sxy / (sxx * syy).sqrt()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{SettlementPins, SkyChoice, build_world};
+    use hornvale_astronomy::SkyPins;
+    use hornvale_terrain::TerrainPins;
+
+    #[test]
+    fn occupation_records_reconstruct_from_the_ledger() {
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+
+        let recs = occupation_records(&world);
+        assert!(!recs.is_empty(), "seed 42 has occupations");
+
+        // A reconstructed record round-trips its site + lifecycle.
+        let r = &recs[0];
+        assert!(r.founded >= 0.0);
+
+        // `occupations_at` groups by cell — the same layer must show up
+        // among the records at its own site.
+        let at = occupations_at(&world, r.site);
+        assert!(at.iter().any(|o| o.founded == r.founded));
+
+        // Every returned occupation genuinely sits on the queried cell, and
+        // the layers come back oldest-founded first.
+        assert!(at.iter().all(|o| o.site == r.site));
+        assert!(
+            at.windows(2).all(|w| w[0].founded <= w[1].founded),
+            "occupations_at must order oldest-founded first"
+        );
     }
 }

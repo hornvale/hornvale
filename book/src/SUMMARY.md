@@ -48,6 +48,7 @@
 - [The Meeting of Seed 42](./gallery/the-meeting-seed-42.md)
 - [The Atlas of Seed 42](./gallery/atlas.md)
 - [The Deep Time of Seed 42](./gallery/paleo-seed-42.md)
+- [The Vestige of Seed 42](./gallery/vestige-seed-42.md)
 - [An Abandoned Clearing — Seed 42](./gallery/history-seed-42.md)
 - [The Transport Topology — Seed 42](./gallery/connections-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
@@ -238,8 +239,15 @@
 - [The Lode](./chronicle/the-lode.md)
 - [The First Mark](./chronicle/the-first-mark.md)
 - [The Cloister](./chronicle/the-cloister.md)
+- [The Vestige](./chronicle/the-vestige.md)
+- [The Lookup](./chronicle/the-lookup.md)
+- [The Bearing](./chronicle/the-bearing.md)
+- [The Retainer](./chronicle/the-retainer.md)
 - [The Phantom](./chronicle/the-phantom.md)
 - [The Excursion](./chronicle/the-excursion.md)
+- [The Selvage](./chronicle/the-selvage.md)
+- [The Snapshot](./chronicle/the-snapshot.md)
+- [The Shudder](./chronicle/the-shudder.md)
 
 # Appendix: The Frontier
 

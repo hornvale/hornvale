@@ -5,6 +5,10 @@ use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
     RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs, derive_wild_npcs,
 };
+use crate::snapshot::{
+    KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
+    SensedChannel, SessionSnapshot, SocialEntry,
+};
 use crate::{
     Agent, Focalized, Focalizer, IdentityProjection, Knowledge, PossessOpts, Projection,
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
@@ -69,7 +73,12 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
             Value::Number(n) => n,
             _ => 0.0,
         })
-        .sum::<f64>()
+        // `Iterator::sum::<f64>()` folds from `-0.0` (the float additive
+        // identity that Rust's stdlib picks so an all-negative-zero sum
+        // stays negative), so an NPC with no disposition-shift facts would
+        // otherwise serialize as `-0.0` rather than the plain `0.0` the doc
+        // comment above promises. Fold from an explicit `0.0` instead.
+        .fold(0.0, |acc, n| acc + n)
         * GRIEVANCE_GAIN
 }
 
@@ -125,6 +134,19 @@ pub struct Session<'w> {
     /// a carnivore's hunger senses prey territory; `None` if the demography fit
     /// fails.
     prey: Option<hornvale_kernel::CellMap<f64>>,
+    /// Commits since the possession began; 0 is the opening. Advanced by
+    /// `handle` for every non-empty verb line, so the snapshot can label
+    /// which turn it describes.
+    /// type-audit: bare-ok(count: turn)
+    turn: u64,
+    /// This turn's rendered text, exactly as the prose ABI returned it —
+    /// the opening at `start`, then each verb's own response. The snapshot
+    /// carries it verbatim so that EVERY pane, transcript included, is a
+    /// pure projection of one snapshot; a client forced to read the turn
+    /// text from a second channel would break that, which is the campaign's
+    /// central claim.
+    /// type-audit: bare-ok(prose: last_text)
+    last_text: String,
 }
 
 impl<'w> Session<'w> {
@@ -218,9 +240,12 @@ impl<'w> Session<'w> {
             calendar,
             predator,
             prey,
+            turn: 0,
+            last_text: String::new(),
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
+        session.last_text = opening.clone();
         Ok((session, opening))
     }
 
@@ -237,6 +262,97 @@ impl<'w> Session<'w> {
     /// The locale context this session walks (for the battery's checks).
     pub fn context(&self) -> &LocaleContext {
         &self.ctx
+    }
+
+    /// This turn as `vessel/session/v1` — a pure read, grouped by epistemic
+    /// channel (The Snapshot spec §3). Never commits, never advances the
+    /// turn counter, and costs nothing on turns where no caller asks: the
+    /// CLI never does, so its measured per-turn cost is unchanged.
+    pub fn snapshot(&self) -> Result<SessionSnapshot, VesselError> {
+        let vantage = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        // The noun catalog comes from the focalizer; the PROSE comes from
+        // `last_text` (this turn's real response), not from here.
+        let focalized = self.focalizer.render(&vantage);
+
+        let terrain = LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+        );
+        let present = self
+            .colocated_npcs()
+            .iter()
+            .map(|npc| {
+                let affect = affect_of(&self.ledger, npc, &self.npcs, self.day, &terrain);
+                PresentEntry {
+                    entity: npc.entity.0.get(),
+                    label: npc.label.clone(),
+                    felt: felt_phrase(&affect),
+                }
+            })
+            .collect();
+
+        let social = self
+            .npcs
+            .iter()
+            .map(|npc| {
+                let g = grievance(&self.ledger, npc.entity);
+                SocialEntry {
+                    entity: npc.entity.0.get(),
+                    label: npc.label.clone(),
+                    grievance: g,
+                    hostile: g >= HOSTILITY_THRESHOLD,
+                }
+            })
+            .collect();
+
+        let entries = self
+            .knowledge
+            .0
+            .iter()
+            .map(|(key, value)| KnownEntry {
+                key: key.clone(),
+                value: value.clone(),
+            })
+            .collect();
+
+        Ok(SessionSnapshot {
+            schema: SESSION_SCHEMA.to_string(),
+            turn: self.turn,
+            day: self.day.day,
+            me: SelfChannel {
+                agent: self.agent.id.0,
+                species: self.agent.species.clone(),
+                settlement: self.agent.village.name.clone(),
+                population: self.agent.village.population,
+                room: self
+                    .agent
+                    .position
+                    .pack()
+                    // `RoomAddrError` implements `Debug` but not `Display`, so
+                    // `{e:?}` is the only rendering available here — the same
+                    // choice `windows/locale`'s `LocaleError::Unaddressable`
+                    // makes for the identical error type.
+                    .map_err(|e| VesselError::Build(format!("{e:?}")))?
+                    .0,
+            },
+            sensed: SensedChannel {
+                room: vantage.locale.clone(),
+                sky: vantage.sky.clone(),
+                present,
+            },
+            known: KnownChannel { entries },
+            social,
+            narration: Narration {
+                prose: self.last_text.clone(),
+                nouns: focalized
+                    .nouns
+                    .into_iter()
+                    .map(|(noun, datum)| NounEntry { noun, datum })
+                    .collect(),
+            },
+        })
     }
 
     /// How many `agent-at` facts the session's owned ledger has committed —
@@ -389,7 +505,10 @@ impl<'w> Session<'w> {
             Some((v, r)) => (v, r.trim()),
             None => (line, ""),
         };
-        match verb {
+        if !verb.is_empty() {
+            self.turn += 1;
+        }
+        let turn = match verb {
             "" => Turn::Out(String::new()),
             "look" => self.out(self.describe_here()),
             "go" => self.go(rest),
@@ -412,7 +531,13 @@ impl<'w> Session<'w> {
             "help" => Turn::Out(HELP.to_string()),
             "release" | "quit" => Turn::Released("You let go.".to_string()),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
+        };
+        if !verb.is_empty() {
+            self.last_text = match &turn {
+                Turn::Out(s) | Turn::Released(s) => s.clone(),
+            };
         }
+        turn
     }
 
     /// Absorb the current room's projection into knowledge.
@@ -975,5 +1100,146 @@ fn parse_compass(s: &str) -> Option<Compass> {
         "w" | "west" => Some(Compass::W),
         "nw" | "northwest" => Some(Compass::Nw),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_astronomy::SkyPins;
+    use hornvale_terrain::TerrainPins;
+    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+    fn seam_world() -> World {
+        build_world(
+            Seed(42),
+            &SkyPins::default(),
+            SkyChoice::Generated,
+            &TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    #[test]
+    fn the_opening_snapshot_carries_every_channel() {
+        let world = seam_world();
+        let (session, opening) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let snap = session.snapshot().expect("a live session snapshots");
+
+        assert_eq!(snap.schema, crate::SESSION_SCHEMA);
+        assert_eq!(snap.turn, 0, "the opening is turn 0");
+        assert_eq!(snap.day, 0.5, "PossessOpts::default() is noon");
+        assert!(!snap.me.species.is_empty());
+        assert_eq!(snap.me.room, session.agent().position.pack().unwrap().0);
+        assert!(!snap.sensed.sky.is_empty());
+        assert!(
+            !snap.known.entries.is_empty(),
+            "the opening projection lands"
+        );
+        assert_eq!(
+            snap.social.len(),
+            session.npc_labels().len(),
+            "social covers every derived NPC, co-located or not"
+        );
+        assert!(
+            snap.social.iter().all(|s| s.grievance == 0.0 && !s.hostile),
+            "an unprovoked world starts at zero grievance"
+        );
+        assert_eq!(
+            snap.narration.prose.trim(),
+            opening.trim(),
+            "narration.prose IS the opening text"
+        );
+    }
+
+    #[test]
+    fn the_turn_counter_advances_with_committed_turns() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        assert_eq!(session.snapshot().unwrap().turn, 0);
+        session.handle("look");
+        assert_eq!(session.snapshot().unwrap().turn, 1);
+        session.handle("whoami");
+        assert_eq!(session.snapshot().unwrap().turn, 2);
+    }
+
+    #[test]
+    fn an_unprovoked_npcs_grievance_is_not_negative_zero() {
+        // Names the invariant `grievance`'s own fold comment explains: a
+        // revert to `.sum::<f64>()` (which folds from `-0.0`) would only show
+        // up as a large fixture diff without this assertion (The Snapshot
+        // chronicle).
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        for npc in &session.npcs {
+            let g = grievance(&session.ledger, npc.entity);
+            assert_eq!(g, 0.0);
+            assert!(
+                !g.is_sign_negative(),
+                "an unprovoked NPC's grievance must be plain 0.0, not -0.0"
+            );
+        }
+    }
+
+    #[test]
+    fn a_blank_line_clobbers_neither_turn_nor_narration() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.handle("whoami");
+        let before = session.snapshot().unwrap();
+        session.handle("");
+        let after = session.snapshot().unwrap();
+        assert_eq!(before.turn, after.turn, "a blank line commits no turn");
+        assert_eq!(
+            before.narration.prose, after.narration.prose,
+            "a blank line must not clobber the last verb's own narration"
+        );
+    }
+
+    #[test]
+    fn a_snapshot_is_pure_taken_twice() {
+        let world = seam_world();
+        let (session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let a = crate::snapshot_json(&session.snapshot().unwrap());
+        let b = crate::snapshot_json(&session.snapshot().unwrap());
+        assert_eq!(a, b, "the read is pure — no hidden state advances");
+    }
+
+    #[test]
+    fn provoking_shows_up_in_the_social_channel() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let before = session.snapshot().unwrap();
+        assert!(before.social.iter().all(|s| s.grievance == 0.0));
+        session.handle("provoke");
+        let after = session.snapshot().unwrap();
+        assert!(
+            after.social.iter().any(|s| s.grievance > 0.0),
+            "a provoked NPC's grievance surfaces in `social`"
+        );
+    }
+
+    #[test]
+    fn narration_follows_the_verb_not_the_room() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.handle("whoami");
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.narration.prose.starts_with("A "),
+            "after `whoami` the narration is the whoami answer, not the room block: {:?}",
+            snap.narration.prose
+        );
+        assert!(
+            !snap.narration.prose.starts_with("[room "),
+            "the room block must NOT be substituted for a verb's own response"
+        );
+        session.handle("look");
+        let snap = session.snapshot().unwrap();
+        assert!(
+            snap.narration.prose.starts_with("[room "),
+            "after `look` the narration IS the room block"
+        );
     }
 }

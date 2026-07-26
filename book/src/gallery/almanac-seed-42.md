@@ -172,6 +172,14 @@ Geothermal gradient spans 21–30 K/km — the deep's warmth.
 The land's lode is dominantly salt, found across 34% of it.
 Notable ore: copper, gold, lead-zinc, iron, coal, gems, bauxite.
 
+## The Vestige
+
+The underworld's residue marks 1% of the land — the buried palimpsest of ages before.
+0 abandoned delvings and 202 buried undercities lie beneath the land.
+116 layers of that residue are still venerated against 87 forgotten — memory still holds most of the ground.
+1 pre-human gate-scars still weep dread into the deep.
+The residue's dominant hazard is structural collapse — 202 layers so afflicted.
+
 ## The People
 
 The land holds 116 settlement(s).

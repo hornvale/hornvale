@@ -20,6 +20,8 @@ export type WorkerRequest = StartRequest | CommandRequest;
 export interface StartedResponse {
   type: "started";
   text: string;
+  /** The opening turn's `vessel/session/v1` JSON; "" if unavailable. */
+  snapshot: string;
 }
 
 /** Worker -> page: genesis or wasm failure; text is the sim's own error. */
@@ -33,6 +35,8 @@ export interface OutResponse {
   type: "out";
   text: string;
   released: boolean;
+  /** This turn's `vessel/session/v1` JSON; "" if unavailable. */
+  snapshot: string;
 }
 
 export type WorkerResponse = StartedResponse | ErrorResponse | OutResponse;

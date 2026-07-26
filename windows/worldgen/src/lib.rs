@@ -82,10 +82,12 @@ pub mod components;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
+pub mod render;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
+pub mod vestige;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -101,11 +103,16 @@ pub use graph_derive::{
 pub use history_bake::{BakeCensus, BakeConfig, History, bake, census};
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
-    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
-    stratigraphy, sundered_landmasses, territories,
+    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
+    occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
+    sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
+pub use vestige::{
+    HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
+    vestige_from_occupation, vestiges_at, vestiges_field,
+};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -858,7 +865,7 @@ pub fn demography_report_with_beta(
     floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
 }
 
@@ -970,7 +977,7 @@ const CARNIVORE_THRESHOLD: f64 = 0.5;
 pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
@@ -1005,6 +1012,29 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
     }))
 }
 
+/// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
+/// subsurface palimpsest radiates: the MAX dread over the cell's vestige
+/// stack ([`vestiges_at`]'s per-cell semantics; an empty stack reads `0.0`),
+/// already `[0, 1]` (each [`Vestige::dread`] is authored in-range, so no
+/// field-wide normalization is needed here — max, not sum, because dread is a
+/// warning signal a wanderer SENSES, not an additive hazard load). Built over
+/// [`vestiges_field`] (one ledger scan for the whole world) rather than
+/// calling `vestiges_at` per cell, which would rescan the ledger's committed
+/// occupation history once per cell. Derived from committed history
+/// (occupation records) and terrain (the pre-human gate-scar presence test):
+/// no seed, no facts, byte-identical across calls. EXPOSED but not yet
+/// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
+/// hazard axis is a deferred follow-on.
+/// type-audit: bare-ok(ratio: return)
+pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let field = vestiges_field(world, &terrain);
+    Ok(hornvale_kernel::CellMap::from_fn(
+        terrain.geosphere(),
+        |cell| field.get(cell).iter().map(|v| v.dread).fold(0.0, f64::max),
+    ))
+}
+
 /// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
 /// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure`].
 /// Where the predator field sums CARNIVORE realized density (so a quarry flees
@@ -1022,7 +1052,7 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
 pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
@@ -1079,7 +1109,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
@@ -1828,7 +1858,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(diurnal_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(diurnal_lines_from(&terrain, &climate))
 }
 
 /// [`diurnal_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -1946,7 +1978,9 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(seas_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(seas_lines_from(&terrain, &climate))
 }
 
 /// [`seas_lines`] from a PRE-BUILT terrain and climate — the body without the
@@ -2009,7 +2043,9 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
 pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(rains_lines_from(&terrain, &climate))
 }
 
 /// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2101,10 +2137,9 @@ pub fn sky_phrase(
 /// observation.
 /// type-audit: bare-ok(prose: return)
 pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(firmament_lines_from(
-        &terrain_of(world)?,
-        &climate_of(world)?,
-    ))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(firmament_lines_from(&terrain, &climate))
 }
 
 /// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
@@ -2300,7 +2335,9 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// world.
 /// type-audit: bare-ok(prose: return)
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(ground_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(ground_lines_from(&terrain, &climate))
 }
 
 /// [`ground_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2497,6 +2534,129 @@ pub fn lode_lines_from(
     if colocated > 0 {
         lines.push(format!(
             "{colocated} cells hold both cave and ore — the deep worked twice."
+        ));
+    }
+    Ok(lines)
+}
+
+/// A hazard's almanac-facing name, in `HazardKind`'s declaration order (the
+/// tie-break the dominant-hazard line below relies on).
+fn hazard_name(hazard: HazardKind) -> &'static str {
+    match hazard {
+        HazardKind::Structural => "structural collapse",
+        HazardKind::ToxicGas => "toxic gas",
+        HazardKind::Pestilent => "pestilence",
+        HazardKind::Flooded => "flooding",
+        HazardKind::Numinous => "the numinous",
+        HazardKind::Cursed => "the cursed",
+    }
+}
+
+/// The Vestige's headline lines for the almanac: notable subsurface residue
+/// across the land — sealed wards, abandoned delvings and buried undercities,
+/// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
+/// and the residue's dominant hazard (The Vestige). Reads the batched
+/// [`vestiges_field`] once for the whole world (rather than calling
+/// [`vestiges_at`] per cell, which would rescan the ledger's committed
+/// occupation history once per cell). Land-only, mirroring the Lode/Deep
+/// sections; empty for a landless world, or for land with no residue at all.
+/// type-audit: bare-ok(prose: return)
+pub fn vestige_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let geo = terrain.geosphere();
+    let field = vestiges_field(world, terrain);
+
+    let (mut land, mut residue_cells) = (0usize, 0usize);
+    let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
+        (0usize, 0usize, 0usize, 0usize);
+    let (mut venerated, mut forgotten) = (0usize, 0usize);
+    let mut hazard_counts = [0usize; 6];
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let stack = field.get(cell);
+        if stack.is_empty() {
+            continue;
+        }
+        residue_cells += 1;
+        for vestige in stack {
+            match vestige.kind {
+                VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
+                VestigeKind::AbandonedDelving => delvings += 1,
+                VestigeKind::BuriedRuin => buried_ruins += 1,
+                VestigeKind::GateScar => gate_scars += 1,
+            }
+            match vestige.valence {
+                Valence::Venerated => venerated += 1,
+                Valence::Forgotten => forgotten += 1,
+            }
+            let idx = match vestige.hazard {
+                HazardKind::Structural => 0,
+                HazardKind::ToxicGas => 1,
+                HazardKind::Pestilent => 2,
+                HazardKind::Flooded => 3,
+                HazardKind::Numinous => 4,
+                HazardKind::Cursed => 5,
+            };
+            hazard_counts[idx] += 1;
+        }
+    }
+    if land == 0 || residue_cells == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = vec![format!(
+        "The underworld's residue marks {:.0}% of the land — the buried palimpsest of ages before.",
+        residue_cells as f64 / land as f64 * 100.0
+    )];
+    if sealed > 0 {
+        lines.push(format!(
+            "{sealed} cells hold a sealed ward — the deep still shut."
+        ));
+    }
+    if delvings + buried_ruins > 0 {
+        lines.push(format!(
+            "{delvings} abandoned delvings and {buried_ruins} buried undercities lie beneath the land."
+        ));
+    }
+    lines.push(if forgotten > venerated {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — forgetting outpaces memory."
+        )
+    } else {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — memory still holds most of the ground."
+        )
+    });
+    if gate_scars > 0 {
+        lines.push(format!(
+            "{gate_scars} pre-human gate-scars still weep dread into the deep."
+        ));
+    }
+    // Ties break to the lower-declared variant, same as ground_lines_from /
+    // lode_lines_from.
+    let (dominant_idx, dominant_count) = hazard_counts
+        .iter()
+        .enumerate()
+        .max_by(|(ia, ca), (ib, cb)| ca.cmp(cb).then(ib.cmp(ia)))
+        .map(|(i, c)| (i, *c))
+        .expect("hazard_counts is a fixed-size non-empty array");
+    if dominant_count > 0 {
+        let hazard = match dominant_idx {
+            0 => HazardKind::Structural,
+            1 => HazardKind::ToxicGas,
+            2 => HazardKind::Pestilent,
+            3 => HazardKind::Flooded,
+            4 => HazardKind::Numinous,
+            _ => HazardKind::Cursed,
+        };
+        lines.push(format!(
+            "The residue's dominant hazard is {} — {dominant_count} layers so afflicted.",
+            hazard_name(hazard)
         ));
     }
     Ok(lines)
@@ -3253,7 +3413,7 @@ pub fn exposure_of(
     let wc = WorldComponents::assemble()?;
     let name = resolve_kind(&wc, species)?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let settled = settled_cells(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
@@ -5044,7 +5204,7 @@ pub fn world_name(world: &World) -> Option<String> {
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
     let terrain = terrain_of(world).ok()?;
-    let climate = climate_of(world).ok()?;
+    let climate = climate_from(world, &terrain).ok()?;
     world_name_in_from(world, wc, &terrain, &climate)
 }
 
@@ -5150,9 +5310,20 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
+    sky_report_from(world, time, &terrain, &climate)
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<SkyReport, BuildError> {
+    let mut report = sky_of(world)?.sky_at(time);
     let cell = hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -5731,7 +5902,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 })?,
+        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
@@ -5741,6 +5912,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         water_lines: water_lines_from(&terrain),
         deep_lines: deep_lines_from(world, &terrain)?,
         lode_lines: lode_lines_from(world, &terrain, &climate)?,
+        vestige_lines: vestige_lines_from(world, &terrain)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
@@ -6084,6 +6256,61 @@ mod tests {
             "some cells are dense predator territory"
         );
         assert!(va.contains(&0.0), "many cells carry no predators");
+    }
+
+    #[test]
+    fn vestige_dread_is_deterministic_in_range_and_reads_higher_where_haunted() {
+        // THE VESTIGE: the derived dread field is byte-identical across calls
+        // (no seed, pure over committed history + terrain), stays in [0,1] (each
+        // Vestige::dread is authored in-range and the fold is a max, not a sum),
+        // and reads strictly higher at a cell carrying a breached/forgotten
+        // vestige than at a cell whose stack is empty.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = vestige_dread(&world).unwrap();
+        let b = vestige_dread(&world).unwrap();
+        let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
+        let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
+        assert_eq!(va, vb, "two calls produce byte-identical fields");
+        assert!(
+            va.iter().all(|v| (0.0..=1.0).contains(v)),
+            "every cell's dread stays in [0,1]"
+        );
+
+        // The fixture cell `vestige.rs`'s own tests use: ancient continental
+        // crust whose presence noise fires the pre-human gate-scar test, so
+        // its stack's first (and only) layer is breached + forgotten
+        // (dread 0.9). See `vestige::DEEP_ANCIENT_NUMINOUS_CELL`'s doc comment
+        // for how this cell was found.
+        let haunted_cell = hornvale_kernel::CellId(21966);
+        let terrain = terrain_of(&world).unwrap();
+        let haunted_stack = vestiges_at(&world, &terrain, haunted_cell);
+        assert!(
+            !haunted_stack.is_empty(),
+            "the fixture cell must carry at least the pre-human vestige"
+        );
+
+        // Find a genuinely empty-stack cell by scanning: land or ocean, no
+        // pre-human scar, no occupation ever founded there.
+        let geo = terrain.geosphere();
+        let empty_cell = geo
+            .cells()
+            .find(|&cell| vestiges_at(&world, &terrain, cell).is_empty())
+            .expect("some cell in a seed-42 world has no vestige at all");
+
+        let haunted_dread = *a.get(haunted_cell);
+        let empty_dread = *a.get(empty_cell);
+        assert!(
+            haunted_dread > empty_dread,
+            "a haunted cell must read strictly higher than an empty one ({haunted_dread} vs {empty_dread})"
+        );
+        assert_eq!(empty_dread, 0.0, "an empty stack folds to zero dread");
     }
 
     #[test]

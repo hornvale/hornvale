@@ -193,6 +193,8 @@ run -p hornvale -- map --world "$wsky" --out book/src/gallery/column-seed-42.png
     --field column > book/src/gallery/column-seed-42.md
 run -p hornvale -- map --world "$wsky" --out book/src/gallery/features-seed-42.png \
     --field features > book/src/gallery/features-seed-42.md
+run -p hornvale -- vestige-map --world "$wsky" --out book/src/gallery/vestige-seed-42.png \
+    > book/src/gallery/vestige-seed-42.md
 run -p hornvale -- star-chart --world "$wsky" --out book/src/gallery/star-chart-seed-42.png \
     > book/src/gallery/star-chart-seed-42.md
 

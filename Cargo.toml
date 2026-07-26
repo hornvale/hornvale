@@ -14,6 +14,14 @@ serde_json = "1"
 # platforms; amends the decision-0004 dependency allowlist.
 libm = "0.2"
 
+# Profiling build: release codegen plus full debug symbols so samply /
+# flamegraph can symbolicate the stacks. Inherits release, so it does NOT
+# perturb the `release` profile or any committed artifact — it is a separate
+# target dir (target/profiling/). Build with `cargo build --profile profiling`.
+[profile.profiling]
+inherits = "release"
+debug = true
+
 # TOOL-hot-crate-opt: the kernel noise field (fbm/value-noise/lattice) and
 # seed derivation are the innermost primitive of ALL world generation; a
 # flamegraph of the worldgen test suite attributed ~42% of self time to

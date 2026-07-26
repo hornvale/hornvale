@@ -1190,7 +1190,7 @@ pub fn doctrines_of(world: &World) -> Vec<DoctrineVoice> {
 /// type-audit: bare-ok(identifier-text: species)
 pub fn account_params_of(world: &World, species: &str) -> Result<AccountParams, BuildError> {
     let terrain = crate::terrain_of(world)?;
-    let climate = crate::climate_of(world)?;
+    let climate = crate::climate_from(world, &terrain)?;
     account_params_from(world, species, &terrain, &climate)
 }
 
@@ -1397,7 +1397,10 @@ pub struct ChorusVoice {
 /// param-derivation failure: skip that kind rather than fail the whole
 /// pass (`else { continue }`).
 pub fn accounts_of(world: &World) -> Vec<ChorusVoice> {
-    let (Ok(terrain), Ok(climate)) = (crate::terrain_of(world), crate::climate_of(world)) else {
+    let Ok(terrain) = crate::terrain_of(world) else {
+        return Vec::new();
+    };
+    let Ok(climate) = crate::climate_from(world, &terrain) else {
         return Vec::new();
     };
     accounts_from(world, &terrain, &climate)
