@@ -169,11 +169,29 @@ actually sit at criticality, which is precisely what neither prior build achieve
 - A community has **at most one** patron, and a subordinate may not itself take one. Slice 2's
   relation graph is therefore a set of **one-level stars**, not a tree — depth is the deferred
   chaining lever (§9), so cycles are structurally impossible rather than merely prevented.
-- **A second bid on an already-subordinated community transfers the patronage.** A raider that
-  clears dominance over a community that already has a patron takes over the relation; the old
-  patron simply loses it, and does *not* contest — contesting is the deferred protection lever
-  (§9). Stated explicitly because otherwise the bake's iteration order would decide it silently,
-  which is precisely the class of accident the determinism discipline exists to prevent.
+- **A second bid on an already-subordinated community transfers the patronage — but only against
+  hysteresis.** A raider must clear dominance over the **incumbent patron** (`strength(raider) >
+  strength(incumbent) × RAID_MARGIN`), not merely over the subordinate. The old patron still does
+  *not* contest — contesting is the deferred protection lever (§9) — it simply loses the relation
+  to someone who plainly out-muscles it. Stated explicitly because otherwise the bake's iteration
+  order would decide it silently, which is precisely the class of accident the determinism
+  discipline exists to prevent.
+
+  **This was revised on measurement, exactly as §3 said it would be.** Without hysteresis the rule
+  produced ~87% churn: in a fixture where *no community ever closes* — so dissolutions are
+  impossible — 259 formations occurred against a ceiling of 34 first-time subordinations, with only
+  3 relations standing at the end. Rival patrons were swapping the same targets back and forth every
+  epoch. That defeats the slice's own premise: a store cannot accumulate if the collector changes
+  each epoch, and §4.3's adaptive demand can never build history on a relation whose assessment is
+  reset to `eff_capacity × ASSESS_RATE` by every transfer.
+- **Relation depth is forbidden, and must be enforced rather than assumed.** Keying the table by
+  subordinate bounds *out-degree* to one, which is a functional graph — a shape that still admits
+  chains and cycles. One-level stars additionally require that **a raider which is itself a
+  subordinate takes no vassal, and a target which is itself a patron is not subordinated.** Both
+  checks are required; measurement without them showed 57–89% of standing relations sitting under a
+  patron who was themselves paying someone. Depth is the deferred chaining lever (§9), and §5
+  preregisters the headline on its *absence*, so allowing it in by omission would adjudicate a
+  different model than the one preregistered.
 - **Cardinality is deliberately unbounded**: a dominant may hold any number of subordinates. No
   arbitrary cap is imposed, because whether a runaway hub forms is exactly the kind of thing this
   slice should *measure* rather than legislate. The maximum subordinates held by any one community
