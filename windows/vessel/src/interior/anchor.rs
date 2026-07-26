@@ -32,6 +32,11 @@ pub enum AnchorKind {
     Pool,
     /// A fallen log (the wilderness half).
     Log,
+    /// The room's open middle — every room has one, built or wild. The anchor
+    /// other patterns attach to when they attach to nothing more specific.
+    Ground,
+    /// A recess off the main space: what makes a room deeper than a hub.
+    Alcove,
 }
 
 /// One anchor: what it is, and the anchor it lies strictly within, if any.
