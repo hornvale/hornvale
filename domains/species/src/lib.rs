@@ -747,6 +747,28 @@ pub enum MetabolicClass {
     Ametabolic,
 }
 
+/// The medium a kind's body lives in — a universal biosphere axis, like
+/// [`SocialForm`] (decision 0065). Every kind with a body is in some medium,
+/// so this is a field on [`BiosphereTraits`] rather than an optional
+/// component: it is not a capacity only some kinds carry.
+///
+/// Read by worldgen's carrying-capacity layer as **support restriction**: a
+/// kind outside its medium has zero carrying capacity there, full stop, rather
+/// than a small one. Softening this to a low score would not work — dominance
+/// is an argmax, and a cell with only small values still has a largest one
+/// (spec: The Waterline §3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HabitatDomain {
+    /// Lives above the waterline. Every shipped kind, in v1.
+    Terrestrial,
+    /// Lives below it. No shipped kind yet — the aquatic roster is this
+    /// campaign's sequel, and the variant ships ahead of its first holder so
+    /// that adding one is authoring rather than a code change.
+    Aquatic,
+    /// At home in both — a shore-dweller, an otter, a crocodilian.
+    Amphibious,
+}
+
 /// The biosphere component: every entity has one. The packer and the
 /// habitat/niche-K layer read only these traits.
 /// type-audit: bare-ok(identifier-text)
@@ -781,6 +803,9 @@ pub struct BiosphereTraits {
     /// to the old "has a psyche entry" proxy for peoplehood. (An enum, not a
     /// bare primitive — no type-audit verdict needed.)
     pub social_form: SocialForm,
+    /// The medium this kind's body lives in (The Waterline). Gated at the
+    /// carrying-capacity layer: a kind outside its medium cannot be there.
+    pub habitat_domain: HabitatDomain,
 }
 
 // The biosphere / psyche / perception / family authoring lives in the four
@@ -818,6 +843,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: goblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -829,6 +855,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: kobold_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -840,6 +867,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: hobgoblin_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -851,6 +879,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: bugbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Settled,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -862,6 +891,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: treant_condition_niche(),
                 potency: 9.0 / 30.0, // treant — CR 9 (5E MM); potency = CR/30
                 social_form: SocialForm::Sessile,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -873,6 +903,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: twig_blight_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Sessile,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -884,6 +915,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_elk_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -895,6 +927,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: woolly_mammoth_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -906,6 +939,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: giant_goat_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Gregarious,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -917,6 +951,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: otyugh_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -928,6 +963,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -939,6 +975,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: rust_monster_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -950,6 +987,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: white_dragon_condition_niche(),
                 potency: 13.0 / 30.0, // adult white dragon — CR 13 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -961,6 +999,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: red_dragon_condition_niche(),
                 potency: 17.0 / 30.0, // adult red dragon — CR 17 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -972,6 +1011,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: black_dragon_condition_niche(),
                 potency: 14.0 / 30.0, // adult black dragon — CR 14 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
         (
@@ -983,6 +1023,7 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: owlbear_condition_niche(),
                 potency: 0.0,
                 social_form: SocialForm::Solitary,
+                habitat_domain: HabitatDomain::Terrestrial,
             },
         ),
     ]
@@ -1429,6 +1470,23 @@ mod tests {
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
+        }
+    }
+
+    #[test]
+    fn every_shipped_kind_declares_a_habitat_domain_and_all_are_terrestrial() {
+        // The Waterline v1: the mechanism is general, the content degenerate.
+        // No shipped kind is Aquatic yet — the aquatic roster is the sequel —
+        // so this asserts the ROSTER FACT, and a future marine kind is meant
+        // to fail here and be added deliberately, not slip in unnoticed.
+        let bio = biosphere_registry();
+        assert_eq!(bio.len(), 16, "sixteen kinds compete for space");
+        for (kind, traits) in bio.iter() {
+            assert_eq!(
+                traits.habitat_domain,
+                HabitatDomain::Terrestrial,
+                "{kind:?} is terrestrial in v1"
+            );
         }
     }
 
