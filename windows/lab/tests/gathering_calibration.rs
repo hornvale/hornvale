@@ -181,9 +181,14 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // baseline of 32.7.
     // The Sundering (moving-sea epoch; lefford regen, 0063): 15.3251 ->
     // 15.3811; still comfortably below the uniform-sphere baseline of 32.7.
+    // The Tumult (predation epoch; lefford regen, 0063): predation reseats
+    // communities onto the richer sites they seize, pulling population very
+    // slightly equatorward (15.3811 -> 15.0837); the preregistered
+    // directional claim asserted above — below the uniform-sphere baseline
+    // of 32.7 — is untouched and still clears by better than 2x.
     assert!(
-        (mean - 15.3811).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.3811)"
+        (mean - 15.0837).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.0837)"
     );
 }
 
