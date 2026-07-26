@@ -12,8 +12,9 @@
 use hornvale_alchemy::Substrate;
 use hornvale_alchemy::production::{PRODUCTIONS, admits};
 use hornvale_alchemy::quality::qualities_of;
+use hornvale_climate::GeneratedClimate;
 use hornvale_species::BiosphereTraits;
-use hornvale_terrain::{Commodity, RockClass, SoilOrder};
+use hornvale_terrain::{Commodity, GeneratedTerrain, RockClass, SoilOrder};
 
 /// Carry an ore deposit into a substrate. `grade` is the deposit's already-
 /// drawn ore grade in [0,1] — the one place a drawn quantity reaches alchemy,
@@ -132,6 +133,80 @@ pub fn reachable_productions(sources: &[Substrate]) -> Vec<&'static str> {
     names.sort_unstable();
     names.dedup();
     names
+}
+
+/// A deterministic total order over `Substrate`'s five ratio fields.
+///
+/// `Substrate` itself derives neither `Ord` nor `Hash` (its fields are `f64`,
+/// which has no total order under `PartialOrd` — NaN is unordered — and no
+/// authored value here is ever NaN, but the type stays honest about that).
+/// Callers that need a fixed, reproducible order (so two worlds' substance
+/// sets are directly comparable) sort with this instead. Per project
+/// convention, float comparison uses `total_cmp`, chained field-by-field so
+/// the order is total even though no single field is.
+fn substrate_order(a: &Substrate, b: &Substrate) -> std::cmp::Ordering {
+    a.metallic
+        .total_cmp(&b.metallic)
+        .then_with(|| a.organic.total_cmp(&b.organic))
+        .then_with(|| a.saline.total_cmp(&b.saline))
+        .then_with(|| a.refractory.total_cmp(&b.refractory))
+        .then_with(|| a.purity.total_cmp(&b.purity))
+}
+
+/// Every distinct substance a world contains, derived from its generated
+/// terrain and climate — the seed-level closing of the carry functions
+/// above (spec §8 evidence items 2/3).
+///
+/// Walks every land cell of `terrain`'s Geosphere and lands a substrate for
+/// each geological source present — the bedrock ([`substrate_of_rock`]), the
+/// climate-coupled soil ([`substrate_of_soil`], via [`crate::soil_of`]), and
+/// any ore deposit ([`substrate_of_commodity`], via [`crate::deposit_of`]) —
+/// plus living matter ([`substrate_of_life`]) wherever the cell is
+/// habitable (`climate`'s habitability mask: the existing "could host a
+/// vale-like settlement" signal, reused here as this campaign's biosphere-
+/// presence proxy rather than authoring a new one). Ocean cells contribute
+/// nothing — The Assay's inventories are terrestrial, matching the
+/// terrestrial-supply frame the rest of the composition root already uses.
+///
+/// Deduplicated and sorted by [`substrate_order`] so the result is
+/// deterministic — the same seed's terrain/climate always walks the same
+/// cells in the same order, and the sort removes any dependence on that
+/// walk order besides — and directly comparable between worlds.
+pub fn substances_of_world(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Vec<Substrate> {
+    let geo = terrain.geosphere();
+    let soils = crate::soil_of(terrain, climate, geo);
+    let mut substances: Vec<Substrate> = Vec::new();
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        substances.push(substrate_of_rock(terrain.rock_at(cell)));
+        substances.push(substrate_of_soil(*soils.get(cell)));
+        if let Some(deposit) = crate::deposit_of(terrain, climate, geo, cell) {
+            substances.push(substrate_of_commodity(deposit.commodity, deposit.grade));
+        }
+        if *climate.habitability().get(cell) {
+            substances.push(substrate_of_life());
+        }
+    }
+    substances.sort_by(substrate_order);
+    substances.dedup();
+    substances
+}
+
+/// The productions a world's material endowment can reach — [`substances_of_world`]
+/// piped through [`reachable_productions`]. The seed-level entry point spec
+/// §8 evidence items 2/3 ask for: same seed, same list, byte-identically;
+/// materially different geology, materially different list.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn reachable_productions_of_world(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Vec<&'static str> {
+    reachable_productions(&substances_of_world(terrain, climate))
 }
 
 #[cfg(test)]
@@ -354,6 +429,168 @@ mod tests {
         ];
         for (soil, expected) in cases {
             assert_eq!(substrate_of_soil(soil), expected, "{soil:?}");
+        }
+    }
+
+    /// Build a world only as deep as terrain genesis (`BuildDepth::Terrain`)
+    /// — the cheapest depth that yields a real, generated terrain/climate
+    /// pair — then reconstruct both off it exactly the way every other
+    /// `*_lines_from`/`history_for` view in `lib.rs` does. Reused by every
+    /// seed-level test below so world generation happens once per seed.
+    fn terrain_and_climate_with_pins(
+        seed: u64,
+        terrain_pins: &hornvale_terrain::TerrainPins,
+    ) -> (GeneratedTerrain, GeneratedClimate) {
+        let wc = crate::WorldComponents::assemble().expect("component roster assembles");
+        let world = crate::build_world_to(
+            hornvale_kernel::Seed(seed),
+            &crate::SkyPins::default(),
+            crate::SkyChoice::Generated,
+            terrain_pins,
+            &crate::SettlementPins::default(),
+            &wc,
+            crate::BuildDepth::Terrain,
+        )
+        .expect("a terrain-depth build succeeds");
+        let terrain = crate::terrain_of(&world).expect("terrain reconstructs");
+        let climate = crate::climate_from(&world, &terrain).expect("climate reconstructs");
+        (terrain, climate)
+    }
+
+    /// [`terrain_and_climate_with_pins`] at the crate's default terrain pins
+    /// — the ordinary, full-size globe.
+    fn terrain_and_climate_for(seed: u64) -> (GeneratedTerrain, GeneratedClimate) {
+        terrain_and_climate_with_pins(seed, &hornvale_terrain::TerrainPins::default())
+    }
+
+    /// A small, mostly-ocean globe: pinned so land area (and therefore
+    /// rock/soil/ore variety) stays small. Used only by the divergence test
+    /// below — see its doc comment for why a full default-size globe cannot
+    /// exercise this claim.
+    fn sparse_terrain_pins() -> hornvale_terrain::TerrainPins {
+        hornvale_terrain::TerrainPins {
+            ocean_fraction: Some(0.95),
+            plates: Some(2),
+            continents: Some(1),
+            globe_level: Some(4),
+            ..hornvale_terrain::TerrainPins::default()
+        }
+    }
+
+    /// Spec §8 evidence item 2: the same seed yields exactly the same
+    /// substance set and the same reachable-production list, byte-
+    /// identically, across independent world (re)generations.
+    #[test]
+    fn same_seed_yields_the_same_substances_and_productions() {
+        let (terrain_a, climate_a) = terrain_and_climate_for(42);
+        let (terrain_b, climate_b) = terrain_and_climate_for(42);
+
+        let substances_a = substances_of_world(&terrain_a, &climate_a);
+        let substances_b = substances_of_world(&terrain_b, &climate_b);
+        assert_eq!(
+            substances_a, substances_b,
+            "the same seed must yield the same substance set"
+        );
+
+        let productions_a = reachable_productions_of_world(&terrain_a, &climate_a);
+        let productions_b = reachable_productions_of_world(&terrain_b, &climate_b);
+        assert_eq!(
+            productions_a, productions_b,
+            "the same seed must yield the same reachable-production list"
+        );
+    }
+
+    /// Spec §8 evidence item 3 — the campaign's one substantive claim about
+    /// the WORLD rather than the code: two seeds with materially different
+    /// geology reach materially different production sets.
+    ///
+    /// What was tried first: seeds 1 and 42 at the crate's DEFAULT terrain
+    /// pins. Their substance sets do diverge (asserted below is not
+    /// vacuous), but every seed tried at default pins — 0 through 39, by
+    /// hand, plus 1 and 42 — reaches the SAME all-7 reachable-production
+    /// set. That is not a bug: `PRODUCTIONS` has only 7 entries today (see
+    /// `domains/alchemy/src/production.rs`), several of their thresholds are
+    /// generous (e.g. `grind-stone`'s malleability <= 0.3 admits nearly
+    /// every rock; `dissolve-salt` is admitted by ordinary Aridisol soil,
+    /// not only evaporite), and a default-size globe has thousands of land
+    /// cells — enough that essentially every world's soil/rock/climate
+    /// variety alone saturates the whole table regardless of seed. So
+    /// production-set divergence needs a world small enough that this
+    /// saturation does NOT happen: [`sparse_terrain_pins`] pins a small,
+    /// mostly-ocean globe (few land cells, few plates), and at THAT
+    /// configuration seeds do diverge — e.g. seed 0 reaches 6 productions
+    /// (no `dissolve-salt`: this particular small landmass never rolls
+    /// evaporite rock or arid-enough soil) while seed 2 reaches all 7. Pins
+    /// are held fixed and identical between the two builds; only the seed
+    /// differs, so the divergence is attributable to the seed, exactly as
+    /// item 3 asks for.
+    #[test]
+    fn materially_different_geology_reaches_materially_different_productions() {
+        // The substance-set claim holds even at default pins.
+        let (terrain_a, climate_a) = terrain_and_climate_for(1);
+        let (terrain_b, climate_b) = terrain_and_climate_for(42);
+        let substances_a = substances_of_world(&terrain_a, &climate_a);
+        let substances_b = substances_of_world(&terrain_b, &climate_b);
+        assert_ne!(
+            substances_a, substances_b,
+            "seeds 1 and 42 must land materially different substance sets"
+        );
+
+        // The reachable-production claim needs the small-globe pins (see
+        // the doc comment above for why default-size worlds saturate).
+        let pins = sparse_terrain_pins();
+        let (sparse_a, sparse_climate_a) = terrain_and_climate_with_pins(0, &pins);
+        let (sparse_b, sparse_climate_b) = terrain_and_climate_with_pins(2, &pins);
+        let productions_a = reachable_productions_of_world(&sparse_a, &sparse_climate_a);
+        let productions_b = reachable_productions_of_world(&sparse_b, &sparse_climate_b);
+        assert_ne!(
+            productions_a, productions_b,
+            "seeds 0 and 2 at the same small-globe pins must reach different production sets: {productions_a:?} vs {productions_b:?}"
+        );
+    }
+
+    /// Companion to `reachable_productions_is_sorted_and_deduplicated`, for
+    /// the substance side: `substances_of_world` must return no two adjacent
+    /// equal entries (dedup) and must be sorted by [`substrate_order`].
+    /// `Substrate` has no `Ord`, so unlike the productions test (which gets
+    /// both properties from one "strictly increasing" sweep over `&str`)
+    /// this needs two separate checks.
+    #[test]
+    fn substances_of_world_is_sorted_and_deduplicated() {
+        let (terrain, climate) = terrain_and_climate_for(42);
+        let substances = substances_of_world(&terrain, &climate);
+        assert!(
+            substances.len() > 1,
+            "need at least two substances to exercise ordering: {} found",
+            substances.len()
+        );
+        assert!(
+            substances
+                .windows(2)
+                .all(|w| substrate_order(&w[0], &w[1]) != std::cmp::Ordering::Greater),
+            "substances must be sorted by substrate_order"
+        );
+        assert!(
+            substances.windows(2).all(|w| w[0] != w[1]),
+            "substances must be deduplicated (no adjacent equal entries)"
+        );
+    }
+
+    /// A real generated world reaches a non-empty, sensible production set:
+    /// every name it returns is one the production table actually declares.
+    #[test]
+    fn a_real_world_reaches_a_nonempty_sensible_production_set() {
+        let (terrain, climate) = terrain_and_climate_for(42);
+        let productions = reachable_productions_of_world(&terrain, &climate);
+        assert!(
+            !productions.is_empty(),
+            "a real world must reach at least one production"
+        );
+        for name in &productions {
+            assert!(
+                PRODUCTIONS.iter().any(|p| &p.name == name),
+                "{name} must be a production the table actually declares"
+            );
         }
     }
 }
