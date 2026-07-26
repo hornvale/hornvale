@@ -2,7 +2,7 @@
 
 **Campaign:** The Hearth — campaign 1 of The Rose Window as amended
 **Date:** 2026-07-25
-**Status:** draft (G3)
+**Status:** shipped (2026-07-25)
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md`, **Amendment 1**
 (§1a) — read that first; this spec builds only on the amended program.
 **Decisions in force:** 0069 (fine position is never serialized), 0072 (derived

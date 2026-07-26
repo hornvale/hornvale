@@ -1,5 +1,9 @@
 # The Hearth — Implementation Plan
 
+**Status: COMPLETE (shipped 2026-07-25).** T1 `2a76215a`, T2 `28895452`,
+T3 `357feeb7`, T4 `ead57a6a`, T4a `d362a889`, T5 `ca0dac31`, T6 `c06587c8`.
+Ships inert and byte-identical (spec §9.1); The Threshold makes it live.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use
 > `superpowers:subagent-driven-development` to implement this plan task-by-task
 > (and `dispatching-hornvale-subagents` for every dispatch). Steps use checkbox
