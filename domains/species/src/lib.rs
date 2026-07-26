@@ -1002,6 +1002,9 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 condition_niche: xorn_condition_niche(),
                 potency: 5.0 / 30.0, // xorn — CR 5 (5E MM); potency = CR/30
                 social_form: SocialForm::Solitary,
+                // Ametabolic, burrows through stone: lives IN the substrate,
+                // not on it. rust-monster shares the pure-MINERAL niche but
+                // stays Terrestrial — it walks the surface eating metal.
             },
         ),
         (

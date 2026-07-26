@@ -187,7 +187,8 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency — the row every kind carries and the packer and habitat model read)
+potency, social organization — the row every kind carries and the packer
+and habitat model read)
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
@@ -225,6 +226,7 @@ mind-perception-speech chain a kind climbs; the three chromatic dragons climb
 it all the way — each carries a mind, perceives, and speaks — and are absent
 only from Society. A consumer that needs a society reading for a solitary
 kind resolves `SocietyVector::baseline()`, the goblin-equal values.
+
 What the old `Option<PeopledTraits>`
 once guaranteed by the shape of a type — the peopled traits together or none —
 worldgen now enforces as this load-time nested-capacity check across the

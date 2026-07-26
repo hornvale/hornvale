@@ -9184,6 +9184,49 @@ mod tests {
         );
     }
 
+    #[test]
+    fn land_stays_fully_occupied_after_the_gate() {
+        // P5 (spec §5): "Land stays fully occupied — every one of the 11,066
+        // land cells has a dominant before and after." The Tumult's land mask
+        // (all five supply axes are terrestrial) takes cells OUT of
+        // contention for kinds whose whole uptake vector finds no supply
+        // there; P5's claim is that it never empties a LAND cell of every
+        // kind — every land cell keeps at least one kind with K > 0.
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _y, _yp) = stellar_inputs(&sky);
+        let wc = WorldComponents::assemble().unwrap();
+        let bio: Vec<&hornvale_species::BiosphereTraits> =
+            wc.biosphere.iter().map(|(_, b)| b).collect();
+        let ks = niche_per_species_k(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &bio,
+        );
+        let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
+        assert_eq!(land.len(), 11_066, "P5's land-cell count (spec §1)");
+
+        let undominated: Vec<hornvale_kernel::CellId> = land
+            .iter()
+            .copied()
+            .filter(|&c| !ks.iter().any(|(_, k)| *k.get(c) > 0.0))
+            .collect();
+        assert!(
+            undominated.is_empty(),
+            "P5: every land cell must have at least one kind with K > 0 after \
+             the gate; {} did not (first: {:?})",
+            undominated.len(),
+            undominated.first()
+        );
+    }
+
     /// The three build-local reads
     /// [`menagerie_full_roster_dominant_breakdown`] returns: every kind's
     /// name (biosphere order, the `tag`-indexable slice), the per-kind

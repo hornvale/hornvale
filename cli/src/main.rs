@@ -984,13 +984,20 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
 fn cmd_lab_run(args: &[String]) -> Result<(), String> {
     let path = args.get(2).ok_or("lab run requires <PATH>")?;
     let study = hornvale_lab::load_study(std::path::Path::new(path)).map_err(|e| e.to_string())?;
+    let goldens_dir = std::path::Path::new(hornvale_lab::CENSUS_GOLDENS_DIR);
+    // Fail fast, before spending any compute: a census study on the wrong
+    // machine would otherwise run to completion before `publish` (the
+    // load-bearing check — see below) refuses it. `publish` re-checks this
+    // itself, so this is a UX shortcut, not the guard's only enforcement
+    // point (decision 0063; windows/lab/src/census_guard.rs).
+    hornvale_lab::require_canonical_host_for(
+        &study.name,
+        goldens_dir,
+        &hornvale_lab::current_hostname(),
+    )?;
     let result = hornvale_lab::run(&study).map_err(|e| e.to_string())?;
     hornvale_lab::write_csv(&result, std::path::Path::new("lab-out")).map_err(|e| e.to_string())?;
-    let written = hornvale_lab::publish(
-        &result,
-        std::path::Path::new("book/src/laboratory/generated"),
-    )
-    .map_err(|e| e.to_string())?;
+    let written = hornvale_lab::publish(&result, goldens_dir).map_err(|e| e.to_string())?;
     let refusals = result.rows.iter().filter(|r| r.refusal.is_some()).count();
     println!(
         "study {}: {} rows, {} refusals; summary + {} charts published.",
