@@ -301,6 +301,58 @@ still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
 with respect to, never a distribution of its own.
 
+**The condition niche's four axes, and the frame each is said in.** The
+biosphere component's `ConditionNiche` carries one response curve per
+environmental axis — temperature in °C, moisture in the climate field's
+`[0,1]` unit, insolation relative to the planet's global scalar, and
+elevation in **metres above the world's own sea level**. That last frame is
+newer than the others and worth stating plainly, because it was wrong until
+*The Tumult* and wrong invisibly. Elevation had been scored against the raw
+[reference datum](../chronicle/the-datum.md) — an *isostatic* zero, a
+reference-thickness crust floating at equilibrium — which is the right frame
+for a planet's crust and the wrong one for a creature. A world's sea level is
+itself a value of that type, derived from the elevation field and different on
+every world: across a hundred sampled seeds it ranges from −1723 m to
+−3478 m. So an optimum authored as "2600" did not name an altitude at all; it
+named 5200 m above sea level on one world and 5900 m on another, in both cases
+at or above the highest land those worlds had. The kobold's authored highland
+stronghold — the one axis meant to be its exclusive, uncontestable ground —
+was not merely uncontested but **unoccupiable**, and its habitat fit ran
+roughly an order of magnitude below every other people's *everywhere*, which
+is precisely the signature of a niche that has been quietly deleted rather
+than lost. The correction is one subtraction at the substrate boundary
+(`elevation_at(cell) − sea_level`), and it makes the axis a fixed frame that
+an authored number can mean something in. The optima are now stated against
+the measured distribution of settleable land — median 1561 m above sea level,
+quartiles 621 m and 2651 m, the 95th percentile at 4148 m — and the four
+peoples tile it: bugbear's lowland at the 15th percentile, hobgoblin's plains
+at the 24th, goblin's wide generalist curve centred on the median, and
+kobold's stronghold at the 79th, with the giant goat's alpine ceiling above it
+at the 91st. Measured over the same seeds, the kobold is now the best-fit
+people on every settleable cell above 3000 m and the worst below 500 m, which
+is what "highlander" was always supposed to mean. The lesson generalizes past
+this one axis: **a unit is not a frame.** Both quantities were honest metres;
+only one of them was metres from a place a creature could care about.
+
+The correction also exposed something the bug had been hiding, worth recording
+here rather than leaving to be re-discovered. Under the old datum an ocean cell
+sat some four kilometres from every authored optimum, so the elevation axis was
+incidentally acting as a **land mask** — and two of the habitat model's supply
+axes have never had one of their own. Photosynthate and plant forage ride the
+carrying-capacity field, which is land-limited; the ambient detritus term is a
+global constant and the mineral term reads a prospectivity field, and both are
+defined on the seafloor exactly as on a hillside. With the elevation axis
+re-datumed and no longer excluding submerged cells by accident, the three
+kinds that eat detritus or rock now score across the ocean floor: at seed 42
+the otyugh's total suitability goes from 0 % to 85 % submerged, the rust
+monster's from 22 % to 86 %, the xorn's from 58 % to 74 %. No settlement lands
+there — every one of seed 42's 216 stack settlements is on land, because the
+peoples' own supply is land-limited — but a swamp detritivore whose habitat is
+mostly seabed is not a claim this model should be making. That is a **supply
+term** gap, not an elevation one, and it belongs to the same unfinished work
+as the animal-prey axis: a land mask (or an aquatic niche worth the name)
+authored deliberately, rather than an accidental one restored.
+
 **The peoples ahead:** deliberation latency's still-unspent half — the
 salience or negotiation rule that would read a people's decisiveness
 directly, now that language's formality knob has spent only the telling of

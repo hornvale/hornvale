@@ -1262,7 +1262,11 @@ pub struct Substrate {
     /// Annual-mean top-of-atmosphere insolation, relative to the planet's
     /// global scalar (`hornvale_astronomy::insolation_rel`).
     pub insolation: f64,
-    /// Terrain elevation scalar (meters-scale). Ocean cells included.
+    /// Height above this world's sea level, metres — NOT the raw
+    /// [`hornvale_kernel::ReferenceElevation`], whose isostatic datum sits
+    /// 1.7–3.5 km below sea level and moves from world to world. Negative on
+    /// ocean cells (they are still scored; the supply term is what empties
+    /// them).
     pub elevation: f64,
 }
 
@@ -1315,6 +1319,17 @@ pub fn annual_mean_insolation(
 /// cosine off the substellar point, floored at `0.0` on the night side —
 /// so the terminator ring, not the fixed noon point, reads as the
 /// temperate band.
+///
+/// Elevation is **height above this world's sea level**, not the raw
+/// [`hornvale_kernel::ReferenceElevation`] (The Tumult's re-datum). The
+/// reference datum is isostatic — 0 m is a reference-thickness crust at
+/// equilibrium — so a world's sea level is itself a *drawn* value of that
+/// type (measured range across seeds: −1723 m to −3478 m). Scoring an
+/// authored elevation niche against the raw datum therefore asked "how far
+/// above the isostatic reference?", a quantity that shifts by ~1.8 km
+/// between worlds and means nothing ecologically. Subtracting sea level
+/// makes the axis a fixed, world-independent frame that the authored
+/// optima in `domains/species` can actually name.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar)
 pub fn substrate_field(
     geo: &Geosphere,
@@ -1324,6 +1339,7 @@ pub fn substrate_field(
     insolation_scalar: f64,
     regime: &RotationRegime,
 ) -> hornvale_kernel::CellMap<Substrate> {
+    let sea_level = terrain.sea_level();
     hornvale_kernel::CellMap::from_fn(geo, |cell| Substrate {
         temperature_c: climate.mean_temperature_at(cell).get(),
         moisture: climate.moisture_at(cell),
@@ -1335,7 +1351,10 @@ pub fn substrate_field(
                 insolation_scalar * hornvale_climate::substellar_cosine(geo.position(cell)).max(0.0)
             }
         },
-        elevation: terrain.elevation_at(cell).get(),
+        // The re-datum: `ReferenceElevation - ReferenceElevation` is the
+        // kernel's own typed subtraction, whose output is the signed metre
+        // difference — height above sea level. Negative on ocean cells.
+        elevation: terrain.elevation_at(cell) - sea_level,
     })
 }
 
