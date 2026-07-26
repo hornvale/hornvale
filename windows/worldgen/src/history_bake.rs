@@ -691,10 +691,22 @@ impl<'a> Bake<'a> {
             // viable-minimum death — the second dissipation).
             return Relocation::Lost;
         }
-        // A people that could not seat itself after paying the war loss cannot
-        // take held land at all (it would `open` at `peak_population == 0` — a
-        // peopleless settlement, which the shipped invariant forbids). It can
-        // still pioneer.
+        // A people that could not seat itself after paying the war loss does
+        // not start the fight: winning would leave it below the viability floor
+        // it only just cleared above, holding a prize as a remnant this model
+        // already calls dead. It can still pioneer — the veto is on held ground
+        // alone.
+        //
+        // NOT the no-peopleless-settlements guard, whatever this comment used
+        // to say (The Tumult, final review F-3). That invariant is enforced
+        // upstream by the `pop < VIABLE_MIN` return directly above: the
+        // smallest population that reaches this line is `VIABLE_MIN`, and
+        // `VIABLE_MIN × (1 - WAR_LOSS)` = 1.4 rounds to 1 in `open`, never to
+        // 0. `Bake::maybe_raid`'s identically-shaped guard is the one that
+        // genuinely does prevent a `peak_population == 0` seat — nothing bounds
+        // a seated raider's population from below, so its post-war figure can
+        // round to zero. Here the rule is viability, not headcount, and
+        // `a_people_that_cannot_survive_winning_does_not_fight` binds it.
         let can_fight = pop * (1.0 - WAR_LOSS) >= VIABLE_MIN;
         let Some(home) = self.best_home(
             people,
@@ -1640,6 +1652,105 @@ mod tests {
             "the evicted holder must have resettled somewhere"
         );
         assert_eq!((bake.tally.raided, bake.tally.fled), (1, 1));
+    }
+
+    #[test]
+    fn a_people_that_cannot_survive_winning_does_not_fight() {
+        // The Tumult, final review F-3: `relocate`'s `can_fight` guard shipped
+        // with NO arm anywhere — replacing it with `true` left all 22 bake
+        // tests, the end-to-end no-peopleless-settlements gate, and seed 42's
+        // whole census byte-identical. Seed 42 simply never produces a roller
+        // in the narrow band the guard governs, so only a hand-built state can
+        // reach it.
+        //
+        // The band is exactly `[VIABLE_MIN, VIABLE_MIN / (1 - WAR_LOSS))` =
+        // [2.0, 2.857): big enough to keep looking for a home (the `pop <
+        // VIABLE_MIN` death above does not catch it), too small to still be
+        // viable after paying `WAR_LOSS` for a conquest. Such a people must
+        // pioneer, never prey — and a people just ABOVE the band must still
+        // prey, or the guard would be a blanket ban on weak conquerors rather
+        // than the viability rule it is. Both halves are asserted, so the test
+        // pins where the threshold sits and not merely that one exists.
+        let take_the_rich_cell = |roller_pop: f64| {
+            let (_geo, graphs, capacity, river_prox, refugia, era) =
+                cascade_world(|c| if c == CellId(20) { RICH } else { POOR });
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+            // A very weak holder sits on the one rich cell: beatable by even a
+            // sub-viable roller (`RAID_MARGIN` clears at strength 1.5+), and
+            // far enough below its cell's capacity to have spoils worth taking.
+            bake.open(
+                KindId("goblin"),
+                CellId(20),
+                0.0,
+                1.0,
+                Founding::Genesis(CellId(20)),
+                None,
+                0.0,
+            );
+            let roller = bake.open(
+                KindId("kobold"),
+                CellId(0),
+                0.0,
+                roller_pop,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let (r_id, r_lineage) = (
+                bake.communities[roller].id,
+                bake.communities[roller].lineage,
+            );
+            bake.close(roller, 0.0, CauseOfEnd::Fled, Ended::Nature);
+            let outcome = bake.relocate(
+                KindId("kobold"),
+                roller_pop,
+                r_lineage,
+                r_id,
+                0.0,
+                CellId(0),
+                &era,
+                0.0,
+                0,
+            );
+            let seated = *bake
+                .node_index
+                .get(&CellId(20))
+                .expect("the rich cell is occupied either way");
+            let holder_people = bake.records[bake.communities[seated].record].people;
+            (outcome, holder_people)
+        };
+
+        // Inside the band: 2.5 clears `VIABLE_MIN` but 2.5 × 0.7 = 1.75 does
+        // not, so held ground never enters the option set. It pioneers onto
+        // marginal vacant land and the goblins keep the rich cell.
+        let (outcome, holder) = take_the_rich_cell(2.5);
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 0 },
+            "a roller that could not survive winning must pioneer, not prey"
+        );
+        assert_eq!(
+            holder,
+            KindId("goblin"),
+            "the rich cell must not have changed hands: a sub-viable conqueror \
+             would hold it as a remnant this model already calls dead"
+        );
+
+        // Just above it: 2.9 × 0.7 = 2.03 clears `VIABLE_MIN`, so the very same
+        // world resolves the other way. Without this half the assertion above
+        // would also pass if the guard vetoed every weak roller outright.
+        let (outcome, holder) = take_the_rich_cell(2.9);
+        assert_eq!(
+            outcome,
+            Relocation::Settled { cascade: 1 },
+            "a roller that CAN survive winning still takes the rich held cell"
+        );
+        assert_eq!(
+            holder,
+            KindId("kobold"),
+            "the rich cell must have changed hands just above the threshold"
+        );
     }
 
     #[test]
