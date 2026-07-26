@@ -672,6 +672,14 @@ impl<'w> Session<'w> {
             from,
             to: self.day,
             params: SUSTENANCE,
+            // The planet's rotation period, so the action clock's tick divides
+            // the local day exactly (The Action Clock, spec §4.1). `None` on a
+            // tidally-locked world, which the rotation pin admits.
+            day_length_std: self
+                .calendar
+                .as_ref()
+                .and_then(|c| c.day_length())
+                .map(|d| d.get()),
             terrain: &terrain,
         };
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {

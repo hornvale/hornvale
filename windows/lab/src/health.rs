@@ -60,13 +60,18 @@ fn is_distress(label: AffectLabel) -> bool {
 /// deterministic (`DriveMovements::step` draws nothing new; `affect_of` is a
 /// read). This is the shared core of both the real-world sweep and the
 /// synthetic null-control / injected-fault scenarios.
-/// type-audit: bare-ok(count: ticks)
+/// `day_length_std` is the world's rotation period in standard days, passed
+/// through to the tick so the action clock can divide the local day exactly
+/// (The Action Clock, spec §4.1); `None` for a tidally-locked world and for the
+/// planted-terrain synthetic scenarios, which have no sky.
+/// type-audit: bare-ok(count: ticks), bare-ok(ratio: day_length_std)
 pub fn run_simulation(
     seed_ledger: &Ledger,
     registry: &hornvale_kernel::ConceptRegistry,
     npcs: &[Npc],
     terrain: &dyn Terrain,
     ticks: usize,
+    day_length_std: Option<f64>,
 ) -> Vec<Vec<Affect>> {
     let mut ledger = seed_ledger.clone();
     let mut traces: Vec<Vec<Affect>> = vec![Vec::new(); npcs.len()];
@@ -77,6 +82,7 @@ pub fn run_simulation(
             from: WorldTime { day },
             to: WorldTime { day: day + 1.0 },
             params: SUSTENANCE,
+            day_length_std,
             terrain,
         };
         // The kernel tick applies the drive-movement facts; the same headless
@@ -150,7 +156,21 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     let prey = hornvale_worldgen::prey_pressure(world).ok();
     let terrain =
         LocaleTerrain::with_fields(&ctx, calendar.as_ref(), predator.as_ref(), prey.as_ref());
-    let traces = run_simulation(&ledger, &registry, &npcs, &terrain, HEALTH_TICKS);
+    // The rotation period the action clock divides (spec §4.1) — the same
+    // calendar the wake cycle already reads; `None` if the world is
+    // tidally-locked or has no derivable sky.
+    let day_length_std = calendar
+        .as_ref()
+        .and_then(|c| c.day_length())
+        .map(|d| d.get());
+    let traces = run_simulation(
+        &ledger,
+        &registry,
+        &npcs,
+        &terrain,
+        HEALTH_TICKS,
+        day_length_std,
+    );
     npcs.into_iter()
         .zip(traces)
         .map(|(npc, affects)| AffectTrace {

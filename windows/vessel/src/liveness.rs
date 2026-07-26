@@ -16,7 +16,7 @@ use hornvale_species::{ActivityCycle, MetabolicClass};
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness), bare-ok(ratio: mass_kg)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -80,6 +80,13 @@ pub struct Npc {
     /// elemental does not fear the eldritch. Read by the Danger drive against the
     /// cell's hazards for per-kind fear.
     pub threat_niche: ThreatNiche,
+    /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
+    /// threaded from `biosphere_registry` at derivation beside the metabolic
+    /// class. Read by the action clock to scale every action's cost
+    /// allometrically (The Action Clock); nothing else consumes it. Bare `f64`
+    /// rather than the kernel's `Mass`, matching `clock::tempo`'s parameter —
+    /// it is only ever consumed as the ratio `mass_kg / REFERENCE_MASS_KG`.
+    pub mass_kg: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -3192,7 +3199,7 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// once it knows water — committing a dated `agent-at`/`drank` at each
 /// executed step. Holds a `Terrain` to compute belief and exploration
 /// mid-walk. Run through c6's `tick`.
-/// type-audit: bare-ok(return)
+/// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Npc>,
@@ -3202,6 +3209,12 @@ pub struct DriveMovements<'a> {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
+    /// The world's rotation period in standard days (`Calendar::day_length`),
+    /// `None` on a tidally-locked world. The action clock divides the planet's
+    /// day into an exact integer number of ticks (The Action Clock, spec §4.1),
+    /// so the scheduler needs the day length the same way it needs the drive
+    /// parameters. Threaded but not yet read.
+    pub day_length_std: Option<f64>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
 }
@@ -3651,6 +3664,16 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
+            // Body mass (The Action Clock): the allometric driver of every
+            // action's cost. A species missing from the biosphere registry
+            // falls back EXPLICITLY to the clock's reference mass — `tempo`
+            // clamps a nonsense value anyway, but the fallback is stated here
+            // rather than left implicit, so a defaulted creature reads at
+            // exactly tempo 1.0.
+            let mass_kg = biosphere
+                .get_by_label(&species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -3705,6 +3728,7 @@ pub fn derive_npcs(
                 niche,
                 boldness,
                 threat_niche,
+                mass_kg,
                 label,
             }
         })
@@ -3750,6 +3774,13 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
+            // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
+            // most of the health battery's population, so the wild path must
+            // carry the trait too or the tempo spread collapses.
+            let mass_kg = biosphere
+                .get_by_label(&species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -3791,6 +3822,7 @@ pub fn derive_wild_npcs(
                 niche,
                 boldness,
                 threat_niche,
+                mass_kg,
                 label,
             }
         })
@@ -4124,6 +4156,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -4160,6 +4195,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -4198,6 +4236,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -4234,6 +4275,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -4267,6 +4311,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -4316,6 +4363,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -4354,6 +4404,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         }
     }
@@ -4377,6 +4430,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: label.into(),
         }
     }
@@ -5027,6 +5083,9 @@ mod tests {
             from: WorldTime { day: 1.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next =
@@ -5161,6 +5220,59 @@ mod tests {
     }
 
     #[test]
+    fn derived_npcs_carry_their_species_body_mass() {
+        // THE PRECONDITION FOR PER-AGENT TEMPO (The Action Clock T2): if mass
+        // does not reach `Npc`, the action clock's tempo collapses to a
+        // constant and the campaign has no per-agent variation at all.
+        // Asserted on a REAL derived population — both the peopled roster and
+        // the wild fauna, which are most of the health battery's population —
+        // and asserted to VARY: a single value across species means the trait
+        // is being defaulted, not read.
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut ledger = world.ledger.clone();
+        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
+        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, 4));
+        assert!(!npcs.is_empty(), "the probe world derives a population");
+        for n in &npcs {
+            assert!(
+                n.mass_kg.is_finite() && n.mass_kg > 0.0,
+                "{} has a nonsense mass {}",
+                n.species,
+                n.mass_kg
+            );
+            // The registry's own value, not a fallback: the threading reads the
+            // same `biosphere_registry` lookup that supplies the niche.
+            let authored = hornvale_species::biosphere_registry()
+                .get_by_label(&n.species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            assert_eq!(
+                n.mass_kg, authored,
+                "{}'s mass is the authored trait, not a default",
+                n.species
+            );
+        }
+        let distinct: std::collections::BTreeSet<u64> =
+            npcs.iter().map(|n| n.mass_kg.to_bits()).collect();
+        assert!(
+            distinct.len() > 1,
+            "every species has the same mass — the trait is defaulted, not read: {:?}",
+            npcs.iter()
+                .map(|n| (n.species.as_str(), n.mass_kg))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
     fn seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding() {
         // THE CONFLUENCE'S PAYOFF, MEASURED NOT ASSUMED: the earlier pinned
         // finding here (see git history) measured that seed 42's possessed
@@ -5256,6 +5368,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -5266,6 +5381,9 @@ mod tests {
             // wait" — a real session's `wait` would never span this.
             to: WorldTime { day: 100_000.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next =
@@ -5785,6 +5903,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -5802,6 +5923,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next =
@@ -5888,6 +6012,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -5905,6 +6032,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         world.ledger = hornvale_kernel::tick(
@@ -5962,6 +6092,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -5975,6 +6108,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10_000.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -6045,6 +6181,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -6062,6 +6201,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 1_000_000.0 },
             params: degenerate,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -6113,6 +6255,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -6121,6 +6266,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10.0 },
             params: p,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -6358,6 +6506,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "wanderer".into(),
         };
 
@@ -6378,6 +6529,9 @@ mod tests {
                 from: WorldTime { day: 1.0 }, // after the seeded history
                 to: WorldTime { day: 60.0 },  // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -6533,6 +6687,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "wanderer".into(),
         };
         // The herd-mate B: knows water (so it beelines and settles, bounded), and
@@ -6550,6 +6707,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herd-mate".into(),
         };
 
@@ -6640,6 +6800,9 @@ mod tests {
                 from: WorldTime { day: from_day },
                 to: WorldTime { day: 60.0 }, // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -6785,6 +6948,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: label.into(),
         };
 
@@ -6862,6 +7028,9 @@ mod tests {
             from: now,
             to: WorldTime { day: now.day + 1.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next =
@@ -7684,6 +7853,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "creature".into(),
         }
     }
@@ -7841,6 +8013,9 @@ mod tests {
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: mortal_threat_niche(),
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "cornered".into(),
             }
         };
@@ -7868,6 +8043,9 @@ mod tests {
                     cold: 0.0,
                     predator: 0.0,
                 },
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "herd-edge".into(),
             }
         };
@@ -7886,6 +8064,9 @@ mod tests {
             from: WorldTime { day: 0.30 },
             to: WorldTime { day: 0.40 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
@@ -7932,6 +8113,9 @@ mod tests {
             from: WorldTime { day: 0.40 },
             to: WorldTime { day: 0.55 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
@@ -7957,6 +8141,9 @@ mod tests {
             from: WorldTime { day: 0.30 },
             to: WorldTime { day: 0.40 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
@@ -8295,6 +8482,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
@@ -8403,6 +8593,9 @@ mod tests {
                 niche: default_diet_niche(),
                 boldness: 0.5,
                 threat_niche: mortal_threat_niche(),
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -8412,6 +8605,9 @@ mod tests {
                 from: WorldTime { day: 1.0 },
                 to: WorldTime { day: 41.0 },
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -8487,6 +8683,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -8494,6 +8693,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9368,6 +9570,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
@@ -9418,6 +9623,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);

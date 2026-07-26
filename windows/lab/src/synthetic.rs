@@ -129,6 +129,9 @@ impl Scenario {
             &self.npcs,
             &self.terrain,
             ticks,
+            // A planted-terrain scenario has no sky to derive a day from: the
+            // action clock takes its base rate (The Action Clock, spec §4.1).
+            None,
         );
         self.npcs
             .iter()
@@ -235,6 +238,9 @@ fn creature(
             cold: 0.5,
             predator: 1.0,
         },
+        // The action clock's reference mass, so tempo is exactly `1.0` and a
+        // planted scenario's timings are the creature-independent baseline.
+        mass_kg: hornvale_vessel::clock::REFERENCE_MASS_KG,
         label: species.to_string(),
     }
 }
