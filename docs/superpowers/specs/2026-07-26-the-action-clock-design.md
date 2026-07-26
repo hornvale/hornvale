@@ -1,0 +1,216 @@
+# The Action Clock — actions cost time, and time is shared
+
+**Campaign:** The Action Clock — campaign 2 of The Rose Window
+**Date:** 2026-07-26
+**Status:** draft (G3)
+**Parent:** `2026-07-25-the-rose-window-metaplan-design.md` §4.1 (four clocks)
+and §6.2; **Amendment 1** (§1a) for the program as amended.
+**Decisions in force:** 0021 (derive, never author per-creature), 0033
+(quantize at emit only), 0040, 0016 (studies preregister), 0069/0072/0075 (the
+fine layer this campaign's consumer is building).
+**Registry:** `CLIENT-action-clock`, `CLIENT-four-clocks`.
+
+## 1. The gap, corrected
+
+The metaplan says "nothing in Hornvale schedules time at action granularity."
+Run against the tree, that is too strong, and the true picture is more useful:
+
+```
+  action    time cost today              per-agent?  mechanism
+  -------   --------------------------   ----------  --------------
+  MoveTo    MOVE_DURATION = 0.1 days     NO          a COST
+  Drink     0                            —           free
+  Eat       0                            —           free
+  Rest      jump to next waking          —           a SKIP
+  Hold      jump to next act crossing    —           a SKIP
+```
+
+Three separate things are true. **Three of five actions are free.** The one that
+costs **costs the same for every creature**. And two arms do not charge time at
+all — they *skip* to the next moment something can change (`next_awake_day`,
+`next_act`), which is an **event-driven scheduler in embryo**, the same
+mechanism that stops a roguelike ticking through nothing.
+
+So this campaign does not build a clock. It finishes one that is half-built.
+
+**Why now.** Free actions have been harmless because drives bound them: once
+sated, a drive switches off, so a zero-cost `Drink` buys nothing. The Hearth's
+fine layer removes that protection — free actions plus free within-room steps
+would let a creature do arbitrarily much in one instant. The gap becomes
+load-bearing exactly as the interior does.
+
+## 2. Three rungs, all three shipping (owner decision)
+
+1. **Every action costs.** No free actions; the cost model becomes total.
+2. **Cost varies per agent**, derived from what the creature already is —
+   never authored per creature (decision 0021).
+3. **Agents interleave.** The tick becomes a priority queue over
+   `(next_action_time, entity)` instead of walking each creature through the
+   whole interval in turn.
+
+Rung 3 was recommended for deferral on the grounds that ordering nobody can
+observe is machinery without a consumer — Hornvale has no contested resources,
+no combat, no conversation. **The owner's call is to ship it now, and the
+reason is sequencing:** The Threshold is landing anchor occupancy, and two
+creatures at one anchor is precisely the first place order becomes observable.
+Restructuring the tick now is cheaper than restructuring it inside a campaign
+that must also do something else.
+
+## 3. Cost
+
+`cost(action, agent) = base(action) × tempo(agent)`.
+
+**`base` is authored, per action kind** — five small constants, one dial each,
+replacing the single `MOVE_DURATION`. Drinking is quick; a meal is not; sleep
+keeps its existing jump-to-waking, which is a *phase*, not a cost, and is not
+touched.
+
+**`tempo` is derived, never authored.** The physical tempo already present on
+`Npc` is `metabolic_class`: an endotherm runs hot and acts fast, an ectotherm
+slower, an Ametabolic construct is outside the metabolic economy entirely and
+keeps the baseline. This is The Bane's move — derive what a creature *does*
+from what it already *is* — and it adds no new field, no lookup table, and no
+per-species authoring.
+
+Reserved, and deliberately not v1: **temperature-dependent ectotherm tempo** (a
+cold lizard really is slower, and the thermal machinery to express it already
+ships), and **body mass**, which is the honest physical driver but is not
+currently a species property.
+
+## 4. Integer scheduling, `f64` commits
+
+The scheduler orders agents by *when they next act*. That ordering must be a
+**total order with deterministic ties**, and `f64` days cannot supply one: it is
+not `Ord`, and accumulated float addition is precisely the drift the project
+bans in `astar`, whose costs "are `u64` integers specifically to avoid float
+non-determinism."
+
+So: **schedule in integer ticks; commit in `f64` days.**
+
+```
+  scheduling  Ticks(u64)     internal, exact, totally ordered, never serialized
+  committing  day: f64       the existing save-format contract, unchanged
+```
+
+A fixed `TICKS_PER_DAY` converts at the boundary. This is **quantize-at-emit
+applied to time** — the third instance of one discipline (decision 0033 for
+floats, 0069 for space, this for time), and it means the queue's arithmetic is
+exact while nothing about the ledger's shape changes.
+
+The queue key is `(Ticks, EntityId)`: a `BTreeSet` over integers, ties broken by
+entity, so the order is a pure function of the frozen ledger.
+
+## 5. The constraint that keeps interleaving safe
+
+Interleaving changes **when** each agent acts. It must not change **what an
+agent can see**.
+
+Today each creature reads `frozen` — the pre-tick ledger — plus its own emitted
+facts. If interleaving let creature B observe creature A's mid-tick move, every
+cross-agent read would become order-sensitive, and that is exactly the hazard
+`alarm_field` was designed around: PSY-12's determinism line is that *a field
+over the frozen population is order-independent; direct agent-to-agent reads
+mid-tick are not.*
+
+**So cross-agent reads stay frozen-based.** The alarm field, the hazard
+memory's roster, and the band's shared belief all continue to read the pre-tick
+ledger, exactly as now. Interleaving is additive to the determinism story rather
+than a threat to it — it reorders *acting*, not *perceiving*.
+
+The consequence to state plainly: two creatures acting at the same simulated
+moment do not see each other within that tick. That is the same one-tick
+latency the alarm field already has, and it is what makes the wave terminate.
+
+## 6. What the restructure actually touches
+
+`DriveMovements::step` currently owns nine pieces of per-creature state in loop
+locals — `pos`, `last_drank`, `last_rested`, `last_ate`, `believed`, `visited`,
+`steps`, `mode`, and the walk's own `day`. Under interleaving those must live
+across queue pops, in a `BTreeMap<EntityId, WalkState>` built once from
+`frozen`.
+
+That is the campaign's real work, and it is a *refactor with a behavioural
+consequence* rather than a new subsystem. The decision loop, the arbitration,
+the drives and the fact emission are untouched; what changes is who calls them
+and in what order.
+
+## 7. Determinism and drift
+
+**No genesis change**, no new predicate, no new serialized quantity: `Ticks` is
+internal to the scheduler and never leaves it.
+
+**This campaign is not byte-identical, and cannot be.** Charging `Drink` and
+`Eat` shifts when discharges land; per-agent tempo shifts every walk;
+interleaving reorders emission within a tick. Seed-42 galleries and the health
+battery both move.
+
+That makes it a **scoped-drift campaign**, like The Haunt: the drift must be
+*named and justified*, creature by creature where it is small enough to read,
+and never regenerated over. The acceptance protocol is §8.
+
+## 8. Acceptance
+
+Preregistered before the first task, with signs, in the ledger (decision 0016):
+
+- **Freeze the baseline from main's tip** — seed-42 galleries and the health
+  battery, recorded with the commit SHA, *before* any code lands. A baseline
+  taken mid-campaign aliases other campaigns' physics into this measurement.
+- **Predictions.** Creatures with slower-tempo metabolic classes cover less
+  ground per interval and reach water later. Endotherms are least affected.
+  Ametabolic agents are unaffected *entirely* — they carry no drives, so their
+  walks must be identical to the byte, which is a sharp internal control.
+- **The health null-control still holds**: chronicity `0.0` and every distress
+  run recovering. Prevalence and the by-cause breakdown may move; chronicity
+  moving is a stop.
+- **Order is a pure function of the frozen ledger** — the same tick run twice
+  yields the same emission sequence, and a shuffled `npcs` input yields the same
+  result (the queue's tie-break, not the input order, decides).
+- **No free action remains**: a property test that every `Action` advances the
+  clock, so a future action cannot silently be added for free.
+- **Re-time the health battery** — the longest sim in the suite, never the
+  possession walk.
+
+## 9. Scope
+
+**In:** the five base costs; `tempo` from `metabolic_class`; `Ticks` and the
+conversion boundary; the priority queue and the hoisted `WalkState`; the
+frozen-read constraint; the drift protocol.
+
+**Out, each with a home:**
+
+- **Maintenance conditions for interval actions** — "she was interrupted"
+  requires a condition that holds *throughout* an action, not just at entry.
+  Owed to this campaign by The Hearth's §12, and deferred because v1's actions
+  are instantaneous-with-a-cost rather than genuinely durative: nothing yet
+  happens *during* one. It lands with the first action long enough to interrupt.
+- **Allen's interval algebra** — thirteen relations, jointly exhaustive and
+  pairwise disjoint, with a published composition table; the settled vocabulary
+  if overlapping actions ever need reasoning about, and the exact twin of The
+  Hearth's RCC-8 borrow. Not needed while actions do not overlap.
+- Temperature-dependent ectotherm tempo; body mass as the tempo driver.
+- Initiative as a *contested* quantity (who acts first when it matters) — that
+  is a combat concern and combat is ordered after Vitality (metaplan §6.5).
+
+## 10. Flagged for G3
+
+1. **[drift — leads this list] This campaign cannot be byte-identical**, and
+   unlike The Haunt's scoped drift it moves *every* metabolic creature rather
+   than a few beasts. The galleries and the health battery both shift. The
+   protocol is §8: preregister, freeze the baseline first, name the movement,
+   never regenerate over it. Confirm that is the accepted cost.
+2. **[scope — owner already decided] All three rungs.** Recorded here with the
+   reasoning: interleaving has no consumer *today*, and its consumer (The
+   Threshold's occupancy) arrives next. Restructuring the tick now is cheaper
+   than doing it inside a campaign with another job.
+3. **[determinism] `Ticks` as an internal integer clock.** Nothing new is
+   serialized, and `f64` days remain the committed contract — but this is a new
+   time representation in a project with one, so it leads the determinism
+   review by the same convention that put epochs and save-format calls first.
+4. **[risk] Interleaving is a refactor of the hottest loop in the sim.**
+   `DriveMovements::step` is where the health battery spends its ~325 s. The
+   restructure could plausibly cost or save meaningfully, and the honest
+   position is that it is **unmeasured**. Time it on the health battery, not the
+   possession walk.
+5. **[interaction] The Threshold is in flight and touches the same loop.**
+   Both campaigns edit `DriveMovements::step`. Sequencing or a deliberate merge
+   plan is an owner call, not autopilot's.
