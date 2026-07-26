@@ -678,11 +678,48 @@ pub fn species_carrying_input(
     }
 }
 
+/// **The terrestrial-supply frame (The Tumult's land mask).** Every v1
+/// resource-supply axis is *terrestrial* supply: the resource a land-dwelling
+/// forager can reach, defined on cells above the world's sea level and **zero
+/// on submerged cells**. This is a property of the supply fields, not a rule
+/// about who may live where — the roster's habitat comes out of what it eats,
+/// so nothing needs a per-species exemption.
+///
+/// Three of the five axes have always carried this mask implicitly:
+/// `PHOTOSYNTHATE` rides `hornvale_demography::carrying_capacity`, which
+/// returns 0 wherever `CarryingInput.habitable` is false, and
+/// `hornvale_climate::is_habitable` requires `elevation >= sea_level`;
+/// `PLANT_FORAGE` is a scale of that same field; `ANIMAL_PREY` is a
+/// placeholder zero. The two that did not — `MINERAL` (a prospectivity read,
+/// which terrain defines on the seafloor too) and `DETRITUS` (a global
+/// constant) — leaked, and were only *incidentally* masked by a bug: before
+/// The Tumult's elevation re-datum, an ocean cell sat ~4 km from every
+/// authored elevation optimum, so the condition term zeroed the seafloor for
+/// everyone. Correcting the datum put ocean cells only ~1100 m below sea
+/// level and exposed the gap — 85 % of the otyugh's, 86 % of the rust
+/// monster's and 74 % of the xorn's total K landed on the seabed. The mask is
+/// stated here instead, on the supply, where it survives any change to the
+/// condition axes.
+///
+/// **Why the supply term and not the K assembly.** Multiplying assembled K by
+/// a land mask would state "nothing lives in water" as a law of the model —
+/// a law that would have to be *unstated* the day an aquatic kind is
+/// authored. Masking the supply says the narrower, truer thing: *these*
+/// resources are land resources. The roster today is entirely terrestrial
+/// (checked kind by kind at The Tumult: swamp, cave, forest, plains, tundra,
+/// alpine and volcanic kinds; no aquatic or amphibious kind, and the two
+/// wettest — otyugh and black dragon — are swamp-dwellers, i.e. wet *land*),
+/// so masking every axis is correct today. An aquatic kind arrives by
+/// authoring a marine supply axis and a supply field defined on water, not by
+/// an exemption from a global rule; its uptake vector would simply weight an
+/// axis these fields do not touch.
+///
 /// Ambient detritus supply (BIO-35 Stage 1: The Demesne). Dead-matter
 /// resource is treated as broadly available this stage — a small constant
 /// floor, not a spatial field. A real spatial detritus field (litterfall /
 /// carcass turnover) is a later refinement once T2 wires the per-axis dot
-/// product this stage is building toward.
+/// product this stage is building toward. It is the *land* amplitude:
+/// [`detritus_supply_field`] applies it above sea level and 0 below.
 /// type-audit: bare-ok(ratio)
 pub const DETRITUS_AMBIENT: f64 = 0.2;
 
@@ -696,6 +733,10 @@ const FORAGE_FRACTION: f64 = 0.5;
 /// fraction of the NPP-based `base_carrying` (grazable matter tracks primary
 /// production spatially). Pure, deterministic, no RNG — a direct scale of an
 /// already-computed field.
+///
+/// Land-masked transitively, and therefore taking no `terrain`: `base_carrying`
+/// is already 0 on submerged cells (see [`DETRITUS_AMBIENT`]'s terrestrial-
+/// supply frame), and a scale of 0 is 0.
 /// type-audit: bare-ok(count: base_carrying), bare-ok(count: return)
 pub fn forage_supply_field(
     geo: &Geosphere,
@@ -704,19 +745,50 @@ pub fn forage_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
+/// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
+/// **0 on submerged cells** — the terrestrial-supply frame stated as a field
+/// rather than as a bare constant, so the detritus axis carries the same land
+/// mask the photosynthate/forage axes already carried through
+/// `carrying_capacity`. Pure, deterministic — a mask, no float ordering.
+/// type-audit: bare-ok(count: return)
+pub fn detritus_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if terrain.is_ocean(c) {
+            0.0
+        } else {
+            DETRITUS_AMBIENT
+        }
+    })
+}
+
 /// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
 /// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
 /// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
 /// in the weighted sum T2 builds (`scale` is the mineral supply amplitude —
 /// the one calibration knob, re-fit in T3). Pure, deterministic — a direct
 /// read, no float ordering involved (`total_cmp`-free).
+///
+/// **Land-masked (The Tumult): 0 on submerged cells.** Terrain derives
+/// prospectivity on the seafloor as readily as on land — it is honest
+/// geology — but it is not supply a land forager can reach, and this is the
+/// terrestrial supply field. See [`DETRITUS_AMBIENT`] for the frame and why
+/// the mask lives here rather than on assembled K.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn mineral_supply_field(
     geo: &Geosphere,
     terrain: &GeneratedTerrain,
     scale: f64,
 ) -> hornvale_kernel::CellMap<f64> {
-    hornvale_kernel::CellMap::from_fn(geo, |c| terrain.prospectivity_at(c) * scale)
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if terrain.is_ocean(c) {
+            0.0
+        } else {
+            terrain.prospectivity_at(c) * scale
+        }
+    })
 }
 
 /// The mineral supply field's amplitude (BIO-35 Stage 1: The Demesne, task
@@ -771,16 +843,24 @@ pub fn axis_supply(
 /// For each species and cell: `saturate(axis_supply(niche, per_axis))` (the
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
-/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL` read their own T1
-/// supply fields, `DETRITUS` reads the ambient constant, and `ANIMAL_PREY`
-/// is Stage 2's placeholder zero (a later stage's trophic wiring); see
-/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
+/// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
+/// own supply fields, and `ANIMAL_PREY` is Stage 2's placeholder zero (a
+/// later stage's trophic wiring); see [`axis_supply`], Type-II-saturated so
+/// intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
 /// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
 /// buffer-able (floored by the species'
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
 /// sovereignty buffers physiology but not geometry.
+///
+/// **K is 0 on every submerged cell** (The Tumult's land mask), and by
+/// construction rather than by decree: all five supply axes are terrestrial
+/// (see [`DETRITUS_AMBIENT`]'s terrestrial-supply frame), so a species whose
+/// whole uptake vector points at land resources has no supply at sea and its
+/// saturated intake is 0 there. Nothing in this assembly special-cases water;
+/// an aquatic kind authored onto a future marine supply axis would get a
+/// non-zero K at sea from this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
 pub fn niche_per_species_k(
     geo: &Geosphere,
@@ -806,6 +886,7 @@ pub fn niche_per_species_k(
     // and shared by every species' dot product.
     let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
     let forage = forage_supply_field(geo, &base_carrying);
+    let detritus = detritus_supply_field(geo, terrain);
 
     species_biosphere
         .iter()
@@ -824,7 +905,7 @@ pub fn niche_per_species_k(
                     (PHOTOSYNTHATE, *base_carrying.get(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
                     (MINERAL, *mineral.get(cell)),
-                    (DETRITUS, DETRITUS_AMBIENT),
+                    (DETRITUS, *detritus.get(cell)),
                     (ANIMAL_PREY, 0.0),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);

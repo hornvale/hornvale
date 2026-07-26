@@ -334,24 +334,40 @@ is what "highlander" was always supposed to mean. The lesson generalizes past
 this one axis: **a unit is not a frame.** Both quantities were honest metres;
 only one of them was metres from a place a creature could care about.
 
-The correction also exposed something the bug had been hiding, worth recording
-here rather than leaving to be re-discovered. Under the old datum an ocean cell
+The correction also exposed something the bug had been hiding, and the fix for
+that is the second half of the same story. Under the old datum an ocean cell
 sat some four kilometres from every authored optimum, so the elevation axis was
 incidentally acting as a **land mask** — and two of the habitat model's supply
-axes have never had one of their own. Photosynthate and plant forage ride the
-carrying-capacity field, which is land-limited; the ambient detritus term is a
-global constant and the mineral term reads a prospectivity field, and both are
+axes had never had one of their own. Photosynthate and plant forage ride the
+carrying-capacity field, which is land-limited by construction (habitability
+requires a cell above sea level); the ambient detritus term was a global
+constant and the mineral term reads a prospectivity field, and both were
 defined on the seafloor exactly as on a hillside. With the elevation axis
-re-datumed and no longer excluding submerged cells by accident, the three
-kinds that eat detritus or rock now score across the ocean floor: at seed 42
-the otyugh's total suitability goes from 0 % to 85 % submerged, the rust
-monster's from 22 % to 86 %, the xorn's from 58 % to 74 %. No settlement lands
+re-datumed and no longer excluding submerged cells by accident, the three kinds
+that eat detritus or rock scored right across the ocean floor: at seed 42 the
+otyugh's total suitability went from 0 % to 85 % submerged, the rust monster's
+from 22 % to 86 %, the xorn's from 58 % to 74 %. No settlement ever landed
 there — every one of seed 42's 216 stack settlements is on land, because the
 peoples' own supply is land-limited — but a swamp detritivore whose habitat is
-mostly seabed is not a claim this model should be making. That is a **supply
-term** gap, not an elevation one, and it belongs to the same unfinished work
-as the animal-prey axis: a land mask (or an aquatic niche worth the name)
-authored deliberately, rather than an accidental one restored.
+mostly seabed is not a claim this model should be making.
+
+The repair is a **supply-term** one, not an elevation one, and where it was put
+matters more than what it does. The blunt option was to multiply assembled
+carrying capacity by a land mask, which would have stated "nothing lives in
+water" as a law of the model — a law that would have to be *unstated* the day
+an aquatic kind is authored. Instead each of the v1 resource-supply axes is
+declared *terrestrial*: detritus becomes a field rather than a constant, zero
+below sea level, and mineral supply is masked the same way, so all five axes
+now carry the land limit that three of them always carried implicitly. A
+species' habitat then follows from what it eats. No kind is forbidden the sea;
+the roster simply has nothing that can feed there — checked kind by kind, it is
+entirely terrestrial, and even the two wettest niches, the otyugh's and the
+black dragon's, are swamps, which is wet *land*. All three submerged shares
+return to 0 %, with every kind's land carrying capacity byte-unchanged. An
+aquatic kind, when one is authored, arrives by weighting a marine supply axis
+with a field defined on water — an addition to the supply vocabulary rather
+than an exemption from a rule — which leaves it in the same unfinished company
+as the animal-prey axis.
 
 **The peoples ahead:** deliberation latency's still-unspent half — the
 salience or negotiation rule that would read a people's decisiveness
