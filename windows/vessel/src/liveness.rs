@@ -448,9 +448,20 @@ pub trait Terrain {
         false
     }
 
-    /// Whether warmth matters in this room. Read at a CANONICAL day rather
-    /// than the current one: a room's furnishing must not flicker with the
-    /// seasons, so this is a stable property of the place (The Threshold).
+    /// Whether warmth matters in this room — whether its people build around a
+    /// fire. Read at a CANONICAL day rather than the current one: a room's
+    /// furnishing must not flicker with the seasons, so this is a stable
+    /// property of the place, not of the weather (The Threshold). The
+    /// comparison is against [`FURNISHING_COLD_C`], in degrees Celsius, the
+    /// same unit [`Terrain::temperature`] returns.
+    ///
+    /// Unlike [`Terrain::is_built`], whose default is independently silent
+    /// (every implementation reads as unbuilt until one says otherwise), this
+    /// default is NOT self-contained: it calls straight back into whatever
+    /// `temperature` the implementor supplies. A planted or synthetic test
+    /// terrain therefore reads as cold or temperate according to its own
+    /// `temperature`, and one that returns a non-finite value reads as
+    /// temperate, since the comparison is false for `NaN`.
     /// type-audit: bare-ok(flag: return)
     fn is_cold(&self, room: &RoomAddr) -> bool {
         self.temperature(room, FURNISHING_REFERENCE_DAY) < FURNISHING_COLD_C
