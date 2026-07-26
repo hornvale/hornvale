@@ -9,6 +9,8 @@
 
 pub mod anchor;
 pub mod relation;
+pub mod route;
 
 pub use anchor::{Anchor, AnchorId, AnchorKind, Interior};
 pub use relation::{Rcc8, compose, converse, is_symmetric, is_transitive};
+pub use route::{InteriorSpace, route_within};
