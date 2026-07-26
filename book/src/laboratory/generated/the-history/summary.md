@@ -9,7 +9,7 @@ The measure-don't-narrate payoff check for history-first placement. All values a
 
 ## Seed-42 headline (built to `BuildDepth::Full`)
 
-- **migration-fired-at-volume**: 58 migration events (floor 20). PASS — climate-driven displacement fires at volume.
+- **migration-fired-at-volume**: 58 migration events (floor 5). PASS — climate-driven displacement fires at volume.
 - **territories-separated**: mean pairwise region overlap 0.0470 (ceiling 0.25; raw cell-set overlap 0.0000 is a structural 0). PASS — the four goblinoids occupy strongly distinct countries. **The diversity payoff landed.**
 - **stratigraphy-emerged**: 99/227 occupied sites re-occupied (0.4361); depth/capacity correlation -0.4517 (negative). PASS on emergence and on the *coupling*; the negative sign is the falsification finding above.
 
