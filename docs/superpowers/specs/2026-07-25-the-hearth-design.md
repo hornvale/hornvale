@@ -276,7 +276,12 @@ as a value that a furnishing epoch will move.
 - Fields: warmth from the hearth, read by the existing thermal drive.
 - **One natural room type as well as one built one** (§9 flagged item 2).
 
-### 9.1 The two things that keep v1 unreachable — deliberately
+### 9.1 The two things that keep v1 un-LIVE — deliberately
+
+**Terminology, adopted from The Threshold (§1.1 there):** *live* means wired to
+a call site that actually runs; *reachable* means connected by a route through
+the anchor graph. This program had been using one word for both. v1's substrate
+is **not yet live**; within an interior, anchors are perfectly reachable.
 
 Writing the plan surfaced that the headline outcome cannot be *observed* in v1,
 only *demonstrated*, because two pieces are missing and neither is small:
@@ -319,7 +324,7 @@ there became legible.
   no reason to move. **This is a unit-level demonstration, and deliberately so:**
   v1 builds no interior from a real room and gives creatures no anchor position
   (§9.1), so every live site passes `warmth: None`. The substrate is proved; it
-  is not yet reachable from the sim, which is exactly what makes v1
+  is not yet *live* (§9.1), which is exactly what makes v1
   byte-identical.
 - **The anchor graph is connected** for every composition the validator accepts,
   and the validator **rejects** a composition that would disconnect it — a unit

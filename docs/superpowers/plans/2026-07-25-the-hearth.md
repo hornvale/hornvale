@@ -754,12 +754,24 @@ git commit -m "feat(vessel): within-room routing over the anchor graph (The Hear
 **Interfaces:**
 - Consumes: `Interior`, `AnchorKind` (T2).
 - Produces:
-  - `pub struct Pattern { pub name: &'static str, pub anchors: &'static [AnchorKind], pub needs_cold: bool, pub built: bool }`
-  - `pub const INVENTORY: [Pattern; 5]`
-  - `pub fn selection(seed: &Seed, built: bool, cold: bool) -> Vec<&'static Pattern>`
+  - `pub enum Attach { Hub, Beside(AnchorKind), Within(AnchorKind) }`
+  - `pub struct Pattern { pub name: &'static str, pub kind: AnchorKind, pub attach: Attach, pub requires: Option<AnchorKind>, pub needs_cold: bool, pub built: bool }`
+  - `pub const INVENTORY: [Pattern; 9]`
+  - `pub fn selection(built: bool, cold: bool) -> Vec<&'static Pattern>`
   - `pub fn compose(selected: &[&Pattern]) -> Interior`
   - `pub fn permits(interior: &Interior) -> bool`
   - `pub const ROOM_FURNISHING: &str = "room/furnishing/v1"` (in `streams.rs`)
+- Also modifies T2's `anchor.rs`: adds `AnchorKind::Ground` (the room's open
+  middle — every room has one, built or wild) and `AnchorKind::Alcove`. Purely
+  additive.
+
+**Revised after review by the parallel campaign The Threshold**, which found
+this task's original hub composition degenerate: every anchor one hop from the
+first, so graph distance is 1–2, field decay has almost nothing to decay over,
+and the cold-creature demonstration is a single-step route that barely exercises
+`route_within`. It also asked that the inventory reach roughly its intended size
+*before* The Threshold arms furnishing, since growth afterwards is an epoch
+regardless. Both are fixed here.
 
 **The architecture is copied, not invented** (spec §6): `domains/language/src/phonology.rs`
 builds a per-species phoneme **inventory** with an `Envelope` gating the draw and
@@ -777,53 +789,96 @@ toward "room templates," the campaign has become a catalogue and gone wrong.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hornvale_kernel::Seed;
 
     #[test]
     fn selection_is_derived_from_conditions_not_authored_per_culture() {
         // The SAME inventory yields different sets under different climates —
         // the culture signal is derived, exactly as a phoneme inventory is.
-        let seed = Seed::new(42);
-        let cold = selection(&seed, true, true);
-        let warm = selection(&seed, true, false);
+        let cold = selection(true, true);
+        let warm = selection(true, false);
         assert_ne!(
             cold.iter().map(|p| p.name).collect::<Vec<_>>(),
             warm.iter().map(|p| p.name).collect::<Vec<_>>(),
             "climate must change which patterns a people uses"
         );
         assert!(
-            cold.iter().any(|p| p.anchors.contains(&AnchorKind::Hearth)),
+            cold.iter().any(|p| p.kind == AnchorKind::Hearth),
             "a cold people builds around a fire"
         );
     }
 
     #[test]
-    fn selection_is_deterministic() {
-        let a = selection(&Seed::new(42), true, true);
-        let b = selection(&Seed::new(42), true, true);
-        assert_eq!(
-            a.iter().map(|p| p.name).collect::<Vec<_>>(),
-            b.iter().map(|p| p.name).collect::<Vec<_>>()
+    fn a_pattern_whose_requirement_is_absent_is_not_admissible() {
+        // THE COMPOSITION RULE, and the whole test of whether this is a language
+        // or a catalogue: `the-fireside-bed` completes `the-fire`, so it may not
+        // be drawn where no fire was. This is Alexander's "patterns complete
+        // other patterns" made checkable.
+        let warm = selection(true, false);
+        assert!(
+            !warm.iter().any(|p| p.kind == AnchorKind::Hearth),
+            "no fire in a warm room (fixture precondition)"
+        );
+        assert!(
+            !warm.iter().any(|p| p.name == "the-fireside-bed"),
+            "a bed BY THE FIRE cannot be drawn where there is no fire"
+        );
+        let cold = selection(true, true);
+        assert!(
+            cold.iter().any(|p| p.name == "the-fireside-bed"),
+            "with a fire present, the pattern that completes it becomes admissible"
         );
     }
 
     #[test]
     fn wilderness_draws_natural_patterns_and_no_built_ones() {
         // The fine layer must exist where most agents live (spec §13 item 2).
-        let wild = selection(&Seed::new(7), false, false);
+        // A wilderness interior legitimately has NO threshold: seams belong to
+        // room-graph edges, not to a room's interior (found by The Threshold).
+        let wild = selection(false, false);
         assert!(!wild.is_empty(), "wilderness rooms get anchors too");
         assert!(
             wild.iter().all(|p| !p.built),
             "an unbuilt room contains no built patterns"
         );
+        assert!(
+            !wild.iter().any(|p| p.kind == AnchorKind::Threshold),
+            "wilderness needs no doorway"
+        );
+    }
+
+    #[test]
+    fn composition_is_not_degenerate() {
+        // THE ANTI-HUB TEST. A hub composition puts everything one hop from the
+        // centre, so graph distance is 1-2 and field decay has nothing to decay
+        // over. A real grammar produces DEPTH: some pair of anchors must be at
+        // least three steps apart.
+        let interior = compose(&selection(true, true));
+        let ids = interior.ids();
+        let mut deepest = 0usize;
+        for a in &ids {
+            for b in &ids {
+                if let Some(path) = crate::interior::route_within(&interior, *a, *b, 256) {
+                    deepest = deepest.max(path.len());
+                }
+            }
+        }
+        assert!(
+            deepest >= 3,
+            "the composed interior is degenerate (deepest route {deepest} hops); \
+             a hub composition is a catalogue, not a language"
+        );
     }
 
     #[test]
     fn a_composition_is_connected_and_the_validator_says_so() {
-        let sel = selection(&Seed::new(42), true, true);
-        let interior = compose(&sel);
-        assert!(interior.is_connected(), "the composition is walkable");
-        assert!(permits(&interior), "the validator accepts a connected interior");
+        for (built, cold) in [(true, true), (true, false), (false, false)] {
+            let interior = compose(&selection(built, cold));
+            assert!(
+                interior.is_connected(),
+                "composition (built={built}, cold={cold}) is walkable"
+            );
+            assert!(permits(&interior), "the validator accepts it");
+        }
     }
 
     #[test]
@@ -848,7 +903,19 @@ Expected: FAIL — `cannot find function 'selection' in this scope`.
 
 - [ ] **Step 3: Implement**
 
-First add the label to `windows/vessel/src/streams.rs`, inside the existing
+First, in `windows/vessel/src/interior/anchor.rs`, add two variants to
+`AnchorKind` (additive; every existing match is exhaustive over a fieldless enum
+so nothing else changes):
+
+```rust
+    /// The room's open middle — every room has one, built or wild. The anchor
+    /// other patterns attach to when they attach to nothing more specific.
+    Ground,
+    /// A recess off the main space: what makes a room deeper than a hub.
+    Alcove,
+```
+
+Then add the label to `windows/vessel/src/streams.rs`, inside the existing
 `stream_labels!` block:
 
 ```rust
@@ -858,7 +925,7 @@ First add the label to `windows/vessel/src/streams.rs`, inside the existing
     ROOM_FURNISHING = "room/furnishing/v1" => "which patterns a room draws";
 ```
 
-Then `pattern.rs`:
+Then `windows/vessel/src/interior/pattern.rs`:
 
 ```rust
 //! The pattern inventory — authored primitives, DERIVED selection, and a
@@ -871,85 +938,131 @@ Then `pattern.rs`:
 //! fragment; a room is a composition of them. Authoring whole rooms would make
 //! this a catalogue of solutions rather than a generative language, which is
 //! the failure mode that killed software's borrowing of Alexander.
+//!
+//! THE COMPOSITION RULES ARE THE SUBSTANCE, not the inventory's size. Two rules
+//! carry the weight here: a pattern declares WHERE it attaches, and a pattern
+//! may declare another it COMPLETES and without which it is inadmissible.
+//! Together they give a room depth — a hub composition, where everything hangs
+//! off the centre, is the degenerate case and is what the anti-hub test forbids.
 
-use super::anchor::{AnchorKind, Interior};
-use hornvale_kernel::Seed;
+use super::anchor::{AnchorId, AnchorKind, Interior};
 
-/// One authored pattern: a named relational fragment and the anchors it brings.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// Where a pattern's anchor attaches to what is already composed.
+pub enum Attach {
+    /// To the room's [`AnchorKind::Ground`] — the open middle.
+    Hub,
+    /// Adjacent to the first anchor of this kind (`Ec`).
+    Beside(AnchorKind),
+    /// Strictly inside the first anchor of this kind (`Ntpp`).
+    Within(AnchorKind),
+}
+
+/// One authored pattern: a named relational fragment contributing one anchor,
+/// where it attaches, and what it completes.
 pub struct Pattern {
-    /// The pattern's name (stable; part of no save-format contract).
+    /// The pattern's name.
     pub name: &'static str,
-    /// The anchors this pattern contributes, in order.
-    pub anchors: &'static [AnchorKind],
+    /// The anchor this pattern contributes.
+    pub kind: AnchorKind,
+    /// Where that anchor attaches.
+    pub attach: Attach,
+    /// A kind that must ALREADY be present for this pattern to be admissible —
+    /// Alexander's "patterns complete other patterns", made checkable.
+    pub requires: Option<AnchorKind>,
     /// Whether this pattern is drawn only where warmth matters.
     pub needs_cold: bool,
     /// Whether this pattern belongs to BUILT rooms (false = wilderness).
     pub built: bool,
 }
 
-/// The authored inventory — deliberately small. Its size is not the substance;
-/// the composition rules are (spec §6).
-pub const INVENTORY: [Pattern; 5] = [
-    Pattern {
-        name: "the-fire",
-        anchors: &[AnchorKind::Hearth],
-        needs_cold: true,
-        built: true,
-    },
-    Pattern {
-        name: "the-threshold",
-        anchors: &[AnchorKind::Threshold],
-        needs_cold: false,
-        built: true,
-    },
-    Pattern {
-        name: "the-sleeping-place",
-        anchors: &[AnchorKind::Bed],
-        needs_cold: false,
-        built: true,
-    },
-    Pattern {
-        name: "the-water",
-        anchors: &[AnchorKind::Pool],
-        needs_cold: false,
-        built: false,
-    },
-    Pattern {
-        name: "the-fallen-log",
-        anchors: &[AnchorKind::Log],
-        needs_cold: false,
-        built: false,
-    },
+/// The authored inventory. Sized near its intended scale deliberately: once
+/// The Threshold makes furnishing live, `room/furnishing/v1` is a determinism
+/// contract and growth costs an epoch.
+pub const INVENTORY: [Pattern; 9] = [
+    // --- built ---
+    Pattern { name: "the-ground", kind: AnchorKind::Ground, attach: Attach::Hub,
+              requires: None, needs_cold: false, built: true },
+    Pattern { name: "the-threshold", kind: AnchorKind::Threshold, attach: Attach::Hub,
+              requires: None, needs_cold: false, built: true },
+    Pattern { name: "the-alcove", kind: AnchorKind::Alcove, attach: Attach::Hub,
+              requires: None, needs_cold: false, built: true },
+    Pattern { name: "the-fire", kind: AnchorKind::Hearth, attach: Attach::Within(AnchorKind::Alcove),
+              requires: Some(AnchorKind::Alcove), needs_cold: true, built: true },
+    Pattern { name: "the-fireside-bed", kind: AnchorKind::Bed, attach: Attach::Beside(AnchorKind::Hearth),
+              requires: Some(AnchorKind::Hearth), needs_cold: true, built: true },
+    Pattern { name: "the-water-jar", kind: AnchorKind::Vessel, attach: Attach::Beside(AnchorKind::Ground),
+              requires: None, needs_cold: false, built: true },
+    Pattern { name: "the-screen", kind: AnchorKind::Screen, attach: Attach::Beside(AnchorKind::Threshold),
+              requires: Some(AnchorKind::Threshold), needs_cold: false, built: true },
+    // --- wild ---
+    Pattern { name: "the-clearing", kind: AnchorKind::Ground, attach: Attach::Hub,
+              requires: None, needs_cold: false, built: false },
+    Pattern { name: "the-pool", kind: AnchorKind::Pool, attach: Attach::Beside(AnchorKind::Ground),
+              requires: None, needs_cold: false, built: false },
 ];
 
-/// The patterns a room draws, DERIVED from what it already is — whether it is
-/// built and whether warmth matters there — never authored per culture. The
-/// seed is threaded for the future variation draw; v1's selection is a pure
-/// filter, so it is deterministic trivially.
-pub fn selection(_seed: &Seed, built: bool, cold: bool) -> Vec<&'static Pattern> {
-    INVENTORY
-        .iter()
-        .filter(|p| p.built == built)
-        .filter(|p| !p.needs_cold || cold)
-        .collect()
+/// The patterns a room draws, DERIVED from what it already is — never authored
+/// per culture. Admissibility is order-sensitive: a pattern that COMPLETES
+/// another is admitted only once that other has been admitted, so the inventory
+/// order encodes the grammar's dependency order.
+///
+/// **Keyed by NAME, never by position.** A future seeded draw must select on
+/// `p.name`; keying on an index would silently re-roll every room the moment a
+/// pattern is inserted (the same bug class as an id-as-offset, one scale up).
+pub fn selection(built: bool, cold: bool) -> Vec<&'static Pattern> {
+    let mut out: Vec<&'static Pattern> = Vec::new();
+    let mut present: std::collections::BTreeSet<AnchorKind> = std::collections::BTreeSet::new();
+    for p in INVENTORY.iter() {
+        if p.built != built {
+            continue;
+        }
+        if p.needs_cold && !cold {
+            continue;
+        }
+        if let Some(req) = p.requires
+            && !present.contains(&req)
+        {
+            continue;
+        }
+        present.insert(p.kind);
+        out.push(p);
+    }
+    out
 }
 
-/// Compose the selected patterns into one interior: each pattern contributes its
-/// anchors, and every anchor is connected to the first (a hub composition — the
-/// simplest rule that guarantees the connectivity `permits` demands). Richer
-/// composition rules are where later work belongs.
+/// Compose the selected patterns into one interior, honouring each pattern's
+/// attachment. The first `Ground` anchor is the hub; everything else attaches to
+/// the hub, beside a named kind, or within one. Depth comes from the chain
+/// (`Within` then `Beside`), which is what keeps the result from collapsing to
+/// a star.
 pub fn compose(selected: &[&Pattern]) -> Interior {
     let mut interior = Interior::new();
-    let mut first: Option<super::anchor::AnchorId> = None;
+    let mut hub: Option<AnchorId> = None;
+    // First placed anchor of each kind — the attachment target.
+    let mut first_of: std::collections::BTreeMap<AnchorKind, AnchorId> =
+        std::collections::BTreeMap::new();
+
     for p in selected {
-        for kind in p.anchors {
-            let id = interior.push(*kind, None);
-            match first {
-                None => first = Some(id),
-                Some(f) => interior.connect(f, id),
-            }
+        let target = match p.attach {
+            Attach::Hub => hub,
+            Attach::Beside(k) | Attach::Within(k) => first_of.get(&k).copied().or(hub),
+        };
+        let within = match (&p.attach, target) {
+            (Attach::Within(_), Some(t)) => Some(t),
+            _ => None,
+        };
+        let id = interior.push(p.kind, within);
+        // A contained anchor is already linked by containment; anything else
+        // needs an explicit edge (unless it IS the hub).
+        if within.is_none()
+            && let Some(t) = target
+        {
+            interior.connect(t, id);
         }
+        if hub.is_none() && p.kind == AnchorKind::Ground {
+            hub = Some(id);
+        }
+        first_of.entry(p.kind).or_insert(id);
     }
     interior
 }
@@ -964,19 +1077,26 @@ pub fn permits(interior: &Interior) -> bool {
 ```
 
 Add to `mod.rs`: `pub mod pattern;` and
-`pub use pattern::{INVENTORY, Pattern, compose, permits, selection};`.
+`pub use pattern::{Attach, INVENTORY, Pattern, compose, permits, selection};`.
 
-Note the name collision: `pattern::compose` and `relation::compose` are both
-re-exported. Re-export the relation one as `compose_relations` in `mod.rs` to
-keep both unambiguous.
+**Name collision:** `pattern::compose` and `relation::compose` are both
+re-exported from `mod.rs`. Re-export the relation one as `compose_relations`
+to keep both unambiguous, and update T1's test module if it used the re-export
+(it uses `super::*`, so it will not need changing).
+
+If the anti-hub test fails, do **not** weaken it — the inventory's attachments
+are what produce depth, so fix the attachments. The intended cold-built chain is
+`threshold — ground — alcove ⊃ hearth — bed`, which puts the bed at least three
+steps from the threshold.
 
 - [ ] **Step 4: Run and verify**
 
 ```bash
-cargo test -p hornvale-vessel --lib interior:: 2>&1 | tail -20
+cargo test -p hornvale-vessel --lib interior:: 2>&1 | tail -25
+cargo test -p hornvale-vessel 2>&1 | tail -10
 ```
 
-Expected: PASS, 16 interior tests.
+Expected: PASS, 17 interior tests (11 + T4's 6).
 
 - [ ] **Step 5: Commit**
 
@@ -985,7 +1105,7 @@ cargo fmt
 cargo clippy -p hornvale-vessel --all-targets -- -D warnings
 cargo run --manifest-path tools/type-audit/Cargo.toml -- check
 git add windows/vessel/src/interior/ windows/vessel/src/streams.rs
-git commit -m "feat(vessel): the pattern inventory, derived selection, and the validator (The Hearth T4)"
+git commit -m "feat(vessel): the pattern inventory, attachment composition, and the validator (The Hearth T4)"
 ```
 
 ---
@@ -1190,6 +1310,32 @@ it exactly.
             warmth_at(&cold_room, d2, 64),
             warmth_at(&cold_room, h2, 64),
             "with no fire, nowhere is warmer — the creature has no reason to move"
+        );
+
+        // AND ON A REAL COMPOSITION, not only a hand-built graph — otherwise the
+        // demonstration proves the fixture rather than the grammar. The
+        // cold-built selection puts a hearth in an alcove off the ground, so the
+        // warmth gradient must be strictly positive walking in from the door.
+        use crate::interior::{compose, selection};
+        let real = compose(&selection(true, true));
+        let door = real
+            .ids()
+            .into_iter()
+            .find(|id| real.anchor(*id).kind == AnchorKind::Threshold)
+            .expect("a built room has a threshold");
+        let fire = real
+            .ids()
+            .into_iter()
+            .find(|id| real.anchor(*id).kind == AnchorKind::Hearth)
+            .expect("a cold built room has a hearth");
+        assert!(
+            warmth_at(&real, fire, 64) > warmth_at(&real, door, 64),
+            "in a really composed room, the fire is warmer than the doorway"
+        );
+        let real_plan = route_within(&real, door, fire, 256).expect("the fire is reachable");
+        assert!(
+            real_plan.len() >= 2,
+            "the route to the fire crosses the room rather than being one step: {real_plan:?}"
         );
     }
 ```
