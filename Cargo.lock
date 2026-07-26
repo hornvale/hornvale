@@ -30,6 +30,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-alchemy"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-almanac"
 version = "0.1.0"
 dependencies = [

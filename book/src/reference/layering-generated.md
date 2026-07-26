@@ -7,6 +7,7 @@ kernel  →  domains/*  →  windows/*  →  cli
 | crate | layer | workspace dependencies | dev/build-only extras |
 |---|---|---|---|
 | hornvale-kernel | kernel | — | — |
+| hornvale-alchemy | domains | hornvale-kernel | — |
 | hornvale-astronomy | domains | hornvale-kernel | — |
 | hornvale-climate | domains | hornvale-kernel | — |
 | hornvale-culture | domains | hornvale-kernel | — |
