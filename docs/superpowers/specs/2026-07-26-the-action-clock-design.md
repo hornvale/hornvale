@@ -103,7 +103,7 @@ Reserved, and deliberately not v1: **temperature-dependent ectotherm tempo** (a
 cold lizard really is slower, and the thermal machinery to express it already
 ships), and **metabolic class as a secondary modifier** on top of mass.
 
-## 4. Integer scheduling, `f64` commits
+## 4. Integer scheduling, `f64` commits, and a clock that divides the planet's day
 
 The scheduler orders agents by *when they next act*. That ordering must be a
 **total order with deterministic ties**, and `f64` days cannot supply one: it is
@@ -118,13 +118,51 @@ So: **schedule in integer ticks; commit in `f64` days.**
   committing  day: f64       the existing save-format contract, unchanged
 ```
 
-A fixed `TICKS_PER_DAY` converts at the boundary. This is **quantize-at-emit
-applied to time** — the third instance of one discipline (decision 0033 for
-floats, 0069 for space, this for time), and it means the queue's arithmetic is
-exact while nothing about the ledger's shape changes.
+This is **quantize-at-emit applied to time** — the third instance of one
+discipline (decision 0033 for floats, 0069 for space, this for time). The queue
+key is `(Ticks, EntityId)`: a `BTreeSet` over integers, ties broken by entity, so
+the order is a pure function of the frozen ledger.
 
-The queue key is `(Ticks, EntityId)`: a `BTreeSet` over integers, ties broken by
-entity, so the order is a pure function of the frozen ledger.
+### 4.1 The tick divides the planet's day (owner decision)
+
+A fixed `TICKS_PER_DAY` would be arbitrary. The clock is derived instead:
+
+```
+ticks_per_local_day = max(1, round(day_length_std × BASE_TICKS_PER_STD_DAY))
+tick duration       = day_length_std / ticks_per_local_day   ≈ 1/BASE std days
+```
+
+with `BASE_TICKS_PER_STD_DAY = 1_000` authored and `day_length_std` read from the
+world's `Calendar` (`domains/astronomy/src/calendar.rs:542` —
+`day: Option<StdDays>`, the local rotation period in standard days).
+
+**Two properties hold at once, and both are wanted.**
+
+- **The tick stays approximately absolute.** Base costs are authored *in ticks*,
+  and a tick is within one part in `ticks_per_local_day` of `1/1000` of a
+  standard day on every world. So a creature's stride does not slow because its
+  planet rotates slowly — which would be wrong: a bear's gait is set by the bear,
+  not by the sky. Cross-world variation in an action's absolute cost is under
+  0.1%.
+- **The local day is an EXACT integer number of ticks.** This is the reason to
+  derive it at all. `ActivityCycle` — `is_awake`, `next_awake_day` — is the sim's
+  one genuinely local-day-keyed mechanism, and under an arbitrary granularity
+  every dawn and dusk rounds to the nearest tick. Over a long run (the health
+  battery simulates many days) those roundings *beat* against the day cycle and a
+  creature wakes a hair earlier each morning for no physical reason. Making the
+  day divide exactly removes the beat by construction rather than bounding it.
+
+**A tidally-locked world has no day** (`Calendar::day` is `Option`), and this is
+not hypothetical — the rotation pin admits it. There, `ticks_per_local_day` falls
+back to `BASE_TICKS_PER_STD_DAY` and a tick is exactly `1/1000` of a standard
+day. Stated rather than left to a `unwrap_or`, because a world with no dawn is
+exactly the world where a day-derived clock has nothing to derive from.
+
+**The coupling this introduces, stated plainly.** The scheduler's granularity is
+now downstream of astronomy: an epoch of the rotation draw changes the clock's
+resolution. Nothing serialized depends on it — `Ticks` never leaves the
+scheduler — so no save breaks, but the two are no longer independent, and a
+future sky epoch should expect the walk to move.
 
 ## 5. The constraint that keeps interleaving safe
 
@@ -200,8 +238,8 @@ Preregistered before the first task, with signs, in the ledger (decision 0016):
 
 ## 9. Scope
 
-**In:** the five base costs; `tempo` from body mass; `Ticks` and the
-conversion boundary; the priority queue and the hoisted `WalkState`; the
+**In:** the five base costs; `tempo` from body mass; `Ticks`, the day-derived
+tick rate, and the conversion boundary; the priority queue and the hoisted `WalkState`; the
 frozen-read constraint; the drift protocol.
 
 **Out, each with a home:**
