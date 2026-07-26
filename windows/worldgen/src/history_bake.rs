@@ -134,6 +134,18 @@ const STORE_WEIGHT: f64 = 0.5;
 /// The fraction of a community's stores that survives each epoch — a hoard is
 /// not immortal.
 const STORE_DECAY: f64 = 0.95;
+/// The share of a subordinate cell's effective capacity a patron demands per
+/// epoch. The dominant taxes what it can SEE — the land, never the granary
+/// (spec §4.2's information asymmetry). A save-format constant: changing it
+/// re-fights every world's history.
+const ASSESS_RATE: f64 = 0.1;
+/// The ceiling on an assessment, as a multiple of the subordinate cell's
+/// effective capacity: no patron may demand more than the land could ever
+/// produce (spec §4.5's divergence bound). It does not bind at the moment a
+/// relation forms — `ASSESS_RATE` is well under it — but it is the bound the
+/// deferred adaptive-demand loop (§4.3) raises an assessment against, so the
+/// clamp is written where the assessment is set rather than bolted on later.
+const ASSESS_MAX: f64 = 0.5;
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
@@ -233,7 +245,7 @@ pub struct History {
 /// (conflict must fire on a *value* gradient, in worlds with land to spare, and
 /// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
 /// redistribute the world, not depopulate it).
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinated), bare-ok(count: max_subordinates), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BakeCensus {
     /// Grow events (a community expanded under a sub-capacity load).
@@ -254,6 +266,16 @@ pub struct BakeCensus {
     /// cascade's terminal roller reaches vacant ground exactly as a first-hop
     /// one does, and is a resettle by the same reading.
     pub resettled: u64,
+    /// Subordination events (a dominant community imposed a standing tribute
+    /// relation on a productive neighbour whose land it did not covet). Counts
+    /// relations *formed*, including a transfer of patronage, so a target
+    /// milked by two rivals in turn is counted once per takeover.
+    pub subordinated: u64,
+    /// The largest number of subordinates any one patron holds **at `now`** —
+    /// spec §8.2's runaway-hub reading. A standing measurement of the relation
+    /// graph as the bake closes, not a peak over the whole span: a star that
+    /// formed and dissolved before `now` is not in it.
+    pub max_subordinates: u64,
     /// Total records opened over the whole bake.
     pub records_total: u64,
     /// Records still alive at `now`.
@@ -339,8 +361,61 @@ struct Community {
     stores: f64,
 }
 
+/// A standing tribute relation: who a community pays, and how much its patron
+/// currently demands. Live bake state only — a relation is never serialized,
+/// so this adds no committed field and no save-format surface (spec §4.4).
+#[derive(Clone, Copy, Debug)]
+struct Tribute {
+    /// Index into `Bake::communities` of the patron.
+    patron: usize,
+    /// What the patron currently demands per epoch — set from what it can SEE
+    /// (the subordinate's cell), never from what the subordinate has
+    /// (spec §4.2). Clamped to `[0, eff_capacity × ASSESS_MAX]`.
+    ///
+    /// Written but not yet read: **collection** is the next slice-2 step, and
+    /// nothing flows along a relation until it lands. The term is set the
+    /// moment a relation forms because that is when the patron takes its
+    /// reading of the land, not when it first comes to collect.
+    #[allow(dead_code)]
+    assessment: f64,
+}
+
+/// Which way a raid resolves, decided by the **mobility of the prize**
+/// (spec §4.1). Both outcomes clear the same dominance and no-spoils gates;
+/// only what is takeable differs.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Spoil {
+    /// The cell is worth more: an immobile prize, takeable only by occupying
+    /// it. The raid evicts and seizes (the shipped path).
+    Evict,
+    /// The cell is no better, but the people are productive: a mobile prize,
+    /// takeable repeatedly without displacing anyone. The raid subordinates.
+    Subordinate,
+}
+
+impl Spoil {
+    /// Rank for the candidate comparator: **eviction outranks subordination**
+    /// at equal value, because taking the land is the larger prize.
+    ///
+    /// This term cannot actually decide a comparison under the shipped
+    /// classification — `Evict` requires `t_val > raider_val` and
+    /// `Subordinate` requires `t_val <= raider_val`, so every eviction
+    /// candidate already outranks every subordination candidate on value
+    /// alone. It is stated because the ordering is a *decision*, and a future
+    /// classification that admits an equal-value eviction must not have that
+    /// decision fall to whichever cell the neighbour walk happened to visit
+    /// first.
+    fn rank(self) -> u8 {
+        match self {
+            Spoil::Evict => 1,
+            Spoil::Subordinate => 0,
+        }
+    }
+}
+
 /// The mutable bake state: records, live communities, the one-alive-per-site
-/// index, the id counter, the dynamics stream, and the running tally.
+/// index, the id counter, the dynamics stream, the standing tribute relations,
+/// and the running tally.
 struct Bake<'a> {
     /// One era-aware connection graph per era (`graphs.len() == eras.len()`).
     /// Each graph's traversable neighbours (`conductance > 0.0`) are that era's
@@ -371,6 +446,13 @@ struct Bake<'a> {
     next_id: u64,
     /// The epoch-dynamics random stream (drawn sequentially in commit order).
     stream: Stream,
+    /// Standing tribute relations, keyed by the **subordinate's** community
+    /// index. One patron per community is structural rather than enforced: the
+    /// key IS the subordinate, so a second bid overwrites rather than adding
+    /// (spec §4.4's patronage transfer). Slice 2's relation graph is therefore
+    /// a set of one-level stars, and cycles are impossible rather than merely
+    /// prevented. Iterated in key order (`BTreeMap`, never a hash map).
+    tribute: BTreeMap<usize, Tribute>,
     /// The running event tally.
     tally: BakeCensus,
 }
@@ -927,8 +1009,19 @@ impl<'a> Bake<'a> {
         community_idx
     }
 
-    /// Close a community's record: mark it dead, stamp the ending, and free its
-    /// cell from the one-alive-per-site index.
+    /// Close a community's record: mark it dead, stamp the ending, free its
+    /// cell from the one-alive-per-site index, and dissolve every tribute
+    /// relation it was party to.
+    ///
+    /// **Dissolution is a coherence floor, not a feature** (spec §4.4): a
+    /// relation may not outlive either party, in either role — a dead
+    /// subordinate pays nobody, and a dead patron collects from nobody. Both
+    /// directions are removed here because `tribute` holds community *indices*,
+    /// and an entry naming a closed community is a dangling index into
+    /// `communities` — a silent corruption that would surface as a wrong
+    /// collection (or a panic) on some unrelated seed. Freed subordinates do
+    /// NOT cascade; the collapse-release avalanche is an explicit spec §9
+    /// non-goal, distinct from this cleanup.
     fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended) {
         let c = &mut self.communities[idx];
         c.alive = false;
@@ -941,6 +1034,9 @@ impl<'a> Bake<'a> {
         if self.node_index.get(&site) == Some(&idx) {
             self.node_index.remove(&site);
         }
+        // …and it is party to no relation, as subordinate or as patron.
+        self.tribute.remove(&idx);
+        self.tribute.retain(|_, t| t.patron != idx);
     }
 
     /// Update a community's peak population and monotone tech from its current
@@ -1027,10 +1123,11 @@ impl<'a> Bake<'a> {
         }
     }
 
-    /// Opportunistic predation (The Tumult): a community raids the reachable
-    /// occupied neighbour whose land is worth MORE than its own **this era**
-    /// (covetousness) and whose strength it can beat by `RAID_MARGIN`
-    /// (dominance) — decoupled from its own crowding. Predation is
+    /// Opportunistic predation (The Tumult), now resolving **two outcomes**
+    /// decided by the mobility of the prize (The Tithe, spec §4.1): a
+    /// community raids the reachable occupied neighbour whose strength it can
+    /// beat by `RAID_MARGIN` (dominance) and which still has a surplus worth
+    /// taking (`has_spoils`) — decoupled from its own crowding. Predation is
     /// `motive × capability × inhibition` (spec §4.2a): the inhibitions are
     /// conjoined vetoes in this candidate loop, so they compose without
     /// interacting, and each can only ever *reduce* conflict. See
@@ -1046,7 +1143,36 @@ impl<'a> Bake<'a> {
     /// prize to be strictly *more* valuable also excludes every zero-factor
     /// cell for free.
     ///
-    /// The outcome is **conquest of immobile land**, not plunder (spec §4.3).
+    /// **Which outcome fires is the mobility of the prize** (spec §4.1):
+    ///
+    /// - `Spoil::Evict` — the target's cell is worth MORE this era
+    ///   (covetousness). An immobile prize is takeable only by *occupying* it,
+    ///   so the raid evicts and seizes. This is the shipped path, below,
+    ///   unchanged.
+    /// - `Spoil::Subordinate` — the cell is no better, but the target is
+    ///   productive (`has_spoils`, i.e. it has growth headroom, which is the
+    ///   inverse of the no-spoils veto and composes with it for free). Its
+    ///   people and their product are a MOBILE prize, takeable repeatedly
+    ///   without displacing anyone, so the raid imposes tribute and nobody
+    ///   moves.
+    ///
+    /// The second branch is genuine new motive rather than a relabelling: the
+    /// shipped rule `continue`d on `t_val <= raider_val`, so a strong community
+    /// ignored a poorer neighbour outright. Under tribute a neighbour whose
+    /// *land* is no prize but whose *people* are productive is worth milking,
+    /// and a dominant grows **without changing cell** — the accumulation term
+    /// The Tumult's sub-critical measurement said the model was missing. One
+    /// scan finds the best target of either kind; there is no second pass.
+    ///
+    /// A target already paying THIS raider is skipped: there is nothing further
+    /// to take from it this epoch. A target paying someone else is not — a
+    /// second bid **transfers** the patronage and the old patron does not
+    /// contest (contesting is the deferred protection lever, spec §9). That is
+    /// stated in the spec, and honoured here, precisely so the bake's iteration
+    /// order cannot decide it silently.
+    ///
+    /// On the eviction branch the outcome is **conquest of immobile land**, not
+    /// plunder (spec §4.3).
     /// The prize is the cell: war destroys `WAR_LOSS` of *each* side's
     /// population, the raider abandons its own poorer site (`Migrated`,
     /// `Ended::Nature` — an orderly, self-directed move) and reopens on the
@@ -1064,7 +1190,8 @@ impl<'a> Bake<'a> {
     /// no-peopleless-settlements invariant forbids.
     ///
     /// Deterministic and draw-free: it picks the most valuable such target,
-    /// tie-broken by the weakest, then the lowest `CellId` (`f64::total_cmp`
+    /// tie-broken by eviction over subordination (see [`Spoil::rank`]), then
+    /// the weakest, then the lowest `CellId` (`f64::total_cmp`
     /// throughout), and never touches the epoch stream — `maybe_raid` itself
     /// consumes no draw. It does change which communities exist and how
     /// pressured they are, so the *sequence* of `grow`'s `DAUGHTER_PROB` draws
@@ -1084,41 +1211,83 @@ impl<'a> Bake<'a> {
         }
         let raider_str = self.strength(raider);
         let raider_val = self.eff_capacity(era, raider_site);
-        // (target index, that cell's value, the target's strength, its cell)
-        let mut best: Option<(usize, f64, f64, CellId)> = None;
+        // (target index, that cell's value, the target's strength, its cell,
+        //  and how a raid on it would resolve)
+        let mut best: Option<(usize, f64, f64, CellId, Spoil)> = None;
         for n in traversable_neighbors(self.cur(), raider_site) {
             let Some(&t) = self.node_index.get(&n) else {
                 continue;
             };
             let t_val = self.eff_capacity(era, n);
             let t_str = self.strength(t);
-            if t_val <= raider_val {
-                continue; // covet only land that is BETTER *this era*
-            }
             if raider_str <= t_str * RAID_MARGIN {
                 continue; // dominance: only a fight it can win
             }
             if !self.has_spoils(era, t) {
                 continue; // inhibition: a starving neighbour is a husk (spec §4.2a)
             }
+            // Classification, not a veto: the mobility of the prize decides
+            // how a raid on this neighbour would resolve (spec §4.1).
+            let kind = if t_val > raider_val {
+                Spoil::Evict // land that is BETTER *this era*: take the ground
+            } else if self.tribute.get(&t).is_some_and(|tr| tr.patron == raider) {
+                continue; // already ours; nothing further to take this epoch
+            } else {
+                Spoil::Subordinate // no better land, but productive people
+            };
             let better = match best {
                 None => true,
-                Some((_, bv, bs, bc)) => t_val
+                Some((_, bv, bs, bc, bk)) => t_val
                     .total_cmp(&bv) // the MOST valuable land
-                    .then(bs.total_cmp(&t_str)) // among equal value, the WEAKEST
+                    .then(kind.rank().cmp(&bk.rank())) // at equal value, EVICTION
+                    .then(bs.total_cmp(&t_str)) // then the WEAKEST
                     .then(bc.cmp(&n)) // then the lowest CellId
                     .is_gt(),
             };
             if better {
-                best = Some((t, t_val, t_str, n));
+                best = Some((t, t_val, t_str, n, kind));
             }
         }
-        let Some((target, _, _, _)) = best else {
+        let Some((target, _, _, _, kind)) = best else {
             return; // nothing worth taking, or nothing beatable
         };
+        let prize = self.communities[target].site;
+
+        // Exhaustive, so a third kind of prize cannot silently inherit the
+        // eviction path. `Evict` falls through to the shipped body below
+        // rather than being nested into an arm: its `close`/`open` sequencing
+        // is load-bearing for the one-alive-per-site invariant, so it is left
+        // exactly where (and as) it was.
+        match kind {
+            Spoil::Subordinate => {
+                // The mobile prize: the target keeps its cell, its people and
+                // its life, and begins paying. NOTHING here touches
+                // `node_index` — subordination moves nobody, so the
+                // one-alive-per-site invariant is untouched by construction
+                // rather than by careful sequencing.
+                //
+                // The assessment reads the SUBORDINATE'S CELL, never its
+                // granary: land tax is assessed on area precisely because the
+                // granary cannot be seen (spec §4.2). A second bid overwrites,
+                // which IS the patronage transfer — `tribute` is keyed by the
+                // subordinate, so one patron per community is structural.
+                let cap = self.eff_capacity(era, prize);
+                let assessment = (cap * ASSESS_RATE).clamp(0.0, cap * ASSESS_MAX);
+                self.tribute.insert(
+                    target,
+                    Tribute {
+                        patron: raider,
+                        assessment,
+                    },
+                );
+                self.tally.subordinated += 1;
+                self.touch(raider, year);
+                return;
+            }
+            Spoil::Evict => {}
+        }
 
         self.tally.raided += 1;
-        let prize = self.communities[target].site;
         let (raider_people, raider_id, raider_lineage, raider_offset) = {
             let c = &self.communities[raider];
             (
@@ -1278,6 +1447,7 @@ pub fn bake(
         node_index: BTreeMap::new(),
         next_id: 1,
         stream: seed.derive(hornvale_history::streams::BAKE).stream(),
+        tribute: BTreeMap::new(),
         tally: BakeCensus::default(),
     };
 
@@ -1360,6 +1530,15 @@ pub fn bake(
     // 3. Close at `now`: alive records keep `ended = None`.
     let now = cfg.end_year;
     bake.tally.alive_at_now = bake.records.iter().filter(|r| r.is_alive()).count() as u64;
+    // The widest star standing at `now` (spec §8.2's runaway-hub reading).
+    // `close` dissolves both directions of a relation, so every entry left
+    // here names two live communities. Counted in `BTreeMap` key order — a
+    // maximum is order-free anyway, but the container is never a hash map.
+    let mut per_patron: BTreeMap<usize, u64> = BTreeMap::new();
+    for t in bake.tribute.values() {
+        *per_patron.entry(t.patron).or_insert(0) += 1;
+    }
+    bake.tally.max_subordinates = per_patron.values().copied().max().unwrap_or(0);
 
     History {
         records: bake.records,
@@ -1488,6 +1667,7 @@ mod tests {
             node_index: BTreeMap::new(),
             next_id: 1,
             stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tribute: BTreeMap::new(),
             tally: BakeCensus::default(),
         };
 
@@ -1609,6 +1789,7 @@ mod tests {
             node_index: BTreeMap::new(),
             next_id: 1,
             stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
+            tribute: BTreeMap::new(),
             tally: BakeCensus::default(),
         }
     }
@@ -1667,6 +1848,154 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    #[test]
+    fn subordination_leaves_both_communities_exactly_where_they_stand() {
+        // The mobile prize (spec §4.1): the raid takes the people's product,
+        // not their ground, so nobody moves, nobody dies, and — the invariant
+        // that matters — `node_index` is not touched at all. A subordination
+        // that quietly re-indexed a cell would break the one-alive-per-site
+        // invariant in a way no census field would show.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+
+        // Equal-value cells (the world is value-flat), so `t_val > raider_val`
+        // is FALSE and the shipped eviction path cannot fire. A big raider, a
+        // small but far-from-capacity — i.e. productive — neighbour.
+        let raider = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let target = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            10.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        let index_before = bake.node_index.clone();
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        let t = bake
+            .tribute
+            .get(&target)
+            .copied()
+            .expect("a relation formed");
+        assert_eq!(t.patron, raider, "the raider must be the patron");
+        assert!(
+            t.assessment > 0.0 && t.assessment <= RICH * ASSESS_MAX,
+            "the assessment must be positive and clamped: {}",
+            t.assessment
+        );
+        assert_eq!(bake.tally.subordinated, 1, "one relation formed");
+        assert_eq!(bake.tally.raided, 0, "equal-value land: no eviction");
+        assert_eq!(bake.tally.fled, 0, "nobody was driven off");
+        assert_eq!(
+            bake.node_index, index_before,
+            "subordination must not touch the one-alive-per-site index"
+        );
+        assert!(
+            bake.communities[raider].alive && bake.communities[target].alive,
+            "both communities must survive a subordination"
+        );
+        assert_eq!(bake.communities[raider].site, CellId(0), "raider stays put");
+        assert_eq!(bake.communities[target].site, far, "subordinate stays put");
+        assert_eq!(
+            bake.communities[target].population.to_bits(),
+            10.0f64.to_bits(),
+            "subordination is not a war: no population is destroyed"
+        );
+    }
+
+    #[test]
+    fn a_tribute_relation_dies_with_either_party() {
+        // Spec §4.4's coherence floor. `tribute` holds community INDICES, so
+        // an entry naming a closed community is a dangling index — the kind of
+        // corruption that stays silent until it panics on an unrelated seed.
+        // Both roles must be cleaned: subordinate (the key) and patron (the
+        // value). The freed subordinate does NOT cascade — collapse-release is
+        // an explicit §9 non-goal.
+        let (geo, graphs, capacity, river_prox, refugia, _era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let ring = geo.neighbors(CellId(0));
+        let (cell_a, cell_b) = (ring[0], ring[1]);
+
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub_a = bake.open(
+            KindId("kobold"),
+            cell_a,
+            0.0,
+            10.0,
+            Founding::Genesis(cell_a),
+            None,
+            0.0,
+        );
+        let sub_b = bake.open(
+            KindId("bugbear"),
+            cell_b,
+            0.0,
+            10.0,
+            Founding::Genesis(cell_b),
+            None,
+            0.0,
+        );
+        for &s in &[sub_a, sub_b] {
+            bake.tribute.insert(
+                s,
+                Tribute {
+                    patron,
+                    assessment: 1.0,
+                },
+            );
+        }
+
+        // (a) The SUBORDINATE falls: its own relation goes, its sibling's stays.
+        bake.close(sub_a, 100.0, CauseOfEnd::Famine, Ended::Nature);
+        assert!(
+            !bake.tribute.contains_key(&sub_a),
+            "a dead subordinate pays nobody"
+        );
+        assert_eq!(
+            bake.tribute.get(&sub_b).map(|t| t.patron),
+            Some(patron),
+            "one subordinate's death must not dissolve its sibling's relation"
+        );
+
+        // (b) The PATRON falls: every relation it held goes with it, and the
+        //     freed subordinate lives on where it stood (no cascade).
+        bake.close(patron, 200.0, CauseOfEnd::Famine, Ended::Nature);
+        assert!(
+            bake.tribute.is_empty(),
+            "a dead patron collects from nobody: {:?}",
+            bake.tribute.keys().collect::<Vec<_>>()
+        );
+        assert!(
+            bake.communities[sub_b].alive,
+            "the freed subordinate must survive its patron"
+        );
+        assert_eq!(
+            bake.node_index.get(&cell_b),
+            Some(&sub_b),
+            "the freed subordinate keeps its cell"
         );
     }
 

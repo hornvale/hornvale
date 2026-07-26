@@ -541,6 +541,113 @@ fn a_hostile_cell_in_a_full_world_starves_instead_of_cascading() {
     );
 }
 
+/// A **value-flat** world: every cell carries the same capacity and every cell
+/// is habitable in the single era. Two properties make it the exact negative
+/// control the subordination trigger needs (spec §4.1):
+///
+/// - **No cell is ever worth more than its neighbour**, so the shipped covet
+///   test (`eff_capacity(target) > eff_capacity(raider)`) is false *everywhere,
+///   always*. Eviction is impossible by construction, not by luck of the seed.
+/// - **Nobody is ever crowded and nobody is ever evicted**: capacity 120 sits
+///   far above the genesis (10) and daughter (8) populations, and the logistic
+///   growth term asymptotes at pressure 1, well below `COLLAPSE_PRESSURE`. So
+///   every community stays productive — `has_spoils` holds — and no climate
+///   mask ever moves anybody.
+///
+/// What is left is a pure strength gradient: communities founded at different
+/// years sit at wildly different populations (and reach their tech horizons at
+/// different years), so a mature genesis community towers over a fresh daughter
+/// next door. Under the shipped rule that neighbour is invisible — poorer land
+/// is not coveted, so a strong community simply ignores it. Under tribute the
+/// people are the prize, and it is milked where it stands.
+fn value_flat_fixture() -> (
+    Geosphere,
+    CellMap<f64>,
+    CellMap<f64>,
+    Vec<EraClimate>,
+    CellMap<bool>,
+) {
+    let geo = Geosphere::new(1); // 42 cells
+    let capacity = CellMap::from_fn(&geo, |_| 120.0);
+    let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+    let refugia = CellMap::from_fn(&geo, |_| false);
+    let era = EraClimate {
+        day: 0.0,
+        ice: CellMap::from_fn(&geo, |_| false),
+        habitable: CellMap::from_fn(&geo, |_| true),
+        sea_level: e(0.0),
+        ice_fraction: 0.0,
+    };
+    (geo, capacity, river_prox, vec![era], refugia)
+}
+
+#[test]
+fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
+    // The Tithe's founding claim: asset mobility decides how a raid ends
+    // (spec §4.1). The prize the shipped rule knows is IMMOBILE — the cell —
+    // so a raid can only evict, and a neighbour whose land is no better is
+    // ignored outright (`t_val <= raider_val { continue }`). The prize this
+    // task adds is MOBILE — the people and their product — takeable
+    // repeatedly without displacing anyone.
+    //
+    // The fixture makes the shipped path IMPOSSIBLE: capacity is uniform, so
+    // the covet test is false on every pair in every era. Any raid this world
+    // resolves is therefore the new branch, and `raided == 0` is asserted
+    // alongside so the test cannot pass by the old mechanism firing.
+    let (geo, cap, river, eras, refugia) = value_flat_fixture();
+    let people = peoples();
+    let cfg = BakeConfig {
+        start_year: 0.0,
+        end_year: 500.0,
+        epoch_years: 25.0,
+        ..BakeConfig::default_millennia()
+    };
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    let h = bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    );
+    let c = census(&h);
+    // (a) The world really is value-flat and quiet: no eviction, no climate
+    //     displacement, nobody starved. Nothing here can explain a raid.
+    assert_eq!(
+        c.raided, 0,
+        "equal-value land: eviction must not fire: {c:?}"
+    );
+    assert_eq!(c.fled, 0, "no eviction, so nobody may be driven off: {c:?}");
+    assert_eq!(
+        c.migrated, 0,
+        "the mask must never evict anyone here: {c:?}"
+    );
+    // (b) …and the new branch fired anyway.
+    assert!(
+        c.subordinated > 0,
+        "a productive, beatable, no-richer neighbour must be subordinated: {c:?}"
+    );
+    // (c) The relation is REAL, not just a counter: at least one patron still
+    //     holds a subordinate at `now`. `max_subordinates` is read off the
+    //     live relation table, so this fails if the tally is bumped without a
+    //     relation being recorded (mutation-verified).
+    assert!(
+        c.max_subordinates > 0,
+        "the tally moved but no relation is held at now: {c:?}"
+    );
+    // (d) Tribute redistributes rather than consuming: subordination moves
+    //     nobody, so every community that was ever opened and not starved is
+    //     still standing.
+    assert_eq!(
+        c.alive_at_now, c.records_total,
+        "subordination must displace and kill nobody: {c:?}"
+    );
+}
+
 #[test]
 fn ocean_sunders_and_a_lane_leapfrogs() {
     use hornvale_worldgen::history_bake::{BakeConfig, History, bake, census};
