@@ -850,17 +850,36 @@ impl<'w> Session<'w> {
         Ok(out)
     }
 
+    /// The common case is a prose noun, and the chart (~1.5 ms to build) is
+    /// never needed to answer one: check the prose catalog first and only
+    /// fall through to the chart on a miss, rather than routing through
+    /// `lens_nouns` (which always builds both grains for its own contract —
+    /// the full union other callers and the thesis test depend on). A noun
+    /// named by both grains still resolves to the prose datum, because the
+    /// prose catalog is checked, and answered from, first.
     fn examine(&self, noun: &str) -> Turn {
         if noun.is_empty() {
             return Turn::Out("Examine what?".to_string());
         }
         let wanted = noun.to_lowercase();
-        match self.lens_nouns() {
-            Ok(nouns) => match nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
-                Some((_, detail)) => Turn::Out(detail.clone()),
-                None => Turn::Out(format!("You see no {noun} here.")),
-            },
-            Err(e) => Turn::Out(format!("error: {e}")),
+        let prose = match self.focalized() {
+            Ok(f) => f,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
+        if let Some((_, detail)) = prose.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
+            return Turn::Out(detail.clone());
+        }
+        let scene = match self.purview(0) {
+            Ok(s) => s,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
+        match scene
+            .legend
+            .iter()
+            .find(|e| e.noun.to_lowercase() == wanted)
+        {
+            Some(e) => Turn::Out(e.datum.clone()),
+            None => Turn::Out(format!("You see no {noun} here.")),
         }
     }
 
