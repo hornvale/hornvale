@@ -103,3 +103,15 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0061](0061-x86-sse41-for-hardware-exact-rounding.md) | x86 builds enable SSE4.1 so exact rounding uses hardware `roundsd` (byte-identical; ~15% compute win) | Proposed |
 | [0062](0062-the-classification-split.md) | The classification split: `is-a` and `instance-of` coexist | Accepted |
 | [0063](0063-census-regen-is-local-again.md) | Census regeneration is local again (supersedes 0046) | Accepted |
+| [0064](0064-potency-is-challenge-rating-over-thirty.md) | Potency is Challenge Rating over thirty, over the supernatural set | Accepted |
+| [0065](0065-socialform-and-the-nested-capacity-lattice.md) | SocialForm is a universal axis; capacities are a nested lattice | Accepted |
+| [0066](0066-language-drift-is-a-function-of-sociality-and-lifespan.md) | Language drift-rate is a function of sociality and lifespan | Accepted |
+| [0067](0067-the-mind-society-vector-split.md) | The mind/society vector split | Accepted |
+| [0068](0068-society-gates-on-sociality-not-sedentism.md) | The society vector gates on sociality, not sedentism | Accepted |
+| [0069](0069-fine-position-is-never-serialized.md) | Fine position is never serialized — the two-tier position law | Accepted |
+| [0070](0070-wounds-commit-health-folds.md) | Wounds commit; health folds — no HP counter anywhere | Accepted |
+| [0071](0071-one-snapshot-per-commit.md) | One snapshot per commit; panes are pure projections | Accepted |
+| [0072](0072-derived-geometry-is-causal.md) | Derived geometry is causal | Accepted |
+| [0073](0073-epoch-granularity-is-declared.md) | Epoch granularity is declared, not discovered | Accepted |
+| [0074](0074-capacities-are-a-chain-and-facts-gate-on-components.md) | Capacities are a chain, and species facts gate on components | Accepted |
+| [0075](0075-the-causal-geometry-is-the-anchor-graph.md) | The causal derived geometry is the anchor graph, not the metric layout | Accepted |

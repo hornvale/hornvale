@@ -31,7 +31,16 @@ const bytes = await readFile(wasmPath);
 
 // Empty imports object: the module may import nothing (spec guarantee).
 const { instance } = await WebAssembly.instantiate(bytes, {});
-const { hv_start, hv_in_ptr, hv_handle, hv_out_ptr, hv_out_len, memory } = instance.exports;
+const {
+  hv_start,
+  hv_in_ptr,
+  hv_handle,
+  hv_out_ptr,
+  hv_out_len,
+  hv_snapshot_ptr,
+  hv_snapshot_len,
+  memory,
+} = instance.exports;
 
 const readOut = () =>
   new TextDecoder().decode(
@@ -73,13 +82,41 @@ assert.match(readOut(), /No verb 'dance'/);
 assert.equal(send("release"), 1, "release returns Turn::Released");
 assert.equal(readOut(), "You let go.");
 
-// 6. Re-possession with a different seed (exercises the teardown path).
-assert.equal(hv_start(43n), 0, "seed-43 genesis succeeds after teardown");
+// 6. Re-possession with a DIFFERENT possessable seed (exercises teardown).
+// Scouted, not hardcoded: many seeds generate no settlement at all, so
+// `hv_start` returns 2 (possession refused) for them — that is a valid
+// world, not a bug, and hardcoding one made this check fail whenever
+// worldgen moved. 43 and 45 are both settlement-free today.
+let other = null;
+for (let seed = 43n; seed < 60n; seed++) {
+  if (hv_start(seed) === 0) {
+    other = seed;
+    break;
+  }
+}
+assert.notEqual(other, null, "some seed in 43..60 is possessable");
 assert.notEqual(readOut(), golden, "a different seed is a different world");
 
 // 7. And back to 42: same world again (determinism across restarts).
 assert.equal(hv_start(42n), 0);
 assert.equal(readOut(), golden, "seed 42 re-derives byte-identically");
+
+// 8. The snapshot rides alongside the prose, and its narration IS the prose.
+const snapshotJson = () =>
+  new TextDecoder().decode(
+    new Uint8Array(memory.buffer, hv_snapshot_ptr(), hv_snapshot_len()),
+  );
+assert.ok(hv_snapshot_len() > 0, "a live possession carries a snapshot");
+const snap = JSON.parse(snapshotJson());
+assert.equal(snap.schema, "vessel/session/v1");
+for (const key of ["self", "sensed", "known", "social", "narration"]) {
+  assert.ok(key in snap, `snapshot carries the ${key} channel`);
+}
+assert.equal(
+  snap.narration.prose.trimEnd(),
+  golden.trimEnd(),
+  "narration.prose === the transcript opening the prose ABI already returns",
+);
 
 const kib = (bytes.length / 1024).toFixed(0);
 console.log(`casement smoke OK — ${kib} KiB wasm, seed-42 genesis ${genesisMs.toFixed(0)} ms`);

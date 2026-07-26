@@ -865,7 +865,7 @@ pub fn demography_report_with_beta(
     floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
 }
 
@@ -977,7 +977,7 @@ const CARNIVORE_THRESHOLD: f64 = 0.5;
 pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
@@ -1052,7 +1052,7 @@ pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
@@ -1109,7 +1109,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
@@ -1858,7 +1858,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(diurnal_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(diurnal_lines_from(&terrain, &climate))
 }
 
 /// [`diurnal_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -1976,7 +1978,9 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(seas_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(seas_lines_from(&terrain, &climate))
 }
 
 /// [`seas_lines`] from a PRE-BUILT terrain and climate — the body without the
@@ -2039,7 +2043,9 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
 pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(rains_lines_from(&terrain, &climate))
 }
 
 /// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2131,10 +2137,9 @@ pub fn sky_phrase(
 /// observation.
 /// type-audit: bare-ok(prose: return)
 pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(firmament_lines_from(
-        &terrain_of(world)?,
-        &climate_of(world)?,
-    ))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(firmament_lines_from(&terrain, &climate))
 }
 
 /// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
@@ -2330,7 +2335,9 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// world.
 /// type-audit: bare-ok(prose: return)
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(ground_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(ground_lines_from(&terrain, &climate))
 }
 
 /// [`ground_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -3041,11 +3048,14 @@ fn observe_with_sources(
     sources: &[&dyn PhenomenaSource],
 ) -> Result<Vec<Phenomenon>, BuildError> {
     // Source the kind's perception from the world's component set (ECS c3),
-    // keyed by its `KindId` label.
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
+    // keyed by its `KindId` label. Fails loudly for a kind that carries no
+    // perception (plain fauna): before The Vigil this was an `.expect`, so the
+    // REPL's `phenomena --as owlbear` panicked the process.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
     let day = observation_time(world, perception.activity)?;
     Ok(observe(
         sources,
@@ -3403,7 +3413,7 @@ pub fn exposure_of(
     let wc = WorldComponents::assemble()?;
     let name = resolve_kind(&wc, species)?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let settled = settled_cells(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
@@ -3463,26 +3473,19 @@ fn exposure_of_impl(
 
     let species = name;
     // Source perception from the world's component set (ECS c3), keyed by the
-    // kind's `KindId` label. Since The Solitary Tongue, a speaker (an
-    // articulation-registry kind) is no longer necessarily a perceiver — the
-    // three dragons speak but do not (yet) perceive (perception stays the
-    // four peoples, deferred). A non-perceiving speaker falls back to the
-    // goblin baseline (`Diurnal`, 0.5/0.5) purely as this classifier's input
-    // — a neutral stand-in, not a claim the dragon actually perceives that
-    // way — so its color/body/kin exposure still classifies instead of
-    // panicking on a missing component that is legitimately absent.
-    const NON_PERCEIVING_SPEAKER_BASELINE: hornvale_species::PerceptionVector =
-        hornvale_species::PerceptionVector {
-            activity: hornvale_species::ActivityCycle::Diurnal,
-            night_vision: 0.5,
-            sky_attention: 0.5,
-        };
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .copied()
-        .unwrap_or(NON_PERCEIVING_SPEAKER_BASELINE);
-    let depths = pack_depths(&perception);
+    // kind's `KindId` label. Since The Vigil every minded speaker perceives
+    // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
+    // for every kind that can reach a lexicon. `exposure_of` is public and
+    // `resolve_kind` accepts any biosphere kind, so a caller may still pass
+    // plain fauna — which fails loudly here rather than silently classifying
+    // colour as though a bear saw like a goblin. Mirrors the same failure in
+    // `chorus::account_params_from`.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
+    let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
@@ -4917,39 +4920,40 @@ fn species_genesis(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        // Peopled-registry facts (mind + perception + speech) describe a
-        // settling people's full cluster. A minded solitary (a dragon carries a
-        // psyche but no perception or speech) emits only its `SPECIES_NAME`
-        // above; its mind stays latent — read from the registry if it is ever
-        // agentified — so every shipped world is byte-identical (The Eremite).
-        // Gated on `Settled`, which the nested-capacity invariant guarantees
-        // implies the full peopled cluster, so the reads below are total.
-        let settled = wc
-            .biosphere
-            .get(kind)
-            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled);
-        if let Some(p) = wc.psyche.get(kind).filter(|_| settled) {
-            let perception = wc
-                .perception
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let articulation = wc
-                .articulation
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let society = wc
-                .society
-                .get(kind)
-                .expect("a Settled people carries a society vector (integrity-checked)");
-            let sociality = match society.sociality {
-                Sociality::Hierarchic => "hierarchic",
-                Sociality::Communal => "communal",
-            };
-            let status = match society.status_basis {
-                StatusBasis::Rank => "rank",
-                StatusBasis::Knowledge => "knowledge",
-                StatusBasis::Generosity => "generosity",
-            };
+        // Species-registry facts describe a kind's authored components. Each
+        // fact FAMILY is gated on the component that produces it — not on
+        // `SocialForm::Settled`, which is sedentism and withheld a solitary
+        // kind's mind, senses, and speech for a reason unrelated to any of
+        // them (the shape decision 0068 corrected for `SocietyVector`, left
+        // standing in the other three families). A dragon therefore emits
+        // mind + perception + speech and, correctly, no society facts: it has
+        // no society, rather than failing to settle.
+        //
+        // The commit ORDER below is unchanged from the single-gate version —
+        // note that `in-group-radius` still sits between two mind facts, which
+        // is why the mind block appears twice rather than being merged: the
+        // first mind block (threat-response, deliberation-latency) commits,
+        // then the society block's `in-group-radius`, then the SECOND mind
+        // block (time-horizon), and only then the rest of the society block
+        // (sociality-mode, status-basis) — so the society block appears
+        // twice for the identical reason, split by that same interleaved
+        // `time-horizon`. Emission order is a save-format contract; this
+        // gates only, so every settling people's fact sequence stays
+        // byte-identical and the only new facts in any world are the
+        // dragons' own (The Vigil).
+        //
+        // LOAD-BEARING: do not "simplify" this into one mind block and one
+        // society block. Merging them would move `in-group-radius` to after
+        // `time-horizon` for every settling people (goblin, hobgoblin,
+        // bugbear, kobold) in every committed world — a save-format change
+        // with no epoch, i.e. silent corruption of every already-committed
+        // world and fixture.
+        let mind = wc.psyche.get(kind);
+        let society = wc.society.get(kind);
+        let perception = wc.perception.get(kind);
+        let articulation = wc.articulation.get(kind);
+
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
                 &world.registry,
@@ -4962,14 +4966,29 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
             world.ledger.commit(
-                sfact(id, IN_GROUP_RADIUS, Value::Number(society.in_group_radius)),
+                sfact(id, IN_GROUP_RADIUS, Value::Number(s.in_group_radius)),
                 &world.registry,
             )?;
+        }
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
+            let sociality = match s.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match s.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
             world.ledger.commit(
                 sfact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
                 &world.registry,
@@ -4978,6 +4997,8 @@ fn species_genesis(
                 sfact(id, STATUS_BASIS, Value::Text(status.to_string())),
                 &world.registry,
             )?;
+        }
+        if let Some(perception) = perception {
             let activity = match perception.activity {
                 ActivityCycle::Diurnal => "diurnal",
                 ActivityCycle::Nocturnal => "nocturnal",
@@ -5007,6 +5028,8 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(articulation) = articulation {
             let exotic = match articulation.exotic {
                 hornvale_language::ExoticManner::None => "none",
                 hornvale_language::ExoticManner::Trill => "trill",
@@ -5181,7 +5204,7 @@ pub fn world_name(world: &World) -> Option<String> {
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
     let terrain = terrain_of(world).ok()?;
-    let climate = climate_of(world).ok()?;
+    let climate = climate_from(world, &terrain).ok()?;
     world_name_in_from(world, wc, &terrain, &climate)
 }
 
@@ -5287,9 +5310,20 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
+    sky_report_from(world, time, &terrain, &climate)
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<SkyReport, BuildError> {
+    let mut report = sky_of(world)?.sky_at(time);
     let cell = hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -5868,7 +5902,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 })?,
+        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
@@ -5942,6 +5976,109 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A seed-42 generated-sky world with the default roster — the shared
+    /// fixture for the fact-emission tests below.
+    fn vigil_world() -> World {
+        build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    /// The predicate sequence committed for one species entity, in ledger order.
+    fn predicate_sequence(world: &World, species: &str) -> Vec<String> {
+        let id = hornvale_species::species_entity(world, species)
+            .unwrap_or_else(|| panic!("{species} has a species entity"));
+        world
+            .ledger
+            .facts_about(id)
+            .map(|f| f.predicate.clone())
+            .collect()
+    }
+
+    #[test]
+    fn a_settled_people_emits_the_same_seventeen_facts_in_the_same_order() {
+        // The Vigil re-gates emission per fact FAMILY, but must not REORDER
+        // it: emission order is a save-format contract, and the existing
+        // sequence interleaves a society fact between two mind facts. Pinning
+        // the literal order is what proves the re-gate changed gates only.
+        // Seventeen: `species-name` plus the sixteen authored-vector facts.
+        let world = vigil_world();
+        assert_eq!(
+            predicate_sequence(&world, "goblin"),
+            vec![
+                "species-name",
+                "species-threat-response",
+                "species-deliberation-latency",
+                "species-in-group-radius",
+                "species-time-horizon",
+                "species-sociality-mode",
+                "species-status-basis",
+                "species-activity-cycle",
+                "species-night-vision",
+                "species-sky-attention",
+                "species-labiality",
+                "species-vowel-space",
+                "species-voicing",
+                "species-sibilance",
+                "species-voice-loudness",
+                "species-tonality",
+                "species-exotic-manner",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dragon_emits_mind_perception_and_speech_but_no_society() {
+        // Decision 0068's semantics, now visible in the ledger: a Solitary
+        // kind is minded and speaks and perceives, and keeps no society — so
+        // its society facts are absent because it HAS no society, not because
+        // it fails to settle. Before The Vigil all four families were withheld
+        // by one sedentism gate.
+        let world = vigil_world();
+        let seq = predicate_sequence(&world, "red-dragon");
+        for present in [
+            "species-threat-response",
+            "species-deliberation-latency",
+            "species-time-horizon",
+            "species-activity-cycle",
+            "species-night-vision",
+            "species-sky-attention",
+            "species-labiality",
+            "species-exotic-manner",
+        ] {
+            assert!(
+                seq.iter().any(|p| p == present),
+                "{present} must be emitted"
+            );
+        }
+        for absent in [
+            "species-in-group-radius",
+            "species-sociality-mode",
+            "species-status-basis",
+        ] {
+            assert!(
+                !seq.iter().any(|p| p == absent),
+                "{absent} must NOT be emitted — a dragon keeps no society"
+            );
+        }
+        assert_eq!(
+            seq.len(),
+            14,
+            "species-name + mind 3 + perception 3 + speech 7"
+        );
+    }
+
+    #[test]
+    fn plain_fauna_still_emits_only_its_name() {
+        let world = vigil_world();
+        assert_eq!(predicate_sequence(&world, "owlbear"), vec!["species-name"]);
+    }
 
     #[test]
     fn wild_concentrations_are_deterministic_beasts() {
