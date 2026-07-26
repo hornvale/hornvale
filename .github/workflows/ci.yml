@@ -53,12 +53,21 @@ jobs:
           # divergent transcendentals, which quantization cannot make identical
           # across platforms. They are excluded here (byte-identity is
           # platform-local; a real worldgen change still surfaces loudly in
-          # world.json and the censuses).
+          # world.json and the censuses). scene-surrounds-seed-42.json carries
+          # exactly the same exposure — its `biome`, `water` and `relief`
+          # fields are thresholded classifications too, built from
+          # `windows/locale`'s own locale-seed-42.json (already excluded above)
+          # — so it inherits an already-excluded artifact's platform-local
+          # noise (The Margin). Byte-identity for this document is still
+          # enforced where it can be: the platform-local golden fixtures under
+          # `windows/scene/tests/fixtures/` and the in-process determinism
+          # test in the producer's own suite.
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
-            ':(exclude)book/src/reference/locale-seed-42.json'
+            ':(exclude)book/src/reference/locale-seed-42.json' \
+            ':(exclude)book/src/gallery/scene-surrounds-seed-42.json'
 
   atlas:
     name: Atlas client
