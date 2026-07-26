@@ -1,237 +1,227 @@
 # The Waterline — a medium for the habitat model
 
-**Campaign**: The Waterline (prerequisite to BIO-35 Stage 2 / The Chase)
+**Campaign**: The Waterline (prerequisite work surfaced by BIO-35 Stage 2 / The Chase)
 **Date**: 2026-07-26
-**Status**: spec, awaiting G3 review
+**Status**: spec, **substantially corrected 2026-07-26 — see §11**
 
 ## 1. Summary
 
-The habitat model has no concept of **medium**. Nothing anywhere asks whether a
-cell is land or water, or which of those a kind lives in. The consequence,
-measured at seed 42 on current main:
+Two resource-supply axes — `MINERAL` and `DETRITUS` — are not gated by the
+habitability mask that gates the other two, so the kinds that eat them hold
+carrying capacity below sea level. Measured at seed 42:
 
 ```
-kind                 land    ocean    total   ocean %
-xorn                    7    25982    25989    100.0%
-rust-monster         2832     9801    12633     77.6%
-twig-blight            65     1345     1410     95.4%
-goblin                  0      930      930    100.0%
+                 BEFORE                          AFTER (this campaign)
+kind          land    ocean   total          land    ocean   total
+xorn             7   25,982  25,989             7   25,982  25,989   (Lithic — kept)
+rust-monster 8,719    3,914  12,633         8,719        0    8,719   (Terrestrial)
+twig-blight  1,410        0   1,410         1,410        0    1,410   (unaffected)
+goblin         930        0     930           930        0      930   (unaffected)
 
-world: 2,904 land cells / 38,058 ocean cells
+world: 11,066 land cells / 29,896 ocean cells (sea level = −2,936.17 m)
 ```
 
-The goblin dominates 930 cells, every one below sea level and none on land.
-
-This campaign adds the missing concept: a per-kind `HabitatDomain` on
-`BiosphereTraits`, evaluated against terrain's existing `is_ocean` predicate,
-applied as **support restriction** — a hard zero on carrying capacity for a
-kind outside its medium.
-
-Every shipped kind is `Terrestrial` in v1, so the content is degenerate and the
-outcome is a land mask. The *mechanism* is general, so adding a marine kind
-later is authoring, not a code change.
+The fix introduces the concept the model lacks — **medium** — as a per-kind
+`HabitatDomain` on `BiosphereTraits`, applied as support restriction at the
+carrying-capacity layer.
 
 ## 2. The measured diagnosis
 
-Two independent defects, both verified by
-`windows/worldgen/tests/waterline_probe.rs` (committed at `0041069f`):
-
-**2.1 `habitability` is not a land test.** Climate's `CellMap<bool>` marks
-**3,817 ocean cells habitable against 392 land cells**. It answers whether the
-*climate* is livable, and open ocean is thermally stable and wet, so it passes
-easily. It is correct at its own question and was never asked this one.
-
-**2.2 `MINERAL` and `DETRITUS` bypass it entirely.** `PHOTOSYNTHATE` and
-`PLANT_FORAGE` ride `base_carrying`, which consumes habitability — which is why
-goblin and twig-blight read exactly `0.000000` in rejected cells. Mineral comes
-from lithology and detritus is an ambient constant; neither is gated. In a
-sampled cell at −4,120 m:
+**One defect, precisely located.** `PHOTOSYNTHATE` and `PLANT_FORAGE` ride
+`base_carrying`, which consumes climate's habitability mask. `MINERAL` comes
+from lithology and `DETRITUS` is an ambient constant; **neither is gated at
+all**. In a sampled cell at −4,120 m:
 
 ```
-goblin 0.000000   xorn 0.000485   rust-monster 0.000313   twig-blight 0.000000
+goblin 0.000000   twig-blight 0.000000   xorn 0.000485   rust-monster 0.000313
 ```
 
-That fully explains the table in §1: goblin's ocean cells are *habitable* ocean
-where forage flows; xorn's are *non*-habitable deep ocean where only the two
-ungated axes do.
+Only the two mineral feeders leak. Everything else is already excluded.
 
-**Why it went unnoticed:** settlement placement filters to land downstream, so
-every human-visible output stayed sane while the density field did not.
+**Habitability is already a land test**, contrary to this spec's first draft.
+`climate::is_habitable` is:
+
+```rust
+elevation_m >= sea_level_m
+    && (HABITABLE_MIN_C..=HABITABLE_MAX_C).contains(&temp_c)
+    && moisture >= HABITABLE_MIN_MOISTURE
+```
+
+Measured: **4,209 habitable cells, every one on land, zero at sea.** It works.
+
+**Why it still needs replacing for this purpose.** Its doc says what it is —
+*"whether a cell could host a vale-like settlement"* — a **settlement-suitability**
+test. Reusing it as the medium gate would import "moisture ≥ 0.2" and
+"−25 °C ≤ T ≤ 35 °C" into the requirements of a rock-eating construct, which is
+wrong for the same reason the current bug is wrong: it answers a different
+question and happens to correlate. The medium axis says what it means.
 
 ## 3. Why support restriction, and not a smaller number
 
-The defect lifts to a shape with one well-known answer: *a scoring function
-with unbounded support, plus an unconditional lower bound, applied over a
-domain where the question is undefined.* Machine learning masks logits to −∞
-before the softmax; statistics declares the support; databases distinguish
-`NULL` from `0`. None of them fixes it by shrinking values.
+The defect lifts to: *a scoring function with unbounded support, plus an
+unconditional lower bound, applied over a domain where the question is
+undefined.* ML masks logits to −∞ before the softmax; statistics declares the
+support; databases distinguish `NULL` from `0`.
 
-That matters here because **dominance is `argmax`, a comparative operation**.
-The goblin holds its 930 ocean cells not because its density is large but
-because nothing else is larger there. At a floor of `1e-9` it still holds them.
-Only removing a cell from contention removes it from contention.
-
-This falsifies the most attractive alternative framing — *"the real bug is that
-`sovereignty_floor` grants 0.33–0.76 of full habitat response unconditionally,
-so scope the floor."* That may well be a real defect, and it is captured as its
-own registry row, but it cannot fix an argmax and so cannot be this campaign's
-answer.
-
-`ConditionResponse::eval` is `floor + (1 − floor)·devotion·exp(−½z²)` — a
-Gaussian with unbounded support over a floor. Elevation's floor is already hard
-(`0.0`), and it still excludes nothing, because a Gaussian never reaches zero.
-Softness is not the problem; undeclared support is.
+It matters because **dominance is `argmax`**. A cell containing only tiny
+values still has a largest one, so shrinking values cannot remove a kind from
+contention — only restricting the support can. This is why "scope
+`sovereignty_floor`" (which grants 0.33–0.76 of full habitat response
+unconditionally on three of four axes) is *not* this campaign's fix, however
+much it looks like the root cause. It is captured as its own registry row.
 
 ## 4. The design
 
 ### 4.1 `HabitatDomain` on `BiosphereTraits`
 
 ```rust
-/// The medium a kind's body lives in — a universal biosphere axis, like
-/// `social_form` (decision 0065). Every kind with a body is in some medium;
-/// this is not a capacity only some kinds carry, so it is a field rather than
-/// a component store.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HabitatDomain {
-    /// Lives above the waterline. Every shipped kind, in v1.
+    /// Lives above the waterline.
     Terrestrial,
-    /// Lives below it. No shipped kind yet — the aquatic roster is this
-    /// campaign's sequel.
+    /// Lives below it. No shipped kind yet — the aquatic roster is a sequel.
     Aquatic,
-    /// At home in both (a shore-dweller, an otter, a crocodilian).
+    /// At home in both, moving between them — an otter, a crocodilian.
     Amphibious,
+    /// Lives *in the substrate*, which underlies both land and sea floor, and
+    /// is therefore indifferent to the waterline above it. A xorn swims
+    /// through stone; the ocean over its head is not its medium.
+    Lithic,
 }
 ```
 
-Placed on `BiosphereTraits` beside `social_form`, following The Eremite's
-precedent for a universal axis. A component store is the idiom for an optional
-*capacity*; a universal axis is a field, and gets totality for free rather than
-needing an integrity rule to enforce it.
+Placed beside `social_form`, following The Eremite's precedent for a universal
+biosphere axis (0065).
 
-### 4.2 The gate, at K
+`Lithic` and `Amphibious` share a permit-everywhere gate in v1 but make
+different claims, and the distinction is worth carrying: `Amphibious` means *at
+home in both media and moving between them*; `Lithic` means *in neither — in a
+third medium that underlies both*. When a future campaign gives the substrate
+its own extent (ice sheets, deep sediment, exposed bedrock), `Lithic` gains a
+real gate and `Amphibious` does not.
 
-In `niche_per_species_k`, a kind outside its medium reads **zero carrying
-capacity**, before supply and condition terms are combined:
+### 4.2 Authoring
+
+| kind | domain | why |
+|---|---|---|
+| xorn | `Lithic` | `Ametabolic`, pure-`MINERAL`, burrows through stone. Its domain is the world's rock, most of which happens to lie under water. |
+| rust-monster | `Terrestrial` | `Ectotherm`, pure-`MINERAL`, but a walking beast that eats metal objects — it lives on the surface, not in it. |
+| the other fourteen | `Terrestrial` | surface dwellers, all. |
+
+### 4.3 The gate, at K
+
+First statement inside `niche_per_species_k`'s per-cell closure:
 
 ```rust
+let wet = terrain.is_ocean(cell);
 let permitted = match bio.habitat_domain {
-    HabitatDomain::Terrestrial => !terrain.is_ocean(cell),
-    HabitatDomain::Aquatic => terrain.is_ocean(cell),
-    HabitatDomain::Amphibious => true,
+    HabitatDomain::Terrestrial => !wet,
+    HabitatDomain::Aquatic => wet,
+    HabitatDomain::Amphibious | HabitatDomain::Lithic => true,
 };
 if !permitted {
     return 0.0;
 }
 ```
 
-Gating **K**, not each supply field, is deliberate. The measured defect has two
-independent sources (§2), and per-axis gating would have to fix both paths
-while leaving the next axis added ungated by default. Gating K covers every
-axis at once, present and future, and states the actual claim: *this kind
-cannot be here* — not *this kind finds no food here*.
-
-`terrain.is_ocean(cell)` already exists (`elevation_at(id) <
-globe.sea_level`) and is already used by `confluence.rs`, `demesne.rs`, and
-`traversal.rs`. No new medium field is derived; the campaign reads the one
-terrain already publishes, which keeps this correct under The Sundering's
-time-varying sea level for free.
-
-### 4.3 `habitability` is untouched
-
-It answers a real and different question, and answers it correctly. The medium
-gate is orthogonal and additional. A kind must clear both: the right medium
-*and* a livable climate.
+Gating **K**, not each supply field, states the actual claim — *this kind
+cannot be here* — and covers every axis at once, including any added later.
+`terrain.is_ocean(cell)` (`elevation_at(id) < globe.sea_level`) already exists;
+no new field is derived, and it tracks The Sundering's time-varying sea level
+for free.
 
 ## 5. Preregistered predictions
 
-**P1.** After the gate, no kind dominates any ocean cell. The land/ocean table
-in §1 becomes land-only for every kind.
+**P1.** After the gate, `rust-monster` holds zero ocean cells (was 3,914) and
+its land count is unchanged at 8,719.
 
-**P2.** Xorn's dominated-cell count collapses from 25,989 to at most the 2,904
-land cells, and the "largest domain on the world" title changes hands or
-changes magnitude by an order of magnitude.
+**P2.** `xorn` is **unchanged** at 7 land / 25,982 ocean — it is `Lithic`, and
+rock is rock. Consequently `demesne.rs`'s xorn assertion, which fails under a
+Terrestrial-xorn reading, **passes**.
 
-**P3.** Goblin dominates zero cells before the change and a non-zero number of
-*land* cells after — or, if it still dominates nothing, that is a real finding
-about the peoples' competitive position and is reported, not tuned away.
+**P3.** `twig-blight` and `goblin` are unchanged (they already held zero ocean
+cells).
 
-**P4 (the one I am least sure of).** **Settlement placement does not move.**
-Land cells' competitive shares are computed per-cell, so removing ocean from
-contention should leave them identical — but `emigration_pressure` and any
-global normalization in the coexistence stack could couple them. If seed 42's
-flagship settlement name or position changes, world identity has drifted and
-the campaign's cost is much larger than its diff. **This is measured before the
-fix is built** (§7), not discovered after.
+**P4 — already measured, Task 1, and it held.** Zeroing *all* ocean K left seed
+42 byte-identical (3,553 facts, village `Qvooshtvoagootao`, `lens_purity`
+passing). Settlement placement does not move, so world identity does not drift.
 
-**P5.** The four peoples' *relative* K ordering on land is unchanged — this
-campaign removes cells from contention, it does not re-weight the survivors.
+**P5.** No test in the workspace reddens except those pinning `rust-monster`'s
+or the aggregate dominance counts.
 
-## 6. Blast radius, by consumer class and by committed artifact
-
-Both partitions, per The Vigil's retrospective lesson.
+## 6. Blast radius
 
 ### Consumers
 
 | class | sites | effect |
 |---|---|---|
 | K computation | `niche_per_species_k` | the gate |
-| Registry literals | every `BiosphereTraits { .. }` in `domains/species` (16 kinds) plus Lab's synthetic rosters in `windows/lab/src/roster.rs` | one new field each |
-| Dominance metrics | `menagerie_full_roster_dominant_breakdown` and the `#[ignore]`d `≥6`-distinct-dominants target | counts move; the ignored target may move toward or away from its threshold — reported either way |
-| Coexistence stack | `demography_report`, `couple_trophic`, `cell_share` | fewer cells with non-zero density; no formula change |
-| Settlement placement | genesis attractors | P4 — expected unchanged, measured |
-| Lab metrics | anything reading density or dominance | census-regenerating (§8) |
+| Registry literals | 16 in `domains/species`; two `..goblin_bio` spreads in `windows/worldgen` and Lab's clones inherit | one field |
+| Dominance metrics | `menagerie_full_roster_dominant_breakdown`, `demesne.rs` | rust-monster's counts move; xorn's do not |
+| Coexistence stack | `pack` filters `present` to `k > 0.0`, so a zeroed kind is simply absent | no formula change |
+| Settlement placement | genesis attractors | unchanged (P4, measured) |
 
 ### Committed artifacts
 
 | artifact | expected |
 |---|---|
-| census goldens (`book/src/laboratory/generated/**/rows.csv`) | **change** — the carve-out |
-| `cli/tests/fixtures/world-seed-42.json` | unchanged iff P4 holds; the tripwire decides |
-| `book/src/gallery/*` almanacs, dictionary, phonology | unchanged (no sky, language, or perception input) |
-| `docs/audits/type-audit-report.md` | one new tagged item |
-| The Demesne's chronicle prose | see §9 |
+| `cli/tests/fixtures/world-seed-42.json` | **unchanged** (P4) |
+| census goldens | changed only where a metric reads density/dominance — **much narrower than first thought**, since only rust-monster moves. Verify before requesting the carve-out. |
+| gallery, dictionary, phonology, almanacs | unchanged |
+| `docs/audits/type-audit-report.md` | unchanged (an enum, no primitive tag) |
 
-## 7. Task ordering — P4 first
+## 7. Determinism
 
-The plan's first task measures P4 against a throwaway gate, before any authored
-field exists. If settlement placement moves, the campaign's shape changes
-(world identity drift, a re-baselined fixture, possibly an epoch conversation)
-and that must be known at task 1, not task 5.
+No epoch, no new predicate, no serialized state, no stream draws. `P4` is
+measured, not assumed.
 
-## 8. Determinism and the census carve-out
+## 8. What this campaign no longer claims
 
-- **No epoch**: no seed-derivation label, stream consumption order, or noise
-  constant changes.
-- **No new predicate**, no serialized state. `BiosphereTraits` is authored
-  build state, not save format.
-- **No draws move** — *if* P4 holds. If it does not, placement changes and
-  drawn names follow it.
-- **Census regeneration is required** and is a carve-out: explicit owner
-  authorization before the regen runs.
+The first draft justified The Waterline as a **prerequisite** for the prey
+field on the grounds that prey production was 77.9% oceanic. **That figure was
+wrong** (§11). Corrected: prey production is **91.8% land, 8.2% ocean**, and
+the richest prey cell in the world is on land.
 
-## 9. The Demesne's claim
+So The Chase would not have put dragons to sea in any dominant way, and this
+campaign is not load-bearing for it. It remains worth doing — 3,914 wrongly
+held ocean cells is a real defect, and the medium concept is a real gap — but
+it is a **correctness campaign in its own right**, not a blocker. The Chase can
+proceed before or after it.
+
+## 9. The Demesne
 
 The Demesne's chronicle reports the xorn winning "the largest domain any kind
-holds — a mineral-eater owning its mountains as the place-identity model
-intends." Measured on current main, that domain is **7 land cells and 25,982
-ocean cells**.
+holds — a mineral-eater owning its mountains." Measured: 7 land cells and
+25,982 ocean cells.
 
-The rank-restoration that campaign measured is real and this campaign does not
-dispute it: the xorn genuinely went from noise to the largest domain. What the
-prose reads as mountains is seafloor. After The Waterline the claim becomes
-true or becomes false, and either way the chronicle needs re-reading against
-the new numbers. Correcting another campaign's shipped chronicle is the owner's
-call, flagged at G3 rather than done silently.
+Under §4.2's authoring the domain is **kept** and its acceptance test passes,
+so nothing is falsified — but the prose is still inaccurate, and the accurate
+version is better: the xorn owns the world's *rock*, and most of a world's rock
+lies beneath its ocean. A one-sentence chronicle correction at close, owner's
+call.
 
 ## 10. Non-goals
 
-- **The aquatic roster.** v1 authors zero `Aquatic` kinds; 93% of the world
-  becomes honestly empty. That is the point — an honest empty ocean creates the
-  demand a dishonest full one hides. Sequel.
-- **Scoping `sovereignty_floor`.** Falsified as this campaign's fix (§3);
-  registry row.
-- **The prey field** (The Chase) — downstream of this, unblocked by it.
-- **Freshwater.** The Freshet's `WaterKind` salt/fresh distinction is not read
-  here; `is_ocean` is the only medium test in v1. A lake is not yet a medium.
-- **Re-tuning β or any competition constant** to compensate for the removed
-  cells.
+The aquatic roster; scoping `sovereignty_floor`; the prey field; freshwater as
+a medium; re-tuning β.
+
+## 11. Correction notice
+
+This spec's first draft was built on a probe that classified ocean as
+`elevation < 0.0`. **Sea level on seed 42 is −2,936.17 m**, and terrain already
+publishes `is_ocean` (`elevation < sea_level`). The two disagree on 8,162
+cells, and every land/ocean figure in the first draft was wrong. Specifically:
+
+| first draft | corrected |
+|---|---|
+| 2,904 land / 38,058 ocean | **11,066 land / 29,896 ocean** |
+| "goblin dominates 930 cells, all below sea level, none on land" | goblin's 930 cells are **all land**; unaffected by this campaign |
+| "habitability marks 3,817 ocean cells habitable vs 392 land" | **4,209 habitable cells, all land, zero ocean** — habitability is already a land test |
+| "prey production is 77.9% ocean" | **8.2% ocean** |
+| two independent defects | **one**: `MINERAL`/`DETRITUS` bypass habitability |
+
+The design survived the correction — support restriction and a medium axis are
+still right, and Task 1's byte-identity result never depended on the
+classification. The *motivation* did not: this is a smaller campaign than it
+was sold as. The measurement used an assumed constant where the codebase
+published the real predicate, and four rounds of conclusions were drawn before
+anyone checked. Retrospective headline.

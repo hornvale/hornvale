@@ -1,3 +1,15 @@
+//! # CORRECTION (2026-07-26)
+//!
+//! This probe originally classified ocean as `elevation < 0.0`. **Sea level on
+//! seed 42 is −2,936.17 m**, and terrain publishes the real predicate as
+//! `is_ocean` (`elevation < sea_level`). The two disagree on 8,162 cells, so
+//! every land/ocean figure this probe reported before the correction was
+//! wrong — including the headline "the goblin dominates 930 cells, all below
+//! sea level" (those 930 cells are all LAND) and "prey production is 77.9%
+//! ocean" (it is 8.2%). The probe now uses `terrain.is_ocean` throughout, and
+//! keeps an explicit check that the two tests disagree, so the trap cannot
+//! silently return. See the campaign spec §11.
+//!
 //! FEASIBILITY PROBE (The Waterline; opened as The Chase / BIO-35 Stage 2) — measurement only, not a
 //! shipped feature. Answers three questions before the prey-field spec is
 //! written:
@@ -259,7 +271,9 @@ fn waterline_probe() {
     // so it is never exactly zero: `> 0.0` measures float positivity, not
     // ecological presence. The question that matters is the MAGNITUDE split
     // between land and sea.
-    println!("\n-- production: land vs ocean (ocean = elevation < 0 m)");
+    println!(
+        "\n-- production: land vs ocean (ocean = terrain.is_ocean, i.e. elevation < sea_level)"
+    );
     let mut land_total = 0.0f64;
     let mut sea_total = 0.0f64;
     let mut land_cells = 0usize;
@@ -267,9 +281,8 @@ fn waterline_probe() {
     let mut land_max = 0.0f64;
     let mut sea_max = 0.0f64;
     for (i, &c) in cells.iter().enumerate() {
-        let elev = terrain.elevation_at(c).get();
         let v = prod_at(i);
-        if elev < 0.0 {
+        if terrain.is_ocean(c) {
             sea_total += v;
             sea_cells += 1;
             sea_max = sea_max.max(v);
@@ -325,7 +338,7 @@ fn waterline_probe() {
             };
         }
         if let Some((id, _)) = best {
-            if terrain.elevation_at(cell).get() < 0.0 {
+            if terrain.is_ocean(cell) {
                 *dom_sea.entry(id).or_insert(0) += 1;
             } else {
                 *dom_land.entry(id).or_insert(0) += 1;
@@ -359,16 +372,33 @@ fn waterline_probe() {
     }
     println!("   (world has {land_cells} land cells and {sea_cells} ocean cells)");
 
+    // --- SEA LEVEL: is `elevation < 0` the same test as `is_ocean`? -------
+    let sl = terrain.sea_level().get();
+    let below_zero = cells
+        .iter()
+        .filter(|&&c| terrain.elevation_at(c).get() < 0.0)
+        .count();
+    let is_ocean = cells.iter().filter(|&&c| terrain.is_ocean(c)).count();
+    let disagree = cells
+        .iter()
+        .filter(|&&c| (terrain.elevation_at(c).get() < 0.0) != terrain.is_ocean(c))
+        .count();
+    println!("\n-- sea level vs the zero datum");
+    println!("   sea_level = {sl:.2} m");
+    println!("   cells with elevation < 0 : {below_zero}");
+    println!("   cells with is_ocean(c)   : {is_ocean}");
+    println!("   cells where the two tests DISAGREE: {disagree}");
+
     // --- Does the EXISTING habitability mask reach every axis? ------------
     println!("\n-- habitability mask vs the per-axis supply fields");
     let habitable = climate.habitability();
     let hab_land = cells
         .iter()
-        .filter(|&&c| *habitable.get(c) && terrain.elevation_at(c).get() >= 0.0)
+        .filter(|&&c| *habitable.get(c) && !terrain.is_ocean(c))
         .count();
     let hab_sea = cells
         .iter()
-        .filter(|&&c| *habitable.get(c) && terrain.elevation_at(c).get() < 0.0)
+        .filter(|&&c| *habitable.get(c) && terrain.is_ocean(c))
         .count();
     println!(
         "   habitable cells: {hab_land} on land, {hab_sea} at sea (of {land_cells} land / {sea_cells} ocean)"
