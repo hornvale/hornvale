@@ -7059,9 +7059,12 @@ mod tests {
         // vantage observes one salient phenomenon — re-pin to 1 (measured; a
         // cascade smoke test, the exact belief count is incidental to "the
         // cascade runs").
+        // The Tumult (predation epoch, 2026-07-26): predation reseats the
+        // flagship onto a cell whose vantage observes two salient phenomena —
+        // re-pinned 1 -> 2 on the same "incidental count" basis.
         assert_eq!(
             hornvale_religion::beliefs_held_by(&world, village.id).len(),
-            1
+            2
         );
     }
 

@@ -2,6 +2,29 @@
 //! motion; and the same script is byte-deterministic.
 use hornvale_vessel::{PossessOpts, Session, Turn};
 
+/// Did THIS NPC commit a positional (`agent-at`) fact? Read from its own
+/// `why` recount, the per-NPC provenance channel.
+///
+/// The three stay-put claims below used to read `Session::
+/// committed_agent_at_count() == 0` instead. That accessor sums the whole
+/// derived roster (the flagship settlement plus its two most populous
+/// neighbours), so it can only stand in for "the NPC under test stayed put"
+/// while EVERY derived NPC happens to sit on fresh water. The Tumult's
+/// predation epoch ended that coincidence: at seed 42 the flagship
+/// (`Qvooshtvoagootao`) is still on water and still drinks in place, but the
+/// neighbour `Vootkeonoagootoaneo` was reseated off the river and its NPC now
+/// wanders 18 steps looking for water. The proxy went nonzero while every
+/// claim these tests actually make stayed true — so the proxy is narrowed to
+/// the claim rather than re-pinned to 18, which would have frozen an
+/// unrelated neighbour's water access into three tests that say nothing
+/// about it.
+fn walked(session: &mut Session, label: &str) -> bool {
+    match session.handle(&format!("why {label}")) {
+        Turn::Out(s) => s.contains("position on a day"),
+        Turn::Released(_) => panic!("why never releases"),
+    }
+}
+
 fn world() -> hornvale_kernel::World {
     hornvale_worldgen::build_world(
         hornvale_kernel::Seed(42),
@@ -40,20 +63,28 @@ fn waiting_moves_an_npc_and_it_is_observed() {
     // `liveness.rs`'s
     // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
     // — 0 moves, drinks in place), so "the world moved on wait" is no longer
-    // provable via `agent-at`: it is now provable via `drank`. Starting at
+    // provable via the FLAGSHIP's `agent-at`: it is now provable via `drank`.
+    // (The Tumult, 2026-07-26: the flagship is STILL on water and still
+    // drinks in place; predation reseated a NEIGHBOUR off the river, so the
+    // session-wide agent-at count is no longer 0 even though this claim is
+    // unchanged. See `walked` at the top of this file.) Starting at
     // day 0.5 (PossessOpts::default), the seek threshold (0.85) is crossed
     // at world day ~5.667 — "wait 7" spans that crossing.
+    let flagship = session
+        .npc_labels()
+        .first()
+        .map(|s| (*s).to_string())
+        .expect("a session always derives NPCs");
     let out = session.handle("wait 7");
-    assert_eq!(
-        session.committed_agent_at_count(),
-        0,
-        "measured: the on-water flagship settlement's NPCs never need to \
-         walk to reach fresh water"
-    );
     assert!(
         session.committed_drank_count() >= 1,
-        "the world moved on wait (a drank fact committed even though no \
-         one walked)"
+        "the world moved on wait (a drank fact committed even though the \
+         flagship's own NPC never walked)"
+    );
+    assert!(
+        !walked(&mut session, &flagship),
+        "measured: the on-water flagship settlement's own NPC never needs to \
+         walk to reach fresh water"
     );
     // The wait output mentions motion (non-empty, references an NPC/movement).
     match out {
@@ -95,11 +126,15 @@ fn a_colocated_npcs_drinking_in_place_is_not_narrated_as_a_false_departure() {
     // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
     // — a real, settlement-placement gap, not the belief mechanism).
     // The Confluence's settlement condensation moves seed 42's flagship
-    // settlement (and its two derived neighbors) directly ONTO fresh water
-    // (0 moves, drinks in place — the SAME measurement above, re-run after
-    // the freshwater re-point): the co-located NPC now never leaves the
-    // room at all, so neither a departure NOR an arrival is ever the true
-    // event across a full drive cycle. This test asserts that reality
+    // settlement directly ONTO fresh water (0 moves, drinks in place — the
+    // SAME measurement above, re-run after the freshwater re-point): the
+    // co-located NPC now never leaves the room at all, so neither a
+    // departure NOR an arrival is ever the true event across a full drive
+    // cycle. (The Confluence also put both derived NEIGHBOURS on water; The
+    // Tumult's predation epoch, 2026-07-26, reseated one of them —
+    // `Vootkeonoagootoaneo` — off the river, and its NPC now wanders. That
+    // is invisible to the player's room and does not touch this claim, which
+    // is about the CO-LOCATED NPC only.) This test asserts that reality
     // honestly: `wait` across the seek crossing (~5.667 days from day 0.5)
     // commits a `drank` (the world genuinely moved) but narrates it as the
     // generic "stirred" sensing, never inventing a named departure for an
@@ -138,11 +173,6 @@ fn a_colocated_npcs_drinking_in_place_is_not_narrated_as_a_false_departure() {
     // (measured: `committed_drank_count() >= 1`), but no one's position
     // changed.
     let crossing_wait = out_text(session.handle("wait 7"));
-    assert_eq!(
-        session.committed_agent_at_count(),
-        0,
-        "measured: the on-water settlement's NPCs never leave the room"
-    );
     assert!(
         session.committed_drank_count() >= 1,
         "the world genuinely moved (a drank fact committed)"
@@ -163,6 +193,16 @@ fn a_colocated_npcs_drinking_in_place_is_not_narrated_as_a_false_departure() {
     assert!(
         !labels.iter().any(|l| still_here.contains(l.as_str())),
         "a co-located NPC that never left must not be named as departing/arriving: {still_here}"
+    );
+    // The premise the whole test rests on, asserted last so the narration
+    // reads above are taken on an unperturbed session: the co-located NPC
+    // (the flagship's own, always first in the derived roster) really did
+    // stay put, so "no departure happened" is a fact about it and not an
+    // artifact of nobody being derived.
+    let colocated = labels.first().expect("a session always derives NPCs");
+    assert!(
+        !walked(&mut session, colocated),
+        "measured: the co-located on-water NPC never leaves the room"
     );
 }
 
@@ -209,16 +249,17 @@ fn why_recounts_an_npcs_dated_history_after_it_drinks() {
     // directly onto fresh water (see `liveness.rs`'s
     // `seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding`
     // — 0 moves, drinks in place), so the dated fact the crossing commits is
-    // a `drank`, never an `agent-at`.
+    // a `drank`, never an `agent-at`. (The Tumult, 2026-07-26: still true of
+    // THIS NPC after the predation epoch; a neighbour's NPC now walks, which
+    // is why the check below is per-NPC rather than session-wide.)
     session.handle("wait 7");
-    assert_eq!(
-        session.committed_agent_at_count(),
-        0,
-        "measured: this NPC's own settlement is on-water; it never walks"
-    );
     assert!(
         session.committed_drank_count() >= 1,
         "the NPC satisfied its sustenance goal"
+    );
+    assert!(
+        !walked(&mut session, label),
+        "measured: this NPC's own settlement is on-water; it never walks"
     );
 
     let recount = out_text(session.handle(&format!("why {label}")));
