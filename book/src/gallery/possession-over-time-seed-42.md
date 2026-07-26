@@ -40,7 +40,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (28 stirred).
+Time passes. You sense movement nearby (23 stirred).
 > look
 [room 738918402, day 6]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (27 stirred).
+Time passes. You sense movement nearby (22 stirred).
 > look
 [room 738918402, day 7]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
@@ -58,13 +58,13 @@ The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
 No one here answers to 'hobgoblin' (see 'npcs').
 > wait 90
-Time passes. You sense movement nearby (1262 stirred).
+Time passes. You sense movement nearby (1052 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
-The bugbear of Qvooshtvoagootao eats its fill.
+The bugbear of Qvooshtvoagootao grows restless.
 > release
 You let go.
 ```

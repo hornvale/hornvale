@@ -6,6 +6,7 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
+use crate::clock::{climb_factor, cost_ticks, days_of};
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
     ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
@@ -3120,11 +3121,6 @@ pub fn alarm_field_memo(
 /// (spec §8).
 const PLAN_BUDGET: usize = 1_000;
 
-/// One action's duration: the one authored action-duration judgment call
-/// (spec §8). Small relative to a drive cycle (SUSTENANCE's ~5.7-day rise) so
-/// a multi-room journey still resolves within a single `wait`.
-const MOVE_DURATION: f64 = 0.1;
-
 /// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
 /// strict-progress guard's backstop: even if a decision loop somehow failed
 /// to advance `day` on every iteration, this bounds total work per tick
@@ -3526,12 +3522,36 @@ impl<'a> DriveMovements<'a> {
             PLAN_BUDGET,
         );
         st.mode = resolution.mode;
+        // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
+        // what it costs depends on the creature doing it. Charged HERE, once,
+        // above the behaviour match, so the cost model is TOTAL by construction
+        // — a future `Action` cannot be added for free by forgetting an arm.
+        // Historically only `MoveTo` charged, and it charged the same flat
+        // `MOVE_DURATION` for every creature over every kind of ground; that
+        // constant is gone, and `clock::base_ticks` is now its single home.
+        //
+        // The climb factor is a `MoveTo` modifier alone (spec §3.1) — drinking
+        // is not steeper in the mountains — and it is read from the terrain
+        // BEFORE `st.pos` moves. `Rest` pays here only for lying down; the
+        // sleep itself remains the jump-to-waking below, a phase and not a cost.
+        //
+        // The interval guard stays exactly where `MoveTo`'s was: charging is
+        // what can carry a walk past `to.day`, so it is checked immediately
+        // after the charge and before anything is emitted.
+        if let Intent::Do(action) = &resolution.intent {
+            let ground = match action {
+                Action::MoveTo(n) => {
+                    climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n))
+                }
+                _ => 1.0,
+            };
+            st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
+            if st.day > self.to.day {
+                return false;
+            }
+        }
         match resolution.intent {
             Intent::Do(Action::MoveTo(n)) => {
-                st.day += MOVE_DURATION;
-                if st.day > self.to.day {
-                    return false;
-                }
                 // Provenance follows the committed errand (the mode):
                 // thirst distinguishes BELIEVED (beelining a known
                 // source) from IGNORANT (exploring blind); thermal names
@@ -5199,87 +5219,98 @@ mod tests {
         // replaces with a shared clock (T5), at which point this golden MOVES —
         // and having to rewrite it by hand is the point, because the drift is
         // then named rather than regenerated over.
+        //
+        // REWRITTEN BY HAND at T4 (charging every action), as designed. What
+        // moved is ONLY the days: all eighty facts, their order, their rooms and
+        // their provenances are unchanged, because both creatures stand at the
+        // reference mass (tempo exactly `1.0`) and the terrain is level, so a
+        // move still costs the historical `0.1` days. The shift is the newly
+        // charged actions alone — a drink `0.0015` days, lying down `0.0015`, a
+        // meal `0.03` — accumulating to at most `0.070` days by the end of a
+        // 39-day walk. Two ties the old literal recorded are gone with them:
+        // `drank` no longer shares the arriving move's exact day, and `rested`
+        // no longer shares the preceding meal's.
         const EXPECTED: &[&str] = &[
-            r#"EntityId(1)|rested|Flag(true)|Some(4607182418800017408)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
             r#"EntityId(1)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4618178707890180369)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4618854247834285941)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4618854247834285941)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4618966837824970203)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4619079427815654465)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4622963782494261520)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4622963782494261520)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4623160814977958981)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4623217109973301112)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4623217109973301112)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4623273404968643243)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4623329699963985374)|walking home (sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4625801988509427303)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4625858283504769435)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4625886431002440501)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4625886431002440501)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4625914578500111567)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4625942725997782633)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4627481455870467552)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4627481455870467552)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4627551824614645217)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4627579972112316283)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4627579972112316283)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4627608119609987349)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4627636267107658415)|walking home (sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4629174996980343334)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4629245365724520999)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4629273513222192065)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4629273513222192065)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4629301660719863131)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4629329808217534197)|walking home (sated)"#,
-            r#"EntityId(1)|eaten|Flag(true)|Some(4630284477513544502)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(1)|rested|Flag(true)|Some(4630284477513544502)|slept at home (fatigue eased)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4630312625011215567)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|agent-at|Text("180339")|Some(4630326698760051100)|went down to the river it knew (thirst)"#,
-            r#"EntityId(1)|drank|Flag(true)|Some(4630326698760051100)|drank from the river (thirst sated)"#,
-            r#"EntityId(1)|agent-at|Text("180243")|Some(4630340772508886633)|walking home (sated)"#,
-            r#"EntityId(1)|agent-at|Text("172046")|Some(4630354846257722166)|walking home (sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4607182418800017408)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
             r#"EntityId(2)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4618178707890180369)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4618854247834285941)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4618854247834285941)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4618966837824970203)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4619079427815654465)|walking home (sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4622963782494261520)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4622963782494261520)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4623160814977958981)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4623217109973301112)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4623217109973301112)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4623273404968643243)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4623329699963985374)|walking home (sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4625801988509427303)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4625858283504769435)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4625886431002440501)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4625886431002440501)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4625914578500111567)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4625942725997782633)|walking home (sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4627481455870467552)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4627481455870467552)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4627551824614645217)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4627579972112316283)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4627579972112316283)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4627608119609987349)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4627636267107658415)|walking home (sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4629174996980343334)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4629245365724520999)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4629273513222192065)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4629273513222192065)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4629301660719863131)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4629329808217534197)|walking home (sated)"#,
-            r#"EntityId(2)|eaten|Flag(true)|Some(4630284477513544502)|grazed the productive ground (hunger sated)"#,
-            r#"EntityId(2)|rested|Flag(true)|Some(4630284477513544502)|slept at home (fatigue eased)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4630312625011215567)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|agent-at|Text("180339")|Some(4630326698760051100)|went down to the river it knew (thirst)"#,
-            r#"EntityId(2)|drank|Flag(true)|Some(4630326698760051100)|drank from the river (thirst sated)"#,
-            r#"EntityId(2)|agent-at|Text("180243")|Some(4630340772508886633)|walking home (sated)"#,
-            r#"EntityId(2)|agent-at|Text("172046")|Some(4630354846257722166)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
         ];
         let shape = hoist_walk_shape();
         assert_eq!(
@@ -5294,6 +5325,169 @@ mod tests {
                 got, want,
                 "fact {i} differs from the recorded before-picture"
             );
+        }
+    }
+
+    /// The charging fixture (The Action Clock T4): the `hoist_walk_shape` world
+    /// reduced to the ONE creature that genuinely reaches the water and drinks.
+    /// Both charging tests want the same walk — one varying its mass, one
+    /// reading the days it emits — so the world is built once here rather than
+    /// invented twice.
+    ///
+    /// Returns the ledger (already carrying the creature's perception history),
+    /// the terrain, and the creature at reference mass.
+    fn charged_walk_fixture() -> (Ledger, PlantedTerrain, Npc) {
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0, 0.0), (n2, 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let e = ledger.mint_entity();
+        let npc = shared_belief_npc(e, here.clone(), water.clone(), "walker");
+        // Stood at the water on day 0, home again by day 1 — the same history
+        // the shared-belief tests give their `knower`, so belief is real.
+        commit_agent_at(&mut ledger, &reg, e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
+        (ledger, t, npc)
+    }
+
+    #[test]
+    fn a_heavier_creature_covers_less_ground_in_the_same_interval() {
+        // THE CAMPAIGN'S HEADLINE (spec §3, rung 2), at unit level: one world,
+        // one interval, one creature — and the ONLY difference between the runs
+        // is body mass. An action costs `base × (mass/70)^0.25`, so the heavier
+        // creature spends longer on each one and gets less far in the same days.
+        //
+        // The world is deliberately WATERLESS, and the creature ignorant, so it
+        // explores continuously: its walk is bounded by how fast it can move
+        // rather than by how often it gets thirsty. In the water fixture next
+        // door the errand is drive-bound instead — a round trip to a known
+        // river is four moves per thirst cycle whatever the creature weighs, so
+        // mass shifts *when* it drinks (later, as the spec predicts) but not how
+        // many moves fit in the interval. Ground covered is the sharper read.
+        let mut ledger = Ledger::default();
+        let reg = agent_at_reg();
+        let here = raddr(1.0);
+        let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
+        let e = ledger.mint_entity();
+        let base = shared_belief_npc(e, here.clone(), here.clone(), "walker");
+        commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
+        let moves = |mass_kg: f64| {
+            let mut npc = base.clone();
+            npc.mass_kg = mass_kg;
+            let sys = DriveMovements {
+                npcs: vec![npc],
+                from: WorldTime { day: 1.0 },
+                to: WorldTime { day: 40.0 },
+                params: SUSTENANCE,
+                day_length_std: None,
+                terrain: &terrain,
+            };
+            sys.step(&ledger)
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .count()
+        };
+        // Not two buckets but a graded spread across the mass band — the spec's
+        // own acceptance prediction (§8), and the reason tempo is derived from
+        // continuous mass rather than the four-valued metabolic class.
+        let walked: Vec<(f64, usize)> = [1.0_f64, 70.0, 5_000.0, 100_000.0]
+            .into_iter()
+            .map(|m| (m, moves(m)))
+            .collect();
+        for pair in walked.windows(2) {
+            let ((lm, lw), (hm, hw)) = (pair[0], pair[1]);
+            assert!(
+                lw > hw,
+                "a {lm} kg creature covered {lw} rooms and a heavier {hm} kg one \
+                 {hw} — the heavier must cover less ground in the same interval"
+            );
+        }
+    }
+
+    #[test]
+    fn drinking_and_eating_now_cost_time() {
+        // RUNG 1 (spec §2): no action is free. Before this task the creature
+        // arrived at the water and drank in the SAME instant — the `drank` fact
+        // carried the arriving `agent-at` fact's exact day (both read
+        // `4618854247834285941` in the T3 golden above). Now the drink consumes
+        // time, so it lands strictly later, by exactly its cost.
+        let (ledger, terrain, npc) = charged_walk_fixture();
+        let mass = npc.mass_kg;
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        let drank_day = facts
+            .iter()
+            .find(|f| f.predicate == DRANK)
+            .expect("it drinks")
+            .day
+            .expect("dated");
+        // The arrival is the latest move no later than the drink itself.
+        let arrived = facts
+            .iter()
+            .filter(|f| f.predicate == AGENT_AT)
+            .filter_map(|f| f.day)
+            .filter(|d| *d <= drank_day)
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!(
+            arrived.is_finite(),
+            "it walked to the water before drinking"
+        );
+        assert!(
+            drank_day > arrived,
+            "the drink still happens in the same instant as the arrival ({arrived})"
+        );
+        let expected = crate::clock::days_of(
+            crate::clock::cost_ticks(&Action::Drink, mass, 1.0),
+            // The fixture has no sky, so the clock takes its base rate.
+            None,
+        );
+        assert!(
+            (drank_day - arrived - expected).abs() < 1e-12,
+            "a drink should cost exactly {expected} days; the gap is {}",
+            drank_day - arrived
+        );
+        // The same property across the WHOLE walk: one creature, so every fact
+        // it emits must be strictly later than the one before. That also pins
+        // the `rested`-atop-`eaten` tie the T3 golden recorded (both
+        // `4622963782494261520`) as gone — a meal and lying down cost time too.
+        let mut prev = f64::NEG_INFINITY;
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d > prev,
+                "`{}` at {d} did not advance the clock past {prev}",
+                f.predicate
+            );
+            prev = d;
         }
     }
 
