@@ -628,17 +628,26 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
     );
     // (b) …and the new branch fired anyway.
     assert!(
-        c.subordinated > 0,
+        c.subordinations_formed > 0,
         "a productive, beatable, no-richer neighbour must be subordinated: {c:?}"
     );
-    // (c) The relation is REAL, not just a counter: at least one patron still
-    //     holds a subordinate at `now`. `max_subordinates` is read off the
-    //     live relation table, so this fails if the tally is bumped without a
-    //     relation being recorded (mutation-verified).
+    // (c) The relation is REAL, not just a counter: relations still STAND at
+    //     `now`, and at least one patron holds a subordinate. Both are read off
+    //     the live relation table, so they fail if the tally is bumped without
+    //     a relation being recorded (mutation-verified).
+    assert!(
+        c.tribute_relations_at_now > 0,
+        "the tally moved but no relation stands at now: {c:?}"
+    );
     assert!(
         c.max_subordinates > 0,
         "the tally moved but no relation is held at now: {c:?}"
     );
+    // Depth (spec §9's deferred chaining lever, which §5 preregisters the
+    // headline on the absence of) is bound on this and every other REAL bake by
+    // the `debug_assert!` at the point of formation in `history_bake.rs` — the
+    // table is private, and an end-of-bake reading would in any case miss a
+    // chain that formed and dissolved mid-span. Tests run in debug.
     // (d) Tribute redistributes rather than consuming: subordination moves
     //     nobody, so every community that was ever opened and not starved is
     //     still standing.

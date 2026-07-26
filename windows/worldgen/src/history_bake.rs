@@ -245,7 +245,7 @@ pub struct History {
 /// (conflict must fire on a *value* gradient, in worlds with land to spare, and
 /// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
 /// redistribute the world, not depopulate it).
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinated), bare-ok(count: max_subordinates), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct BakeCensus {
     /// Grow events (a community expanded under a sub-capacity load).
@@ -266,11 +266,23 @@ pub struct BakeCensus {
     /// cascade's terminal roller reaches vacant ground exactly as a first-hop
     /// one does, and is a resettle by the same reading.
     pub resettled: u64,
-    /// Subordination events (a dominant community imposed a standing tribute
-    /// relation on a productive neighbour whose land it did not covet). Counts
-    /// relations *formed*, including a transfer of patronage, so a target
-    /// milked by two rivals in turn is counted once per takeover.
-    pub subordinated: u64,
+    /// **First-time** subordinations: a dominant community imposed a standing
+    /// tribute relation on a productive neighbour that was paying nobody.
+    /// Deliberately excludes takeovers — a single counter mixing the two
+    /// cannot be read as "N subjugations" the way spec §8.1's "at volume"
+    /// criterion assumes, because churn between rival patrons inflates it
+    /// without a single new people being subjugated.
+    pub subordinations_formed: u64,
+    /// **Takeovers**: a relation that already existed changed hands, the new
+    /// patron having cleared `RAID_MARGIN` over the incumbent (spec §4.4's
+    /// hysteresis). Reported beside the formations rather than pooled with
+    /// them precisely so churn is visible as churn.
+    pub patronage_transfers: u64,
+    /// Tribute relations still standing **at `now`** — the stock, where the
+    /// two counters above are flows. A relation ends when either party's
+    /// community closes, so this is what survived the whole span, not what was
+    /// ever formed.
+    pub tribute_relations_at_now: u64,
     /// The largest number of subordinates any one patron holds **at `now`** —
     /// spec §8.2's runaway-hub reading. A standing measurement of the relation
     /// graph as the bake closes, not a peak over the whole span: a star that
@@ -447,11 +459,24 @@ struct Bake<'a> {
     /// The epoch-dynamics random stream (drawn sequentially in commit order).
     stream: Stream,
     /// Standing tribute relations, keyed by the **subordinate's** community
-    /// index. One patron per community is structural rather than enforced: the
-    /// key IS the subordinate, so a second bid overwrites rather than adding
-    /// (spec §4.4's patronage transfer). Slice 2's relation graph is therefore
-    /// a set of one-level stars, and cycles are impossible rather than merely
-    /// prevented. Iterated in key order (`BTreeMap`, never a hash map).
+    /// index. Keying by subordinate makes *at most one patron per community*
+    /// structural: a second bid overwrites rather than adding (spec §4.4's
+    /// patronage transfer, which additionally has to clear hysteresis).
+    ///
+    /// **That alone does NOT give one-level stars.** Bounding out-degree to
+    /// one yields a *functional graph*, which still admits chains and cycles;
+    /// measurement without the further checks found 57–89% of standing
+    /// relations sitting under a patron who was themselves paying someone.
+    /// The one-level-star shape spec §4.4 requires is enforced explicitly, in
+    /// [`Bake::maybe_raid`]'s classification: a raider that is itself a
+    /// subordinate takes no vassal, and a target that is itself a patron is
+    /// not subordinated. Those two keep the patron set and the subordinate set
+    /// **disjoint** inductively, which is what makes depth — and therefore a
+    /// cycle — impossible rather than merely unobserved. Depth is the deferred
+    /// chaining lever (spec §9), and spec §5 preregisters the headline on its
+    /// absence.
+    ///
+    /// Iterated in key order (`BTreeMap`, never a hash map).
     tribute: BTreeMap<usize, Tribute>,
     /// The running event tally.
     tally: BakeCensus,
@@ -1164,12 +1189,31 @@ impl<'a> Bake<'a> {
     /// The Tumult's sub-critical measurement said the model was missing. One
     /// scan finds the best target of either kind; there is no second pass.
     ///
-    /// A target already paying THIS raider is skipped: there is nothing further
-    /// to take from it this epoch. A target paying someone else is not — a
-    /// second bid **transfers** the patronage and the old patron does not
-    /// contest (contesting is the deferred protection lever, spec §9). That is
-    /// stated in the spec, and honoured here, precisely so the bake's iteration
-    /// order cannot decide it silently.
+    /// **Three skips guard the subordination branch**, all placed *after* the
+    /// covet test so none of them can ever veto an eviction (they decide who
+    /// may be milked, never who may be conquered):
+    ///
+    /// 1. **The raider is itself a subordinate** — a vassal takes no vassal.
+    /// 2. **The target is itself a patron** — a patron is not subordinated.
+    ///    Together with (1) these keep the patron set and the subordinate set
+    ///    disjoint, which *is* spec §4.4's one-level-star invariant: keying
+    ///    `tribute` by subordinate bounds out-degree to one, but a functional
+    ///    graph still admits chains and cycles, and measurement without these
+    ///    two found most standing relations sitting under a patron who was
+    ///    themselves paying someone.
+    /// 3. **The target already pays THIS raider** — nothing further to take
+    ///    from it this epoch.
+    ///
+    /// A target paying *someone else* is a live candidate: a second bid
+    /// **transfers** the patronage, and the old patron does not contest
+    /// (contesting is the deferred protection lever, spec §9). But the bid
+    /// must clear `RAID_MARGIN` over the **incumbent patron**, not merely over
+    /// the subordinate (spec §4.4's hysteresis) — without that bound, rival
+    /// patrons swap the same targets back and forth every epoch (~87% churn,
+    /// measured), and neither a store nor an adaptive assessment can build any
+    /// history on a relation whose collector changes each epoch. All of this
+    /// is stated in the spec and honoured here precisely so the bake's
+    /// iteration order cannot decide it silently.
     ///
     /// On the eviction branch the outcome is **conquest of immobile land**, not
     /// plunder (spec §4.3).
@@ -1211,6 +1255,11 @@ impl<'a> Bake<'a> {
         }
         let raider_str = self.strength(raider);
         let raider_val = self.eff_capacity(era, raider_site);
+        // Spec §4.4, guard (1): a community that is itself paying someone takes
+        // no vassal of its own. Hoisted because it does not vary over the
+        // candidate walk — but applied per-candidate, inside the else-chain,
+        // so a vassal can still *evict*.
+        let raider_is_vassal = self.tribute.contains_key(&raider);
         // (target index, that cell's value, the target's strength, its cell,
         //  and how a raid on it would resolve)
         let mut best: Option<(usize, f64, f64, CellId, Spoil)> = None;
@@ -1230,8 +1279,30 @@ impl<'a> Bake<'a> {
             // how a raid on this neighbour would resolve (spec §4.1).
             let kind = if t_val > raider_val {
                 Spoil::Evict // land that is BETTER *this era*: take the ground
-            } else if self.tribute.get(&t).is_some_and(|tr| tr.patron == raider) {
-                continue; // already ours; nothing further to take this epoch
+            } else if raider_is_vassal {
+                continue; // (1) a vassal takes no vassal — no depth (spec §4.4)
+            } else if self.tribute.values().any(|tr| tr.patron == t) {
+                continue; // (2) a patron is not subordinated — no depth either
+            } else if let Some(tr) = self.tribute.get(&t) {
+                // The target already pays someone.
+                //
+                // (3) Already ours: nothing further to take this epoch. Stated
+                // explicitly because it is a rule, though the hysteresis just
+                // below independently subsumes it — no community can clear
+                // `RAID_MARGIN > 1` over its own strength, so a raider can
+                // never out-bid itself. Deleting this line alone changes no
+                // behaviour; deleting both re-takes one's own subordinate every
+                // scan (mutation-verified in that direction).
+                if tr.patron == raider {
+                    continue;
+                }
+                // A takeover, and it must out-muscle the INCUMBENT, not the
+                // subordinate: hysteresis (spec §4.4). The incumbent still does
+                // not fight — it simply keeps what a lesser rival cannot take.
+                if raider_str <= self.strength(tr.patron) * RAID_MARGIN {
+                    continue;
+                }
+                Spoil::Subordinate // a takeover that plainly out-muscles the incumbent
             } else {
                 Spoil::Subordinate // no better land, but productive people
             };
@@ -1256,8 +1327,11 @@ impl<'a> Bake<'a> {
         // Exhaustive, so a third kind of prize cannot silently inherit the
         // eviction path. `Evict` falls through to the shipped body below
         // rather than being nested into an arm: its `close`/`open` sequencing
-        // is load-bearing for the one-alive-per-site invariant, so it is left
-        // exactly where (and as) it was.
+        // is load-bearing for the one-alive-per-site invariant, so that body
+        // is left byte-for-byte as it was, not even re-indented. (`prize` is
+        // read by both outcomes, so its binding — and it alone — was hoisted
+        // above the `match`; same expression, same position in the sequence,
+        // and nothing between it and its old site can observe the move.)
         match kind {
             Spoil::Subordinate => {
                 // The mobile prize: the target keeps its cell, its people and
@@ -1273,14 +1347,41 @@ impl<'a> Bake<'a> {
                 // subordinate, so one patron per community is structural.
                 let cap = self.eff_capacity(era, prize);
                 let assessment = (cap * ASSESS_RATE).clamp(0.0, cap * ASSESS_MAX);
-                self.tribute.insert(
+                let previous = self.tribute.insert(
                     target,
                     Tribute {
                         patron: raider,
                         assessment,
                     },
                 );
-                self.tally.subordinated += 1;
+                // The one-level-star invariant, checked where it is ESTABLISHED
+                // rather than at the end of the bake: a chain that formed and
+                // dissolved mid-span would be invisible to any closing reading.
+                // Holds inductively — the patron set and the subordinate set
+                // are kept disjoint by the two guards in the classification
+                // above (spec §4.4).
+                debug_assert!(
+                    !self.tribute.contains_key(&raider),
+                    "relation depth: a vassal ({raider}) took a vassal ({target})"
+                );
+                debug_assert!(
+                    !self.tribute.values().any(|tr| tr.patron == target),
+                    "relation depth: a patron ({target}) was subordinated to {raider}"
+                );
+                // Flows, counted apart: a takeover subjugates nobody new, and
+                // pooling the two would let churn read as volume (spec §8.1).
+                match previous {
+                    Some(_) => self.tally.patronage_transfers += 1,
+                    None => self.tally.subordinations_formed += 1,
+                }
+                // A no-op in today's call sequence — `step_community` calls
+                // `grow` (which touches the raider at this same `year`, at this
+                // same population) immediately before `maybe_raid`, and `touch`
+                // is idempotent. Kept so the branch mirrors the eviction path
+                // and so a future caller reaching `maybe_raid` by another route
+                // still records the raider's peak; it is deliberately the one
+                // line here that COULD have moved a committed record, and it
+                // provably does not (seed 42's records are byte-identical).
                 self.touch(raider, year);
                 return;
             }
@@ -1530,12 +1631,24 @@ pub fn bake(
     // 3. Close at `now`: alive records keep `ended = None`.
     let now = cfg.end_year;
     bake.tally.alive_at_now = bake.records.iter().filter(|r| r.is_alive()).count() as u64;
-    // The widest star standing at `now` (spec §8.2's runaway-hub reading).
-    // `close` dissolves both directions of a relation, so every entry left
-    // here names two live communities. Counted in `BTreeMap` key order — a
+    // The stock at `now`: how many relations survived the span, and the widest
+    // star among them (spec §8.2's runaway-hub reading). `close` dissolves both
+    // directions of a relation, so every entry left here must name two live
+    // communities — asserted rather than assumed, over a REAL bake, because a
+    // dangling index is exactly the corruption that stays silent until it
+    // panics on some unrelated seed. Counted in `BTreeMap` key order — a
     // maximum is order-free anyway, but the container is never a hash map.
+    bake.tally.tribute_relations_at_now = bake.tribute.len() as u64;
     let mut per_patron: BTreeMap<usize, u64> = BTreeMap::new();
-    for t in bake.tribute.values() {
+    for (&sub, t) in &bake.tribute {
+        debug_assert!(
+            bake.communities[sub].alive && bake.communities[t.patron].alive,
+            "a standing tribute relation must name two ALIVE communities: \
+             {sub} (alive {}) pays {} (alive {})",
+            bake.communities[sub].alive,
+            t.patron,
+            bake.communities[t.patron].alive,
+        );
         *per_patron.entry(t.patron).or_insert(0) += 1;
     }
     bake.tally.max_subordinates = per_patron.values().copied().max().unwrap_or(0);
@@ -1893,12 +2006,27 @@ mod tests {
             .copied()
             .expect("a relation formed");
         assert_eq!(t.patron, raider, "the raider must be the patron");
-        assert!(
-            t.assessment > 0.0 && t.assessment <= RICH * ASSESS_MAX,
-            "the assessment must be positive and clamped: {}",
+        // Pinned exactly, not to a slack band: `ASSESS_RATE` of the
+        // SUBORDINATE cell's effective capacity, which here is `RICH` (the
+        // era mask is 1.0 everywhere and the clamp does not bind). A band of
+        // `(0, RICH × ASSESS_MAX]` would pass for any rate in `(0, 0.5]`.
+        // Which cell is read is bound by
+        // `the_assessment_reads_the_subordinates_cell_not_the_raiders`, since
+        // this world is value-flat and cannot distinguish the two.
+        assert_eq!(
+            t.assessment.to_bits(),
+            (RICH * ASSESS_RATE).to_bits(),
+            "assessment must be exactly eff_capacity × ASSESS_RATE: {}",
             t.assessment
         );
-        assert_eq!(bake.tally.subordinated, 1, "one relation formed");
+        assert_eq!(
+            bake.tally.subordinations_formed, 1,
+            "one first-time relation formed"
+        );
+        assert_eq!(
+            bake.tally.patronage_transfers, 0,
+            "nothing changed hands: the target was paying nobody"
+        );
         assert_eq!(bake.tally.raided, 0, "equal-value land: no eviction");
         assert_eq!(bake.tally.fled, 0, "nobody was driven off");
         assert_eq!(
@@ -1915,6 +2043,385 @@ mod tests {
             bake.communities[target].population.to_bits(),
             10.0f64.to_bits(),
             "subordination is not a war: no population is destroyed"
+        );
+    }
+
+    /// Three cells in a line — `x ~ y ~ z`, with `x` and `z` **not** adjacent
+    /// — deterministically chosen (lowest ids first) and asserted rather than
+    /// hoped for: on a triangle every community would see every other and
+    /// neither depth guard could be exercised in isolation.
+    fn line_of_three(geo: &Geosphere) -> (CellId, CellId, CellId) {
+        let x = CellId(0);
+        for &y in geo.neighbors(x) {
+            for &z in geo.neighbors(y) {
+                if z != x && !geo.neighbors(x).contains(&z) {
+                    return (x, y, z);
+                }
+            }
+        }
+        panic!("Geosphere::new(1) must offer an x~y~z with x and z non-adjacent");
+    }
+
+    /// Every standing relation's patron pays nobody — the one-level-star
+    /// invariant, stated as the property the depth guards exist to hold. A
+    /// chain `a → b → c` puts `b` in the table both as a key and as a patron,
+    /// which is exactly what this rejects.
+    fn assert_no_chained_relations(bake: &Bake<'_>) {
+        for (sub, t) in &bake.tribute {
+            assert!(
+                !bake.tribute.contains_key(&t.patron),
+                "relation depth: {sub} pays {}, who is themselves paying {:?}",
+                t.patron,
+                bake.tribute.get(&t.patron).map(|p| p.patron)
+            );
+        }
+    }
+
+    #[test]
+    fn a_vassal_takes_no_vassal_of_its_own() {
+        // Spec §4.4's first depth guard. Keying `tribute` by subordinate bounds
+        // OUT-degree to one, which is a functional graph — it still admits
+        // chains. A ~ B ~ C in a line, strongest to weakest: A subordinates B,
+        // and B must then decline C, which it could otherwise plainly beat.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let (x, y, z) = line_of_three(&geo);
+
+        let a = bake.open(
+            KindId("goblin"),
+            x,
+            0.0,
+            80.0,
+            Founding::Genesis(x),
+            None,
+            0.0,
+        );
+        let b = bake.open(
+            KindId("kobold"),
+            y,
+            0.0,
+            30.0,
+            Founding::Genesis(y),
+            None,
+            0.0,
+        );
+        let c = bake.open(
+            KindId("bugbear"),
+            z,
+            0.0,
+            10.0,
+            Founding::Genesis(z),
+            None,
+            0.0,
+        );
+
+        // A's only occupied neighbour is B (C is out of reach), and 80 clears
+        // 30 × RAID_MARGIN.
+        bake.maybe_raid(a, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&b).map(|t| t.patron),
+            Some(a),
+            "precondition: A must hold B, or the guard under test is never reached"
+        );
+        // B could beat C (30 > 10 × RAID_MARGIN) and C is productive — the ONLY
+        // thing standing between them is B's own subjection.
+        bake.maybe_raid(b, &era, 0.0);
+        assert!(
+            !bake.tribute.contains_key(&c),
+            "a vassal must take no vassal: B pays A, so C must stay free"
+        );
+        assert_eq!(bake.tribute.len(), 1, "exactly one relation may stand");
+        assert_no_chained_relations(&bake);
+        assert_eq!(
+            bake.tally.subordinations_formed, 1,
+            "only A's bid may have formed anything"
+        );
+    }
+
+    #[test]
+    fn a_patron_is_not_itself_subordinated() {
+        // Spec §4.4's second depth guard — the same line, raided from the other
+        // end. B takes C first; A may then NOT take B, because a chain
+        // A → B → C is the depth spec §5 preregisters the headline on the
+        // absence of. Both guards are required: this one is unreachable in the
+        // test above and that one is unreachable here.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let (x, y, z) = line_of_three(&geo);
+
+        let a = bake.open(
+            KindId("goblin"),
+            x,
+            0.0,
+            80.0,
+            Founding::Genesis(x),
+            None,
+            0.0,
+        );
+        let b = bake.open(
+            KindId("kobold"),
+            y,
+            0.0,
+            30.0,
+            Founding::Genesis(y),
+            None,
+            0.0,
+        );
+        let c = bake.open(
+            KindId("bugbear"),
+            z,
+            0.0,
+            10.0,
+            Founding::Genesis(z),
+            None,
+            0.0,
+        );
+
+        bake.maybe_raid(b, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&c).map(|t| t.patron),
+            Some(b),
+            "precondition: B must hold C, or the guard under test is never reached"
+        );
+        // A could beat B (80 > 30 × RAID_MARGIN) and B is productive — the ONLY
+        // thing protecting B is that it is already a patron.
+        bake.maybe_raid(a, &era, 0.0);
+        assert!(
+            !bake.tribute.contains_key(&b),
+            "a patron must not be subordinated: B holds C, so A must leave it"
+        );
+        assert_eq!(bake.tribute.len(), 1, "exactly one relation may stand");
+        assert_no_chained_relations(&bake);
+        assert_eq!(
+            bake.tally.subordinations_formed, 1,
+            "only B's bid may have formed anything"
+        );
+        assert_eq!(bake.tally.patronage_transfers, 0, "nothing changed hands");
+    }
+
+    /// A raider on prime land beside a subordinate on marginal land, plus the
+    /// two indices. The value asymmetry is the point: `Subordinate` requires
+    /// `t_val <= raider_val`, so a *poorer* target is legal, and it is the only
+    /// shape that can tell "reads the subordinate's cell" from "reads the
+    /// raider's" — which spec §4.2's information asymmetry turns on.
+    #[test]
+    fn the_assessment_reads_the_subordinates_cell_not_the_raiders() {
+        let (geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(0) { RICH } else { POOR });
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+
+        let raider = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        // Population 5 on a cell worth 10: pressure 0.5, so it is productive
+        // (`has_spoils`) and beatable, but its ground is worth a tenth of the
+        // raider's — no eviction motive at all.
+        let target = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            5.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        let t = bake
+            .tribute
+            .get(&target)
+            .copied()
+            .expect("a relation formed");
+        assert_eq!(t.patron, raider);
+        assert_eq!(
+            t.assessment.to_bits(),
+            (POOR * ASSESS_RATE).to_bits(),
+            "the demand must be assessed on the SUBORDINATE's land ({POOR}), not the patron's \
+             ({RICH}): {}",
+            t.assessment
+        );
+    }
+
+    #[test]
+    fn a_stronger_rival_takes_over_a_standing_relation() {
+        // Spec §4.4: a second bid TRANSFERS the patronage; the incumbent does
+        // not contest. Nothing bound this before, so a "don't re-subordinate"
+        // tweak could have deleted the rule with every test still green.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let ring = geo.neighbors(CellId(0));
+        let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
+
+        let target = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let incumbent = bake.open(
+            KindId("kobold"),
+            incumbent_cell,
+            0.0,
+            20.0,
+            Founding::Genesis(incumbent_cell),
+            None,
+            0.0,
+        );
+        // 80 clears 20 × RAID_MARGIN comfortably: this bid qualifies.
+        let rival = bake.open(
+            KindId("bugbear"),
+            rival_cell,
+            0.0,
+            80.0,
+            Founding::Genesis(rival_cell),
+            None,
+            0.0,
+        );
+
+        bake.maybe_raid(incumbent, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&target).map(|t| t.patron),
+            Some(incumbent),
+            "precondition: the incumbent must hold the target"
+        );
+
+        bake.maybe_raid(rival, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&target).map(|t| t.patron),
+            Some(rival),
+            "a qualifying second bid must MOVE the patronage, not be ignored"
+        );
+        assert_eq!(bake.tribute.len(), 1, "a transfer adds no second relation");
+        assert_eq!(
+            bake.tally.subordinations_formed, 1,
+            "one people was subjugated, once — a takeover subjugates nobody new"
+        );
+        assert_eq!(bake.tally.patronage_transfers, 1, "one takeover");
+        assert_no_chained_relations(&bake);
+    }
+
+    #[test]
+    fn a_rival_that_cannot_out_muscle_the_incumbent_leaves_the_relation_alone() {
+        // Spec §4.4's hysteresis, revised on measurement: without it the rule
+        // produced ~87% churn, rivals swapping the same targets every epoch.
+        // The rival here plainly beats the SUBORDINATE (25 > 10 × RAID_MARGIN)
+        // and fails only against the INCUMBENT (25 <= 20 × RAID_MARGIN), so the
+        // margin's subject is the single thing this test reads.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let ring = geo.neighbors(CellId(0));
+        let (incumbent_cell, rival_cell) = (ring[0], ring[1]);
+
+        let target = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let incumbent = bake.open(
+            KindId("kobold"),
+            incumbent_cell,
+            0.0,
+            20.0,
+            Founding::Genesis(incumbent_cell),
+            None,
+            0.0,
+        );
+        let rival = bake.open(
+            KindId("bugbear"),
+            rival_cell,
+            0.0,
+            25.0,
+            Founding::Genesis(rival_cell),
+            None,
+            0.0,
+        );
+
+        bake.maybe_raid(incumbent, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&target).map(|t| t.patron),
+            Some(incumbent),
+            "precondition: the incumbent must hold the target"
+        );
+
+        bake.maybe_raid(rival, &era, 0.0);
+        assert_eq!(
+            bake.tribute.get(&target).map(|t| t.patron),
+            Some(incumbent),
+            "a bid that cannot out-muscle the incumbent must leave the relation standing"
+        );
+        assert_eq!(
+            bake.tally.patronage_transfers, 0,
+            "no takeover may be counted"
+        );
+        assert_eq!(
+            bake.tally.subordinations_formed, 1,
+            "and nothing new was formed either"
+        );
+    }
+
+    #[test]
+    fn a_second_scan_on_a_target_already_ours_forms_nothing() {
+        // The "already ours" skip: there is nothing further to take from one's
+        // own subordinate this epoch. Without it the same relation would be
+        // re-inserted every scan and counted as a takeover of itself.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+
+        let raider = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let target = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            10.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+        let after_first = (
+            bake.tally.subordinations_formed,
+            bake.tally.patronage_transfers,
+        );
+        assert_eq!(after_first, (1, 0), "precondition: one first-time relation");
+
+        bake.maybe_raid(raider, &era, 0.0);
+        assert_eq!(
+            (
+                bake.tally.subordinations_formed,
+                bake.tally.patronage_transfers
+            ),
+            after_first,
+            "re-scanning one's own subordinate must move no counter"
+        );
+        assert_eq!(
+            bake.tribute.get(&target).map(|t| t.patron),
+            Some(raider),
+            "and must leave the relation exactly as it stood"
         );
     }
 
