@@ -100,25 +100,33 @@ Not subagent work, and worthless if it runs late.
 **Interfaces:**
 - Produces:
   - `pub struct Ticks(pub u64)`
-  - `pub const BASE_TICKS_PER_STD_DAY: u64 = 1_000`
+  - `pub const BASE_TICKS_PER_STD_DAY: u64 = 100_000`
   - `pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64`
   - `pub const REFERENCE_MASS_KG: f64 = 70.0`
   - `pub const TIME_EXPONENT: f64 = 0.25`
   - `pub fn days_of(t: Ticks, day_length_std: Option<f64>) -> f64`
   - `pub fn tempo(mass_kg: f64) -> f64`
   - `pub fn base_ticks(action: &Action) -> Ticks`
-  - `pub fn cost_ticks(action: &Action, mass_kg: f64) -> Ticks`
+  - `pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks`
+  - `pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64`
 
 **The tick rate is derived from the planet's day** (spec §4.1), not fixed:
-`ticks_per_local_day = max(1, round(day_length_std × 1_000))`, so the local day
+`ticks_per_local_day = max(1, round(day_length_std × 100_000))`, so the local day
 is an *exact* integer of ticks and `ActivityCycle`'s dawn/dusk land on tick
 boundaries instead of beating against the clock over a long run. The tick stays
-approximately absolute (within one part in `ticks_per_local_day` of `1/1000`
+approximately absolute (within one part in `ticks_per_local_day` of `1/100_000`
 standard day), so base costs authored in ticks mean the same absolute duration on
 every world. A tidally-locked world (`day_length_std` is `None`) falls back to
 `BASE_TICKS_PER_STD_DAY`.
 
-`base_ticks(MoveTo) = 100` reproduces the historical `MOVE_DURATION` of `0.1`
+**The resolution is `1e5`, not `1e3`** (spec §3.2): at `1e3` a tick is ~86
+seconds and a within-room step — The Hearth's anchor graph, seconds long — is a
+*fraction of one tick*, rounding either to zero (which `no_action_is_free`
+forbids) or to 86 seconds to cross to the fire. Micro costs are **not built
+here** (no consumer until The Threshold places creatures at anchors); the
+obligation is only that the fine layer needs no clock change when it arrives.
+
+`base_ticks(MoveTo) = 10_000` reproduces the historical `MOVE_DURATION` of `0.1`
 days on an Earth-like world; T3's refactor stays byte-identical regardless,
 because it charges nothing.
 
@@ -137,9 +145,9 @@ mod tests {
         // Earth-like rotation gives 1000 ticks per local day, so a
         // reference-mass creature's move is 100 ticks = 0.1 days exactly.
         let mv = Action::MoveTo(RoomAddr { face: 0, path: vec![0] });
-        assert_eq!(base_ticks(&mv), Ticks(100));
-        assert_eq!(cost_ticks(&mv, REFERENCE_MASS_KG), Ticks(100));
-        assert_eq!(days_of(Ticks(100), Some(1.0)), 0.1);
+        assert_eq!(base_ticks(&mv), Ticks(10_000));
+        assert_eq!(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Ticks(10_000));
+        assert_eq!(days_of(Ticks(10_000), Some(1.0)), 0.1);
     }
 
     #[test]
@@ -166,9 +174,9 @@ mod tests {
         // must mean the same absolute duration whatever the planet does — a
         // bear's gait is set by the bear, not by the sky. Under 0.1% spread.
         let mv = Action::MoveTo(RoomAddr { face: 0, path: vec![0] });
-        let reference = days_of(cost_ticks(&mv, REFERENCE_MASS_KG), Some(1.0));
+        let reference = days_of(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Some(1.0));
         for d in [0.41_f64, 2.7, 17.25] {
-            let here = days_of(cost_ticks(&mv, REFERENCE_MASS_KG), Some(d));
+            let here = days_of(cost_ticks(&mv, REFERENCE_MASS_KG, 1.0), Some(d));
             assert!(
                 ((here - reference) / reference).abs() < 0.001,
                 "a move takes {here} days on a {d}-day world vs {reference} on Earth"
@@ -181,7 +189,8 @@ mod tests {
         // A world with no dawn is exactly the world a day-derived clock cannot
         // derive from. Stated, not unwrap_or'd (spec §4.1).
         assert_eq!(ticks_per_local_day(None), BASE_TICKS_PER_STD_DAY);
-        assert_eq!(days_of(Ticks(1_000), None), 1.0);
+        assert_eq!(BASE_TICKS_PER_STD_DAY, 100_000);
+        assert_eq!(days_of(Ticks(100_000), None), 1.0);
     }
 
     #[test]
@@ -199,7 +208,7 @@ mod tests {
                 base_ticks(a).0 > 0,
                 "{a:?} is free — every action must cost time"
             );
-            assert!(cost_ticks(a, REFERENCE_MASS_KG).0 > 0, "{a:?} costs nothing");
+            assert!(cost_ticks(a, REFERENCE_MASS_KG, 1.0).0 > 0, "{a:?} costs nothing");
         }
     }
 
@@ -235,6 +244,26 @@ mod tests {
                 "tempo({m}) is not already quantized"
             );
         }
+    }
+
+    #[test]
+    fn climbing_costs_more_and_descending_costs_the_same() {
+        // The macro cost function's other half (spec §3.1). Uphill is slower;
+        // downhill is NOT faster (a walking creature does not gain by descending,
+        // and modelling that would be a dial earning nothing); an undescribable
+        // room (elevation INFINITY, Terrain's documented convention) is neutral.
+        assert_eq!(climb_factor(100.0, 100.0), 1.0, "level ground is unmodified");
+        assert!(climb_factor(100.0, 600.0) > 1.0, "uphill costs more");
+        assert_eq!(climb_factor(600.0, 100.0), 1.0, "downhill is not faster");
+        assert_eq!(climb_factor(f64::INFINITY, 0.0), 1.0, "undescribable is neutral");
+        assert_eq!(climb_factor(0.0, f64::INFINITY), 1.0);
+        // Bounded: a cliff must not stall a walk outright.
+        assert!(climb_factor(0.0, 1.0e9) <= MAX_CLIMB_FACTOR);
+        // And it reaches the cost model.
+        let mv = Action::MoveTo(RoomAddr { face: 0, path: vec![0] });
+        let level = cost_ticks(&mv, REFERENCE_MASS_KG, 1.0);
+        let steep = cost_ticks(&mv, REFERENCE_MASS_KG, climb_factor(0.0, 500.0));
+        assert!(steep > level, "the climb reaches the cost: {steep:?} vs {level:?}");
     }
 
     #[test]
@@ -276,10 +305,13 @@ use crate::liveness::Action;
 pub struct Ticks(pub u64);
 
 /// The base resolution: ticks per STANDARD day, before the planet's rotation is
-/// taken into account. `1_000` makes the historical `MOVE_DURATION` of `0.1`
-/// days exactly `100` ticks on an Earth-like world.
+/// taken into account. `100_000` puts a tick at ~0.86 seconds, which is what
+/// makes a within-room step (seconds long) REPRESENTABLE — at `1_000` a tick is
+/// ~86 seconds and the fine layer could not be expressed at all (spec §3.2).
+/// An Earth-like world therefore has `10_000` ticks per `MoveTo`, the historical
+/// `MOVE_DURATION` of `0.1` days.
 /// type-audit: bare-ok(count)
-pub const BASE_TICKS_PER_STD_DAY: u64 = 1_000;
+pub const BASE_TICKS_PER_STD_DAY: u64 = 100_000;
 
 /// How many ticks make one LOCAL day on a world whose rotation period is
 /// `day_length_std` standard days — `round(day × base)`, at least one.
@@ -313,6 +345,14 @@ pub const TIME_EXPONENT: f64 = 0.25;
 /// a zero or infinite cost mid-walk.
 /// type-audit: bare-ok(ratio)
 const MASS_BAND_KG: (f64, f64) = (0.001, 100_000.0);
+
+/// The climb, in metres, that doubles a move's cost. Authored.
+/// type-audit: bare-ok(ratio)
+const CLIMB_SCALE_M: f64 = 500.0;
+
+/// The ceiling on [`climb_factor`], so a cliff cannot stall a walk outright.
+/// type-audit: bare-ok(ratio)
+const MAX_CLIMB_FACTOR: f64 = 4.0;
 
 /// `t` in STANDARD days — the conversion at the commit boundary, where floats
 /// belong. A local day of `day_length_std` is exactly
@@ -353,23 +393,48 @@ pub fn tempo(mass_kg: f64) -> f64 {
 /// elsewhere — this is only the cost of the act of lying down.
 pub fn base_ticks(action: &Action) -> Ticks {
     match action {
-        // 100 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
-        Action::MoveTo(_) => Ticks(100),
-        // A drink is quick.
-        Action::Drink => Ticks(20),
-        // A meal is not.
-        Action::Eat => Ticks(60),
-        // Lying down is quick; the SLEEP is the jump-to-waking, not this.
-        Action::Rest => Ticks(20),
+        // 10_000 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
+        Action::MoveTo(_) => Ticks(10_000),
+        // A drink is quick — a couple of minutes.
+        Action::Drink => Ticks(150),
+        // A meal is not — the better part of an hour.
+        Action::Eat => Ticks(3_000),
+        // Lying DOWN is quick; the sleep itself is the jump-to-waking, not this.
+        Action::Rest => Ticks(150),
     }
 }
 
-/// What `action` costs `mass_kg` of creature, rounded to an exact tick count and
-/// never zero (a free action would let a creature act unboundedly at one
-/// instant).
-/// type-audit: bare-ok(ratio: mass_kg)
-pub fn cost_ticks(action: &Action, mass_kg: f64) -> Ticks {
-    let scaled = base_ticks(action).0 as f64 * tempo(mass_kg);
+/// The uphill penalty on a room-to-room move: `1 + climb / CLIMB_SCALE_M`,
+/// clamped, and `1.0` whenever either elevation is non-finite (`Terrain::
+/// elevation` returns `INFINITY` for an undescribable room, by its own
+/// documented convention). Only UPHILL costs — a walking creature does not
+/// descend meaningfully faster, and modelling that would be a dial earning
+/// nothing.
+///
+/// Takes ELEVATIONS rather than rooms and a `&dyn Terrain` deliberately: this
+/// module is pure arithmetic with no ledger or world access, which is what lets
+/// it be tested without building a terrain. The caller does the two lookups.
+/// type-audit: bare-ok(ratio: from_elev_m), bare-ok(ratio: to_elev_m), bare-ok(ratio: return)
+pub fn climb_factor(from_elev_m: f64, to_elev_m: f64) -> f64 {
+    if !from_elev_m.is_finite() || !to_elev_m.is_finite() {
+        return 1.0;
+    }
+    let climb = (to_elev_m - from_elev_m).max(0.0);
+    (1.0 + climb / CLIMB_SCALE_M).clamp(1.0, MAX_CLIMB_FACTOR)
+}
+
+/// What `action` costs a creature of `mass_kg` over ground of
+/// `terrain_factor` (`1.0` for level or non-move actions), rounded to an exact
+/// tick count and never zero — a free action would let a creature act
+/// unboundedly at one instant.
+/// type-audit: bare-ok(ratio: mass_kg), bare-ok(ratio: terrain_factor)
+pub fn cost_ticks(action: &Action, mass_kg: f64, terrain_factor: f64) -> Ticks {
+    let factor = if terrain_factor.is_finite() && terrain_factor > 0.0 {
+        terrain_factor
+    } else {
+        1.0
+    };
+    let scaled = base_ticks(action).0 as f64 * tempo(mass_kg) * factor;
     Ticks((scaled.round() as u64).max(1))
 }
 ```
@@ -689,7 +754,14 @@ and `Eat` arms (`Rest` keeps `next_awake_day`, but pays the cost of lying down
 *before* the jump):
 
 ```rust
-                        st.day += days_of(cost_ticks(&action, npc.mass_kg), self.day_length_std);
+                        let ground = climb_factor(
+                            self.terrain.elevation(&st.pos),
+                            self.terrain.elevation(&n),
+                        );
+                        st.day += days_of(
+                            cost_ticks(&action, npc.mass_kg, ground),
+                            self.day_length_std,
+                        );
 ```
 
 Delete `const MOVE_DURATION` entirely — leaving it would be a second,
@@ -913,7 +985,8 @@ changes source shows the source. T4/T5's commit messages carry a
 an unmade decision.
 
 **Type consistency.** `Ticks`, `BASE_TICKS_PER_STD_DAY`, `ticks_per_local_day`, `REFERENCE_MASS_KG`,
-`TIME_EXPONENT`, `days_of`, `tempo`, `base_ticks`, `cost_ticks` (T1);
+`TIME_EXPONENT`, `days_of`, `tempo`, `base_ticks`, `climb_factor`,
+`cost_ticks` (T1);
 `Npc.mass_kg` and `DriveMovements.day_length_std` (T2); `WalkState`, `WalkState::begin`, `advance_one` (T3) — used
 under exactly these names in T4 and T5.
 
