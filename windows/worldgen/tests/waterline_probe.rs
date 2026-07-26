@@ -372,6 +372,19 @@ fn waterline_probe() {
     }
     println!("   (world has {land_cells} land cells and {sea_cells} ocean cells)");
 
+    // --- Do any DERIVED settlements sit at sea? (census-exposure check) ----
+    // `composition-variance` (a census metric) reads the demography report's
+    // `stack_settlements`. If none of those ever sat on an ocean cell, the
+    // metric cannot have moved, and the census carve-out is not needed.
+    println!("\n-- derived stack settlements, land vs ocean");
+    let ss = &report.stack_settlements;
+    let at_sea = ss.iter().filter(|s| terrain.is_ocean(s.cell)).count();
+    println!(
+        "   stack settlements: {} total, {} at sea",
+        ss.len(),
+        at_sea
+    );
+
     // --- SEA LEVEL: is `elevation < 0` the same test as `is_ocean`? -------
     let sl = terrain.sea_level().get();
     let below_zero = cells
