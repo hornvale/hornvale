@@ -2,7 +2,7 @@
 //! Crucible inherits.
 
 use hornvale_alchemy::Substrate;
-use hornvale_alchemy::production::{PRODUCTIONS, admits, permits};
+use hornvale_alchemy::production::{PRODUCTIONS, admits, apply, permits};
 use hornvale_alchemy::quality::{Quality, QualityVector, qualities_of};
 use hornvale_alchemy::sign::signs_of;
 
@@ -100,5 +100,29 @@ fn no_production_admits_everything() {
             "{} admits every substance -- its requirements are vacuous",
             p.name
         );
+    }
+}
+
+/// The spec's §8 evidence item 1: no production produces a quality vector
+/// outside [0,1]. Discharged by actually applying every production's
+/// outputs to every substrate in the sweep -- previously untestable,
+/// because nothing ever called `apply`.
+#[test]
+fn no_production_output_leaves_the_unit_interval() {
+    for s in sweep() {
+        let q = qualities_of(&s);
+        for p in PRODUCTIONS {
+            for output in p.outputs {
+                let product = apply(output, &q);
+                for axis in Quality::ALL {
+                    let v = product.get(axis);
+                    assert!(
+                        (0.0..=1.0).contains(&v),
+                        "{} output leaves [0,1] on {axis:?} at {s:?}: {v}",
+                        p.name
+                    );
+                }
+            }
+        }
     }
 }

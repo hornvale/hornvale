@@ -113,6 +113,18 @@ pub fn admits(p: &Production, q: &QualityVector) -> bool {
     })
 }
 
+/// Apply one output's quality deltas to an input bundle, yielding the
+/// product's bundle. Deltas are additive and the result is clamped to
+/// [0,1] on every axis by `QualityVector::set`, so a product can never
+/// leave the unit interval however the table is authored.
+pub fn apply(output: &Output, input: &QualityVector) -> QualityVector {
+    let mut out = *input;
+    for (quality, delta) in output.deltas {
+        out.set(*quality, input.get(*quality) + delta);
+    }
+    out
+}
+
 /// The authored production table. Universal — identical in every world. Per-
 /// world difference arrives through which of these are REACHABLE, which
 /// depends on what a world is made of.
