@@ -100,17 +100,27 @@ Not subagent work, and worthless if it runs late.
 **Interfaces:**
 - Produces:
   - `pub struct Ticks(pub u64)`
-  - `pub const TICKS_PER_DAY: u64 = 1_000`
+  - `pub const BASE_TICKS_PER_STD_DAY: u64 = 1_000`
+  - `pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64`
   - `pub const REFERENCE_MASS_KG: f64 = 70.0`
   - `pub const TIME_EXPONENT: f64 = 0.25`
-  - `pub fn days_of(t: Ticks) -> f64`
+  - `pub fn days_of(t: Ticks, day_length_std: Option<f64>) -> f64`
   - `pub fn tempo(mass_kg: f64) -> f64`
   - `pub fn base_ticks(action: &Action) -> Ticks`
   - `pub fn cost_ticks(action: &Action, mass_kg: f64) -> Ticks`
 
-`TICKS_PER_DAY = 1_000` makes today's `MOVE_DURATION = 0.1` days exactly 100
-ticks — so the base cost for `MoveTo` is representable with no rounding, which is
-what lets T3's refactor stay byte-identical while T4's charge is the only change.
+**The tick rate is derived from the planet's day** (spec §4.1), not fixed:
+`ticks_per_local_day = max(1, round(day_length_std × 1_000))`, so the local day
+is an *exact* integer of ticks and `ActivityCycle`'s dawn/dusk land on tick
+boundaries instead of beating against the clock over a long run. The tick stays
+approximately absolute (within one part in `ticks_per_local_day` of `1/1000`
+standard day), so base costs authored in ticks mean the same absolute duration on
+every world. A tidally-locked world (`day_length_std` is `None`) falls back to
+`BASE_TICKS_PER_STD_DAY`.
+
+`base_ticks(MoveTo) = 100` reproduces the historical `MOVE_DURATION` of `0.1`
+days on an Earth-like world; T3's refactor stays byte-identical regardless,
+because it charges nothing.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -122,15 +132,56 @@ mod tests {
     use hornvale_kernel::room::RoomAddr;
 
     #[test]
-    fn a_move_costs_exactly_todays_duration_at_reference_mass() {
-        // The bridge to today's behaviour: MOVE_DURATION is 0.1 days, and
-        // TICKS_PER_DAY = 1000, so a reference-mass creature's move is 100
-        // ticks EXACTLY — no rounding, which is what keeps the refactor
-        // byte-identical before the charge lands.
+    fn a_move_costs_exactly_todays_duration_on_an_earthlike_world() {
+        // The bridge to today's behaviour: MOVE_DURATION was 0.1 days, and an
+        // Earth-like rotation gives 1000 ticks per local day, so a
+        // reference-mass creature's move is 100 ticks = 0.1 days exactly.
         let mv = Action::MoveTo(RoomAddr { face: 0, path: vec![0] });
         assert_eq!(base_ticks(&mv), Ticks(100));
         assert_eq!(cost_ticks(&mv, REFERENCE_MASS_KG), Ticks(100));
-        assert_eq!(days_of(Ticks(100)), 0.1);
+        assert_eq!(days_of(Ticks(100), Some(1.0)), 0.1);
+    }
+
+    #[test]
+    fn the_local_day_is_an_exact_integer_number_of_ticks() {
+        // THE REASON THE RATE IS DERIVED (spec §4.1). Whatever the rotation, a
+        // whole local day must be a whole number of ticks — otherwise every
+        // dawn rounds and the error beats against the day cycle over a long run.
+        for d in [1.0_f64, 0.41, 2.7, 1.0 / 3.0, 17.25] {
+            let n = ticks_per_local_day(Some(d));
+            assert!(n >= 1, "day {d} gives {n} ticks");
+            // A day is exactly `n` ticks by construction, so converting them
+            // back lands on the day length itself.
+            let round_trip = days_of(Ticks(n), Some(d));
+            assert!(
+                (round_trip - d).abs() < 1e-12,
+                "day {d}: {n} ticks converts back to {round_trip}, not {d}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_tick_stays_approximately_absolute_across_worlds() {
+        // The other half of §4.1: base costs are authored in TICKS, so a move
+        // must mean the same absolute duration whatever the planet does — a
+        // bear's gait is set by the bear, not by the sky. Under 0.1% spread.
+        let mv = Action::MoveTo(RoomAddr { face: 0, path: vec![0] });
+        let reference = days_of(cost_ticks(&mv, REFERENCE_MASS_KG), Some(1.0));
+        for d in [0.41_f64, 2.7, 17.25] {
+            let here = days_of(cost_ticks(&mv, REFERENCE_MASS_KG), Some(d));
+            assert!(
+                ((here - reference) / reference).abs() < 0.001,
+                "a move takes {here} days on a {d}-day world vs {reference} on Earth"
+            );
+        }
+    }
+
+    #[test]
+    fn a_tidally_locked_world_falls_back_to_the_base_rate() {
+        // A world with no dawn is exactly the world a day-derived clock cannot
+        // derive from. Stated, not unwrap_or'd (spec §4.1).
+        assert_eq!(ticks_per_local_day(None), BASE_TICKS_PER_STD_DAY);
+        assert_eq!(days_of(Ticks(1_000), None), 1.0);
     }
 
     #[test]
@@ -224,11 +275,28 @@ use crate::liveness::Action;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Ticks(pub u64);
 
-/// Ticks per standard day. `1_000` makes the historical `MOVE_DURATION` of
-/// `0.1` days exactly `100` ticks, so the pre-clock behaviour is representable
-/// without rounding.
+/// The base resolution: ticks per STANDARD day, before the planet's rotation is
+/// taken into account. `1_000` makes the historical `MOVE_DURATION` of `0.1`
+/// days exactly `100` ticks on an Earth-like world.
 /// type-audit: bare-ok(count)
-pub const TICKS_PER_DAY: u64 = 1_000;
+pub const BASE_TICKS_PER_STD_DAY: u64 = 1_000;
+
+/// How many ticks make one LOCAL day on a world whose rotation period is
+/// `day_length_std` standard days — `round(day × base)`, at least one.
+///
+/// Deriving this rather than fixing it is what makes a whole local day an
+/// EXACT integer of ticks (spec §4.1). `ActivityCycle` is the sim's one
+/// local-day-keyed mechanism, and under an arbitrary granularity every dawn
+/// rounds to the nearest tick and the error beats against the day cycle over a
+/// long run. `None` — a tidally-locked world, which the rotation pin admits —
+/// has no day to divide, so it takes the base rate.
+/// type-audit: bare-ok(ratio: day_length_std), bare-ok(count: return)
+pub fn ticks_per_local_day(day_length_std: Option<f64>) -> u64 {
+    match day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+        Some(d) => ((d * BASE_TICKS_PER_STD_DAY as f64).round() as u64).max(1),
+        None => BASE_TICKS_PER_STD_DAY,
+    }
+}
 
 /// The mass at which `tempo` is exactly `1.0` — a human-scale creature.
 /// Authored.
@@ -246,10 +314,16 @@ pub const TIME_EXPONENT: f64 = 0.25;
 /// type-audit: bare-ok(ratio)
 const MASS_BAND_KG: (f64, f64) = (0.001, 100_000.0);
 
-/// `t` as a fraction of a standard day — the conversion at the commit boundary.
-/// type-audit: bare-ok(ratio: return)
-pub fn days_of(t: Ticks) -> f64 {
-    t.0 as f64 / TICKS_PER_DAY as f64
+/// `t` in STANDARD days — the conversion at the commit boundary, where floats
+/// belong. A local day of `day_length_std` is exactly
+/// [`ticks_per_local_day`] ticks, so this is that ratio scaled.
+/// type-audit: bare-ok(ratio: day_length_std), bare-ok(ratio: return)
+pub fn days_of(t: Ticks, day_length_std: Option<f64>) -> f64 {
+    let per_day = ticks_per_local_day(day_length_std);
+    match day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+        Some(d) => t.0 as f64 * d / per_day as f64,
+        None => t.0 as f64 / per_day as f64,
+    }
 }
 
 /// How much slower than reference this creature acts: `(mass / reference) ^
@@ -279,7 +353,7 @@ pub fn tempo(mass_kg: f64) -> f64 {
 /// elsewhere — this is only the cost of the act of lying down.
 pub fn base_ticks(action: &Action) -> Ticks {
     match action {
-        // 100 ticks = 0.1 days: today's MOVE_DURATION exactly.
+        // 100 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
         Action::MoveTo(_) => Ticks(100),
         // A drink is quick.
         Action::Drink => Ticks(20),
@@ -326,15 +400,26 @@ git commit -m "feat(vessel): the action cost model — integer ticks, allometric
 
 ---
 
-### Task 2: Body mass reaches `Npc`
+### Task 2: Body mass and the planet's day reach the tick
 
 **Files:**
 - Modify: `windows/vessel/src/liveness.rs` (the `Npc` struct; `derive_npcs` and
   `derive_wild_npcs` where `biosphere_registry()` is already read, ~line 3630)
 
 **Interfaces:**
-- Produces: `Npc.mass_kg: f64` — the species' adult body mass, threaded from the
-  biosphere registry at derivation.
+- Produces:
+  - `Npc.mass_kg: f64` — the species' adult body mass, threaded from the
+    biosphere registry at derivation.
+  - `DriveMovements.day_length_std: Option<f64>` — the world's rotation period in
+    standard days, from `Calendar::day` (`domains/astronomy/src/calendar.rs:542`),
+    `None` for a tidally-locked world.
+
+`DriveMovements` already carries `params: DriveParams`; the day length is the
+same shape of field. Every construction site needs it — find them with
+`grep -rn "DriveMovements {" --include=*.rs .` (both `windows/vessel` and
+`windows/lab/src/health.rs`). `windows/lab/src/health.rs` already obtains the
+calendar via `hornvale_worldgen::sky_of(world)` for `LocaleTerrain::with_fields`,
+so the value is in scope there; pass `None` in planted-terrain unit fixtures.
 
 **Read first:** the lines around `let biosphere = hornvale_species::biosphere_registry();`
 in `derive_npcs`. `temperature_niche`, `metabolic_class` and the diet niche are
@@ -542,7 +627,7 @@ git commit -m "refactor(vessel): hoist the walk into WalkState + advance_one, by
   arms; delete `MOVE_DURATION`)
 
 **Interfaces:**
-- Consumes: `cost_ticks`, `days_of`, `Ticks` (T1); `Npc.mass_kg` (T2);
+- Consumes: `cost_ticks`, `days_of`, `Ticks` (T1); `Npc.mass_kg` and `DriveMovements.day_length_std` (T2);
   `advance_one` (T3).
 
 - [ ] **Step 1: Write the failing tests**
@@ -604,7 +689,7 @@ and `Eat` arms (`Rest` keeps `next_awake_day`, but pays the cost of lying down
 *before* the jump):
 
 ```rust
-                        st.day += days_of(cost_ticks(&action, npc.mass_kg));
+                        st.day += days_of(cost_ticks(&action, npc.mass_kg), self.day_length_std);
 ```
 
 Delete `const MOVE_DURATION` entirely — leaving it would be a second,
@@ -710,7 +795,12 @@ moves, then all of the next's.
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
-        let from_ticks = (self.from.day * TICKS_PER_DAY as f64).round() as u64;
+        let per_day = ticks_per_local_day(self.day_length_std) as f64;
+        let scale = match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+            Some(d) => per_day / d, // ticks per STANDARD day on this world
+            None => per_day,
+        };
+        let from_ticks = (self.from.day * scale).round() as u64;
         for npc in &self.npcs {
             let st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
             queue.insert((from_ticks, npc.entity));
@@ -723,8 +813,8 @@ moves, then all of the next's.
             if !self.advance_one(frozen, &npc, st, &alarm, &mut afraid_memo, &mut out) {
                 continue; // this creature's walk is done; it is not requeued
             }
-            let next = (st.day * TICKS_PER_DAY as f64).round() as u64;
-            if next > (self.to.day * TICKS_PER_DAY as f64).round() as u64 {
+            let next = (st.day * scale).round() as u64;
+            if next > (self.to.day * scale).round() as u64 {
                 continue;
             }
             queue.insert((next, e));
@@ -822,9 +912,9 @@ changes source shows the source. T4/T5's commit messages carry a
 `<describe the drift>` slot, which is a measurement to fill at commit time, not
 an unmade decision.
 
-**Type consistency.** `Ticks`, `TICKS_PER_DAY`, `REFERENCE_MASS_KG`,
+**Type consistency.** `Ticks`, `BASE_TICKS_PER_STD_DAY`, `ticks_per_local_day`, `REFERENCE_MASS_KG`,
 `TIME_EXPONENT`, `days_of`, `tempo`, `base_ticks`, `cost_ticks` (T1);
-`Npc.mass_kg` (T2); `WalkState`, `WalkState::begin`, `advance_one` (T3) — used
+`Npc.mass_kg` and `DriveMovements.day_length_std` (T2); `WalkState`, `WalkState::begin`, `advance_one` (T3) — used
 under exactly these names in T4 and T5.
 
 **One risk carried deliberately.** T5's queue holds `(Npc, WalkState)` per entity
