@@ -45,10 +45,12 @@ pub fn mint_flagship(world: &World, ctx: &LocaleContext) -> Result<Agent, Vessel
         .ok_or_else(|| VesselError::NoSpecies(village.name.clone()))?;
     // `species` is free text read from the ledger (a committed `Value::Text`),
     // not a `KindId` — resolve it against the perception component registry by
-    // its `KindId` label, failing loudly if unknown. Only minded SPEAKERS carry
-    // a perception row (the four peoples and, since The Vigil, the three
-    // dragons), so an unknown or plain-fauna label fails here. A dragon label
-    // cannot reach this path anyway: `species` is read from a SETTLEMENT.
+    // its `KindId` label, failing loudly if unknown. Today's perception
+    // roster is exactly the four peoples and, since The Vigil, the three
+    // dragons (`check_integrity` enforces speech ⊆ perception, not the
+    // converse — a future non-speaking perceiver stays expressible), so an
+    // unknown or plain-fauna label fails here. A dragon label cannot reach
+    // this path anyway: `species` is read from a SETTLEMENT.
     let perception = *perception_registry()
         .iter()
         .find(|(k, _)| k.0 == species.as_str())

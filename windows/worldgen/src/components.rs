@@ -49,8 +49,12 @@ pub struct WorldComponents {
 
 impl WorldComponents {
     /// Gather every domain's canonical registry and enforce referential
-    /// integrity: the peopled cluster shares one key-set, and every peopled
-    /// kind has a biosphere row. Fails loudly with the physical reason.
+    /// integrity: the nested-capacity chain speech ⊆ perception ⊆ mind (not
+    /// one shared key-set — since The Eremite the peopled cluster is a
+    /// lattice, and a `Solitary` minded kind may carry a mind without
+    /// perception or speech), every minded kind has a biosphere row, and a
+    /// `Settled` kind carries the full peopled cluster. Fails loudly with the
+    /// physical reason.
     pub fn assemble() -> Result<Self, BuildError> {
         let biosphere = hornvale_species::biosphere_registry();
         let psyche = hornvale_species::psyche_registry();

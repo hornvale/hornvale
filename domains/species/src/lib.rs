@@ -215,8 +215,11 @@ pub struct PerceptionVector {
 /// concepts rooted in *every* daughter. A future dragon inherits this by
 /// construction; a deliberately divergent-eyed dragon must override it, which
 /// is exactly when someone should have to decide whether the shared tongue
-/// still holds. At this value the hue ladder yields depth 2, so Draconic
-/// lexicalizes `dark`, `light`, and `red` — and nothing else (spec: The Vigil).
+/// still holds. At this value the hue ladder yields depth 2, so Draconic's
+/// HUE vocabulary is exactly `dark`, `light`, and `red` — nothing else on
+/// that ladder. The same value separately opens the full luminance ladder
+/// (`gloom`/`shadow`/`starlit`, `pack_depths`' other output), so this is not
+/// a claim about Draconic's color/dark vocabulary as a whole (spec: The Vigil).
 /// type-audit: bare-ok(ratio)
 pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 

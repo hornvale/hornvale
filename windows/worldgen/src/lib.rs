@@ -4771,10 +4771,23 @@ fn species_genesis(
         //
         // The commit ORDER below is unchanged from the single-gate version —
         // note that `in-group-radius` still sits between two mind facts, which
-        // is why the mind block appears twice rather than being merged.
-        // Emission order is a save-format contract; this gates only, so every
-        // settling people's fact sequence stays byte-identical and the only new
-        // facts in any world are the dragons' own (The Vigil).
+        // is why the mind block appears twice rather than being merged: the
+        // first mind block (threat-response, deliberation-latency) commits,
+        // then the society block's `in-group-radius`, then the SECOND mind
+        // block (time-horizon), and only then the rest of the society block
+        // (sociality-mode, status-basis) — so the society block appears
+        // twice for the identical reason, split by that same interleaved
+        // `time-horizon`. Emission order is a save-format contract; this
+        // gates only, so every settling people's fact sequence stays
+        // byte-identical and the only new facts in any world are the
+        // dragons' own (The Vigil).
+        //
+        // LOAD-BEARING: do not "simplify" this into one mind block and one
+        // society block. Merging them would move `in-group-radius` to after
+        // `time-horizon` for every settling people (goblin, hobgoblin,
+        // bugbear, kobold) in every committed world — a save-format change
+        // with no epoch, i.e. silent corruption of every already-committed
+        // world and fixture.
         let mind = wc.psyche.get(kind);
         let society = wc.society.get(kind);
         let perception = wc.perception.get(kind);
