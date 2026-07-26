@@ -77,6 +77,7 @@ fn stage<T>(label: &'static str, f: impl FnOnce() -> T) -> T {
     out
 }
 
+pub mod alchemy;
 pub mod chorus;
 pub mod components;
 pub mod graph_derive;

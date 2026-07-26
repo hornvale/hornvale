@@ -7,6 +7,7 @@ description = "Hornvale composition root: where all domains meet to build worlds
 
 [dependencies]
 hornvale-kernel = { path = "../../kernel" }
+hornvale-alchemy = { path = "../../domains/alchemy" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
 hornvale-climate = { path = "../../domains/climate" }
 hornvale-terrain = { path = "../../domains/terrain" }
