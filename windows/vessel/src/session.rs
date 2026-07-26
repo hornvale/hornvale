@@ -782,10 +782,29 @@ impl<'w> Session<'w> {
             ["out"] => 1,
             ["out", n] => match n.parse::<u32>() {
                 Ok(v) => v,
-                Err(e) if *e.kind() == std::num::IntErrorKind::PosOverflow => {
+                // `u32::from_str` overflows past 4294967295, but this arm
+                // never sees a real value to check — the parse itself
+                // failed — so quoting `u32::MAX` back at the player states a
+                // bound that is false: the real ceiling is `depth -
+                // globe_level` (six rungs on seed 42), enforced below. Rather
+                // than inventing a second, wrong number here, saturate to
+                // `u32::MAX` — certainly past any real chart's ceiling — and
+                // let the ordinary bound check just below produce the one
+                // honest refusal.
+                Err(e) if matches!(e.kind(), std::num::IntErrorKind::PosOverflow) => u32::MAX,
+                // `u32::from_str` reports a leading '-' as `InvalidDigit`,
+                // not `NegOverflow` (there is no negative u32 to overflow
+                // toward), so folding it into "'-1' is not a number" would
+                // be false — it is a number, just a negative one, and there
+                // is no such thing as zooming out a negative number of
+                // rungs.
+                Err(_)
+                    if n.starts_with('-')
+                        && n.len() > 1
+                        && n[1..].bytes().all(|b| b.is_ascii_digit()) =>
+                {
                     return Turn::Out(format!(
-                        "'{n}' is too many rungs out; the chart tops out at {} rungs coarser.",
-                        u32::MAX
+                        "Zoom out by how much? '{n}' is negative; there is no such rung."
                     ));
                 }
                 Err(_) => {
