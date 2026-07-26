@@ -2,6 +2,37 @@
 //! shipped feature. Answers three questions before the prey-field spec is
 //! written:
 //!
+//! ## Task 1 result: does support restriction move settlement placement? (P4)
+//!
+//! Measured 2026-07-26 on seed 42, this branch's base (includes The Vigil).
+//! A throwaway gate was added as the first statement of `niche_per_species_k`'s
+//! `CellMap::from_fn` closure in `windows/worldgen/src/lib.rs` (reverted
+//! immediately after measuring, not shipped here):
+//! ```text
+//! if terrain.is_ocean(cell) { return 0.0; }
+//! ```
+//! - Baseline (`cargo run -q -p hornvale -- new --seed 42 --out
+//!   /tmp/wl-before.json`): `world of seed 42 written to
+//!   /tmp/wl-before.json (3553 facts; village: Qvooshtvoagootao)` — matches
+//!   the expected line exactly.
+//! - Gated (`--out /tmp/wl-after.json`): `world of seed 42 written to
+//!   /tmp/wl-after.json (3553 facts; village: Qvooshtvoagootao)` — same fact
+//!   count, same village name.
+//! - `cargo test -p hornvale --test lens_purity`:
+//!   `seed_42_world_json_matches_the_committed_fixture ... ok` — the
+//!   committed fixture still matches with the gate applied.
+//! - Fact-level diff (`/tmp/wl-before.json` vs `/tmp/wl-after.json`):
+//!   `cmp` reports **byte-identical**; the Python set-diff over
+//!   `(subject, predicate, object)` triples independently confirms
+//!   `only-before: 0  only-after: 0` (3553 facts on both sides).
+//!
+//! **Answer: no, settlement placement does not move.** Zeroing every
+//! species' carrying capacity at ocean cells (the exact form the shipped
+//! fix will take) produced a byte-identical world at seed 42 — same fact
+//! count, same fact set, same village name, same committed-fixture match.
+//! The remaining Waterline tasks can proceed without a world-identity
+//! re-scoping conversation or fixture re-pin.
+//!
 //! 1. **Does the home-range factor compose exactly once?** `home_range` is
 //!    cells-per-individual and already divides a species' capacity share on
 //!    the DENSITY side. If prey supply is additionally integrated over the
