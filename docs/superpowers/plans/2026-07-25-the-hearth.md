@@ -1110,6 +1110,138 @@ git commit -m "feat(vessel): the pattern inventory, attachment composition, and 
 
 ---
 
+### Task 4a: Containment is walkable — reconcile `permits` with routing
+
+**Files:**
+- Modify: `windows/vessel/src/interior/route.rs` (`successors`)
+- Test: `windows/vessel/src/interior/pattern.rs` (`mod tests`)
+
+**Why this task exists.** T4 surfaced a real inconsistency: `Interior::is_connected`
+walks **both** adjacency and containment, but `InteriorSpace::successors` walks
+adjacency **only**. So a `Within` anchor — the hearth inside the alcove — is its
+own routing component: `permits()` returns `true` for a room whose fire no
+creature can reach, and T4's anti-hub test passed via an unrelated arm
+(`screen → threshold → ground → alcove`) rather than the intended chain.
+
+**The fix is in routing, not in composition.** Adding an adjacency edge for
+contained anchors would make the hearth both `Ntpp` and `Ec` to the alcove, and
+since `relation()` tests containment first, that edge would be invisible to the
+vocabulary while visible to the planner — a hidden disagreement, worse than the
+one being fixed. Containment genuinely *is* walkable: standing in the alcove you
+can step to the hearth in it, and back out. So routing follows it.
+
+- [ ] **Step 1: Write the failing tests**
+
+Add to `pattern.rs`'s `mod tests`:
+
+```rust
+    #[test]
+    fn a_permitted_interior_is_routable_between_every_pair() {
+        // CONNECTIVITY AND ROUTABILITY MUST AGREE. `permits` walks containment;
+        // routing must too, or the validator green-lights a room a creature
+        // cannot cross. This is the invariant a hearth-inside-an-alcove broke
+        // silently — the anti-hub test still passed, via a different arm.
+        for (built, cold) in [(true, true), (true, false), (false, false)] {
+            let interior = compose(&selection(built, cold));
+            assert!(permits(&interior));
+            for a in interior.ids() {
+                for b in interior.ids() {
+                    assert!(
+                        crate::interior::route_within(&interior, a, b, 256).is_some(),
+                        "permitted interior (built={built}, cold={cold}) has no route \
+                         {a:?} -> {b:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_intended_chain_is_the_deep_one() {
+        // Not merely SOME 3-hop route: the route the grammar was designed to
+        // produce. threshold -> ground -> alcove -> hearth -> bed.
+        let interior = compose(&selection(true, true));
+        let find = |k: AnchorKind| {
+            interior
+                .ids()
+                .into_iter()
+                .find(|id| interior.anchor(*id).kind == k)
+                .unwrap_or_else(|| panic!("a cold built room has a {k:?}"))
+        };
+        let door = find(AnchorKind::Threshold);
+        let bed = find(AnchorKind::Bed);
+        let plan = crate::interior::route_within(&interior, door, bed, 256)
+            .expect("the bed is reachable from the door");
+        assert!(
+            plan.len() >= 4,
+            "the intended chain is at least four steps, got {}: {plan:?}",
+            plan.len()
+        );
+    }
+```
+
+- [ ] **Step 2: Run and watch them fail**
+
+```bash
+cargo test -p hornvale-vessel --lib interior::pattern 2>&1 | tail -20
+```
+
+Expected: FAIL — `has no route` on the first, and `expect("the bed is reachable
+from the door")` panicking on the second.
+
+- [ ] **Step 3: Make containment walkable**
+
+Replace `InteriorSpace::successors` in `route.rs`:
+
+```rust
+    fn successors(&self, s: &AnchorId) -> Vec<(AnchorId, AnchorId, u64)> {
+        // Adjacency (`Ec`) AND containment (`Ntpp`) are both walkable: standing
+        // in the alcove you can step to the hearth inside it, and back out.
+        // `is_connected` has always walked both; routing must agree with it, or
+        // the validator accepts rooms a creature cannot cross.
+        let mut out = self.interior.neighbors(*s);
+        if let Some(parent) = self.interior.anchor(*s).within {
+            out.push(parent);
+        }
+        for id in self.interior.ids() {
+            if self.interior.anchor(id).within == Some(*s) {
+                out.push(id);
+            }
+        }
+        // Deterministic and duplicate-free: `neighbors` is already ascending,
+        // but the containment links are appended out of order.
+        out.sort();
+        out.dedup();
+        out.into_iter().map(|n| (n, n, 1)).collect()
+    }
+```
+
+Update the doc comment on `InteriorSpace` to say the step relation is adjacency
+*or* containment.
+
+- [ ] **Step 4: Run and verify**
+
+```bash
+cargo test -p hornvale-vessel --lib interior:: 2>&1 | tail -25
+cargo test -p hornvale-vessel 2>&1 | tail -10
+```
+
+Expected: PASS, 19 interior tests (17 + 2). Stage A's three route tests must
+still pass unchanged — none of them uses containment, so `successors` is
+identical on their graphs.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cargo fmt
+cargo clippy -p hornvale-vessel --all-targets -- -D warnings
+cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+git add windows/vessel/src/interior/
+git commit -m "fix(vessel): containment is walkable — routing agrees with the validator (The Hearth T4a)"
+```
+
+---
+
 ### Task 5: Fields — what an anchor emits
 
 **Files:**
