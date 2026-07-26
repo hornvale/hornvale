@@ -33,7 +33,12 @@ and the drive hookup that makes the campaign measurable.
 - No wall-clock time. `f64` transcendentals via `hornvale_kernel::math`.
 - Every `pub` item, field and variant gets a one-line doc comment
   (`#![warn(missing_docs)]`); every primitive at a `pub` boundary carries a
-  `type-audit:` verdict tag.
+  `type-audit:` verdict tag. **The ratified `bare-ok` classes are exactly**
+  `ratio, count, index, constructor-edge, envelope, identifier-text, prose,
+  artifact, diagnostic-value, render-internal, flag`
+  (`tools/type-audit/src/tag.rs:4`). An unparseable class is a hard finding, so
+  do not invent one — and a fieldless enum needs no tag at all, having no
+  primitive at its boundary.
 - **Outcomes read topology, never metrics** (spec §2.1). No outcome may depend on
   a distance in a plane. In v1 this is *vacuously* true because no coordinate
   exists — do not introduce one, not even "just for testing."
@@ -417,8 +422,9 @@ use super::relation::{Rcc8, converse};
 pub struct AnchorId(pub u16);
 
 /// What an anchor IS. An object earns a place here by the activity it affords
-/// (spec §7), never by decoration.
-/// type-audit: bare-ok(tag)
+/// (spec §7), never by decoration. (No `type-audit:` tag: a fieldless enum has
+/// no primitive at its boundary, and `tag` is NOT a ratified `bare-ok` class —
+/// see `tools/type-audit/src/tag.rs:4` for the eleven that are.)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AnchorKind {
     /// A fire: emits warmth and light; the canonical gathering place.
