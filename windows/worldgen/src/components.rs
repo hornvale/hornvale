@@ -711,7 +711,21 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
         );
-        assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+        // Match the message, not just the variant: the perception check
+        // follows the psyche check in the same loop, and red-dragon carries a
+        // psyche, so a bare `MalformedKind(_)` match would also pass if the
+        // psyche check tripped instead — which would not exercise the rule
+        // this branch adds (speech ⊆ perception).
+        match result {
+            Err(BuildError::MalformedKind(msg)) => {
+                assert!(
+                    msg.contains("has no perception"),
+                    "must fail on the speech-without-perception rule, got {msg:?}"
+                );
+            }
+            Err(other) => panic!("expected MalformedKind, got a different BuildError: {other}"),
+            Ok(_) => panic!("expected MalformedKind, got Ok"),
+        }
     }
 
     #[test]

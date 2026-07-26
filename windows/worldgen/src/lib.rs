@@ -5817,11 +5817,12 @@ mod tests {
     }
 
     #[test]
-    fn a_settled_people_emits_the_same_sixteen_facts_in_the_same_order() {
+    fn a_settled_people_emits_the_same_seventeen_facts_in_the_same_order() {
         // The Vigil re-gates emission per fact FAMILY, but must not REORDER
         // it: emission order is a save-format contract, and the existing
         // sequence interleaves a society fact between two mind facts. Pinning
         // the literal order is what proves the re-gate changed gates only.
+        // Seventeen: `species-name` plus the sixteen authored-vector facts.
         let world = vigil_world();
         assert_eq!(
             predicate_sequence(&world, "goblin"),

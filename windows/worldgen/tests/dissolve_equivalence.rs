@@ -57,16 +57,40 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
         minded,
         "lexicon must key exactly the minded kinds (peoples + dragons)"
     );
-    // The Vigil: every speaker perceives (the enforced chain speech ⊆
-    // perception). Asserted in this direction, not as equality: a future
-    // non-speaking perceiver must stay expressible, and `check_integrity`
-    // permits it.
-    for kind in art.ids() {
-        assert!(
-            wc.perception.contains(kind),
-            "speaking kind {kind:?} must also perceive (speech ⊆ perception)"
-        );
-    }
+    // The Vigil: `check_integrity` (components.rs) already enforces speech ⊆
+    // perception at load time — `WorldComponents::assemble()` above would
+    // have failed if any speaker lacked perception, so re-deriving that same
+    // subset relation here would just restate an enforced rule and pass
+    // vacuously every time `assemble()` succeeds. What `check_integrity`
+    // does NOT pin is which seven kinds occupy the roster today — a
+    // subset-only invariant is silent on names. Assert the roster fact
+    // instead: at THIS commit, perception coincides with articulation
+    // exactly, by name — the four settling peoples plus the three chromatic
+    // dragons — spelled out so a future non-speaking perceiver (an owl with
+    // eyes and no words) reads as a real change to this list, not a passing
+    // test that never looked.
+    let named_roster: Vec<hornvale_kernel::KindId> = [
+        "black-dragon",
+        "bugbear",
+        "goblin",
+        "hobgoblin",
+        "kobold",
+        "red-dragon",
+        "white-dragon",
+    ]
+    .into_iter()
+    .map(hornvale_kernel::KindId)
+    .collect();
+    let perceivers: Vec<_> = wc.perception.ids().copied().collect();
+    assert_eq!(
+        perceivers, named_roster,
+        "perception must key exactly the four peoples + three dragons, by name (The Vigil)"
+    );
+    assert_eq!(
+        art.ids().copied().collect::<Vec<_>>(),
+        named_roster,
+        "articulation must key the same named roster as perception"
+    );
     // A non-minded kind (ordinary fauna) carries no lexicon.
     for kind in wc.biosphere.ids() {
         if !art.contains(kind) {

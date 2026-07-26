@@ -1,9 +1,15 @@
 //! Exposure derivation at the composition root (Words Task 8):
 //! `pack_depths` maps a species' perception vector onto the color-pack
 //! ladders, and `exposure_of`/`lexicon_of` classify (and then name) every
-//! registered concept for a settled species.
-use hornvale_language::{ExposureClass, GapReason, LexEntry};
-use hornvale_worldgen::{SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of};
+//! registered concept for a settled species. Also covers The Vigil's other
+//! composition-root perception seam, `observed_phenomena_as`: the malformed-
+//! kind failure for a non-perceiving fauna kind, and the dragon success path.
+use hornvale_language::{ExposureClass, GapReason, LexEntry, PackDepths, color_pack, in_ladder};
+use hornvale_species::{ActivityCycle, DRACONIC_NIGHT_VISION, PerceptionVector};
+use hornvale_worldgen::{
+    BuildError, SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of,
+    observed_phenomena_as, pack_depths,
+};
 
 /// The seed-42, generated-sky, default-pins (full four-people roster)
 /// world `species_worlds.rs` builds. Task A15a cut settlement genesis over
@@ -229,8 +235,112 @@ fn a_dragon_perceives_with_its_own_eyes_not_the_goblins() {
         matches!(goblin.get("blue"), Some(ExposureClass::Steeped)),
         "the goblin still lexicalizes blue — the dragon's gap is its own"
     );
+    for concept in ["green", "yellow"] {
+        assert!(
+            matches!(
+                dragon.get(concept),
+                Some(ExposureClass::Unknown {
+                    reason: GapReason::Perceptual(_)
+                })
+            ),
+            "'{concept}' (hue rank 3) must be a perceptual gap at hue depth 2 \
+             (dark/light/red only) — the discriminator between depth 2 and \
+             depth 3, unlike 'blue' which is a gap at both, got {:?}",
+            dragon.get(concept)
+        );
+    }
     assert!(
         matches!(dragon.get("starlit"), Some(ExposureClass::Steeped)),
         "the full luminance ladder opens at the draconic clade eye"
+    );
+}
+
+/// A direct unit test of `pack_depths` at the draconic clade value (spec
+/// §8.3, never written until this fix pass): the campaign's headline claim —
+/// Draconic's hue inventory is exactly `dark`/`light`/`red` — was pinned only
+/// by the drift-checked generated dictionary, which does not distinguish the
+/// shipped `night_vision = 0.9` from the `0.75` spec §11 left live (both
+/// round to hue depth 2). Constructing the vector straight from
+/// `DRACONIC_NIGHT_VISION` makes this test move if that constant ever does.
+#[test]
+fn pack_depths_at_the_draconic_clade_value_opens_exactly_dark_light_red() {
+    let draconic = PerceptionVector {
+        activity: ActivityCycle::Diurnal,
+        night_vision: DRACONIC_NIGHT_VISION,
+        // `pack_depths` reads only `night_vision`; the other two fields are
+        // irrelevant to this claim.
+        sky_attention: 0.0,
+    };
+    let depths = pack_depths(&draconic);
+    assert_eq!(
+        depths,
+        PackDepths {
+            hue: 2,
+            luminance: 3
+        },
+        "the draconic clade eye must yield hue depth 2 and the full \
+         luminance ladder (depth 3)"
+    );
+
+    // State the claim as concept ids, not integers: which entries the
+    // ladders let through at this depth.
+    let mut in_ids: Vec<&str> = Vec::new();
+    let mut out_ids: Vec<&str> = Vec::new();
+    for entry in color_pack() {
+        if in_ladder(entry, &depths) {
+            in_ids.push(entry.concept);
+        } else {
+            out_ids.push(entry.concept);
+        }
+    }
+    in_ids.sort_unstable();
+    out_ids.sort_unstable();
+    assert_eq!(
+        in_ids,
+        vec!["dark", "gloom", "light", "red", "shadow", "starlit"],
+        "in the lexicon at the draconic clade value: the hue ladder's \
+         dark/light/red, and the whole luminance ladder"
+    );
+    assert_eq!(
+        out_ids,
+        vec!["blue", "brown", "green", "yellow"],
+        "NOT in the lexicon at the draconic clade value: hue ranks 3-5"
+    );
+}
+
+#[test]
+fn a_kind_without_perception_fails_loudly_when_observing_phenomena_too() {
+    // Sibling of `a_kind_without_perception_fails_loudly_instead_of_
+    // borrowing_goblin_eyes` above, but for the OTHER perception-driven
+    // composition-root seam: before The Vigil, `observe_with_sources` held
+    // an `.expect("peopled pass over a fauna kind")`, so the REPL's
+    // `phenomena --as owlbear` panicked the whole process. Regression pin:
+    // a plain fauna kind must fail loudly, by name, with the error and not
+    // a panic.
+    let w = world();
+    let err = observed_phenomena_as(&w, "owlbear").expect_err("plain fauna carries no perception");
+    let msg = format!("{err:?}");
+    assert!(
+        msg.contains("owlbear") && msg.contains("perception"),
+        "the error must name the kind and the missing component, got {msg}"
+    );
+    assert!(
+        matches!(err, BuildError::MalformedKind(_)),
+        "must fail as MalformedKind, not any other BuildError variant, got {err:?}"
+    );
+}
+
+#[test]
+fn a_dragon_observes_phenomena_with_its_own_eyes() {
+    // The success path a dragon must keep: since The Vigil a dragon carries
+    // real perception, so observing phenomena AS a dragon succeeds and
+    // returns a non-empty, sky-shaped list — the campaign's legible payoff
+    // (spec §8.4/§8.5), downgraded in the plan to a one-shot manual REPL
+    // step and never pinned by a test until now.
+    let w = world();
+    let phenomena = observed_phenomena_as(&w, "red-dragon").expect("a dragon perceives");
+    assert!(
+        !phenomena.is_empty(),
+        "a dragon must observe a non-empty phenomena list"
     );
 }
