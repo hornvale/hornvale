@@ -310,4 +310,73 @@ mod tests {
         };
         assert!(!permits(&bad), "1.5 out of 1.0 in must not balance");
     }
+
+    /// `permits` must reject an UNDER-balanced production -- one that
+    /// destroys mass -- and not just an over-balanced one. The authored
+    /// table only ever exercises the over-balanced direction (1.5 out of
+    /// 1.0 in, above), so a mutant that drops `.abs()` from `permits` would
+    /// pass every other test: `total - inputs` is negative here, and only
+    /// the absolute value catches it.
+    #[test]
+    fn permits_rejects_a_mass_destroying_production() {
+        let bad = Production {
+            name: "into-nothing",
+            process: Process::Calcine,
+            inputs: 1,
+            requires: &[],
+            outputs: &[Output {
+                bulk: 0.5,
+                deltas: &[],
+            }],
+            emits: Sign::Hue,
+        };
+        assert!(!permits(&bad), "0.5 out of 1.0 in must not balance");
+    }
+
+    /// `admits` must require ALL preconditions to hold, not just one.
+    /// Every production in the authored table has exactly one `Requirement`,
+    /// so `admission_respects_requirements` can't distinguish `.all` from
+    /// `.any`. This synthetic production has two requirements on different
+    /// axes; a substance satisfying only one of them must still be
+    /// rejected.
+    #[test]
+    fn admission_requires_every_requirement() {
+        let both = Production {
+            name: "two-requirements",
+            process: Process::Grind,
+            inputs: 1,
+            requires: &[
+                Requirement {
+                    quality: Quality::Fixity,
+                    min: 0.6,
+                    max: 1.0,
+                },
+                Requirement {
+                    quality: Quality::Solubility,
+                    min: 0.6,
+                    max: 1.0,
+                },
+            ],
+            outputs: &[Output {
+                bulk: 1.0,
+                deltas: &[],
+            }],
+            emits: Sign::Grain,
+        };
+        let satisfies_both = QualityVector {
+            fixity: 0.8,
+            solubility: 0.8,
+            ..QualityVector::default()
+        };
+        let satisfies_only_fixity = QualityVector {
+            fixity: 0.8,
+            solubility: 0.1,
+            ..QualityVector::default()
+        };
+        assert!(admits(&both, &satisfies_both));
+        assert!(
+            !admits(&both, &satisfies_only_fixity),
+            "one satisfied requirement out of two must not admit"
+        );
+    }
 }
