@@ -1,7 +1,9 @@
 # The Crucible: An Alchemy Program Metaplan — Design
 
 **Date:** 2026-07-26
-**Status:** Draft — awaiting G3
+**Status:** Approved at G3 2026-07-26. **Amended same day (Amendment 1, §9
+risk 1): qualities are latent, not observable** — see
+`2026-07-26-the-assay-design.md` §2.
 **Parent spec:** `2026-07-05-hornvale-longterm-plan-design.md` (Constitution;
 UNI-1's "one mechanic" thesis and UNI-2's metaphysics gate)
 **Worktree:** `the-crucible` (branch `the-crucible`), off `main` at `bd7314a0`
@@ -297,9 +299,16 @@ scales; the accuracy metric; the explanation schemas.
 1. **The quality inventory is taste-gated.** It is the one authored artifact
    whose contents cannot be derived, and a bad inventory yields a generative
    space that is combinatorially large and semantically empty. Mitigation: keep
-   it small, and require every quality to be *observable in principle by a
-   practitioner* — a quality nobody can sample cannot enter a doctrine and is
-   therefore dead weight.
+   it small, and require every quality to be *inferable in principle* — it must
+   affect at least one observable, or it is dead weight.
+
+   > **Amendment 1 (2026-07-26).** This mitigation originally read "observable
+   > in principle by a practitioner." That was backwards: if qualities were
+   > directly observable there would be no provenance confound at all, and the
+   > program would have no subject matter. **Qualities are latent; what a
+   > practitioner perceives are signs — weak, partly misleading functions of
+   > the qualities — and reaction outcomes.** Corrected in
+   > `2026-07-26-the-assay-design.md` §2, which is binding.
 2. **Collapsing admissibility into truth** (§5.3). A single reviewer check per
    doctrine campaign; called out here because it is a one-line mistake that
    silently deletes the subject matter.
