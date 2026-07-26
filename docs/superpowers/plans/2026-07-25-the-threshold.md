@@ -9,7 +9,7 @@
 **Tech Stack:** Rust 2024, `windows/vessel`, no new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-07-25-the-threshold-design.md`
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (14 entries, nine ideonomy passes, four overturns)
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (15 entries, nine ideonomy passes, four overturns)
 
 ## BLOCKING PRECONDITION
 
@@ -71,6 +71,7 @@ Not subagent work. Steps 1 and 2 of the spec's acceptance protocol are worthless
 - Produces:
   - `pub enum SeamKind { Narrow, Broad }`
   - `pub fn seam_kind(built: bool) -> SeamKind`
+  - the hub is the first `AnchorKind::Ground`, matching `compose`'s own definition
   - `pub fn landing(interior: &Interior, kind: SeamKind) -> Option<AnchorId>`
 
 - [ ] **Step 1: Write the failing tests**
@@ -90,9 +91,20 @@ mod tests {
         i
     }
 
-    /// A wilderness interior: no threshold anywhere (spec §4.2 — this is
-    /// legitimate, not a gap to be patched with a fake doorway).
+    /// A wilderness interior, shaped as The Hearth's revised T4 composes it:
+    /// `the-clearing` (a `Ground` hub) with `the-pool` beside it. No threshold
+    /// anywhere, which is legitimate (spec §4.2) rather than a gap to be
+    /// patched with a fake doorway.
     fn wild() -> Interior {
+        let mut i = Interior::new();
+        let g = i.push(AnchorKind::Ground, None);
+        let p = i.push(AnchorKind::Pool, None);
+        i.connect(g, p);
+        i
+    }
+
+    /// An interior with no `Ground` at all — the fallback path.
+    fn groundless() -> Interior {
         let mut i = Interior::new();
         let p = i.push(AnchorKind::Pool, None);
         let l = i.push(AnchorKind::Log, None);
@@ -108,13 +120,31 @@ mod tests {
     }
 
     #[test]
-    fn a_broad_seam_lands_at_the_hub() {
-        // The hub is the first anchor (compose connects everything to it).
+    fn a_broad_seam_lands_at_the_ground_hub() {
         // Without coordinates there is no "nearest anchor to the north edge",
-        // and spec §2.1 of The Hearth forbids reaching for one.
+        // and spec §2.1 of The Hearth forbids reaching for one, so the hub is
+        // the only available answer.
         let i = wild();
         let at = landing(&i, SeamKind::Broad).expect("a wilderness interior has a landing");
-        assert_eq!(at, i.ids()[0]);
+        assert_eq!(i.anchor(at).kind, AnchorKind::Ground);
+    }
+
+    #[test]
+    fn the_hub_is_found_by_kind_not_by_index() {
+        // Ground leads INVENTORY today, so hub and ids()[0] coincide. Build an
+        // interior where they do NOT, and assert we followed the kind.
+        let mut i = Interior::new();
+        let p = i.push(AnchorKind::Pool, None);
+        let g = i.push(AnchorKind::Ground, None);
+        i.connect(p, g);
+        assert_eq!(landing(&i, SeamKind::Broad), Some(g));
+        assert_ne!(landing(&i, SeamKind::Broad), Some(i.ids()[0]));
+    }
+
+    #[test]
+    fn an_interior_with_no_ground_falls_back_to_the_first_anchor() {
+        let i = groundless();
+        assert_eq!(landing(&i, SeamKind::Broad), Some(i.ids()[0]));
     }
 
     #[test]
@@ -194,20 +224,29 @@ pub fn seam_kind(built: bool) -> SeamKind {
 }
 
 /// Which anchor an arriving creature stands at. A narrow seam lands at the
-/// interior's `Threshold` if it has one; everything else lands at the hub (the
-/// first anchor, which `compose` connects every other anchor to). `None` only
-/// for an empty interior.
+/// interior's `Threshold` if it has one; everything else lands at the **hub**.
+///
+/// The hub is the first `Ground` anchor, which is how `compose` defines it —
+/// NOT the first anchor by index. Those coincide today only because `Ground`
+/// happens to lead `INVENTORY` for both the built and wild filters, and
+/// depending on that coincidence would be identity-by-position, the same bug
+/// class this campaign has now found at two other scales (`AnchorId` as a
+/// vector offset; a seeded pattern draw keyed by index). Falls back to the
+/// first anchor for an interior with no `Ground` at all, and `None` only for
+/// an empty one.
 pub fn landing(interior: &Interior, kind: SeamKind) -> Option<AnchorId> {
     let ids = interior.ids();
-    if kind == SeamKind::Narrow {
-        if let Some(&t) = ids
+    if kind == SeamKind::Narrow
+        && let Some(&t) = ids
             .iter()
             .find(|&&a| interior.anchor(a).kind == AnchorKind::Threshold)
-        {
-            return Some(t);
-        }
+    {
+        return Some(t);
     }
-    ids.first().copied()
+    ids.iter()
+        .find(|&&a| interior.anchor(a).kind == AnchorKind::Ground)
+        .copied()
+        .or_else(|| ids.first().copied())
 }
 ```
 
@@ -243,7 +282,7 @@ Nothing consumes this yet."
 - Modify: `windows/vessel/src/interior/mod.rs`, `windows/vessel/src/liveness.rs` (the `Terrain` trait gains one defaulted method)
 
 **Interfaces:**
-- Consumes: `selection`, `compose`, `permits` (The Hearth T4); `Terrain` (liveness).
+- Consumes: `selection(built, cold)`, `compose`, `permits` (The Hearth T4, as revised); `Terrain` (liveness).
 - Produces:
   - `pub fn interior_of(room: &RoomAddr, terrain: &dyn Terrain) -> Interior`
   - `Terrain::is_built(&self, room: &RoomAddr) -> bool` (defaulted `false`)
@@ -393,7 +432,7 @@ pub const FURNISHING_COLD_C: f64 = 5.0;
 use super::anchor::Interior;
 use super::pattern::{compose, selection};
 use crate::liveness::Terrain;
-use hornvale_kernel::{RoomAddr, Seed};
+use hornvale_kernel::RoomAddr;
 
 /// The interior of `room`: which patterns it draws, composed into an anchor
 /// graph. `built` is "is anyone's territory this" and `cold` is "does warmth
@@ -401,12 +440,10 @@ use hornvale_kernel::{RoomAddr, Seed};
 pub fn interior_of(room: &RoomAddr, terrain: &dyn Terrain) -> Interior {
     let built = terrain.is_built(room);
     let cold = terrain.is_cold(room);
-    // `selection`'s seed is unused in The Hearth's v1 (a pure filter); it is
-    // threaded because the signature takes it. When the variation draw lands
-    // it must be keyed by pattern NAME, never by position — see the ledger's
-    // "owed to The Hearth".
-    let seed = Seed::new(0);
-    compose(&selection(&seed, built, cold))
+    // `selection` takes no seed: The Hearth's revised T4 dropped it, since v1's
+    // draw is a pure admissibility filter. When a variation draw lands it must
+    // key on pattern NAME, never on position.
+    compose(&selection(built, cold))
 }
 ```
 

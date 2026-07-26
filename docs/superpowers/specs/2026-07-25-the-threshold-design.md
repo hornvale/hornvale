@@ -11,7 +11,7 @@ Hearth's `Interior`, vocabulary, patterns and fields, none of which exist on
 `main`.
 **Decisions in force:** 0069 (fine position is never serialized), 0072 (derived
 geometry is causal), 0073 (epoch granularity is declared), 0009, 0016.
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (14 entries, nine
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (15 entries, nine
 ideonomy passes, four overturns).
 
 ---
@@ -170,11 +170,17 @@ error in the case The Hearth does model.
 
 - A **narrow** seam lands at a distinguished anchor — the doorway actually
   used, which is The Hearth's `AnchorKind::Threshold`.
-- A **broad** seam lands at the interior's **hub**. That is the only
-  topologically available answer: without coordinates there is no "nearest
-  anchor to the north edge," and §2.1 of The Hearth forbids reaching for one
-  (*outcomes read topology, never metrics*). The forced answer being the
-  metric-free one is a good sign rather than a compromise.
+- A **broad** seam lands at the interior's **hub** — the first `Ground`
+  anchor, which is how The Hearth's composition defines the hub. That is the
+  only topologically available answer: without coordinates there is no
+  "nearest anchor to the north edge," and §2.1 of The Hearth forbids reaching
+  for one (*outcomes read topology, never metrics*). The forced answer being
+  the metric-free one is a good sign rather than a compromise.
+
+  **Find the hub by kind, never by index.** They coincide today only because
+  `Ground` leads `INVENTORY` for both filters, and depending on that would be
+  identity-by-position — the same bug class this campaign has now found at two
+  other scales (`AnchorId` as a vector offset, a seeded draw keyed by index).
 
 **This is additive to The Hearth, not a replacement.** It ships
 `AnchorKind::Threshold`; this campaign's seam model *uses* it as the
