@@ -3244,43 +3244,7 @@ impl<'a> TickSystem for DriveMovements<'a> {
             &mut afraid_memo,
         );
         for npc in &self.npcs {
-            let mut pos = agent_position(frozen, npc, self.from);
-            let mut day = self.from.day;
-            // A scratch ledger view isn't available; track drank locally: derive
-            // the starting last-drank day from `frozen`, then simulate forward,
-            // updating a local `last_drank` as we emit `DRANK` facts.
-            let mut last_drank = frozen
-                .find(DRANK)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Likewise the last rest day (The Slumber): fatigue is time since it,
-            // reset when a `rested` fact is emitted.
-            let mut last_rested = frozen
-                .find(RESTED)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Likewise the last meal day (The Provender): hunger is a path
-            // integral since it, reset when an `eaten` fact is emitted.
-            let mut last_ate = frozen
-                .find(EATEN)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Belief and exploration state, evolved locally across the walk (the
-            // fold includes this tick's own emitted moves). Seed belief from the
-            // pre-tick history; grow it whenever the agent stands in water.
-            // The Tidings: seed from the BAND's pooled belief (co-located
-            // members share what they know), not the creature's alone.
-            let mut believed = shared_believed_water(
-                frozen,
-                npc,
-                &self.npcs,
-                self.from,
-                self.terrain,
-                PLAN_BUDGET,
-            );
+            let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
             // The Haunt + The Phantom: the ground this creature remembers being
             // frightened on — a fold over its committed (pre-tick) history,
             // computed ONCE per creature. The FULL population is the roster, so
@@ -3296,249 +3260,372 @@ impl<'a> TickSystem for DriveMovements<'a> {
                 &self.npcs,
                 &mut afraid_memo,
             );
-            let mut visited: std::collections::BTreeSet<RoomAddr> =
-                std::collections::BTreeSet::new();
-            visited.insert(pos.clone());
-            let mut steps = 0usize;
-            // The commitment mode, carried across this walk's steps (session-
-            // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
-            let mut mode = Mode::Idle;
-            loop {
-                if day > self.to.day || steps >= MAX_STEPS {
-                    break;
+            while self.advance_one(frozen, npc, &mut st, &alarm, &memory, &mut out) {}
+        }
+        out
+    }
+}
+
+/// The state of ONE creature's walk through a tick — the nine pieces of
+/// per-creature state that `DriveMovements::step` used to hold in loop locals
+/// (The Action Clock, spec §6).
+///
+/// Hoisting them into a struct is what lets a walk be advanced one action at a
+/// time by [`DriveMovements::advance_one`] instead of run to completion in a
+/// single pass, which in turn is what lets several creatures interleave on a
+/// shared clock. The extraction is behaviour-preserving on its own: the fields
+/// are the same values, initialised in the same way, mutated in the same order.
+///
+/// Tick-local and re-derived, never persisted — like [`Mode`], which it carries.
+struct WalkState {
+    /// Where the creature currently stands.
+    pos: RoomAddr,
+    /// How far into the interval the walk has got.
+    day: f64,
+    /// The day of its most recent drink, `frozen`-seeded and advanced by this
+    /// walk's own emitted `drank` facts.
+    last_drank: f64,
+    /// The day of its most recent sleep, the fatigue twin of `last_drank`.
+    last_rested: f64,
+    /// The day of its most recent meal, the hunger twin of `last_drank`.
+    last_ate: f64,
+    /// The water source it believes in, seeded from the band's pooled belief and
+    /// grown whenever it stands in water.
+    believed: Option<RoomAddr>,
+    /// The cells this walk has already stood on — the explorer's frontier.
+    visited: std::collections::BTreeSet<RoomAddr>,
+    /// How many decisions this walk has taken, against `MAX_STEPS`.
+    steps: usize,
+    /// The commitment mode carried across this walk's steps (hysteresis).
+    mode: Mode,
+}
+
+impl WalkState {
+    /// Open a walk for `npc` at `from`, deriving every field from the FROZEN
+    /// pre-tick ledger — nothing here reads another creature's mid-tick state
+    /// (spec §5), `band` being consulted only through `shared_believed_water`'s
+    /// own frozen reads.
+    fn begin(
+        frozen: &Ledger,
+        npc: &Npc,
+        band: &[Npc],
+        from: WorldTime,
+        terrain: &dyn Terrain,
+    ) -> WalkState {
+        let pos = agent_position(frozen, npc, from);
+        let day = from.day;
+        // A scratch ledger view isn't available; track drank locally: derive
+        // the starting last-drank day from `frozen`, then simulate forward,
+        // updating a local `last_drank` as we emit `DRANK` facts.
+        let last_drank = frozen
+            .find(DRANK)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Likewise the last rest day (The Slumber): fatigue is time since it,
+        // reset when a `rested` fact is emitted.
+        let last_rested = frozen
+            .find(RESTED)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Likewise the last meal day (The Provender): hunger is a path
+        // integral since it, reset when an `eaten` fact is emitted.
+        let last_ate = frozen
+            .find(EATEN)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Belief and exploration state, evolved locally across the walk (the
+        // fold includes this tick's own emitted moves). Seed belief from the
+        // pre-tick history; grow it whenever the agent stands in water.
+        // The Tidings: seed from the BAND's pooled belief (co-located
+        // members share what they know), not the creature's alone.
+        let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
+        let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        visited.insert(pos.clone());
+        let steps = 0usize;
+        // The commitment mode, carried across this walk's steps (session-
+        // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
+        let mode = Mode::Idle;
+        WalkState {
+            pos,
+            day,
+            last_drank,
+            last_rested,
+            last_ate,
+            believed,
+            visited,
+            steps,
+            mode,
+        }
+    }
+}
+
+impl<'a> DriveMovements<'a> {
+    /// Advance ONE creature by ONE decision-and-act: perceive, arbitrate, act,
+    /// append any emitted facts to `out`, and update `st`. Returns `false` when
+    /// this walk is over — past `to`, out of `MAX_STEPS`, or halted by one of
+    /// the arms' own stop conditions — and `true` when it should be advanced
+    /// again.
+    ///
+    /// Every cross-agent read is FROZEN-based (spec §5): `frozen` is the
+    /// pre-tick ledger and `alarm` and `memory` were both built from it before
+    /// any creature moved. Nothing here can observe another creature's mid-tick
+    /// position, which is what keeps the alarm wave terminating and the emitted
+    /// order a pure function of the frozen ledger.
+    fn advance_one(
+        &self,
+        frozen: &Ledger,
+        npc: &Npc,
+        st: &mut WalkState,
+        alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+        memory: &HazardMemory,
+        out: &mut Vec<Fact>,
+    ) -> bool {
+        if st.day > self.to.day || st.steps >= MAX_STEPS {
+            return false;
+        }
+        st.steps += 1;
+        // Standing in water forms/updates belief (nearest-to-home wins).
+        if is_water(&st.pos, self.terrain) {
+            st.believed =
+                nearer_to_home(&npc.home, st.believed.take(), st.pos.clone(), PLAN_BUDGET);
+        }
+        // The temperature-coupled thirst integral (The Kindling),
+        // re-derived over the committed history so far (`frozen` + this
+        // tick's own emitted `out` moves), so the tick's drive matches
+        // `affect_of`'s exactly — one shared fold, no manual alignment.
+        let mut sightings = agent_sightings(frozen, npc.entity, st.day);
+        for f in &*out {
+            if f.subject == npc.entity
+                && f.predicate == AGENT_AT
+                && let Value::Text(s) = &f.object
+                && let Some(d) = f.day
+                && d <= st.day
+            {
+                sightings.push((d, room_from_text(s)));
+            }
+        }
+        sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+        let drive = integrate_thirst(
+            &sightings,
+            &npc.home,
+            st.last_drank,
+            st.day,
+            self.terrain,
+            npc.metabolic_class,
+            &self.params,
+        );
+        // Hunger reuses the same Kindling integral over the same
+        // occupancy (The Provender), but since the last MEAL, at the
+        // HUNGER rate — the second consumer of the path-integral.
+        let hunger_urgency = integrate_thirst(
+            &sightings,
+            &npc.home,
+            st.last_ate,
+            st.day,
+            self.terrain,
+            npc.metabolic_class,
+            &HUNGER,
+        );
+        let explore_step = lowest_unvisited_neighbor(&st.pos, &st.visited, self.terrain);
+        let fatigue = (FATIGUE_RISE * (st.day - st.last_rested)).clamp(0.0, 1.0);
+        let view = Perceived {
+            position: st.pos.clone(),
+            drive,
+            fatigue,
+            believed_water: st.believed.clone(),
+            believed_hazard: memory.shunned.clone(),
+            explore_step,
+        };
+        // BOTH drives now compete: thirst (the drank-fold, on the view)
+        // and thermal (the species' niche read against the per-day
+        // temperature at the cell). Where thermal is inactive (a
+        // comfortable cell — planted terrain with no temperature reads
+        // INFINITY → urgency 0), arbitration reduces to thirst-only and
+        // the walk is byte-identical to Stage 0.
+        let thirst = Thirst {
+            params: self.params,
+        };
+        let thermal = Thermal {
+            niche: npc.temperature_niche,
+            terrain: self.terrain,
+            day: WorldTime { day: st.day },
+            // No interior here either — see the note in `affect_of_memo`.
+            warmth: None,
+        };
+        let rest = Fatigue {
+            home: npc.home.clone(),
+        };
+        let hunger = Hunger {
+            urgency: hunger_urgency,
+            niche: npc.niche.clone(),
+            terrain: self.terrain,
+            day: WorldTime { day: st.day },
+        };
+        let danger = Danger {
+            terrain: self.terrain,
+            threat_niche: npc.threat_niche,
+            boldness: npc.boldness,
+            // THE ALARM: the tick's mover READS the per-tick field (built
+            // alarm-free above), so a calm creature beside genuine distress
+            // catches the alarm and flees. Empty on the settled worlds
+            // (no primary distress) ⇒ byte-identical.
+            alarm: Some(alarm),
+            // THE SHUDDER: the mover also carries the creature's own
+            // remembered dread — the transient half of the same fold that
+            // gave it `believed_hazard`, read at its OWN cell and added
+            // into the same slot as the sensed alarm. Empty on the settled
+            // worlds (no emitter ⇒ the fold's fast path records none) ⇒
+            // byte-identical.
+            dread: Some(&memory.dread),
+        };
+        // Affiliation (The Belonging): loneliness + home-step, from one
+        // plan home (reused, so urgency is O(1)).
+        let plan_home = plan_to_room(&st.pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
+        let social = Social {
+            loneliness: loneliness_from_plan(&plan_home),
+            home_step: plan_home.and_then(|p| p.into_iter().next()),
+        };
+        // The metabolism gate (The Kindling): Ametabolic → no drives.
+        // The niche gate (The Provender): an empty diet → no hunger.
+        // Danger (The Dread) and social (The Belonging) ride the same
+        // metabolic gate (a construct does not flinch or pine); danger is
+        // niche-less, social's gregariousness uniform in v1.
+        let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+        let mut drives: Vec<&dyn Drive> = Vec::new();
+        if !ametabolic {
+            drives.push(&thirst);
+            drives.push(&thermal);
+            drives.push(&rest);
+            if !npc.niche.is_zero() {
+                drives.push(&hunger);
+            }
+            drives.push(&danger);
+            drives.push(&social);
+        }
+        let helpless = !ametabolic && learned_helplessness(st.last_drank, st.day);
+        let disposition = Disposition {
+            latency: npc.deliberation_latency,
+            horizon: npc.time_horizon,
+            helpless,
+            awake: is_awake(
+                npc.activity,
+                self.terrain,
+                &st.pos,
+                WorldTime { day: st.day },
+            ),
+        };
+        let resolution = arbitrate(
+            &view,
+            &npc.home,
+            &drives,
+            &disposition,
+            st.mode,
+            PLAN_BUDGET,
+        );
+        st.mode = resolution.mode;
+        match resolution.intent {
+            Intent::Do(Action::MoveTo(n)) => {
+                st.day += MOVE_DURATION;
+                if st.day > self.to.day {
+                    return false;
                 }
-                steps += 1;
-                // Standing in water forms/updates belief (nearest-to-home wins).
-                if is_water(&pos, self.terrain) {
-                    believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
-                }
-                // The temperature-coupled thirst integral (The Kindling),
-                // re-derived over the committed history so far (`frozen` + this
-                // tick's own emitted `out` moves), so the tick's drive matches
-                // `affect_of`'s exactly — one shared fold, no manual alignment.
-                let mut sightings = agent_sightings(frozen, npc.entity, day);
-                for f in &out {
-                    if f.subject == npc.entity
-                        && f.predicate == AGENT_AT
-                        && let Value::Text(s) = &f.object
-                        && let Some(d) = f.day
-                        && d <= day
-                    {
-                        sightings.push((d, room_from_text(s)));
+                // Provenance follows the committed errand (the mode):
+                // thirst distinguishes BELIEVED (beelining a known
+                // source) from IGNORANT (exploring blind); thermal names
+                // the comfort-seeking; homing names the sated walk back.
+                let provenance = match st.mode {
+                    Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
+                    Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
+                    Mode::Pursuing(DriveKind::Hunger) => "foraged toward richer ground (hunger)",
+                    Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
+                    Mode::Pursuing(DriveKind::Social) => {
+                        "drifted homeward, missing its people (belonging)"
                     }
+                    Mode::Pursuing(DriveKind::Thirst) if st.believed.is_some() => {
+                        "went down to the river it knew (thirst)"
+                    }
+                    Mode::Pursuing(DriveKind::Thirst) => {
+                        "wandered, having found no water yet (thirst)" // ignorant
+                    }
+                    Mode::Homing | Mode::Idle => "walking home (sated)",
+                };
+                out.push(agent_at_fact(npc.entity, &n, st.day, provenance));
+                st.visited.insert(n.clone());
+                st.pos = n;
+            }
+            Intent::Do(Action::Drink) => {
+                out.push(drank_fact(
+                    npc.entity,
+                    st.day,
+                    "drank from the river (thirst sated)",
+                ));
+                st.last_drank = st.day;
+            }
+            Intent::Do(Action::Rest) => {
+                out.push(rested_fact(
+                    npc.entity,
+                    st.day,
+                    "slept at home (fatigue eased)",
+                ));
+                st.last_rested = st.day;
+                // Sleep through the off-phase in one jump to the next
+                // waking, rather than re-resting every step (The Slumber).
+                st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
+                if st.day > self.to.day {
+                    return false;
                 }
-                sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-                let drive = integrate_thirst(
-                    &sightings,
-                    &npc.home,
-                    last_drank,
-                    day,
-                    self.terrain,
+            }
+            Intent::Do(Action::Eat) => {
+                out.push(eaten_fact(
+                    npc.entity,
+                    st.day,
+                    "grazed the productive ground (hunger sated)",
+                ));
+                st.last_ate = st.day;
+            }
+            Intent::Hold => {
+                // Idle (or unreachable): jump to the next act-crossing
+                // in closed form rather than spinning day-by-day. The
+                // strict-progress guarantee: `next_act <= day` breaks
+                // (a thirsty-but-unreachable Hold recomputes the SAME
+                // next_act every iteration — without this check, that
+                // spins to `MAX_STEPS` for nothing).
+                //
+                // Held at a fixed cell, thirst rises linearly at that
+                // cell's COUPLED rate (The Kindling: temperature is
+                // sampled once per occupancy segment, so a held cell has
+                // a constant rate and the jump stays closed-form): the
+                // next crossing is `day + (act − drive) / rate_here`.
+                //
+                // A degenerate `rate == 0.0` makes `next_act` NaN or
+                // infinite. Every NaN comparison is `false`, so leaving
+                // `day` untouched (rather than assigning it) keeps
+                // `drive` well-defined next iteration. Without this guard
+                // a NaN `day` makes `drive` NaN, flipping the thirst
+                // check into the plan-home branch — a budgeted A* search
+                // every remaining iteration up to `MAX_STEPS`, an
+                // O(MAX_STEPS * PLAN_BUDGET) blowup (the-surmise T3
+                // review) instead of the intended cheap spin. `steps >=
+                // MAX_STEPS` alone still bounds the loop.
+                let rate_here = rise_at(
+                    self.terrain.temperature(&st.pos, WorldTime { day: st.day }),
                     npc.metabolic_class,
                     &self.params,
                 );
-                // Hunger reuses the same Kindling integral over the same
-                // occupancy (The Provender), but since the last MEAL, at the
-                // HUNGER rate — the second consumer of the path-integral.
-                let hunger_urgency = integrate_thirst(
-                    &sightings,
-                    &npc.home,
-                    last_ate,
-                    day,
-                    self.terrain,
-                    npc.metabolic_class,
-                    &HUNGER,
-                );
-                let explore_step = lowest_unvisited_neighbor(&pos, &visited, self.terrain);
-                let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
-                let view = Perceived {
-                    position: pos.clone(),
-                    drive,
-                    fatigue,
-                    believed_water: believed.clone(),
-                    believed_hazard: memory.shunned.clone(),
-                    explore_step,
-                };
-                // BOTH drives now compete: thirst (the drank-fold, on the view)
-                // and thermal (the species' niche read against the per-day
-                // temperature at the cell). Where thermal is inactive (a
-                // comfortable cell — planted terrain with no temperature reads
-                // INFINITY → urgency 0), arbitration reduces to thirst-only and
-                // the walk is byte-identical to Stage 0.
-                let thirst = Thirst {
-                    params: self.params,
-                };
-                let thermal = Thermal {
-                    niche: npc.temperature_niche,
-                    terrain: self.terrain,
-                    day: WorldTime { day },
-                    // No interior here either — see the note in `affect_of_memo`.
-                    warmth: None,
-                };
-                let rest = Fatigue {
-                    home: npc.home.clone(),
-                };
-                let hunger = Hunger {
-                    urgency: hunger_urgency,
-                    niche: npc.niche.clone(),
-                    terrain: self.terrain,
-                    day: WorldTime { day },
-                };
-                let danger = Danger {
-                    terrain: self.terrain,
-                    threat_niche: npc.threat_niche,
-                    boldness: npc.boldness,
-                    // THE ALARM: the tick's mover READS the per-tick field (built
-                    // alarm-free above), so a calm creature beside genuine distress
-                    // catches the alarm and flees. Empty on the settled worlds
-                    // (no primary distress) ⇒ byte-identical.
-                    alarm: Some(&alarm),
-                    // THE SHUDDER: the mover also carries the creature's own
-                    // remembered dread — the transient half of the same fold that
-                    // gave it `believed_hazard`, read at its OWN cell and added
-                    // into the same slot as the sensed alarm. Empty on the settled
-                    // worlds (no emitter ⇒ the fold's fast path records none) ⇒
-                    // byte-identical.
-                    dread: Some(&memory.dread),
-                };
-                // Affiliation (The Belonging): loneliness + home-step, from one
-                // plan home (reused, so urgency is O(1)).
-                let plan_home = plan_to_room(&pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
-                let social = Social {
-                    loneliness: loneliness_from_plan(&plan_home),
-                    home_step: plan_home.and_then(|p| p.into_iter().next()),
-                };
-                // The metabolism gate (The Kindling): Ametabolic → no drives.
-                // The niche gate (The Provender): an empty diet → no hunger.
-                // Danger (The Dread) and social (The Belonging) ride the same
-                // metabolic gate (a construct does not flinch or pine); danger is
-                // niche-less, social's gregariousness uniform in v1.
-                let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
-                let mut drives: Vec<&dyn Drive> = Vec::new();
-                if !ametabolic {
-                    drives.push(&thirst);
-                    drives.push(&thermal);
-                    drives.push(&rest);
-                    if !npc.niche.is_zero() {
-                        drives.push(&hunger);
-                    }
-                    drives.push(&danger);
-                    drives.push(&social);
+                let next_act = st.day + (self.params.act - drive) / rate_here;
+                if !next_act.is_finite() {
+                    return true;
                 }
-                let helpless = !ametabolic && learned_helplessness(last_drank, day);
-                let disposition = Disposition {
-                    latency: npc.deliberation_latency,
-                    horizon: npc.time_horizon,
-                    helpless,
-                    awake: is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
-                };
-                let resolution =
-                    arbitrate(&view, &npc.home, &drives, &disposition, mode, PLAN_BUDGET);
-                mode = resolution.mode;
-                match resolution.intent {
-                    Intent::Do(Action::MoveTo(n)) => {
-                        day += MOVE_DURATION;
-                        if day > self.to.day {
-                            break;
-                        }
-                        // Provenance follows the committed errand (the mode):
-                        // thirst distinguishes BELIEVED (beelining a known
-                        // source) from IGNORANT (exploring blind); thermal names
-                        // the comfort-seeking; homing names the sated walk back.
-                        let provenance = match mode {
-                            Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
-                            Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
-                            Mode::Pursuing(DriveKind::Hunger) => {
-                                "foraged toward richer ground (hunger)"
-                            }
-                            Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
-                            Mode::Pursuing(DriveKind::Social) => {
-                                "drifted homeward, missing its people (belonging)"
-                            }
-                            Mode::Pursuing(DriveKind::Thirst) if believed.is_some() => {
-                                "went down to the river it knew (thirst)"
-                            }
-                            Mode::Pursuing(DriveKind::Thirst) => {
-                                "wandered, having found no water yet (thirst)" // ignorant
-                            }
-                            Mode::Homing | Mode::Idle => "walking home (sated)",
-                        };
-                        out.push(agent_at_fact(npc.entity, &n, day, provenance));
-                        visited.insert(n.clone());
-                        pos = n;
-                    }
-                    Intent::Do(Action::Drink) => {
-                        out.push(drank_fact(
-                            npc.entity,
-                            day,
-                            "drank from the river (thirst sated)",
-                        ));
-                        last_drank = day;
-                    }
-                    Intent::Do(Action::Rest) => {
-                        out.push(rested_fact(
-                            npc.entity,
-                            day,
-                            "slept at home (fatigue eased)",
-                        ));
-                        last_rested = day;
-                        // Sleep through the off-phase in one jump to the next
-                        // waking, rather than re-resting every step (The Slumber).
-                        day = next_awake_day(npc.activity, self.terrain, &pos, day);
-                        if day > self.to.day {
-                            break;
-                        }
-                    }
-                    Intent::Do(Action::Eat) => {
-                        out.push(eaten_fact(
-                            npc.entity,
-                            day,
-                            "grazed the productive ground (hunger sated)",
-                        ));
-                        last_ate = day;
-                    }
-                    Intent::Hold => {
-                        // Idle (or unreachable): jump to the next act-crossing
-                        // in closed form rather than spinning day-by-day. The
-                        // strict-progress guarantee: `next_act <= day` breaks
-                        // (a thirsty-but-unreachable Hold recomputes the SAME
-                        // next_act every iteration — without this check, that
-                        // spins to `MAX_STEPS` for nothing).
-                        //
-                        // Held at a fixed cell, thirst rises linearly at that
-                        // cell's COUPLED rate (The Kindling: temperature is
-                        // sampled once per occupancy segment, so a held cell has
-                        // a constant rate and the jump stays closed-form): the
-                        // next crossing is `day + (act − drive) / rate_here`.
-                        //
-                        // A degenerate `rate == 0.0` makes `next_act` NaN or
-                        // infinite. Every NaN comparison is `false`, so leaving
-                        // `day` untouched (rather than assigning it) keeps
-                        // `drive` well-defined next iteration. Without this guard
-                        // a NaN `day` makes `drive` NaN, flipping the thirst
-                        // check into the plan-home branch — a budgeted A* search
-                        // every remaining iteration up to `MAX_STEPS`, an
-                        // O(MAX_STEPS * PLAN_BUDGET) blowup (the-surmise T3
-                        // review) instead of the intended cheap spin. `steps >=
-                        // MAX_STEPS` alone still bounds the loop.
-                        let rate_here = rise_at(
-                            self.terrain.temperature(&pos, WorldTime { day }),
-                            npc.metabolic_class,
-                            &self.params,
-                        );
-                        let next_act = day + (self.params.act - drive) / rate_here;
-                        if !next_act.is_finite() {
-                            continue;
-                        }
-                        if next_act <= day || next_act > self.to.day {
-                            break;
-                        }
-                        day = next_act;
-                    }
+                if next_act <= st.day || next_act > self.to.day {
+                    return false;
                 }
+                st.day = next_act;
             }
         }
-        out
+        true
     }
 }
 
@@ -5022,6 +5109,192 @@ mod tests {
             shared_believed_water(&ledger, &lost, &band, now, &t, 10_000),
             None
         );
+    }
+
+    /// The before-picture fixture for the walk hoist (The Action Clock T3): a
+    /// two-creature planted-terrain world walked over a long interval, chosen
+    /// because it exercises every arm of the decision loop — moves under several
+    /// provenances, a drink, rests across the diurnal off-phase, and meals — so
+    /// the emitted sequence is a wide net for an extraction bug.
+    ///
+    /// Returns the emitted facts rendered as one line per fact:
+    /// `subject|predicate|object|day-bits|provenance`.
+    fn hoist_walk_shape() -> Vec<String> {
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+
+        let sys = DriveMovements {
+            npcs: vec![knower, lost],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
+            terrain: &t,
+        };
+        sys.step(&ledger)
+            .iter()
+            .map(|f| {
+                format!(
+                    "{:?}|{}|{:?}|{:?}|{}",
+                    f.subject,
+                    f.predicate,
+                    f.object,
+                    f.day.map(f64::to_bits),
+                    f.provenance
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_hoisted_walk_emits_exactly_what_the_loop_emitted() {
+        // THE REFACTOR'S WARRANT (The Action Clock T3). The per-creature walk is
+        // being hoisted out of `DriveMovements::step`'s loop into `WalkState` +
+        // `advance_one`, and the claim is that this changes NOTHING. So the
+        // emitted fact sequence — subject, predicate, object, the day's exact
+        // bits, and provenance, IN ORDER — is pinned here against the loop as it
+        // stood before the extraction. Written and passing BEFORE the hoist; it
+        // must still pass after, or the extraction is wrong.
+        //
+        // It is a golden, deliberately: a self-consistency check (run twice, get
+        // the same answer) is satisfied by any deterministic implementation,
+        // including a broken one. Only a recorded before-picture pins the OLD
+        // behaviour.
+        //
+        // Note the shape it records: all of `EntityId(1)`'s facts, then all of
+        // `EntityId(2)`'s. That is the sequential loop this campaign later
+        // replaces with a shared clock (T5), at which point this golden MOVES —
+        // and having to rewrite it by hand is the point, because the drift is
+        // then named rather than regenerated over.
+        const EXPECTED: &[&str] = &[
+            r#"EntityId(1)|rested|Flag(true)|Some(4607182418800017408)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4618178707890180369)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4618854247834285941)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4618854247834285941)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4618966837824970203)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4619079427815654465)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4622963782494261520)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4622963782494261520)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623160814977958981)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4623217109973301112)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4623217109973301112)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623273404968643243)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4623329699963985374)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4625801988509427303)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625858283504769435)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4625886431002440501)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4625886431002440501)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625914578500111567)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4625942725997782633)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4627481455870467552)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4627481455870467552)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627551824614645217)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4627579972112316283)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4627579972112316283)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627608119609987349)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4627636267107658415)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4629174996980343334)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629245365724520999)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4629273513222192065)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4629273513222192065)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629301660719863131)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4629329808217534197)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4630284477513544502)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4630284477513544502)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630312625011215567)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4630326698760051100)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4630326698760051100)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630340772508886633)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4630354846257722166)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4607182418800017408)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4618178707890180369)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4618854247834285941)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4618854247834285941)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4618966837824970203)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4619079427815654465)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4622963782494261520)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4622963782494261520)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623160814977958981)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4623217109973301112)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4623217109973301112)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623273404968643243)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4623329699963985374)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4625801988509427303)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625858283504769435)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4625886431002440501)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4625886431002440501)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625914578500111567)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4625942725997782633)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4627481455870467552)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4627481455870467552)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627551824614645217)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4627579972112316283)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4627579972112316283)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627608119609987349)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4627636267107658415)|walking home (sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4629174996980343334)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629245365724520999)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4629273513222192065)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4629273513222192065)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629301660719863131)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4629329808217534197)|walking home (sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4630284477513544502)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4630284477513544502)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630312625011215567)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4630326698760051100)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4630326698760051100)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630340772508886633)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4630354846257722166)|walking home (sated)"#,
+        ];
+        let shape = hoist_walk_shape();
+        assert_eq!(
+            shape.len(),
+            EXPECTED.len(),
+            "the walk emitted {} facts, not the recorded {}",
+            shape.len(),
+            EXPECTED.len()
+        );
+        for (i, (got, want)) in shape.iter().zip(EXPECTED.iter()).enumerate() {
+            assert_eq!(
+                got, want,
+                "fact {i} differs from the recorded before-picture"
+            );
+        }
     }
 
     #[test]
