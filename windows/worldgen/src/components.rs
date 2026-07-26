@@ -49,8 +49,12 @@ pub struct WorldComponents {
 
 impl WorldComponents {
     /// Gather every domain's canonical registry and enforce referential
-    /// integrity: the peopled cluster shares one key-set, and every peopled
-    /// kind has a biosphere row. Fails loudly with the physical reason.
+    /// integrity: the nested-capacity chain speech ⊆ perception ⊆ mind (not
+    /// one shared key-set — since The Eremite the peopled cluster is a
+    /// lattice, and a `Solitary` minded kind may carry a mind without
+    /// perception or speech), every minded kind has a biosphere row, and a
+    /// `Settled` kind carries the full peopled cluster. Fails loudly with the
+    /// physical reason.
     pub fn assemble() -> Result<Self, BuildError> {
         let biosphere = hornvale_species::biosphere_registry();
         let psyche = hornvale_species::psyche_registry();
@@ -228,9 +232,15 @@ fn check_integrity(
     family_proto: &ComponentStore<KindId, hornvale_language::ArticulationVector>,
     family_of: &ComponentStore<KindId, &'static str>,
 ) -> Result<(), BuildError> {
-    // Nested capacities (The Eremite): speech ⊆ mind, perception ⊆ mind, and a
-    // Settled people carries the full peopled cluster. A creature may carry a
-    // mind (psyche) without perception or speech — the solitary minded.
+    // Nested capacities (The Eremite; tightened to a CHAIN by The Vigil):
+    // speech ⊆ perception ⊆ mind, and a Settled people carries the full
+    // peopled cluster. A creature may carry a mind (psyche) without perception
+    // or speech (the solitary minded), and perception without speech (a future
+    // non-speaking perceiver — an owl with eyes and no words), but never speech
+    // without senses. 0065 enforced these as two independent branches under
+    // mind, which permitted exactly that incoherent case: between The Solitary
+    // Tongue and The Vigil the dragons occupied it, and a hardcoded
+    // goblin-baseline stopgap in `exposure_of_impl` was what kept it working.
     if !articulation.ids().eq(lexicon.ids()) {
         return Err(BuildError::MalformedKind(
             "articulation and lexicon registries must share one key-set".into(),
@@ -247,6 +257,11 @@ fn check_integrity(
         if !psyche.contains(k) {
             return Err(BuildError::MalformedKind(format!(
                 "kind {k:?} speaks but has no mind (psyche)"
+            )));
+        }
+        if !perception.contains(k) {
+            return Err(BuildError::MalformedKind(format!(
+                "speaking kind {k:?} has no perception (speech ⊆ perception ⊆ mind)"
             )));
         }
         if !family_of.contains(k) {
@@ -661,6 +676,60 @@ mod tests {
             &family_of,
         );
         assert!(matches!(result, Err(BuildError::MalformedKind(_))));
+    }
+
+    #[test]
+    fn integrity_rejects_a_speaker_with_no_perception() {
+        // The Vigil: the enforced lattice becomes the CHAIN
+        // speech ⊆ perception ⊆ mind. Decision 0065 enforced a FORK (speech ⊆
+        // mind, perception ⊆ mind), which permits a speaker with no senses —
+        // the state the dragons occupied between The Solitary Tongue and The
+        // Vigil, and the reason the goblin-baseline stopgap existed. An
+        // anti-vacuity negative: drop one speaker's perception row and expect
+        // a loud rejection, so the rule cannot pass by being unreachable.
+        let biosphere = biosphere_registry();
+        let psyche = psyche_registry();
+        let society = society_registry();
+        let articulation = articulation_registry();
+        let lexicon = lexicon_registry();
+        let family_of = family_of();
+
+        // `ComponentStore` has no `remove`, so build the reduced store by
+        // filtering.
+        let perception: ComponentStore<KindId, _> = perception_registry()
+            .iter()
+            .filter(|(k, _)| k.0 != "red-dragon")
+            .map(|(k, v)| (*k, *v))
+            .collect();
+
+        let result = WorldComponents::from_stores(
+            biosphere,
+            psyche,
+            society,
+            perception,
+            articulation,
+            lexicon,
+            family_proto(),
+            family_of,
+            ComponentStore::new(),
+            ComponentStore::new(),
+            ComponentStore::new(),
+        );
+        // Match the message, not just the variant: the perception check
+        // follows the psyche check in the same loop, and red-dragon carries a
+        // psyche, so a bare `MalformedKind(_)` match would also pass if the
+        // psyche check tripped instead — which would not exercise the rule
+        // this branch adds (speech ⊆ perception).
+        match result {
+            Err(BuildError::MalformedKind(msg)) => {
+                assert!(
+                    msg.contains("has no perception"),
+                    "must fail on the speech-without-perception rule, got {msg:?}"
+                );
+            }
+            Err(other) => panic!("expected MalformedKind, got a different BuildError: {other}"),
+            Ok(_) => panic!("expected MalformedKind, got Ok"),
+        }
     }
 
     #[test]

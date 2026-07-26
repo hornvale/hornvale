@@ -113,3 +113,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0071](0071-one-snapshot-per-commit.md) | One snapshot per commit; panes are pure projections | Accepted |
 | [0072](0072-derived-geometry-is-causal.md) | Derived geometry is causal | Accepted |
 | [0073](0073-epoch-granularity-is-declared.md) | Epoch granularity is declared, not discovered | Accepted |
+| [0074](0074-capacities-are-a-chain-and-facts-gate-on-components.md) | Capacities are a chain, and species facts gate on components | Accepted |
+| [0075](0075-the-causal-geometry-is-the-anchor-graph.md) | The causal derived geometry is the anchor graph, not the metric layout | Accepted |

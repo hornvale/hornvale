@@ -1604,7 +1604,7 @@ const SWITCH_MARGIN: f64 = 0.1;
 /// directly (see the [`Drive`] trait's stock-vs-flow note). NOT wired into the
 /// live NPC `decide` this stage (Stage 1 unit-tests it in isolation);
 /// arbitration of thirst + thermal together is Stage 2.
-/// type-audit: bare-ok(return)
+/// type-audit: bare-ok(ratio: warmth)
 pub struct Thermal<'a> {
     /// The species' temperature niche: `optimum` is the preferred °C, `width`
     /// the tolerance half-band. Discomfort is deviation past `width` from
@@ -1615,6 +1615,21 @@ pub struct Thermal<'a> {
     pub terrain: &'a dyn Terrain,
     /// The day the temperature is sensed at (the diurnal+seasonal phase).
     pub day: WorldTime,
+    /// The room INTERIOR's warmth at the creature's anchor (The Hearth), or
+    /// `None` where no interior exists — [`crate::interior::warmth_at`]'s
+    /// reading, folded ADDITIVELY into the felt temperature. It can only RAISE
+    /// what the creature feels, so a creature already comfortable in a cold
+    /// room is unchanged and an interior-free world is byte-identical by
+    /// construction: the same additive-latent discipline as [`Danger::alarm`],
+    /// and `None` is exactly the pre-Hearth reading. Read at the creature's OWN
+    /// anchor only (the field already decayed the emission over graph distance),
+    /// exactly as the alarm is read at its own cell.
+    ///
+    /// NOT LIVE in v1 (spec §9.1): nothing yet derives an [`crate::interior::Interior`]
+    /// from a real room and creatures have no anchor position, so every live
+    /// construction site passes `None`. The seam exists; the occupancy that
+    /// fills it is its own campaign.
+    pub warmth: Option<f64>,
 }
 
 impl<'a> Thermal<'a> {
@@ -1638,18 +1653,51 @@ impl<'a> Thermal<'a> {
     /// inactive (urgency `0.0`) at every cell and never enters arbitration.
     /// type-audit: bare-ok(ratio: return)
     fn urgency_at(&self, room: &RoomAddr) -> f64 {
-        let temp = self.terrain.temperature(room, self.day);
+        self.urgency_of(self.terrain.temperature(room, self.day))
+    }
+
+    /// The thermal urgency of a FELT temperature (°C) — the niche comparison
+    /// itself, factored out so the ambient reading ([`Self::urgency_at`]) and
+    /// the interior-warmed one ([`Self::urgency_here`]) can never disagree
+    /// about what a temperature feels like. Non-finite in, `0.0` out.
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency_of(&self, temp: f64) -> f64 {
         if !temp.is_finite() {
             return 0.0;
         }
         let dev = (temp - self.niche.optimum).abs();
         ((dev - self.niche.width).max(0.0) / self.niche.width).clamp(0.0, 1.0)
     }
+
+    /// The thermal urgency felt HERE — [`Self::urgency_at`] plus the room
+    /// interior's [`Thermal::warmth`] at the creature's anchor, folded
+    /// ADDITIVELY into the sensed temperature BEFORE the niche comparison (The
+    /// Hearth). The term can only RAISE the felt temperature, never lower it,
+    /// so a cold creature beside a fire is eased and no creature is made colder
+    /// by a hearth. `None` returns the ambient reading UNTOUCHED — not
+    /// `temp + 0.0` — so an interior-free world takes the same arithmetic path
+    /// it did before The Hearth. An unreadable cell stays unreadable: a
+    /// non-finite ambient temperature plus a finite warmth is still non-finite,
+    /// so it still registers `0.0`.
+    ///
+    /// The warmth field is emitted in °C at its source
+    /// ([`crate::interior::HEARTH_WARMTH`]) and decayed over graph distance
+    /// there, so it is folded 1:1 with no second dial to tune — one source of
+    /// scale, unlike the alarm's separate [`ALARM_SCALE`].
+    /// type-audit: bare-ok(ratio: return)
+    fn urgency_here(&self, room: &RoomAddr) -> f64 {
+        let temp = self.terrain.temperature(room, self.day);
+        self.urgency_of(self.warmth.map_or(temp, |w| temp + w))
+    }
 }
 
 impl<'a> Drive for Thermal<'a> {
     fn urgency(&self, view: &Perceived) -> f64 {
-        self.urgency_at(&view.position)
+        // THE HEARTH: the interior's warmth at the creature's own anchor joins
+        // the ambient temperature ADDITIVELY, so a creature by the fire feels
+        // the room it is in rather than the weather outside it. `warmth: None`
+        // — every live site in v1 — is the identity.
+        self.urgency_here(&view.position)
     }
     fn act_threshold(&self) -> f64 {
         THERMAL_ACT
@@ -2870,6 +2918,11 @@ pub fn affect_of_memo(
         niche: npc.temperature_niche,
         terrain,
         day,
+        // No interior: nothing yet derives an `Interior` from a real room and a
+        // creature has no anchor position to read warmth AT (spec §9.1), so the
+        // live drive senses the ambient temperature exactly as it did before
+        // The Hearth. The seam is here; the occupancy that fills it is not.
+        warmth: None,
     };
     let rest = Fatigue {
         home: npc.home.clone(),
@@ -3306,6 +3359,8 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     niche: npc.temperature_niche,
                     terrain: self.terrain,
                     day: WorldTime { day },
+                    // No interior here either — see the note in `affect_of_memo`.
+                    warmth: None,
                 };
                 let rest = Fatigue {
                     home: npc.home.clone(),
@@ -8511,6 +8566,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &cold_here,
             day,
+            warmth: None,
         };
         let view = at(home.clone());
         assert_eq!(
@@ -8534,6 +8590,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &hot_here,
             day,
+            warmth: None,
         };
         assert_eq!(
             drive.affordance(&view, PLAN_BUDGET),
@@ -8558,6 +8615,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
+            warmth: None,
         };
         let view = at(home.clone());
         assert_eq!(drive.urgency(&view), 0.0, "inside the band → zero urgency");
@@ -8589,6 +8647,7 @@ mod tests {
             niche: cold_niche(),
             terrain: &t,
             day,
+            warmth: None,
         };
         assert_eq!(cold.urgency(&view), 0.0, "the cold niche tolerates 2 °C");
         assert_eq!(
@@ -8601,6 +8660,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
+            warmth: None,
         };
         assert!(warm.urgency(&view) > 0.0, "the warm niche flees 2 °C");
         assert_eq!(
@@ -8628,6 +8688,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
+            warmth: None,
         };
         let view = at(home.clone());
         assert_eq!(drive.urgency(&view), drive.urgency(&view));
@@ -8658,6 +8719,7 @@ mod tests {
             niche: cold_niche(),
             terrain: &t,
             day,
+            warmth: None,
         };
         let view = at(home.clone());
         assert_eq!(
@@ -8702,6 +8764,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
@@ -8801,6 +8864,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // A representative spread of thirst states; each must arbitrate ==
@@ -8904,6 +8968,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
@@ -8960,6 +9025,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let Resolution {
@@ -9025,6 +9091,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         // (a) MILD thirst (0.5, active under eager_thirst, capped 0.5 < 0.6):
         //     severe cold wins → step toward WARMTH.
@@ -9103,6 +9170,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
@@ -9163,6 +9231,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
+            warmth: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         assert_eq!(thermal.anticipation_lead(0.0), 0.0);
@@ -9225,6 +9294,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Maxed thirst, KNOWS reachable water → would normally beeline.
@@ -9378,6 +9448,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
+            warmth: None,
         };
         let rest = Fatigue { home: home.clone() };
         let drives: [&dyn Drive; 3] = [&thirst, &thermal, &rest];
@@ -9525,6 +9596,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Tick 1: thirst grab-utility 0.50 < thermal 0.60 → commit to thermal.
@@ -9636,6 +9708,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
+            warmth: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let a = arb(
@@ -9720,6 +9793,115 @@ mod tests {
         assert!(
             in_band.valence > alone.valence,
             "the shared belief must make the felt state MORE positive, not just different"
+        );
+    }
+
+    #[test]
+    fn a_cold_creature_crosses_the_room_to_the_fire() {
+        // THE HEARTH, end to end: a thermally stressed creature in a room with a
+        // hearth routes to the hearth anchor and is warmer there than where it
+        // began. A creature in an identical room WITHOUT a fire has nowhere
+        // warmer to go — the additive-latent control.
+        use crate::interior::{AnchorKind, Interior, route_within, warmth_at};
+        let mut warm_room = Interior::new();
+        let door = warm_room.push(AnchorKind::Threshold, None);
+        let hall = warm_room.push(AnchorKind::Bed, None);
+        let hearth = warm_room.push(AnchorKind::Hearth, None);
+        warm_room.connect(door, hall);
+        warm_room.connect(hall, hearth);
+
+        let here = warmth_at(&warm_room, door, 64);
+        let there = warmth_at(&warm_room, hearth, 64);
+        assert!(there > here, "the fire is warmer than the doorway");
+        let plan = route_within(&warm_room, door, hearth, 64).expect("reachable");
+        assert_eq!(plan.last(), Some(&hearth), "the plan ends at the fire");
+
+        let mut cold_room = Interior::new();
+        let d2 = cold_room.push(AnchorKind::Threshold, None);
+        let h2 = cold_room.push(AnchorKind::Bed, None);
+        cold_room.connect(d2, h2);
+        assert_eq!(
+            warmth_at(&cold_room, d2, 64),
+            warmth_at(&cold_room, h2, 64),
+            "with no fire, nowhere is warmer — the creature has no reason to move"
+        );
+
+        // AND ON A REAL COMPOSITION, not only a hand-built graph — otherwise the
+        // demonstration proves the fixture rather than the grammar. The
+        // cold-built selection puts a hearth in an alcove off the ground, so the
+        // warmth gradient must be strictly positive walking in from the door.
+        use crate::interior::{compose, selection};
+        let real = compose(&selection(true, true));
+        let door = real
+            .ids()
+            .into_iter()
+            .find(|id| real.anchor(*id).kind == AnchorKind::Threshold)
+            .expect("a built room has a threshold");
+        let fire = real
+            .ids()
+            .into_iter()
+            .find(|id| real.anchor(*id).kind == AnchorKind::Hearth)
+            .expect("a cold built room has a hearth");
+        assert!(
+            warmth_at(&real, fire, 64) > warmth_at(&real, door, 64),
+            "in a really composed room, the fire is warmer than the doorway"
+        );
+        let real_plan = route_within(&real, door, fire, 256).expect("the fire is reachable");
+        assert!(
+            real_plan.len() >= 2,
+            "the route to the fire crosses the room rather than being one step: {real_plan:?}"
+        );
+    }
+
+    #[test]
+    fn the_thermal_drive_folds_the_hearths_warmth_additively() {
+        // THE HEARTH's drive seam. `warmth` is folded ADDITIVELY into the sensed
+        // temperature, so the SAME cold cell is urgent unwarmed and comfortable
+        // beside a fire — and `Some(0.0)` reads exactly as `None`, the identity
+        // every live construction site relies on for byte-identity.
+        let home = raddr(1.0);
+        let day = WorldTime { day: 0.0 };
+        // −10 °C against the warm niche (optimum 18, width 8): deviation 28,
+        // well past the band.
+        let t = PlantedTerrain::thermal([(home.clone(), -10.0)]);
+        let view = at(home.clone());
+
+        let unwarmed = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            warmth: None,
+        };
+        let unheated = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            warmth: Some(0.0),
+        };
+        let beside_the_fire = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            warmth: Some(30.0),
+        };
+
+        assert!(
+            unwarmed.urgency(&view) > unwarmed.act_threshold(),
+            "a −10 °C room is well past the warm niche's act threshold"
+        );
+        assert_eq!(
+            unheated.urgency(&view),
+            unwarmed.urgency(&view),
+            "a warmth of zero is the identity — an interior-free world is unchanged"
+        );
+        assert_eq!(
+            beside_the_fire.urgency(&view),
+            0.0,
+            "+30 °C of hearth carries −10 °C into the warm niche's tolerance band"
+        );
+        assert!(
+            beside_the_fire.urgency(&view) < unwarmed.urgency(&view),
+            "the additive term can only ease a COLD creature's discomfort"
         );
     }
 }

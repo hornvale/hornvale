@@ -291,6 +291,21 @@ recomputes, or for a save-format-class document whose meaning changes are epoch
 events; the end-to-end fixture for a document the client merely parses.** Where
 neither holds, a second committed copy is only a thing to drift.
 
+Every test of this bet so far has pushed on the *producer* side — new source
+classes, new layers, new document shapes. [The Vigil](./chronicle/the-vigil.md)
+pushed on the **observer** side instead, and the interface took it without
+modification. The observation machinery — the lens, the characteristic hour,
+the salience ranking — was authored for settling peoples, every one of which
+has a place, a society, and neighbours. A dragon has none of these: it never
+settles, so the exposure classifier that feeds it finds no biome, no
+neighbouring kind, no hearth. It nonetheless observes through exactly the same
+path, and the ranking it gets back is visibly its own — lunar eclipses outrank
+the sun for a crepuscular creature with a dark-adapted eye. That the consumer
+never learns which system produced a phenomenon is the half of this bet that
+was already well tested; that the *observer* need not be a member of a society
+for the interface to describe it is the half that had never been exercised,
+because until now every observer was.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

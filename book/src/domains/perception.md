@@ -129,14 +129,19 @@ exceptions (Study 007). Only on the 1,487 moonless worlds does the sun
 reclaim most kobold pantheons (90.4%), a bright night-star taking the rest
 — the identity lens makes no claim past what it was built to guarantee,
 and the moonless split is exactly that honest remainder, measured rather
-than assumed. `Crepuscular` is part of the closed vocabulary this
-vector is bound to but is claimed by no species this campaign, and rather
-than leave it undefined until some future people needs it, its activity
-factor (0.7) is authored now and the enumeration variant declared idle in
-the model card — the same treatment the species chapter gave deliberation
-latency, a dimension banked ahead of the rule that will consume it. A
-future crepuscular people is then a data change, not a code change: the
-formula above already knows what to do with it.
+than assumed. `Crepuscular` is part of the closed vocabulary this vector is
+bound to; authored ahead of any species that would claim it (the same
+treatment the species chapter gave deliberation latency, a dimension banked
+ahead of the rule that will consume it), its activity factor (0.7) sat idle
+in the model card through this campaign and Y2-2. It is idle no longer:
+*The Vigil* gave the three chromatic dragons perception, and `white-dragon`
+— polar, insolation optimum 0.05, twilight-dominated light — is the first
+shipped kind to read `Crepuscular` off its own authored niche. `red-dragon`
+reads `Diurnal` and `black-dragon` reads `Nocturnal` by the same rule, so
+the clade's one shared night vision (`ν = 0.9`) still yields three different
+characteristic hours (see [Species](./species.md) for the per-dragon
+derivation). Click and Ejective wait the same way in the articulation
+vector's own enumeration, for a species anatomy that claims one.
 
 **The skies ahead.** Religion already runs through each species' own eyes
 at its own hour — the composition root calls it once per species-flagship,

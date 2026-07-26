@@ -178,3 +178,47 @@ reversibility (ledger #7): the predicate algebra is the least-reversible piece
 and the object catalogue is purely additive, so vocabulary lands first and
 everything else composes onto it. Stage A is independently testable (JEPD, the
 composition table, A* over the graph) with no patterns and no fields at all.
+
+#15 [G4] — **v1 is a substrate, not an observable outcome — spec criterion
+corrected (owner: Option A, 2026-07-25).** · *Found while writing the plan, not
+at spec time:* nothing derives an `Interior` from a real room, and creatures have
+no anchor position, so every live site passes `warmth: None` and the headline
+outcome is demonstrated at unit level rather than observed in the sim. · *Why
+Option A:* adding derivation + occupancy means new per-creature positional state
+with its own entry rules, which moves behaviour, surrenders byte-identity, and
+makes the health battery the gate rather than a check — plausibly doubling the
+campaign while removing the property that makes it safe to land. Precedent: The
+Snapshot shipped campaign 1 with nothing newly playable. · *Actions:* success
+criterion rewritten to say "demonstrated, not yet observed"; spec §9.1 added
+naming the follow-up campaign (derivation + occupancy) and its first two tasks;
+the branch is pushed so a parallel session can read the spec without waiting for
+the merge. · *ideonomy 0 passes* (a scoping consequence discovered by
+construction, surfaced to the owner rather than resolved by me).
+
+#16 [G5] — **Upstream review from the parallel campaign The Threshold, acted on
+before T4 was dispatched.** That campaign (branch `the-threshold`, off
+`the-hearth`) brainstormed the derivation+occupancy half and returned five
+findings against this one. Disposition:
+- **`compose` was degenerate — ADOPTED, T4 rewritten.** Hub composition put
+  every anchor one hop from the first, so graph distance was 1–2, field decay
+  had nothing to decay over, and the cold-creature demonstration was a
+  single-step route barely exercising `route_within`. T4 now gives each pattern
+  an `Attach` (Hub / Beside(kind) / Within(kind)) and an optional `requires`
+  (Alexander's "patterns complete other patterns", made checkable), with an
+  **anti-hub test** demanding a route of ≥3 hops. This is the campaign's own
+  criterion turned on it: if composition rules do not carry the weight, it is a
+  catalogue.
+- **Inventory size before arming — ADOPTED.** 5 → 9 patterns; growth after The
+  Threshold makes furnishing live costs an epoch regardless.
+- **Key the seeded draw by NAME, not position — ADOPTED** as a documented
+  constraint on `selection` (an id-as-offset bug one scale up).
+- **live vs reachable — ADOPTED** into spec §9.1.
+- **The threshold modelling error** (one Threshold anchor per room, but rooms
+  have ~6 mesh neighbours, so two doorways share one anchor) — **absorbed by
+  The Threshold, no edit here**; our `Threshold` becomes the narrow-case landing
+  site and the wilderness test is correct as written.
+· *Also:* Stage A pushed to `origin/the-hearth`, because their plan's BLOCKING
+PRECONDITION was written against a branch that then carried "a spec and a plan
+and zero code commits."
+· *ideonomy 0 passes* (adopting another campaign's grounded review, not a fresh
+design choice).

@@ -248,6 +248,8 @@
 - [The Selvage](./chronicle/the-selvage.md)
 - [The Snapshot](./chronicle/the-snapshot.md)
 - [The Shudder](./chronicle/the-shudder.md)
+- [The Hearth](./chronicle/the-hearth.md)
+- [The Vigil](./chronicle/the-vigil.md)
 
 # Appendix: The Frontier
 
