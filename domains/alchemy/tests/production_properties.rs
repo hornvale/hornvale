@@ -126,3 +126,91 @@ fn no_production_output_leaves_the_unit_interval() {
         }
     }
 }
+
+/// End-to-end (`Substrate` -> `qualities_of` -> `signs_of`) pin: a denser
+/// substrate must read as heavier. `heft_tracks_density_faithfully` in
+/// `sign.rs` hand-builds a `QualityVector` directly, so nothing before this
+/// test connects a `Substrate` to a `Sign` through the full pipeline -- a
+/// constant `density` row in `qualities_of` would leave that unit test
+/// green.
+#[test]
+fn denser_substrate_reads_heavier_end_to_end() {
+    let light = Substrate {
+        metallic: 0.1,
+        organic: 0.8,
+        saline: 0.0,
+        refractory: 0.0,
+        purity: 1.0,
+    };
+    let heavy = Substrate {
+        metallic: 0.9,
+        organic: 0.0,
+        saline: 0.0,
+        refractory: 0.5,
+        purity: 1.0,
+    };
+    let heft = |s: &Substrate| signs_of(&qualities_of(s)).heft;
+    assert!(
+        heft(&heavy) > heft(&light),
+        "a denser substrate must read as heavier end-to-end"
+    );
+}
+
+/// End-to-end pin: a more malleable/fixed substrate reads both a greater
+/// grain and a greater lustre. Both signs are hand-authored linear blends
+/// of fixity and malleability in `signs_of`; every existing unit test for
+/// them hand-builds its `QualityVector`, so a constant `grain` or `lustre`
+/// row would leave the suite green without this.
+#[test]
+fn more_malleable_and_fixed_substrate_reads_grainier_and_more_lustrous_end_to_end() {
+    let soft = Substrate {
+        metallic: 0.2,
+        organic: 0.8,
+        saline: 0.0,
+        refractory: 0.0,
+        purity: 1.0,
+    };
+    let fixed = Substrate {
+        metallic: 0.9,
+        organic: 0.0,
+        saline: 0.0,
+        refractory: 0.0,
+        purity: 1.0,
+    };
+    let sg = |s: &Substrate| signs_of(&qualities_of(s));
+    assert!(
+        sg(&fixed).grain > sg(&soft).grain,
+        "a more fixed/malleable substrate must read a greater grain"
+    );
+    assert!(
+        sg(&fixed).lustre > sg(&soft).lustre,
+        "a more fixed/malleable substrate must read a greater lustre"
+    );
+}
+
+/// End-to-end pin: a more volatile/vital substrate reads a stronger odour.
+/// `odour` blends volatility and vitality in `signs_of`; nothing runs a
+/// `Substrate` through the full pipeline to reach it elsewhere, so a
+/// constant `odour` row would leave the suite green without this.
+#[test]
+fn more_volatile_and_vital_substrate_reads_stronger_odour_end_to_end() {
+    let inert = Substrate {
+        metallic: 0.5,
+        organic: 0.0,
+        saline: 0.0,
+        refractory: 0.0,
+        purity: 1.0,
+    };
+    let volatile = Substrate {
+        metallic: 0.5,
+        organic: 1.0,
+        saline: 0.0,
+        refractory: 0.0,
+        purity: 1.0,
+    };
+    let odour = |s: &Substrate| signs_of(&qualities_of(s)).odour;
+    assert!(
+        odour(&volatile) > odour(&inert),
+        "a more volatile/vital substrate must read a stronger odour"
+    );
+}
