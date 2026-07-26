@@ -128,6 +128,7 @@ fn peopled_components() -> WorldComponents {
     WorldComponents::from_stores(
         biosphere,
         psyche,
+        hornvale_species::society_registry(),
         hornvale_species::perception_registry(),
         hornvale_language::articulation_registry(),
         hornvale_language::lexicon_registry(),

@@ -141,7 +141,13 @@ fn derivations_replay() {
     for kind in hornvale_language::articulation_registry().ids() {
         let species = kind.0;
         let ph = hornvale_worldgen::language_of(&world, species);
-        let cascade = hornvale_language::draw_cascade(&world.seed, species);
+        // Route through the composition root's cascade_of (not the language
+        // crate's default-regime draw_cascade): the articulation registry is
+        // dragon-reachable (The Solitary Tongue), and a dragon's cascade must
+        // be drawn at its frozen regime, consistent with the lexicon
+        // lexicon_of below already builds at that same regime.
+        let cascade = hornvale_worldgen::cascade_of(&world, species)
+            .unwrap_or_else(|e| panic!("cascade_of({species}) failed: {e:?}"));
         let lex = hornvale_worldgen::lexicon_of(&world, species)
             .unwrap_or_else(|e| panic!("lexicon_of({species}) failed: {e:?}"));
 

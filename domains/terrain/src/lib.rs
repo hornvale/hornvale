@@ -9,6 +9,7 @@ pub mod crust;
 pub mod drainage;
 pub mod elevation;
 pub mod facts;
+pub mod features;
 pub mod globe;
 pub mod lithology;
 pub mod pins;
@@ -28,6 +29,7 @@ pub use carve::{
     CarveDelta, CarveParams, Provenance, REROUTE_TOP_RIVERS, apply_repose, carve_incision,
     erodibility, find_waterfalls, rerouted_flow_fraction, route_sediment,
 };
+pub use features::{Cave, CaveKind, Commodity, Deposit, DepositProcess};
 pub use globe::{GenesisOutcome, GlobeSummary, TectonicGlobe, generate, summarize};
 pub use lithology::{
     Appearance, Basement, Fertility, Hydro, MarginPolarity, MaterialBuffer, RockClass, SoilDepth,
@@ -262,7 +264,7 @@ mod tests {
     #[test]
     fn stream_labels_are_fully_qualified_and_documented() {
         let labels = stream_labels();
-        assert_eq!(labels.len(), 22);
+        assert_eq!(labels.len(), 23);
         assert_eq!(labels[0].0, "terrain");
         for (label, doc) in &labels[1..] {
             assert!(label.starts_with("terrain/"), "unqualified label {label}");

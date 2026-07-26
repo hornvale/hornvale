@@ -74,8 +74,8 @@ pub use clause::{
     ClauseSpec, Definiteness, Frame, Number, ParseContext, ParseError, parse_common, realize_common,
 };
 pub use etymology::{
-    AppliedRule, Cascade, Daughter, Derivation, RuleKind, SoundRule, assign_proto_roots,
-    draw_cascade, evolve, proto_root,
+    AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
+    assign_proto_roots, draw_cascade, draw_cascade_with_regime, evolve, proto_root,
 };
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
@@ -243,13 +243,63 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
+            // The Solitary Tongue: the three chromatic dragons speak a shared
+            // Draconic tongue (per-chromatic differentiation is deferred —
+            // one vector for white/red/black-dragon). Harsh and hissing: a
+            // high sibilance and loud voice from a huge, reptilian throat, a
+            // wide-open vowel space and low labiality (dragons have no lips
+            // to round), moderately voiced, and atonal like the peoples.
+            // `ExoticManner` offers only Trill/Click/Ejective — none reads as
+            // a hiss/growl (the high `sibilance` already carries the hiss),
+            // so this stays `None`, matching the "draconic" `family_proto`
+            // entry below.
+            (
+                KindId("white-dragon"),
+                ArticulationVector {
+                    labiality: 0.2,
+                    vowel_space: 0.4,
+                    voicing: 0.7,
+                    sibilance: 0.9,
+                    voice_loudness: 0.9,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("red-dragon"),
+                ArticulationVector {
+                    labiality: 0.2,
+                    vowel_space: 0.4,
+                    voicing: 0.7,
+                    sibilance: 0.9,
+                    voice_loudness: 0.9,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
+            (
+                KindId("black-dragon"),
+                ArticulationVector {
+                    labiality: 0.2,
+                    vowel_space: 0.4,
+                    voicing: 0.7,
+                    sibilance: 0.9,
+                    voice_loudness: 0.9,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
         ]
         .into_iter()
         .collect()
     }
 
     /// Peopled lexicon, one per speaking kind. Byte-identical to the former
-    /// species peopled component's noun + rung words.
+    /// species peopled component's noun + rung words for the four peoples;
+    /// The Solitary Tongue adds a shared stopgap row for the three
+    /// dragons (a solitary hoarder has no settlement or castes — these
+    /// words are placeholders satisfying the `articulation.ids ==
+    /// lexicon.ids` invariant, exercised only if a dragon is ever placed).
     /// type-audit: bare-ok(identifier-text)
     pub fn lexicon_registry() -> ComponentStore<KindId, Lexicon> {
         [
@@ -295,6 +345,44 @@ pub mod speech {
                     artisan: "tanner",
                     shaman: "omen-reader",
                     top: "headman",
+                },
+            ),
+            // The Solitary Tongue: a shared stopgap Draconic vocabulary — a
+            // solitary hoarder's "settlement" is its hoard, not a village;
+            // there is no warrior/artisan/shaman caste, only the hoard's one
+            // dweller, so every rung word names the same wyrm. Identical for
+            // all three chromatics (per-chromatic differentiation deferred).
+            (
+                KindId("white-dragon"),
+                Lexicon {
+                    noun: "hoard",
+                    worker_override: None,
+                    warrior: "wyrm",
+                    artisan: "wyrm",
+                    shaman: "wyrm",
+                    top: "wyrm",
+                },
+            ),
+            (
+                KindId("red-dragon"),
+                Lexicon {
+                    noun: "hoard",
+                    worker_override: None,
+                    warrior: "wyrm",
+                    artisan: "wyrm",
+                    shaman: "wyrm",
+                    top: "wyrm",
+                },
+            ),
+            (
+                KindId("black-dragon"),
+                Lexicon {
+                    noun: "hoard",
+                    worker_override: None,
+                    warrior: "wyrm",
+                    artisan: "wyrm",
+                    shaman: "wyrm",
+                    top: "wyrm",
                 },
             ),
         ]

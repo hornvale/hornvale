@@ -4,8 +4,8 @@
 
 use hornvale_kernel::Seed;
 use hornvale_language::{
-    Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameKind, Namer, Phonology,
-    SiteConcepts, build_lexicon, draw_phonology, render_views,
+    CascadeRegime, Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameKind, Namer,
+    Phonology, SiteConcepts, build_lexicon, draw_phonology, render_views,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -63,7 +63,16 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
         // ph is the daughter's own drawn phonology (the evolution target
         // and the phonology names are drawn under); proto is the DIFFERENT
         // permissive family-level proto phonology roots are drawn from.
-        let lex = build_lexicon(&Seed(seed), "fam", "swept", &ph, &proto, &exposures, &[]);
+        let lex = build_lexicon(
+            &Seed(seed),
+            "fam",
+            "swept",
+            &ph,
+            &proto,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         let namer = Namer::new(&Seed(seed), "swept", &ph);
         let site = SiteConcepts {
             concepts: &["water", "fire", "moon", "shadow"],

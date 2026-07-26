@@ -137,24 +137,60 @@ pub enum SocialForm {
     Settled,
 }
 
-/// The closed six-dimension psychology vector (spec §3). Scalars are bare
-/// ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening the vector
-/// requires its own campaign.
+impl SocialForm {
+    /// Whether this form lives *socially* — in a group with its own kind, so a
+    /// minded member has a society-mind (authority, status, an in-group). True
+    /// for `Gregarious` (packs/herds) and `Settled` (communities); false for
+    /// `Solitary` and `Sessile`. This is the sociality axis, deliberately
+    /// distinct from settlement-forming (`Settled` alone): a nomadic band is
+    /// social without being sedentary (decision 0068 refines 0067).
+    /// type-audit: bare-ok(flag: return)
+    pub const fn is_social(self) -> bool {
+        matches!(self, Self::Gregarious | Self::Settled)
+    }
+}
+
+/// The individual-mind vector (spec: The Cloister): the psychology every
+/// minded kind carries, whether or not it belongs to a society. Scalars are
+/// bare ratios in `[0, 1]` with 0.5 ≡ the goblin baseline; widening requires
+/// its own campaign.
 /// type-audit: bare-ok(ratio)
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct PsychVector {
-    /// How a society answers threat: flee 0 ↔ stand 1.
+pub struct MindVector {
+    /// How this creature answers threat: flee 0 ↔ stand 1.
     pub threat_response: f64,
-    /// How slowly decisions are made (idle this campaign; banked).
+    /// How slowly decisions are made (banked; read by the vessel).
     pub deliberation_latency: f64,
-    /// How wide "us" is drawn: insular 0 ↔ expansive 1.
-    pub in_group_radius: f64,
     /// How far ahead works are planned: immediate 0 ↔ generational 1.
     pub time_horizon: f64,
+}
+
+/// The community-mind vector (spec: The Cloister): the psychology only a
+/// society has, carried solely by `Settled` kinds. A `Solitary` creature
+/// carries none; consumers needing a society reading for one resolve
+/// [`SocietyVector::baseline`]. `in_group_radius` is a bare ratio in `[0, 1]`.
+/// type-audit: bare-ok(ratio)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SocietyVector {
     /// Authority shape.
     pub sociality: Sociality,
     /// What earns standing.
     pub status_basis: StatusBasis,
+    /// How wide "us" is drawn: insular 0 ↔ expansive 1.
+    pub in_group_radius: f64,
+}
+
+impl SocietyVector {
+    /// The goblin-baseline society reading — the value a mixed consumer
+    /// resolves for a `Solitary` kind that carries no society vector. Equal to
+    /// the goblin's authored society dims (`Hierarchic`, `Rank`, 0.5).
+    pub const fn baseline() -> Self {
+        Self {
+            sociality: Sociality::Hierarchic,
+            status_basis: StatusBasis::Rank,
+            in_group_radius: 0.5,
+        }
+    }
 }
 
 /// The closed three-dimension perception vector (spec §4). Scalars are bare
@@ -170,6 +206,22 @@ pub struct PerceptionVector {
     /// Celestial vs. terrestrial attention: earthbound 0 ↔ sky-rapt 1.
     pub sky_attention: f64,
 }
+
+/// The draconic clade's night-sky acuity. Authored once for the whole clade
+/// rather than per kind: `night_vision` is the only perception dimension that
+/// reaches language (it alone drives `pack_depths`' hue ladder), so a
+/// per-dragon value would give each dragon its own hue inventory and fragment
+/// the shared frozen Draconic tongue — the cognates section admits only
+/// concepts rooted in *every* daughter. A future dragon inherits this by
+/// construction; a deliberately divergent-eyed dragon must override it, which
+/// is exactly when someone should have to decide whether the shared tongue
+/// still holds. At this value the hue ladder yields depth 2, so Draconic's
+/// HUE vocabulary is exactly `dark`, `light`, and `red` — nothing else on
+/// that ladder. The same value separately opens the full luminance ladder
+/// (`gloom`/`shadow`/`starlit`, `pack_depths`' other output), so this is not
+/// a claim about Draconic's color/dark vocabulary as a whole (spec: The Vigil).
+/// type-audit: bare-ok(ratio)
+pub const DRACONIC_NIGHT_VISION: f64 = 0.9;
 
 /// A species' condition-tolerance profile: one response curve per v1
 /// environmental axis. v1 fixes the four axes; a later campaign generalizes
@@ -739,7 +791,8 @@ pub struct BiosphereTraits {
 // (articulation, lexicon, family proto) lives in `hornvale_language`.
 
 impl Component for BiosphereTraits {}
-impl Component for PsychVector {}
+impl Component for MindVector {}
+impl Component for SocietyVector {}
 impl Component for PerceptionVector {}
 
 /// The universal biosphere component, authored directly (one row per kind).
@@ -937,54 +990,42 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
     .collect()
 }
 
-/// The peopled psychology component — authored directly, present only for the
-/// four settling, speaking peoples (goblin is the baseline: scalars 0.5,
-/// default enum variants).
+/// The individual-mind component — authored directly, present for every
+/// minded kind (the four settling peoples and the three solitary dragons;
+/// goblin is the baseline: scalars 0.5).
 /// type-audit: bare-ok(identifier-text)
-pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
+pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
     [
         (
             KindId("goblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.5,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.5,
                 time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("kobold"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.7,
-                in_group_radius: 0.2,
                 time_horizon: 0.8,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Knowledge,
             },
         ),
         (
             KindId("hobgoblin"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.7,
                 deliberation_latency: 0.6,
-                in_group_radius: 0.3,
                 time_horizon: 0.5,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("bugbear"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.8,
                 deliberation_latency: 0.4,
-                in_group_radius: 0.3,
                 time_horizon: 0.3,
-                sociality: Sociality::Communal,
-                status_basis: StatusBasis::Rank,
             },
         ),
         // The Eremite: the three chromatic dragons carry a mind though they
@@ -992,35 +1033,26 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
         // profile (per-chromatic differentiation is a deferred refinement).
         (
             KindId("white-dragon"),
-            PsychVector {
-                threat_response: 0.95,            // an apex — stands, never flees
-                deliberation_latency: 0.5,        // banked dial, baseline
-                in_group_radius: 0.05,            // "us" = self; utterly solitary
-                time_horizon: 0.90,               // a centuries-long hoarder
-                sociality: Sociality::Hierarchic, // relates by dominance
-                status_basis: StatusBasis::Rank,  // esteems power / the hoard
+            MindVector {
+                threat_response: 0.95,     // an apex — stands, never flees
+                deliberation_latency: 0.5, // banked dial, baseline
+                time_horizon: 0.90,        // a centuries-long hoarder
             },
         ),
         (
             KindId("red-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.05,
                 time_horizon: 0.90,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
         (
             KindId("black-dragon"),
-            PsychVector {
+            MindVector {
                 threat_response: 0.95,
                 deliberation_latency: 0.5,
-                in_group_radius: 0.05,
                 time_horizon: 0.90,
-                sociality: Sociality::Hierarchic,
-                status_basis: StatusBasis::Rank,
             },
         ),
     ]
@@ -1028,8 +1060,55 @@ pub fn psyche_registry() -> ComponentStore<KindId, PsychVector> {
     .collect()
 }
 
-/// The peopled perception component — authored directly, present only for the
-/// four peoples (goblin is the baseline: diurnal, 0.5/0.5).
+/// The community-mind component — authored directly, present only for the
+/// four settling peoples (goblin is the baseline). A Solitary minded kind
+/// (a dragon) carries a MindVector but no SocietyVector.
+/// type-audit: bare-ok(identifier-text)
+pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
+    [
+        (
+            KindId("goblin"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.5,
+            },
+        ),
+        (
+            KindId("kobold"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Knowledge,
+                in_group_radius: 0.2,
+            },
+        ),
+        (
+            KindId("hobgoblin"),
+            SocietyVector {
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.3,
+            },
+        ),
+        (
+            KindId("bugbear"),
+            SocietyVector {
+                sociality: Sociality::Communal,
+                status_basis: StatusBasis::Rank,
+                in_group_radius: 0.3,
+            },
+        ),
+    ]
+    .into_iter()
+    .collect()
+}
+
+/// The perception component — authored directly, present for every minded
+/// SPEAKING kind: the four peoples (goblin is the baseline: diurnal, 0.5/0.5)
+/// and the three chromatic dragons (The Vigil). Since The Vigil the enforced
+/// lattice is `speech ⊆ perception ⊆ mind`, so a speaking kind added without a
+/// row here fails `check_integrity` at load rather than silently perceiving
+/// like a goblin.
 /// type-audit: bare-ok(identifier-text)
 pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
     [
@@ -1063,6 +1142,42 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 activity: ActivityCycle::Nocturnal,
                 night_vision: 0.7,
                 sky_attention: 0.3,
+            },
+        ),
+        // The Vigil: the three chromatic dragons perceive. One clade eye
+        // (`DRACONIC_NIGHT_VISION`), three ecological schedules — `activity`
+        // read off each kind's already-authored `ConditionNiche.insolation`
+        // optimum, and `sky_attention` low across the clade because the
+        // dimension means CELESTIAL vs terrestrial attention, not aerialness:
+        // `perception_lens.ambient = 1.5 - sky_attention`, and a hunting
+        // dragon on the wing looks DOWN.
+        (
+            KindId("white-dragon"),
+            PerceptionVector {
+                // polar, insolation optimum 0.05 — twilight-dominated light
+                activity: ActivityCycle::Crepuscular,
+                night_vision: DRACONIC_NIGHT_VISION,
+                // the open polar sky, the most of the three
+                sky_attention: 0.3,
+            },
+        ),
+        (
+            KindId("red-dragon"),
+            PerceptionVector {
+                // open volcanic terrain, insolation optimum 0.20 — high sun
+                activity: ActivityCycle::Diurnal,
+                night_vision: DRACONIC_NIGHT_VISION,
+                sky_attention: 0.25,
+            },
+        ),
+        (
+            KindId("black-dragon"),
+            PerceptionVector {
+                // shaded lowland swamp, insolation optimum 0.10 — ambush
+                activity: ActivityCycle::Nocturnal,
+                night_vision: DRACONIC_NIGHT_VISION,
+                // canopy, no sky: the most ground-attentive kind in the roster
+                sky_attention: 0.15,
             },
         ),
     ]
@@ -1296,9 +1411,10 @@ mod tests {
         let fam_ids: Vec<_> = fam.ids().collect();
         assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
 
-        // The Eremite: capacities nest (perception ⊆ psyche). The peoples carry
-        // both; the three dragons carry a mind (psyche) but no perception, so
-        // the two stores no longer share one key-set.
+        // Capacities nest (The Eremite, tightened by The Vigil): perception ⊆
+        // psyche, and since The Vigil every minded SPEAKER also perceives, so
+        // the two stores again share one key-set — seven kinds, not the four
+        // peoples.
         for kind in per.ids() {
             assert!(
                 psy.contains(kind),
@@ -1306,7 +1422,11 @@ mod tests {
             );
         }
         assert_eq!(psy.len(), 7, "four peoples + three minded dragons");
-        assert_eq!(per.len(), 4, "perception is the four peoples");
+        assert_eq!(
+            per.len(),
+            7,
+            "perception is the four peoples + the three dragons (The Vigil)"
+        );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
         }
@@ -1334,16 +1454,17 @@ mod tests {
     fn goblin_is_the_baseline_vector() {
         let psy = psyche_registry();
         let g = psy.get(&KindId("goblin")).unwrap();
-        for v in [
-            g.threat_response,
-            g.deliberation_latency,
-            g.in_group_radius,
-            g.time_horizon,
-        ] {
+        for v in [g.threat_response, g.deliberation_latency, g.time_horizon] {
             assert_eq!(v, 0.5, "goblin scalars must sit exactly at baseline");
         }
-        assert_eq!(g.sociality, Sociality::Hierarchic);
-        assert_eq!(g.status_basis, StatusBasis::Rank);
+        let soc = society_registry();
+        let g_soc = soc.get(&KindId("goblin")).unwrap();
+        assert_eq!(
+            g_soc.in_group_radius, 0.5,
+            "goblin society sits at baseline"
+        );
+        assert_eq!(g_soc.sociality, Sociality::Hierarchic);
+        assert_eq!(g_soc.status_basis, StatusBasis::Rank);
     }
 
     #[test]
@@ -1375,9 +1496,12 @@ mod tests {
         );
         let psy = psyche_registry();
         let k = psy.get(&KindId("kobold")).unwrap();
-        assert_eq!(k.sociality, Sociality::Communal);
-        assert_eq!(k.status_basis, StatusBasis::Knowledge);
-        assert!(k.in_group_radius < 0.5 && k.time_horizon > 0.5 && k.threat_response > 0.5);
+        assert!(k.time_horizon > 0.5 && k.threat_response > 0.5);
+        let soc = society_registry();
+        let k_soc = soc.get(&KindId("kobold")).unwrap();
+        assert_eq!(k_soc.sociality, Sociality::Communal);
+        assert_eq!(k_soc.status_basis, StatusBasis::Knowledge);
+        assert!(k_soc.in_group_radius < 0.5);
     }
 
     #[test]
@@ -1422,6 +1546,45 @@ mod tests {
         let k = per.get(&KindId("kobold")).unwrap();
         assert_eq!(k.activity, ActivityCycle::Nocturnal);
         assert!(k.night_vision > 0.5 && k.sky_attention > 0.5);
+    }
+
+    #[test]
+    fn draconic_perception_is_one_clade_eye_and_three_schedules() {
+        let per = perception_registry();
+        // The clade eye: night_vision is the ONLY perception dimension that
+        // reaches language (sole input to `pack_depths`), so every dragon
+        // shares one value — a per-dragon value would give each dragon its own
+        // hue inventory and fragment the shared Draconic tongue.
+        for name in ["white-dragon", "red-dragon", "black-dragon"] {
+            let d = per
+                .get(&KindId(name))
+                .unwrap_or_else(|| panic!("{name} carries a perception row"));
+            assert_eq!(
+                d.night_vision, DRACONIC_NIGHT_VISION,
+                "{name} shares the clade eye"
+            );
+            assert!(
+                d.sky_attention < 0.6,
+                "{name} is a ground-scanning predator, not sky-rapt"
+            );
+        }
+        // The ecological schedule: activity is read off each kind's own
+        // authored insolation optimum, so the three differ.
+        assert_eq!(
+            per.get(&KindId("red-dragon")).unwrap().activity,
+            ActivityCycle::Diurnal,
+            "red-dragon: insolation optimum 0.20, open volcanic high sun"
+        );
+        assert_eq!(
+            per.get(&KindId("black-dragon")).unwrap().activity,
+            ActivityCycle::Nocturnal,
+            "black-dragon: insolation optimum 0.10, shaded swamp ambush"
+        );
+        assert_eq!(
+            per.get(&KindId("white-dragon")).unwrap().activity,
+            ActivityCycle::Crepuscular,
+            "white-dragon: insolation optimum 0.05, polar twilight"
+        );
     }
 
     #[test]
@@ -1548,17 +1711,20 @@ mod tests {
         ] {
             let d = bio.get(&KindId(name)).unwrap();
             // The Eremite: the three dragons are MINDED fauna — a solitary
-            // psyche, but no perception or speech (deferred). Every other
-            // menagerie kind carries neither capacity.
+            // psyche. Since The Vigil they also perceive (one clade eye,
+            // three schedules — see `draconic_perception_is_one_clade_eye_
+            // and_three_schedules`). Every other menagerie kind carries
+            // neither capacity.
             let is_dragon = matches!(name, "white-dragon" | "red-dragon" | "black-dragon");
             assert_eq!(
                 psy.contains(&KindId(name)),
                 is_dragon,
                 "{name}: only the dragons among the menagerie carry a mind"
             );
-            assert!(
-                !per.contains(&KindId(name)),
-                "{name} is fauna: no perception"
+            assert_eq!(
+                per.contains(&KindId(name)),
+                is_dragon,
+                "{name}: only the dragons among the menagerie perceive (The Vigil)"
             );
             // `Mass` has no PartialOrd, so read the raw kilograms rather
             // than comparing against `Mass::new(0.0)`.
@@ -1647,5 +1813,20 @@ mod tests {
         bio.ids()
             .map(|k| (*k, bio.get(k).unwrap().clone()))
             .collect()
+    }
+
+    #[test]
+    fn society_baseline_equals_the_goblin_authored_society() {
+        let goblin = society_registry().get(&KindId("goblin")).copied().unwrap();
+        assert_eq!(goblin, SocietyVector::baseline());
+    }
+
+    #[test]
+    fn society_registry_holds_exactly_the_settled_peoples() {
+        let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
+        assert_eq!(society, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
+        // dragons are minded (psyche) but not Settled — no society vector
+        assert!(society_registry().get(&KindId("red-dragon")).is_none());
+        assert!(psyche_registry().get(&KindId("red-dragon")).is_some());
     }
 }

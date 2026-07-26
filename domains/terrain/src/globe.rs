@@ -149,6 +149,8 @@ pub struct TectonicGlobe {
     /// never consumed as a `Stream`, so it carries no draw-order/save-format
     /// contract (see `streams::LITHOLOGY`).
     pub lithology_seed: Seed,
+    /// Hash-noise seed for the subsurface-features point process (The Lode).
+    pub features_seed: Seed,
     /// The drawn rift history (rift-and-fit, spec §3): the majors' assembly
     /// frame, their seams, and one global spreading rate. The crust field
     /// clips each major craton's cap along these seams. Recomputed at
@@ -161,6 +163,11 @@ impl TectonicGlobe {
     /// only, like `coast-render`/`plate-edge`).
     pub fn lithology_noise_seed(&self) -> Seed {
         self.lithology_seed
+    }
+
+    /// The hash-noise seed for the subsurface features point process.
+    pub fn features_noise_seed(&self) -> Seed {
+        self.features_seed
     }
 }
 
@@ -452,6 +459,10 @@ pub fn generate(
     // seed here is hash-noise only (`streams::LITHOLOGY`) — never consumed
     // as a `Stream`, so this is not a new draw-order contract.
     let lithology_seed = terrain_seed.derive(streams::LITHOLOGY);
+    // Subsurface-features point-process noise (The Lode, spec §6). Hash-noise
+    // only (`streams::FEATURES`) — never consumed as a `Stream`, so this is
+    // not a new draw-order contract.
+    let features_seed = terrain_seed.derive(streams::FEATURES);
     let placeholder_lithology = CellMap::from_fn(geosphere, |_| crate::lithology::MaterialBuffer {
         silica: 0.0,
         grain: 0.0,
@@ -496,6 +507,7 @@ pub fn generate(
         trim_ocean_loss_m3,
         lithology: placeholder_lithology,
         lithology_seed,
+        features_seed,
         rift,
     };
     globe.lithology = crate::lithology::assemble_material(geosphere, &globe);

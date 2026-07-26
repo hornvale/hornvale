@@ -8,7 +8,9 @@
 //! to a [`LexEntry::Gap`] carrying the recountable reason.
 #![warn(missing_docs)]
 
-use crate::etymology::{Daughter, Derivation, assign_proto_roots, draw_cascade, evolve};
+use crate::etymology::{
+    CascadeRegime, Daughter, Derivation, assign_proto_roots, draw_cascade_with_regime, evolve,
+};
 use crate::packs::compound_recipe;
 use crate::phoneme::Segment;
 use crate::phonology::Phonology;
@@ -251,7 +253,14 @@ fn compound_entry(
 /// a component isn't held as a root), and passes every `Unknown` concept's
 /// carried reason straight through to a [`LexEntry::Gap`]. Pure and total:
 /// same inputs always produce an identical [`Lexicon`].
+///
+/// `regime` bounds the drawn cascade's rule count (drift rate) — the
+/// composition root (`windows/worldgen`) computes it from the species'
+/// `SocialForm` and lifespan and passes it in; this crate never reads either.
+/// Passing [`CascadeRegime::SETTLED`] reproduces the historical (pre-regime)
+/// behavior exactly.
 /// type-audit: bare-ok(identifier-text)
+#[allow(clippy::too_many_arguments)]
 pub fn build_lexicon(
     seed: &Seed,
     species: &str,
@@ -260,9 +269,10 @@ pub fn build_lexicon(
     proto_ph: &Phonology,
     exposures: &BTreeMap<String, ExposureClass>,
     daughters: &[Daughter],
+    regime: CascadeRegime,
 ) -> Lexicon {
     let headedness = draw_headedness(seed, species);
-    let cascade = draw_cascade(seed, species);
+    let cascade = draw_cascade_with_regime(seed, species, regime);
 
     let mut entries: BTreeMap<String, LexEntry> = BTreeMap::new();
 
@@ -320,6 +330,7 @@ pub fn build_lexicon(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::etymology::draw_cascade;
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
 
     /// A permissive phonology, matching etymology.rs's own test fixture:
@@ -394,12 +405,54 @@ mod tests {
         // evolved through the species' cascade — not a per-concept v1 draw.
         let ph = test_phonology();
         let ex = sea_exposures();
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &ex, &[]);
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &ex,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
         let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
         let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
         match lex.entry("water").unwrap() {
             LexEntry::Root { derivation, .. } => assert_eq!(derivation.modern, expected),
+            _ => panic!("water should be a Root"),
+        }
+    }
+
+    #[test]
+    fn build_lexicon_default_regime_is_unchanged() {
+        // A CascadeRegime::SETTLED lexicon must reproduce exactly what the
+        // pre-regime `draw_cascade` (proven byte-identical to
+        // draw_cascade_with_regime at SETTLED — see
+        // etymology::tests::draw_cascade_default_equals_settled_regime)
+        // would have produced: the golden for the pre-change behavior IS
+        // draw_cascade's output, since draw_cascade is untouched.
+        let ph = test_phonology();
+        let ex = sea_exposures();
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &ex,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
+        let assigned = assign_proto_roots(&Seed(1), "test", &ph, &universe, &[]);
+        let expected = evolve(&assigned["water"], &draw_cascade(&Seed(1), "test"), &ph).modern;
+        match lex.entry("water").unwrap() {
+            LexEntry::Root { derivation, .. } => assert_eq!(
+                derivation.modern, expected,
+                "build_lexicon at CascadeRegime::SETTLED must be byte-identical \
+                 to the pre-regime draw_cascade default"
+            ),
             _ => panic!("water should be a Root"),
         }
     }
@@ -416,7 +469,16 @@ mod tests {
     fn kobold_singleton_consumes_the_assigned_stream_path() {
         let ph = test_phonology();
         let ex = one_steeped("water");
-        let lex = build_lexicon(&Seed(5), "kobold", "kobold", &ph, &ph, &ex, &[]);
+        let lex = build_lexicon(
+            &Seed(5),
+            "kobold",
+            "kobold",
+            &ph,
+            &ph,
+            &ex,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         let universe: Vec<&str> = ex.keys().map(String::as_str).collect();
         let assigned = assign_proto_roots(&Seed(5), "kobold", &ph, &universe, &[]);
         assert_eq!(
@@ -447,6 +509,7 @@ mod tests {
             &proto_ph,
             &ex,
             &[],
+            CascadeRegime::SETTLED,
         );
         let h = build_lexicon(
             &Seed(3),
@@ -456,6 +519,7 @@ mod tests {
             &proto_ph,
             &ex,
             &[],
+            CascadeRegime::SETTLED,
         );
         let (gp, hp) = (root_proto(&g, "water"), root_proto(&h, "water"));
         assert_eq!(gp, hp, "same family+proto_ph ⇒ identical proto-root");
@@ -474,8 +538,26 @@ mod tests {
         let ph = test_phonology();
         let proto_ph = test_phonology();
         let ex = one_steeped("water");
-        let a = build_lexicon(&Seed(3), "goblin", "goblinoid", &ph, &proto_ph, &ex, &[]);
-        let b = build_lexicon(&Seed(3), "goblin", "hobgoblinoid", &ph, &proto_ph, &ex, &[]);
+        let a = build_lexicon(
+            &Seed(3),
+            "goblin",
+            "goblinoid",
+            &ph,
+            &proto_ph,
+            &ex,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        let b = build_lexicon(
+            &Seed(3),
+            "goblin",
+            "hobgoblinoid",
+            &ph,
+            &proto_ph,
+            &ex,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         assert_ne!(
             root_proto(&a, "water"),
             root_proto(&b, "water"),
@@ -496,7 +578,16 @@ mod tests {
                 ),
             },
         );
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         for concept in exposures.keys() {
             assert!(
                 lex.entry(concept).is_some(),
@@ -514,7 +605,16 @@ mod tests {
     fn knows_of_concept_compounds_from_steeped_components_in_headedness_order() {
         let ph = test_phonology();
         let exposures = sea_exposures();
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
 
         let water_roman = match lex.entry("water").unwrap() {
             LexEntry::Root { views, .. } => views.roman.to_lowercase(),
@@ -560,7 +660,16 @@ mod tests {
         // is omitted, so the compound can't be assembled.
         exposures.insert("water".to_string(), ExposureClass::Steeped);
         exposures.insert("sea".to_string(), ExposureClass::KnowsOf);
-        let lex = build_lexicon(&Seed(1), "test", "test", &ph, &ph, &exposures, &[]);
+        let lex = build_lexicon(
+            &Seed(1),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         match lex.entry("sea").unwrap() {
             LexEntry::Gap {
                 reason: GapReason::Experiential(_),
@@ -573,8 +682,26 @@ mod tests {
     fn build_lexicon_is_pure() {
         let ph = test_phonology();
         let exposures = sea_exposures();
-        let a = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures, &[]);
-        let b = build_lexicon(&Seed(5), "test", "test", &ph, &ph, &exposures, &[]);
+        let a = build_lexicon(
+            &Seed(5),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        let b = build_lexicon(
+            &Seed(5),
+            "test",
+            "test",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
         assert_eq!(a, b, "same inputs must yield an identical lexicon");
     }
 
@@ -621,6 +748,7 @@ mod tests {
             &ph,
             &exposures,
             &[],
+            CascadeRegime::SETTLED,
         );
         assert_eq!(first_lex.headedness, Headedness::HeadFirst);
         let water_first = root_roman(&first_lex, "water");
@@ -639,6 +767,7 @@ mod tests {
             &ph,
             &exposures,
             &[],
+            CascadeRegime::SETTLED,
         );
         assert_eq!(last_lex.headedness, Headedness::HeadLast);
         let water_last = root_roman(&last_lex, "water");

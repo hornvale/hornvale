@@ -36,13 +36,15 @@ usage:
   hornvale almanac [--world <PATH>]        render the almanac (default: world.json)
   hornvale explain --world <PATH> sky      narrate the sky's derivation from the ledger
   hornvale repl [--world <PATH>]           interrogate a world interactively
-  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>]
-                                            walk a frozen world as its flagship settler
-  hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column]
+  hornvale possess (--world <PATH> | --seed <N>) [--day <D>] [--script <PATH>] [--out <PATH>]
+                                            walk a frozen world as its flagship settler;
+                                            --out saves the played world (the world remembers)
+  hornvale map [--world <PATH>] [--out <PNG>] [--field elevation|lithology|sediment|column|features]
                                             render the elevation, lithology, or sediment/carve-delta map (markdown to stdout; default field: elevation)
   hornvale biome-map [--world <PATH>] [--out <PNG>] render the biome map (markdown to stdout)
   hornvale paleo-map [--world <PATH>] [--out <PNG>] render the deep-time strata map (markdown to stdout)
   hornvale settlement-map [--world <PATH>] [--out <PNG>] render the settlement map (markdown to stdout)
+  hornvale vestige-map [--world <PATH>] [--out <PNG>] render the residue map (markdown to stdout)
   hornvale star-chart [--world <PATH>] [--out <PNG>] render the star chart (markdown to stdout)
   hornvale scene tiles [--world <PATH>] [--width <N>] emit scene/tiles/v1 JSON to stdout
   hornvale scene tiles-region --world W --face F --level L --ix X --iy Y --samples N
@@ -114,6 +116,7 @@ fn main() -> ExitCode {
         Some("biome-map") => cmd_biome_map(&args),
         Some("paleo-map") => cmd_paleo_map(&args),
         Some("settlement-map") => cmd_settlement_map(&args),
+        Some("vestige-map") => cmd_vestige_map(&args),
         Some("star-chart") => cmd_star_chart(&args),
         Some("scene") => cmd_scene(&args),
         Some("history") => cmd_history(&args),
@@ -430,14 +433,14 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     };
     let day = parse_possess_day(args)?;
     let stdout = std::io::stdout();
-    if let Some(path) = flag_value(args, "--script") {
+    let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
         let mut out = stdout.lock();
         use std::io::Write;
         writeln!(out, "# A Possession — seed {}, day {day}\n", world.seed.0)
             .map_err(|e| e.to_string())?;
         writeln!(out, "```text").map_err(|e| e.to_string())?;
-        hornvale_vessel::run(
+        let played = hornvale_vessel::run(
             &world,
             hornvale_vessel::PossessOpts {
                 day: WorldTime { day },
@@ -449,7 +452,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
         )
         .map_err(|e| e.to_string())?;
         writeln!(out, "```").map_err(|e| e.to_string())?;
-        Ok(())
+        played
     } else {
         let stdin = std::io::stdin();
         hornvale_vessel::run(
@@ -462,8 +465,20 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
             stdin.lock(),
             stdout.lock(),
         )
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?
+    };
+    // The input `--world` file is read-only; only `--out` writes (The First
+    // Mark, Task 4 — the played world outlives the session).
+    if let Some(out) = flag_value(args, "--out") {
+        played
+            .save(std::path::Path::new(out))
+            .map_err(|e| format!("saving {out}: {e}"))?;
+        eprintln!(
+            "played world written to {out} ({} facts)",
+            played.ledger.len()
+        );
     }
+    Ok(())
 }
 
 /// Render the world's elevation map: a markdown page (title, land lines,
@@ -483,9 +498,12 @@ page above is deterministic.\n\n";
 
 fn cmd_map(args: &[String]) -> Result<(), String> {
     let field = flag_value(args, "--field").unwrap_or("elevation");
-    if !matches!(field, "elevation" | "lithology" | "sediment" | "column") {
+    if !matches!(
+        field,
+        "elevation" | "lithology" | "sediment" | "column" | "features"
+    ) {
         return Err(format!(
-            "unknown --field '{field}' (expected elevation|lithology|sediment|column)"
+            "unknown --field '{field}' (expected elevation|lithology|sediment|column|features)"
         ));
     }
     let world = load_world(args)?;
@@ -509,6 +527,7 @@ fn cmd_map(args: &[String]) -> Result<(), String> {
                 hornvale_terrain::render::sediment_png(terrain.geosphere(), terrain.globe())
             }
             "column" => hornvale_terrain::render::column_png(terrain.geosphere(), terrain.globe()),
+            "features" => hornvale_terrain::render::features_png(&terrain),
             _ => hornvale_terrain::render::elevation_png(
                 terrain.geosphere(),
                 terrain.globe(),
@@ -634,6 +653,40 @@ fn cmd_settlement_map(args: &[String]) -> Result<(), String> {
         let pixels =
             hornvale_climate::render::biome_pixels(climate.geosphere(), &climate.biome_map());
         let png = hornvale_settlement::render::overlay_png(&pixels, &sites, flagship);
+        std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
+        let name = std::path::Path::new(out)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(out);
+        doc.push_str(&format!("![Full-color render](./{name})\n\n"));
+        doc.push_str(PLATFORM_LOCAL_RENDER_NOTE);
+    }
+    doc.push_str("---\n\n*Generated deterministically: this seed always yields this page.*\n");
+    print!("{doc}");
+    Ok(())
+}
+
+/// Render the world's residue palimpsest (The Vestige): a markdown page
+/// (title + kind/valence legend) to stdout and, with `--out`, the PNG to
+/// disk. Both deterministic; mirrors `paleo-map`/`settlement-map`'s
+/// structure. No ASCII lens: the palette distinguishes five kinds times two
+/// valences (ten colors), more than a 72×24 glyph budget can render legibly,
+/// unlike paleo's three-stratum ASCII map.
+fn cmd_vestige_map(args: &[String]) -> Result<(), String> {
+    let world = load_world(args)?;
+    let mut doc = format!("# The Vestige of Seed {}\n\n", world.seed.0);
+    doc.push_str(
+        "The underworld's residue: sealed wards, abandoned delvings, buried \
+         ruins, and dormant gate-scars, colored by kind and by whether the \
+         site is still venerated or has been forgotten.\n\n",
+    );
+    doc.push_str(
+        "Legend: gate-scar (violet), natural seal (blue), abandoned delving \
+         (gold), buried ruin (rust), sealed vault (pale yellow) — bright/warm \
+         reads venerated, dim/dark reads forgotten; slate marks no residue.\n\n",
+    );
+    if let Some(out) = flag_value(args, "--out") {
+        let png = world_builder::render::vestige_png(&world);
         std::fs::write(out, png).map_err(|e| format!("writing {out}: {e}"))?;
         let name = std::path::Path::new(out)
             .file_name()
@@ -1466,6 +1519,11 @@ mod tests {
     #[test]
     fn usage_mentions_paleo_map() {
         assert!(USAGE.contains("paleo-map"));
+    }
+
+    #[test]
+    fn usage_mentions_vestige_map() {
+        assert!(USAGE.contains("vestige-map"));
     }
 
     #[test]

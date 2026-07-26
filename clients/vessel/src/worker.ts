@@ -10,6 +10,8 @@ interface VesselExports {
   hv_handle(len: number): number;
   hv_out_ptr(): number;
   hv_out_len(): number;
+  hv_snapshot_ptr(): number;
+  hv_snapshot_len(): number;
 }
 
 // Deno's default check lib types `self` for a window; cast to the small
@@ -50,6 +52,12 @@ function readOut(v: VesselExports): string {
   );
 }
 
+function readSnapshot(v: VesselExports): string {
+  return new TextDecoder().decode(
+    new Uint8Array(v.memory.buffer, v.hv_snapshot_ptr(), v.hv_snapshot_len()),
+  );
+}
+
 function writeIn(v: VesselExports, line: string): number {
   const bytes = new TextEncoder().encode(line);
   if (bytes.length > 4096) return -1;
@@ -64,12 +72,19 @@ scope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
     if (msg.type === "start") {
       const rc = v.hv_start(BigInt(msg.seed));
       scope.postMessage(
-        rc === 0 ? { type: "started", text: readOut(v) } : { type: "error", text: readOut(v) },
+        rc === 0
+          ? { type: "started", text: readOut(v), snapshot: readSnapshot(v) }
+          : { type: "error", text: readOut(v) },
       );
     } else {
       const len = writeIn(v, msg.line);
       if (len < 0) {
-        scope.postMessage({ type: "out", text: "That command is too long.", released: false });
+        scope.postMessage({
+          type: "out",
+          text: "That command is too long.",
+          released: false,
+          snapshot: "",
+        });
         return;
       }
       const rc = v.hv_handle(len);
@@ -77,7 +92,12 @@ scope.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         scope.postMessage({ type: "error", text: `The casement is dark: protocol error ${rc}.` });
         return;
       }
-      scope.postMessage({ type: "out", text: readOut(v), released: rc === 1 });
+      scope.postMessage({
+        type: "out",
+        text: readOut(v),
+        released: rc === 1,
+        snapshot: readSnapshot(v),
+      });
     }
   } catch (err) {
     scope.postMessage({ type: "error", text: `The casement is dark: ${err}` });

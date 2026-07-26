@@ -4,7 +4,14 @@
 **Registry:** BIO-37 (the sociality × lifespan roster grid — the language half) ·
 gives the three dragons speech (a Draconic `ArticulationVector` + lexicon) ·
 makes `draw_cascade`'s drift-rate a function of `SocialForm` × `lifespan`
-**Status:** G3 draft (awaiting Nathan)
+**Status:** SHIPPED (2026-07-22, chronicle: the-solitary-tongue) — drift =
+f(sociality × lifespan) via `CascadeRegime`; the three dragons speak a frozen
+Draconic isolate (divergence 0.25 < goblinoid 0.32); decision 0066; BIO-37
+language half shipped. Additive (dictionary/phonology/audio grew, +N/−0),
+peoples byte-identical, not an epoch; verified before and after absorbing main
+(The Sundering shifted an exposure golden — re-pinned, mechanism byte-identity
+held). Deferred: dragon perception, placement, Draconic grammar, per-chromatic
+tongues.
 **Date:** 2026-07-22
 
 ---

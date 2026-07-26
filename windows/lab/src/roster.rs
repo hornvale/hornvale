@@ -42,6 +42,14 @@ fn goblin_derived(
     )]
     .into_iter()
     .collect();
+    let society: ComponentStore<KindId, _> = [(
+        k,
+        *hornvale_species::society_registry()
+            .get(&g)
+            .expect("the shipped goblin has a society row"),
+    )]
+    .into_iter()
+    .collect();
     let perception: ComponentStore<KindId, _> = [(
         k,
         *hornvale_species::perception_registry()
@@ -69,6 +77,7 @@ fn goblin_derived(
     WorldComponents::from_stores(
         biosphere,
         psyche,
+        society,
         perception,
         articulation_store,
         lexicon,
@@ -174,6 +183,7 @@ pub fn awakened_owlbear_components() -> WorldComponents {
     WorldComponents::from_stores(
         biosphere,
         psyche,
+        ComponentStore::new(), // society: both kinds here are Solitary
         perception,
         articulation,
         lexicon,

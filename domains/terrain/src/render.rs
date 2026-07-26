@@ -6,8 +6,10 @@
 //! cell center at level ≥ 4 is within ~2.5°, so the pixel's band plus both
 //! neighbors always contains it.
 
+use crate::features::{CaveKind, Commodity};
 use crate::globe::TectonicGlobe;
 use crate::lithology::RockClass;
+use crate::provider::GeneratedTerrain;
 use crate::streams;
 use hornvale_kernel::{Geosphere, NearestCellIndex, Seed, math, noise};
 
@@ -338,6 +340,79 @@ pub fn column_png(geo: &Geosphere, globe: &TectonicGlobe) -> Vec<u8> {
     hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &column_pixels(geo, globe))
 }
 
+/// The palette color for a deposit's commodity: an exhaustive match over
+/// `Commodity` (The Lode's features-lens legend) so a future variant without
+/// a color fails to compile rather than panicking at render time.
+/// type-audit: bare-ok(render-internal: return)
+fn commodity_color(commodity: Commodity) -> [u8; 3] {
+    match commodity {
+        Commodity::Copper => [80, 200, 180],
+        Commodity::Gold => [255, 215, 0],
+        Commodity::LeadZinc => [150, 150, 170],
+        Commodity::Iron => [180, 60, 30],
+        Commodity::Salt => [240, 240, 250],
+        Commodity::Coal => [10, 10, 10],
+        Commodity::Gems => [220, 60, 220],
+        Commodity::Tin => [190, 190, 130],
+        Commodity::Bauxite => [200, 120, 60],
+    }
+}
+
+/// The palette color for a cave's kind: an exhaustive match over `CaveKind`
+/// so a future variant without a color fails to compile rather than
+/// panicking at render time.
+/// type-audit: bare-ok(render-internal: return)
+fn cave_color(kind: CaveKind) -> [u8; 3] {
+    match kind {
+        CaveKind::Karst => [100, 180, 255],
+        CaveKind::LavaTube => [255, 100, 0],
+        CaveKind::Fracture => [120, 90, 60],
+    }
+}
+
+/// Muted base color for a cell with no located feature: a flat slate-blue
+/// for ocean, a flat sage for land — deliberately low-key so the commodity
+/// and cave-kind colors read clearly against it.
+const FEATURES_OCEAN_BASE: [u8; 3] = [60, 80, 100];
+/// See [`FEATURES_OCEAN_BASE`].
+const FEATURES_LAND_BASE: [u8; 3] = [90, 100, 80];
+
+/// Raw RGB pixels of the equirectangular features map: the nearest cell's
+/// deposit (colored by commodity) where the point process places one, else
+/// its cave (colored by kind) where one is placed, else a muted ocean/land
+/// base — categorical-resolution, no coastal-noise refinement (same
+/// convention as `lithology_pixels`).
+fn features_pixels(terrain: &GeneratedTerrain) -> Vec<u8> {
+    let geo = terrain.geosphere();
+    let (width, height) = (MAP_WIDTH, MAP_WIDTH / 2);
+    let index = NearestCellIndex::new(geo);
+    rasterize(width, height, |latitude, longitude| {
+        let cell = index.nearest(geo, latitude, longitude);
+        if let Some(deposit) = terrain.deposit_at(cell) {
+            commodity_color(deposit.commodity)
+        } else if let Some(cave) = terrain.cave_at(cell) {
+            cave_color(cave.kind)
+        } else if terrain.is_ocean(cell) {
+            FEATURES_OCEAN_BASE
+        } else {
+            FEATURES_LAND_BASE
+        }
+    })
+}
+
+/// Render the terrain provider's caves & ore deposits as an equirectangular
+/// PNG lens (The Lode): commodity color where a deposit sits, cave-kind
+/// color where a cave sits, muted ocean/land base otherwise. Same provider,
+/// same bytes — the point process is a pure hash-noise function of
+/// already-committed fields (no stream draws, no coastal-noise refinement).
+/// The lens reads through the provider (not `Geosphere`+`TectonicGlobe`
+/// directly) because caves and deposits live on `GeneratedTerrain`'s
+/// `cave_at`/`deposit_at` queries, not on stored globe fields.
+/// type-audit: bare-ok(artifact: return)
+pub fn features_png(terrain: &GeneratedTerrain) -> Vec<u8> {
+    hornvale_kernel::png::encode_rgb(MAP_WIDTH, MAP_WIDTH / 2, &features_pixels(terrain))
+}
+
 /// Render the globe as a 72×24 ASCII map: '~' ocean, '.' lowland, '+'
 /// hills, '^' mountains, 'A' high peaks. One newline per row.
 /// type-audit: bare-ok(artifact)
@@ -372,7 +447,64 @@ mod tests {
     use super::*;
     use crate::globe::generate;
     use crate::pins::TerrainPins;
+    use crate::provider::GeneratedTerrain;
     use hornvale_kernel::{Geosphere, Seed};
+
+    #[test]
+    fn features_png_is_well_formed_and_byte_deterministic() {
+        let geo = Geosphere::new(4);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        let a = features_png(&terrain);
+        assert_eq!(a, features_png(&terrain));
+        assert!(a.starts_with(&[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]));
+        // IHDR width and height, big-endian, at offsets 16 and 20.
+        assert_eq!(&a[16..20], &MAP_WIDTH.to_be_bytes());
+        assert_eq!(&a[20..24], &(MAP_WIDTH / 2).to_be_bytes());
+    }
+
+    /// Every `Commodity` variant, in declaration order — mirrors
+    /// `commodity_color`'s match arms.
+    const ALL_COMMODITIES: [Commodity; 9] = [
+        Commodity::Copper,
+        Commodity::Gold,
+        Commodity::LeadZinc,
+        Commodity::Iron,
+        Commodity::Salt,
+        Commodity::Coal,
+        Commodity::Gems,
+        Commodity::Tin,
+        Commodity::Bauxite,
+    ];
+
+    #[test]
+    fn every_commodity_has_a_distinct_palette_color() {
+        use std::collections::BTreeSet;
+        let colors: BTreeSet<[u8; 3]> = ALL_COMMODITIES
+            .iter()
+            .map(|&c| commodity_color(c))
+            .collect();
+        assert_eq!(
+            colors.len(),
+            ALL_COMMODITIES.len(),
+            "two commodities share a palette color"
+        );
+    }
+
+    /// Every `CaveKind` variant, in declaration order — mirrors
+    /// `cave_color`'s match arms.
+    const ALL_CAVE_KINDS: [CaveKind; 3] = [CaveKind::Karst, CaveKind::LavaTube, CaveKind::Fracture];
+
+    #[test]
+    fn every_cave_kind_has_a_distinct_palette_color() {
+        use std::collections::BTreeSet;
+        let colors: BTreeSet<[u8; 3]> = ALL_CAVE_KINDS.iter().map(|&k| cave_color(k)).collect();
+        assert_eq!(
+            colors.len(),
+            ALL_CAVE_KINDS.len(),
+            "two cave kinds share a palette color"
+        );
+    }
 
     #[test]
     fn png_is_well_formed_and_byte_deterministic() {

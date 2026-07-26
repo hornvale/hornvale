@@ -23,7 +23,9 @@ use hornvale_kernel::{
     RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
-use hornvale_terrain::{GLOBE_LEVEL, GeneratedTerrain, TerrainPins};
+use hornvale_terrain::{
+    BandKind, Commodity, Deposit, DepositProcess, GLOBE_LEVEL, GeneratedTerrain, TerrainPins,
+};
 use std::cell::RefCell;
 use std::sync::OnceLock;
 // The profiler measures wall-clock stage durations for a committed diagnostic
@@ -80,10 +82,12 @@ pub mod components;
 pub mod graph_derive;
 pub mod history_bake;
 pub mod history_emit;
+pub mod render;
 pub mod schedule;
 pub mod settlement_pins;
 pub mod streams;
 pub mod traversal;
+pub mod vestige;
 pub use chorus::{
     ChorusVoice, DoctrineVoice, LadderRung, Observations, PredictionCrisis, account_params_of,
     accounts_from, accounts_of, beta_of, chorus_ground, crisis_of, cyclic_beliefs_of,
@@ -101,11 +105,16 @@ pub use history_bake::{
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
-    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, ruins_of_people,
-    stratigraphy, sundered_landmasses, territories,
+    emit_now, goblinoid_overlap, goblinoid_region_overlap, migration_events, occupation_records,
+    occupations_at, occupations_by_cell, present_day, ruins_of_people, stratigraphy,
+    sundered_landmasses, territories,
 };
 pub use settlement_pins::SettlementPins;
 pub use traversal::{BASE_COST, traversal_cost, traversal_cost_at};
+pub use vestige::{
+    HazardKind, SealState, Valence, Vestige, VestigeKind, prehuman_vestige,
+    vestige_from_occupation, vestiges_at, vestiges_field,
+};
 
 /// Errors from building a world.
 /// type-audit: bare-ok(prose: Pins.0), bare-ok(prose: MalformedKind.0)
@@ -609,6 +618,37 @@ pub fn soil_of(
     })
 }
 
+/// The canonical deposit query: terrain's derived deposits, overlaid with the
+/// one climate-coupled ore (laterite — bauxite/nickel from hot+wet weathering)
+/// where terrain has no stronger primary. The soil-projection seam (The Ground)
+/// applied to ore. (The Lode, spec §4.)
+pub fn deposit_of(
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    geo: &Geosphere,
+    cell: hornvale_kernel::CellId,
+) -> Option<Deposit> {
+    if let Some(d) = terrain.deposit_at(cell) {
+        return Some(d); // a primary/areal deposit wins
+    }
+    if terrain.is_ocean(cell) {
+        return None;
+    }
+    let _ = geo;
+    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+    let wet = climate.moisture_at(cell) > 0.6;
+    if hot && wet {
+        return Some(Deposit {
+            process: DepositProcess::Lateritic,
+            commodity: Commodity::Bauxite,
+            depth: BandKind::Regolith,
+            grade: 0.4,
+            tonnage: 0.6,
+        });
+    }
+    None
+}
+
 /// Fold a species' psychology (spec §4) into its carrying-capacity inputs.
 /// The retired suitability formula scaled a people's freshwater weight by its
 /// time horizon and softened its hostility penalty by its threat response; the
@@ -624,7 +664,7 @@ pub fn soil_of(
 /// Identity-ish at the goblin baseline; deterministic in `p`.
 pub fn species_carrying_input(
     base: hornvale_demography::CarryingInput,
-    p: &hornvale_species::PsychVector,
+    p: &hornvale_species::MindVector,
 ) -> hornvale_demography::CarryingInput {
     // Long-horizon peoples value reliable water more; bold (high threat-
     // response) peoples tolerate hostile ground better (lower effective
@@ -827,7 +867,7 @@ pub fn demography_report_with_beta(
     floor: f64,
 ) -> Result<hornvale_demography::DemographyReport, BuildError> {
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     demography_report_with_beta_from(world, wc, beta, floor, &terrain, &climate)
 }
 
@@ -939,7 +979,7 @@ const CARNIVORE_THRESHOLD: f64 = 0.5;
 pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Carnivore tags: the enumeration index into `wc.biosphere` (the same
@@ -974,6 +1014,29 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
     }))
 }
 
+/// The per-cell VESTIGE-DREAD field (The Vestige) — the ambient dread a cell's
+/// subsurface palimpsest radiates: the MAX dread over the cell's vestige
+/// stack ([`vestiges_at`]'s per-cell semantics; an empty stack reads `0.0`),
+/// already `[0, 1]` (each [`Vestige::dread`] is authored in-range, so no
+/// field-wide normalization is needed here — max, not sum, because dread is a
+/// warning signal a wanderer SENSES, not an additive hazard load). Built over
+/// [`vestiges_field`] (one ledger scan for the whole world) rather than
+/// calling `vestiges_at` per cell, which would rescan the ledger's committed
+/// occupation history once per cell. Derived from committed history
+/// (occupation records) and terrain (the pre-human gate-scar presence test):
+/// no seed, no facts, byte-identical across calls. EXPOSED but not yet
+/// consumed: this is the hook (spec §9.2) — wiring it into the vessel's
+/// hazard axis is a deferred follow-on.
+/// type-audit: bare-ok(ratio: return)
+pub fn vestige_dread(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
+    let terrain = terrain_of(world)?;
+    let field = vestiges_field(world, &terrain);
+    Ok(hornvale_kernel::CellMap::from_fn(
+        terrain.geosphere(),
+        |cell| field.get(cell).iter().map(|v| v.dread).fold(0.0, f64::max),
+    ))
+}
+
 /// The per-cell PREY-PRESSURE field (The Teeth) — the ambient draw a HUNTER
 /// senses of prey territory, the anti-symmetric DUAL of [`predator_pressure`].
 /// Where the predator field sums CARNIVORE realized density (so a quarry flees
@@ -991,7 +1054,7 @@ pub fn predator_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>,
 pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let geo = terrain.geosphere();
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // Prey-base tags (the dense stack index): a mobile-beast, non-carnivore
@@ -1048,7 +1111,7 @@ pub fn prey_pressure(world: &World) -> Result<hornvale_kernel::CellMap<f64>, Bui
 pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64; 3])>, BuildError> {
     let wc = WorldComponents::assemble()?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let report = demography_report_from(world, &wc, &terrain, &climate)?;
     // The dense-index → species-label map (the same ascending-`KindId` order the
     // stack's `dominant` tag indexes into).
@@ -1801,7 +1864,9 @@ const DIURNAL_PEAK_SAMPLES: u32 = 200;
 /// `Locked` branch never applies `diurnal_amp_at`).
 /// type-audit: bare-ok(prose: return)
 pub fn diurnal_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(diurnal_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(diurnal_lines_from(&terrain, &climate))
 }
 
 /// [`diurnal_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -1919,7 +1984,9 @@ fn cardinal_current_direction(east: f64, north: f64) -> &'static str {
 /// happens to cancel to zero).
 /// type-audit: bare-ok(prose: return)
 pub fn seas_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(seas_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(seas_lines_from(&terrain, &climate))
 }
 
 /// [`seas_lines`] from a PRE-BUILT terrain and climate — the body without the
@@ -1982,7 +2049,9 @@ fn regime_word(regime: PrecipRegime) -> &'static str {
 /// `band == 0` default).
 /// type-audit: bare-ok(prose: return)
 pub fn rains_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(rains_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(rains_lines_from(&terrain, &climate))
 }
 
 /// [`rains_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2074,10 +2143,9 @@ pub fn sky_phrase(
 /// observation.
 /// type-audit: bare-ok(prose: return)
 pub fn firmament_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(firmament_lines_from(
-        &terrain_of(world)?,
-        &climate_of(world)?,
-    ))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(firmament_lines_from(&terrain, &climate))
 }
 
 /// [`firmament_lines`] from a PRE-BUILT terrain and climate (The Single
@@ -2239,6 +2307,25 @@ pub fn soil_order_name(order: hornvale_terrain::SoilOrder) -> &'static str {
     }
 }
 
+/// Human-readable commodity name (The Lode, spec §5): lowercase, for almanac
+/// prose and census categorical values — a pure naming projection, no new
+/// draws.
+/// type-audit: bare-ok(identifier-text: return)
+pub fn commodity_name(commodity: Commodity) -> &'static str {
+    use Commodity::*;
+    match commodity {
+        Copper => "copper",
+        Gold => "gold",
+        LeadZinc => "lead-zinc",
+        Iron => "iron",
+        Salt => "salt",
+        Coal => "coal",
+        Gems => "gems",
+        Tin => "tin",
+        Bauxite => "bauxite",
+    }
+}
+
 /// Land-cell karst-hydrology share above which "karst country" is a notable
 /// ground feature for the almanac (The Ground, spec §3/§6) — a chosen prose
 /// threshold, not a physical constant.
@@ -2254,7 +2341,9 @@ const GROUND_ANDOSOL_NOTABLE: f64 = 0.1;
 /// world.
 /// type-audit: bare-ok(prose: return)
 pub fn ground_lines(world: &World) -> Result<Vec<String>, BuildError> {
-    Ok(ground_lines_from(&terrain_of(world)?, &climate_of(world)?))
+    let terrain = terrain_of(world)?;
+    let climate = climate_from(world, &terrain)?;
+    Ok(ground_lines_from(&terrain, &climate))
 }
 
 /// [`ground_lines`] from a PRE-BUILT terrain and climate — the body without
@@ -2374,6 +2463,206 @@ pub fn deep_lines_from(
         let iced = geo.cells().filter(|c| *paleo.envelope.get(*c)).count();
         lines.push(format!(
             "Glaciated strata lie in the cover over {iced} cells — the ice left its mark."
+        ));
+    }
+    Ok(lines)
+}
+
+/// The Lode's headline lines for the almanac: the dominant ore commodity
+/// (and any other notable commodities) across the land, the cave-country
+/// share, and any regions where a cave and an ore deposit coincide (The
+/// Lode, spec §4/§5). Reads the canonical [`deposit_of`] query — terrain's
+/// primary deposits overlaid with the climate-coupled laterite — so the
+/// almanac and the census agree on what counts as ore. A pure projection
+/// over the world's single sculpted terrain/climate: no new draws. Empty
+/// for a landless world, or for land with neither caves nor ore.
+/// type-audit: bare-ok(prose: return)
+pub fn lode_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<Vec<String>, BuildError> {
+    let _ = world; // no world-level refinement today; kept for signature symmetry with deep_lines_from
+    let geo = terrain.geosphere();
+    let (mut land, mut cave_land, mut ore_land, mut colocated) = (0usize, 0usize, 0usize, 0usize);
+    let mut commodities: std::collections::BTreeMap<Commodity, usize> =
+        std::collections::BTreeMap::new();
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let has_cave = terrain.cave_at(cell).is_some();
+        if has_cave {
+            cave_land += 1;
+        }
+        if let Some(deposit) = deposit_of(terrain, climate, geo, cell) {
+            ore_land += 1;
+            *commodities.entry(deposit.commodity).or_insert(0) += 1;
+            if has_cave {
+                colocated += 1;
+            }
+        }
+    }
+    if land == 0 || (ore_land == 0 && cave_land == 0) {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = Vec::new();
+    if ore_land > 0 {
+        // Ties break to the lower-declared variant, same as ground_lines_from.
+        let dominant = commodities
+            .iter()
+            .max_by(|a, b| a.1.cmp(b.1).then(b.0.cmp(a.0)))
+            .map(|(&c, _)| c)
+            .expect("ore_land > 0 guarantees at least one commodity count");
+        lines.push(format!(
+            "The land's lode is dominantly {}, found across {:.0}% of it.",
+            commodity_name(dominant),
+            ore_land as f64 / land as f64 * 100.0
+        ));
+        let others: Vec<&'static str> = commodities
+            .keys()
+            .copied()
+            .filter(|&c| c != dominant)
+            .map(commodity_name)
+            .collect();
+        if !others.is_empty() {
+            lines.push(format!("Notable ore: {}.", others.join(", ")));
+        }
+    }
+    if cave_land > 0 {
+        lines.push(format!(
+            "{:.0}% of the land is cave country.",
+            cave_land as f64 / land as f64 * 100.0
+        ));
+    }
+    if colocated > 0 {
+        lines.push(format!(
+            "{colocated} cells hold both cave and ore — the deep worked twice."
+        ));
+    }
+    Ok(lines)
+}
+
+/// A hazard's almanac-facing name, in `HazardKind`'s declaration order (the
+/// tie-break the dominant-hazard line below relies on).
+fn hazard_name(hazard: HazardKind) -> &'static str {
+    match hazard {
+        HazardKind::Structural => "structural collapse",
+        HazardKind::ToxicGas => "toxic gas",
+        HazardKind::Pestilent => "pestilence",
+        HazardKind::Flooded => "flooding",
+        HazardKind::Numinous => "the numinous",
+        HazardKind::Cursed => "the cursed",
+    }
+}
+
+/// The Vestige's headline lines for the almanac: notable subsurface residue
+/// across the land — sealed wards, abandoned delvings and buried undercities,
+/// the venerated-vs-forgotten valence split, prominent pre-human gate-scars,
+/// and the residue's dominant hazard (The Vestige). Reads the batched
+/// [`vestiges_field`] once for the whole world (rather than calling
+/// [`vestiges_at`] per cell, which would rescan the ledger's committed
+/// occupation history once per cell). Land-only, mirroring the Lode/Deep
+/// sections; empty for a landless world, or for land with no residue at all.
+/// type-audit: bare-ok(prose: return)
+pub fn vestige_lines_from(
+    world: &World,
+    terrain: &GeneratedTerrain,
+) -> Result<Vec<String>, BuildError> {
+    let geo = terrain.geosphere();
+    let field = vestiges_field(world, terrain);
+
+    let (mut land, mut residue_cells) = (0usize, 0usize);
+    let (mut sealed, mut delvings, mut buried_ruins, mut gate_scars) =
+        (0usize, 0usize, 0usize, 0usize);
+    let (mut venerated, mut forgotten) = (0usize, 0usize);
+    let mut hazard_counts = [0usize; 6];
+    for cell in geo.cells() {
+        if terrain.is_ocean(cell) {
+            continue;
+        }
+        land += 1;
+        let stack = field.get(cell);
+        if stack.is_empty() {
+            continue;
+        }
+        residue_cells += 1;
+        for vestige in stack {
+            match vestige.kind {
+                VestigeKind::SealedVault | VestigeKind::NaturalSeal => sealed += 1,
+                VestigeKind::AbandonedDelving => delvings += 1,
+                VestigeKind::BuriedRuin => buried_ruins += 1,
+                VestigeKind::GateScar => gate_scars += 1,
+            }
+            match vestige.valence {
+                Valence::Venerated => venerated += 1,
+                Valence::Forgotten => forgotten += 1,
+            }
+            let idx = match vestige.hazard {
+                HazardKind::Structural => 0,
+                HazardKind::ToxicGas => 1,
+                HazardKind::Pestilent => 2,
+                HazardKind::Flooded => 3,
+                HazardKind::Numinous => 4,
+                HazardKind::Cursed => 5,
+            };
+            hazard_counts[idx] += 1;
+        }
+    }
+    if land == 0 || residue_cells == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut lines = vec![format!(
+        "The underworld's residue marks {:.0}% of the land — the buried palimpsest of ages before.",
+        residue_cells as f64 / land as f64 * 100.0
+    )];
+    if sealed > 0 {
+        lines.push(format!(
+            "{sealed} cells hold a sealed ward — the deep still shut."
+        ));
+    }
+    if delvings + buried_ruins > 0 {
+        lines.push(format!(
+            "{delvings} abandoned delvings and {buried_ruins} buried undercities lie beneath the land."
+        ));
+    }
+    lines.push(if forgotten > venerated {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — forgetting outpaces memory."
+        )
+    } else {
+        format!(
+            "{venerated} layers of that residue are still venerated against {forgotten} forgotten — memory still holds most of the ground."
+        )
+    });
+    if gate_scars > 0 {
+        lines.push(format!(
+            "{gate_scars} pre-human gate-scars still weep dread into the deep."
+        ));
+    }
+    // Ties break to the lower-declared variant, same as ground_lines_from /
+    // lode_lines_from.
+    let (dominant_idx, dominant_count) = hazard_counts
+        .iter()
+        .enumerate()
+        .max_by(|(ia, ca), (ib, cb)| ca.cmp(cb).then(ib.cmp(ia)))
+        .map(|(i, c)| (i, *c))
+        .expect("hazard_counts is a fixed-size non-empty array");
+    if dominant_count > 0 {
+        let hazard = match dominant_idx {
+            0 => HazardKind::Structural,
+            1 => HazardKind::ToxicGas,
+            2 => HazardKind::Pestilent,
+            3 => HazardKind::Flooded,
+            4 => HazardKind::Numinous,
+            _ => HazardKind::Cursed,
+        };
+        lines.push(format!(
+            "The residue's dominant hazard is {} — {dominant_count} layers so afflicted.",
+            hazard_name(hazard)
         ));
     }
     Ok(lines)
@@ -2765,11 +3054,14 @@ fn observe_with_sources(
     sources: &[&dyn PhenomenaSource],
 ) -> Result<Vec<Phenomenon>, BuildError> {
     // Source the kind's perception from the world's component set (ECS c3),
-    // keyed by its `KindId` label.
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
+    // keyed by its `KindId` label. Fails loudly for a kind that carries no
+    // perception (plain fauna): before The Vigil this was an `.expect`, so the
+    // REPL's `phenomena --as owlbear` panicked the process.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
     let day = observation_time(world, perception.activity)?;
     Ok(observe(
         sources,
@@ -3127,7 +3419,7 @@ pub fn exposure_of(
     let wc = WorldComponents::assemble()?;
     let name = resolve_kind(&wc, species)?;
     let terrain = terrain_of(world)?;
-    let climate = climate_of(world)?;
+    let climate = climate_from(world, &terrain)?;
     let settled = settled_cells(world, species);
     // `exposure_of_impl` alone owns the "coexisting counts only once the
     // querying species has settled" rule; the outer gate this replaced was
@@ -3187,11 +3479,18 @@ fn exposure_of_impl(
 
     let species = name;
     // Source perception from the world's component set (ECS c3), keyed by the
-    // kind's `KindId` label.
-    let perception = wc
-        .perception
-        .get(&KindId(name))
-        .expect("peopled pass over a fauna kind");
+    // kind's `KindId` label. Since The Vigil every minded speaker perceives
+    // (`check_integrity` enforces speech ⊆ perception), so this lookup is total
+    // for every kind that can reach a lexicon. `exposure_of` is public and
+    // `resolve_kind` accepts any biosphere kind, so a caller may still pass
+    // plain fauna — which fails loudly here rather than silently classifying
+    // colour as though a bear saw like a goblin. Mirrors the same failure in
+    // `chorus::account_params_from`.
+    let perception = wc.perception.get(&KindId(name)).ok_or_else(|| {
+        BuildError::MalformedKind(format!(
+            "'{name}' carries no perception component (not a peopled kind)"
+        ))
+    })?;
     let depths = pack_depths(perception);
     let geo = terrain.geosphere();
 
@@ -3323,11 +3622,93 @@ pub fn family_daughters(
         // language divergence is a speaker concern. Byte-identical for the
         // peoples' families, whose members all speak.
         .filter(|(kind, _)| wc.articulation.contains(kind))
-        .map(|(kind, _)| hornvale_language::Daughter {
-            cascade: hornvale_language::draw_cascade(&world.seed, kind.0),
-            phonology: language_of_wc(world, wc, kind.0),
+        .map(|(kind, _)| {
+            // Draw at kind's OWN regime (cascade_regime_of), not the
+            // language crate's default-regime draw_cascade: a family can
+            // hold a dragon (the "draconic" family), so the daughter's
+            // cascade must be frozen consistent with its lexicon. This
+            // reads the biosphere row from the CALLER's `wc` rather than
+            // calling `cascade_of` (which re-`assemble()`s the CANONICAL
+            // registries) — `family_daughters` is also called with a
+            // synthetic `wc` (Lab's solo/twin components,
+            // `WorldComponents::from_stores`), whose re-keyed kinds
+            // (e.g. "goblin-twin") do not exist in the canonical registry
+            // `cascade_of` would resolve against.
+            let bio = wc
+                .biosphere
+                .get(kind)
+                .expect("every kind in family_of has a biosphere row (integrity-checked)");
+            hornvale_language::Daughter {
+                cascade: hornvale_language::draw_cascade_with_regime(
+                    &world.seed,
+                    kind.0,
+                    cascade_regime_of(bio),
+                ),
+                phonology: language_of_wc(world, wc, kind.0),
+            }
         })
         .collect()
+}
+
+/// The lifespan (years) at and above which a `Solitary` species' cascade
+/// regime freezes to the isolate rate ([`CascadeRegime::new`]`(0, 1)`)
+/// instead of the historical `SETTLED` rate. Authored comfortably between
+/// two bracketing values computed from `hornvale_species::lifespan` at the
+/// registry's authored masses: the longest-lived of the four settling
+/// peoples, bugbear at ~80.9 yr (132.0 kg, `Endotherm`), and the
+/// shortest-lived dragon, white/black-dragon at ~163.4 yr (2200.0 kg,
+/// `Endotherm`). Also clear of the wild `Solitary` beasts
+/// (otyugh/xorn/rust-monster/owlbear), which top out around ~110 yr and so
+/// stay banked at `SETTLED` rather than freezing.
+///
+/// [`CascadeRegime::new`]: hornvale_language::CascadeRegime::new
+const LIFESPAN_THRESHOLD_YEARS: f64 = 120.0;
+
+/// The authored drift-rate map (spec — drift = f(SocialForm, lifespan)),
+/// pure over a biosphere row (no world/seed needed; `domains/language`
+/// cannot read `SocialForm`, so worldgen — the composition root — computes
+/// this and passes the regime in). `Settled` peoples keep drawing at the
+/// historical rate; `Gregarious` beasts (no current speaker) bank a slightly
+/// slower `{1,2}`; `Solitary` freezes to the isolate rate `{0,1}` once its
+/// allometric lifespan clears [`LIFESPAN_THRESHOLD_YEARS`] (a dragon), else
+/// it stays at the historical rate (a short-lived solitary beast, banked);
+/// `Sessile` never speaks and is inert at `SETTLED`. Total over
+/// `SocialForm`.
+fn cascade_regime_of(bio: &hornvale_species::BiosphereTraits) -> hornvale_language::CascadeRegime {
+    match bio.social_form {
+        hornvale_species::SocialForm::Settled => hornvale_language::CascadeRegime::SETTLED,
+        hornvale_species::SocialForm::Gregarious => hornvale_language::CascadeRegime::new(1, 2),
+        hornvale_species::SocialForm::Solitary => {
+            if hornvale_species::lifespan(bio.mass, bio.metabolic_class).get()
+                >= LIFESPAN_THRESHOLD_YEARS
+            {
+                hornvale_language::CascadeRegime::new(0, 1)
+            } else {
+                hornvale_language::CascadeRegime::SETTLED
+            }
+        }
+        hornvale_species::SocialForm::Sessile => hornvale_language::CascadeRegime::SETTLED,
+    }
+}
+
+/// A species' cascade, drawn at its own regime ([`cascade_regime_of`]) rather
+/// than the historical default — the composition-root seam every
+/// dragon-reachable cascade draw should route through, so a dragon's cascade
+/// stays consistent with the frozen regime its lexicon draws at. Assembles
+/// `WorldComponents`, resolves the kind, and reads its biosphere row.
+/// type-audit: bare-ok(identifier-text: species)
+pub fn cascade_of(world: &World, species: &str) -> Result<hornvale_language::Cascade, BuildError> {
+    let wc = WorldComponents::assemble()?;
+    let name = resolve_kind(&wc, species)?;
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("resolve_kind only returns kinds with a biosphere row (integrity-checked)");
+    Ok(hornvale_language::draw_cascade_with_regime(
+        &world.seed,
+        name,
+        cascade_regime_of(bio),
+    ))
 }
 
 /// Build `species`' lexicon within an explicit component set `wc` — the
@@ -3356,6 +3737,10 @@ pub fn lexicon_of_in(
         None => (name, ph.clone()),
     };
     let daughters = family_daughters(world, wc, family);
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("every kind has a biosphere row (integrity-checked)");
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         name,
@@ -3364,6 +3749,7 @@ pub fn lexicon_of_in(
         &proto_ph,
         &exposures,
         &daughters,
+        cascade_regime_of(bio),
     ))
 }
 
@@ -3393,6 +3779,10 @@ fn lexicon_of_in_from(
         None => (name, ph.clone()),
     };
     let daughters = family_daughters(world, wc, family);
+    let bio = wc
+        .biosphere
+        .get(&KindId(name))
+        .expect("every kind has a biosphere row (integrity-checked)");
     Ok(hornvale_language::build_lexicon(
         &world.seed,
         name,
@@ -3401,6 +3791,7 @@ fn lexicon_of_in_from(
         &proto_ph,
         &exposures,
         &daughters,
+        cascade_regime_of(bio),
     ))
 }
 
@@ -3451,11 +3842,14 @@ fn sociality_register(sociality: hornvale_species::Sociality) -> f64 {
 /// goblin baseline (`Rank`, `Hierarchic`, `deliberation_latency == 0.5`):
 /// `status_register(Rank) == sociality_register(Hierarchic) == 0.5`, so
 /// blending two 0.5s (or reading either directly) always yields 0.5.
-pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language::VoiceParams {
+pub fn voice_params(
+    mind: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
+) -> hornvale_language::VoiceParams {
     hornvale_language::VoiceParams {
-        formality: (status_register(psych.status_basis) + psych.deliberation_latency) / 2.0,
-        repetition: sociality_register(psych.sociality),
-        epithet_density: status_register(psych.status_basis),
+        formality: (status_register(society.status_basis) + mind.deliberation_latency) / 2.0,
+        repetition: sociality_register(society.sociality),
+        epithet_density: status_register(society.status_basis),
     }
 }
 
@@ -3463,9 +3857,9 @@ pub fn voice_params(psych: &hornvale_species::PsychVector) -> hornvale_language:
 /// §7): honorifics are drawn only for a rank-based status basis — the
 /// goblin baseline — matching `voice_params`' epithet-density reading of
 /// the same field.
-pub fn morph_options(psych: &hornvale_species::PsychVector) -> hornvale_language::MorphOptions {
+pub fn morph_options(society: &hornvale_species::SocietyVector) -> hornvale_language::MorphOptions {
     hornvale_language::MorphOptions {
-        honorifics: psych.status_basis == hornvale_species::StatusBasis::Rank,
+        honorifics: society.status_basis == hornvale_species::StatusBasis::Rank,
     }
 }
 
@@ -4089,10 +4483,23 @@ fn build_to(
             None => (name, ph.clone()),
         };
         let daughters = family_daughters(&world, wc, family);
+        // `species_set` is the history-placed settling roster (occupations
+        // form communities only for `Settled` kinds), so every `name` here
+        // resolves to `SETTLED` via `cascade_regime_of` too — this stays the
+        // literal for clarity rather than re-deriving a biosphere lookup
+        // this loop doesn't otherwise need. Dragons never reach this site
+        // (unplaced).
         lexicons.insert(
             name,
             hornvale_language::build_lexicon(
-                &seed, name, fam_label, ph, &proto_ph, &exposures, &daughters,
+                &seed,
+                name,
+                fam_label,
+                ph,
+                &proto_ph,
+                &exposures,
+                &daughters,
+                hornvale_language::CascadeRegime::SETTLED,
             ),
         );
     }
@@ -4128,7 +4535,7 @@ fn build_to(
             .get(name)
             .expect("a Namer was built for every placed species");
         let morph = morph_options(
-            wc.psyche
+            wc.society
                 .get(&KindId(name))
                 .expect("peopled pass over a fauna kind"),
         );
@@ -4284,10 +4691,15 @@ fn build_to(
                 threat,
             };
             // Mind + speech sourced from the world's component set (ECS c3):
-            // psychology from `wc.psyche`, the role vocabulary from
-            // `wc.lexicon`, both keyed by the kind's `KindId` label.
+            // psychology from `wc.psyche`, society from `wc.society`, the role
+            // vocabulary from `wc.lexicon`, all keyed by the kind's `KindId`
+            // label.
             let psych_v = wc
                 .psyche
+                .get(&KindId(name))
+                .expect("peopled pass over a fauna kind");
+            let society_v = wc
+                .society
                 .get(&KindId(name))
                 .expect("peopled pass over a fauna kind");
             let lex = wc
@@ -4297,8 +4709,8 @@ fn build_to(
             let psych = hornvale_culture::PsychSummary {
                 threat_response: psych_v.threat_response,
                 time_horizon: psych_v.time_horizon,
-                communal: psych_v.sociality == hornvale_species::Sociality::Communal,
-                rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
+                communal: society_v.sociality == hornvale_species::Sociality::Communal,
+                rank_status: society_v.status_basis == hornvale_species::StatusBasis::Rank,
                 vocabulary: hornvale_culture::RoleVocabulary {
                     worker_override: lex.worker_override.map(str::to_string),
                     warrior: lex.warrior.to_string(),
@@ -4334,7 +4746,7 @@ fn build_to(
             let namer = namers
                 .get(name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(psych_v);
+            let morph = morph_options(society_v);
             let lexicon = lexicons
                 .get(name)
                 .expect("a lexicon was built for every placed species");
@@ -4578,35 +4990,40 @@ fn species_genesis(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        // Peopled-registry facts (mind + perception + speech) describe a
-        // settling people's full cluster. A minded solitary (a dragon carries a
-        // psyche but no perception or speech) emits only its `SPECIES_NAME`
-        // above; its mind stays latent — read from the registry if it is ever
-        // agentified — so every shipped world is byte-identical (The Eremite).
-        // Gated on `Settled`, which the nested-capacity invariant guarantees
-        // implies the full peopled cluster, so the reads below are total.
-        let settled = wc
-            .biosphere
-            .get(kind)
-            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled);
-        if let Some(p) = wc.psyche.get(kind).filter(|_| settled) {
-            let perception = wc
-                .perception
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let articulation = wc
-                .articulation
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let sociality = match p.sociality {
-                Sociality::Hierarchic => "hierarchic",
-                Sociality::Communal => "communal",
-            };
-            let status = match p.status_basis {
-                StatusBasis::Rank => "rank",
-                StatusBasis::Knowledge => "knowledge",
-                StatusBasis::Generosity => "generosity",
-            };
+        // Species-registry facts describe a kind's authored components. Each
+        // fact FAMILY is gated on the component that produces it — not on
+        // `SocialForm::Settled`, which is sedentism and withheld a solitary
+        // kind's mind, senses, and speech for a reason unrelated to any of
+        // them (the shape decision 0068 corrected for `SocietyVector`, left
+        // standing in the other three families). A dragon therefore emits
+        // mind + perception + speech and, correctly, no society facts: it has
+        // no society, rather than failing to settle.
+        //
+        // The commit ORDER below is unchanged from the single-gate version —
+        // note that `in-group-radius` still sits between two mind facts, which
+        // is why the mind block appears twice rather than being merged: the
+        // first mind block (threat-response, deliberation-latency) commits,
+        // then the society block's `in-group-radius`, then the SECOND mind
+        // block (time-horizon), and only then the rest of the society block
+        // (sociality-mode, status-basis) — so the society block appears
+        // twice for the identical reason, split by that same interleaved
+        // `time-horizon`. Emission order is a save-format contract; this
+        // gates only, so every settling people's fact sequence stays
+        // byte-identical and the only new facts in any world are the
+        // dragons' own (The Vigil).
+        //
+        // LOAD-BEARING: do not "simplify" this into one mind block and one
+        // society block. Merging them would move `in-group-radius` to after
+        // `time-horizon` for every settling people (goblin, hobgoblin,
+        // bugbear, kobold) in every committed world — a save-format change
+        // with no epoch, i.e. silent corruption of every already-committed
+        // world and fixture.
+        let mind = wc.psyche.get(kind);
+        let society = wc.society.get(kind);
+        let perception = wc.perception.get(kind);
+        let articulation = wc.articulation.get(kind);
+
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
                 &world.registry,
@@ -4619,14 +5036,29 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
             world.ledger.commit(
-                sfact(id, IN_GROUP_RADIUS, Value::Number(p.in_group_radius)),
+                sfact(id, IN_GROUP_RADIUS, Value::Number(s.in_group_radius)),
                 &world.registry,
             )?;
+        }
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
+            let sociality = match s.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match s.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
             world.ledger.commit(
                 sfact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
                 &world.registry,
@@ -4635,6 +5067,8 @@ fn species_genesis(
                 sfact(id, STATUS_BASIS, Value::Text(status.to_string())),
                 &world.registry,
             )?;
+        }
+        if let Some(perception) = perception {
             let activity = match perception.activity {
                 ActivityCycle::Diurnal => "diurnal",
                 ActivityCycle::Nocturnal => "nocturnal",
@@ -4664,6 +5098,8 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(articulation) = articulation {
             let exotic = match articulation.exotic {
                 hornvale_language::ExoticManner::None => "none",
                 hornvale_language::ExoticManner::Trill => "trill",
@@ -4838,7 +5274,7 @@ pub fn world_name(world: &World) -> Option<String> {
 /// type-audit: bare-ok(identifier-text)
 pub fn world_name_in(world: &World, wc: &WorldComponents) -> Option<String> {
     let terrain = terrain_of(world).ok()?;
-    let climate = climate_of(world).ok()?;
+    let climate = climate_from(world, &terrain).ok()?;
     world_name_in_from(world, wc, &terrain, &climate)
 }
 
@@ -4944,9 +5380,20 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 /// agent's sky and the almanac's placed-observer lines describe the same
 /// point on the globe.
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
+    sky_report_from(world, time, &terrain, &climate)
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+) -> Result<SkyReport, BuildError> {
+    let mut report = sky_of(world)?.sky_at(time);
     let cell = hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
@@ -5413,6 +5860,11 @@ fn rendered_pantheon_of(
             .find(|(k, _)| k.0 == species)
             .map(|(_, p)| p)
             .expect("peopled pass over a fauna kind"),
+        wc.society
+            .iter()
+            .find(|(k, _)| k.0 == species)
+            .map(|(_, s)| s)
+            .expect("peopled pass over a fauna kind"),
     );
     let tenets = tenets_for(&beliefs, &phenomena, &voice);
     Ok(Some((v, beliefs.into_iter().zip(tenets).collect())))
@@ -5520,7 +5972,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report(world, WorldTime { day: 0.0 })?,
+        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
@@ -5529,6 +5981,8 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         ground_lines: ground_lines_from(&terrain, &climate),
         water_lines: water_lines_from(&terrain),
         deep_lines: deep_lines_from(world, &terrain)?,
+        lode_lines: lode_lines_from(world, &terrain, &climate)?,
+        vestige_lines: vestige_lines_from(world, &terrain)?,
         diurnal_lines: diurnal_lines_from(&terrain, &climate),
         seas_lines: seas_lines_from(&terrain, &climate),
         rains_lines: rains_lines_from(&terrain, &climate),
@@ -5592,6 +6046,109 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A seed-42 generated-sky world with the default roster — the shared
+    /// fixture for the fact-emission tests below.
+    fn vigil_world() -> World {
+        build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    /// The predicate sequence committed for one species entity, in ledger order.
+    fn predicate_sequence(world: &World, species: &str) -> Vec<String> {
+        let id = hornvale_species::species_entity(world, species)
+            .unwrap_or_else(|| panic!("{species} has a species entity"));
+        world
+            .ledger
+            .facts_about(id)
+            .map(|f| f.predicate.clone())
+            .collect()
+    }
+
+    #[test]
+    fn a_settled_people_emits_the_same_seventeen_facts_in_the_same_order() {
+        // The Vigil re-gates emission per fact FAMILY, but must not REORDER
+        // it: emission order is a save-format contract, and the existing
+        // sequence interleaves a society fact between two mind facts. Pinning
+        // the literal order is what proves the re-gate changed gates only.
+        // Seventeen: `species-name` plus the sixteen authored-vector facts.
+        let world = vigil_world();
+        assert_eq!(
+            predicate_sequence(&world, "goblin"),
+            vec![
+                "species-name",
+                "species-threat-response",
+                "species-deliberation-latency",
+                "species-in-group-radius",
+                "species-time-horizon",
+                "species-sociality-mode",
+                "species-status-basis",
+                "species-activity-cycle",
+                "species-night-vision",
+                "species-sky-attention",
+                "species-labiality",
+                "species-vowel-space",
+                "species-voicing",
+                "species-sibilance",
+                "species-voice-loudness",
+                "species-tonality",
+                "species-exotic-manner",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dragon_emits_mind_perception_and_speech_but_no_society() {
+        // Decision 0068's semantics, now visible in the ledger: a Solitary
+        // kind is minded and speaks and perceives, and keeps no society — so
+        // its society facts are absent because it HAS no society, not because
+        // it fails to settle. Before The Vigil all four families were withheld
+        // by one sedentism gate.
+        let world = vigil_world();
+        let seq = predicate_sequence(&world, "red-dragon");
+        for present in [
+            "species-threat-response",
+            "species-deliberation-latency",
+            "species-time-horizon",
+            "species-activity-cycle",
+            "species-night-vision",
+            "species-sky-attention",
+            "species-labiality",
+            "species-exotic-manner",
+        ] {
+            assert!(
+                seq.iter().any(|p| p == present),
+                "{present} must be emitted"
+            );
+        }
+        for absent in [
+            "species-in-group-radius",
+            "species-sociality-mode",
+            "species-status-basis",
+        ] {
+            assert!(
+                !seq.iter().any(|p| p == absent),
+                "{absent} must NOT be emitted — a dragon keeps no society"
+            );
+        }
+        assert_eq!(
+            seq.len(),
+            14,
+            "species-name + mind 3 + perception 3 + speech 7"
+        );
+    }
+
+    #[test]
+    fn plain_fauna_still_emits_only_its_name() {
+        let world = vigil_world();
+        assert_eq!(predicate_sequence(&world, "owlbear"), vec!["species-name"]);
+    }
 
     #[test]
     fn wild_concentrations_are_deterministic_beasts() {
@@ -5686,6 +6243,67 @@ mod tests {
     }
 
     #[test]
+    fn cascade_regime_of_matches_the_authored_regime_map() {
+        // THE SOLITARY TONGUE (Task 2): cascade_regime_of is a total, pure
+        // function of a biosphere row (no world/seed needed). Each of the
+        // four peoples (Settled) draws at the historical SETTLED rate; each
+        // dragon (Solitary, long-lived) freezes to the isolate rate.
+        let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+        for people in ["goblin", "kobold", "hobgoblin", "bugbear"] {
+            let bio = wc
+                .biosphere
+                .get_by_label(people)
+                .unwrap_or_else(|| panic!("{people} has a biosphere row"));
+            assert_eq!(
+                cascade_regime_of(bio),
+                hornvale_language::CascadeRegime::SETTLED,
+                "{people} is Settled -> the SETTLED regime"
+            );
+        }
+        for dragon in ["white-dragon", "red-dragon", "black-dragon"] {
+            let bio = wc
+                .biosphere
+                .get_by_label(dragon)
+                .unwrap_or_else(|| panic!("{dragon} has a biosphere row"));
+            assert_eq!(
+                cascade_regime_of(bio),
+                hornvale_language::CascadeRegime::new(0, 1),
+                "{dragon} is Solitary and long-lived -> the frozen isolate regime"
+            );
+        }
+        // Total-map coverage: Gregarious (no current speaker) banks {1,2};
+        // short-lived Solitary beasts bank SETTLED (below the threshold);
+        // Sessile never speaks and is inert at SETTLED.
+        let elk = wc
+            .biosphere
+            .get_by_label("giant-elk")
+            .expect("giant-elk has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(elk),
+            hornvale_language::CascadeRegime::new(1, 2),
+            "giant-elk is Gregarious -> the banked {{1,2}} regime"
+        );
+        let otyugh = wc
+            .biosphere
+            .get_by_label("otyugh")
+            .expect("otyugh has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(otyugh),
+            hornvale_language::CascadeRegime::SETTLED,
+            "otyugh is Solitary but short-lived -> the banked SETTLED regime"
+        );
+        let treant = wc
+            .biosphere
+            .get_by_label("treant")
+            .expect("treant has a biosphere row");
+        assert_eq!(
+            cascade_regime_of(treant),
+            hornvale_language::CascadeRegime::SETTLED,
+            "treant is Sessile (never speaks) -> inert at SETTLED"
+        );
+    }
+
+    #[test]
     fn predator_pressure_is_deterministic_and_nontrivial() {
         // THE QUARRY: the carnivore-density field is byte-identical across calls
         // (no seed, pure over committed facts) and genuinely varies — some cells
@@ -5708,6 +6326,61 @@ mod tests {
             "some cells are dense predator territory"
         );
         assert!(va.contains(&0.0), "many cells carry no predators");
+    }
+
+    #[test]
+    fn vestige_dread_is_deterministic_in_range_and_reads_higher_where_haunted() {
+        // THE VESTIGE: the derived dread field is byte-identical across calls
+        // (no seed, pure over committed history + terrain), stays in [0,1] (each
+        // Vestige::dread is authored in-range and the fold is a max, not a sum),
+        // and reads strictly higher at a cell carrying a breached/forgotten
+        // vestige than at a cell whose stack is empty.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let a = vestige_dread(&world).unwrap();
+        let b = vestige_dread(&world).unwrap();
+        let va: Vec<f64> = a.iter().map(|(_, v)| *v).collect();
+        let vb: Vec<f64> = b.iter().map(|(_, v)| *v).collect();
+        assert_eq!(va, vb, "two calls produce byte-identical fields");
+        assert!(
+            va.iter().all(|v| (0.0..=1.0).contains(v)),
+            "every cell's dread stays in [0,1]"
+        );
+
+        // The fixture cell `vestige.rs`'s own tests use: ancient continental
+        // crust whose presence noise fires the pre-human gate-scar test, so
+        // its stack's first (and only) layer is breached + forgotten
+        // (dread 0.9). See `vestige::DEEP_ANCIENT_NUMINOUS_CELL`'s doc comment
+        // for how this cell was found.
+        let haunted_cell = hornvale_kernel::CellId(21966);
+        let terrain = terrain_of(&world).unwrap();
+        let haunted_stack = vestiges_at(&world, &terrain, haunted_cell);
+        assert!(
+            !haunted_stack.is_empty(),
+            "the fixture cell must carry at least the pre-human vestige"
+        );
+
+        // Find a genuinely empty-stack cell by scanning: land or ocean, no
+        // pre-human scar, no occupation ever founded there.
+        let geo = terrain.geosphere();
+        let empty_cell = geo
+            .cells()
+            .find(|&cell| vestiges_at(&world, &terrain, cell).is_empty())
+            .expect("some cell in a seed-42 world has no vestige at all");
+
+        let haunted_dread = *a.get(haunted_cell);
+        let empty_dread = *a.get(empty_cell);
+        assert!(
+            haunted_dread > empty_dread,
+            "a haunted cell must read strictly higher than an empty one ({haunted_dread} vs {empty_dread})"
+        );
+        assert_eq!(empty_dread, 0.0, "an empty stack folds to zero dread");
     }
 
     #[test]
@@ -5849,6 +6522,7 @@ mod tests {
         let shrunk_wc = WorldComponents::from_stores(
             shrunk_biosphere,
             wc.psyche.clone(),
+            wc.society.clone(),
             wc.perception.clone(),
             wc.articulation.clone(),
             wc.lexicon.clone(),
@@ -6058,6 +6732,7 @@ mod tests {
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
+            ComponentStore::new(),
             hornvale_language::family_proto(),
             family_of,
             ComponentStore::new(),
@@ -6124,6 +6799,10 @@ mod tests {
             [(g, *hornvale_species::psyche_registry().get(&g).unwrap())]
                 .into_iter()
                 .collect();
+        let society: ComponentStore<KindId, _> =
+            [(g, *hornvale_species::society_registry().get(&g).unwrap())]
+                .into_iter()
+                .collect();
         let perception: ComponentStore<KindId, _> =
             [(g, *hornvale_species::perception_registry().get(&g).unwrap())]
                 .into_iter()
@@ -6147,6 +6826,7 @@ mod tests {
         let wc = crate::components::WorldComponents::from_stores(
             biosphere,
             psyche,
+            society,
             perception,
             articulation,
             lexicon,
@@ -7362,6 +8042,61 @@ mod tests {
         );
     }
 
+    #[test]
+    fn deposit_of_overlays_laterite_and_passes_through_primary_deposits() {
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let mut saw_primary_passthrough = false;
+        let mut saw_laterite_overlay = false;
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                assert_eq!(deposit_of(&terrain, &climate, geo, cell), None);
+                continue;
+            }
+            let combined = deposit_of(&terrain, &climate, geo, cell);
+            match terrain.deposit_at(cell) {
+                Some(primary) => {
+                    assert_eq!(
+                        combined,
+                        Some(primary),
+                        "a primary deposit must pass through unchanged at {cell:?}"
+                    );
+                    saw_primary_passthrough = true;
+                }
+                None => {
+                    let hot = climate.mean_temperature_at(cell).get() > 22.0;
+                    let wet = climate.moisture_at(cell) > 0.6;
+                    if hot && wet {
+                        assert_eq!(
+                            combined,
+                            Some(Deposit {
+                                process: DepositProcess::Lateritic,
+                                commodity: Commodity::Bauxite,
+                                depth: BandKind::Regolith,
+                                grade: 0.4,
+                                tonnage: 0.6,
+                            }),
+                            "a hot+wet land cell with no primary deposit gets a laterite overlay at {cell:?}"
+                        );
+                        saw_laterite_overlay = true;
+                    } else {
+                        assert_eq!(combined, None);
+                    }
+                }
+            }
+        }
+        assert!(
+            saw_laterite_overlay,
+            "seed 42 has no hot+wet land cell without a primary deposit to overlay"
+        );
+        assert!(
+            saw_primary_passthrough,
+            "seed 42 has no land cell with a primary deposit to pass through"
+        );
+    }
+
     /// The flagship's cell, read back from its committed `CELL_ID` fact
     /// (independent of `placements`, which build_world already consumed).
     fn flagship_cell(world: &World, village_id: EntityId) -> hornvale_kernel::CellId {
@@ -7429,6 +8164,10 @@ mod tests {
             .psyche
             .get(&kind)
             .expect("peopled pass over a fauna kind");
+        let society_v = wc
+            .society
+            .get(&kind)
+            .expect("peopled pass over a fauna kind");
         let lex = wc
             .lexicon
             .get(&kind)
@@ -7436,8 +8175,8 @@ mod tests {
         let psych = hornvale_culture::PsychSummary {
             threat_response: psych_v.threat_response,
             time_horizon: psych_v.time_horizon,
-            communal: psych_v.sociality == hornvale_species::Sociality::Communal,
-            rank_status: psych_v.status_basis == hornvale_species::StatusBasis::Rank,
+            communal: society_v.sociality == hornvale_species::Sociality::Communal,
+            rank_status: society_v.status_basis == hornvale_species::StatusBasis::Rank,
             vocabulary: hornvale_culture::RoleVocabulary {
                 worker_override: lex.worker_override.map(str::to_string),
                 warrior: lex.warrior.to_string(),
@@ -7604,6 +8343,7 @@ mod tests {
             [(KindId("test-beast"), "test-beast")].into_iter().collect();
         let wc = WorldComponents::from_stores(
             biosphere,
+            ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
             ComponentStore::new(),
@@ -7789,7 +8529,11 @@ mod tests {
     #[test]
     fn goblin_voice_params_are_the_baseline() {
         let psy = hornvale_species::psyche_registry();
-        let v = voice_params(psy.get(&KindId("goblin")).unwrap());
+        let soc = hornvale_species::society_registry();
+        let v = voice_params(
+            psy.get(&KindId("goblin")).unwrap(),
+            soc.get(&KindId("goblin")).unwrap(),
+        );
         assert!((v.formality - 0.5).abs() < 1e-12 && (v.epithet_density - 0.5).abs() < 1e-12);
     }
 
@@ -8086,7 +8830,10 @@ mod tests {
         let ph = language_of(&world, "kobold");
         let ex = exposure_of(&world, "kobold").unwrap();
         // Singleton path: family == species, proto_ph == ph; the merger-aware
-        // daughters slice is the family's one member (kobold itself).
+        // daughters slice is the family's one member (kobold itself). Kobold
+        // is Settled, so `cascade_regime_of` resolves to SETTLED here too —
+        // the literal stays for a direct, mechanism-level comparison against
+        // `lexicon_of`.
         let wc = WorldComponents::assemble().unwrap();
         let daughters = family_daughters(&world, &wc, "kobold");
         let direct = hornvale_language::build_lexicon(
@@ -8097,8 +8844,36 @@ mod tests {
             &ph,
             &ex,
             &daughters,
+            hornvale_language::CascadeRegime::SETTLED,
         );
         assert_eq!(lexicon_of(&world, "kobold").unwrap(), direct);
+    }
+
+    #[test]
+    fn goblin_lexicon_mechanism_is_stable_given_fixed_exposures() {
+        // THE SOLITARY TONGUE (Task 2) byte-identity guard: goblin exercises
+        // the OTHER branch of `lexicon_of_in` (a real multi-member family
+        // with a shared proto phonology, unlike kobold's singleton path).
+        // Goblin is Settled, so `cascade_regime_of` must resolve to the
+        // historical SETTLED regime here exactly as the pre-Task-2 literal
+        // did — a dragon-blind caller sees byte-identical draws.
+        let world = generated(42);
+        let ph = language_of(&world, "goblin");
+        let ex = exposure_of(&world, "goblin").unwrap();
+        let wc = WorldComponents::assemble().unwrap();
+        let proto_ph = proto_phonology_of_in(&world, &wc, "goblinoid");
+        let daughters = family_daughters(&world, &wc, "goblinoid");
+        let direct = hornvale_language::build_lexicon(
+            &world.seed,
+            "goblin",
+            "goblinoid",
+            &ph,
+            &proto_ph,
+            &ex,
+            &daughters,
+            hornvale_language::CascadeRegime::SETTLED,
+        );
+        assert_eq!(lexicon_of(&world, "goblin").unwrap(), direct);
     }
 
     #[test]

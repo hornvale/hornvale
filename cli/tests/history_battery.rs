@@ -15,9 +15,12 @@
 //! **The Tumult (predation) re-measured every number here** — the epoch moves
 //! which communities survive and where, so both the seed-42 headline and the
 //! whole cross-seed sweep shifted, and the committed report was regenerated
-//! from this run. The floors did not move; the measurements did, and the const
-//! comments below record where each one now sits. The one to watch is the
-//! sweep's migration minimum, which fell to 6 against a floor of 5.
+//! from this run. The campaign moved no floor; the measurements moved, and the
+//! const comments below record where each one now sits. (The seed-42 floors
+//! themselves did move while this branch was open — main re-synced them with
+//! the light gate for The Sundering — which is a separate change, recorded at
+//! its own const.) The one to watch is the sweep's migration minimum, which
+//! fell to 6 against a floor of 5.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -36,15 +39,24 @@ const SWEEP: [u64; 9] = [1, 2, 3, 7, 13, 42, 100, 256, 777];
 // Seed-42 gates (identical to the light gates — the full-cascade build must not
 // disturb the Settlements-depth placement these measure).
 //
-// The Tumult (predation) re-pin: seed 42 at Full depth measures 58 climate
-// migrations (was 51 pre-Tumult) and 99/227 re-occupied sites (was 6/139) —
-// conquest re-seats communities onto new ground, so far more of them meet a
-// later era's habitability flip, and re-occupation stacks accordingly. Both
-// floors move UP against their measurements and neither is raised to track
-// them: they are inertness floors, not targets.
-const MIGRATION_FLOOR: u64 = 20;
+// Re-synced with the light gate (`history_gates.rs`) for The Sundering's
+// moving-sea epoch, which re-scoped the sibling gate (migration 51→12, fewer
+// re-stacks) but missed this heavy-tier twin: `MIGRATION_FLOOR` 20→5 and
+// `MIN_RESTACKED_SITES` 3→1 now match the light gate exactly, restoring the
+// "identical gates" invariant this comment asserts. `MAX_REGION_OVERLAP`
+// already matched.
+//
+// The Tumult (predation) then re-measured both: seed 42 at Full depth measures
+// 58 climate migrations (was 51 on this campaign's branch point) and 99/227
+// re-occupied sites (was 6/139) — conquest re-seats communities onto new
+// ground, so far more of them meet a later era's habitability flip, and
+// re-occupation stacks accordingly. The measurements moved UP and away from
+// both floors; neither floor is raised to track them, because they are
+// inertness floors, not targets, and because raising them here would re-break
+// the identical-gates invariant the re-sync above restored.
+const MIGRATION_FLOOR: u64 = 5;
 const MAX_REGION_OVERLAP: f64 = 0.25;
-const MIN_RESTACKED_SITES: u64 = 3;
+const MIN_RESTACKED_SITES: u64 = 1;
 
 // Cross-seed floors, set below the sweep's measured MINIMA.
 //
@@ -154,14 +166,39 @@ fn history_gates_full_world_and_cross_seed() {
             r.seed,
             r.strat.restacked_sites
         );
-        assert!(
-            r.strat.depth_capacity_correlation < 0.0,
-            "seed {} depth/capacity correlation not negative: {:.4}",
-            r.seed,
-            r.strat.depth_capacity_correlation
-        );
         rows.push(r);
     }
+
+    // The negative depth/capacity correlation is the sweep's robust CENTRAL
+    // TENDENCY, not a per-seed universal (re-scoped 2026-07-23, deliberately,
+    // after The Sundering's moving-sea epoch — this heavy-tier twin was missed
+    // when the light gate was re-pinned). The moving sea produces TWO regimes,
+    // confirmed by inspecting per-cell structure:
+    //   - MOST worlds (8/9) have climate-contested MARGINAL land that glacial/
+    //     sea churn forces to be re-occupied repeatedly at tiny populations
+    //     (e.g. seed 3 stacks cells 24-27 layers deep at mean peak ~1) — deep
+    //     stacks on poor land, a strong NEGATIVE correlation.
+    //   - A SPARSE world with no such churn (seed 2: 62 occupied cells, its
+    //     re-stacks all PRIME land at mean peak ~87 vs 72 for single-occupation
+    //     cells) re-stacks on good land — a genuine POSITIVE correlation, not a
+    //     numerical fluke (all 7 of its restacked cells are consistently
+    //     high-population).
+    // The finding "stratigraphy accretes on marginal land" therefore holds as a
+    // robust central tendency (median ~= -0.40, 8/9 negative), and the median
+    // gate keeps its falsification teeth without asserting a universality the
+    // physics no longer supports.
+    let mut corrs: Vec<f64> = rows
+        .iter()
+        .map(|r| r.strat.depth_capacity_correlation)
+        .collect();
+    corrs.sort_by(f64::total_cmp);
+    let median = corrs[corrs.len() / 2]; // SWEEP is fixed at 9 seeds (odd) -> true median
+    assert!(
+        median < 0.0,
+        "sweep MEDIAN depth/capacity correlation not negative: {median:.4} — the \
+         'stratigraphy accretes on marginal land' finding no longer holds even in \
+         central tendency; re-measure before re-pinning. Per-seed (sorted): {corrs:?}"
+    );
 
     // 3. Regenerate the committed report artifact.
     let (summary, csv) = render_report(mig42, raw42, region42, &strat42, &rows);

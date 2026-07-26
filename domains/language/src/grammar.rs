@@ -458,6 +458,7 @@ pub fn realize_tongue_deep(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::etymology::CascadeRegime;
     use crate::lexicon::{ExposureClass, LexEntry, build_lexicon};
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
@@ -599,6 +600,7 @@ mod tests {
             &ph,
             &exposures,
             &[],
+            CascadeRegime::SETTLED,
         )
     }
 
@@ -691,6 +693,7 @@ mod tests {
             &ph,
             &exposures,
             &[],
+            CascadeRegime::SETTLED,
         );
         let clause = TongueClause {
             subject: "Vavako".into(),

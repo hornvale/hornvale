@@ -16,6 +16,31 @@ pub struct GeneratedTerrain {
     notes: Vec<String>,
 }
 
+/// Winning-craton age above which crust counts as ancient enough to have
+/// witnessed the pre-human deep (`[0,1]`, `GeneratedTerrain::crust_age_at`'s
+/// scale).
+/// type-audit: bare-ok(ratio)
+const ANCIENT_CRUST_AGE: f64 = 0.8;
+
+/// Spatial frequency for the pre-human scar presence noise. Distinct from
+/// The Lode's cave (5.0) and deposit (7.0) frequencies sampled off the same
+/// seed, so the three point processes decorrelate on the sphere.
+/// type-audit: bare-ok(ratio)
+const PREHUMAN_SCAR_FREQ: f64 = 11.0;
+
+/// fBm octaves for the pre-human scar presence noise (matches The Lode's
+/// caves/deposits).
+/// type-audit: bare-ok(count)
+const PREHUMAN_SCAR_OCTAVES: u32 = 4;
+
+/// Presence threshold for the pre-human scar noise test: `sphere_fbm01`
+/// compresses variance toward 0.5 (see `crust.rs`), so this is not a small
+/// absolute probability but is still sparse relative to the ancient-crust
+/// population it gates within — at seed 42 it selects 1 of ~1900
+/// ancient-crust cells.
+/// type-audit: bare-ok(ratio)
+const PREHUMAN_SCAR_THRESHOLD: f64 = 0.30;
+
 impl GeneratedTerrain {
     /// Wrap a genesis outcome with the Geosphere it was generated over.
     /// Panics (fail fast) if the mesh and the globe disagree on cell count —
@@ -203,6 +228,92 @@ impl GeneratedTerrain {
     /// type-audit: bare-ok(ratio)
     pub fn cave_proneness_at(&self, id: CellId) -> f64 {
         crate::lithology::cave_proneness(&self.material_at(id), self.drainage_at(id))
+    }
+
+    /// The cave at a cell, if the fluid-flow point process places one.
+    pub fn cave_at(&self, id: CellId) -> Option<crate::features::Cave> {
+        if self.is_ocean(id) {
+            return None;
+        }
+        let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let pos = self.geosphere.position(id);
+        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 5.0, 4);
+        let prob = crate::features::presence_prob(self.cave_proneness_at(id), belt);
+        if noise >= prob {
+            return None;
+        }
+        let buf = self.material_at(id);
+        let near_fault = self.boundary_at(id).is_some();
+        let kind = crate::features::cave_kind(&buf, near_fault);
+        // Depth-reach grows with proneness (deeper karst in wetter, more soluble rock).
+        let depth_reach_bands = 1 + (self.cave_proneness_at(id) * 3.0) as u32;
+        Some(crate::features::Cave {
+            kind,
+            depth_reach_bands,
+        })
+    }
+
+    /// The dominant ore deposit at a cell, if the point process places one.
+    pub fn deposit_at(&self, id: CellId) -> Option<crate::features::Deposit> {
+        if self.is_ocean(id) {
+            return None;
+        }
+        let buf = self.material_at(id);
+        let rock = self.rock_at(id);
+        let boundary = self.boundary_at(id).map(|b| b.kind);
+        let endorheic = self.is_endorheic(id);
+        let (process, commodity) =
+            crate::features::deposit_kind(rock, boundary, &buf, endorheic, self.crust_age_at(id))?;
+        // Areal ores (rock IS the ore) are always present; point ores gate on prospectivity×belt×noise.
+        let areal = matches!(process, crate::features::DepositProcess::ChemicalSediment)
+            || matches!(process, crate::features::DepositProcess::Placer);
+        let belt = crate::features::belt_weight(self.boundary_distance_at(id));
+        let pos = self.geosphere.position(id);
+        let noise = crate::crust::sphere_fbm01(self.globe.features_noise_seed(), pos, 7.0, 4);
+        if !areal {
+            let prob = crate::features::presence_prob(self.prospectivity_at(id), belt);
+            if noise >= prob {
+                return None;
+            }
+        }
+        let (grade, tonnage) =
+            crate::features::deposit_grade_tonnage(process, self.prospectivity_at(id), noise);
+        Some(crate::features::Deposit {
+            process,
+            commodity,
+            depth: crate::features::deposit_depth(process),
+            grade,
+            tonnage,
+        })
+    }
+
+    /// Whether a cell carries a rare pre-human "gate scar": deep crust old
+    /// enough to have witnessed the pre-human world, plus a hash-noise
+    /// presence test firing. Pure and deterministic — no draws, no facts,
+    /// no epoch — reuses The Lode's FEATURES noise seed exactly as
+    /// [`cave_at`](Self::cave_at)/[`deposit_at`](Self::deposit_at) do, so no
+    /// new stream label is introduced. Ocean cells never qualify (nothing
+    /// pre-human is legible under open water in this model). This
+    /// encapsulates the calibration coupling between the ancient-crust
+    /// threshold and terrain's internal presence noise so a caller (e.g.
+    /// `windows/worldgen`'s pre-human vestige gate) reads only the boolean,
+    /// never terrain's noise field directly.
+    /// type-audit: bare-ok(flag: return)
+    pub fn prehuman_scar_at(&self, id: CellId) -> bool {
+        if self.is_ocean(id) {
+            return false;
+        }
+        if self.crust_age_at(id) <= ANCIENT_CRUST_AGE {
+            return false;
+        }
+        let pos = self.geosphere.position(id);
+        let noise = crate::crust::sphere_fbm01(
+            self.globe.features_noise_seed(),
+            pos,
+            PREHUMAN_SCAR_FREQ,
+            PREHUMAN_SCAR_OCTAVES,
+        );
+        noise < PREHUMAN_SCAR_THRESHOLD
     }
 
     /// The geothermal gradient at a cell (K/km) — the deep's energy base.
@@ -433,5 +544,42 @@ mod tests {
         assert_eq!(terrain.waterfall_provenance(), Provenance::Process);
         assert_eq!(terrain.delta_provenance(), Provenance::Process);
         assert_eq!(terrain.playa_provenance(), Provenance::Process);
+    }
+
+    #[test]
+    fn prehuman_scar_never_fires_on_ocean() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        for cell in geo.cells() {
+            if terrain.is_ocean(cell) {
+                assert!(
+                    !terrain.prehuman_scar_at(cell),
+                    "ocean cells never carry a pre-human scar"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn prehuman_scar_at_matches_the_ancient_crust_and_noise_gate() {
+        let geo = Geosphere::new(3);
+        let outcome = generate(Seed(42), &geo, &TerrainPins::default()).unwrap();
+        let terrain = GeneratedTerrain::new(geo.clone(), outcome);
+        for cell in geo.cells() {
+            let expected = !terrain.is_ocean(cell)
+                && terrain.crust_age_at(cell) > ANCIENT_CRUST_AGE
+                && crate::crust::sphere_fbm01(
+                    terrain.globe().features_noise_seed(),
+                    geo.position(cell),
+                    PREHUMAN_SCAR_FREQ,
+                    PREHUMAN_SCAR_OCTAVES,
+                ) < PREHUMAN_SCAR_THRESHOLD;
+            assert_eq!(
+                terrain.prehuman_scar_at(cell),
+                expected,
+                "cell {cell:?} disagrees with the direct ancient-crust + noise gate"
+            );
+        }
     }
 }

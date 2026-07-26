@@ -3237,7 +3237,16 @@ mod tests {
             |concept: &str| hornvale_worldgen::noun_class_of(&world, "goblin", concept);
         let mut exposures = BTreeMap::new();
         exposures.insert("planet".to_string(), ExposureClass::Steeped);
-        let lexicon = build_lexicon(&world.seed, "goblin", "goblin", &ph, &ph, &exposures, &[]);
+        let lexicon = build_lexicon(
+            &world.seed,
+            "goblin",
+            "goblin",
+            &ph,
+            &ph,
+            &exposures,
+            &[],
+            hornvale_language::CascadeRegime::SETTLED,
+        );
         let probe = TongueProbe {
             concept: "planet".to_string(),
             subject: "Vebe".to_string(),
