@@ -301,6 +301,21 @@ still a real per-species divergence these two psychology scalars produce. A
 species is the fixed point those draws (and, now, this one field) are taken
 with respect to, never a distribution of its own.
 
+**Threat response found a second, sharper consumer in *The Tumult*.** Where
+demography folds it smoothly into a capacity term, the deep-history bake's
+conflict rule reads it as a **gate**: a people whose threat response falls
+below a fixed threshold does not raid at all, however strong it is on paper.
+Two things follow that are worth recording here rather than only in
+[Settlement](./settlement.md). First, the gate produces an **asymmetric**
+aversion structure with no pairwise machinery whatever — each people gates on
+its *own* authored number, so one people can decline a fight its neighbour is
+happy to pick — and on the shipped roster it means the goblin, at 0.5, never
+raids anyone while the other three may. Second, and more pointed: this is the
+**only** per-species input the bake receives. Neither the condition niche nor
+any other component enters that history, so every people-to-people asymmetry
+the deep past produces runs through this one scalar. That is a real limit of
+the current bake, not a property of the vector.
+
 **The condition niche's four axes, and the frame each is said in.** The
 biosphere component's `ConditionNiche` carries one response curve per
 environmental axis — temperature in °C, moisture in the climate field's

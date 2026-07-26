@@ -1,6 +1,19 @@
 # The Tumult — Living-Community C3, Slice 1: Predation
 
-**Status:** design (G3 re-review — the model was reframed after slice-1's crowding sandpile was falsified)
+**Status:** SHIPPED — merged to `main` 2026-07-26. Slice 1 is complete and the
+§5 headline metric is a **documented falsification**: the cascade-size
+distribution is geometric with a hard exponential cutoff, branching ratio
+σ ≈ 0.051 over 2974 conquests pooled across seeds 1..=100 (support 0.48
+decades against the ≥ ~1.5 threshold; per-octave decay ~46×). Conflict does
+fire on value rather than density (seed 42: 0 → 76 conquests with land to
+spare; alive-at-`now` 138 → 203, inside every band). Both §5 amendments were
+post-observation and pull in opposite directions, as disclosed there. The
+diagnosed successor is the deferred dominance-hierarchy + collapse-release
+slice of §6. See `book/src/chronicle/the-tumult.md` and
+`docs/retrospectives/the-tumult.md`.
+
+*(Original status: design (G3 re-review — the model was reframed after
+slice-1's crowding sandpile was falsified).)*
 **Program:** The Living Community engine (campaign 3 of ~5), conflict-as-criticality (SOC-criticality)
 **Slice:** predation — conflict is driven by *coveting value* down a *strength* gradient, not by crowding. A genesis epoch.
 **Base:** origin/main @d9f6a55e (contains The Sundering).

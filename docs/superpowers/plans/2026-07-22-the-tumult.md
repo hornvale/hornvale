@@ -331,6 +331,20 @@ git commit -m "test(cli): predation-bake wall-time + max-depth cost gate, heavy 
 
 ---
 
+---
+
+## Status: COMPLETE — merged 2026-07-26
+
+All four tasks shipped, plus the two close-time investigations the epoch
+surfaced (the coastal-inversion adjudication and the elevation re-datum + land
+mask). The headline is a **falsification**: the cascade-size distribution is
+geometric with a hard cutoff, branching ratio σ ≈ 0.051 over 2974 conquests
+pooled across seeds 1..=100 — deeply sub-critical, no constant tuned toward a
+power law. Conflict does fire on value rather than density (seed 42: 0 → 76
+conquests, alive-at-now 138 → 203). Chronicle:
+`book/src/chronicle/the-tumult.md`. Retrospective:
+`docs/retrospectives/the-tumult.md`.
+
 ## Close (G6 — `closing-a-campaign`, Nathan-authorized)
 
 Census regen on `lefford` (0063); cascade re-pins; keystone refreeze; artifact drift; DoD docs (chronicle — the crowding→predation reframe + the six-pass ideonomy pivot; retrospective; freshness sweep; Confidence Gradient re-score; registry flip SOC-criticality → elaborated/slice-1 with the measured power-law-or-falsification result + the deferred dominance-hierarchy/cohesion/captives/grievance rows); full gate + artifact drift; fast-forward main.

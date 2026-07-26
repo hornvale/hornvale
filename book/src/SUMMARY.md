@@ -250,6 +250,7 @@
 - [The Shudder](./chronicle/the-shudder.md)
 - [The Hearth](./chronicle/the-hearth.md)
 - [The Vigil](./chronicle/the-vigil.md)
+- [The Tumult](./chronicle/the-tumult.md)
 
 # Appendix: The Frontier
 
