@@ -6,7 +6,7 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
-use crate::interior::AnchorId;
+use crate::interior::{AnchorId, Interior, SeamKind, landing};
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
     ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
@@ -4147,6 +4147,72 @@ pub fn plan_to_room(
         from.clone(),
         budget,
     )
+}
+
+/// Which anchor each creature stands at, inside the presence bubble.
+///
+/// NEVER SERIALIZED (decision 0069, `CLIENT-two-tier-position`): an entity's
+/// persisted position is its room; this is the finer tier and it evaporates
+/// with the bubble. That is not a convenience — it is what makes `AnchorId`
+/// safe to use as a key here at all. `AnchorId` is a vector OFFSET into a
+/// derived `Interior`, not a name, so a committed occupancy fact would orphan
+/// the moment a `room/furnishing/v1` epoch regenerated the base; an ephemeral
+/// one cannot. If you ever find yourself persisting one of these, that is why
+/// you must not (The Threshold, task 4).
+///
+/// Keyed by [`EntityId`] rather than the brief's `NpcId`: no such type exists
+/// in this crate. [`Npc`] already carries `entity: EntityId` — its minted
+/// ledger entity, the same handle every other bubble-scoped map in this
+/// module (the fear memo, the disposition state) keys by — so occupancy
+/// follows suit rather than inventing a parallel identity for the same thing.
+#[derive(Debug, Default)]
+pub struct Occupancy(std::collections::BTreeMap<EntityId, AnchorId>);
+
+impl Occupancy {
+    /// Where `who` currently stands, or `None` if it has not arrived (or has
+    /// since departed). Both ends of a creature's stay in a room are
+    /// legitimately "nowhere in particular" — there is no sentinel anchor for
+    /// "not here", only the absence of an entry.
+    pub fn at(&self, who: EntityId) -> Option<AnchorId> {
+        self.0.get(&who).copied()
+    }
+
+    /// Place `who` at the anchor a seam of `kind` lands at in `interior`
+    /// ([`landing`]) — the entry point for a creature crossing into the room
+    /// from the coarse (room-graph) layer. An empty interior has no landing
+    /// at all ([`landing`] returns `None`); arriving into one is a no-op
+    /// rather than a panic, since an interior with zero anchors has nowhere
+    /// for anyone to be recorded standing.
+    pub fn arrive(&mut self, who: EntityId, interior: &Interior, kind: SeamKind) {
+        if let Some(at) = landing(interior, kind) {
+            self.0.insert(who, at);
+        }
+    }
+
+    /// Move `who` to `to`, but only if `to` is adjacent to where it currently
+    /// stands ([`Interior::neighbors`]). Returns whether the move happened —
+    /// a creature that has not arrived anywhere, or a target that is not a
+    /// neighbor of its current anchor, is refused rather than silently
+    /// teleported, since a graph walk that skips edges is not a walk at all.
+    /// type-audit: bare-ok(flag: return)
+    pub fn walk(&mut self, who: EntityId, interior: &Interior, to: AnchorId) -> bool {
+        let Some(here) = self.at(who) else {
+            return false;
+        };
+        if !interior.neighbors(here).contains(&to) {
+            return false;
+        }
+        self.0.insert(who, to);
+        true
+    }
+
+    /// Forget `who` entirely. This is the bubble collapsing (or a creature
+    /// leaving the room) for ONE creature at a time — this task has no "clear
+    /// everyone" call, because nothing yet drives a whole-bubble teardown
+    /// through this type rather than by simply dropping it.
+    pub fn depart(&mut self, who: EntityId) {
+        self.0.remove(&who);
+    }
 }
 
 #[cfg(test)]
@@ -10088,5 +10154,86 @@ mod tests {
                 assert!(is_movement(&a), "{a:?} is replayable but is not a movement");
             }
         }
+    }
+
+    /// A minimal built-interior fixture for occupancy tests: a threshold
+    /// connected directly to a hearth. Deliberately NOT the full pattern-grammar
+    /// composition (`compose(&selection(true, true))`, which nests the hearth
+    /// several hops inside an alcove) — `walking_requires_adjacency` needs a
+    /// threshold and a hearth that ARE neighbors, one hop apart.
+    fn built_interior() -> Interior {
+        use crate::interior::AnchorKind;
+        let mut i = Interior::new();
+        let t = i.push(AnchorKind::Threshold, None);
+        let h = i.push(AnchorKind::Hearth, None);
+        i.connect(t, h);
+        i
+    }
+
+    /// A minted entity id for occupancy tests, standing in for the brief's
+    /// `NpcId` (no such type exists — see [`Occupancy`]'s doc comment).
+    fn npc_id(n: u64) -> EntityId {
+        EntityId::new(n).unwrap()
+    }
+
+    #[test]
+    fn a_creature_arrives_at_the_seam_landing() {
+        use crate::interior::AnchorKind;
+        let interior = built_interior();
+        let mut occ = Occupancy::default();
+        occ.arrive(npc_id(1), &interior, SeamKind::Narrow);
+        let at = occ
+            .at(npc_id(1))
+            .expect("an arrived creature stands somewhere");
+        assert_eq!(interior.anchor(at).kind, AnchorKind::Threshold);
+    }
+
+    #[test]
+    fn occupancy_is_empty_until_arrival_and_forgotten_on_departure() {
+        let mut occ = Occupancy::default();
+        assert!(occ.at(npc_id(1)).is_none());
+        occ.arrive(npc_id(1), &built_interior(), SeamKind::Narrow);
+        assert!(occ.at(npc_id(1)).is_some());
+        occ.depart(npc_id(1));
+        assert!(
+            occ.at(npc_id(1)).is_none(),
+            "the bubble collapsing forgets everything"
+        );
+    }
+
+    #[test]
+    fn walking_requires_adjacency() {
+        use crate::interior::AnchorKind;
+        let i = built_interior(); // threshold -- hearth
+        let mut occ = Occupancy::default();
+        occ.arrive(npc_id(1), &i, SeamKind::Narrow);
+        let hearth = i
+            .ids()
+            .iter()
+            .copied()
+            .find(|&a| i.anchor(a).kind == AnchorKind::Hearth)
+            .unwrap();
+        assert!(
+            occ.walk(npc_id(1), &i, hearth),
+            "adjacent, so the walk succeeds"
+        );
+        assert_eq!(occ.at(npc_id(1)), Some(hearth));
+
+        // THE NAME'S OWN CLAIM: adjacency is REQUIRED, not merely consulted on
+        // the happy path. Plant a third anchor with no edge to the hearth and
+        // confirm walking straight to it is refused rather than teleported.
+        let mut disconnected = built_interior();
+        let stray = disconnected.push(AnchorKind::Bed, None);
+        let mut occ2 = Occupancy::default();
+        occ2.arrive(npc_id(2), &disconnected, SeamKind::Narrow);
+        assert!(
+            !occ2.walk(npc_id(2), &disconnected, stray),
+            "a non-adjacent target must be rejected"
+        );
+        assert_ne!(
+            occ2.at(npc_id(2)),
+            Some(stray),
+            "a rejected walk must not move the creature"
+        );
     }
 }
