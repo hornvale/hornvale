@@ -18,12 +18,18 @@
 # forever.
 #
 # Fails CLOSED: if the hostname does not match, no census runs. If the
-# canonical box is ever renamed or replaced, change CANONICAL_CENSUS_HOST
-# below — one line, in version control, visible in review.
+# canonical box is ever renamed or replaced, change the hostname in
+# census-canonical-host.txt — one line, in version control, visible in
+# review.
+#
+# `windows/lab/src/census_guard.rs` (the Rust-side guard on `lab run`'s
+# publish path, cli/src/main.rs's `cmd_lab_run`, decision-0063 C1) reads the
+# SAME file, baked in at compile time via `include_str!`. One file, two
+# readers, so the canonical hostname is never hardcoded twice.
 
 # The short hostname (`hostname -s`) of the one box that may author census
 # goldens. Compared case-insensitively.
-CANONICAL_CENSUS_HOST="lefford"
+CANONICAL_CENSUS_HOST="$(cat "$(dirname "${BASH_SOURCE[0]}")/census-canonical-host.txt")"
 
 # Exit 0 on the canonical box; otherwise print why and exit 1.
 require_canonical_census_host() {
