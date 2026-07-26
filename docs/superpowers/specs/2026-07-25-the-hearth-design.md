@@ -276,6 +276,30 @@ as a value that a furnishing epoch will move.
 - Fields: warmth from the hearth, read by the existing thermal drive.
 - **One natural room type as well as one built one** (§9 flagged item 2).
 
+### 9.1 The two things that keep v1 unreachable — deliberately
+
+Writing the plan surfaced that the headline outcome cannot be *observed* in v1,
+only *demonstrated*, because two pieces are missing and neither is small:
+
+1. **Nothing derives an `Interior` from a real room.** There is no path from a
+   `RoomAddr` to a composed pattern set.
+2. **Creatures have no anchor position.** `agent-at` places a creature in a
+   *room*; nothing says which anchor it stands at, so `warmth_at` has no "here"
+   to read.
+
+Adding them would give creatures a new positional state inside the bubble with
+its own entry rules, would move behaviour, and would therefore surrender
+byte-identity and make the health battery the gate rather than a check. That is
+its own campaign — **the derivation and occupancy campaign**, whose first tasks
+are (a) `interior_of(room, culture, era) -> Interior` and (b) an anchor-valued
+occupancy for creatures within the bubble, with entry defaulting to the
+threshold anchor. Everything it needs is specified here; it inherits the
+vocabulary, the graph, the patterns and the fields intact.
+
+Landing the substrate first, byte-identically, is the same shape as The Snapshot
+(campaign 1 of this program): nothing new became playable, and what was already
+there became legible.
+
 **Explicitly out, and each has a home:**
 
 - Rendering, panes, any coordinate solve — Campaign 4.
@@ -288,10 +312,15 @@ as a value that a furnishing epoch will move.
 
 ## 10. Success criteria
 
-- **A cold creature crosses the room to the fire.** With a hearth anchor in its
-  room, a thermally stressed creature's plan targets the hearth anchor and its
-  thermal urgency falls on arrival — the drive is satisfied *at an anchor*, not
-  only by terrain. A creature in an identical room with no hearth does not.
+- **A cold creature crosses the room to the fire — demonstrated, not yet
+  observed.** Given an interior with a hearth, routing from the doorway targets
+  the hearth anchor and the warmth read there exceeds the warmth where it began;
+  an identical interior with no hearth offers nowhere warmer, so the creature has
+  no reason to move. **This is a unit-level demonstration, and deliberately so:**
+  v1 builds no interior from a real room and gives creatures no anchor position
+  (§9.1), so every live site passes `warmth: None`. The substrate is proved; it
+  is not yet reachable from the sim, which is exactly what makes v1
+  byte-identical.
 - **The anchor graph is connected** for every composition the validator accepts,
   and the validator **rejects** a composition that would disconnect it — a unit
   test on both sides.
