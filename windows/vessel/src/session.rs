@@ -676,11 +676,34 @@ impl<'w> Session<'w> {
             Ok(s) => s,
             Err(e) => return Turn::Out(format!("error: {e}")),
         };
-        let ways: Vec<String> = self
-            .ways()
-            .iter()
-            .map(|(c, _)| format!("{c:?}").to_uppercase())
-            .collect();
+        // The footer must name the DRAWN cell's own exits, not the walk
+        // depth's — the caption, not the picture, carries the honesty, and
+        // `self.ways()` always answers for the fine-grained room the agent
+        // actually stands in, which is a different cell than the one this
+        // chart draws once `zoom > 0`. Recompute the centre address the same
+        // way `purview_scene` truncates it, then ask the locale layer for
+        // that address's own exits.
+        let depth = self.agent.position.depth();
+        let keep = depth.saturating_sub(zoom) as usize;
+        let centre = RoomAddr {
+            face: self.agent.position.face,
+            path: self.agent.position.path[..keep.min(self.agent.position.path.len())].to_vec(),
+        };
+        let ways: Vec<String> = match self.ctx.describe(&centre, self.day) {
+            Ok(locale) => locale
+                .exits
+                .iter()
+                .filter(|e| e.kind == ExitKind::Edge)
+                .filter_map(|e| match e.direction {
+                    Direction::Compass(c) => Some(format!("{c:?}").to_uppercase()),
+                    _ => None,
+                })
+                .collect(),
+            // Above the bound where `map`'s own clamp already refuses, but
+            // reachable in principle for a future caller: an undrawable
+            // footer is omitted, never fabricated from the wrong depth.
+            Err(_) => Vec::new(),
+        };
         Turn::Out(hornvale_scene::render_surrounds_ascii(
             &scene, "terrain", &ways,
         ))

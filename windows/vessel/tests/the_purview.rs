@@ -28,7 +28,11 @@ fn out(t: Turn) -> String {
 fn examine_accepts_exactly_the_union_of_both_grains() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let mut rooms_visited: Vec<u64> = Vec::new();
     for turn in 0..6 {
+        if let Ok(id) = session.agent().position.pack() {
+            rooms_visited.push(id.0);
+        }
         let prose: Vec<String> = session
             .focalized()
             .unwrap()
@@ -71,6 +75,20 @@ fn examine_accepts_exactly_the_union_of_both_grains() {
             session.handle(&format!("go {way}"));
         }
     }
+    // `session.handle(&format!("go {way}"))`'s result is discarded above, and
+    // `ways()` always returns three edges regardless of whether the agent
+    // actually moved — so a `go` silently broken into a no-op would leave
+    // this whole loop re-examining turn 0's room six times without anything
+    // noticing. The walk is known (empirically) to visit 3 distinct rooms
+    // over 6 turns, oscillating after the first move; assert only that it
+    // moved at all, not a specific count.
+    rooms_visited.sort_unstable();
+    rooms_visited.dedup();
+    assert!(
+        rooms_visited.len() > 1,
+        "the six-turn walk must visit more than one distinct room \
+         (rooms visited: {rooms_visited:?})"
+    );
 }
 
 #[test]
@@ -80,20 +98,40 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     let prose = session.focalized().unwrap();
     let chart = session.purview(0).unwrap();
     let mut shared = 0;
-    for (noun, _) in &prose.nouns {
-        if chart
+    for (noun, prose_datum) in &prose.nouns {
+        let Some(chart_entry) = chart
             .legend
             .iter()
-            .any(|e| e.noun.eq_ignore_ascii_case(noun))
-        {
-            shared += 1;
-            let a = out(session.handle(&format!("examine {noun}")));
-            let b = out(session.handle(&format!("examine {}", noun.to_uppercase())));
-            assert_eq!(
-                a, b,
-                "'{noun}' must resolve identically however it is asked"
-            );
-        }
+            .find(|e| e.noun.eq_ignore_ascii_case(noun))
+        else {
+            continue;
+        };
+        shared += 1;
+        // Case-insensitive lookup alone (`examine noun` vs `examine NOUN`)
+        // would pass even if the join answered from the WRONG grain, as long
+        // as it did so consistently. The actual claim under test is that a
+        // noun named by both grains resolves to the PROSE catalog's own
+        // datum, prose being primary — and since the two grains genuinely
+        // carry different text for a shared noun (e.g. the settlement's
+        // population line vs. its chart-mint line), this also pins that the
+        // chart's datum is NOT what answers.
+        let reply = out(session.handle(&format!("examine {noun}")));
+        assert_eq!(
+            &reply, prose_datum,
+            "'{noun}' is named by both grains; examine must answer with the \
+             prose catalog's own datum (prose is primary)"
+        );
+        assert_ne!(
+            &reply, &chart_entry.datum,
+            "'{noun}' must not resolve to the chart's datum when prose also \
+             names it"
+        );
+        // The case-insensitive lookup itself is still worth pinning.
+        let upper = out(session.handle(&format!("examine {}", noun.to_uppercase())));
+        assert_eq!(
+            reply, upper,
+            "'{noun}' must resolve identically however it is asked"
+        );
     }
     // The biome is named by both the prose and the chart's legend, so this is
     // not a vacuous pass.
@@ -106,6 +144,8 @@ fn drawing_the_map_never_moves_the_world() {
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
     let where_i_stand = session.agent().position.clone();
     let facts = session.committed_agent_at_count();
+    let ledger_before = session.session_ledger_json();
+    let knowledge_before = session.knowledge().0.clone();
     for _ in 0..5 {
         session.handle("map");
         session.handle("map out 2");
@@ -119,6 +159,57 @@ fn drawing_the_map_never_moves_the_world() {
         session.committed_agent_at_count(),
         facts,
         "map commits nothing"
+    );
+    assert_eq!(
+        session.session_ledger_json(),
+        ledger_before,
+        "map writes nothing to the ledger"
+    );
+    assert_eq!(
+        &session.knowledge().0,
+        &knowledge_before,
+        "map teaches the session nothing new"
+    );
+}
+
+/// The `ways on:` footer must name the exits of the cell the chart actually
+/// draws, not the walk-depth room the agent stands in — those are different
+/// cells once `zoom_out > 0`, and a footer that reports the wrong one is
+/// exactly the "picture lies, caption doesn't" failure this campaign's
+/// rendering doctrine forbids. Measured directly on seed 42: after one `go`,
+/// the room the agent stands in exits NE/NW/S, but the ancestor cell
+/// `map out 1` draws from there exits SE/N/SW — a genuine divergence, not a
+/// coincidence of ordering, so this test would have failed under the old
+/// code (which passed `self.ways()`, the walk-depth exits, unconditionally).
+#[test]
+fn map_out_names_the_drawn_cells_own_exits_not_the_walk_depths() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let way = session
+        .ways()
+        .first()
+        .map(|(c, _)| format!("{c:?}"))
+        .expect("the starting room has exits");
+    session.handle(&format!("go {way}"));
+    let fine_ways: Vec<String> = session
+        .ways()
+        .iter()
+        .map(|(c, _)| format!("{c:?}").to_uppercase())
+        .collect();
+    assert_eq!(
+        fine_ways,
+        vec!["NE", "NW", "S"],
+        "pin: the fine room's own exits at this point of the seed-42 walk \
+         (if world-gen ever changes this, re-measure and update the pin)"
+    );
+    let coarse = out(session.handle("map out 1"));
+    assert!(
+        coarse.contains("ways on: SE, N, SW"),
+        "the footer must report the DRAWN cell's own exits: {coarse}"
+    );
+    assert!(
+        !coarse.contains("ways on: NE, NW, S"),
+        "the footer must not leak the walk-depth room's exits onto a coarser chart: {coarse}"
     );
 }
 
