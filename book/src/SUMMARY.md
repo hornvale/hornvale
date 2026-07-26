@@ -256,6 +256,7 @@
 - [The Waterline](./chronicle/the-waterline.md)
 - [The Purview](./chronicle/the-purview.md)
 - [The Margin](./chronicle/the-margin.md)
+- [The Reagent](./chronicle/the-reagent.md)
 
 # Appendix: The Frontier
 

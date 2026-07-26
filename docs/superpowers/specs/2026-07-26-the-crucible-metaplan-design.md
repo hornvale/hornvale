@@ -3,7 +3,7 @@
 **Date:** 2026-07-26
 **Status:** Approved at G3 2026-07-26. **Amended same day (Amendment 1, §9
 risk 1): qualities are latent, not observable** — see
-`2026-07-26-the-assay-design.md` §2.
+`2026-07-26-the-reagent-design.md` §2.
 **Parent spec:** `2026-07-05-hornvale-longterm-plan-design.md` (Constitution;
 UNI-1's "one mechanic" thesis and UNI-2's metaphysics gate)
 **Worktree:** `the-crucible` (branch `the-crucible`), off `main` at `bd7314a0`
@@ -243,7 +243,7 @@ Measurable against the existing census, which regenerates locally in ~7 min
 
 Sequenced by what is inherited. Each is its own spec → plan → execution cycle.
 
-### 7.1 Campaign 1 — The Assay (the material layer)
+### 7.1 Campaign 1 — The Reagent (the material layer)
 
 The quality inventory; per-world substance derivation read off lithology,
 deposits, and biosphere traits at the composition root; the production grammar;
@@ -308,7 +308,7 @@ scales; the accuracy metric; the explanation schemas.
    > program would have no subject matter. **Qualities are latent; what a
    > practitioner perceives are signs — weak, partly misleading functions of
    > the qualities — and reaction outcomes.** Corrected in
-   > `2026-07-26-the-assay-design.md` §2, which is binding.
+   > `2026-07-26-the-reagent-design.md` §2, which is binding.
 2. **Collapsing admissibility into truth** (§5.3). A single reviewer check per
    doctrine campaign; called out here because it is a one-line mistake that
    silently deletes the subject matter.

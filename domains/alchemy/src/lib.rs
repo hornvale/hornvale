@@ -6,7 +6,7 @@
 //! [`sign::SignVector`] channels — weak, partly misleading functions of the
 //! qualities — and the outcomes of [`production`]s. That latent/manifest split
 //! is what makes a practitioner's doctrine capable of being WRONG, and it is
-//! the whole reason this domain exists (spec: The Assay §2).
+//! the whole reason this domain exists (spec: The Reagent §2).
 //!
 //! THIS DOMAIN DRAWS NOTHING. There is no `streams.rs`, no `StreamLabel`, and
 //! no `Seed` parameter anywhere in it. Chemistry is universal; per-world

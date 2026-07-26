@@ -7,7 +7,7 @@
 //! for the same reason as [`crate::envelope_of`] does for language.
 //!
 //! Every function here is PURE: no seed, no stream, no draw. That is what
-//! keeps The Assay free of a save-format contract.
+//! keeps The Reagent free of a save-format contract.
 
 use hornvale_alchemy::Substrate;
 use hornvale_alchemy::production::{PRODUCTIONS, admits};
@@ -101,7 +101,7 @@ pub fn substrate_of_soil(s: SoilOrder) -> Substrate {
 
 /// Carry living matter into a substrate. Every organism is, alchemically, the
 /// same kind of thing at this fidelity: organic and nothing else. Species
-/// differentiation is deliberately out of scope for The Assay.
+/// differentiation is deliberately out of scope for The Reagent.
 pub fn substrate_of_life() -> Substrate {
     Substrate {
         metallic: 0.0,
@@ -153,9 +153,17 @@ fn substrate_order(a: &Substrate, b: &Substrate) -> std::cmp::Ordering {
         .then_with(|| a.purity.total_cmp(&b.purity))
 }
 
-/// Every distinct substance a world contains, derived from its generated
-/// terrain and climate — the seed-level closing of the carry functions
-/// above (spec §8 evidence items 2/3).
+/// A world's substance samples, derived from its generated terrain and
+/// climate — the seed-level closing of the carry functions above (spec §8
+/// evidence items 2/3).
+///
+/// NOT a material inventory, despite the length: this returns one entry per
+/// distinct `Substrate` VALUE, and because each ore deposit carries its own
+/// drawn `grade`, a default globe yields thousands of entries against only
+/// ~24 distinct material CATEGORIES. `dedup` collapses repeated rock and soil
+/// substrates but is nearly inert on ore, whose grades are distinct floats.
+/// If you want heterogeneity, count categories — the length of this `Vec` is
+/// dominated by grade sampling, not by material variety.
 ///
 /// Walks every land cell of `terrain`'s Geosphere and lands a substrate for
 /// each geological source present — the bedrock ([`substrate_of_rock`]), the
@@ -165,7 +173,7 @@ fn substrate_order(a: &Substrate, b: &Substrate) -> std::cmp::Ordering {
 /// habitable (`climate`'s habitability mask: the existing "could host a
 /// vale-like settlement" signal, reused here as this campaign's biosphere-
 /// presence proxy rather than authoring a new one). Ocean cells contribute
-/// nothing — The Assay's inventories are terrestrial, matching the
+/// nothing — The Reagent's inventories are terrestrial, matching the
 /// terrestrial-supply frame the rest of the composition root already uses.
 ///
 /// Deduplicated and sorted by [`substrate_order`] so the result is
@@ -282,7 +290,7 @@ mod tests {
     }
 
     /// The carry is a pure function: same input, same output, always. It
-    /// takes no seed and consumes no stream, which is what keeps The Assay
+    /// takes no seed and consumes no stream, which is what keeps The Reagent
     /// free of a save-format contract.
     #[test]
     fn the_carry_is_pure() {

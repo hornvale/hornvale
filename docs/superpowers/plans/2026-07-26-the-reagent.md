@@ -1,4 +1,4 @@
-# The Assay Implementation Plan
+# The Reagent Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 > Hornvale-specific: also read `.claude/skills/dispatching-hornvale-subagents` before dispatching any implementer.
@@ -44,7 +44,7 @@ these implicitly.
   touches `libm` and cannot introduce a cross-platform ULP difference.
 - **`cargo fmt` is the final step before every commit.** Skipped fmt is the
   project's most common review finding.
-- **The Assay draws nothing.** No `streams.rs`, no `StreamLabel`, no `Seed`
+- **The Reagent draws nothing.** No `streams.rs`, no `StreamLabel`, no `Seed`
   parameter anywhere in this crate. If a task seems to need a draw, stop — that
   is a spec violation, not an implementation detail.
 
@@ -176,7 +176,7 @@ Create `domains/alchemy/src/lib.rs`:
 //! [`sign::SignVector`] channels — weak, partly misleading functions of the
 //! qualities — and the outcomes of [`production`]s. That latent/manifest split
 //! is what makes a practitioner's doctrine capable of being WRONG, and it is
-//! the whole reason this domain exists (spec: The Assay §2).
+//! the whole reason this domain exists (spec: The Reagent §2).
 //!
 //! THIS DOMAIN DRAWS NOTHING. There is no `streams.rs`, no `StreamLabel`, and
 //! no `Seed` parameter anywhere in it. Chemistry is universal; per-world
@@ -380,7 +380,7 @@ Expected: clean; `architecture` passes (the new crate depends on the kernel alon
 
 ```bash
 git add domains/alchemy Cargo.lock
-git commit -m "feat(alchemy): the crate, the substrate, and the eight latent qualities (The Assay T1)"
+git commit -m "feat(alchemy): the crate, the substrate, and the eight latent qualities (The Reagent T1)"
 ```
 
 ---
@@ -558,7 +558,7 @@ Expected: PASS, 6 tests.
 cargo fmt
 cargo clippy -p hornvale-alchemy --all-targets -- -D warnings
 git add domains/alchemy
-git commit -m "feat(alchemy): manifest signs, and the hue collision that mechanizes signatures (The Assay T2)"
+git commit -m "feat(alchemy): manifest signs, and the hue collision that mechanizes signatures (The Reagent T2)"
 ```
 
 ---
@@ -847,7 +847,7 @@ Expected: PASS, 10 tests.
 cargo fmt
 cargo clippy -p hornvale-alchemy --all-targets -- -D warnings
 git add domains/alchemy
-git commit -m "feat(alchemy): processes, the production table, and mass balance (The Assay T3)"
+git commit -m "feat(alchemy): processes, the production table, and mass balance (The Reagent T3)"
 ```
 
 ---
@@ -938,7 +938,7 @@ mod tests {
     }
 
     /// The carry is a pure function: same input, same output, always. It
-    /// takes no seed and consumes no stream, which is what keeps The Assay
+    /// takes no seed and consumes no stream, which is what keeps The Reagent
     /// free of a save-format contract.
     #[test]
     fn the_carry_is_pure() {
@@ -984,7 +984,7 @@ Prepend to `windows/worldgen/src/alchemy.rs`:
 //! for the same reason as [`crate::envelope_of`] does for language.
 //!
 //! Every function here is PURE: no seed, no stream, no draw. That is what
-//! keeps The Assay free of a save-format contract.
+//! keeps The Reagent free of a save-format contract.
 
 use hornvale_alchemy::Substrate;
 use hornvale_alchemy::production::{PRODUCTIONS, admits};
@@ -1058,7 +1058,7 @@ pub fn substrate_of_soil(s: SoilOrder) -> Substrate {
 
 /// Carry living matter into a substrate. Every organism is, alchemically, the
 /// same kind of thing at this fidelity: organic and nothing else. Species
-/// differentiation is deliberately out of scope for The Assay.
+/// differentiation is deliberately out of scope for The Reagent.
 pub fn substrate_of_life() -> Substrate {
     Substrate { metallic: 0.0, organic: 1.0, saline: 0.05, refractory: 0.05, purity: 1.0 }
 }
@@ -1113,7 +1113,7 @@ dependency was added to `domains/alchemy/Cargo.toml` instead of
 cargo fmt
 cargo clippy -p hornvale-worldgen --all-targets -- -D warnings
 git add windows/worldgen domains/alchemy Cargo.lock
-git commit -m "feat(worldgen): carry terrain and biosphere into alchemy substrates (The Assay T4)"
+git commit -m "feat(worldgen): carry terrain and biosphere into alchemy substrates (The Reagent T4)"
 ```
 
 ---
@@ -1132,7 +1132,7 @@ git commit -m "feat(worldgen): carry terrain and biosphere into alchemy substrat
 Create `domains/alchemy/tests/production_properties.rs`:
 
 ```rust
-//! The Assay's property battery: the invariants every later campaign in The
+//! The Reagent's property battery: the invariants every later campaign in The
 //! Crucible inherits.
 
 use hornvale_alchemy::Substrate;
@@ -1195,7 +1195,7 @@ fn qualities_and_signs_stay_in_range_across_the_sweep() {
 }
 
 /// Derivation is a pure function: the same substrate always yields the same
-/// qualities. The Assay draws nothing, so this must hold trivially -- and is
+/// qualities. The Reagent draws nothing, so this must hold trivially -- and is
 /// asserted anyway, because it is the claim a later change is most likely to
 /// break silently.
 #[test]
@@ -1271,7 +1271,7 @@ no generated artifact, so **no census regeneration is owed** — do not run one.
 
 ```bash
 git add domains/alchemy docs/audits/type-audit-report.md
-git commit -m "test(alchemy): the property battery, and the type audit (The Assay T5)"
+git commit -m "test(alchemy): the property battery, and the type audit (The Reagent T5)"
 ```
 
 ---

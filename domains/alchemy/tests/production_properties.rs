@@ -1,4 +1,4 @@
-//! The Assay's property battery: the invariants every later campaign in The
+//! The Reagent's property battery: the invariants every later campaign in The
 //! Crucible inherits.
 
 use hornvale_alchemy::Substrate;
@@ -61,7 +61,7 @@ fn qualities_and_signs_stay_in_range_across_the_sweep() {
 }
 
 /// Derivation is a pure function: the same substrate always yields the same
-/// qualities. The Assay draws nothing, so this must hold trivially -- and is
+/// qualities. The Reagent draws nothing, so this must hold trivially -- and is
 /// asserted anyway, because it is the claim a later change is most likely to
 /// break silently.
 #[test]

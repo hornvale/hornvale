@@ -1,4 +1,4 @@
-//! Enforces the campaign's headline claim (spec §5): "The Assay draws
+//! Enforces the campaign's headline claim (spec §5): "The Reagent draws
 //! nothing." A hidden draw in this crate would be an unregistered
 //! save-format contract -- exactly the failure mode `derivation_is_pure` in
 //! `production_properties.rs` cannot detect, since a tautology
@@ -50,7 +50,7 @@ fn code_part(line: &str) -> &str {
     }
 }
 
-/// The Assay draws nothing: no source file under `domains/alchemy/src/`
+/// The Reagent draws nothing: no source file under `domains/alchemy/src/`
 /// mentions `Seed`, `StreamLabel`, or `Stream` in live code, and none
 /// declares a `streams` module. A later change that threaded a `Seed`
 /// through this crate -- an unregistered save-format contract, per the
@@ -67,7 +67,7 @@ fn domain_draws_nothing() {
                 assert!(
                     !code.contains(needle),
                     "{}:{}: found forbidden identifier `{needle}` in live code -- \
-                     The Assay draws nothing (spec §5); a draw here is an \
+                     The Reagent draws nothing (spec §5); a draw here is an \
                      unregistered save-format contract:\n    {line}",
                     path.display(),
                     lineno + 1,

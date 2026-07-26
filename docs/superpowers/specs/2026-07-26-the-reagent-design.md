@@ -1,7 +1,8 @@
-# The Assay — Design
+# The Reagent — Design
 
 **Date:** 2026-07-26
-**Status:** Draft — awaiting G3
+**Status:** Shipped 2026-07-26. **Amended at close (§2a, §8a): the shipped
+confound reaches appearance but not behaviour** — owner decision at G6.
 **Parent spec:** `2026-07-26-the-crucible-metaplan-design.md` (§7.1)
 **Worktree:** `the-crucible` (branch `the-crucible`), off `main` at `bd7314a0`
 **Autopilot:** engaged (G3/G6 hard stops; ledger at
@@ -38,6 +39,35 @@ the entire program's subject matter would vanish. The correct constraint:
 This is the campaign's most important structural commitment, and it is what
 makes the doctrine of signatures *wrong in a mechanized way* rather than
 wrong by authorial fiat.
+
+## 2a. Amendment at close — the confound reaches appearance, not behaviour
+
+Measured on the shipped code, not inferred. The causal chain this campaign
+actually delivers is:
+
+```
+  ore grade  ->  causticity  ->  hue        (appearance)
+  ore grade  ->  causticity  ->  nothing    (behaviour)
+```
+
+**No production in `PRODUCTIONS` requires `Causticity`.** Its only consumer
+anywhere in the tree is `hue`. Sweeping all nine commodities across grade
+0.00→1.00 in 0.01 steps leaves the admitted-production set invariant for every
+commodity. So the drawn quantity that was supposed to be the confound's physical
+mechanism **cannot make a recipe fail**.
+
+What shipped is coherent and still worth having: poor ore *looks* different and
+*behaves* identically, so a practitioner sorting reagents by colour learns
+nothing. That is a real doctrine-of-signatures error, mechanized. But it is not
+§2's "a recipe works in one valley and fails in the next" — that claim describes
+a behavioural coupling this campaign does not build.
+
+**Owner decision at G6 (2026-07-26):** ship the appearance half; do not touch
+the authored inventory now. **Coupling grade to behaviour — a causticity-gated
+production, so provenance determines whether a recipe works — is campaign 2's
+first task**, ahead of any practitioner work, because The Signature's whole
+subject is a doctrine that fails on provenance and there is nothing yet for such
+a doctrine to be wrong about.
 
 ## 3. The three inventories (authored, and small)
 
@@ -116,7 +146,7 @@ This is the campaign's central determinism claim, and it is a strong one:
   `BiosphereTraits`.
 - **Drawn:** **nothing.**
 
-> **The Assay draws nothing.** It introduces no `streams.rs`, no seed-derivation
+> **The Reagent draws nothing.** It introduces no `streams.rs`, no seed-derivation
 > label, no new save-format contract, and no epoch risk. It is a pure
 > projection over state other domains already drew.
 
@@ -172,6 +202,44 @@ Opening UNI-2 later relaxes exactly this predicate and nothing else.
 No lab metric is registered by this campaign, so no census regeneration is
 owed. (Campaign 2 registers the accuracy metric and *will* owe one.)
 
+## 8a. Amendment at close — item 3's real scope
+
+Item 3 above claims "two seeds with materially different geology yield
+materially different *reachable* production sets… and the number it produces is
+the baseline campaign 2's hypothesis is measured against." **As written this
+overstates what is true.** Measured:
+
+- **At default terrain pins every seed reaches all seven productions.** Four
+  ubiquitous source categories cover the whole table — life alone unlocks four
+  of seven, and any silicate rock adds a fifth — so a default globe saturates
+  it regardless of seed. The baseline is a constant, not a variable.
+- Genuine production-set divergence appears only at deliberately sparse pins
+  (`ocean_fraction=0.95, plates=2, continents=1, globe_level=4`), where roughly
+  half of seed pairs differ — and the difference is **one production wide**
+  (`dissolve-salt`).
+- The substance-set half of the divergence assertion passes at default pins
+  only because thousands of per-cell ore grades are distinct floats. Those
+  floats provably cannot change a production set, so that assertion is true but
+  weak as evidence.
+
+**Reachable-production count is therefore a weak discriminator by
+construction**, and the shipped test says so in its own doc comment rather than
+hiding it.
+
+**Consequence for campaign 2, to settle before it preregisters.** The
+metaplan's hypothesis — doctrine accuracy varies with the terrain heterogeneity
+an alchemist can reach — is untestable if exposure is "the world's reachable
+production set," because between-world variance is zero at default pins. Two
+changes rescue it, and both should be written into The Signature's spec:
+
+1. **Measure reach locally, not globally.** An alchemist reaches a settlement
+   catchment, not a globe. Globe-scale saturation says nothing about local
+   variation, and at ~130 land cells the endowment already varies.
+2. **Use a finer measure than production count** — distinct material categories
+   reachable, or ore-grade dispersion. Grade dispersion is the most promising,
+   since grade → causticity is the confound's actual mechanism and is exactly
+   what a production-set measure discards.
+
 ## 9. In / out
 
 **In:** the three inventories; the production table and its notation;
@@ -205,7 +273,7 @@ identification; economy and trade.
 2. **The §2 amendment** — qualities are latent, not observable. This reverses a
    line in the metaplan you approved this morning; it is a correction, and the
    metaplan has been amended in the same commit.
-3. **"The Assay draws nothing" (§5)** — worth confirming, because it is the
+3. **"The Reagent draws nothing" (§5)** — worth confirming, because it is the
    claim that makes this campaign low-risk, and because a later reviewer
    finding a draw hidden in the substance derivation would mean a save-format
    contract nobody registered.
