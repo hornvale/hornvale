@@ -23,7 +23,11 @@ browser, and something has to run it.</p></noscript>
 
 <p class="casement-docent">Genesis takes a few seconds — everything above
 derives from the seed, every time. The verbs: <code>look</code>,
-<code>go n|ne|e|se|s|sw|w|nw</code>, <code>examine</code>, <code>back</code>,
+<code>map</code> (and <code>map out N</code> for a coarser rung — the chart
+of the rooms around you, with ground you have walked but cannot currently see
+drawn from memory), <code>go n|ne|e|se|s|sw|w|nw</code>,
+<code>examine</code> (anything either the prose or the chart named),
+<code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily
 route, departing and returning), <code>npcs</code>, <code>why</code>,
 <code>whoami</code>, <code>knows</code>, <code>release</code>. This terminal
@@ -49,6 +53,12 @@ the CLI runs.</p>
     font-family: var(--mono-font, "Source Code Pro", monospace);
     font-size: 0.8em;
     opacity: 0.75;
+  }
+  .casement-map {
+    font-family: var(--mono-font, "Source Code Pro", monospace);
+    font-size: 0.8em;
+    opacity: 0.75;
+    white-space: pre;
   }
   .casement-echo { opacity: 0.6; }
   .casement-error { color: #b3554d; }

@@ -15,6 +15,12 @@ use serde::Serialize;
 mod region;
 pub use region::*;
 
+mod surrounds;
+pub use surrounds::*;
+
+mod surrounds_ascii;
+pub use surrounds_ascii::*;
+
 /// The schema identifier this crate emits.
 /// type-audit: bare-ok(identifier-text)
 pub const TILES_SCHEMA: &str = "scene/tiles/v1";
@@ -26,7 +32,7 @@ pub const MIN_WIDTH: u32 = 16;
 pub const MAX_WIDTH: u32 = 1024;
 
 /// Scene construction failed; the reason, loudly (the GenesisError manner).
-/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0)
+/// type-audit: bare-ok(diagnostic-value: WidthOdd.0), bare-ok(diagnostic-value: WidthOutOfRange.0), bare-ok(prose: Build.0), bare-ok(diagnostic-value: RegionFaceOutOfRange.0), bare-ok(diagnostic-value: RegionLevelOutOfRange.0), bare-ok(diagnostic-value: RegionTileOutOfRange.ix), bare-ok(diagnostic-value: RegionTileOutOfRange.iy), bare-ok(diagnostic-value: RegionTileOutOfRange.level), bare-ok(diagnostic-value: RegionSamplesOutOfRange.0), bare-ok(diagnostic-value: SurroundsRadiusOutOfRange.0), bare-ok(diagnostic-value: SurroundsUnaddressable.0)
 #[derive(Debug, Clone, PartialEq)]
 pub enum SceneError {
     /// Width must be even (height is width / 2).
@@ -50,6 +56,13 @@ pub enum SceneError {
     },
     /// Regional query: `samples` must be 1..=MAX_REGION_SAMPLES.
     RegionSamplesOutOfRange(u32),
+    /// Surrounds query: `radius` must be 0..=MAX_SURROUNDS_RADIUS.
+    SurroundsRadiusOutOfRange(u32),
+    /// Surrounds query: a neighbourhood cell's address could not be packed
+    /// to a room id (see `RoomAddr::pack`); the `RoomAddrError` debug is
+    /// carried. Mirrors `LocaleError::Unaddressable` — fail fast rather
+    /// than mint a meaningless `room: 0`.
+    SurroundsUnaddressable(String),
 }
 
 impl std::fmt::Display for SceneError {
@@ -76,6 +89,12 @@ impl std::fmt::Display for SceneError {
             ),
             SceneError::RegionSamplesOutOfRange(s) => {
                 write!(f, "--samples {s} is outside 1..={MAX_REGION_SAMPLES}")
+            }
+            SceneError::SurroundsRadiusOutOfRange(r) => {
+                write!(f, "--radius {r} is outside 0..={MAX_SURROUNDS_RADIUS}")
+            }
+            SceneError::SurroundsUnaddressable(e) => {
+                write!(f, "surrounds neighbourhood cell is unaddressable: {e}")
             }
         }
     }
@@ -438,7 +457,7 @@ pub fn temperature_grid(world: &World, width: u32, day: f64) -> Result<Vec<f64>,
 /// Settlement point features: every place holding both coordinate facts,
 /// in `places` order, with the flagship excluded there and appended last
 /// under its own kind (spec §2: the flagship appears exactly once).
-fn features_of(world: &World) -> Vec<Feature> {
+pub(crate) fn features_of(world: &World) -> Vec<Feature> {
     let flagship = hornvale_settlement::village_info(world);
     let flagship_id = flagship.as_ref().map(|v| v.id);
     let mut features = Vec::new();
@@ -471,7 +490,7 @@ fn features_of(world: &World) -> Vec<Feature> {
 /// Latitude/longitude of a place from settlement's coordinate facts;
 /// `None` if either is missing (such a place is skipped, the
 /// settlement-map precedent).
-fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Option<(f64, f64)> {
+pub(crate) fn place_latlon(world: &World, id: hornvale_kernel::EntityId) -> Option<(f64, f64)> {
     let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return None,

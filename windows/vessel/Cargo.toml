@@ -15,6 +15,7 @@ hornvale-language = { path = "../../domains/language" }
 hornvale-settlement = { path = "../../domains/settlement" }
 hornvale-species = { path = "../../domains/species" }
 hornvale-astronomy = { path = "../../domains/astronomy" }
+hornvale-scene = { path = "../scene" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

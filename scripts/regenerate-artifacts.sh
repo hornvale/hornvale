@@ -204,6 +204,7 @@ run -p hornvale -- scene tiles-region --world "$wsky" --face 0 --level 3 --ix 4 
 run -p hornvale -- scene moons --world "$wsky" > book/src/gallery/scene-moons-seed-42.json
 run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neighbors-seed-42.json
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
+run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
 
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.

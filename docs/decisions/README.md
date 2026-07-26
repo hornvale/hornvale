@@ -115,3 +115,5 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0073](0073-epoch-granularity-is-declared.md) | Epoch granularity is declared, not discovered | Accepted |
 | [0074](0074-capacities-are-a-chain-and-facts-gate-on-components.md) | Capacities are a chain, and species facts gate on components | Accepted |
 | [0075](0075-the-causal-geometry-is-the-anchor-graph.md) | The causal derived geometry is the anchor graph, not the metric layout | Accepted |
+| [0076](0076-the-situated-pole-is-egocentric-and-knowledge-limited.md) | The scene protocol's situated pole is egocentric and knowledge-limited | Accepted |
+| [0077](0077-zoom-in-the-room-mesh-is-path-truncation.md) | Zoom in the room mesh is path truncation; the chart may show a scale the body cannot enter | Accepted |
