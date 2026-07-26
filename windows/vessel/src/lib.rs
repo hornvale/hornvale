@@ -5,6 +5,7 @@
 
 mod agent;
 mod focalize;
+pub mod interior;
 mod knowledge;
 pub mod liveness;
 mod session;
