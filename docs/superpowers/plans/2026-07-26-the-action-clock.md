@@ -802,7 +802,22 @@ Scoped drift: <describe the gallery movement>."
 - Modify: `windows/vessel/src/liveness.rs` (`DriveMovements::step`'s outer loop)
 
 **Interfaces:**
-- Consumes: `WalkState`, `advance_one` (T3); `Ticks` (T1).
+- Consumes: `WalkState`, `advance_one` (T3); `Ticks`, `ticks_per_local_day` (T1).
+
+**A finding T3 reported, to handle here rather than discover.** `HazardMemory` is
+*not* a `WalkState` field: `begin` cannot compute it (that needs
+`&mut PrimaryAfraidMemo`), so T3 left it a per-creature local computed in `step`
+right after `begin`. Under the queue it must survive pops like every other piece
+of per-creature state. Carry it in the same per-entity map as the `WalkState` —
+`BTreeMap<EntityId, (Npc, WalkState, HazardMemory)>` — rather than recomputing it
+per pop, which would be both wasteful and a behaviour change (it is a fold over
+`frozen`, computed once per creature per tick today).
+
+**And the before-picture golden will legitimately move.** T3 pinned an 80-fact
+literal recording the *sequential* shape — all of one entity's facts, then the
+next's. Interleaving changes that by design. **Rewrite the literal by hand from
+the new output and describe what moved in the commit message**; do not regenerate
+it blind. That hand-rewrite is the mechanism that forces this drift to be named.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -863,7 +878,7 @@ moves, then all of the next's.
         // The shared clock: every creature is queued at the moment it next acts,
         // ordered by (ticks, entity) so the sequence is a pure function of the
         // frozen ledger — the entity id is the tie-break, never the input order.
-        let mut states: std::collections::BTreeMap<EntityId, (Npc, WalkState)> =
+        let mut states: std::collections::BTreeMap<EntityId, (Npc, WalkState, HazardMemory)> =
             std::collections::BTreeMap::new();
         let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
             std::collections::BTreeSet::new();
@@ -880,9 +895,10 @@ moves, then all of the next's.
         }
         while let Some(&(t, e)) = queue.iter().next() {
             queue.remove(&(t, e));
-            let Some((npc, st)) = states.get_mut(&e) else { continue };
+            let Some((npc, st, memory)) = states.get_mut(&e) else { continue };
             let npc = npc.clone();
-            if !self.advance_one(frozen, &npc, st, &alarm, &mut afraid_memo, &mut out) {
+            let memory = memory.clone();
+            if !self.advance_one(frozen, &npc, st, &alarm, &memory, &mut out) {
                 continue; // this creature's walk is done; it is not requeued
             }
             let next = (st.day * scale).round() as u64;
