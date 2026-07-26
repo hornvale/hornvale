@@ -58,10 +58,10 @@ that must also do something else.
 
 ## 3. Cost
 
-`cost(action, agent) = base(action) × tempo(agent)`.
+`cost(action, agent, ground) = base(action) × tempo(agent) × terrain(ground)`.
 
-**`base` is authored, per action kind** — five small constants, one dial each,
-replacing the single `MOVE_DURATION`. Drinking is quick; a meal is not; sleep
+**`base` is authored, per action kind** — five small constants in *ticks*, one
+dial each, replacing the single `MOVE_DURATION`. Drinking is quick; a meal is not; sleep
 keeps its existing jump-to-waking, which is a *phase*, not a cost, and is not
 touched.
 
@@ -103,6 +103,64 @@ Reserved, and deliberately not v1: **temperature-dependent ectotherm tempo** (a
 cold lizard really is slower, and the thermal machinery to express it already
 ships), and **metabolic class as a secondary modifier** on top of mass.
 
+### 3.1 `terrain` — the macro cost function's other half
+
+Every room-to-room move costs the same today whatever the ground: crossing a
+mountain and crossing a plain are both `0.1` days. That is the macro cost
+function's missing modifier, and `Terrain` already supplies what it needs.
+
+```
+terrain(from, to) = 1 + max(0, elevation(to) − elevation(from)) / CLIMB_SCALE_M
+```
+
+clamped to an authored band, and `1.0` whenever either elevation is non-finite
+(`Terrain::elevation` returns `INFINITY` for an undescribable room, by its own
+documented convention). Only **uphill** costs: a walking creature does not
+descend meaningfully faster, and modelling that would be a second dial earning
+nothing. The factor applies to `MoveTo` alone — drinking is not steeper in the
+mountains.
+
+### 3.2 Resolution: one unit, fine enough for the layer that is coming
+
+A within-room step — anchor to anchor in The Hearth's interior — takes seconds.
+A room-to-room move takes hours. At `1_000` ticks per standard day a tick is
+~86 seconds, so **a within-room step is a fraction of one tick**: it rounds to
+zero, which the totality rule forbids, or to one, which is 86 seconds to cross to
+the hearth. The clock would be unable to express the layer it is about to serve.
+
+The fix is resolution, not a second kind of tick:
+
+```
+  base        tick ≈    room move   within-room step   u64 headroom
+  1e3/day     86 s      100         0 or 1  ← broken   2.5e16 days
+  1e5/day     0.86 s    10,000      ~12                2.5e14 days
+```
+
+`BASE_TICKS_PER_STD_DAY = 100_000`. The exact-integer-day property (§4.1) is
+untouched — `round(day × 1e5)` is exact by construction — and `u64` holds some
+700 billion years.
+
+**Why not two tick types**, macro and micro. Four independent settled answers
+agree, and they agree against it. Discrete-event simulation uses one global clock
+at the finest needed resolution and one queue, because two clocks mean a
+conversion at every interaction and conversions are where drift enters — and this
+campaign's priority queue *is* a DES. Roguelike energy systems (DCSS's 10 `aut`
+per normal turn) pick a fine base precisely so fractional speeds are
+representable, rather than adding a second clock. Multirate numerical integration
+does use fast and slow subsystems, but keeps **one time axis** and varies the
+*step size* — which is `UNI-32`'s coarse-constrains-fine, two step sizes and one
+clock. And music notation is the cleanest statement: a whole note and a
+sixteenth are one unit at different denominations, which is exactly why a bar can
+contain both; make them different *types* and you cannot add them, though adding
+them is the correct operation rather than an error.
+
+Macro and micro are the same dimension — elapsed time. What differs is the
+**cost function** (terrain modifies moving between rooms; features and path will
+modify moving within one), and that is two derivations of one unit. There is a
+determinism argument too: the queue must totally order a creature mid-room-
+crossing against one mid-hall-walk, and one unit gives that for free where two
+would need a conversion inside the ordering path.
+
 ## 4. Integer scheduling, `f64` commits, and a clock that divides the planet's day
 
 The scheduler orders agents by *when they next act*. That ordering must be a
@@ -132,7 +190,7 @@ ticks_per_local_day = max(1, round(day_length_std × BASE_TICKS_PER_STD_DAY))
 tick duration       = day_length_std / ticks_per_local_day   ≈ 1/BASE std days
 ```
 
-with `BASE_TICKS_PER_STD_DAY = 1_000` authored and `day_length_std` read from the
+with `BASE_TICKS_PER_STD_DAY = 100_000` authored (§3.2) and `day_length_std` read from the
 world's `Calendar` (`domains/astronomy/src/calendar.rs:542` —
 `day: Option<StdDays>`, the local rotation period in standard days).
 
@@ -238,12 +296,18 @@ Preregistered before the first task, with signs, in the ledger (decision 0016):
 
 ## 9. Scope
 
-**In:** the five base costs; `tempo` from body mass; `Ticks`, the day-derived
-tick rate, and the conversion boundary; the priority queue and the hoisted `WalkState`; the
+**In:** the five base costs; `tempo` from body mass; the `terrain` climb factor
+on `MoveTo`; `Ticks`, the day-derived tick rate at `1e5` resolution, and the
+conversion boundary; the priority queue and the hoisted `WalkState`; the
 frozen-read constraint; the drift protocol.
 
 **Out, each with a home:**
 
+- **Micro (within-room) action costs.** Within-room movement is not live —
+  The Hearth ships the anchor graph but nothing derives an interior or places a
+  creature at an anchor; that is The Threshold. So a micro cost function has no
+  consumer. This campaign's obligation is only to pick a base **fine enough that
+  the fine layer needs no clock change when it arrives** (§3.2), and stop there.
 - **Maintenance conditions for interval actions** — "she was interrupted"
   requires a condition that holds *throughout* an action, not just at entry.
   Owed to this campaign by The Hearth's §12, and deferred because v1's actions
