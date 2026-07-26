@@ -815,12 +815,13 @@ pub fn niche_per_species_k(
                 // THE WATERLINE: support restriction. A kind outside its
                 // medium has no carrying capacity here at all — not a small
                 // one. Gated at K rather than per supply axis because the
-                // defect had two independent sources (climate's
-                // `habitability` is not a land test, and MINERAL/DETRITUS
-                // bypass it), and because the claim is "this kind cannot be
-                // here", not "this kind finds no food here". A small value
-                // would not do: dominance is an argmax, so a cell containing
-                // only small values still has a largest one.
+                // defect had ONE source (climate's `habitability` already
+                // tests elevation >= sea level; MINERAL/DETRITUS simply
+                // bypass that mask — spec §2/§11), and because the claim is
+                // "this kind cannot be here", not "this kind finds no food
+                // here". A small value would not do: dominance is an argmax,
+                // so a cell containing only small values still has a largest
+                // one.
                 let wet = terrain.is_ocean(cell);
                 let permitted = match bio.habitat_domain {
                     hornvale_species::HabitatDomain::Terrestrial => !wet,
@@ -9037,14 +9038,15 @@ mod tests {
     #[test]
     fn no_terrestrial_kind_holds_carrying_capacity_below_the_waterline() {
         // The Waterline's whole claim (P1), scoped to HabitatDomain::Terrestrial
-        // kinds specifically — the claim is never about EVERY kind. Before the
-        // gate the goblin held 930 ocean cells and the xorn 25,982; the
-        // mechanism was that `habitability` asks whether the CLIMATE is
-        // livable (open ocean passes easily) and that MINERAL/DETRITUS bypass
-        // it entirely. Since Step 0's re-authoring, xorn is `Lithic`
-        // (permit-everywhere: it lives IN the substrate, indifferent to the
-        // waterline) and is therefore EXPECTED to keep its ocean cells — it is
-        // deliberately excluded here, not an offender.
+        // kinds specifically — the claim is never about EVERY kind. Measured:
+        // before the gate the goblin held 930 LAND cells and zero ocean;
+        // xorn held 25,982 ocean cells and rust-monster 3,914 — the mechanism
+        // was that MINERAL/DETRITUS bypass `climate::is_habitable` entirely
+        // (that mask already excludes ocean — spec §2/§11). Since Step 0's
+        // re-authoring, xorn is `Lithic` (permit-everywhere: it lives IN the
+        // substrate, indifferent to the waterline) and is therefore EXPECTED
+        // to keep its ocean cells — it is deliberately excluded here, not an
+        // offender.
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
