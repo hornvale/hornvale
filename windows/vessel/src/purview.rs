@@ -22,6 +22,24 @@ pub const PURVIEW_RADIUS: u32 = 4;
 /// type-audit: bare-ok(index)
 const AGENT_SALIENCE: u32 = 5;
 
+/// The chart's centre address: `position` truncated `zoom_out` rungs
+/// coarser. Zoom in this mesh is path truncation, never an aggregation, so
+/// the coarse centre is always an ancestor of the fine one. The single
+/// source of this calculation — `purview_scene` (the chart itself) and
+/// `Session::map` (the footer's exits, which must name the SAME room the
+/// chart drew) both call this rather than each re-deriving it, because two
+/// independent copies is exactly how a footer and a chart end up disagreeing
+/// about which room is centred (see the-purview's Task 6 fix wave).
+/// type-audit: bare-ok(count: zoom_out)
+pub fn chart_centre(position: &RoomAddr, zoom_out: u32) -> RoomAddr {
+    let depth = position.depth();
+    let keep = depth.saturating_sub(zoom_out) as usize;
+    RoomAddr {
+        face: position.face,
+        path: position.path[..keep.min(position.path.len())].to_vec(),
+    }
+}
+
 /// Build the chart the possession draws: the fog-free scene, then the
 /// epistemic and agent overlays. `zoom_out` coarsens by truncating the
 /// observer's path — zoom in this mesh is not an aggregation, it is the same
@@ -39,11 +57,8 @@ pub fn purview_scene(
     zoom_out: u32,
 ) -> Result<SurroundsScene, VesselError> {
     let depth = position.depth();
+    let centre = chart_centre(position, zoom_out);
     let keep = depth.saturating_sub(zoom_out) as usize;
-    let centre = RoomAddr {
-        face: position.face,
-        path: position.path[..keep.min(position.path.len())].to_vec(),
-    };
     // `surrounds_scene_in`, NOT `surrounds_scene`: the session already holds a
     // built `LocaleContext`, and building a fresh one costs ~1.2 s (measured)
     // against ~2 ms of actual per-cell work. `map` runs every turn, so the

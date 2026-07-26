@@ -667,8 +667,8 @@ impl<'w> Session<'w> {
         let max_zoom = depth.saturating_sub(self.ctx.globe_level());
         if zoom > max_zoom {
             return Turn::Out(
-                "There is no coarser rung to show; the chart has reached the bottom of \
-                 the world."
+                "There is no coarser rung to show; the chart already draws at the coarsest \
+                 the world allows."
                     .to_string(),
             );
         }
@@ -680,15 +680,11 @@ impl<'w> Session<'w> {
         // depth's — the caption, not the picture, carries the honesty, and
         // `self.ways()` always answers for the fine-grained room the agent
         // actually stands in, which is a different cell than the one this
-        // chart draws once `zoom > 0`. Recompute the centre address the same
-        // way `purview_scene` truncates it, then ask the locale layer for
-        // that address's own exits.
-        let depth = self.agent.position.depth();
-        let keep = depth.saturating_sub(zoom) as usize;
-        let centre = RoomAddr {
-            face: self.agent.position.face,
-            path: self.agent.position.path[..keep.min(self.agent.position.path.len())].to_vec(),
-        };
+        // chart draws once `zoom > 0`. `chart_centre` is the SAME function
+        // `purview_scene` uses to truncate — a second, independent copy of
+        // this arithmetic is exactly how the footer and the drawn cell end
+        // up disagreeing about which room is centred.
+        let centre = crate::chart_centre(&self.agent.position, zoom);
         let ways: Vec<String> = match self.ctx.describe(&centre, self.day) {
             Ok(locale) => locale
                 .exits
@@ -712,20 +708,21 @@ impl<'w> Session<'w> {
     /// Every noun this lens has surfaced, at either grain: the prose's own
     /// catalog first (the fine grain wins a collision — prose is primary),
     /// then the chart's legend. This union IS the attention join.
+    ///
+    /// A genuine failure of either grain (the observable scene or the
+    /// chart) is propagated as `Err`, never silently downgraded to an empty
+    /// union — `examine` must be able to tell "the lens failed" from "no
+    /// grain surfaced that noun", and only the latter is a bare absence.
     /// type-audit: bare-ok(identifier-text: return)
-    pub fn lens_nouns(&self) -> Vec<(String, String)> {
-        let mut out: Vec<(String, String)> = match self.focalized() {
-            Ok(f) => f.nouns,
-            Err(_) => Vec::new(),
-        };
-        if let Ok(scene) = self.purview(0) {
-            for e in &scene.legend {
-                if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
-                    out.push((e.noun.clone(), e.datum.clone()));
-                }
+    pub fn lens_nouns(&self) -> Result<Vec<(String, String)>, VesselError> {
+        let mut out: Vec<(String, String)> = self.focalized()?.nouns;
+        let scene = self.purview(0)?;
+        for e in &scene.legend {
+            if !out.iter().any(|(n, _)| n.eq_ignore_ascii_case(&e.noun)) {
+                out.push((e.noun.clone(), e.datum.clone()));
             }
         }
-        out
+        Ok(out)
     }
 
     fn examine(&self, noun: &str) -> Turn {
@@ -733,13 +730,12 @@ impl<'w> Session<'w> {
             return Turn::Out("Examine what?".to_string());
         }
         let wanted = noun.to_lowercase();
-        match self
-            .lens_nouns()
-            .iter()
-            .find(|(n, _)| n.to_lowercase() == wanted)
-        {
-            Some((_, detail)) => Turn::Out(detail.clone()),
-            None => Turn::Out(format!("You see no {noun} here.")),
+        match self.lens_nouns() {
+            Ok(nouns) => match nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
+                Some((_, detail)) => Turn::Out(detail.clone()),
+                None => Turn::Out(format!("You see no {noun} here.")),
+            },
+            Err(e) => Turn::Out(format!("error: {e}")),
         }
     }
 
@@ -1079,5 +1075,84 @@ fn parse_compass(s: &str) -> Option<Compass> {
         "w" | "west" => Some(Compass::W),
         "nw" | "northwest" => Some(Compass::Nw),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
+
+    fn world() -> World {
+        build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    /// The regression this pins: `examine` must be able to tell "the lens
+    /// itself failed" from "no grain surfaced that noun" — before this fix,
+    /// `lens_nouns` swallowed both `focalized()`'s and `purview(0)`'s errors
+    /// into a bare empty `Vec`, so a genuine lens failure rendered as the
+    /// same "You see no <noun> here." as an honest absence. We force
+    /// `focalized()` to fail by corrupting the possessed agent's own
+    /// position with an out-of-range path digit (`RoomAddr::pack` rejects
+    /// any digit >= 4 — see `kernel/src/room.rs`), which `LocaleContext::
+    /// describe` hits on its very first line, well before any geometry
+    /// runs. This mutates the session's private field directly (this test
+    /// lives inside the `session` module for exactly that access) rather
+    /// than reaching for a public setter that would let ordinary callers
+    /// corrupt a session's position too.
+    #[test]
+    fn examine_reports_a_genuine_lens_failure_loudly_not_as_an_absence() {
+        let w = world();
+        let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        // Sanity: examine must work normally before we break anything.
+        assert!(
+            session.focalized().is_ok(),
+            "the fixture session must start in a healthy state"
+        );
+        session.agent.position.path.push(99);
+        assert!(
+            session.focalized().is_err(),
+            "the corrupted position must actually break the lens, or this \
+             test proves nothing"
+        );
+        let reply = match session.handle("examine anything") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            reply.starts_with("error:"),
+            "a lens failure must be reported loudly, not read as an \
+             absence: got {reply:?}"
+        );
+        assert!(
+            !reply.starts_with("You see no"),
+            "a lens failure must never masquerade as 'nothing here': got \
+             {reply:?}"
+        );
+    }
+
+    /// The ordinary path still refuses cleanly when both grains genuinely
+    /// have nothing to say — `lens_nouns`'s new `Result` must not turn every
+    /// refusal into an `Err`.
+    #[test]
+    fn examine_still_refuses_plainly_when_nothing_is_wrong() {
+        let w = world();
+        let (session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+        let reply = match session.examine("a-noun-no-grain-surfaced") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert!(
+            reply.starts_with("You see no"),
+            "a healthy lens with no matching noun must refuse plainly: \
+             got {reply:?}"
+        );
     }
 }

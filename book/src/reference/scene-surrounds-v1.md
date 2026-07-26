@@ -120,12 +120,17 @@ knowledge is part of what is being described.
 | `sensed` | within the neighbourhood, seen from where the observer stands | the coarse triple only: `biome`, `water`, `relief`; the fine fields are `null` |
 | `remembered` | known from having been there, no longer in view | as recorded when it was visited |
 
-A producer with no session — the CLI, or an external client driving the
-wasm catalog — emits only `here` and `sensed`; it has no basis for
+A producer with no session — today, only the CLI's `hornvale scene
+surrounds` — emits only `here` and `sensed`; it has no basis for
 remembering anything. `remembered` is written by a consumer that owns a
 possession and therefore knows where its observer has walked. The schema
 carries the vocabulary so that both producers speak it, not because every
-producer can use all of it.
+producer can use all of it. (Unlike `scene/tiles/v1` and
+`scene/tiles-region/v1`, `clients/world-wasm` does not export a surrounds
+query today — `hw_scene_tiles` and `hw_scene_tiles_region` are its only
+scene exports. A browser client that wants a session-owning `remembered`
+overlay would need a new wasm export; the schema's vocabulary is ready for
+that even though no producer offers it yet.)
 
 The coarse triple is deliberately what can be *seen across open ground*
 rather than what can be measured by standing on it. Reading a room's exact
@@ -153,7 +158,19 @@ Three catalogs make the document self-describing: `biome_legend` (the biome
 catalog in its stable append-only order), `water_legend`, and
 `relief_legend`. A cell's `biome`, `water` and `relief` are indices into
 them. `relief_legend` is `abyss, shelf, lowland, upland, highland, alpine`,
-and its band boundaries are contract.
+and its band boundaries are contract:
+
+| `relief_legend` index | Name | Elevation (m) |
+|---|---|---|
+| 0 | `abyss` | < −3000 |
+| 1 | `shelf` | −3000 .. 0 |
+| 2 | `lowland` | 0 .. 300 |
+| 3 | `upland` | 300 .. 1000 |
+| 4 | `highland` | 1000 .. 2500 |
+| 5 | `alpine` | ≥ 2500 |
+
+Each band is half-open, `[lower, upper)`, against `elevation_m`; changing a
+boundary mints `scene/surrounds/v2`.
 
 `cells` is ordered by ascending packed `room` id — a total order over `u64`
 that needs no float comparison and cannot vary between runs.
@@ -174,6 +191,97 @@ neighbourhood spans roughly 0.07° — about one five-thousandth of the globe.
 Any figure in metres would be an illustration conditioned on an assumed
 planet size rather than a fact the model holds. Neither this schema nor a
 renderer's caption asserts metres per cell.
+
+## The document
+
+Every `scene/surrounds/v1` document is one JSON object with these fields,
+in this order (field order **is** the JSON key order and is contract):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema` | string | Always the literal `"scene/surrounds/v1"`. |
+| `seed` | integer | The world's seed (u64; JavaScript's plain `JSON.parse` loses precision above 2^53 — use BigInt-aware parsing when the exact seed matters). |
+| `day` | number | The day observed (`WorldTime`), quantized at the emit boundary. |
+| `observer` | object | Where the observer stands — see the table below. |
+| `radius` | integer | Neighbourhood radius, in BFS rings, `0..=8`. |
+| `depth` | integer | The refinement depth every cell sits at. |
+| `orientation` | string | Always the literal `"lattice"` — the chart is lattice-aligned, never north-up. |
+| `biome_legend` | array of string | The biome catalog, stable append-only order; a cell's `biome` indexes into it. |
+| `water_legend` | array of string | The water catalog, stable order; a cell's `water` indexes into it. |
+| `relief_legend` | array of string | `["abyss", "shelf", "lowland", "upland", "highland", "alpine"]`; a cell's `relief` indexes into it. |
+| `cells` | array of object | The neighbourhood, ascending by packed `room` id — see the cell table below. |
+| `legend` | array of object | The chart's noun catalog, ascending by `noun` — see the `LegendEntry` table below. |
+
+`observer` is itself an object, in this field order:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `room` | integer | The observer's packed room id (u64 — see the room-id precision note below). |
+| `face` | integer | Base icosahedron face, `0..20`. |
+| `depth` | integer | Refinement depth. |
+| `latitude` | number | Centroid latitude, degrees, quantized. |
+| `longitude` | number | Centroid longitude, degrees, quantized. |
+
+Each element of `cells` is an object, in this field order:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `room` | integer | Packed room id (u64 — see the precision note below). |
+| `u` | integer or null | Lattice offset from the observer on axis 0; `null` on a seam cell. |
+| `v` | integer or null | Lattice offset on axis 1; `null` on a seam cell. |
+| `w` | integer or null | Lattice offset on axis 2; `null` on a seam cell. |
+| `up` | boolean or null | Triangle orientation; `null` on a seam cell. |
+| `seam` | boolean | Set when this cell lies on a different base face than the observer. |
+| `state` | string | `"here"`, `"sensed"`, or (session-written only) `"remembered"`. |
+| `biome` | integer | Index into `biome_legend`. |
+| `water` | integer | Index into `water_legend`. |
+| `relief` | integer | Index into `relief_legend`. |
+| `regime` | string or null | The strangeness overlay's descriptor; `null` when the cell is not `"here"`. |
+| `temperature_c` | number or null | Annual-mean temperature, °C, quantized; `null` when the cell is not `"here"`. |
+| `moisture` | number or null | Dimensionless moisture index, quantized; `null` when the cell is not `"here"`. |
+| `elevation_m` | number or null | Elevation, metres, quantized; `null` when the cell is not `"here"`. |
+| `marks` | array of object | Salience-ranked things standing here, ordered by `(salience, noun)` — see the `Mark` table below. |
+
+Each element of a cell's `marks` (`Mark`) is an object, in this field order:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `noun` | string | The examinable noun. |
+| `kind` | string | `"settlement"` or `"agent"`. |
+| `datum` | string | One line about it — what `examine` prints. |
+| `salience` | integer | Rank key; lower is more salient. |
+
+Each element of `legend` (`LegendEntry`) is an object, in this field order:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `noun` | string | The examinable noun. |
+| `datum` | string | What `examine` prints for it. |
+
+**Room ids are u64 and can exceed JavaScript's safe integer range.**
+`observer.room` and every cell's `room` are packed room ids: a sentinel bit,
+two bits per path element, and five bits for the face (see
+`RoomAddr::pack` in `kernel/src/room.rs`). Past roughly depth 24 that packed
+value exceeds 2^53, the largest integer a JavaScript `Number` can represent
+exactly, so a browser client parsing this schema with plain `JSON.parse`
+can silently corrupt a room id at deep radii — the same hazard the seed
+field carries, and for the same reason. A future browser client (this
+schema's stated audience, alongside the CLI) needs BigInt-aware parsing for
+`seed` and every `room` field alike.
+
+## Getting one
+
+```
+hornvale scene surrounds --world <path> [--room <ID>] [--radius <N>] [--depth <D>]
+```
+
+This prints one `scene/surrounds/v1` document to standard output. `--world`
+defaults to `world.json`. With no `--room`, the chart centres on the
+flagship settlement's own room at `--depth` (default: the walk depth,
+`globe_level + 6`) — the same ground a possession starts on. `--radius`
+defaults to 4 (31 cells). The committed example,
+[`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
+is produced this way against the seed-42 sky world.
 
 ## Determinism
 
