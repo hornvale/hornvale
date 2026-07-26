@@ -270,8 +270,9 @@ mod tests {
     /// authored table. These rows are authored data with no computation to
     /// check against — a miscopied or wrongly-grouped row is exactly the
     /// defect that must not ship silently, so every variant is listed
-    /// explicitly (no catch-all arm) and a later addition to `Commodity`
-    /// must update this table too.
+    /// explicitly. Note the limit: this is a hand-written array, not an
+    /// exhaustive match, so adding a variant to `Commodity` will NOT break
+    /// this test — add the new row here by hand.
     #[test]
     fn substrate_of_commodity_matches_the_authored_table() {
         let grade = 1.0;
@@ -297,8 +298,9 @@ mod tests {
 
     /// Pin every `RockClass` variant's row in `substrate_of_rock`'s authored
     /// table, grouped by petrological family exactly as the production code
-    /// groups them. Listed one variant at a time (no catch-all arm) so a
-    /// later addition to `RockClass` forces this table to be updated.
+    /// groups them. Listed one variant at a time. Note the limit: this is a
+    /// hand-written array, not an exhaustive match, so adding a variant to
+    /// `RockClass` will NOT break this test — add the new row here by hand.
     #[test]
     fn substrate_of_rock_matches_the_authored_table() {
         let cases: [(RockClass, Substrate); 19] = [
@@ -334,8 +336,9 @@ mod tests {
     }
 
     /// Pin every `SoilOrder` variant's row in `substrate_of_soil`'s authored
-    /// table. Listed one variant at a time (no catch-all arm) so a later
-    /// addition to `SoilOrder` forces this table to be updated.
+    /// table. Listed one variant at a time. Note the limit: this is a
+    /// hand-written array, not an exhaustive match, so adding a variant to
+    /// `SoilOrder` will NOT break this test — add the new row here by hand.
     #[test]
     fn substrate_of_soil_matches_the_authored_table() {
         let cases: [(SoilOrder, Substrate); 9] = [
