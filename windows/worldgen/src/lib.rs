@@ -4760,39 +4760,27 @@ fn species_genesis(
             sfact(id, SPECIES_NAME, Value::Text(name.to_string())),
             &world.registry,
         )?;
-        // Peopled-registry facts (mind + perception + speech) describe a
-        // settling people's full cluster. A minded solitary (a dragon carries a
-        // psyche but no perception or speech) emits only its `SPECIES_NAME`
-        // above; its mind stays latent — read from the registry if it is ever
-        // agentified — so every shipped world is byte-identical (The Eremite).
-        // Gated on `Settled`, which the nested-capacity invariant guarantees
-        // implies the full peopled cluster, so the reads below are total.
-        let settled = wc
-            .biosphere
-            .get(kind)
-            .is_some_and(|b| b.social_form == hornvale_species::SocialForm::Settled);
-        if let Some(p) = wc.psyche.get(kind).filter(|_| settled) {
-            let perception = wc
-                .perception
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let articulation = wc
-                .articulation
-                .get(kind)
-                .expect("a Settled people carries the full peopled cluster (integrity-checked)");
-            let society = wc
-                .society
-                .get(kind)
-                .expect("a Settled people carries a society vector (integrity-checked)");
-            let sociality = match society.sociality {
-                Sociality::Hierarchic => "hierarchic",
-                Sociality::Communal => "communal",
-            };
-            let status = match society.status_basis {
-                StatusBasis::Rank => "rank",
-                StatusBasis::Knowledge => "knowledge",
-                StatusBasis::Generosity => "generosity",
-            };
+        // Species-registry facts describe a kind's authored components. Each
+        // fact FAMILY is gated on the component that produces it — not on
+        // `SocialForm::Settled`, which is sedentism and withheld a solitary
+        // kind's mind, senses, and speech for a reason unrelated to any of
+        // them (the shape decision 0068 corrected for `SocietyVector`, left
+        // standing in the other three families). A dragon therefore emits
+        // mind + perception + speech and, correctly, no society facts: it has
+        // no society, rather than failing to settle.
+        //
+        // The commit ORDER below is unchanged from the single-gate version —
+        // note that `in-group-radius` still sits between two mind facts, which
+        // is why the mind block appears twice rather than being merged.
+        // Emission order is a save-format contract; this gates only, so every
+        // settling people's fact sequence stays byte-identical and the only new
+        // facts in any world are the dragons' own (The Vigil).
+        let mind = wc.psyche.get(kind);
+        let society = wc.society.get(kind);
+        let perception = wc.perception.get(kind);
+        let articulation = wc.articulation.get(kind);
+
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, THREAT_RESPONSE, Value::Number(p.threat_response)),
                 &world.registry,
@@ -4805,14 +4793,29 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
             world.ledger.commit(
-                sfact(id, IN_GROUP_RADIUS, Value::Number(society.in_group_radius)),
+                sfact(id, IN_GROUP_RADIUS, Value::Number(s.in_group_radius)),
                 &world.registry,
             )?;
+        }
+        if let Some(p) = mind {
             world.ledger.commit(
                 sfact(id, TIME_HORIZON, Value::Number(p.time_horizon)),
                 &world.registry,
             )?;
+        }
+        if let Some(s) = society {
+            let sociality = match s.sociality {
+                Sociality::Hierarchic => "hierarchic",
+                Sociality::Communal => "communal",
+            };
+            let status = match s.status_basis {
+                StatusBasis::Rank => "rank",
+                StatusBasis::Knowledge => "knowledge",
+                StatusBasis::Generosity => "generosity",
+            };
             world.ledger.commit(
                 sfact(id, SOCIALITY_MODE, Value::Text(sociality.to_string())),
                 &world.registry,
@@ -4821,6 +4824,8 @@ fn species_genesis(
                 sfact(id, STATUS_BASIS, Value::Text(status.to_string())),
                 &world.registry,
             )?;
+        }
+        if let Some(perception) = perception {
             let activity = match perception.activity {
                 ActivityCycle::Diurnal => "diurnal",
                 ActivityCycle::Nocturnal => "nocturnal",
@@ -4850,6 +4855,8 @@ fn species_genesis(
                 ),
                 &world.registry,
             )?;
+        }
+        if let Some(articulation) = articulation {
             let exotic = match articulation.exotic {
                 hornvale_language::ExoticManner::None => "none",
                 hornvale_language::ExoticManner::Trill => "trill",
@@ -5784,6 +5791,108 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A seed-42 generated-sky world with the default roster — the shared
+    /// fixture for the fact-emission tests below.
+    fn vigil_world() -> World {
+        build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 42 builds")
+    }
+
+    /// The predicate sequence committed for one species entity, in ledger order.
+    fn predicate_sequence(world: &World, species: &str) -> Vec<String> {
+        let id = hornvale_species::species_entity(world, species)
+            .unwrap_or_else(|| panic!("{species} has a species entity"));
+        world
+            .ledger
+            .facts_about(id)
+            .map(|f| f.predicate.clone())
+            .collect()
+    }
+
+    #[test]
+    fn a_settled_people_emits_the_same_sixteen_facts_in_the_same_order() {
+        // The Vigil re-gates emission per fact FAMILY, but must not REORDER
+        // it: emission order is a save-format contract, and the existing
+        // sequence interleaves a society fact between two mind facts. Pinning
+        // the literal order is what proves the re-gate changed gates only.
+        let world = vigil_world();
+        assert_eq!(
+            predicate_sequence(&world, "goblin"),
+            vec![
+                "species-name",
+                "species-threat-response",
+                "species-deliberation-latency",
+                "species-in-group-radius",
+                "species-time-horizon",
+                "species-sociality-mode",
+                "species-status-basis",
+                "species-activity-cycle",
+                "species-night-vision",
+                "species-sky-attention",
+                "species-labiality",
+                "species-vowel-space",
+                "species-voicing",
+                "species-sibilance",
+                "species-voice-loudness",
+                "species-tonality",
+                "species-exotic-manner",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dragon_emits_mind_perception_and_speech_but_no_society() {
+        // Decision 0068's semantics, now visible in the ledger: a Solitary
+        // kind is minded and speaks and perceives, and keeps no society — so
+        // its society facts are absent because it HAS no society, not because
+        // it fails to settle. Before The Vigil all four families were withheld
+        // by one sedentism gate.
+        let world = vigil_world();
+        let seq = predicate_sequence(&world, "red-dragon");
+        for present in [
+            "species-threat-response",
+            "species-deliberation-latency",
+            "species-time-horizon",
+            "species-activity-cycle",
+            "species-night-vision",
+            "species-sky-attention",
+            "species-labiality",
+            "species-exotic-manner",
+        ] {
+            assert!(
+                seq.iter().any(|p| p == present),
+                "{present} must be emitted"
+            );
+        }
+        for absent in [
+            "species-in-group-radius",
+            "species-sociality-mode",
+            "species-status-basis",
+        ] {
+            assert!(
+                !seq.iter().any(|p| p == absent),
+                "{absent} must NOT be emitted — a dragon keeps no society"
+            );
+        }
+        assert_eq!(
+            seq.len(),
+            14,
+            "species-name + mind 3 + perception 3 + speech 7"
+        );
+    }
+
+    #[test]
+    fn plain_fauna_still_emits_only_its_name() {
+        let world = vigil_world();
+        assert_eq!(predicate_sequence(&world, "owlbear"), vec!["species-name"]);
+    }
 
     #[test]
     fn wild_concentrations_are_deterministic_beasts() {

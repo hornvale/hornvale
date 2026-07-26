@@ -33915,6 +33915,136 @@
         "provenance": "species"
       },
       {
+        "subject": 196,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.95
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "nocturnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.15
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 196,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
         "subject": 197,
         "predicate": "species-name",
         "object": {
@@ -34645,6 +34775,136 @@
         "provenance": "species"
       },
       {
+        "subject": 205,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.95
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "diurnal"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.25
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 205,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
         "subject": 206,
         "predicate": "species-name",
         "object": {
@@ -34679,6 +34939,136 @@
         "predicate": "species-name",
         "object": {
           "Text": "white-dragon"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-threat-response",
+        "object": {
+          "Number": 0.95
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-deliberation-latency",
+        "object": {
+          "Number": 0.5
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-time-horizon",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-activity-cycle",
+        "object": {
+          "Text": "crepuscular"
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-night-vision",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-sky-attention",
+        "object": {
+          "Number": 0.3
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-labiality",
+        "object": {
+          "Number": 0.2
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-vowel-space",
+        "object": {
+          "Number": 0.4
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-voicing",
+        "object": {
+          "Number": 0.7
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-sibilance",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-voice-loudness",
+        "object": {
+          "Number": 0.9
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-tonality",
+        "object": {
+          "Number": 0.0
+        },
+        "place": null,
+        "day": 0.0,
+        "provenance": "species"
+      },
+      {
+        "subject": 209,
+        "predicate": "species-exotic-manner",
+        "object": {
+          "Text": "none"
         },
         "place": null,
         "day": 0.0,
