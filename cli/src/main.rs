@@ -53,8 +53,10 @@ usage:
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
-  hornvale scene surrounds [--world <PATH>] [--room <ID>] [--radius <N>] [--depth <D>]
+  hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
                                                       emit scene/surrounds/v1 JSON to stdout
+                                                      (--room and --depth are mutually exclusive —
+                                                      a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
                           read a site's stratigraphy + flesh (the deep history of one cell)
   hornvale connections --world <PATH> --site <CELL>
@@ -387,11 +389,11 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
 }
 
-/// Parse and validate `--day` for `possess`: a finite, non-negative
-/// standard day (default `0.0` when the flag is absent). Rejects `inf`,
-/// `-inf`, `nan`, and negative values loudly rather than handing the vessel
-/// window a day it cannot observe.
-fn parse_possess_day(args: &[String]) -> Result<f64, String> {
+/// Parse and validate `--day`: a finite, non-negative standard day (default
+/// `0.0` when the flag is absent). Rejects `inf`, `-inf`, `nan`, and
+/// negative values loudly rather than handing a consumer (`possess`, `scene
+/// surrounds`) a day it cannot observe.
+fn parse_day_flag(args: &[String]) -> Result<f64, String> {
     let s = flag_value(args, "--day").unwrap_or("0");
     let day: f64 = s.parse().map_err(|_| format!("bad --day: {s}"))?;
     if !(day.is_finite() && day >= 0.0) {
@@ -405,7 +407,7 @@ fn parse_possess_day(args: &[String]) -> Result<f64, String> {
 /// Parse and validate `--at` for `book` (C8, The Diachronic Book): a
 /// finite, non-negative standard day, or `None` when the flag is absent
 /// (the committed artifact's fixed epoch pair). Mirrors
-/// `parse_possess_day`'s validation.
+/// `parse_day_flag`'s validation.
 fn parse_at_day(args: &[String]) -> Result<Option<f64>, String> {
     let Some(s) = flag_value(args, "--at") else {
         return Ok(None);
@@ -433,7 +435,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     } else {
         load_world(args)?
     };
-    let day = parse_possess_day(args)?;
+    let day = parse_day_flag(args)?;
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -1122,6 +1124,22 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         Some("surrounds") => {
+            // A packed --room id already carries its own depth (it's baked
+            // into the id's path length), so a --depth alongside it can
+            // never be honoured without re-addressing the room at a
+            // different depth — a second, independent geometric operation
+            // this flag has never meant. Reject the combination loudly
+            // rather than silently ignoring whichever one loses. Checked
+            // before `load_world` so a bad combination fails fast, without
+            // needing a world at all.
+            if flag_value(args, "--room").is_some() && flag_value(args, "--depth").is_some() {
+                return Err(
+                    "--room and --depth cannot be combined: the room id already carries its \
+                     own depth. Pass --depth alone (to size a fresh room from the default \
+                     settlement centre) or --room alone (to draw around that exact room)."
+                        .to_string(),
+                );
+            }
             let world = load_world(args)?;
             let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
             let depth = match flag_value(args, "--depth") {
@@ -1136,6 +1154,7 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     .map_err(|e| format!("--radius must be a u32: {e}"))?,
                 None => 4,
             };
+            let day = parse_day_flag(args)?;
             let room = match flag_value(args, "--room") {
                 Some(raw) => {
                     let id = raw
@@ -1153,9 +1172,8 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
                     settlement_room(&world, v.id, depth)?
                 }
             };
-            let scene =
-                hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day: 0.0 })
-                    .map_err(|e| e.to_string())?;
+            let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
+                .map_err(|e| e.to_string())?;
             println!("{}", hornvale_scene::surrounds_json(&scene));
             Ok(())
         }
@@ -1502,16 +1520,16 @@ mod tests {
 
     #[test]
     fn bad_day_value_rejects_non_finite_and_negative_spans() {
-        let err = parse_possess_day(&args(&["--day", "inf"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "inf"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "-inf"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "-inf"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "nan"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "nan"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "-1"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "-1"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        assert_eq!(parse_possess_day(&args(&["--day", "5"])).unwrap(), 5.0);
-        assert_eq!(parse_possess_day(&args(&[])).unwrap(), 0.0);
+        assert_eq!(parse_day_flag(&args(&["--day", "5"])).unwrap(), 5.0);
+        assert_eq!(parse_day_flag(&args(&[])).unwrap(), 0.0);
     }
 
     #[test]
@@ -1733,5 +1751,37 @@ mod tests {
             err.contains("tiles-region"),
             "known kinds must include tiles-region: {err}"
         );
+    }
+
+    /// `--room` and `--depth` used to silently disagree: a packed room id
+    /// already carries its own depth, so a `--depth` alongside it was read
+    /// and then thrown away. The combination must now be refused loudly —
+    /// checked before `load_world`, so this needs no `--world` fixture.
+    #[test]
+    fn scene_surrounds_rejects_room_and_depth_together() {
+        let err = cmd_scene(&args(&[
+            "scene",
+            "surrounds",
+            "--room",
+            "12345",
+            "--depth",
+            "6",
+        ]))
+        .unwrap_err();
+        assert!(
+            err.contains("--room and --depth cannot be combined"),
+            "unexpected error text: {err}"
+        );
+    }
+
+    #[test]
+    fn scene_surrounds_accepts_room_or_depth_alone() {
+        // Neither call reaches the mutual-exclusivity guard; both must
+        // proceed to `load_world` and fail on the *missing world* instead
+        // (proving the guard itself did not fire).
+        let err = cmd_scene(&args(&["scene", "surrounds", "--room", "12345"])).unwrap_err();
+        assert!(!err.contains("cannot be combined"), "{err}");
+        let err = cmd_scene(&args(&["scene", "surrounds", "--depth", "6"])).unwrap_err();
+        assert!(!err.contains("cannot be combined"), "{err}");
     }
 }
