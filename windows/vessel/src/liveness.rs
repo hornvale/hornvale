@@ -584,6 +584,12 @@ pub struct LocaleTerrain<'a> {
     /// (throwaway reads / no field), so a carnivore reads only ordinary
     /// productivity.
     prey: Option<&'a hornvale_kernel::CellMap<f64>>,
+    /// The world's settlement-territory set (The Threshold, task 5b —
+    /// `built_rooms`), injected the same way (a domain/window can't reach up
+    /// to `hornvale_settlement`); `None` → every room reads unbuilt (a
+    /// throwaway read with no world), the same fail-safe-to-wilderness
+    /// posture `Terrain::is_built`'s own default takes.
+    built: Option<&'a std::collections::BTreeSet<RoomId>>,
 }
 impl<'a> LocaleTerrain<'a> {
     /// Build the adapter over `ctx` with the fractional-day (Tier-0) sun and no
@@ -595,6 +601,7 @@ impl<'a> LocaleTerrain<'a> {
             calendar: None,
             predator: None,
             prey: None,
+            built: None,
         }
     }
     /// Build with the world's `calendar` (if any), so `solar_altitude` (and thus
@@ -611,34 +618,42 @@ impl<'a> LocaleTerrain<'a> {
             calendar,
             predator: None,
             prey: None,
+            built: None,
         }
     }
     /// Build with the world's `calendar` AND its predator-pressure field (The
-    /// Quarry) — no prey field. Retained for callers that read danger but not the
-    /// hunt; delegates to [`with_fields`](Self::with_fields).
+    /// Quarry) — no prey field, no settlement-territory set. Retained for
+    /// callers that read danger but not the hunt; delegates to
+    /// [`with_fields`](Self::with_fields).
     /// type-audit: bare-ok(ratio: predator)
     pub fn with_calendar_and_predators(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
     ) -> Self {
-        Self::with_fields(ctx, calendar, predator, None)
+        Self::with_fields(ctx, calendar, predator, None, None)
     }
     /// Build with the world's `calendar`, predator-pressure field (The Quarry),
-    /// AND prey-pressure field (The Teeth) — the full drive read, where danger
-    /// senses carnivore territory and a carnivore's hunger senses prey.
+    /// prey-pressure field (The Teeth), AND settlement-territory set (The
+    /// Threshold, task 5b's `built_rooms`) — the full drive read: danger
+    /// senses carnivore territory, a carnivore's hunger senses prey, and a
+    /// creature's thermal drive can find a real hearth. `built` is `None` for
+    /// every caller with no world to read one from (the throwaway/no-field
+    /// case `Terrain::is_built`'s own default already covers).
     /// type-audit: bare-ok(ratio: predator), bare-ok(ratio: prey)
     pub fn with_fields(
         ctx: &'a LocaleContext,
         calendar: Option<&'a hornvale_astronomy::Calendar>,
         predator: Option<&'a hornvale_kernel::CellMap<f64>>,
         prey: Option<&'a hornvale_kernel::CellMap<f64>>,
+        built: Option<&'a std::collections::BTreeSet<RoomId>>,
     ) -> Self {
         Self {
             ctx,
             calendar,
             predator,
             prey,
+            built,
         }
     }
 }
@@ -706,6 +721,17 @@ impl<'a> Terrain for LocaleTerrain<'a> {
         self.prey
             .and_then(|field| self.ctx.blend_at(room, field))
             .unwrap_or(0.0)
+    }
+    fn is_built(&self, room: &RoomAddr) -> bool {
+        // THE THRESHOLD's real answer (task 5b): built iff `room` packs to a
+        // room id in the injected settlement-territory set (`built_rooms`).
+        // `None` (no set injected — a throwaway read with no world) or a pack
+        // failure (only possible past `MAX_DEPTH`, never reached here) both
+        // read as unbuilt, the same fail-safe-to-wilderness posture
+        // `Terrain::is_built`'s own default already takes.
+        self.built
+            .zip(room.pack().ok())
+            .is_some_and(|(set, id)| set.contains(&id))
     }
 }
 
@@ -3943,6 +3969,36 @@ fn settlement_room(world: &World, ctx: &LocaleContext, settlement: EntityId) -> 
     RoomAddr::containing(pos, walk_depth(ctx))
 }
 
+/// The set of packed room ids a settlement's territory occupies — the real
+/// answer [`Terrain::is_built`] needs from a live world (The Threshold, task
+/// 5b: the arming Task 5 wired had nothing to read, since no `Terrain`
+/// implementation ever overrode the default `false`). A room's *culture* is
+/// not a property of the room itself; it belongs to the people whose
+/// territory contains it, so this asks the only question derivable from
+/// `hornvale_settlement::all_settlements`: which room is each settlement's
+/// own cell? Today's model gives a settlement exactly ONE room (the same one
+/// `settlement_room` homes its derived NPC at) — so "built" here means
+/// precisely that room, not a radius of surrounding countryside. That is a
+/// deliberately NARROW answer: widening it to a settlement's outskirts or
+/// worked fields is a real question, but one nothing in the model yet
+/// derives (there is no committed "territory extent" a wider read could be
+/// honest about) — a later campaign's to ask, not an oversight here. Built
+/// once, at session/sweep start, and injected into `LocaleTerrain` the same
+/// way the predator/prey fields are (`with_fields`) — a domain/window can't
+/// reach up to `hornvale_settlement` on its own. `RoomAddr::pack`'s only
+/// failure mode is a path past `MAX_DEPTH`, never reached at a session's own
+/// walk depth, so a pack failure is silently dropped rather than panicking —
+/// the same "coarse constrains fine, never blocks" posture the rest of this
+/// module takes toward world-derived data. `BTreeSet`, never `HashSet`
+/// (constitutional): `RoomId` is the packed, `Ord` form of a `RoomAddr`, the
+/// natural key.
+pub fn built_rooms(world: &World, ctx: &LocaleContext) -> std::collections::BTreeSet<RoomId> {
+    hornvale_settlement::all_settlements(world)
+        .iter()
+        .filter_map(|v| settlement_room(world, ctx, v.id).pack().ok())
+        .collect()
+}
+
 /// The species' activity-cycle, from its committed `SPECIES_ACTIVITY_CYCLE`
 /// fact on the species' own entity (resolved by name via `species_entity`).
 /// Defaults to `Diurnal` if the species or the fact is missing.
@@ -5564,6 +5620,46 @@ mod tests {
         assert_eq!(
             npcs[0].home, want_home_room,
             "the possessed agent's own settlement's NPC must be derived"
+        );
+    }
+
+    #[test]
+    fn locale_terrain_is_built_reads_real_settlement_territory() {
+        // THE THRESHOLD's real answer (task 5b): a `LocaleTerrain` injected
+        // with the world's settlement-territory set (`built_rooms`) must read
+        // the settlement's own room as built, and a DIFFERENT room (one of
+        // its neighbours) as wild — proving `is_built` reads real data
+        // derived from the world, not a hardcoded constant either way.
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let home_id = hornvale_settlement::village_info(&world).unwrap().id;
+        let home = settlement_room(&world, &ctx, home_id);
+        let built = built_rooms(&world, &ctx);
+        assert!(
+            !built.is_empty(),
+            "seed 42's flagship settlement must contribute at least one built room"
+        );
+        let terrain = LocaleTerrain::with_fields(&ctx, None, None, None, Some(&built));
+        assert!(
+            terrain.is_built(&home),
+            "the settlement's own room must read as built"
+        );
+        // A neighbour is NOT the settlement's own room, so under the narrow
+        // "settlement's own room only" definition it must read wild — unless
+        // a second settlement happens to occupy it too, which the assertion
+        // below would surface honestly rather than silently pass.
+        let neighbor = home.neighbors().into_iter().next().unwrap();
+        assert!(
+            !terrain.is_built(&neighbor),
+            "a settlement's neighbouring room is a different room, so it \
+             reads wild under the narrow definition: {neighbor:?}"
         );
     }
 

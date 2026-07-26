@@ -14,7 +14,8 @@ use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo, derive_npcs, waking_offset,
+    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo, built_rooms, derive_npcs,
+    waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -148,8 +149,19 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
     let predator = hornvale_worldgen::predator_pressure(world).ok();
     // The prey-pressure field (The Teeth), so a carnivore's hunger senses prey.
     let prey = hornvale_worldgen::prey_pressure(world).ok();
-    let terrain =
-        LocaleTerrain::with_fields(&ctx, calendar.as_ref(), predator.as_ref(), prey.as_ref());
+    // The settlement-territory set (The Threshold, task 5b) — this sweep is a
+    // real world with real settlements, so it is the other construction site
+    // that has a world to read one from (`session.rs`'s live session is the
+    // other); a room a settlement occupies can now draw a real hearth here
+    // too, the same way it does mid-possession.
+    let built = built_rooms(world, &ctx);
+    let terrain = LocaleTerrain::with_fields(
+        &ctx,
+        calendar.as_ref(),
+        predator.as_ref(),
+        prey.as_ref(),
+        Some(&built),
+    );
     let traces = run_simulation(&ledger, &registry, &npcs, &terrain, HEALTH_TICKS);
     npcs.into_iter()
         .zip(traces)

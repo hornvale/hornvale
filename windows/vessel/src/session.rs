@@ -3,7 +3,7 @@
 
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs, derive_wild_npcs,
+    RESTED, SUSTENANCE, affect_of, agent_position, built_rooms, derive_npcs, derive_wild_npcs,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -14,7 +14,7 @@ use crate::{
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Seed, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -134,6 +134,13 @@ pub struct Session<'w> {
     /// a carnivore's hunger senses prey territory; `None` if the demography fit
     /// fails.
     prey: Option<hornvale_kernel::CellMap<f64>>,
+    /// The world's settlement-territory set (The Threshold, task 5b —
+    /// `built_rooms`), computed once at `start`, so a room a settlement
+    /// actually occupies reads as built and can draw a real hearth.
+    /// `Session::start` requires `mint_flagship` to resolve a settlement
+    /// first, so in practice this always carries at least the possessed
+    /// agent's own home room by the time a session exists.
+    built: std::collections::BTreeSet<RoomId>,
     /// Commits since the possession began; 0 is the opening. Advanced by
     /// `handle` for every non-empty verb line, so the snapshot can label
     /// which turn it describes.
@@ -225,6 +232,12 @@ impl<'w> Session<'w> {
         // The prey-pressure field (The Teeth), so a carnivore's hunger senses
         // prey territory — the dual of the predator field, same one-shot fit.
         let prey = hornvale_worldgen::prey_pressure(world).ok();
+        // The settlement-territory set (The Threshold, task 5b), so a room a
+        // settlement actually occupies reads as built and can draw a real
+        // hearth — the real answer Task 5's arming had nothing to read before
+        // this. Built once here, the same one-shot-at-start discipline as
+        // `calendar`/`predator`/`prey`.
+        let built = built_rooms(world, &ctx);
         let mut session = Session {
             world,
             ctx,
@@ -240,6 +253,7 @@ impl<'w> Session<'w> {
             calendar,
             predator,
             prey,
+            built,
             turn: 0,
             last_text: String::new(),
         };
@@ -279,6 +293,7 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
         let present = self
             .colocated_npcs()
@@ -648,6 +663,7 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
@@ -933,6 +949,7 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
         here.iter()
             .map(|npc| {
