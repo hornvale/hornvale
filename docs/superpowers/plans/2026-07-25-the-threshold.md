@@ -9,7 +9,7 @@
 **Tech Stack:** Rust 2024, `windows/vessel`, no new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-07-25-the-threshold-design.md`
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (12 entries, seven ideonomy passes, four overturns)
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (14 entries, nine ideonomy passes, four overturns)
 
 ## BLOCKING PRECONDITION
 
@@ -362,6 +362,13 @@ and, near the other drive constants:
 /// The day a room's furnishing reads its climate at (The Threshold). Any fixed
 /// day serves; day 0 is the world's own origin and needs no justification
 /// beyond being stable. Changing it is a `room/furnishing/v1` epoch.
+///
+/// SCOPE, stated so it is not discovered later: this freezes furnishing at
+/// ORIGIN climate forever. A room that grows cold over long time never gains a
+/// hearth. That is invisible only because the play window is days to years
+/// while climate drift is paleoclimate-scale — so the interior is a pure
+/// function of the room in SPACE, and frozen in TIME at day 0. When eras
+/// become playable this constant is the thing to revisit.
 pub const FURNISHING_REFERENCE_DAY: WorldTime = WorldTime { day: 0.0 };
 
 /// Below this mean temperature (°C) a room's people build around a fire.
@@ -689,6 +696,8 @@ fn beyond_the_cap_catch_up_places_rather_than_replays() {
 - [ ] **Step 1: Write the failing test** — a cold creature in a built cold room ends its tick at the hearth, and the warmth there exceeds the warmth where it began; the same creature in a hearthless interior does not move.
 
 - [ ] **Step 2–4:** give `Thermal::affordance` a within-room branch that compares `warmth_at` across the interior's anchors and returns `Action::MoveWithin`, with `serviceability` scoring it by warmth gained. `comfort_step` (rooms) stays exactly as it is — this is a new branch, not a replacement.
+
+  **`route_within` returning `None` is genuinely reachable, not a defensive branch** (spec §8a). A seasonal passability read can leave the traversable graph disconnected even though `permits` certified the base graph connected, so a creature can be stranded away from the hearth. The branch must fall back to the existing room-scale `comfort_step` rather than treating `None` as impossible — and a test must cover it, with an interior whose hearth is unroutable from the creature's anchor.
 
 - [ ] **Step 5: Measure, do not assert.** Run the health battery and the seed-42 galleries. **Expect drift, and record it stratified** against the Before-Task-1 preregistration: which subpopulation moved, by how much, and in which direction. Any drift in warm-climate or hearthless-room creatures is outside the prediction and owes a creature-by-creature explanation.
 

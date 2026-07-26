@@ -11,7 +11,7 @@ Hearth's `Interior`, vocabulary, patterns and fields, none of which exist on
 `main`.
 **Decisions in force:** 0069 (fine position is never serialized), 0072 (derived
 geometry is causal), 0073 (epoch granularity is declared), 0009, 0016.
-**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (12 entries, seven
+**Ledger:** `.superpowers/sdd/the-threshold-ledger.md` (14 entries, nine
 ideonomy passes, four overturns).
 
 ---
@@ -384,6 +384,55 @@ Produced by this brainstorm, cheap to fix there, expensive to fix after.
    decay almost nothing to decay over. An argument for some richer composition
    landing in The Hearth rather than after it.
 5. **"Live" vs "reachable"** (§1.1).
+
+## 8a. Reserved — seasonal variation
+
+Raised at review: does "the interior is a pure function of the room" survive
+outdoor rooms — snow, foliage, a frozen pond? Mostly, on a principle worth
+stating, and with one gap.
+
+**An anchor is a place, not a condition.** The gully exists year-round; only
+the water is seasonal. A hearth is a hearth whether lit; a streambed is a
+streambed whether wet. So a snowmelt stream is not a seasonal *anchor* — it is
+a permanent place carrying a seasonal field. Node stability is a consequence of
+what an anchor is, not an assumption about weather.
+
+**Change divides by cyclicity, not by rate:**
+
+| change | example | mechanism |
+|---|---|---|
+| **periodic** — it returns | snow melts, the lake thaws, the ford drops | a **derived read** at `(room, day)`; no state |
+| **monotone** — it does not | a log rots, a house burns, a pond dries for good | a **committed fact**, via promotion on touch |
+
+The monotone half is already designed: The Hearth's promotion-on-touch is
+exactly this mechanism, and seasonal-to-permanent change is a **second consumer
+for it beyond barred doors**. Only the periodic half needs reserving.
+
+**Reserved shape.** Keep `interior_of` a pure function of the room and put time
+in the **read**: whether an edge may be traversed *right now* is a passability
+read at the current day, consulted by `route_within` rather than baked into
+`connect`. Same shape as the rest of this program — topology stable, reads
+live — and it consumes `t_mean`/`t_swing`, which the climate domain already
+emits, so it needs no producer work.
+
+**The connectivity consequence, which reaches v1.** The Hearth's first
+well-formedness rule is that a composition must yield a **connected** anchor
+graph, enforced by `permits`. Under a passability read the *base* graph stays
+connected while the *traversable* graph may not — a creature stranded in a room
+the validator certified connected. The guarantee weakens to "connected in the
+base, possibly not today," and one of two rules must be chosen when passability
+lands: either seasonal impassability may never disconnect (checked at read), or
+stranding is legal. **Until that is chosen, this campaign treats
+`route_within`'s `None` as genuinely reachable** — §7's Thermal branch must
+behave sensibly when the hearth is unroutable rather than treating it as
+impossible.
+
+**And a threshold nobody has named.** Geomorphology distinguishes weather from
+landform: a flood is an event over a stable floodplain until it avulses the
+channel. A flood is a field; a hundred floods are a new river course. Whichever
+campaign builds seasonal passage owes a stated rule for *when a periodic
+process promotes to a monotone one* — without it, a permanently-dried pond gets
+modelled as a seasonally-dry one and the world has a pond that resurrects.
 
 ## 9. Flagged for G3
 
