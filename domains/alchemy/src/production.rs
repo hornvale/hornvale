@@ -379,4 +379,66 @@ mod tests {
             "one satisfied requirement out of two must not admit"
         );
     }
+
+    /// `admits` must be INCLUSIVE at the requirement's lower bound: a value
+    /// exactly at `min` must be admitted. A mutant that narrows the min side
+    /// to exclusive (`v > r.min`) would reject this and pass every other
+    /// test here, since none of them probes the boundary itself.
+    #[test]
+    fn admission_includes_the_min_boundary() {
+        let synthetic = Production {
+            name: "boundary-check",
+            process: Process::Grind,
+            inputs: 1,
+            requires: &[Requirement {
+                quality: Quality::Fixity,
+                min: 0.4,
+                max: 0.8,
+            }],
+            outputs: &[Output {
+                bulk: 1.0,
+                deltas: &[],
+            }],
+            emits: Sign::Grain,
+        };
+        let at_min = QualityVector {
+            fixity: 0.4,
+            ..QualityVector::default()
+        };
+        assert!(
+            admits(&synthetic, &at_min),
+            "a value exactly at min must be admitted"
+        );
+    }
+
+    /// `admits` must be INCLUSIVE at the requirement's upper bound: a value
+    /// exactly at `max` must be admitted. A mutant that narrows the max side
+    /// to exclusive (`v < r.max`) would reject this and pass every other
+    /// test here, since none of them probes the boundary itself.
+    #[test]
+    fn admission_includes_the_max_boundary() {
+        let synthetic = Production {
+            name: "boundary-check",
+            process: Process::Grind,
+            inputs: 1,
+            requires: &[Requirement {
+                quality: Quality::Fixity,
+                min: 0.4,
+                max: 0.8,
+            }],
+            outputs: &[Output {
+                bulk: 1.0,
+                deltas: &[],
+            }],
+            emits: Sign::Grain,
+        };
+        let at_max = QualityVector {
+            fixity: 0.8,
+            ..QualityVector::default()
+        };
+        assert!(
+            admits(&synthetic, &at_max),
+            "a value exactly at max must be admitted"
+        );
+    }
 }
