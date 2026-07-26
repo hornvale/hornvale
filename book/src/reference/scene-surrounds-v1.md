@@ -278,14 +278,20 @@ schema's stated audience, alongside the CLI) needs BigInt-aware parsing for
 ## Getting one
 
 ```
-hornvale scene surrounds --world <path> [--room <ID>] [--radius <N>] [--depth <D>] [--render json|ascii]
+hornvale scene surrounds [--world <path>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
+                          [--render json|ascii]
 ```
 
 This prints one `scene/surrounds/v1` document to standard output. `--world`
-defaults to `world.json`. With no `--room`, the chart centres on the
-flagship settlement's own room at `--depth` (default: the walk depth,
-`globe_level + 6`) — the same ground a possession starts on. `--radius`
-defaults to 4 (31 cells). The committed example,
+defaults to `world.json`. `--room` and `--depth` are mutually exclusive: a
+packed room id already carries its own depth baked into its path length, so
+combining them is a hard error rather than a silent pick of one over the
+other. With no `--room`, the chart centres on the flagship settlement's own
+room at `--depth` (default: the walk depth, `globe_level + 6`) — the same
+ground a possession starts on; with `--room`, it centres on that exact room
+instead, at whatever depth it already carries. `--radius` defaults to 4 (31
+cells). `--day` (default 0) selects which day's `here` cell to observe. The
+committed example,
 [`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
 is produced this way against the seed-42 sky world.
 
