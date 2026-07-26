@@ -23,3 +23,10 @@ Deno.test("empty lines are preserved as prose spacers", () => {
     { cls: "casement-prose", text: "b" },
   ]);
 });
+
+Deno.test("a chart's lines take the map class, not the prose one", () => {
+  const lines = splitResponse(
+    "[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]\n  ..@..\n  ways on: E, Nw, Sw",
+  );
+  assertEquals(lines.every((l) => l.cls === "casement-map"), true);
+});

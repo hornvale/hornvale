@@ -48,6 +48,12 @@ the CLI runs.</p>
     font-size: 0.8em;
     opacity: 0.75;
   }
+  .casement-map {
+    font-family: var(--mono-font, "Source Code Pro", monospace);
+    font-size: 0.8em;
+    opacity: 0.75;
+    white-space: pre;
+  }
   .casement-echo { opacity: 0.6; }
   .casement-error { color: #b3554d; }
   .casement-controls, .casement-promptrow { margin: 0.5em 0; }

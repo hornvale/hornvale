@@ -11,6 +11,16 @@ Ways on: SE, N, SW.
 [room 738918402, day 0]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: SE, N, SW.
+> map
+[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
+  + + +
+ +++++++
+++++@++++
+ +++++++
+  +++++
+  ways on: SE, N, SW
+  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy, tropical-seasonal-forest
+
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
 > examine sky
@@ -21,6 +31,16 @@ A bugbear of Qvooshtvoagootao (agent 7225590595188407000), day 0, room 738918402
 [room 739115010, day 0]
 You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: NE, NW, S.
+> map out 2
+[lens: terrain · depth 10 · radius 4 · lattice-aligned, not north-up]
+  +++++
+ +++%+++
+++++@++++
+ +++++++
+  + + +
+  ways on: NE, NW, S
+  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy sun-warmed in a hollow, tropical-seasonal-forest
+
 > go ne
 [room 739115106, day 0]
 You stand in tropical seasonal forest — a liana tangle damp on a rise — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

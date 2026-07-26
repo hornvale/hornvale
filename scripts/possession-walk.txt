@@ -1,8 +1,10 @@
 look
+map
 examine a fern-choked draw shaded dry in a hollow
 examine sky
 whoami
 go n
+map out 2
 go ne
 back
 wait 90
