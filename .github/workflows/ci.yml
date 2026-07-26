@@ -61,18 +61,23 @@ jobs:
           # noise (The Margin). Byte-identity for this document is still
           # enforced where it can be: the platform-local golden fixtures under
           # `windows/scene/tests/fixtures/` and the in-process determinism
-          # test in the producer's own suite. surrounds-seed-42.md carries the
-          # same exposure one grain further out: it is an ASCII *rendering*
-          # of exactly those thresholded `biome`/`water`/`relief` values (via
-          # `--render ascii`), so it inherits the identical platform-local
-          # noise and is excluded for the identical reason.
+          # test in the producer's own suite. The three chart snippets under
+          # book/src/gallery/generated/surrounds-seed-42/ carry the same
+          # exposure one grain further out: each is an ASCII *rendering* of
+          # exactly those thresholded `biome`/`water`/`relief` values (via
+          # `--render ascii`), so they inherit the identical platform-local
+          # noise and are excluded for the identical reason. The gallery page
+          # itself, surrounds-seed-42.md, is hand-authored prose that only
+          # `{{#include}}`s those snippets (The Margin's M5 fixup) — it is
+          # never touched by regeneration, so it needs no exclusion and stays
+          # under the strict check.
           git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/ \
             ':(exclude)book/src/gallery/*.png' \
             ':(exclude)book/src/gallery/scene-tiles-seed-42.json' \
             ':(exclude)book/src/gallery/scene-tiles-region-seed-42.json' \
             ':(exclude)book/src/reference/locale-seed-42.json' \
             ':(exclude)book/src/gallery/scene-surrounds-seed-42.json' \
-            ':(exclude)book/src/gallery/surrounds-seed-42.md'
+            ':(exclude)book/src/gallery/generated/surrounds-seed-42/*'
 
   atlas:
     name: Atlas client

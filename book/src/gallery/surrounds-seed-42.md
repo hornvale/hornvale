@@ -50,15 +50,7 @@ single biome throughout, which is why the other two observers below earn
 their place in this page.
 
 ```text
-$ hornvale scene surrounds --world world.json --render ascii
-[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
-  + + +
- +++++++
-++++@++++
- +++++++
-  +++++
-  ways on: SE, N, SW
-  legend: Qvooshtvoagootao, buttressed canopy, tropical seasonal forest
+{{#include generated/surrounds-seed-42/flagship.txt}}
 ```
 
 ## A coastline east of Mjoexaenoenoa
@@ -66,21 +58,15 @@ $ hornvale scene surrounds --world world.json --render ascii
 Room 897392747 (face 11, depth 12), half a degree east of the settlement
 Mjoexaenoenoa (seen from a different angle in [the transport
 topology](./connections-seed-42.md), where it reaches a neighbor by
-sea-lane as well as by land). Here the neighbourhood itself is split: ocean
-to the south and west, temperate forest to the north and east -- the first
-chart on this page where the terrain, not just the observer, reads as
-ground meeting water.
+sea-lane as well as by land). Here the neighbourhood itself is split: `~`
+ocean glyphs fill the lower-left of the chart below, `_` dry land the upper
+rows and the right, meeting close by `@` -- the first chart on this page
+where the terrain, not just the observer, reads as ground meeting water.
+(The chart is lattice-aligned, not north-up -- see above -- so this is a
+description of the picture, not a compass bearing.)
 
 ```text
-$ hornvale scene surrounds --world world.json --room 897392747 --render ascii
-[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
-  _____
- _______
-~~__@____
- ~~~~___
-  ~ ~ ~
-  ways on: SW, SE, N
-  legend: a windthrow gap sun-warmed damp on a rise, epipelagic, temperate forest
+{{#include generated/surrounds-seed-42/coastline.txt}}
 ```
 
 ## A seam, disclosed
@@ -96,14 +82,5 @@ The renderer states the count in its caption rather than dropping the cells
 or fabricating a position for them.
 
 ```text
-$ hornvale scene surrounds --world world.json --room 724698318 --render ascii
-[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
-  ~
- ~~~
-~~~~@
- ~~~~~
-  ~~~~~
-  ways on: NW, SW, E
-  12 cells beyond a face seam: real ground, no honest place on this chart.
-  legend: bathypelagic, unremarkable ground shaded dry in a hollow
+{{#include generated/surrounds-seed-42/seam.txt}}
 ```
