@@ -298,22 +298,77 @@ pub const GOBLINOIDS: [KindId; 4] = [
     KindId("bugbear"),
 ];
 
-/// The number of migration events the bake resolved, read straight off the
-/// ledger: every occupation that ended `migrated` — a community relocated off
-/// a cell the paleoclimate turned hostile — committed an `occ-cause` fact with
-/// that label. This equals `census(bake).migrated` exactly (each migration
-/// event closes one occupation record with cause `Migrated`), so it recovers
-/// the bake's displacement tally without replaying the bake — the
-/// present-as-query the campaign is built on. Migration, not raiding, is the
-/// real world's displacement signal (raids ≈ 0 on the ample vacant land of a
-/// real paleoclimate; raid-driven displacement is deferred to campaign C3).
+/// The number of **climate** displacement events the bake resolved, read
+/// straight off the ledger: an occupation the paleoclimate evicted from a cell
+/// it turned hostile, which relocated to a vacant refuge rather than starving.
+/// This equals `census(bake).migrated` exactly — the contract
+/// `windows/worldgen/tests/history_gates.rs`'s
+/// `migration_events_counts_climate_displacement_only` asserts — so it
+/// recovers the bake's climate-displacement tally without replaying the bake,
+/// the present-as-query the campaign is built on.
+///
+/// **Cause `migrated` alone does not mean climate displacement** (The Tumult).
+/// A conquest also closes the *conqueror's* abandoned record with
+/// `CauseOfEnd::Migrated`: `Bake::maybe_raid` has it leave its poorer land for
+/// the prize, an orderly self-directed move under `Ended::Nature`, before it
+/// reopens on the seized cell. Counting every `occ-cause = migrated` fact
+/// therefore folds predation into the climate signal (seed 42: 133 such facts
+/// against 58 real climate migrations). The two are kept separate — conflict
+/// displacement is `census(bake).raided`/`fled`, and the campaign's cascade
+/// histogram measures its size distribution.
+///
+/// The exclusion is a **query-side fold over the committed records**; nothing
+/// new is serialized for it. A conquest-relocation is exactly a `migrated`
+/// record that *someone else was driven off by*: `maybe_raid` closes the
+/// victim `Fled`, `ended-by` the raider's own just-closed record, in the same
+/// year. So a `migrated` record is excluded when some occupation's
+/// `occ-ended-by` names it and that occupation's `occ-ended` is the same day.
+/// A climate eviction has no such contemporaneous victim — it moves onto
+/// *vacant* land (`Bake::nearest_dest`), and the only other producer of an
+/// `Ended::By` (a cascade hop in `Bake::relocate`) names the roller's *newly
+/// opened* record, whose own ending, if it ever comes, falls in a later year.
 /// type-audit: bare-ok(count: return)
 pub fn migration_events(world: &World) -> u64 {
-    world
+    // Every occupation closed with cause `migrated`, against the day it closed.
+    let migrated: BTreeMap<EntityId, f64> = world
         .ledger
         .find(hornvale_history::OCC_CAUSE)
         .filter(|f| matches!(&f.object, Value::Text(t) if t == "migrated"))
-        .count() as u64
+        .filter_map(|f| {
+            match world
+                .ledger
+                .value_of(f.subject, hornvale_history::OCC_ENDED)
+            {
+                Some(Value::Number(end)) => Some((f.subject, *end)),
+                _ => None,
+            }
+        })
+        .collect();
+
+    // The conquerors among them: a record someone else was driven off by, in
+    // the very year it moved. `total_cmp` rather than `==` — both days are the
+    // same `year` scalar committed through the same quantizing boundary, so
+    // they compare exactly, and the project bans bare float equality.
+    let conquerors: BTreeSet<EntityId> = world
+        .ledger
+        .find(hornvale_history::OCC_ENDED_BY)
+        .filter_map(|f| match &f.object {
+            Value::Entity(by) => Some((f.subject, *by)),
+            _ => None,
+        })
+        .filter(|(victim, by)| {
+            let Some(&moved) = migrated.get(by) else {
+                return false;
+            };
+            matches!(
+                world.ledger.value_of(*victim, hornvale_history::OCC_ENDED),
+                Some(Value::Number(fell)) if moved.total_cmp(fell).is_eq()
+            )
+        })
+        .map(|(_, by)| by)
+        .collect();
+
+    (migrated.len() - conquerors.len()) as u64
 }
 
 /// The number of occupations the moving sea's paleoclimate ended by

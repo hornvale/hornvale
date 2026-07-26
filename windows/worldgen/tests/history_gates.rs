@@ -53,21 +53,29 @@ use hornvale_astronomy::SkyPins;
 use hornvale_kernel::Seed;
 use hornvale_terrain::TerrainPins;
 use hornvale_worldgen::{
-    BuildDepth, GOBLINOIDS, SettlementPins, SkyChoice, WorldComponents, build_world_to,
-    goblinoid_region_overlap, migration_events, stratigraphy, territories,
+    BuildDepth, GOBLINOIDS, SettlementPins, SkyChoice, WorldComponents, build_world_to, census,
+    goblinoid_region_overlap, history_for, migration_events, stratigraphy, territories,
 };
 
 // ---- Frozen thresholds (set BELOW the measured seed-42 values) -------------
 
 /// Gate 1. A run below this floor means climate-driven displacement went inert
 /// (the campaign's STOP condition).
-// The Sundering (moving sea) re-scope: seed-42 now measures 12 (was 51). The
-// static 51 was inflated by unphysical ocean-walking (the raw-mesh BFS strode
-// across open ocean); the moving-sea graph corrects it. Displacement still
-// FIRES and rides the era-bridges (11/12 migrations cross water); the
-// campaign's headline payoff is now isolation-predicts-divergence
-// (history_sundering.rs). Raising diaspora VOLUME is a crowding/pressure matter
-// deferred to C3.
+// The Sundering (moving sea) re-scope: the static 51 was inflated by
+// unphysical ocean-walking (the raw-mesh BFS strode across open ocean); the
+// moving-sea graph corrects it, and seed 42 measured 12. Displacement still
+// FIRES and rides the era-bridges; that campaign's headline payoff moved to
+// isolation-predicts-divergence (history_sundering.rs).
+//
+// The Tumult (predation) re-pin: seed 42 now measures 58 climate migrations —
+// UP from the Sundering's 12, because conquest re-seats communities onto new
+// cells and so exposes many more of them to a later era's habitability flip.
+// The floor is deliberately NOT raised to track it: 5 was set clear of the
+// cross-seed minimum, not of seed 42, and this campaign's readout (Task 3) is
+// what re-measures the sample. Note the raw `occ-cause = migrated` fact count
+// on this world is 133, not 58 — 75 of those are conquest-relocations, which
+// `migration_events` now excludes by design (see its doc comment, and the
+// `migration_events_counts_climate_displacement_only` gate below).
 const MIGRATION_FLOOR: u64 = 5;
 
 /// Gate 2. Seed-42 measured 0.0466 region overlap under the moving sea (0.055
@@ -109,6 +117,51 @@ fn migration_fires_at_volume() {
         "displacement went inert: only {migrated} migration events on seed 42 \
          (floor {MIGRATION_FLOOR}). The paleoclimate era swing is not displacing \
          communities — re-tune the bake before trusting the placement."
+    );
+}
+
+/// Gate 1b — **`migration_events` counts CLIMATE displacement only.** The
+/// query's whole contract: it must equal `census(bake).migrated`, the bake's
+/// own climate-eviction tally. It is not free to: a conquest also closes the
+/// conqueror's abandoned record with cause `migrated` (`Bake::maybe_raid`
+/// leaves its poor land for the prize), so the naive
+/// "count every `occ-cause = migrated` fact" reading folds predation into the
+/// climate signal. `migration_events` excludes those; this asserts it does.
+///
+/// The world under test genuinely contains BOTH kinds of displacement — the
+/// `raided > 0` guard below is what makes the equality bind rather than pass
+/// vacuously on a world where nothing was ever conquered. Deleting the
+/// exclusion reddens this test.
+#[test]
+fn migration_events_counts_climate_displacement_only() {
+    let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
+    let h = history_for(
+        Seed(42),
+        &SkyPins::default(),
+        SkyChoice::Generated,
+        &TerrainPins::default(),
+        &SettlementPins::default(),
+        &wc,
+    )
+    .expect("seed-42 bakes");
+    let c = census(&h);
+    assert!(
+        c.raided > 0,
+        "seed 42 resolved no conquest at all ({c:?}) — this gate would pass \
+         vacuously, since there would be no conquest-relocation for the query \
+         to exclude. Re-point it at a seed that fights."
+    );
+    let w = build(Seed(42), BuildDepth::Settlements);
+    assert_eq!(
+        migration_events(&w),
+        c.migrated,
+        "migration_events disagrees with the bake's own climate-eviction tally \
+         ({} vs {}) on a world with {} conquests — the ledger query is counting \
+         conquest-relocations (which close the conqueror's record with cause \
+         `migrated`) as climate migrations.",
+        migration_events(&w),
+        c.migrated,
+        c.raided
     );
 }
 
