@@ -270,6 +270,22 @@ interface.
 
 ### Task 3: Re-measure the falsification gates on the predation model
 
+> **REVISED after Tasks 1–2 (ledger #14, #16).** Three things changed what this task must do.
+> **(1) Seed 42 is too thin to adjudicate on.** After the locality fix it fires exactly **1**
+> cascade (`cascade_hist [1,0,…]`); the ladder across T2's commits ran 15 → 15 → 6 → 1. The shape
+> verdict therefore rests on the **pooled seed sample**, not seed 42, and the branching ratio looks
+> strongly sub-critical. Say so plainly if that is what the pool shows — a sub-critical result is a
+> legitimate falsification that ships and diagnoses the deferred dominance-hierarchy slice.
+> **(2) Both spec amendments were post-observation and pull in opposite directions on the metric**
+> (amendment 1 raised the branching ratio, amendment 2's locality fix lowered it). Spec §5 carries
+> the disclosure and requires it repeated in this readout. Label it.
+> **(3) Two floors are unverified against the corrected measurements.** `cli/tests/history_battery.rs`
+> `MIGRATION_FLOOR = 20` and `SWEEP_MIGRATION_FLOOR = 5` are heavy-tier (`#[ignore]`, outside the
+> commit gate) and were never run against the corrected `migration_events` query, which more than
+> halved on seed 42 (133 → 58). The cross-seed sweep minimum is **unmeasured**. Run the heavy tier.
+> `MIN_CASCADES = 0` in `history_tumult.rs` is now a weak floor rather than an honest record of an
+> inert mechanism — raise it against the **pooled** sample, never against one thin seed.
+
 **Files:**
 - Modify: `windows/worldgen/tests/history_tumult.rs`
 - Re-measure: `windows/worldgen/tests/history_gates.rs`, `history_placement.rs`
