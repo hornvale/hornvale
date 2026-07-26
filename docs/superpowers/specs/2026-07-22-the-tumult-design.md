@@ -52,7 +52,9 @@ subsystem:
   rewritten. Strength reads the `Community`'s existing `population` and `tech`; coveted value
   reads the existing per-cell `capacity` field (which already folds the Demesne's per-axis supply
   and the Confluence's freshwater term — a cell's worth). The moving-sea era graph gives reach.
-  The `nearest_occupied` helper (slice-1 T1) becomes the raid-target finder; the `relocate`
+  The `nearest_occupied` helper (slice-1 T1) seeded the raid-target search and was ultimately
+  *subsumed* — `maybe_raid` scans direct neighbours and the roll-downhill scans widening rings
+  through a shared BFS helper, so the standalone function was deleted; the `relocate`
   recursion (T2) becomes the roll-downhill cascade; the `BakeCensus` cascade histogram (T1) is
   the falsification instrument; `history_for` (T3) is the measurement entry point. All reused.
 - **`windows/lab` / `windows/worldgen/tests`** — the falsification metric (cascade-size
@@ -188,6 +190,17 @@ is nonetheless **post-observation** and is labelled as such wherever this result
 the Task-3 readout, the chronicle, and the retrospective. The falsification rule is unchanged: the
 measured shape ships whatever it is, and no constant is tuned toward a power law.
 
+**Amendment 2 was also post-observation, and it moved the headline the other way.** The locality
+clause in §4.3 — nearest-admissible-ring rather than a scan of the whole component — was written
+after a *second* unfavourable observation: the unrestricted scan breached the world-level
+population-conservation gate. Restoring locality cut seed-42's cascades from 6 to 1 and removed the
+campaign's largest single cascade. So the two amendments pull in opposite directions on the metric,
+and neither was made to improve it: amendment 1 restored what §1 and §4.3 already asserted, and
+amendment 2 repaired a distance term this spec had dropped by accident. Both are labelled
+post-observation under the same rule, and the honest consequence is that the seed-42 histogram is
+now too thin to adjudicate on its own — §5's verdict rests on the pooled seed sample, and a
+strongly sub-critical branching ratio is a legitimate falsification that ships as one.
+
 ## 6. Scope — what is slice 1, and what is the next slice (a G3 decision)
 
 **Recommended slice 1 (this spec):** the minimal driven-dissipative predation model of §4 —
@@ -261,7 +274,8 @@ predicate, or stream label.
 ## 11. What is salvaged from the falsified first design
 
 The falsified crowding build (commits through `f8f52397` on this branch) is **not discarded** —
-its infrastructure is exactly what this model needs: `nearest_occupied` (raid-target finder),
+its infrastructure is exactly what this model needs: `nearest_occupied` (the BFS whose ring-walking
+survives inside the shared helper, though the function itself was subsumed and deleted),
 `relocate` (the roll-downhill recursion), the `BakeCensus` cascade histogram, `history_for` (the
 measurement entry point), and the gate scaffolding all carry forward. What changes is the raid
 **trigger** (crowding/no-vacant → value × covetousness) and the raid **decision** (displace-only-
