@@ -253,6 +253,7 @@
 - [The Hearth](./chronicle/the-hearth.md)
 - [The Vigil](./chronicle/the-vigil.md)
 - [The Tumult](./chronicle/the-tumult.md)
+- [The Waterline](./chronicle/the-waterline.md)
 - [The Purview](./chronicle/the-purview.md)
 - [The Margin](./chronicle/the-margin.md)
 

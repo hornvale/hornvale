@@ -531,3 +531,9 @@ git status --porcelain
 **Type consistency:** `HabitatDomain` (Task 2) is referenced by Task 3's match arms with the same three variant names. `BiosphereTraits::habitat_domain` is the field name in both. `terrain.is_ocean(cell) -> bool` matches the existing signature at `domains/terrain/src/provider.rs:101`.
 
 **Known risk this plan accepts:** Task 3 may leave the gate red until Task 4 re-pins. That is deliberate — the alternative is re-pinning numbers before the change that moves them, which inverts cause and effect.
+
+---
+
+**Status: SUPERSEDED IN PART, CLOSED** (2026-07-26). Tasks 1–3 were executed and then **removed** at `559a1510`: The Tumult shipped a better-argued fix for the same defect while this plan was being executed (see the spec's §12). Task 4b (sovereignty) was built, measured, and deferred to its own campaign — the implementation is preserved at `4f852fd2` and the finding is registry row BIO-40. Task 6's census verification and regeneration did run, on the canonical box, and taught its own lesson (UNI-39).
+
+For anyone reading this plan as a template, the two things worth taking from it: **Task 1's measure-before-you-build step worked** — it answered the world-identity question in one task rather than five, and its answer held every subsequent time it was rechecked. And **the plan specified a test that asserted nothing** (`the_gate_removes_cells_without_reweighting_the_survivors`), which the final review caught by mutation. A plan can hand an implementer a vacuous test just as easily as an implementer can write one.

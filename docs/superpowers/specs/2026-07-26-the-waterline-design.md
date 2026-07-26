@@ -338,3 +338,15 @@ classification. The *motivation* did not: this is a smaller campaign than it
 was sold as. The measurement used an assumed constant where the codebase
 published the real predicate, and four rounds of conclusions were drawn before
 anyone checked. Retrospective headline.
+
+---
+
+## 12. Outcome (2026-07-26)
+
+**The medium half of this spec did not ship.** While it was in flight, The Tumult (`56364acf`, `341eb9f9`) fixed the same defect by masking the five resource-supply fields to land rather than gating assembled K on a per-kind medium, and its reasoning is better: `ResourceVector` is already a Hutchinsonian resource-hypervolume niche, so habitat is that niche's shadow rather than a second axis, and two mechanisms can contradict each other (an aquatic diet with a terrestrial medium is expressible and incoherent). `HabitatDomain`, the K gate, and the `Lithic` authoring were removed at `559a1510`; the removal changed no world, because every shipped kind was either `Terrestrial` (redundant with the supply mask) or the xorn (permitted everywhere).
+
+The Tumult also found the deeper cause this spec missed: the leak was masked by an accident until The Tumult's own elevation re-datum removed it. Before it, ocean cells sat ~4 km from every authored elevation optimum, so the Gaussian condition term zeroed the seabed for everyone.
+
+**What shipped instead:** the census canonical-host guard ([decision 0079](../../decisions/0079-census-goldens-are-authored-on-one-enforced-host.md)), the probe's sea-level correction, and two findings now carried as registry rows — BIO-40 (sovereignty should decay; the coexistence diversity β was calibrated against is an artifact of the floor) and UNI-39 (world-identity neutrality is not census neutrality). §8's retraction stands and is the better-documented half of this spec: The Waterline was never a prerequisite for the prey field.
+
+Chronicle: [The Waterline](../../../book/src/chronicle/the-waterline.md). Retrospective: [the-waterline](../../retrospectives/the-waterline.md).
