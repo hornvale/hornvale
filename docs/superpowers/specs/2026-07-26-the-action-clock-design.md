@@ -2,7 +2,10 @@
 
 **Campaign:** The Action Clock — campaign 2 of The Rose Window
 **Date:** 2026-07-26
-**Status:** draft (G3)
+**Status:** BUILT, BLOCKED AT G6 (2026-07-26) — all six tasks implemented
+(`071fb429` clock, `37ded590` mass + day length, `6d26b0a0` the hoist
+byte-identical, `a2a9716e` the charge, `45e0ca3a` interleaving). **The gate is
+red on a preregistered stop and must not be re-pinned here** — see §11.
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md` §4.1 (four clocks)
 and §6.2; **Amendment 1** (§1a) for the program as amended.
 **Decisions in force:** 0021 (derive, never author per-creature), 0033
