@@ -91,3 +91,33 @@ fn a_trailing_length_difference_is_still_a_mismatch() {
         .expect_err("extra trailing content must be a mismatch");
     assert!(err.message.contains("line 2"), "got: {}", err.message);
 }
+
+/// The regression this pins: a single-line, compact-JSON fixture (like
+/// `scene/surrounds/v1`'s) can carry a very long shared prefix before the
+/// actual difference. A head-only truncation of each line would then print
+/// two byte-identical `committed:`/`actual:` prefixes and tell the reader
+/// nothing about what differed. The report must instead window around the
+/// first REAL divergence, so the differing region itself is visible.
+#[test]
+fn a_long_shared_prefix_still_surfaces_the_real_divergence() {
+    let path = scratch("long-prefix.txt");
+    let shared_prefix = "x".repeat(300);
+    let committed =
+        format!("{{\"schema\":\"s/v1\",\"pad\":\"{shared_prefix}\",\"tag\":\"COMMITTED-VALUE\"}}");
+    let actual =
+        format!("{{\"schema\":\"s/v1\",\"pad\":\"{shared_prefix}\",\"tag\":\"ACTUAL-VALUE\"}}");
+    std::fs::write(&path, &committed).unwrap();
+    let err = check_golden(&path, &actual, false).expect_err("differing tag must be a mismatch");
+    assert!(
+        err.message.contains("COMMITTED-VALUE"),
+        "the committed line's own differing region must be visible, not just its shared \
+         prefix: got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("ACTUAL-VALUE"),
+        "the actual line's own differing region must be visible, not just its shared \
+         prefix: got: {}",
+        err.message
+    );
+}
