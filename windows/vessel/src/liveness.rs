@@ -6,7 +6,9 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
-use crate::interior::{AnchorId, Interior, SeamKind, interior_of, landing, seam_kind, warmth_at};
+use crate::interior::{
+    AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
+};
 use hornvale_kernel::{
     ANIMAL_PREY, ConditionResponse, EntityId, Fact, Ledger, PHOTOSYNTHATE, PLANT_FORAGE,
     ResourceVector, RoomAddr, RoomId, SearchSpace, TickSystem, Value, World, WorldTime, astar,
@@ -1433,6 +1435,24 @@ pub trait Drive {
     /// type-audit: bare-ok(count: budget)
     fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action>;
 
+    /// Extra candidate actions this drive proposes, BEYOND [`arbitrate`]'s
+    /// fixed room-scale set (the position's three neighbours as `MoveTo`, plus
+    /// `Drink`/`Rest`/`Eat`) — the seam a drive whose action space is FINER
+    /// than the room graph uses to make its own moves visible to the
+    /// multi-drive utility scan. The default is empty, and is correct for
+    /// every drive built before The Threshold: each one's `affordance` already
+    /// picks among the room-graph's own neighbours (a room-scale A* plan's or
+    /// gradient step's first hop is, by construction, always a room-graph
+    /// neighbour), so it is already present in the fixed set and needs no
+    /// second listing here. `Thermal` is the first drive that reasons over a
+    /// DIFFERENT graph (the room interior's anchors), so it is the first to
+    /// override this — see its own doc for why the override is exactly its
+    /// `affordance`'s own within-room choice, not a separate enumeration.
+    /// type-audit: bare-ok(count: _budget)
+    fn candidate_actions(&self, _view: &Perceived, _budget: usize) -> Vec<Action> {
+        Vec::new()
+    }
+
     /// This drive's identity — for the commitment mode and the deterministic
     /// tie-break order (a fixed `DriveKind` ordering, reload-stable).
     fn kind(&self) -> DriveKind;
@@ -1678,8 +1698,10 @@ const SWITCH_MARGIN: f64 = 0.1;
 /// flow drive perceives the ambient temperature of the cell it occupies
 /// directly (see the [`Drive`] trait's stock-vs-flow note). NOT wired into the
 /// live NPC `decide` this stage (Stage 1 unit-tests it in isolation);
-/// arbitration of thirst + thermal together is Stage 2.
-/// type-audit: bare-ok(ratio: warmth)
+/// arbitration of thirst + thermal together is Stage 2. No field here is a
+/// bare primitive at this `pub` boundary (every field is a typed newtype,
+/// trait object, or reference), so this struct itself needs no
+/// `type-audit:` tag — see the individual fields for any that do.
 pub struct Thermal<'a> {
     /// The species' temperature niche: `optimum` is the preferred °C, `width`
     /// the tolerance half-band. Discomfort is deviation past `width` from
@@ -1690,21 +1712,30 @@ pub struct Thermal<'a> {
     pub terrain: &'a dyn Terrain,
     /// The day the temperature is sensed at (the diurnal+seasonal phase).
     pub day: WorldTime,
-    /// The room INTERIOR's warmth at the creature's anchor (The Hearth), or
-    /// `None` where no interior exists — [`crate::interior::warmth_at`]'s
-    /// reading, folded ADDITIVELY into the felt temperature. It can only RAISE
-    /// what the creature feels, so a creature already comfortable in a cold
-    /// room is unchanged and an interior-free world is byte-identical by
-    /// construction: the same additive-latent discipline as [`Danger::alarm`],
-    /// and `None` is exactly the pre-Hearth reading. Read at the creature's OWN
-    /// anchor only (the field already decayed the emission over graph distance),
-    /// exactly as the alarm is read at its own cell.
+    /// The room INTERIOR the creature stands in, paired with the anchor it
+    /// currently occupies within it (The Hearth's warmth seam, The
+    /// Threshold's crossing), or `None` where no interior applies. Where the
+    /// pre-crossing model carried a single precomputed `warmth: Option<f64>`
+    /// scalar, this carries the GRAPH instead: choosing where to move needs
+    /// the interior's shape and the creature's place in it, not just the
+    /// number that shape currently produces at one anchor. The felt warmth
+    /// at any anchor is DERIVED from this pair via
+    /// [`crate::interior::warmth_at`] (see [`Self::urgency_here`]) rather
+    /// than passed in, so there is exactly one source of truth for "warmth
+    /// at an anchor" and the drive can also ask it about anchors the
+    /// creature is not currently standing at (`Self::affordance`'s
+    /// within-room branch).
     ///
-    /// NOT LIVE in v1 (spec §9.1): nothing yet derives an [`crate::interior::Interior`]
-    /// from a real room and creatures have no anchor position, so every live
-    /// construction site passes `None`. The seam exists; the occupancy that
-    /// fills it is its own campaign.
-    pub warmth: Option<f64>,
+    /// `None` means exactly what the old `warmth: None` meant: no interior
+    /// applies, so the felt temperature is the ambient reading untouched
+    /// (see [`Self::urgency_here`]'s `None` arm) — the identity every
+    /// pre-Hearth call site relied on, preserved byte-for-byte. It can only
+    /// ever RAISE what a creature feels (warmth is strictly non-negative and
+    /// additive), so a creature already comfortable in a cold room is
+    /// unchanged and an interior-free world is byte-identical by
+    /// construction, the same additive-latent discipline as
+    /// [`Danger::alarm`].
+    pub interior: Option<(&'a Interior, AnchorId)>,
 }
 
 impl<'a> Thermal<'a> {
@@ -1745,24 +1776,27 @@ impl<'a> Thermal<'a> {
     }
 
     /// The thermal urgency felt HERE — [`Self::urgency_at`] plus the room
-    /// interior's [`Thermal::warmth`] at the creature's anchor, folded
-    /// ADDITIVELY into the sensed temperature BEFORE the niche comparison (The
-    /// Hearth). The term can only RAISE the felt temperature, never lower it,
-    /// so a cold creature beside a fire is eased and no creature is made colder
-    /// by a hearth. `None` returns the ambient reading UNTOUCHED — not
-    /// `temp + 0.0` — so an interior-free world takes the same arithmetic path
-    /// it did before The Hearth. An unreadable cell stays unreadable: a
-    /// non-finite ambient temperature plus a finite warmth is still non-finite,
-    /// so it still registers `0.0`.
+    /// interior's warmth at the creature's own anchor ([`Self::interior`],
+    /// read via [`warmth_at`]), folded ADDITIVELY into the sensed temperature
+    /// BEFORE the niche comparison (The Hearth). The term can only RAISE the
+    /// felt temperature, never lower it, so a cold creature beside a fire is
+    /// eased and no creature is made colder by a hearth. `None` returns the
+    /// ambient reading UNTOUCHED — not `temp + 0.0` — so an interior-free
+    /// world takes the same arithmetic path it did before The Hearth. An
+    /// unreadable cell stays unreadable: a non-finite ambient temperature
+    /// plus a finite warmth is still non-finite, so it still registers `0.0`.
     ///
     /// The warmth field is emitted in °C at its source
     /// ([`crate::interior::HEARTH_WARMTH`]) and decayed over graph distance
     /// there, so it is folded 1:1 with no second dial to tune — one source of
     /// scale, unlike the alarm's separate [`ALARM_SCALE`].
-    /// type-audit: bare-ok(ratio: return)
-    fn urgency_here(&self, room: &RoomAddr) -> f64 {
+    /// type-audit: bare-ok(count: budget), bare-ok(ratio: return)
+    fn urgency_here(&self, room: &RoomAddr, budget: usize) -> f64 {
         let temp = self.terrain.temperature(room, self.day);
-        self.urgency_of(self.warmth.map_or(temp, |w| temp + w))
+        match self.interior {
+            Some((interior, anchor)) => self.urgency_of(temp + warmth_at(interior, anchor, budget)),
+            None => self.urgency_of(temp),
+        }
     }
 }
 
@@ -1770,24 +1804,87 @@ impl<'a> Drive for Thermal<'a> {
     fn urgency(&self, view: &Perceived) -> f64 {
         // THE HEARTH: the interior's warmth at the creature's own anchor joins
         // the ambient temperature ADDITIVELY, so a creature by the fire feels
-        // the room it is in rather than the weather outside it. `warmth: None`
-        // — every live site in v1 — is the identity.
-        self.urgency_here(&view.position)
+        // the room it is in rather than the weather outside it. `interior:
+        // None` reads the pre-Hearth identity. `urgency` carries no `budget`
+        // parameter (the `Drive` trait's `urgency` never has), so this reuses
+        // the same routing budget `affordance`/`serviceability` are given
+        // elsewhere in this drive's own live construction
+        // (`INTERIOR_WARMTH_BUDGET`) — small, fixed, and already justified at
+        // its own definition (the interior graph is at most 9 anchors).
+        self.urgency_here(&view.position, INTERIOR_WARMTH_BUDGET)
     }
     fn act_threshold(&self) -> f64 {
         THERMAL_ACT
     }
-    fn affordance(&self, view: &Perceived, _budget: usize) -> Option<Action> {
+    fn affordance(&self, view: &Perceived, budget: usize) -> Option<Action> {
         // Satisfied inside the tolerance band — nothing to do (a flow drive
-        // needs no plan; NO A*, so `budget` is unused).
+        // needs no plan; this gate reads AMBIENT comfort only, exactly as it
+        // did before The Threshold — a room already inside the niche band
+        // never triggers seeking, whether or not it also has a hearth).
         if self.deviation(&view.position) <= self.niche.width {
             return None;
         }
-        // Otherwise, the comfort gradient step: the neighbour whose temperature
-        // is CLOSEST to the optimum (too-cold → warmer, too-hot → cooler, both
-        // toward the optimum), or `None` when no neighbour is strictly more
-        // comfortable than here (boxed in / a local comfort optimum).
+        // THE THRESHOLD'S CROSSING: try the within-room step FIRST. Ambient
+        // temperature is uniform across one room (there is no per-anchor
+        // coordinate to sample it at — spec §2.1), so the only thing that
+        // varies anchor-to-anchor is the additive hearth warmth `warmth_at`
+        // already reads; `warmest_anchor` finds the anchor whose FELT
+        // reading is closest to the niche optimum, exactly as `comfort_step`
+        // does one scale up.
+        //
+        // Composition with the room-scale gradient below: within-room always
+        // wins when it has somewhere useful to send the creature, because
+        // crossing a room is strictly cheaper than crossing between rooms
+        // (`MOVE_WITHIN_DURATION` << `MOVE_DURATION`) and a room offering
+        // warmth relief should be exhausted before the creature gives up on
+        // it and leaves. The room-scale step is not merely a slower
+        // alternative, though — it is the ONLY option once a within-room
+        // improvement doesn't exist, in TWO distinct cases: no anchor in the
+        // interior is any warmer than here (no fire in this room, or the
+        // creature is already at the warmest reachable one), and — the case
+        // spec §8a calls out by name — a genuinely warmer anchor exists but
+        // [`route_within`] cannot reach it from here. §8a reserves seasonal
+        // passability, under which the traversable graph can be disconnected
+        // even though `permits` certified the BASE graph connected at
+        // composition time, so a creature can be stranded away from its own
+        // room's hearth. `route_within` returning `None` here is that real,
+        // expected case — not a defect to guard against — and it is handled
+        // by simply falling through to the room-scale gradient below, the
+        // same way "no interior at all" already does.
+        if let Some((interior, from)) = self.interior {
+            let ambient = self.terrain.temperature(&view.position, self.day);
+            if let Some(target) =
+                warmest_anchor(interior, from, ambient, self.niche.optimum, budget)
+                && let Some(path) = route_within(interior, from, target, budget)
+                && let Some(&step) = path.first()
+            {
+                return Some(Action::MoveWithin(step));
+            }
+        }
+        // The between-rooms gradient (unchanged): the neighbour whose
+        // temperature is CLOSEST to the optimum (too-cold → warmer, too-hot →
+        // cooler, both toward the optimum), or `None` when no neighbour is
+        // strictly more comfortable than here (boxed in / a local comfort
+        // optimum, or — now — a room whose own warmer hearth is unreachable).
         comfort_step(&view.position, self.niche.optimum, self.terrain, self.day).map(Action::MoveTo)
+    }
+    fn candidate_actions(&self, view: &Perceived, budget: usize) -> Vec<Action> {
+        // Make the within-room step visible to `arbitrate`'s multi-drive
+        // utility scan: its fixed candidate set is built from `RoomAddr`
+        // neighbours and cannot express an `AnchorId`. Rather than a second,
+        // independent enumeration of the interior's anchors (which could
+        // drift from what `affordance` itself would choose), this simply
+        // republishes `affordance`'s own decision WHEN it is a `MoveWithin` —
+        // the within-room branch above already is the argmax over the
+        // interior's anchors, so there is nothing more useful to offer.
+        // Nothing else needs a candidate: the room-scale `MoveTo` case is
+        // already in the fixed set (comfort_step's target is always a room
+        // neighbour), and no OTHER drive scores an anchor-graph action, so a
+        // single candidate here costs the scan nothing.
+        match self.affordance(view, budget) {
+            Some(a @ Action::MoveWithin(_)) => vec![a],
+            _ => Vec::new(),
+        }
     }
     fn kind(&self) -> DriveKind {
         DriveKind::Thermal
@@ -1795,16 +1892,33 @@ impl<'a> Drive for Thermal<'a> {
     fn urgency_ceiling(&self) -> f64 {
         THERMAL_CEIL
     }
-    fn serviceability(&self, action: &Action, view: &Perceived, _budget: usize) -> f64 {
+    fn serviceability(&self, action: &Action, view: &Perceived, budget: usize) -> f64 {
         // A flow drive is served by PRESENCE in a kinder cell: the reduction in
-        // thermal urgency at the neighbour it would step to (0 if the step
-        // doesn't improve comfort). No consume — `Drink` serves it not at all.
+        // thermal urgency at the destination (0 if the step doesn't improve
+        // comfort). No consume — `Drink` serves it not at all.
         match action {
             Action::MoveTo(n) => (self.urgency_at(&view.position) - self.urgency_at(n)).max(0.0),
-            // No consume — none of `Drink`/`Rest`/`Eat` serves comfort. Fine
-            // movement is not yet wired into any drive's plan (The Threshold
-            // task 6+), so it serves nothing today either.
-            Action::Drink | Action::Rest | Action::Eat | Action::MoveWithin(_) => 0.0,
+            // THE THRESHOLD'S CROSSING: the within-room twin of the `MoveTo`
+            // arm above, scored the same way — the reduction in felt urgency
+            // between the creature's CURRENT anchor and `target`, using the
+            // room's own (unchanging) ambient temperature at both ends since
+            // only the anchor, not the room, differs. `0.0` with no interior
+            // (nothing to score an anchor against) rather than a panic: a
+            // `MoveWithin` candidate can only ever reach this drive's
+            // `serviceability` via `candidate_actions`, which itself only
+            // ever proposes one when `self.interior` is `Some`, but this
+            // stays total rather than leaning on that invariant.
+            Action::MoveWithin(target) => match self.interior {
+                Some((interior, from)) => {
+                    let ambient = self.terrain.temperature(&view.position, self.day);
+                    let felt_at =
+                        |a: AnchorId| self.urgency_of(ambient + warmth_at(interior, a, budget));
+                    (felt_at(from) - felt_at(*target)).max(0.0)
+                }
+                None => 0.0,
+            },
+            // No consume — none of `Drink`/`Rest`/`Eat` serves comfort.
+            Action::Drink | Action::Rest | Action::Eat => 0.0,
         }
     }
 }
@@ -1840,6 +1954,55 @@ fn comfort_step(
     // equal-comfort or worse neighbour is no improvement — hold).
     if best_dev.total_cmp(&deviation(from)).is_lt() {
         Some(best_room)
+    } else {
+        None
+    }
+}
+
+/// The warmest anchor in `interior` — the one whose FELT temperature
+/// (`ambient` plus that anchor's own [`warmth_at`]) is CLOSEST to `optimum`
+/// — or `None` when no anchor OTHER than `from` is strictly more comfortable
+/// than `from` itself. [`Thermal::affordance`]'s within-room counterpart to
+/// [`comfort_step`]: the same `total_cmp`-then-ascending-id tie-break and the
+/// same "strictly better than here" gate, but scanning the interior's
+/// anchors rather than a room's three neighbours, and scoring VALUE (`warmth_at`,
+/// which already accounts for every hearth's own reachability from each
+/// candidate) rather than adjacency.
+///
+/// This picks the best DESTINATION, not a first step — the interior graph is
+/// small (at most 9 anchors, `interior/pattern.rs`'s `INVENTORY`) but can
+/// still put the warmest anchor several hops from `from` (the hearth sits 3
+/// hops from a built-cold room's threshold — task 5d's own finding), so a
+/// one-hop neighbour scan would undersell it. The caller is responsible for
+/// turning this destination into a next STEP via [`route_within`], and for
+/// treating that call's `None` as the genuinely reachable case it is (spec
+/// §8a) rather than as impossible — this function does not call
+/// `route_within` itself, so it never has that `None` to handle.
+fn warmest_anchor(
+    interior: &Interior,
+    from: AnchorId,
+    ambient: f64,
+    optimum: f64,
+    budget: usize,
+) -> Option<AnchorId> {
+    let deviation = |a: AnchorId| (ambient + warmth_at(interior, a, budget) - optimum).abs();
+    let mut best: Option<(AnchorId, f64)> = None;
+    for id in interior.ids() {
+        if id == from {
+            continue;
+        }
+        let dev = deviation(id);
+        let keep_existing = match &best {
+            Some((ba, bd)) => dev.total_cmp(bd).then_with(|| id.cmp(ba)).is_ge(),
+            None => false,
+        };
+        if !keep_existing {
+            best = Some((id, dev));
+        }
+    }
+    let (best_anchor, best_dev) = best?;
+    if best_dev.total_cmp(&deviation(from)).is_lt() {
+        Some(best_anchor)
     } else {
         None
     }
@@ -2793,6 +2956,17 @@ pub fn arbitrate(
     candidates.push(Action::Drink);
     candidates.push(Action::Rest);
     candidates.push(Action::Eat);
+    // THE THRESHOLD'S CROSSING: extend the fixed room-scale set with each
+    // drive's OWN extra candidates, in drive order (deterministic — `drives`
+    // is a caller-fixed slice). Every drive before Thermal returns none here
+    // (the default `Drive::candidate_actions`), because a room-scale plan's
+    // first hop is always already one of the neighbours above; Thermal is
+    // the first drive reasoning over a DIFFERENT graph (the room interior's
+    // anchors), so its `MoveWithin` candidate — when it has one — would
+    // otherwise be invisible to this scan no matter how loudly it wants it.
+    for d in drives.iter() {
+        candidates.extend(d.candidate_actions(view, budget));
+    }
 
     // A drive's best single-drive (grab-style) utility over the candidates —
     // the score the commitment switch compares incumbent vs challenger on.
@@ -2893,13 +3067,20 @@ pub fn arbitrate(
             // Following a gradient toward an UNKNOWN one (normal Searching) —
             // this is also hunger's forage-gradient step (seeking richer ground).
             Action::MoveTo(_) => (AffectLabel::Searching, 0.0),
-            // No drive's `affordance` produces `MoveWithin` yet (The Threshold
-            // task 6+), so no candidate can actually be this arm today; it
-            // exists only to keep the match exhaustive. Treated the same as
-            // the generic MoveTo gradient step (neutral Searching) rather than
-            // inventing fine-movement affect semantics ahead of the task that
-            // wires it up.
-            Action::MoveWithin(_) => (AffectLabel::Searching, 0.0),
+            // THE THRESHOLD'S CROSSING: unlike the `MoveTo` arms above, a
+            // within-room target is never a matter of belief or an unknown
+            // gradient — `interior_of` is a pure, immediate derivation (no
+            // partial observation, no belief cache; `interior/mod.rs`), and
+            // `Thermal::affordance` only ever proposes this step AFTER
+            // `route_within` has already verified a real path exists to it
+            // (the unroutable case falls back to the `MoveTo` gradient
+            // above, and so never reaches this arm). So a creature taking
+            // this step is beelining to a KNOWN, VERIFIED-REACHABLE target
+            // exactly as surely as `Fatigue` beelines home or thirst
+            // beelines believed water — `Eager`, not `Searching`.
+            // `Searching` is reserved for gradient-following toward an
+            // UNKNOWN target, which this branch structurally cannot be.
+            Action::MoveWithin(_) => (AffectLabel::Eager, 0.5),
         };
         Resolution {
             intent: Intent::Do(chosen),
@@ -3000,16 +3181,18 @@ pub fn affect_of_memo(
         explore_step,
     };
     let thirst = Thirst { params: SUSTENANCE };
+    // THE THRESHOLD's arming: the room `view.position` is in, ACTUALLY derives
+    // an interior now, owned here so `thermal` below can borrow it — see
+    // `landing_interior`'s own doc for why "landing" is the right anchor for
+    // this stateless snapshot read, which (unlike `DriveMovements::step`'s
+    // per-tick walk, The Threshold task 6) has no per-tick `Occupancy` to
+    // carry a creature's ACTUAL within-room position across.
+    let here = landing_interior(&view.position, terrain);
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
         day,
-        // THE THRESHOLD's arming: the room `pos` is in, ACTUALLY derives an
-        // interior now, and the creature's felt warmth is read at its landing
-        // anchor (`interior_warmth_here`) rather than assumed absent. See that
-        // function's own doc for why "landing" is the right anchor while no
-        // per-tick `Occupancy` is threaded through this snapshot read.
-        warmth: Some(interior_warmth_here(&view.position, terrain)),
+        interior: here.as_ref().map(|(i, a)| (i, *a)),
     };
     let rest = Fatigue {
         home: npc.home.clone(),
@@ -3205,6 +3388,16 @@ const PLAN_BUDGET: usize = 1_000;
 /// a multi-room journey still resolves within a single `wait`.
 const MOVE_DURATION: f64 = 0.1;
 
+/// One WITHIN-ROOM step's duration (The Threshold's crossing, task 6) — a
+/// small fraction of [`MOVE_DURATION`], deliberately: crossing a room is a
+/// much shorter journey than crossing between rooms (at most 8 anchor-hops,
+/// `INTERIOR_WARMTH_BUDGET`'s own justification, versus the mesh-scale
+/// distances a between-room walk covers), so it should cost a proportionally
+/// smaller slice of a `wait`. A round fraction of `MOVE_DURATION` rather than
+/// a fresh guess, so the two movement scales stay comparable by construction
+/// as either is retuned; not itself measured against anything.
+const MOVE_WITHIN_DURATION: f64 = MOVE_DURATION / 10.0;
+
 /// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
 /// strict-progress guard's backstop: even if a decision loop somehow failed
 /// to advance `day` on every iteration, this bounds total work per tick
@@ -3225,39 +3418,37 @@ const MAX_STEPS: usize = 10_000;
 /// silently missed for want of budget.
 const INTERIOR_WARMTH_BUDGET: usize = 64;
 
-/// The interior warmth a creature standing in `pos` feels (The Threshold's
-/// arming): derive the room's interior (`interior_of`) and read [`warmth_at`]
-/// at the anchor a creature crossing INTO the room arrives at (`landing`,
-/// keyed off `seam_kind(terrain.is_built(pos))`) — additive input to
-/// [`Thermal::warmth`].
+/// The room `pos` is in, derived (`interior_of`), paired with the anchor a
+/// creature crossing INTO the room arrives at (`landing`, keyed off
+/// `seam_kind(terrain.is_built(pos))`) — the owned `(Interior, AnchorId)`
+/// [`Thermal::interior`] borrows from. Where the pre-crossing model
+/// ([`warmth_at`] read here directly, folded into a bare `f64`) collapsed
+/// this to a single number at construction time, this returns the GRAPH
+/// itself, because `Thermal::affordance`'s within-room branch (The
+/// Threshold's crossing) needs to ask the interior about anchors other than
+/// the one the caller happens to hand it.
 ///
-/// Neither live call site (`affect_of_memo`'s snapshot read, and
-/// `DriveMovements::step`'s per-tick walk) threads a persisted [`Occupancy`]
-/// through this path: `affect_of_memo` is a stateless re-derivation with
-/// nowhere to carry one, and wiring a real per-tick instance through the walk
-/// so a creature that has WALKED further into the room than the doorway reads
-/// its DEEPER anchor's warmth is a follow-on campaign, not this task's — the
-/// brief is explicit that arming is "no new field, no new read path". So
-/// every creature reached by this function today is, structurally, the "has
-/// not yet arrived anywhere in particular" case, and the landing anchor is
-/// exactly the right answer for it: it is the SAME anchor `Occupancy::arrive`
-/// places a freshly-arrived creature at, so this is the correct reading for
-/// every creature this campaign's `Occupancy` has not yet been asked to
-/// track, not a placeholder standing in for one.
+/// This is `affect_of_memo`'s helper specifically — its stateless snapshot
+/// read has no per-tick state to carry a creature's ACTUAL within-room
+/// position across, so it always reads the LANDING anchor: the same anchor
+/// `Occupancy::arrive` places a freshly-arrived creature at, and therefore
+/// the correct reading for a read with nowhere to remember anything deeper.
+/// `DriveMovements::step`'s per-tick walk (The Threshold task 6) does carry
+/// state — a real [`Occupancy`] — across its own loop, so it derives the
+/// interior itself and tracks the anchor directly rather than calling this.
 ///
-/// `0.0` — the identity a `None` warmth already reads as — for the
-/// pathological interior with no landing at all (an empty one). `interior_of`
-/// never composes one in practice (even wilderness draws `the-clearing`'s
-/// `Ground` hub — see `interior/derive.rs`'s own tests), so this is
-/// unreachable on a live world, not a silent wrong answer.
-/// type-audit: bare-ok(ratio: return)
-fn interior_warmth_here(pos: &RoomAddr, terrain: &dyn Terrain) -> f64 {
+/// `None` only for the pathological interior with no landing at all (an
+/// empty one). `interior_of` never composes one in practice (even wilderness
+/// draws `the-clearing`'s `Ground` hub — see `interior/derive.rs`'s own
+/// tests), so this is unreachable on a live world, not a silent wrong
+/// answer; [`Thermal::interior`]'s own `None` case already reads as the
+/// correct identity (no interior applies) regardless of which of these two
+/// reasons produced it.
+fn landing_interior(pos: &RoomAddr, terrain: &dyn Terrain) -> Option<(Interior, AnchorId)> {
     let interior = interior_of(pos, terrain);
     let kind = seam_kind(terrain.is_built(pos));
-    match landing(&interior, kind) {
-        Some(anchor) => warmth_at(&interior, anchor, INTERIOR_WARMTH_BUDGET),
-        None => 0.0,
-    }
+    let anchor = landing(&interior, kind)?;
+    Some((interior, anchor))
 }
 
 /// A committed `agent-at` fact: `entity` moved to `target` on `day`, with
@@ -3342,12 +3533,29 @@ pub struct DriveMovements<'a> {
     pub terrain: &'a dyn Terrain,
 }
 
-impl<'a> TickSystem for DriveMovements<'a> {
-    fn label(&self) -> &'static str {
-        "drive-movements"
-    }
-    fn step(&self, frozen: &Ledger) -> Vec<Fact> {
+impl<'a> DriveMovements<'a> {
+    /// The per-tick walk, returning both the committed `Fact`s AND the final
+    /// per-creature [`Occupancy`] each npc's walk reached inside this tick's
+    /// own presence bubble — a seam so a test can observe the ephemeral
+    /// within-room result the committed facts alone never reveal (decision
+    /// 0069: `MoveWithin` commits nothing, so nothing about it is otherwise
+    /// visible after `step` returns). [`TickSystem::step`] is a thin wrapper
+    /// discarding the second element; production code only ever wants the
+    /// facts.
+    fn step_with_occupancy(&self, frozen: &Ledger) -> (Vec<Fact>, Occupancy) {
         let mut out: Vec<Fact> = Vec::new();
+        // THE THRESHOLD's crossing (task 6): which anchor each creature
+        // stands at, tracked across this tick's own walk. Shared across
+        // every npc this tick advances — `Occupancy` is keyed by `EntityId`,
+        // so there is no cross-npc collision — and, like `afraid_memo`
+        // below, discarded the moment `step` returns: nothing here is ever
+        // committed or carried into the NEXT tick (`Occupancy`'s own doc —
+        // it evaporates with the bubble). So every creature starts each
+        // fresh `step` call back at its room's landing anchor, never at
+        // wherever a PREVIOUS tick's walk carried it deeper into the room —
+        // the observer-effect gap catch-up (Task 7) exists to close, not
+        // this task's.
+        let mut occupancy = Occupancy::default();
         // One primary-afraid memo for the whole step: `frozen` is fixed here, so
         // every emitter's `(entity, day)` verdict — read by the alarm field AND by
         // each creature's `believed_hazard` re-derivation — is computed once (see
@@ -3368,6 +3576,18 @@ impl<'a> TickSystem for DriveMovements<'a> {
         );
         for npc in &self.npcs {
             let mut pos = agent_position(frozen, npc, self.from);
+            // THE THRESHOLD's crossing: derive this room's interior and
+            // arrive at its landing anchor — the entry point for a creature
+            // crossing INTO the room from the coarse (room-graph) layer.
+            // Re-derived (and re-arrived) every time `pos` changes below,
+            // since an `AnchorId` is only meaningful paired with the SPECIFIC
+            // `Interior` it indexes (`Occupancy`'s own doc).
+            let mut interior = interior_of(&pos, self.terrain);
+            occupancy.arrive(
+                npc.entity,
+                &interior,
+                seam_kind(self.terrain.is_built(&pos)),
+            );
             let mut day = self.from.day;
             // A scratch ledger view isn't available; track drank locally: derive
             // the starting last-drank day from `frozen`, then simulate forward,
@@ -3495,9 +3715,15 @@ impl<'a> TickSystem for DriveMovements<'a> {
                     niche: npc.temperature_niche,
                     terrain: self.terrain,
                     day: WorldTime { day },
-                    // THE THRESHOLD's arming — the same `interior_warmth_here`
-                    // read `affect_of_memo` uses, at this tick's current `pos`.
-                    warmth: Some(interior_warmth_here(&pos, self.terrain)),
+                    // THE THRESHOLD's crossing: the creature's ACTUAL current
+                    // anchor, tracked by `occupancy` and walked by the
+                    // `MoveWithin` arm below — not merely the room's landing
+                    // anchor. `affect_of_memo`'s stateless snapshot read
+                    // still uses the landing-only reading
+                    // (`landing_interior`); this per-tick walk is the one
+                    // place carrying real per-tick state (`Occupancy`) to
+                    // track something better.
+                    interior: occupancy.at(npc.entity).map(|a| (&interior, a)),
                 };
                 let rest = Fatigue {
                     home: npc.home.clone(),
@@ -3590,6 +3816,17 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         out.push(agent_at_fact(npc.entity, &n, day, provenance));
                         visited.insert(n.clone());
                         pos = n;
+                        // Crossing into a DIFFERENT room: re-derive ITS
+                        // interior and re-arrive at ITS landing anchor. The
+                        // anchor reached in the OLD room's graph means
+                        // nothing here — an `AnchorId` is a vector offset
+                        // into the SPECIFIC `Interior` it indexes.
+                        interior = interior_of(&pos, self.terrain);
+                        occupancy.arrive(
+                            npc.entity,
+                            &interior,
+                            seam_kind(self.terrain.is_built(&pos)),
+                        );
                     }
                     Intent::Do(Action::Drink) => {
                         out.push(drank_fact(
@@ -3659,19 +3896,44 @@ impl<'a> TickSystem for DriveMovements<'a> {
                         }
                         day = next_act;
                     }
-                    Intent::Do(Action::MoveWithin(_)) => {
-                        // No drive's `affordance` produces `MoveWithin` yet
-                        // (The Threshold task 6+), so this arm is unreachable
-                        // today. It writes no fact and does not advance `day`
-                        // — a genuine no-op, not a stand-in for behaviour —
-                        // and the unconditional `steps >= MAX_STEPS` cap at
-                        // the top of this loop still bounds iteration even if
-                        // it were ever hit.
+                    Intent::Do(Action::MoveWithin(next)) => {
+                        // THE THRESHOLD's crossing, now live. Fine movement
+                        // writes NO fact (decision 0069 — `MoveWithin`'s
+                        // effect is bubble-local occupancy, never
+                        // serialized), but it still costs time: a room is
+                        // crossed step by step, not instantaneously, so
+                        // `day` advances by the (much smaller) within-room
+                        // duration rather than standing still.
+                        day += MOVE_WITHIN_DURATION;
+                        if day > self.to.day {
+                            break;
+                        }
+                        // `Thermal::affordance`'s within-room branch only
+                        // ever proposes an anchor reachable by
+                        // `route_within`'s FIRST hop, which is by
+                        // construction adjacent to wherever the creature
+                        // currently stands, so `walk` should always succeed
+                        // here. Its bool return is still checked (not
+                        // `unwrap`ped) rather than leaning on that
+                        // invariant: a refused walk simply leaves the
+                        // creature where it was, having still spent the
+                        // tick's time trying — no different in kind from a
+                        // room-scale `Hold`.
+                        occupancy.walk(npc.entity, &interior, next);
                     }
                 }
             }
         }
-        out
+        (out, occupancy)
+    }
+}
+
+impl<'a> TickSystem for DriveMovements<'a> {
+    fn label(&self) -> &'static str {
+        "drive-movements"
+    }
+    fn step(&self, frozen: &Ledger) -> Vec<Fact> {
+        self.step_with_occupancy(frozen).0
     }
 }
 
@@ -4302,17 +4564,27 @@ impl Occupancy {
         }
     }
 
-    /// Move `who` to `to`, but only if `to` is adjacent to where it currently
-    /// stands ([`Interior::neighbors`]). Returns whether the move happened —
-    /// a creature that has not arrived anywhere, or a target that is not a
-    /// neighbor of its current anchor, is refused rather than silently
-    /// teleported, since a graph walk that skips edges is not a walk at all.
+    /// Move `who` to `to`, but only if `to` is ONE WALKABLE HOP from where it
+    /// currently stands ([`Interior::walkable_neighbors`] — adjacency AND
+    /// containment in either direction, e.g. an alcove to the hearth it
+    /// contains). Returns whether the move happened — a creature that has
+    /// not arrived anywhere, or a target that is not reachable in one hop
+    /// from its current anchor, is refused rather than silently teleported,
+    /// since a graph walk that skips edges is not a walk at all.
+    ///
+    /// This MUST use the same one-hop definition [`route_within`]'s planner
+    /// does (The Threshold task 6's own bug: an earlier version checked only
+    /// [`Interior::neighbors`] — adjacency alone — so a planned step INTO a
+    /// contained anchor, like the hearth `the-fire` composes inside its
+    /// alcove, was silently refused even though the plan that proposed it
+    /// was valid). `walkable_neighbors` is the shared definition precisely so
+    /// this cannot drift from the planner again.
     /// type-audit: bare-ok(flag: return)
     pub fn walk(&mut self, who: EntityId, interior: &Interior, to: AnchorId) -> bool {
         let Some(here) = self.at(who) else {
             return false;
         };
-        if !interior.neighbors(here).contains(&to) {
+        if !interior.walkable_neighbors(here).contains(&to) {
             return false;
         }
         self.0.insert(who, to);
@@ -8905,7 +9177,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &cold_here,
             day,
-            warmth: None,
+            interior: None,
         };
         let view = at(home.clone());
         assert_eq!(
@@ -8929,7 +9201,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &hot_here,
             day,
-            warmth: None,
+            interior: None,
         };
         assert_eq!(
             drive.affordance(&view, PLAN_BUDGET),
@@ -8954,7 +9226,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
         let view = at(home.clone());
         assert_eq!(drive.urgency(&view), 0.0, "inside the band → zero urgency");
@@ -8986,7 +9258,7 @@ mod tests {
             niche: cold_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
         assert_eq!(cold.urgency(&view), 0.0, "the cold niche tolerates 2 °C");
         assert_eq!(
@@ -8999,7 +9271,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
         assert!(warm.urgency(&view) > 0.0, "the warm niche flees 2 °C");
         assert_eq!(
@@ -9027,7 +9299,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
         let view = at(home.clone());
         assert_eq!(drive.urgency(&view), drive.urgency(&view));
@@ -9058,7 +9330,7 @@ mod tests {
             niche: cold_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
         let view = at(home.clone());
         assert_eq!(
@@ -9103,7 +9375,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let label = |view: &Perceived| {
@@ -9203,7 +9475,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // A representative spread of thirst states; each must arbitrate ==
@@ -9307,7 +9579,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Weigh (latency 1): the full weighted sum, so the both-serving move
@@ -9364,7 +9636,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let Resolution {
@@ -9430,7 +9702,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         // (a) MILD thirst (0.5, active under eager_thirst, capped 0.5 < 0.6):
         //     severe cold wins → step toward WARMTH.
@@ -9509,7 +9781,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
@@ -9570,7 +9842,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
-            warmth: None,
+            interior: None,
         };
         let thirst = Thirst { params: SUSTENANCE };
         assert_eq!(thermal.anticipation_lead(0.0), 0.0);
@@ -9633,7 +9905,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Maxed thirst, KNOWS reachable water → would normally beeline.
@@ -9787,7 +10059,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day: WorldTime { day: 0.0 },
-            warmth: None,
+            interior: None,
         };
         let rest = Fatigue { home: home.clone() };
         let drives: [&dyn Drive; 3] = [&thirst, &thermal, &rest];
@@ -9935,7 +10207,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         // Tick 1: thirst grab-utility 0.50 < thermal 0.60 → commit to thermal.
@@ -10047,7 +10319,7 @@ mod tests {
             niche: warm_niche(),
             terrain: &terrain,
             day,
-            warmth: None,
+            interior: None,
         };
         let drives: [&dyn Drive; 2] = [&thirst, &thermal];
         let a = arb(
@@ -10194,10 +10466,14 @@ mod tests {
 
     #[test]
     fn the_thermal_drive_folds_the_hearths_warmth_additively() {
-        // THE HEARTH's drive seam. `warmth` is folded ADDITIVELY into the sensed
+        // THE HEARTH's drive seam. Warmth is folded ADDITIVELY into the sensed
         // temperature, so the SAME cold cell is urgent unwarmed and comfortable
-        // beside a fire — and `Some(0.0)` reads exactly as `None`, the identity
-        // every live construction site relies on for byte-identity.
+        // beside a fire — and a hearthless interior reads exactly like `None`,
+        // the identity every live construction site relies on for
+        // byte-identity. Unlike the pre-crossing model (a hand-picked
+        // `warmth: Some(scalar)`), warmth is now DERIVED from a real
+        // `Interior`, so this test builds one rather than injecting a number.
+        use crate::interior::{AnchorKind, Interior};
         let home = raddr(1.0);
         let day = WorldTime { day: 0.0 };
         // −10 °C against the warm niche (optimum 18, width 8): deviation 28,
@@ -10209,19 +10485,35 @@ mod tests {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: None,
+            interior: None,
         };
+        // A real interior with no hearth: `warmth_at` reads `0.0` at its one
+        // anchor, so this must read IDENTICALLY to `interior: None` — the
+        // additive-latent discipline (an emitter-free room is byte-identical
+        // to no interior at all).
+        let mut cold_room = Interior::new();
+        let bed = cold_room.push(AnchorKind::Bed, None);
         let unheated = Thermal {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: Some(0.0),
+            interior: Some((&cold_room, bed)),
         };
+        // Two adjacent hearths: `HEARTH_WARMTH * (1.0 + WARMTH_DECAY) ==
+        // 15.0 * 1.5 == 22.5`°C at the nearer one (its own undecayed
+        // emission plus the other's, one hop away) — enough to carry
+        // −10 °C into the warm niche's `[10, 26]` tolerance band, without
+        // hand-injecting an arbitrary scalar the way the pre-crossing model
+        // could.
+        let mut warm_room = Interior::new();
+        let fire = warm_room.push(AnchorKind::Hearth, None);
+        let second_fire = warm_room.push(AnchorKind::Hearth, None);
+        warm_room.connect(fire, second_fire);
         let beside_the_fire = Thermal {
             niche: warm_niche(),
             terrain: &t,
             day,
-            warmth: Some(30.0),
+            interior: Some((&warm_room, fire)),
         };
 
         assert!(
@@ -10231,12 +10523,12 @@ mod tests {
         assert_eq!(
             unheated.urgency(&view),
             unwarmed.urgency(&view),
-            "a warmth of zero is the identity — an interior-free world is unchanged"
+            "a hearthless interior is the identity — an emitter-free room is unchanged"
         );
         assert_eq!(
             beside_the_fire.urgency(&view),
             0.0,
-            "+30 °C of hearth carries −10 °C into the warm niche's tolerance band"
+            "22.5 °C of hearth warmth carries −10 °C into the warm niche's tolerance band"
         );
         assert!(
             beside_the_fire.urgency(&view) < unwarmed.urgency(&view),
@@ -10247,8 +10539,8 @@ mod tests {
     #[test]
     fn a_cold_creature_reads_less_arousal_beside_a_real_hearth_than_in_a_hearthless_room() {
         // THE THRESHOLD'S ARMING: this is the production path
-        // (`affect_of` → `affect_of_memo` → `interior_warmth_here`), not a
-        // hand-picked `warmth` value like the test above. Two terrains report
+        // (`affect_of` → `affect_of_memo` → `landing_interior`), not a
+        // hand-built `Interior` like the test above. Two terrains report
         // the IDENTICAL ambient temperature at the SAME room address — the
         // only difference between them is `is_built`, which alone decides
         // whether `interior_of` composes a hearth (a cold BUILT room draws
@@ -10322,6 +10614,405 @@ mod tests {
             hearth_affect.arousal < wild_affect.arousal,
             "a real, derived hearth must ease the felt cold below the \
              hearthless reading: hearth {hearth_affect:?} vs wild {wild_affect:?}"
+        );
+    }
+
+    // --- The Threshold's crossing (task 6): Thermal seeks WITHIN a room. ---
+
+    #[test]
+    fn thermal_affordance_crosses_the_room_toward_the_hearth() {
+        // THE THRESHOLD'S CROSSING, the payoff: on a REAL composed interior
+        // (not a hand-built toy — the same one The Hearth's own anti-hub test
+        // proves is non-degenerate), a creature standing at the threshold —
+        // well outside the niche band — steps WITHIN the room toward the
+        // fire, each step landing somewhere strictly warmer than the last,
+        // until it reaches the hearth itself and has nowhere better to go.
+        use crate::interior::{AnchorKind, compose, selection};
+        let interior = compose(&selection(true, true));
+        let door = interior
+            .ids()
+            .into_iter()
+            .find(|&id| interior.anchor(id).kind == AnchorKind::Threshold)
+            .expect("a built cold room has a threshold");
+        let hearth_id = interior
+            .ids()
+            .into_iter()
+            .find(|&id| interior.anchor(id).kind == AnchorKind::Hearth)
+            .expect("a cold built room has a hearth");
+
+        let home = raddr(1.0);
+        let day = WorldTime { day: 0.0 };
+        // Deep cold: well past the warm niche's tolerance band, so the
+        // ambient gate never short-circuits the within-room branch.
+        let t = PlantedTerrain::thermal([(home.clone(), -30.0)]);
+        let view = at(home.clone());
+
+        let mut anchor = door;
+        let mut steps = 0;
+        loop {
+            let drive = Thermal {
+                niche: warm_niche(),
+                terrain: &t,
+                day,
+                interior: Some((&interior, anchor)),
+            };
+            match drive.affordance(&view, 64) {
+                Some(Action::MoveWithin(next)) => {
+                    let before = warmth_at(&interior, anchor, 64);
+                    let after = warmth_at(&interior, next, 64);
+                    assert!(
+                        after > before,
+                        "each within-room step must land somewhere strictly \
+                         warmer: {anchor:?} ({before}) -> {next:?} ({after})"
+                    );
+                    anchor = next;
+                    steps += 1;
+                    assert!(
+                        steps <= 8,
+                        "the interior has at most 9 anchors; this should have converged by now"
+                    );
+                }
+                other => {
+                    // Converged: with nowhere better to go, this must be the
+                    // hearth itself — the interior's unique warmth maximum.
+                    assert_eq!(
+                        anchor, hearth_id,
+                        "the walk should end at the hearth, not give up early \
+                         (next affordance: {other:?})"
+                    );
+                    break;
+                }
+            }
+        }
+        assert!(
+            steps >= 2,
+            "the composed interior is non-degenerate (The Hearth's own \
+             anti-hub test), so reaching the fire should take more than one step"
+        );
+    }
+
+    #[test]
+    fn thermal_affordance_falls_back_to_the_room_scale_gradient_when_the_hearth_is_unroutable() {
+        // spec §8a: a seasonal-passability read can leave the traversable
+        // graph disconnected even though the BASE graph validated as
+        // connected at composition time — a creature stranded away from its
+        // own room's hearth. `route_within`'s `None` here is a real, expected
+        // case, not a defect: the drive must fall back to the room-scale
+        // gradient rather than treating it as impossible.
+        use crate::interior::{AnchorKind, Interior};
+        let mut stranded = Interior::new();
+        let door = stranded.push(AnchorKind::Threshold, None);
+        stranded.push(AnchorKind::Hearth, None);
+        // Deliberately NO edge between them — `permits` would reject this as
+        // a COMPOSITION (it is what a seasonal-passability READ could
+        // produce transiently, not a shape `interior_of` ever composes
+        // today; see route.rs's own `an_unreachable_anchor_yields_no_route`).
+
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        // The room-scale gradient DOES have somewhere to go (ns[0] is
+        // warmer), so this exercises a genuine fallback, not a coincidental
+        // `None` from a boxed-in room.
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -30.0),
+            (ns[0].clone(), 10.0),
+            (ns[1].clone(), -30.0),
+            (ns[2].clone(), -30.0),
+        ]);
+        let view = at(home.clone());
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            interior: Some((&stranded, door)),
+        };
+
+        assert_eq!(
+            drive.affordance(&view, 64),
+            Some(Action::MoveTo(ns[0].clone())),
+            "the hearth is unroutable from the door, so the drive must fall \
+             back to the between-rooms gradient rather than treating the \
+             stranding as impossible"
+        );
+    }
+
+    #[test]
+    fn thermal_serviceability_scores_the_within_room_step_by_warmth_gained() {
+        // Mirrors the `MoveTo` arm's own contract (`urgency_at(here) -
+        // urgency_at(there)`), one scale down: the reduction in FELT urgency
+        // between the creature's current anchor and a candidate one, clamped
+        // to never go negative (a step that makes things worse serves the
+        // drive not at all, exactly like the room-scale arm).
+        use crate::interior::{AnchorKind, Interior};
+        let mut interior = Interior::new();
+        let door = interior.push(AnchorKind::Threshold, None);
+        let hearth = interior.push(AnchorKind::Hearth, None);
+        interior.connect(door, hearth);
+
+        let home = raddr(1.0);
+        let day = WorldTime { day: 0.0 };
+        // cold_niche (optimum 6, width 8): −15 °C is 13.5 short of the
+        // optimum once the door's own 1-hop-decayed warmth (7.5 °C) is
+        // folded in — deliberately NOT deep enough to clamp urgency at its
+        // ceiling at EITHER end, so the improvement genuinely shows up as a
+        // difference rather than two saturated `1.0`s cancelling to `0.0`.
+        let t = PlantedTerrain::thermal([(home.clone(), -15.0)]);
+        let view = at(home.clone());
+        let drive = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+            interior: Some((&interior, door)),
+        };
+
+        let toward_the_fire = drive.serviceability(&Action::MoveWithin(hearth), &view, 64);
+        assert!(
+            toward_the_fire > 0.0,
+            "stepping to the strictly-warmer hearth must serve the drive: {toward_the_fire}"
+        );
+        let toward_itself = drive.serviceability(&Action::MoveWithin(door), &view, 64);
+        assert_eq!(
+            toward_itself, 0.0,
+            "a step that changes nothing serves the drive not at all"
+        );
+        // No interior at all: total (a `MoveWithin` candidate can only ever
+        // reach this drive via `candidate_actions`, which never proposes one
+        // without an interior, but `serviceability` stays total rather than
+        // leaning on that invariant).
+        let no_interior = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            interior: None,
+        };
+        assert_eq!(
+            no_interior.serviceability(&Action::MoveWithin(hearth), &view, 64),
+            0.0
+        );
+    }
+
+    #[test]
+    fn arbitrate_chooses_the_within_room_step_when_thermal_proposes_one() {
+        // THE THRESHOLD'S CROSSING wired all the way through: `arbitrate`'s
+        // fixed room-scale candidate set is built from `RoomAddr` neighbours
+        // and cannot express an `AnchorId` on its own — this proves
+        // `Drive::candidate_actions` actually makes `MoveWithin` reachable
+        // via the live multi-drive path, not merely via `Thermal::affordance`
+        // called in isolation (the test above).
+        use crate::interior::{AnchorKind, Interior};
+        let mut interior = Interior::new();
+        let door = interior.push(AnchorKind::Threshold, None);
+        let hall = interior.push(AnchorKind::Bed, None);
+        let hearth = interior.push(AnchorKind::Hearth, None);
+        interior.connect(door, hall);
+        interior.connect(hall, hearth);
+
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let day = WorldTime { day: 0.0 };
+        // Every room-scale neighbour reads the SAME cold as home (no
+        // room-scale improvement available), so any `MoveTo` the fixed
+        // candidate set offers scores exactly `0.0` — only the within-room
+        // step, reached via `candidate_actions`, can win this arbitration.
+        let t = PlantedTerrain::thermal([
+            (home.clone(), -15.0),
+            (ns[0].clone(), -15.0),
+            (ns[1].clone(), -15.0),
+            (ns[2].clone(), -15.0),
+        ]);
+        let thirst = Thirst { params: SUSTENANCE };
+        let thermal = Thermal {
+            niche: cold_niche(),
+            terrain: &t,
+            day,
+            interior: Some((&interior, door)),
+        };
+        let drives: [&dyn Drive; 2] = [&thirst, &thermal];
+        let view = at(home.clone());
+        let resolution = arb(
+            &view,
+            &home,
+            &drives,
+            0.5,
+            0.0,
+            false,
+            true,
+            Mode::Idle,
+            PLAN_BUDGET,
+        );
+
+        assert_eq!(
+            resolution.intent,
+            Intent::Do(Action::MoveWithin(hall)),
+            "the within-room step must actually win the multi-drive \
+             arbitration, not merely exist as a possibility: {resolution:?}"
+        );
+        // THE AFFECT LABEL: beelining to a KNOWN, VERIFIED-REACHABLE target —
+        // `Thermal::affordance` only ever proposes this step after
+        // `route_within` has confirmed a real path — reads Eager, on the
+        // same basis as `Fatigue`'s always-known walk home, not Searching
+        // (reserved for gradient-following toward an UNKNOWN target).
+        assert_eq!(
+            resolution.affect.label,
+            AffectLabel::Eager,
+            "a creature beelining to a verified-reachable fire is Eager, not Searching"
+        );
+    }
+
+    #[test]
+    fn a_creature_crosses_a_hearth_bearing_room_but_not_a_hearthless_one() {
+        // Task 6's own failing test (step 1): a cold creature at a
+        // hearth-bearing interior's threshold ends its tick nearer the
+        // hearth — reading strictly MORE warmth where it ends than where it
+        // began — while the same creature in a hearthless (wilderness)
+        // interior does not move at all. `MoveWithin` commits no `Fact`
+        // (decision 0069), so this reads the walk's result through
+        // `step_with_occupancy`'s second element rather than the committed
+        // ledger, which a `MoveWithin`-only walk leaves untouched.
+        struct BuiltOverlay<'a> {
+            built: bool,
+            inner: &'a PlantedTerrain,
+        }
+        impl Terrain for BuiltOverlay<'_> {
+            fn elevation(&self, r: &RoomAddr) -> f64 {
+                self.inner.elevation(r)
+            }
+            fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+                self.inner.is_fresh_water(r)
+            }
+            fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+                self.inner.temperature(r, d)
+            }
+            fn is_built(&self, _r: &RoomAddr) -> bool {
+                self.built
+            }
+        }
+
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // Deep, uniform cold: every room-scale neighbour reads the SAME
+        // temperature as home, so the between-rooms gradient never fires and
+        // any movement observed is genuinely the within-room mechanism.
+        //
+        // The niche is chosen deliberately, not reused off the shelf: the
+        // landing anchor (the Threshold) is THREE hops from the composed
+        // hearth (task 5d's own geometry), decaying `HEARTH_WARMTH` to
+        // 1.875/3.75/7.5/15 °C at door/ground/alcove/hearth. `width: 12.0`
+        // and this ambient keep urgency STRICTLY decreasing and UNSATURATED
+        // at every one of those four anchors (each stays inside one
+        // band-width of the last, so the clamp at `1.0` never equalizes two
+        // consecutive readings) while staying ≥ `THERMAL_ACT` everywhere
+        // except the fire itself — so the walk neither stalls on a
+        // zero-`serviceability` tie nor gives up "good enough" one hop
+        // early. A narrower, off-the-shelf niche (`cold_niche`/`warm_niche`,
+        // width `8.0`) saturates two adjacent hops to an identical `1.0`
+        // urgency here, masking the real warmth gain the same way task 5c/5d
+        // found real deep-cold populations already do — this test is
+        // deliberately NOT in that saturated regime, so it demonstrates the
+        // mechanism rather than accidentally exercising the null.
+        let niche = ConditionResponse {
+            optimum: 6.0,
+            width: 12.0,
+            devotion: 0.5,
+        };
+        let ambient = -19.75;
+        let planted = PlantedTerrain::thermal([
+            (home.clone(), ambient),
+            (ns[0].clone(), ambient),
+            (ns[1].clone(), ambient),
+            (ns[2].clone(), ambient),
+        ]);
+        let build_npc = |entity: EntityId| Npc {
+            entity,
+            home: home.clone(),
+            resource: home.clone(),
+            species: "human".to_string(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: niche,
+            deliberation_latency: 0.0,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            // An EMPTY diet niche: no hunger drive to rule out.
+            niche: ResourceVector::new(&[]).unwrap(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: "test".to_string(),
+        };
+
+        // BUILT + COLD: `interior_of` composes the real hearth-bearing chain
+        // (threshold -> ground -> alcove -> hearth -> bed;
+        // `pattern.rs`'s own `the_intended_chain_is_the_deep_one`), landing
+        // at the Threshold, three hops from the fire.
+        let hearth_terrain = BuiltOverlay {
+            built: true,
+            inner: &planted,
+        };
+        let mut ledger = Ledger::default();
+        let e1 = ledger.mint_entity();
+        let sys = DriveMovements {
+            npcs: vec![build_npc(e1)],
+            // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
+            // Slumber wake-gates Thermal, so a diurnal creature simulated
+            // from `day: 0.0` starts ASLEEP and never engages it at all.
+            from: WorldTime { day: 0.35 },
+            to: WorldTime { day: 1.35 },
+            params: SUSTENANCE,
+            terrain: &hearth_terrain,
+        };
+        let (_facts, occ) = sys.step_with_occupancy(&ledger);
+        let interior = interior_of(&home, &hearth_terrain);
+        let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
+        let hearth_id = interior
+            .ids()
+            .into_iter()
+            .find(|&id| interior.anchor(id).kind == crate::interior::AnchorKind::Hearth)
+            .expect("a built cold room has a hearth");
+        let end = occ.at(e1).expect("the creature arrived somewhere");
+        assert_ne!(
+            end, landing_anchor,
+            "a cold creature in a hearth-bearing room must move within it \
+             over the course of a full day"
+        );
+        assert!(
+            warmth_at(&interior, end, 64) > warmth_at(&interior, landing_anchor, 64),
+            "it must end its tick strictly warmer than where it began"
+        );
+        assert_eq!(
+            end, hearth_id,
+            "given a full day and a small per-step cost, it reaches the fire itself"
+        );
+
+        // WILDERNESS + COLD (the hearthless control): the SAME temperature,
+        // the SAME species, differing only in `is_built` — `interior_of`
+        // never composes a `Hearth` anchor for wilderness
+        // (`interior/pattern.rs`'s INVENTORY has no wild `Hearth` pattern),
+        // so there is nowhere warmer to walk to and the creature stays
+        // exactly where it arrived.
+        let wild_terrain = BuiltOverlay {
+            built: false,
+            inner: &planted,
+        };
+        let mut ledger2 = Ledger::default();
+        let e2 = ledger2.mint_entity();
+        let sys2 = DriveMovements {
+            npcs: vec![build_npc(e2)],
+            // Start mid-morning (`waking_offset(Diurnal)`), not midnight: The
+            // Slumber wake-gates Thermal, so a diurnal creature simulated
+            // from `day: 0.0` starts ASLEEP and never engages it at all.
+            from: WorldTime { day: 0.35 },
+            to: WorldTime { day: 1.35 },
+            params: SUSTENANCE,
+            terrain: &wild_terrain,
+        };
+        let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2);
+        let wild_interior = interior_of(&home, &wild_terrain);
+        let wild_landing = landing(&wild_interior, seam_kind(false)).expect("wilderness lands too");
+        assert_eq!(
+            occ2.at(e2),
+            Some(wild_landing),
+            "a hearthless room gives the creature nowhere warmer to walk \
+             within, so it must not move"
         );
     }
 
@@ -10518,6 +11209,48 @@ mod tests {
             Some(stray),
             "a rejected walk must not move the creature"
         );
+    }
+
+    #[test]
+    fn walking_into_a_contained_anchor_succeeds_not_only_across_adjacency() {
+        // THE THRESHOLD task 6's own regression: a hearth composes WITHIN its
+        // alcove (`Attach::Within`, `pattern.rs`'s `the-fire`), a containment
+        // (`Ntpp`) edge, not adjacency (`Ec`) — `Interior::neighbors` alone
+        // does not see it, but `route_within`'s planner walks it (its own
+        // `successors` includes containment in both directions), and a plan
+        // step `walk` then silently refused was a real bug this task hit
+        // live: a creature stepping from an alcove INTO the hearth it
+        // contains was rejected by the old adjacency-only check even though
+        // the route that proposed the step was valid.
+        use crate::interior::AnchorKind;
+        let mut i = Interior::new();
+        let ground = i.push(AnchorKind::Ground, None);
+        let alcove = i.push(AnchorKind::Alcove, None);
+        let hearth = i.push(AnchorKind::Hearth, Some(alcove));
+        i.connect(ground, alcove);
+        let mut occ = Occupancy::default();
+        occ.arrive(npc_id(1), &i, SeamKind::Broad);
+        assert_eq!(
+            occ.at(npc_id(1)),
+            Some(ground),
+            "lands at the Ground hub (no Threshold here)"
+        );
+        assert!(
+            occ.walk(npc_id(1), &i, alcove),
+            "ground to alcove is plain adjacency"
+        );
+        assert!(
+            occ.walk(npc_id(1), &i, hearth),
+            "alcove to the hearth it CONTAINS is one walkable hop too, \
+             not merely one `route_within` step"
+        );
+        assert_eq!(occ.at(npc_id(1)), Some(hearth));
+        // And back out, the converse direction (contained -> container).
+        assert!(
+            occ.walk(npc_id(1), &i, alcove),
+            "the hearth to the alcove containing it is walkable in reverse"
+        );
+        assert_eq!(occ.at(npc_id(1)), Some(alcove));
     }
 
     #[test]

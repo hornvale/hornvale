@@ -88,13 +88,47 @@ impl Interior {
         &self.anchors[id.0 as usize]
     }
 
-    /// The anchors directly touching `a`, ascending.
+    /// The anchors directly touching `a` (`Ec`), ascending. Adjacency ONLY —
+    /// containment (`Ntpp`) is a SEPARATE relation (see [`Self::within`]),
+    /// which is why a creature crossing from an alcove into the hearth it
+    /// contains is not a "neighbour" step in THIS sense even though it is a
+    /// genuine single-hop walk ([`Self::walkable_neighbors`] is the union
+    /// callers that actually MOVE a creature need).
     pub fn neighbors(&self, a: AnchorId) -> Vec<AnchorId> {
         self.adjacency
             .iter()
             .filter(|(x, _)| *x == a)
             .map(|(_, y)| *y)
             .collect()
+    }
+
+    /// Every anchor a creature standing at `a` may step to in ONE hop:
+    /// adjacency (`Ec`, [`Self::neighbors`]) AND containment (`Ntpp`) in
+    /// EITHER direction — the anchor `a` lies strictly within (its
+    /// container, if any) and every anchor that lies strictly within `a`
+    /// (its contents). Deterministic (ascending, duplicate-free).
+    ///
+    /// This is the SINGLE definition of "one walkable hop" the interior
+    /// layer has: [`crate::interior::route_within`]'s A* successors and
+    /// [`crate::liveness::Occupancy::walk`]'s adjacency check both call this
+    /// rather than each re-deriving their own notion of "adjacent enough to
+    /// walk to", the same discipline `Interior::is_connected`'s own doc
+    /// states for containment-plus-adjacency reachability — a route planner
+    /// and the thing that actually executes one step of its plan must agree
+    /// on what a step IS, or a planned step silently fails to execute.
+    pub fn walkable_neighbors(&self, a: AnchorId) -> Vec<AnchorId> {
+        let mut out = self.neighbors(a);
+        if let Some(parent) = self.anchor(a).within {
+            out.push(parent);
+        }
+        for id in self.ids() {
+            if self.anchor(id).within == Some(a) {
+                out.push(id);
+            }
+        }
+        out.sort();
+        out.dedup();
+        out
     }
 
     /// Whether `a` lies strictly within `b`, following the containment chain
