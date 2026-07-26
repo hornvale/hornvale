@@ -1,6 +1,11 @@
 # The Tithe — Living-Community C3, Slice 2: Tribute
 
-**Status:** design (G3 — awaiting Nathan)
+**Status:** G3 CLEARED (Nathan, 2026-07-26). Two calls are **provisional and refinable** rather
+than deeply justified, and are flagged here so a later reader does not mistake them for settled:
+(a) the productivity test for the subordinate branch is `pressure < 1` — a reasonable reading of
+"has surplus to take", not a derived threshold; (b) a second bid on an already-subordinated
+community **transfers** patronage with no contest, which means patrons can be quietly poached.
+Both are cheap to revise once the mechanism is measured.
 **Program:** The Living Community engine (campaign 4), conflict-as-criticality
 **Slice:** tribute — a raid may end in *subordination* rather than eviction, and the rate is a
 guess on both sides. A genesis epoch.
