@@ -129,10 +129,10 @@ const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 const DAUGHTER_PROB: f64 = 0.06;
 /// How much a unit of stored wealth is worth as raiding strength, relative to
 /// a head of population. Walls, retainers and granaries are strength the local
-/// land does not have to feed. type-audit: bare-ok(ratio)
+/// land does not have to feed.
 const STORE_WEIGHT: f64 = 0.5;
 /// The fraction of a community's stores that survives each epoch — a hoard is
-/// not immortal. type-audit: bare-ok(ratio)
+/// not immortal.
 const STORE_DECAY: f64 = 0.95;
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
@@ -430,9 +430,13 @@ fn tech_for(year: f64) -> TechHorizon {
 /// The raiding strength of a HOMELESS people mid-roll. It has no live
 /// community to read a `tech` off, so strength is reckoned from the population
 /// it still carries and the horizon its people has reached this year
-/// (`tech_for(year + offset)`, the same offset the community carried) — the
-/// same `population × tech_weight` reckoning [`Bake::strength`] applies to a
-/// seated one. A displaced people is not disarmed by being displaced.
+/// (`tech_for(year + offset)`, the same offset the community carried). A
+/// displaced people is not disarmed by being displaced.
+///
+/// This deliberately carries **no stores term**, unlike [`Bake::strength`]: a
+/// roller's community has already closed, and stores are lost on closure
+/// (spec §4.2a), so crediting a homeless remnant with a hoard would resurrect
+/// wealth the fall of its community destroyed.
 fn roller_strength(pop: f64, offset: f64, year: f64) -> f64 {
     pop * tech_weight(tech_for(year + offset))
 }
@@ -847,8 +851,7 @@ impl<'a> Bake<'a> {
     /// remnants preying on remnants all the way down.
     fn has_spoils(&self, era: &EraClimate, idx: usize) -> bool {
         let c = &self.communities[idx];
-        let eff = self.eff_capacity(era, c.site);
-        eff > 0.0 && c.population * NEED / eff < NO_SPOILS_PRESSURE
+        self.eff_capacity(era, c.site) > 0.0 && self.pressure_of(idx, era) < NO_SPOILS_PRESSURE
     }
 
     /// A community's crowding pressure on its cell this era: population
@@ -1187,10 +1190,13 @@ impl<'a> Bake<'a> {
 
     /// A comfortable community grows logistically, and — if very comfortable —
     /// may throw off a daughter onto a vacant habitable neighbour. Also the
-    /// one place `STORE_DECAY` applies: it runs exactly once per living
-    /// community per epoch, so a hoard erodes at a steady per-epoch rate
-    /// rather than compounding with how often the community is touched
-    /// elsewhere.
+    /// one place `STORE_DECAY` applies. Precisely: `grow` has a single call
+    /// site and runs at most once per community per epoch, and only for a
+    /// community that survived its own turn — one evicted by climate or lost
+    /// to Famine returns from `step_community` before reaching here, and its
+    /// stores are moot because they are lost on closure anyway. So every
+    /// community that survives into the next epoch has decayed exactly once,
+    /// and no hoard can double-decay.
     fn grow(&mut self, idx: usize, era: &EraClimate, year: f64, pressure: f64) {
         let c = &mut self.communities[idx];
         c.population *= 1.0 + GROWTH_RATE * (1.0 - pressure);
@@ -1607,8 +1613,8 @@ mod tests {
         }
     }
 
-    /// A uniform, fully habitable [`EraClimate`] at `day` over
-    /// [`single_community_fixture`]'s one-cell world.
+    /// A uniform, fully habitable [`EraClimate`] at `day` over a one-cell
+    /// world — the frame the store test's fixture is built on.
     fn era_at(day: f64) -> EraClimate {
         use hornvale_kernel::ReferenceElevation;
         let geo = Geosphere::new(1);
@@ -1621,22 +1627,20 @@ mod tests {
         }
     }
 
-    /// A hand-built [`Bake`] with a single genesis community (population 10)
-    /// on a one-cell, fully-habitable world. The store tests need a live
-    /// community whose `stores` they can poke directly; owned inputs are
-    /// leaked to `'static` so the `Bake` can be returned by value like the
-    /// integration test's `fixture` helpers.
-    fn single_community_fixture() -> Bake<'static> {
+    #[test]
+    fn stores_raise_strength_but_never_pressure() {
+        // A hand-built Bake with one genesis community (population 10) on a
+        // one-cell, fully-habitable world, built from owned locals the test
+        // borrows — the file's own fixture idiom (cf. `cascade_world`), not a
+        // leaked `'static`. Give it stores and confirm:
+        //   (a) strength rises with stores
+        //   (b) the pressure the bake computes is unchanged
         let geo = Geosphere::new(1);
-        let graphs: &'static Vec<ConnectionGraph> =
-            Box::leak(Box::new(vec![full_land_graph(&geo)]));
-        let capacity: &'static CellMap<f64> =
-            Box::leak(Box::new(CellMap::from_fn(&geo, |_| 100.0)));
-        let river_prox: &'static CellMap<f64> =
-            Box::leak(Box::new(CellMap::from_fn(&geo, |_| 0.0)));
-        let refugia: &'static CellMap<bool> =
-            Box::leak(Box::new(CellMap::from_fn(&geo, |_| false)));
-        let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         bake.open(
             KindId("goblin"),
             CellId(0),
@@ -1646,15 +1650,7 @@ mod tests {
             None,
             0.0,
         );
-        bake
-    }
 
-    #[test]
-    fn stores_raise_strength_but_never_pressure() {
-        // A hand-built Bake with one community. Give it stores and confirm:
-        //   (a) strength rises with stores
-        //   (b) the pressure the bake computes is unchanged
-        let mut bake = single_community_fixture();
         let before_strength = bake.strength(0);
         let before_pressure = bake.pressure_of(0, &era_at(0.0));
 
