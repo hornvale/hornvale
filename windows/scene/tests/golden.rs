@@ -50,13 +50,8 @@ fn surrounds_seed_1_json() -> String {
     // shallow depth; this pin only needs a stable address, not a specific
     // biome or a seam. Same lat/lon -> unit-sphere conversion as the lib
     // tests' `observer` helper.
-    let (la, lo) = (0.0_f64.to_radians(), 0.0_f64.to_radians());
     let observer = hornvale_kernel::RoomAddr::containing(
-        [
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-            hornvale_kernel::math::sin(la),
-        ],
+        hornvale_kernel::math::unit_sphere_from_lat_lon(0.0, 0.0),
         6,
     );
     surrounds_json(
@@ -119,13 +114,8 @@ fn surrounds_seed_42_flagship_json() -> String {
     let ctx = hornvale_locale::LocaleContext::build(&w).unwrap();
     let depth = ctx.globe_level() + 6;
     let (lat, lon) = flagship_latlon(&w);
-    let (la, lo) = (lat.to_radians(), lon.to_radians());
     let observer = hornvale_kernel::RoomAddr::containing(
-        [
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-            hornvale_kernel::math::sin(la),
-        ],
+        hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     );
     surrounds_json(

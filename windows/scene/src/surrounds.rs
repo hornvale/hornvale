@@ -323,12 +323,7 @@ fn settlement_marks(world: &World, depth: u32) -> BTreeMap<u64, Vec<Mark>> {
             latitude,
             longitude,
         } = f;
-        let (la, lo) = (latitude.to_radians(), longitude.to_radians());
-        let position = [
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-            hornvale_kernel::math::sin(la),
-        ];
+        let position = hornvale_kernel::math::unit_sphere_from_lat_lon(latitude, longitude);
         let Ok(id) = RoomAddr::containing(position, depth).pack() else {
             continue;
         };
@@ -414,13 +409,8 @@ mod tests {
         // mints its agent, so the gallery scene shows the walked ground.
         let v = hornvale_settlement::village_info(w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(w, v.id).expect("the flagship has coordinates");
-        let (la, lo) = (lat.to_radians(), lon.to_radians());
         RoomAddr::containing(
-            [
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-                hornvale_kernel::math::sin(la),
-            ],
+            hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
             depth,
         )
     }
@@ -476,13 +466,8 @@ mod tests {
     #[test]
     fn a_seam_observer_carries_no_coordinate_on_seam_cells() {
         let w = world();
-        let (la, lo) = ((-10.0_f64).to_radians(), 0.0_f64.to_radians());
         let seam_observer = RoomAddr::containing(
-            [
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-                hornvale_kernel::math::sin(la),
-            ],
+            hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
             12,
         );
         assert_eq!(

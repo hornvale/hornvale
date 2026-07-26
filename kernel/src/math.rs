@@ -95,6 +95,30 @@ pub fn tanh(x: f64) -> f64 {
     libm::tanh(x)
 }
 
+/// A geographic latitude/longitude (degrees) as a position on the unit
+/// sphere, `[x, y, z]` — the sim's one lat/lon → unit-sphere routing. Every
+/// consumer that must find "the room this coordinate falls in" (a
+/// settlement's mint point, a `--at LAT,LON` room lookup, a scene's
+/// observer) calls this, rather than hand-copying the trig, so they agree
+/// bit-for-bit.
+///
+/// This sits on the determinism path (the result typically feeds
+/// `RoomAddr::containing`): it calls `cos`/`sin` above — never `f64`'s
+/// inherent methods — in the fixed order `cos(lat)*cos(lon)`,
+/// `cos(lat)*sin(lon)`, `sin(lat)`. Do not reorder the calls or substitute
+/// std's transcendentals; either would move a world's saved rooms.
+///
+/// Same deferred verdict `RoomAddr::containing`'s own `[f64; 3]` position
+/// parameter and `NearestCellIndex::nearest`'s own `latitude`/`longitude`
+/// parameters carry (this is that identical lat/lon-degrees-in,
+/// unit-sphere-xyz-out shape).
+/// type-audit: pending(wave-1)
+#[inline]
+pub fn unit_sphere_from_lat_lon(lat_deg: f64, lon_deg: f64) -> [f64; 3] {
+    let (lat, lon) = (lat_deg.to_radians(), lon_deg.to_radians());
+    [cos(lat) * cos(lon), cos(lat) * sin(lon), sin(lat)]
+}
+
 #[cfg(test)]
 // The comparison target here IS the platform libm — the one place std's
 // transcendentals are legitimately called.

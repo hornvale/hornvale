@@ -1185,13 +1185,8 @@ fn settlement_room(
         Some(hornvale_kernel::Value::Number(n)) => *n,
         _ => return Err("the settlement has no longitude fact".to_string()),
     };
-    let (la, lo) = (lat.to_radians(), lon.to_radians());
     Ok(RoomAddr::containing(
-        [
-            math::cos(la) * math::cos(lo),
-            math::cos(la) * math::sin(lo),
-            math::sin(la),
-        ],
+        math::unit_sphere_from_lat_lon(lat, lon),
         depth,
     ))
 }
@@ -1235,13 +1230,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
             .trim()
             .parse()
             .map_err(|_| "bad longitude".to_string())?;
-        let (la, lo) = (lat.to_radians(), lon.to_radians());
-        let position = [
-            math::cos(la) * math::cos(lo),
-            math::cos(la) * math::sin(lo),
-            math::sin(la),
-        ];
-        RoomAddr::containing(position, depth)
+        RoomAddr::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
     } else {
         return Err("provide --at LAT,LON or --room ID".to_string());
     };
