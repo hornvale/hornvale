@@ -1,5 +1,12 @@
 # The Purview Implementation Plan
 
+**Status: COMPLETE — all 7 tasks shipped 2026-07-26.** See the
+[chronicle](../../../book/src/chronicle/the-purview.md) and the
+[retrospective](../../retrospectives/the-purview.md). Two corrections were
+made to this plan during execution: Task 5 calls `surrounds_scene_in` (the
+convenience wrapper rebuilds a ~1.2 s context per turn), and Task 6's zoom
+clamp uses `depth - globe_level`, not `depth`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the possession a coarse spatial lens — an egocentric, fogged, deterministic chart of the rooms around the possessed agent, sharing one noun catalog with the prose.

@@ -251,6 +251,7 @@
 - [The Shudder](./chronicle/the-shudder.md)
 - [The Hearth](./chronicle/the-hearth.md)
 - [The Vigil](./chronicle/the-vigil.md)
+- [The Purview](./chronicle/the-purview.md)
 
 # Appendix: The Frontier
 

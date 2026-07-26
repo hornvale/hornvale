@@ -1,5 +1,14 @@
 # The Purview — Design
 
+**Status: SHIPPED 2026-07-26.** Chronicle:
+[the-purview](../../../book/src/chronicle/the-purview.md). Retrospective:
+[the-purview](../../retrospectives/the-purview.md). Decisions promoted:
+[0076](../../decisions/0076-the-situated-pole-is-egocentric-and-knowledge-limited.md),
+[0077](../../decisions/0077-zoom-in-the-room-mesh-is-path-truncation.md).
+Two departures from this spec, both ledgered at G4 and carried into the
+shipped design: the observer's bearing-of-north field was dropped (§5.1) and
+strange-site marks were trimmed to a followup (§5.2).
+
 **Campaign:** The Purview — the spatial lens: a locale-scale, egocentric,
 fogged map of the possessed agent's surroundings, one lens with the prose,
 joined by attention.
