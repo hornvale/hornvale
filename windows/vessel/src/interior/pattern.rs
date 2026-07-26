@@ -298,6 +298,50 @@ mod tests {
     }
 
     #[test]
+    fn a_permitted_interior_is_routable_between_every_pair() {
+        // CONNECTIVITY AND ROUTABILITY MUST AGREE. `permits` walks containment;
+        // routing must too, or the validator green-lights a room a creature
+        // cannot cross. This is the invariant a hearth-inside-an-alcove broke
+        // silently — the anti-hub test still passed, via a different arm.
+        for (built, cold) in [(true, true), (true, false), (false, false)] {
+            let interior = compose(&selection(built, cold));
+            assert!(permits(&interior));
+            for a in interior.ids() {
+                for b in interior.ids() {
+                    assert!(
+                        crate::interior::route_within(&interior, a, b, 256).is_some(),
+                        "permitted interior (built={built}, cold={cold}) has no route \
+                         {a:?} -> {b:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_intended_chain_is_the_deep_one() {
+        // Not merely SOME 3-hop route: the route the grammar was designed to
+        // produce. threshold -> ground -> alcove -> hearth -> bed.
+        let interior = compose(&selection(true, true));
+        let find = |k: AnchorKind| {
+            interior
+                .ids()
+                .into_iter()
+                .find(|id| interior.anchor(*id).kind == k)
+                .unwrap_or_else(|| panic!("a cold built room has a {k:?}"))
+        };
+        let door = find(AnchorKind::Threshold);
+        let bed = find(AnchorKind::Bed);
+        let plan = crate::interior::route_within(&interior, door, bed, 256)
+            .expect("the bed is reachable from the door");
+        assert!(
+            plan.len() >= 4,
+            "the intended chain is at least four steps, got {}: {plan:?}",
+            plan.len()
+        );
+    }
+
+    #[test]
     fn the_validator_rejects_a_disconnected_composition() {
         // The first well-formedness rule (spec §6): an unreachable anchor means
         // part of the room cannot be used, so the composition is ill-formed.

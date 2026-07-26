@@ -6,9 +6,10 @@
 use super::anchor::{AnchorId, Interior};
 use hornvale_kernel::astar::{SearchSpace, astar};
 
-/// The within-room search problem: step between touching anchors until the goal
-/// anchor is reached. Unit cost — a step is a step; introducing a distance here
-/// would violate the topology rule (spec §2.1).
+/// The within-room search problem: step between anchors that touch (`Ec`) OR
+/// contain one another (`Ntpp`) until the goal anchor is reached. Unit cost — a
+/// step is a step; introducing a distance here would violate the topology rule
+/// (spec §2.1).
 pub struct InteriorSpace<'a> {
     /// The room's anchor graph.
     interior: &'a Interior,
@@ -21,11 +22,24 @@ impl SearchSpace for InteriorSpace<'_> {
     type Action = AnchorId;
 
     fn successors(&self, s: &AnchorId) -> Vec<(AnchorId, AnchorId, u64)> {
-        self.interior
-            .neighbors(*s)
-            .into_iter()
-            .map(|n| (n, n, 1))
-            .collect()
+        // Adjacency (`Ec`) AND containment (`Ntpp`) are both walkable: standing
+        // in the alcove you can step to the hearth inside it, and back out.
+        // `is_connected` has always walked both; routing must agree with it, or
+        // the validator accepts rooms a creature cannot cross.
+        let mut out = self.interior.neighbors(*s);
+        if let Some(parent) = self.interior.anchor(*s).within {
+            out.push(parent);
+        }
+        for id in self.interior.ids() {
+            if self.interior.anchor(id).within == Some(*s) {
+                out.push(id);
+            }
+        }
+        // Deterministic and duplicate-free: `neighbors` is already ascending,
+        // but the containment links are appended out of order.
+        out.sort();
+        out.dedup();
+        out.into_iter().map(|n| (n, n, 1)).collect()
     }
 
     fn goal(&self, s: &AnchorId) -> bool {
