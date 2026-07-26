@@ -65,17 +65,43 @@ replacing the single `MOVE_DURATION`. Drinking is quick; a meal is not; sleep
 keeps its existing jump-to-waking, which is a *phase*, not a cost, and is not
 touched.
 
-**`tempo` is derived, never authored.** The physical tempo already present on
-`Npc` is `metabolic_class`: an endotherm runs hot and acts fast, an ectotherm
-slower, an Ametabolic construct is outside the metabolic economy entirely and
-keeps the baseline. This is The Bane's move — derive what a creature *does*
-from what it already *is* — and it adds no new field, no lookup table, and no
-per-species authoring.
+**`tempo` is derived from BODY MASS, never authored.**
+
+*Corrected while planning.* This section first derived tempo from
+`metabolic_class`, on the stated grounds that body mass "is not currently a
+species property." **That was wrong.** `SPECIES_MASS_KG` is a registered trait
+predicate (`domains/species/src/lib.rs:34`, read at `:1361`), and `derive_npcs`
+already reads `biosphere_registry()` to thread `temperature_niche` and
+`metabolic_class` onto `Npc` — so mass is one more line of exactly the move
+already made three times.
+
+Mass is also the *better* driver, and decisively so: metabolic class has four
+variants of which the live roster uses two, so class-derived tempo would give
+the whole world roughly **two** distinct speeds. Per-agent cost that barely
+varies per agent is not worth a campaign. Mass is continuous and genuinely
+per-species — a mouse and a bear are both endotherms.
+
+```
+tempo(mass) = quantize( (mass_kg / REFERENCE_MASS_KG) ^ TIME_EXPONENT )
+cost_ticks(action, agent) = round( base_ticks(action) × tempo(agent) )
+```
+
+`TIME_EXPONENT = 0.25`: biological *times* — stride period, heart interval,
+lifespan — scale as roughly the quarter power of mass, the same allometry the
+species domain already invokes for basal rate. Bigger is slower per action.
+
+**The determinism detail that matters.** `powf` is a libm transcendental and
+must route through `hornvale_kernel::math`; platform libms differ in the last
+ULP, and here that float immediately crosses a **rounding boundary** into an
+integer tick count, where a one-ULP difference could flip the result. So the
+tempo is `quantize`d (8 significant digits, decision 0033's own helper) *before*
+rounding, which makes the boundary reproducible across platforms. This is the
+one place in the campaign where cross-platform identity is genuinely at risk,
+and it is closed by construction.
 
 Reserved, and deliberately not v1: **temperature-dependent ectotherm tempo** (a
 cold lizard really is slower, and the thermal machinery to express it already
-ships), and **body mass**, which is the honest physical driver but is not
-currently a species property.
+ships), and **metabolic class as a secondary modifier** on top of mass.
 
 ## 4. Integer scheduling, `f64` commits
 
@@ -155,8 +181,10 @@ Preregistered before the first task, with signs, in the ledger (decision 0016):
 - **Freeze the baseline from main's tip** — seed-42 galleries and the health
   battery, recorded with the commit SHA, *before* any code lands. A baseline
   taken mid-campaign aliases other campaigns' physics into this measurement.
-- **Predictions.** Creatures with slower-tempo metabolic classes cover less
-  ground per interval and reach water later. Endotherms are least affected.
+- **Predictions.** Heavier creatures cover less ground per interval and reach
+  water later; the lightest are least affected. The spread should be visible
+  across species rather than clustered into two buckets — if it is not, the mass
+  trait is not reaching `Npc`.
   Ametabolic agents are unaffected *entirely* — they carry no drives, so their
   walks must be identical to the byte, which is a sharp internal control.
 - **The health null-control still holds**: chronicity `0.0` and every distress
@@ -172,7 +200,7 @@ Preregistered before the first task, with signs, in the ledger (decision 0016):
 
 ## 9. Scope
 
-**In:** the five base costs; `tempo` from `metabolic_class`; `Ticks` and the
+**In:** the five base costs; `tempo` from body mass; `Ticks` and the
 conversion boundary; the priority queue and the hoisted `WalkState`; the
 frozen-read constraint; the drift protocol.
 
