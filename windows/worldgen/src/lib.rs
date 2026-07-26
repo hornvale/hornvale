@@ -9084,11 +9084,18 @@ mod tests {
     }
 
     #[test]
-    fn the_gate_removes_cells_without_reweighting_the_survivors() {
-        // P5: support restriction takes cells OUT of contention; it must not
-        // change the relative standing of kinds on land. Compare each pair's
-        // K ratio on a land cell against the same ratio computed from the
-        // ungated formula (supply x conditions), which the gate does not touch.
+    fn land_stays_fully_occupied_after_the_gate() {
+        // P5 (spec §5): "Land stays fully occupied — every one of the 11,066
+        // land cells has a dominant before and after." Support restriction
+        // takes cells OUT of contention for the kinds it excludes; P5's claim
+        // is that it never empties a LAND cell of every kind — every land
+        // cell keeps at least one kind with K > 0. (The previous version of
+        // this test asserted neither the ratio its doc claimed nor P5 itself
+        // — it only checked that *some* kind was positive on *some* of the
+        // first 200 land cells, which xorn alone satisfies regardless of
+        // whether the gate is correct; a reviewer mutation-verified that
+        // setting `Terrestrial => true` — i.e. deleting the gate for all
+        // fifteen terrestrial kinds — left it green.)
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
@@ -9108,19 +9115,143 @@ mod tests {
             &bio,
         );
         let land: Vec<_> = geo.cells().filter(|&c| !terrain.is_ocean(c)).collect();
-        assert!(!land.is_empty(), "seed 42 has land");
-        let mut any_positive = false;
-        for &c in land.iter().take(200) {
-            for (_, k) in &ks {
-                if *k.get(c) > 0.0 {
-                    any_positive = true;
-                }
-            }
-        }
+        assert_eq!(land.len(), 11_066, "P5's land-cell count (spec §1)");
+
+        let undominated: Vec<hornvale_kernel::CellId> = land
+            .iter()
+            .copied()
+            .filter(|&c| !ks.iter().any(|(_, k)| *k.get(c) > 0.0))
+            .collect();
         assert!(
-            any_positive,
-            "the gate must leave land capacity intact, not zero the world"
+            undominated.is_empty(),
+            "P5: every land cell must have at least one kind with K > 0 after \
+             the gate; {} did not (first: {:?})",
+            undominated.len(),
+            undominated.first()
         );
+
+        // P5's other half, restated here (the Terrestrial-specific version
+        // lives in `no_terrestrial_kind_holds_carrying_capacity_below_the_waterline`
+        // above): no ocean cell may carry a Terrestrial kind's capacity.
+        let ocean_with_terrestrial: usize = geo
+            .cells()
+            .filter(|&c| terrain.is_ocean(c))
+            .filter(|&c| {
+                ks.iter().any(|(tag, k)| {
+                    bio[*tag as usize].habitat_domain
+                        == hornvale_species::HabitatDomain::Terrestrial
+                        && *k.get(c) > 0.0
+                })
+            })
+            .count();
+        assert_eq!(
+            ocean_with_terrestrial, 0,
+            "P5: no ocean cell may hold a Terrestrial kind's carrying capacity"
+        );
+    }
+
+    #[test]
+    fn all_four_habitat_domains_gate_correctly_on_synthetic_biosphere_traits() {
+        // M1: no shipped kind is `Aquatic` or `Amphibious` (§1's table has
+        // only Lithic xorn and Terrestrial everything else), so those two
+        // arms of `niche_per_species_k`'s `HabitatDomain` match have zero
+        // coverage from every test above — a reviewer mutation-verified that
+        // inverting `Aquatic => !wet` left all 173 worldgen lib tests green.
+        // Pin all four arms directly against SYNTHETIC `BiosphereTraits`
+        // rather than waiting for the aquatic roster (BIO-37's sequel) to
+        // exercise them for the first time.
+        //
+        // Built from xorn's row (pure `MINERAL` niche): `MINERAL`/`DETRITUS`
+        // bypass climate's habitability mask entirely (spec §2), so this
+        // niche yields K > 0 on BOTH land and ocean absent any domain gate —
+        // the one shape that can actually distinguish all four arms, rather
+        // than passing vacuously because one side was already zero for an
+        // unrelated reason (exactly how I1's stale test slipped by).
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let sky = sky_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let (insolation_scalar, obliquity_deg, regime, _y, _yp) = stellar_inputs(&sky);
+
+        let xorn_bio = hornvale_species::biosphere_registry()
+            .get(&KindId("xorn"))
+            .expect("shipped xorn has a biosphere row")
+            .clone();
+
+        let domains = [
+            hornvale_species::HabitatDomain::Terrestrial,
+            hornvale_species::HabitatDomain::Aquatic,
+            hornvale_species::HabitatDomain::Amphibious,
+            hornvale_species::HabitatDomain::Lithic,
+        ];
+        let bio: Vec<hornvale_species::BiosphereTraits> = domains
+            .iter()
+            .map(|&habitat_domain| hornvale_species::BiosphereTraits {
+                habitat_domain,
+                ..xorn_bio.clone()
+            })
+            .collect();
+        let bio_refs: Vec<&hornvale_species::BiosphereTraits> = bio.iter().collect();
+
+        let ks = niche_per_species_k(
+            geo,
+            &terrain,
+            &climate,
+            obliquity_deg,
+            insolation_scalar,
+            &regime,
+            &bio_refs,
+        );
+        let k_of = |tag: u32| &ks.iter().find(|(t, _)| *t == tag).unwrap().1;
+        let land_positive = |k: &hornvale_kernel::CellMap<f64>| {
+            geo.cells().any(|c| !terrain.is_ocean(c) && *k.get(c) > 0.0)
+        };
+        let ocean_positive = |k: &hornvale_kernel::CellMap<f64>| {
+            geo.cells().any(|c| terrain.is_ocean(c) && *k.get(c) > 0.0)
+        };
+        let land_all_zero = |k: &hornvale_kernel::CellMap<f64>| {
+            geo.cells().all(|c| terrain.is_ocean(c) || *k.get(c) == 0.0)
+        };
+        let ocean_all_zero = |k: &hornvale_kernel::CellMap<f64>| {
+            geo.cells()
+                .all(|c| !terrain.is_ocean(c) || *k.get(c) == 0.0)
+        };
+
+        // tag 0: Terrestrial — land only.
+        assert!(
+            land_positive(k_of(0)),
+            "Terrestrial must be permitted on land"
+        );
+        assert!(
+            ocean_all_zero(k_of(0)),
+            "Terrestrial must be excluded from every ocean cell"
+        );
+
+        // tag 1: Aquatic — ocean only. The exact arm the reviewer's
+        // `Aquatic => !wet` mutation inverted with zero test failures.
+        assert!(
+            ocean_positive(k_of(1)),
+            "Aquatic must be permitted on ocean"
+        );
+        assert!(
+            land_all_zero(k_of(1)),
+            "Aquatic must be excluded from every land cell"
+        );
+
+        // tag 2: Amphibious — permitted everywhere.
+        assert!(
+            land_positive(k_of(2)),
+            "Amphibious must be permitted on land"
+        );
+        assert!(
+            ocean_positive(k_of(2)),
+            "Amphibious must be permitted on ocean"
+        );
+
+        // tag 3: Lithic — shares Amphibious's v1 permit-everywhere gate.
+        assert!(land_positive(k_of(3)), "Lithic must be permitted on land");
+        assert!(ocean_positive(k_of(3)), "Lithic must be permitted on ocean");
     }
 
     /// The three build-local reads
