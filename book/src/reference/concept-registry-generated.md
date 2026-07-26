@@ -80,6 +80,7 @@
 | `occ-site` | yes | the Geosphere cell the occupation sits on |
 | `occ-tech` | yes | the occupation's technological horizon |
 | `ocean-fraction` | yes | fraction of globe cells below sea level |
+| `pays-tribute-to` | yes | the community this community pays standing tribute to |
 | `peopled-by` | yes | the species that peoples a settlement |
 | `plate-count` | yes | how many tectonic plates the globe has |
 | `pole-star-north` | yes | a bright star stands within 10 degrees of the north celestial pole at genesis (epoch-scoped: precession retires pole stars) |

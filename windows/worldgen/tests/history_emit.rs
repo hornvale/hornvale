@@ -9,7 +9,8 @@ use hornvale_history::record::{
 };
 use hornvale_kernel::{CellId, EntityId, KindId, Seed, World};
 use hornvale_worldgen::{
-    History, emit_history, occupation_records, occupations_at, ruins_of_people, territories,
+    History, TributeRelation, emit_history, occupation_records, occupations_at, ruins_of_people,
+    territories,
 };
 
 fn eid(n: u64) -> EntityId {
@@ -147,6 +148,63 @@ fn founded_from_and_ended_by_resolve_to_the_right_entities() {
             .value_of(fled, hornvale_history::OCC_ENDED_BY)
             .cloned(),
         Some(hornvale_kernel::Value::Entity(alive_goblin_id))
+    );
+}
+
+#[test]
+fn a_standing_tribute_relation_is_committed_as_a_dated_entity_fact() {
+    // Spec §4.4: the relation lives only inside the bake, and is made legible
+    // exactly as an occupation's `ended-by` is — one registered predicate
+    // carrying `Value::Entity(patron)` on the SUBORDINATE's subject, dated by
+    // the day the relation was established. Nothing about it is a new `Fact`
+    // shape, and the direction is load-bearing: a reader must be able to ask
+    // "who does this community pay?" and get one answer.
+    let mut w = test_world();
+    let mut h = hand_history();
+    h.tribute = vec![TributeRelation {
+        subordinate: eid(3), // the alive kobold community
+        patron: eid(1),      // …pays the alive goblin one
+        since: 120.0,
+    }];
+    emit_history(&mut w, &h).unwrap();
+
+    let settlements = hornvale_settlement::all_settlements(&w);
+    let of_people = |people: &str| {
+        settlements
+            .iter()
+            .find(|s| {
+                w.ledger
+                    .text_of(s.id, hornvale_history::OCC_PEOPLE)
+                    .is_some_and(|p| p == people)
+            })
+            .expect("both alive occupations must be settlements")
+            .id
+    };
+    let goblin = of_people("goblin");
+    let kobold = of_people("kobold");
+
+    assert_eq!(
+        w.ledger
+            .value_of(kobold, hornvale_history::PAYS_TRIBUTE_TO)
+            .cloned(),
+        Some(hornvale_kernel::Value::Entity(goblin)),
+        "the subordinate must name its patron's MINTED entity"
+    );
+    let fact = w
+        .ledger
+        .facts_about(kobold)
+        .find(|f| f.predicate == hornvale_history::PAYS_TRIBUTE_TO)
+        .expect("the relation must be committed");
+    assert_eq!(
+        fact.day,
+        Some(120.0),
+        "dated by the day the relation was established, not by `now`"
+    );
+    assert!(
+        w.ledger
+            .value_of(goblin, hornvale_history::PAYS_TRIBUTE_TO)
+            .is_none(),
+        "the patron pays nobody: the fact goes on the subordinate alone"
     );
 }
 

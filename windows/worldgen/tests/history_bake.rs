@@ -657,6 +657,65 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
     );
 }
 
+/// The value-flat world, baked long enough that the relations it forms have
+/// epochs left to actually collect over. "A relation stands" and "tribute
+/// flowed" are genuinely different claims — a remittance is paid out of the
+/// epoch's growth increment (spec §4.2), so a relation formed on the last
+/// epoch of a bake would move nothing at all.
+fn subordination_fixture_long() -> hornvale_worldgen::history_bake::History {
+    let (geo, cap, river, eras, refugia) = value_flat_fixture();
+    let people = peoples();
+    let cfg = BakeConfig {
+        start_year: 0.0,
+        end_year: 500.0,
+        epoch_years: 25.0,
+        ..BakeConfig::default_millennia()
+    };
+    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
+    bake(
+        Seed(42),
+        &geo,
+        &cap,
+        &river,
+        &eras,
+        &refugia,
+        &people,
+        &cfg,
+        &graphs,
+    )
+}
+
+#[test]
+fn tribute_flows_along_a_standing_relation_and_nobody_is_farmed_to_death() {
+    // Spec §4.2/§4.2a over a REAL bake: Task 2 built the standing relation but
+    // nothing moved along it. What must be true now is that the relation is a
+    // conduit — wealth leaves the subordinate and lands in the patron's store —
+    // and that being milked is survivable, because a remittance is capped by
+    // that epoch's growth and can therefore never eat into the standing stock.
+    let h = subordination_fixture_long();
+    let c = census(&h);
+    assert!(
+        c.subordinations_formed > 0,
+        "precondition: a relation must form before anything can flow: {c:?}"
+    );
+    assert!(
+        c.tribute_collected > 0.0,
+        "tribute must actually flow along a standing relation: {c:?}"
+    );
+    assert!(
+        c.max_stores_at_now > 0.0,
+        "the flow must LAND: some patron must hold a store at now: {c:?}"
+    );
+    // §8.3: no community is farmed to extinction by tribute alone. In this
+    // fixture the mask evicts nobody and no land is worth taking, so the only
+    // way a record could die is starvation — and a remittance bounded by the
+    // epoch's growth cannot starve anyone.
+    assert_eq!(
+        c.alive_at_now, c.records_total,
+        "tribute must milk, never kill: {c:?}"
+    );
+}
+
 #[test]
 fn ocean_sunders_and_a_lane_leapfrogs() {
     use hornvale_worldgen::history_bake::{BakeConfig, History, bake, census};

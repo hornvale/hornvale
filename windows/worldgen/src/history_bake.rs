@@ -236,8 +236,32 @@ pub struct History {
     pub records: Vec<OccupationRecord>,
     /// The standard-day/year the bake closed at.
     pub now: f64,
+    /// The tribute relations still standing at `now`, in subordinate order.
+    /// Only the survivors: a relation ends when either party's community
+    /// closes (spec §4.4), so one that formed and dissolved mid-span leaves
+    /// nothing here — exactly as a dead occupation leaves a ruin rather than a
+    /// settlement.
+    pub tribute: Vec<TributeRelation>,
     /// Event tallies, counted as the bake resolves each epoch.
     tally: BakeCensus,
+}
+
+/// A standing tribute relation as it stood at `now`, carried out of the bake
+/// for emission. Both parties are named by their **community handle** (the
+/// `community` field of an [`OccupationRecord`]), not by a bake-internal index,
+/// so this survives the bake it came from — the same translation `Ended::By`
+/// and `Founding::From` already rely on.
+/// type-audit: bare-ok(count: since)
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TributeRelation {
+    /// The community that pays.
+    pub subordinate: EntityId,
+    /// The community that collects.
+    pub patron: EntityId,
+    /// The standard day this relation was established. A patronage transfer
+    /// re-establishes it, so this is when the *current* patron took it over,
+    /// not when the subordinate first began paying somebody.
+    pub since: f64,
 }
 
 /// A tally of the events a bake resolved — the falsification instrument. Under
@@ -245,8 +269,11 @@ pub struct History {
 /// (conflict must fire on a *value* gradient, in worlds with land to spare, and
 /// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
 /// redistribute the world, not depopulate it).
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: tribute_collected), bare-ok(count: max_stores_at_now), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
+// `Eq` is deliberately absent: the two accumulator readouts below are `f64`,
+// and a census is only ever compared for equality in assertions (`PartialEq`),
+// never used as a key.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BakeCensus {
     /// Grow events (a community expanded under a sub-capacity load).
     pub grew: u64,
@@ -288,6 +315,18 @@ pub struct BakeCensus {
     /// graph as the bake closes, not a peak over the whole span: a star that
     /// formed and dissolved before `now` is not in it.
     pub max_subordinates: u64,
+    /// Every remittance that actually changed hands, summed over the **whole
+    /// bake** — a run total (the integral of the per-epoch flows), not a
+    /// per-epoch flow and not a stock. It counts what moved, not what was
+    /// demanded: an assessment the subordinate's growth could not cover is
+    /// collected only up to that growth, and the shortfall is not in here.
+    pub tribute_collected: f64,
+    /// The largest store any one **alive** community holds at `now` — spec
+    /// §8.2's accumulator readout, and a stock, where `tribute_collected` above
+    /// is a flow. Stores decay each epoch and are lost when a community closes,
+    /// so this is what a surviving extractor has actually managed to keep, not
+    /// the sum of everything it ever took.
+    pub max_stores_at_now: f64,
     /// Total records opened over the whole bake.
     pub records_total: u64,
     /// Records still alive at `now`.
@@ -336,11 +375,14 @@ impl History {
     /// producer) use to reach the private `tally` field from outside this
     /// module. The tally starts at its default (zero): a hand-built history
     /// was never actually baked, so there is no genuine event count to report.
+    /// `tribute` likewise starts empty — a hand-built history has no relation
+    /// table behind it; a test that wants one assigns the field directly.
     /// type-audit: bare-ok(count: now)
     pub fn new(records: Vec<OccupationRecord>, now: f64) -> History {
         History {
             records,
             now,
+            tribute: Vec::new(),
             tally: BakeCensus::default(),
         }
     }
@@ -382,14 +424,20 @@ struct Tribute {
     patron: usize,
     /// What the patron currently demands per epoch — set from what it can SEE
     /// (the subordinate's cell), never from what the subordinate has
-    /// (spec §4.2). Clamped to `[0, eff_capacity × ASSESS_MAX]`.
+    /// (spec §4.2). Clamped to `[0, eff_capacity × ASSESS_MAX]`. Read by
+    /// [`Bake::collect_tribute`], which pays out the lesser of this and the
+    /// subordinate's growth: the demand is what the patron *asks*, never what
+    /// it necessarily gets.
     ///
-    /// Written but not yet read: **collection** is the next slice-2 step, and
-    /// nothing flows along a relation until it lands. The term is set the
-    /// moment a relation forms because that is when the patron takes its
-    /// reading of the land, not when it first comes to collect.
-    #[allow(dead_code)]
+    /// The term is set the moment a relation forms because that is when the
+    /// patron takes its reading of the land, not when it first comes to
+    /// collect.
     assessment: f64,
+    /// The standard day this relation was established — the day the *current*
+    /// patron took it, since a patronage transfer re-establishes it. Carried
+    /// only so the emitted fact can be dated by when it became true, exactly as
+    /// an occupation's end-of-life facts are.
+    since: f64,
 }
 
 /// Which way a raid resolves, decided by the **mobility of the prize**
@@ -478,6 +526,26 @@ struct Bake<'a> {
     ///
     /// Iterated in key order (`BTreeMap`, never a hash map).
     tribute: BTreeMap<usize, Tribute>,
+    /// **This epoch's** growth increment per community, indexed exactly as
+    /// `communities` is (`open` pushes a zero as it appends). A remittance is
+    /// paid out of the epoch's growth and never out of the standing stock
+    /// (spec §4.2), so collection needs the increment `grow` actually applied
+    /// — the difference between milking a subordinate and killing it.
+    ///
+    /// Zeroed wholesale at the top of every epoch by [`Bake::begin_epoch`]. A
+    /// stale increment surviving into the next epoch would be taxed again, and
+    /// again, on a community that never grew after it — the standing stock by
+    /// another name, arrived at by accident.
+    ///
+    /// **That clear is currently redundant, and is kept anyway** (measured:
+    /// suppressing it reddens no test). `step_community` calls `grow` for every
+    /// community that survives its own turn, and one that does not survive is
+    /// dead — so today every entry a collection can reach was written this
+    /// epoch regardless. The invariant §4.2 rests on is "this epoch's growth",
+    /// not "`grow` happens to run for everybody", and a rule that grew only
+    /// some communities per epoch would make the difference silent, wrong, and
+    /// invisible: it would tax a remembered surplus.
+    epoch_growth: Vec<f64>,
     /// The running event tally.
     tally: BakeCensus,
 }
@@ -1029,6 +1097,10 @@ impl<'a> Bake<'a> {
             tech_offset,
             stores: 0.0,
         });
+        // Keep the growth buffer exactly parallel to `communities`: a community
+        // opened mid-epoch has grown nothing yet this epoch, and so owes
+        // nothing if it is subordinated before the epoch closes.
+        self.epoch_growth.push(0.0);
         self.node_index.insert(site, community_idx);
         self.tally.records_total += 1;
         community_idx
@@ -1062,6 +1134,66 @@ impl<'a> Bake<'a> {
         // …and it is party to no relation, as subordinate or as patron.
         self.tribute.remove(&idx);
         self.tribute.retain(|_, t| t.patron != idx);
+    }
+
+    /// Open a new epoch: zero every community's growth buffer.
+    ///
+    /// A remittance is paid from *that epoch's* growth (spec §4.2), so the
+    /// buffer must hold this epoch's increments and nothing else. Rebuilt by
+    /// length rather than filled in place so it stays parallel to
+    /// `communities` even if a caller ever appends by some other route.
+    fn begin_epoch(&mut self) {
+        self.epoch_growth.clear();
+        self.epoch_growth.resize(self.communities.len(), 0.0);
+    }
+
+    /// Each patron collects from each of its subordinates: it demands what its
+    /// assessment says (set from the cell it can SEE) and receives what the
+    /// subordinate hands over — paid from **that epoch's growth**, never the
+    /// standing stock, which is the difference between milking a community and
+    /// killing it. A fully-taxed subordinate is left exactly where it began the
+    /// epoch; it still grows in any epoch its patron under-assesses, just
+    /// slower.
+    ///
+    /// The remittance lands in `stores`, never in `population` (spec §4.2a):
+    /// tribute is wealth, not bodies, and a patron whose winnings entered the
+    /// pressure term would starve itself on its own success.
+    ///
+    /// Deterministic: the relation table is a `BTreeMap`, so the pass runs in
+    /// subordinate-index order, and it is snapshotted to a `Vec` first so no
+    /// entry's outcome can depend on a mutation made earlier in the same pass.
+    /// Every remittance reads only `assessment` (frozen when the relation
+    /// formed) and `epoch_growth` (frozen by the step loop that has already
+    /// finished), so no entry can read what an earlier one wrote and the order
+    /// is immaterial today. That is a property of what this loop happens to
+    /// read, not one anything enforces: a term that read the patron's `stores`
+    /// — the obvious next reach, since `strength` does — would make the order
+    /// decide the outcome, and the snapshot would then be load-bearing rather
+    /// than belt-and-braces.
+    fn collect_tribute(&mut self, year: f64) {
+        let relations: Vec<(usize, Tribute)> = self.tribute.iter().map(|(&s, &t)| (s, t)).collect();
+        for (sub, rel) in relations {
+            // Cheap, and the failure it guards is silent. `close` dissolves
+            // both directions of every relation a dying community was party to
+            // (spec §4.4), so this should be unreachable — but a corpse taxed,
+            // or a dead patron quietly enriched, would show up nowhere.
+            if !self.communities[sub].alive || !self.communities[rel.patron].alive {
+                continue;
+            }
+            let surplus = self.epoch_growth[sub].max(0.0);
+            let remittance = rel.assessment.min(surplus);
+            self.communities[sub].population -= remittance;
+            self.communities[rel.patron].stores += remittance;
+            self.tally.tribute_collected += remittance;
+            // A no-op in today's call sequence — `grow` touched the patron at
+            // this same `year` and this same population earlier in the epoch,
+            // and collection moves `stores`, which `touch` does not read. Kept
+            // for the same reason the subordination branch keeps its own
+            // (`maybe_raid`): every mutation site in this bake records the
+            // community it moved, and a future caller reaching collection by
+            // another route must not silently skip that.
+            self.touch(rel.patron, year);
+        }
     }
 
     /// Update a community's peak population and monotone tech from its current
@@ -1352,6 +1484,7 @@ impl<'a> Bake<'a> {
                     Tribute {
                         patron: raider,
                         assessment,
+                        since: year,
                     },
                 );
                 // The one-level-star invariant, checked where it is ESTABLISHED
@@ -1469,8 +1602,16 @@ impl<'a> Bake<'a> {
     /// and no hoard can double-decay.
     fn grow(&mut self, idx: usize, era: &EraClimate, year: f64, pressure: f64) {
         let c = &mut self.communities[idx];
+        let before = c.population;
         c.population *= 1.0 + GROWTH_RATE * (1.0 - pressure);
+        // The increment ACTUALLY applied — the only thing tribute may be paid
+        // out of (spec §4.2). Negative above unit pressure, where a crowded
+        // community shrinks; [`Bake::collect_tribute`] floors it at zero, so a
+        // shrinking subordinate simply owes nothing rather than paying a
+        // negative tribute back to its patron.
+        let increment = c.population - before;
         c.stores *= STORE_DECAY;
+        self.epoch_growth[idx] = increment;
         self.touch(idx, year);
         self.tally.grew += 1;
 
@@ -1549,6 +1690,7 @@ pub fn bake(
         next_id: 1,
         stream: seed.derive(hornvale_history::streams::BAKE).stream(),
         tribute: BTreeMap::new(),
+        epoch_growth: Vec::new(),
         tally: BakeCensus::default(),
     };
 
@@ -1619,12 +1761,18 @@ pub fn bake(
         let era_idx = bake.era_index_for(eras, year);
         bake.cur_graph = era_idx;
         let era = eras[era_idx].clone();
+        // Last epoch's increments are spent: nothing may be taxed twice.
+        bake.begin_epoch();
         let snapshot: Vec<usize> = (0..bake.communities.len())
             .filter(|&i| bake.communities[i].alive)
             .collect();
         for idx in snapshot {
             bake.step_community(idx, &era, year);
         }
+        // Tribute is collected once the whole world has stepped, so there is
+        // growth to tax and so no subordinate's remittance depends on whether
+        // its patron happened to be stepped before or after it.
+        bake.collect_tribute(year);
         year += cfg.epoch_years;
     }
 
@@ -1652,10 +1800,33 @@ pub fn bake(
         *per_patron.entry(t.patron).or_insert(0) += 1;
     }
     bake.tally.max_subordinates = per_patron.values().copied().max().unwrap_or(0);
+    // The accumulator readout (spec §8.2): the biggest hoard still standing.
+    // Alive communities only — a store dies with its holder — and `total_cmp`,
+    // never `>`, so the fold is total and deterministic.
+    bake.tally.max_stores_at_now = bake
+        .communities
+        .iter()
+        .filter(|c| c.alive)
+        .map(|c| c.stores)
+        .fold(0.0f64, |a, b| if a.total_cmp(&b).is_lt() { b } else { a });
+    // The relations that survived the whole span, translated out of bake
+    // indices into durable community handles (the same translation `ended-by`
+    // and `founded-from` rely on) so emission never has to know what an index
+    // meant. `BTreeMap` iteration, so subordinate order.
+    let tribute: Vec<TributeRelation> = bake
+        .tribute
+        .iter()
+        .map(|(&sub, t)| TributeRelation {
+            subordinate: bake.communities[sub].id,
+            patron: bake.communities[t.patron].id,
+            since: t.since,
+        })
+        .collect();
 
     History {
         records: bake.records,
         now,
+        tribute,
         tally: bake.tally,
     }
 }
@@ -1781,6 +1952,7 @@ mod tests {
             next_id: 1,
             stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
             tribute: BTreeMap::new(),
+            epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
         };
 
@@ -1903,6 +2075,7 @@ mod tests {
             next_id: 1,
             stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
             tribute: BTreeMap::new(),
+            epoch_growth: Vec::new(),
             tally: BakeCensus::default(),
         }
     }
@@ -1961,6 +2134,188 @@ mod tests {
             before_pressure.to_bits(),
             after_pressure.to_bits(),
             "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
+    }
+
+    /// A patron on prime land beside a subordinate on prime land, with the
+    /// relation already standing and its assessment set far above anything the
+    /// subordinate's land could produce. The oversized assessment is what makes
+    /// the collection tests *discriminating*: under spec §4.2's rule the
+    /// remittance is then exactly the epoch's growth increment, and under the
+    /// wrong rule (taxing the standing stock) it would be the whole population.
+    fn tribute_pair<'a>(
+        geo: &Geosphere,
+        graphs: &'a [ConnectionGraph],
+        capacity: &'a CellMap<f64>,
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+    ) -> (Bake<'a>, usize, usize) {
+        let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            40.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            10.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: 1.0e9,
+                since: 0.0,
+            },
+        );
+        (bake, patron, sub)
+    }
+
+    #[test]
+    fn a_patron_accumulates_stores_without_its_pressure_rising() {
+        // Spec §4.2 + §4.2a, the two halves of the slice's central claim:
+        //   (a) the remittance is paid out of THIS epoch's growth increment,
+        //       never the standing stock — so the subordinate is milked back to
+        //       exactly where it began the epoch, and no further;
+        //   (b) it lands in the patron's `stores`, never its `population`, so
+        //       the patron's crowding pressure is bit-for-bit unmoved. A
+        //       successful extractor that fed its winnings into `population`
+        //       would drive itself into Famine, and the readout would report
+        //       "accumulation does not chain" when the truth was self-harm.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
+
+        bake.begin_epoch();
+        let sub_before_growth = bake.communities[sub].population;
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        let increment = bake.communities[sub].population - sub_before_growth;
+        assert!(
+            increment > 0.0,
+            "precondition: the subordinate must actually have grown this epoch"
+        );
+
+        let patron_pressure_before = bake.pressure_of(patron, &era);
+        let patron_population_before = bake.communities[patron].population;
+        bake.collect_tribute(0.0);
+
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            increment.to_bits(),
+            "the patron must receive exactly this epoch's growth increment \
+             ({increment}), not the standing stock ({sub_before_growth}): got {}",
+            bake.communities[patron].stores
+        );
+        assert_eq!(
+            bake.communities[patron].population.to_bits(),
+            patron_population_before.to_bits(),
+            "tribute is wealth, not bodies: the patron's population must not move"
+        );
+        assert_eq!(
+            bake.pressure_of(patron, &era).to_bits(),
+            patron_pressure_before.to_bits(),
+            "stores must never enter the pressure term (spec §4.2a)"
+        );
+        assert!(
+            (bake.communities[sub].population - sub_before_growth).abs() < 1.0e-9,
+            "a fully-taxed subordinate is milked back to exactly where it \
+             started the epoch, never below it: {} vs {sub_before_growth}",
+            bake.communities[sub].population
+        );
+        assert_eq!(
+            bake.tally.tribute_collected.to_bits(),
+            increment.to_bits(),
+            "the run total must count what actually moved"
+        );
+    }
+
+    #[test]
+    fn last_epochs_growth_is_never_taxed_twice() {
+        // The growth buffer is strictly per-epoch (spec §4.2's "that epoch's
+        // growth"). A stale increment left standing would be re-taxed every
+        // epoch forever — the same surplus milked repeatedly out of a community
+        // that never grew again, which is the standing stock by another name.
+        // This is the one test that catches a missing `begin_epoch`; the
+        // growth-vs-stock discrimination itself is asserted next door, in
+        // `a_patron_accumulates_stores_without_its_pressure_rising`.
+        //
+        // The between-epochs survival check below is load-bearing rather than
+        // decorative: a rule taxing the stock drains this subordinate to zero
+        // in the FIRST epoch, after which "no growth ⇒ no tribute" would hold
+        // vacuously and the second epoch would prove nothing at all.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
+
+        bake.begin_epoch();
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        bake.collect_tribute(0.0);
+        let stores_after_one = bake.communities[patron].stores;
+        let sub_after_one = bake.communities[sub].population;
+        assert!(
+            stores_after_one > 0.0,
+            "precondition: the first epoch must have collected something"
+        );
+        assert!(
+            sub_after_one > 0.0,
+            "precondition: a milked subordinate is still standing after the \
+             epoch it was milked in — one drained to nothing makes the second \
+             epoch's reading vacuous (spec §8.3)"
+        );
+
+        // A bad year: the subordinate does not grow at all.
+        bake.begin_epoch();
+        bake.collect_tribute(25.0);
+
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            stores_after_one.to_bits(),
+            "an epoch with no growth yields no tribute: {} vs {stores_after_one}",
+            bake.communities[patron].stores
+        );
+        assert_eq!(
+            bake.communities[sub].population.to_bits(),
+            sub_after_one.to_bits(),
+            "a subordinate that did not grow must not be taxed on its stock"
+        );
+    }
+
+    #[test]
+    fn a_relation_naming_a_dead_community_collects_nothing() {
+        // The coherence guard (spec §4.4): `close` dissolves every relation the
+        // dead community was party to, so this is unreachable through the bake
+        // — but the failure it prevents is silent (a dead patron quietly
+        // enriched, or a corpse taxed), so it is asserted rather than assumed.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
+
+        bake.begin_epoch();
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        // Kill the patron WITHOUT going through `close`, so the relation is
+        // left dangling exactly as a missed cleanup would leave it.
+        bake.communities[patron].alive = false;
+        bake.collect_tribute(0.0);
+
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            0.0f64.to_bits(),
+            "a dead patron collects from nobody"
+        );
+        assert_eq!(
+            bake.tally.tribute_collected.to_bits(),
+            0.0f64.to_bits(),
+            "and nothing is tallied as having moved"
         );
     }
 
@@ -2471,6 +2826,7 @@ mod tests {
                 Tribute {
                     patron,
                     assessment: 1.0,
+                    since: 0.0,
                 },
             );
         }
