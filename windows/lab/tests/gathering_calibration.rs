@@ -275,26 +275,93 @@ fn rank_size_slope_is_observed_not_tuned() {
 /// `SETTLERS_PER_CAPACITY` (= 100), and a community starves out — is removed —
 /// once its `pressure = pop / (SETTLERS_PER_CAPACITY × capacity)` reaches
 /// `COLLAPSE_PRESSURE` (= 2.0). So every SURVIVING community obeys
-/// `pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × capacity`, and summing
-/// over the live settlements gives the aggregate conservation ceiling:
+/// `pop < COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × capacity`.
 ///
-/// > **Σ pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K**
+/// **Corrected (the-tumult): peaks compared against a peak-scoped ceiling
+/// built from the bake's OWN (exact, not proxy) capacity field, not a world
+/// total.** Two compounding defects, found together:
 ///
-/// i.e. 10029 ≤ 2 × 100 × 64.02 ≈ 12804 ✓ (measured ratio ≈ 0.78: mature
-/// communities sit well inside the collapse pressure, as the demography
-/// model intends). Caveat on Σ K: `total_k` here is the niche-differentiated
-/// `per_species_k` sum, used as a generous *proxy* for the base suitability
-/// the bake's collapse rule is actually defined on — numerically close over
-/// this world's live cells (so the ≈0.78 margin holds), though the two
-/// capacity fields are not the identical quantity; a future re-pin on a world
-/// where they diverge should sum the base suitability directly. This is the
-/// draft placer's instantaneous-conservation
-/// invariant carried forward to the history-accumulated regime, NOT a
-/// weakening: it is the strongest bound the collapse rule permits, and it
-/// still catches a runaway (population conjured past the collapse threshold)
-/// or a double-count. The lower guard is positivity — a peopled world never
-/// collapses to zero (asserted above). Per ADR 0016 the ceiling is derived
-/// from the model's constants, not fit to the measurement.
+/// 1. `POPULATION` is committed from `peak_population` — a per-record
+///    all-time high-water mark that never decays once a settlement keeps
+///    living (`history_bake.rs`'s `touch`) — not the settlement's current
+///    headcount. The previous ceiling summed K over *every* cell in the
+///    world, occupied or not: a quantity fixed by geography, not by how many
+///    settlements exist. Summing ever-more per-record peaks against a
+///    world-total denominator therefore penalised settlement *count*, not
+///    over-capacity — The Tumult's deep-history conquest raised live
+///    settlements 150 → 203 (×1.35) and the summed peaks 11446 → 14513
+///    (×1.27) purely from more records existing, with no single settlement
+///    fattening past its own capacity.
+/// 2. The previous ceiling's Σ K was `demography_report`'s niche-
+///    differentiated `per_species_k` — a *proxy* for the capacity the bake's
+///    own collapse-pressure formula is actually defined on, already flagged
+///    as such in this comment's prior revision. Restricting that proxy to
+///    just the occupied cells (to fix defect 1) exposed how loose the proxy
+///    really is: at seed 42 it undershoots the bake's real per-cell capacity
+///    there by roughly two orders of magnitude, because a single species'
+///    saturating niche response at one cell is not the same quantity as the
+///    bake's condensed, cross-species suitability scalar at that cell — the
+///    two were only ever close *in aggregate, over the whole world*, which
+///    is coincidence, not identity.
+///
+/// The fix keeps summing peaks (option (b): a live per-community *current*
+/// headcount is not committed to the ledger anywhere — only the peak is — so
+/// comparing against instantaneous population is not reachable without a
+/// simulation change, out of scope here) and derives a ceiling from the
+/// EXACT field the bake computes its own pressure from, not a proxy.
+/// `bake_history_from` (`windows/worldgen/src/lib.rs`) builds its `capacity`
+/// input as
+/// `hornvale_demography::carrying_capacity(geo, &carrying_inputs_of(geo,
+/// terrain, climate)) × SETTLERS_PER_CAPACITY`; `carrying_inputs_of` is
+/// public expressly so a Lab consumer can recompute this identical field
+/// (its own doc comment says so). This test now calls the exact same two
+/// functions, so `suitability` here is byte-identical to what the bake's own
+/// `Bake::capacity`/`Bake::eff_capacity` used when it decided whether each
+/// community survived — no proxy gap remains.
+///
+/// Each live settlement's peak was set on its own occupied cell (`CELL_ID`,
+/// fixed for a record's whole life — a migration opens a new record rather
+/// than moving the old one), and this capacity field is time-invariant
+/// across eras (only habitability toggles a cell's `eff_capacity` between 0
+/// and its full, era-independent value — see `Bake::eff_capacity`), so the
+/// present-day suitability at that cell is the same value the collapse rule
+/// checked when the peak was set. Restricting the sum to exactly the cells
+/// the live settlements occupy — instead of every cell in the world — makes
+/// the two sides scale with settlement count together, closing defect 1:
+///
+/// > **Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
+/// > Σ suitability(occupied cells)**
+///
+/// This is still a generous bound, not an exact one, for one reason that was
+/// already inherent to the guard before this fix and is unrelated to either
+/// defect above: the collapse check runs at the *start* of an epoch on the
+/// pre-growth population — a community can grow past the collapse pressure
+/// in the same epoch its peak is stamped, and only gets closed the
+/// *following* epoch, so an individual peak can exceed its own cell's strict
+/// `COLLAPSE_PRESSURE` bound by at most one epoch's logistic growth step.
+///
+/// This is the draft placer's instantaneous-conservation invariant carried
+/// forward to the history-accumulated, peak-recording regime, NOT a
+/// weakening: it is the strongest bound the collapse rule permits on a sum
+/// of peaks, built from the exact quantity that rule is defined on, and it
+/// still catches a runaway (population conjured past the collapse threshold
+/// on cells that could never have supported it) or a double-count. It does
+/// NOT catch inflation purely from more settlements existing — that is a
+/// legitimate, non-pathological way for the sum to grow, which is exactly
+/// the defect this correction removes. The lower guard is positivity — a
+/// peopled world never collapses to zero (asserted above). Per ADR 0016 the
+/// ceiling is derived from the model's constants, not fit to the
+/// measurement.
+///
+/// Measured at seed 42 (the-tumult, 2026-07-25): 203 live settlements,
+/// Σ peak_pop = 14513, Σ suitability(occupied cells) ≈ 171.56, ceiling ≈
+/// 34311.79 (ratio ≈ 0.42 — comfortably inside the collapse pressure, as the
+/// model intends). Breach-detection was verified by hand: scaling
+/// `occupied_suitability` down by 10× (simulating a genuinely over-capacity
+/// world) reddened the assertion as expected
+/// (`committed peak population 14513 exceeded the peak-scoped collapse
+/// ceiling 3431.18 …`), confirming the gate still catches a real breach and
+/// is not vacuously true.
 #[test]
 fn world_level_population_conserves_against_total_capacity() {
     use hornvale_kernel::{Seed, Value};
@@ -306,51 +373,53 @@ fn world_level_population_conserves_against_total_capacity() {
         &hornvale_worldgen::SettlementPins::default(),
     )
     .expect("seed-42 world must build");
-    // The peopled-only component set (the psyche key-set; fauna are
-    // biosphere-only), byte-identical to the pre-ECS peopled roster this
-    // conservation guard has always measured.
-    use hornvale_kernel::{ComponentStore, KindId};
-    let psyche = hornvale_species::psyche_registry();
-    let peopled: std::collections::BTreeSet<KindId> = psyche.ids().copied().collect();
-    let biosphere: ComponentStore<KindId, hornvale_species::BiosphereTraits> =
-        hornvale_species::biosphere_registry()
-            .iter()
-            .filter(|(k, _)| peopled.contains(k))
-            .map(|(k, v)| (*k, v.clone()))
-            .collect();
-    let family_of: ComponentStore<KindId, &'static str> = hornvale_species::family_of()
-        .iter()
-        .filter(|(k, _)| peopled.contains(k))
-        .map(|(k, v)| (*k, *v))
-        .collect();
-    let wc = hornvale_worldgen::WorldComponents::from_stores(
-        biosphere,
-        psyche,
-        hornvale_species::perception_registry(),
-        hornvale_language::articulation_registry(),
-        hornvale_language::lexicon_registry(),
-        hornvale_language::family_proto(),
-        family_of,
-        ComponentStore::new(),
-        ComponentStore::new(),
-        ComponentStore::new(),
-    )
-    .expect("the peopled-only component set is well-formed");
-    let report = hornvale_worldgen::demography_report(&world, &wc)
-        .expect("demography_report must recompute over an already-built world's committed facts");
-    // Sum the niche-differentiated K (the coexistence stack's actual
-    // packing capacity) over every peopled species and every cell —
-    // mirroring genesis's own unpinned `species_set` (all-peopled at seed
-    // 42, so no filtering difference from `roster` above).
-    let total_k: f64 = report
-        .per_species_k
-        .iter()
-        .map(|(_, k)| k.iter().map(|(_, v)| *v).sum::<f64>())
-        .sum();
+    // The EXACT capacity field the bake's own collapse-pressure formula is
+    // defined on (`bake_history_from` in `windows/worldgen/src/lib.rs`
+    // builds its `capacity` input this same way, then scales it by
+    // `SETTLERS_PER_CAPACITY` below) — not a proxy. `carrying_inputs_of` is
+    // public expressly so a Lab consumer can recompute this identical field.
+    let terrain =
+        hornvale_worldgen::terrain_of(&world).expect("reconstruct terrain from committed facts");
+    let climate =
+        hornvale_worldgen::climate_of(&world).expect("reconstruct climate from committed facts");
+    let geo = terrain.geosphere();
+    let suitability = hornvale_demography::carrying_capacity(
+        geo,
+        &hornvale_worldgen::carrying_inputs_of(geo, &terrain, &climate),
+    );
     let settlements: Vec<_> = world
         .ledger
         .find(hornvale_settlement::IS_SETTLEMENT)
         .collect();
+    // The occupied cells — one per live settlement, per the bake's
+    // one-community-per-site invariant — read back via each settlement's
+    // committed `CELL_ID`. A `BTreeSet`, not a `Vec`: two settlement facts
+    // naming the same cell would otherwise double-count that cell's
+    // suitability, though the bake's invariant should already make that
+    // impossible.
+    let occupied_cells: std::collections::BTreeSet<hornvale_kernel::CellId> = settlements
+        .iter()
+        .filter_map(|f| {
+            match world
+                .ledger
+                .value_of(f.subject, hornvale_settlement::CELL_ID)
+            {
+                Some(Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                _ => None,
+            }
+        })
+        .collect();
+    // Sum suitability over exactly the cells the live settlements occupy —
+    // NOT every cell in the world. Summing over the whole world let
+    // settlement COUNT inflate the ceiling's denominator independent of the
+    // sum-of-peaks it bounds (see the corrected doc comment above); scoping
+    // to occupied cells makes both sides of the comparison the same
+    // quantity: peaks the live settlements actually set, against the
+    // capacity of the ground they actually set them on.
+    let occupied_suitability: f64 = occupied_cells
+        .iter()
+        .map(|&cell| *suitability.get(cell))
+        .sum();
     let total_pop: f64 = settlements
         .iter()
         .filter_map(|f| {
@@ -368,18 +437,21 @@ fn world_level_population_conserves_against_total_capacity() {
         total_pop > 0.0,
         "a peopled seed-42 world has positive population"
     );
-    // The conservation ceiling, in the bake's own headcount units: no live
-    // community exceeds the collapse pressure, and the live settlements'
-    // per-cell capacities are a subset of the world's total suitability Σ K,
-    // so Σ pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K. Derived from
-    // the model's constants (ADR 0016), not fit to the measurement.
+    // The conservation ceiling, in the bake's own headcount units, scoped to
+    // the settlements' own occupied cells and built from the EXACT capacity
+    // field the bake's pressure formula uses (see the corrected doc comment
+    // above): Σ peak_pop ≤ COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY ×
+    // Σ suitability(occupied cells). Derived from the model's constants (ADR
+    // 0016), not fit to the measurement.
     let ceiling = hornvale_worldgen::history_bake::COLLAPSE_PRESSURE
         * hornvale_worldgen::SETTLERS_PER_CAPACITY
-        * total_k;
+        * occupied_suitability;
     assert!(
         total_pop <= ceiling,
-        "committed population {total_pop} exceeded the collapse ceiling {ceiling} \
-         (= COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × Σ K, Σ K = {total_k}) — a live \
-         community has aggregate-exceeded the starvation pressure the bake enforces"
+        "committed peak population {total_pop} exceeded the peak-scoped collapse ceiling \
+         {ceiling} (= COLLAPSE_PRESSURE × SETTLERS_PER_CAPACITY × \
+         Σ suitability(occupied cells), Σ suitability(occupied cells) = \
+         {occupied_suitability}) — a live settlement's recorded peak has aggregate-exceeded \
+         the starvation pressure the bake enforces on its own occupied cells"
     );
 }
