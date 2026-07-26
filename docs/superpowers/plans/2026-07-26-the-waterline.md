@@ -18,7 +18,7 @@
 - **`cargo fmt` is the final step before every commit.**
 - **Run `make gate` before every commit.** Iterate with `cargo test -p <crate>`.
 - **Run once, inspect many** — `2>&1 | tee /tmp/hv-wl.txt`, then grep the file.
-- **Never run `HV_CENSUS=1` or `make gate-full`** without instruction: the census is an authorization-gated carve-out (Task 5), and `gate-full` rewrites committed benchmark artifacts as a side effect.
+- **Never run `HV_CENSUS=1` or `make gate-full`** without instruction: the census is an authorization-gated carve-out (Task 6), and `gate-full` rewrites committed benchmark artifacts as a side effect.
 - **A falsified prediction is a finding to report, never a number to quietly re-pin.**
 
 ---
@@ -31,8 +31,9 @@
 | `domains/species/src/lib.rs` | `HabitatDomain` enum + `BiosphereTraits` field + 16 authored rows | 2 |
 | `windows/worldgen/src/lib.rs` (`niche_per_species_k`) | the gate | 3 |
 | `windows/worldgen/src/lib.rs` (`mod tests`) | dominance-fallout tests, the `#[ignore]`d target | 4 |
-| `cli/tests/fixtures/world-seed-42.json` | re-pinned only if Task 1 showed drift | 3 |
-| census goldens | Task 5, authorization-gated | 5 |
+| `kernel/src/ecology.rs` | sovereignty: gap-closing, renames | 4b |
+| `cli/tests/fixtures/world-seed-42.json` | **unchanged** — measured byte-identical | — |
+| census goldens | Task 6, verify-then-authorize | 6 |
 
 ---
 
@@ -121,7 +122,7 @@ git add -A && git commit -m "probe(the-waterline): measure P4 — does support r
 - Modify: `domains/species/src/lib.rs`
 
 **Interfaces:**
-- Produces: `hornvale_species::HabitatDomain` (`Terrestrial` | `Aquatic` | `Amphibious`) and `BiosphereTraits::habitat_domain`, read by Task 3.
+- Produces: `hornvale_species::HabitatDomain` and `BiosphereTraits::habitat_domain`, read by Task 3. **NOTE: Task 2 shipped three variants and authored all sixteen kinds `Terrestrial`. Task 3 adds the fourth variant (`Lithic`) and re-authors xorn — see Task 3 Step 0.**
 
 - [ ] **Step 1: Write the failing test**
 
@@ -224,7 +225,34 @@ kind later is authoring, not a code change."
 
 ---
 
-### Task 3: The gate
+### Task 3: The gate (plus the `Lithic` variant)
+
+- [ ] **Step 0: Add `Lithic` and re-author xorn**
+
+Task 2 shipped `Terrestrial | Aquatic | Amphibious` and authored all sixteen
+kinds `Terrestrial`. Add the fourth variant to `HabitatDomain` in
+`domains/species/src/lib.rs`:
+
+```rust
+    /// Lives *in the substrate*, which underlies both land and sea floor, and
+    /// is therefore indifferent to the waterline above it. A xorn swims
+    /// through stone; the ocean over its head is not its medium. Shares
+    /// `Amphibious`'s permit-everywhere gate in v1 but makes a different
+    /// claim — `Amphibious` is at home in both media and moves between them;
+    /// `Lithic` is in neither, in a third medium that underlies both. When a
+    /// future campaign gives the substrate its own extent, this gains a real
+    /// gate and `Amphibious` does not.
+    Lithic,
+```
+
+Re-author **xorn only** to `HabitatDomain::Lithic` (`Ametabolic`, pure-`MINERAL`,
+burrows through stone). `rust-monster` stays `Terrestrial` — same pure-`MINERAL`
+niche, but an `Ectotherm` that walks around eating metal objects, so it lives
+*on* the surface, not *in* it.
+
+Update Task 2's roster test, which asserts every kind is `Terrestrial`: it must
+now assert fifteen `Terrestrial` and xorn `Lithic`, **by name**, so a future
+re-authoring is a deliberate visible change.
 
 **Files:**
 - Modify: `windows/worldgen/src/lib.rs` (`niche_per_species_k`)
@@ -410,31 +438,149 @@ git commit -m "test(the-waterline): re-pin the dominance fallout"
 
 ---
 
-### Task 5: Census regeneration — STOP, authorization required
+### Task 4b: Sovereignty stops being a floor
 
-- [ ] **Step 1: Do not run this task without explicit owner authorization.**
+**Files:**
+- Modify: `kernel/src/ecology.rs` (`ConditionResponse::eval`, `sovereignty_floor`)
+- Modify: every caller passing the old `floor` argument
+- Test: `kernel/src/ecology.rs` `mod tests`
 
-Census regeneration is a standing carve-out. Report the measured drift from Task 4 and **request authorization**. Do not run `HV_CENSUS=1` before receiving it.
+**Interfaces:**
+- Produces: `eval(field, sovereignty)` — same signature shape, new meaning; `sovereignty(mass, potency)` (renamed from `sovereignty_floor`).
 
-- [ ] **Step 2: On authorization only**
+- [ ] **Step 1: Write the failing tests**
 
-```bash
-HV_CENSUS=1 bash scripts/regenerate-artifacts.sh
-git status --porcelain
+```rust
+    #[test]
+    fn a_fully_constrained_creature_is_unchanged_by_sovereignty() {
+        // s = 0 must reproduce the old formula exactly, so the revision is
+        // confined to creatures that should have been buffered all along.
+        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
+        assert_eq!(r.eval(10.0, 0.0), 0.8);
+        let far = r.eval(40.0, 0.0);
+        assert!(far < 1e-6, "a constrained creature vanishes far from optimum, got {far}");
+    }
+
+    #[test]
+    fn sovereignty_widens_the_band_without_raising_the_peak() {
+        // The revision's whole claim: a sovereign creature is no better AT its
+        // optimum, and much better away from it. The old floor did the
+        // opposite — it raised the response everywhere, including at infinity.
+        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
+        assert_eq!(r.eval(10.0, 0.0), r.eval(10.0, 0.9), "the peak is unchanged");
+        assert!(
+            r.eval(30.0, 0.9) > r.eval(30.0, 0.0) * 100.0,
+            "a sovereign creature holds far from its optimum where a constrained one does not"
+        );
+    }
+
+    #[test]
+    fn sovereignty_still_decays_to_nothing_at_distance() {
+        // The property the old floor lacked, and the reason a goblin was a
+        // third at home in the abyss.
+        let r = ConditionResponse { optimum: 10.0, width: 5.0, devotion: 0.8 };
+        let very_far = r.eval(10_000.0, 0.95);
+        assert!(very_far < 1e-6, "even a sovereign creature vanishes eventually, got {very_far}");
+    }
 ```
 
-- [ ] **Step 3: Review and commit the regenerated goldens**
+Adapt the literal construction to `ConditionResponse`'s actual field set if it differs.
 
-Read the changed census rows before committing. Confirm the movement is the waterline's (fewer occupied cells, land-only dominance) and not something unexplained.
+- [ ] **Step 2: Run and watch them fail**
 
 ```bash
-cargo fmt && make gate 2>&1 | tail -5
-git add -A && git commit -m "chore(the-waterline): regenerate censuses after the waterline"
+cargo test -p hornvale-kernel sovereignty 2>&1 | tail -20
+```
+
+Expected: `sovereignty_still_decays_to_nothing_at_distance` FAILS — today it plateaus at 0.95.
+
+- [ ] **Step 3: Replace the formula**
+
+```rust
+        let z = (field - self.optimum) * (1.0 - sovereignty) / self.width;
+        let bump = crate::math::exp(-0.5 * z * z);
+        (self.devotion * bump).clamp(0.0, 1.0)
+```
+
+Rename the parameter `floor` → `sovereignty` and update the doc comment to describe gap-closing, not a floor. Rename `sovereignty_floor` → `sovereignty` and update its doc: it returns the fraction of the environmental gap a creature closes for itself, no longer a lower bound. Update `SOVEREIGNTY_FLOOR_MAX` → `SOVEREIGNTY_MAX` and its doc.
+
+- [ ] **Step 4: Fix every caller**
+
+```bash
+cargo build --workspace 2>&1 | grep -E "^error" | head -20
+```
+
+Callers pass `sovereignty_floor(...)` for the three buffered axes and `0.0` for elevation; the `0.0` sites keep their meaning exactly (fully constrained) and need only the rename.
+
+- [ ] **Step 5: Verify world identity — measured to be byte-identical**
+
+```bash
+cargo run -q -p hornvale -- new --seed 42 --out /tmp/wl-t4b.json
+cmp /tmp/wl-t4b.json cli/tests/fixtures/world-seed-42.json && echo IDENTICAL
+cargo test -p hornvale --test lens_purity 2>&1 | tail -3
+```
+
+Expected: IDENTICAL, `lens_purity` green. This was measured with a throwaway before the spec was written; a different result contradicts a measurement and is a finding — stop and report.
+
+- [ ] **Step 6: Verify P6 — the prediction most likely to be wrong**
+
+```bash
+cargo test -p hornvale-worldgen --test waterline_probe -- --nocapture --ignored 2>&1 | sed -n '/dominance by land/,/world has/p'
+cargo test -p hornvale-worldgen --test demesne 2>&1 | tail -5
+```
+
+P6 says xorn (now `Lithic`) keeps its seafloor domain and `demesne.rs` passes. **If xorn is absent from the dominance table, P6 is falsified — report it, do not re-author xorn to rescue it.**
+
+- [ ] **Step 7: Gate and commit** (expect dominance-pin failures; those are Task 5's)
+
+```bash
+cargo fmt && make gate 2>&1 | tail -20
+git add -A && git commit -m "feat(the-waterline): sovereignty closes the gap, it does not raise a floor"
 ```
 
 ---
 
-### Task 6: Whole-branch verification
+### Task 5: Re-pin the dominance fallout
+
+**Files:** `windows/worldgen/src/lib.rs` (`mod tests`), `windows/worldgen/tests/demesne.rs`, and any other test the two changes redden.
+
+- [ ] **Step 1: Enumerate the damage in one pass**
+
+```bash
+cargo nextest run --workspace --no-fail-fast 2>&1 | tee /tmp/wl-fallout.txt | tail -30
+grep -E "^\s+FAIL" /tmp/wl-fallout.txt
+```
+
+- [ ] **Step 2: Update each reddened assertion to its measured value**
+
+Change the pinned number to the newly measured one **and** update its comment to say why it moved (which of the two changes, and in which direction). Do not weaken an assertion into a range to make it pass. A falsified preregistered prediction is reported, not tuned away.
+
+- [ ] **Step 3: Gate and commit**
+
+```bash
+cargo fmt && make gate 2>&1 | tail -20
+git add -A && git commit -m "test(the-waterline): re-pin the dominance fallout"
+```
+
+---
+
+### Task 6: Census — verify first, then request authorization
+
+- [ ] **Step 1: Determine whether any census metric actually moves**
+
+World identity is byte-identical (P4), so any metric reading committed facts is unchanged. Only metrics reading density or dominance can move. Identify them by inspection before running anything:
+
+```bash
+grep -rn "density\|dominan" windows/lab/src/metrics.rs | head -30
+```
+
+- [ ] **Step 2: If none move, say so and skip the regen.** Record the reasoning.
+
+- [ ] **Step 3: If any move, STOP and request authorization.** The census is a standing carve-out; do not run `HV_CENSUS=1` before receiving it.
+
+---
+
+### Task 7: Whole-branch verification
 
 - [ ] **Step 1: Full gate, captured once**
 
@@ -448,7 +594,7 @@ make gate 2>&1 | tee /tmp/wl-gate.txt | tail -30
 make gate-full 2>&1 | tee /tmp/wl-gatefull.txt | tail -30
 ```
 
-Note: this rewrites `book/src/laboratory/generated/the-sounding/` as a side effect (timing-derived benchmark output). Revert that churn — `git checkout -- book/src/laboratory/generated/the-sounding/` — it is machine-load noise, not a result.
+Revert the `book/src/laboratory/generated/the-sounding/` churn afterwards — it is timing-derived benchmark noise, not a result.
 
 - [ ] **Step 3: Artifact freshness**
 
@@ -457,15 +603,9 @@ make rebaseline
 git status --porcelain
 ```
 
-- [ ] **Step 4: Walk the spec against the diff**
+- [ ] **Step 4: Walk the spec against the diff** — P1–P7 and both blast-radius tables against `git diff main...HEAD`.
 
-Check P1–P5 one by one and both blast-radius tables (consumer class AND committed-artifact class) against `git diff main...HEAD`.
-
-- [ ] **Step 5: Report**
-
-Every prediction with its verified outcome, the gate results, and any blast-radius row whose prediction was wrong.
-
----
+- [ ] **Step 5: Report** every prediction with its verified outcome.
 
 ## Self-Review
 
