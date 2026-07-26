@@ -782,6 +782,12 @@ impl<'w> Session<'w> {
             ["out"] => 1,
             ["out", n] => match n.parse::<u32>() {
                 Ok(v) => v,
+                Err(e) if *e.kind() == std::num::IntErrorKind::PosOverflow => {
+                    return Turn::Out(format!(
+                        "'{n}' is too many rungs out; the chart tops out at {} rungs coarser.",
+                        u32::MAX
+                    ));
+                }
                 Err(_) => {
                     return Turn::Out(format!("Zoom out by how much? '{n}' is not a number."));
                 }

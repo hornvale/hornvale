@@ -259,3 +259,23 @@ fn map_out_seven_is_just_past_the_real_bound_and_refuses_cleanly() {
         "the refusal must not leak the locale layer's internal wording: {past_bound}"
     );
 }
+
+/// `map out 4294967296` (one past `u32::MAX`) IS a number — the request must
+/// say so, distinctly from a genuinely non-numeric argument, rather than the
+/// misleading "is not a number" a bare `parse::<u32>()` error swallows both
+/// cases into.
+#[test]
+fn map_out_past_u32_names_the_real_problem_not_a_parse_failure() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let too_large = out(session.handle("map out 4294967296"));
+    assert!(
+        !too_large.contains("is not a number"),
+        "4294967296 is a number; the refusal must not claim otherwise: {too_large}"
+    );
+    let non_numeric = out(session.handle("map out banana"));
+    assert!(
+        non_numeric.contains("is not a number"),
+        "a genuinely non-numeric argument must still say so: {non_numeric}"
+    );
+}
