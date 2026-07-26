@@ -127,6 +127,13 @@ pub const COLLAPSE_PRESSURE: f64 = 2.0;
 const DAUGHTER_MAX_PRESSURE: f64 = 0.7;
 /// Per-epoch probability a comfortable community founds a daughter.
 const DAUGHTER_PROB: f64 = 0.06;
+/// How much a unit of stored wealth is worth as raiding strength, relative to
+/// a head of population. Walls, retainers and granaries are strength the local
+/// land does not have to feed. type-audit: bare-ok(ratio)
+const STORE_WEIGHT: f64 = 0.5;
+/// The fraction of a community's stores that survives each epoch — a hoard is
+/// not immortal. type-audit: bare-ok(ratio)
+const STORE_DECAY: f64 = 0.95;
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
@@ -325,6 +332,11 @@ struct Community {
     tech: TechHorizon,
     /// Per-people tech-advance offset (years), drawn at genesis.
     tech_offset: f64,
+    /// Accumulated wealth — tribute, stores, the granary. Feeds raiding
+    /// strength but is NEVER eaten: it does not enter the pressure term, so a
+    /// successful extractor does not starve itself on its own tribute (spec
+    /// §4.2a). Lost with the community when it closes.
+    stores: f64,
 }
 
 /// The mutable bake state: records, live communities, the one-alive-per-site
@@ -839,12 +851,25 @@ impl<'a> Bake<'a> {
         eff > 0.0 && c.population * NEED / eff < NO_SPOILS_PRESSURE
     }
 
-    /// A community's raiding strength: its population scaled by its tech
-    /// horizon. Heterogeneous strength is the fuel of predation — equals do
-    /// not prey on one another.
+    /// A community's crowding pressure on its cell this era: population
+    /// against effective capacity, scaled by per-capita need. Reads
+    /// `population` only — `stores` must never enter this term, or a
+    /// successful extractor would starve itself on its own tribute (spec
+    /// §4.2a).
+    fn pressure_of(&self, idx: usize, era: &EraClimate) -> f64 {
+        let c = &self.communities[idx];
+        let eff = self.eff_capacity(era, c.site);
+        c.population * NEED / eff
+    }
+
+    /// A community's raiding strength: its population plus a weighted share
+    /// of its stores, scaled by its tech horizon. Heterogeneous strength is
+    /// the fuel of predation — equals do not prey on one another. Stores
+    /// (walls, retainers, granaries) are strength the local land does not
+    /// have to feed, via `STORE_WEIGHT`.
     fn strength(&self, idx: usize) -> f64 {
         let c = &self.communities[idx];
-        c.population * tech_weight(c.tech)
+        (c.population + c.stores * STORE_WEIGHT) * tech_weight(c.tech)
     }
 
     /// Open a new occupation record + live community at `site`, and return the
@@ -892,6 +917,7 @@ impl<'a> Bake<'a> {
             alive: true,
             tech,
             tech_offset,
+            stores: 0.0,
         });
         self.node_index.insert(site, community_idx);
         self.tally.records_total += 1;
@@ -981,7 +1007,7 @@ impl<'a> Bake<'a> {
             return;
         }
 
-        let pressure = self.communities[idx].population * NEED / eff;
+        let pressure = self.pressure_of(idx, era);
 
         if pressure >= COLLAPSE_PRESSURE {
             self.close(idx, year, CauseOfEnd::Famine, Ended::Nature);
@@ -1160,10 +1186,15 @@ impl<'a> Bake<'a> {
     }
 
     /// A comfortable community grows logistically, and — if very comfortable —
-    /// may throw off a daughter onto a vacant habitable neighbour.
+    /// may throw off a daughter onto a vacant habitable neighbour. Also the
+    /// one place `STORE_DECAY` applies: it runs exactly once per living
+    /// community per epoch, so a hoard erodes at a steady per-epoch rate
+    /// rather than compounding with how often the community is touched
+    /// elsewhere.
     fn grow(&mut self, idx: usize, era: &EraClimate, year: f64, pressure: f64) {
         let c = &mut self.communities[idx];
         c.population *= 1.0 + GROWTH_RATE * (1.0 - pressure);
+        c.stores *= STORE_DECAY;
         self.touch(idx, year);
         self.tally.grew += 1;
 
@@ -1574,6 +1605,73 @@ mod tests {
             stream: Seed(1).derive(hornvale_history::streams::BAKE).stream(),
             tally: BakeCensus::default(),
         }
+    }
+
+    /// A uniform, fully habitable [`EraClimate`] at `day` over
+    /// [`single_community_fixture`]'s one-cell world.
+    fn era_at(day: f64) -> EraClimate {
+        use hornvale_kernel::ReferenceElevation;
+        let geo = Geosphere::new(1);
+        EraClimate {
+            day,
+            ice: CellMap::from_fn(&geo, |_| false),
+            habitable: CellMap::from_fn(&geo, |_| true),
+            sea_level: ReferenceElevation::new(0.0).unwrap(),
+            ice_fraction: 0.0,
+        }
+    }
+
+    /// A hand-built [`Bake`] with a single genesis community (population 10)
+    /// on a one-cell, fully-habitable world. The store tests need a live
+    /// community whose `stores` they can poke directly; owned inputs are
+    /// leaked to `'static` so the `Bake` can be returned by value like the
+    /// integration test's `fixture` helpers.
+    fn single_community_fixture() -> Bake<'static> {
+        let geo = Geosphere::new(1);
+        let graphs: &'static Vec<ConnectionGraph> =
+            Box::leak(Box::new(vec![full_land_graph(&geo)]));
+        let capacity: &'static CellMap<f64> =
+            Box::leak(Box::new(CellMap::from_fn(&geo, |_| 100.0)));
+        let river_prox: &'static CellMap<f64> =
+            Box::leak(Box::new(CellMap::from_fn(&geo, |_| 0.0)));
+        let refugia: &'static CellMap<bool> =
+            Box::leak(Box::new(CellMap::from_fn(&geo, |_| false)));
+        let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
+        bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            10.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        bake
+    }
+
+    #[test]
+    fn stores_raise_strength_but_never_pressure() {
+        // A hand-built Bake with one community. Give it stores and confirm:
+        //   (a) strength rises with stores
+        //   (b) the pressure the bake computes is unchanged
+        let mut bake = single_community_fixture();
+        let before_strength = bake.strength(0);
+        let before_pressure = bake.pressure_of(0, &era_at(0.0));
+
+        bake.communities[0].stores = 100.0;
+
+        let after_strength = bake.strength(0);
+        let after_pressure = bake.pressure_of(0, &era_at(0.0));
+
+        assert!(
+            after_strength > before_strength,
+            "stores must feed strength: {before_strength} -> {after_strength}"
+        );
+        assert_eq!(
+            before_pressure.to_bits(),
+            after_pressure.to_bits(),
+            "stores must NOT feed pressure — a successful extractor would starve itself"
+        );
     }
 
     #[test]
