@@ -2,7 +2,7 @@
 
 **Campaign**: The Vigil (Dragons program, campaign 5)
 **Date**: 2026-07-24
-**Status**: spec, awaiting G3 review
+**Status**: SHIPPED (see the completion note at the end)
 
 ## 1. Summary
 
@@ -341,3 +341,12 @@ gate and the enforced chain — as the durable record.
 Nathan was asked and answered with the shared-tongue argument, which supports
 clade uniformity — satisfied here — but not any particular value. 0.75 (hue
 depth 3, keeps green/yellow, no keystone) remains the live alternative.
+
+---
+
+**Status: SHIPPED** (2026-07-25). Ratified as [decision 0074](../../decisions/0074-capacities-are-a-chain-and-facts-gate-on-components.md) — note the number: §10 above predicted 0069, but main absorbed 76 commits during the campaign and 0069–0073 were taken. Chronicle: [The Vigil](../../../book/src/chronicle/the-vigil.md). Retrospective: [the-vigil](../../retrospectives/the-vigil.md).
+
+All eight preregistered predictions (§5) held. Two corrections to this document, both found after it was approved:
+
+- §6's blast-radius table missed `cli/tests/fixtures/world-seed-42.json`, a committed byte-golden world fixture — the enumeration was organised by consumer class and never asked which committed artifacts encode the output. Its tripwire caught it and it was re-pinned in the drifting commit. P7 ("the dictionary is the only committed artifact that changes") was scoped to the CI drift check and held there, but reads broader than it is.
+- §8.3's test ("asserted against the concept ids that enter and leave the ladder") was omitted from the plan, so the campaign's headline claim was pinned only by the drift-checked dictionary — which pins output against *change*, not against being *right*. Closed after the whole-branch review, and mutation-verified against the 0.75 alternative §11 left live.
