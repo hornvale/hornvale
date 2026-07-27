@@ -353,10 +353,10 @@ pub(crate) fn assign_proto_roots_with_epoch(
         std::collections::BTreeMap::new();
     for concept in ordered {
         let core = crate::packs::is_core_concept(concept);
+        let epoch = epoch_of(concept);
         let mut probe = 0u32;
         let form = loop {
-            let candidate =
-                draw_candidate(seed, family, concept, proto_ph, probe, epoch_of(concept));
+            let candidate = draw_candidate(seed, family, concept, proto_ph, probe, epoch);
             let taken = used.contains(&candidate);
             let too_close = core
                 && core_forms
