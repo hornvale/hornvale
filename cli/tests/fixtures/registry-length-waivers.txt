@@ -12,7 +12,6 @@ BIO-27
 BIO-32
 BIO-33
 BIO-36
-BIO-37
 BIO-38
 BIO-40
 BIO-41
@@ -31,7 +30,6 @@ CLIENT-language-not-catalogue
 CLIENT-persistence-notation
 CLIENT-position-as-statement
 CLIENT-prose-primacy
-CLIENT-redaction-panes
 CLIENT-relational-fine-layer
 CLIENT-replay-and-tenses
 CLIENT-room-grid-authority
@@ -67,11 +65,9 @@ LANG-4
 LANG-40
 LANG-41
 LANG-42
-LANG-43
 LANG-45
 LANG-46
 LANG-47
-LANG-48
 LANG-49
 LANG-5
 LANG-50
@@ -86,7 +82,6 @@ LANG-9
 MAP-18
 MAP-19
 MAP-20
-MAP-21
 MAP-22
 MAP-23
 MAP-24
@@ -104,12 +99,8 @@ MAP-56
 MAP-59
 MAP-61
 MAP-63
-MAP-64
 MAP-65
-MAP-66
-MAP-67
 MAP-69
-MAP-7
 MAP-connectors-as-apertures
 MAP-impression
 MAP-perceive-apertures
@@ -119,14 +110,10 @@ MEM-9
 ORRERY-pole-reconcile
 ORRERY-starfield-backdrop
 PERF-genesis-terrain-rebuilds
-PERF-lab-metric-rebuilds
 PROC-11
-PROC-12
 PROC-13
 PROC-14
 PROC-15
-PROC-18
-PROC-19
 PROC-20
 PSY-10
 PSY-11
@@ -163,7 +150,6 @@ SKY-tidal-braking
 SKY-trojan-world
 SOC-11
 SOC-9
-SOC-belief-sharing
 SOC-contact
 SOC-flagship-selection
 SOC-information-economy
@@ -198,7 +184,6 @@ UNI-27
 UNI-28
 UNI-29
 UNI-30
-UNI-32
 UNI-33
 UNI-34
 UNI-36
