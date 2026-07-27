@@ -351,6 +351,84 @@ fn registry_statuses_use_the_closed_vocabulary() {
     );
 }
 
+/// The Idea-cell budget, in characters. A row is a shelf-mark: what the idea
+/// is, and a pointer to where it is argued. The argument lives in
+/// `frontier.md`; the campaign narrative lives in the chronicle the Where cell
+/// links. Sibling norm: `docs/decisions/README.md` — "keep each record short …
+/// if it needs a page, it is probably a spec".
+///
+/// The cap is on the Idea cell only. The Where column carries full GitHub blob
+/// URLs by mandate (`book/src/frontier/CLAUDE.md`), and taxing a row for
+/// carrying pointers is backwards.
+const REGISTRY_IDEA_CAP: usize = 600;
+
+/// Rows over `REGISTRY_IDEA_CAP` on the day the cap landed. **Append-never:**
+/// entries may be removed as rows are compacted, never added. A new row over
+/// the cap is a failure, not a fixture edit — that ratchet is the whole
+/// mechanism (the pattern is the type audit's `pending(wave-N)`, decision
+/// 0028).
+fn registry_length_waivers() -> BTreeSet<&'static str> {
+    include_str!("fixtures/registry-length-waivers.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+#[test]
+fn registry_idea_cells_are_within_budget() {
+    let waived = registry_length_waivers();
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.idea.chars().count() > REGISTRY_IDEA_CAP)
+        .filter(|r| !waived.contains(r.id.as_str()))
+        .map(|r| format!("{}:{} — {} chars", r.id, r.line, r.idea.chars().count()))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry Idea cells over {REGISTRY_IDEA_CAP} chars. A row is an index \
+         entry, not an essay — compact it (the prose is redundant with the \
+         chronicle the Where cell links), relocate it (move the argument to a \
+         frontier.md section and flip `raw` → `elaborated`), or trim it:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+#[test]
+fn the_waiver_list_only_shrinks() {
+    let waived = registry_length_waivers();
+    let rows = registry_rows();
+    let ids: BTreeSet<&str> = rows.iter().map(|r| r.id.as_str()).collect();
+
+    let unknown: Vec<&str> = waived
+        .iter()
+        .filter(|w| !ids.contains(*w))
+        .copied()
+        .collect();
+    assert!(
+        unknown.is_empty(),
+        "waived IDs absent from the registry — the waiver list is append-never \
+         and rows are permanent, so this means a typo or a renamed ID:\n  {}",
+        unknown.join("\n  ")
+    );
+
+    let compacted: Vec<&str> = waived
+        .iter()
+        .filter(|w| {
+            rows.iter()
+                .find(|r| r.id.as_str() == **w)
+                .is_some_and(|r| r.idea.chars().count() <= REGISTRY_IDEA_CAP)
+        })
+        .copied()
+        .collect();
+    assert!(
+        compacted.is_empty(),
+        "these rows are now within budget — remove them from \
+         fixtures/registry-length-waivers.txt so the ratchet holds:\n  {}",
+        compacted.join("\n  ")
+    );
+}
+
 /// The numbered registry IDs that existed when decision
 /// `0026-slugs-not-numbers`'s freeze was finally applied to registry rows.
 /// Append-never: an ID may leave this list only by leaving the registry, which

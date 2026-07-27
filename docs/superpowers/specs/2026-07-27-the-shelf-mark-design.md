@@ -18,9 +18,9 @@ the registry has stopped being an index.
 > **This is the retrieval surface for Hornvale's speculative ideas — one line
 > each, scannable and greppable.**
 
-It is **570 rows and 632 KB**. The mean row is 1109 characters. The largest
-single row (`PSY-11`) is 13.8 KB — longer than most chapters of the book it
-is indexed inside.
+It is **570 rows and 673 KB**. The mean Idea cell is 833 characters. The
+largest single row (`PSY-11`) carries 12,348 characters of Idea prose —
+longer than most chapters of the book it is indexed inside.
 
 The file has three distinct defects, in increasing order of severity.
 
@@ -36,18 +36,22 @@ cell and not the whole row):
 
 ```
 status        rows   over-600   pct
-raw            322        130   40%
-shipped        127         87   68%
-elaborated      97         52   53%
-spec'd           6          5   83%
-ratified         7          2   28%
+raw            323        117   36%
+shipped        130         81   62%
+elaborated      97         34   35%
+spec'd           6          4   66%
+ratified         7          1   14%
 rejected         7          0    0%
-malformed        4          2   50%
                      ---------
-                            278  (48% of all rows)
+                            237  (41% of all rows)
 ```
 
-**`rejected` is the status that already works** — zero violations, mean 521
+*(Counted with the same trimming parser that enforces the cap. An earlier
+count of 278 was inflated: the registry pads short Idea cells with trailing
+spaces for column alignment, and an un-trimmed measurement counted the
+padding. See §4a.)*
+
+**`rejected` is the status that already works** — zero violations, mean 118
 chars. It is also, per the registry's own preamble, "the anti-relitigation
 payload — the registry's most important status." The rows doing the most
 valuable work are already the shortest. That is the existence proof that the
@@ -131,7 +135,7 @@ The registry already defines its own admission control and never enforced it.
 (`idea-registry.md:31`). `elaborated` means "has a full essay in
 `frontier.md`."
 
-322 rows are `raw`, and they average 831 characters of argument.
+323 rows are `raw`, and they average 634 characters of argument.
 
 So the cap does not need a new inbox, a new file, or a new status. **If a row
 has grown past the cap, the row is mislabeled**: an idea with 900 characters
@@ -160,9 +164,18 @@ in full form (~100 chars each; a row citing spec + chronicle + essay carries
 for carrying the pointers this design wants more of.
 
 Measured both ways at 600 chars: whole-row → 366 violations (64%), Idea cell →
-278 (48%). The 88-row difference is rows that are *already compliant prose*
-with good pointers. Capping the whole row would send those to be rewritten
-in the wrong direction.
+237 (41%). The difference is rows that are *already compliant prose* with good
+pointers. Capping the whole row would send those to be rewritten in the wrong
+direction.
+
+**The Idea cell is measured trimmed**, and this is not incidental. The registry
+pads short cells with trailing spaces to align the table's columns, so an
+un-trimmed measurement counts padding as prose and reports short rows as
+bloated — `MAP-1`'s Idea cell is 80 characters and an un-trimmed count called
+it over 600. The generator for the waiver list is therefore the *enforcing
+parser itself*, not a parallel script: a measurement tool that models the
+format differently from the checker will disagree with it, and the disagreement
+is silent.
 
 **Cap: 600 characters on the Idea cell.** Precedent: `docs/decisions/README.md`
 sets the sibling norm — "Keep each record short — a Y-statement plus a few
@@ -172,7 +185,7 @@ empirical anchor is §1a — 100% of `rejected` rows already comply.
 
 ### 4b. Land as a ratchet, not a cliff
 
-278 violations cannot land in one commit. Precedent: the type audit shipped a
+237 violations cannot land in one commit. Precedent: the type audit shipped a
 default-deny check against a large non-compliant corpus using `pending(wave-N)`
 (decision 0028). Same mechanism here.
 
@@ -185,8 +198,8 @@ asymmetry is the whole value:
   an ID is always allowed, adding one fails the test.
 
 This makes the gate green on day one, makes every future row compliant by
-construction, and turns the 278-row compaction into a burn-down that any
-campaign can chip at instead of a blocking 278-row rewrite.
+construction, and turns the 237-row compaction into a burn-down that any
+campaign can chip at instead of a blocking 237-row rewrite.
 
 ### 4c. The five checks
 
@@ -196,7 +209,7 @@ All in `cli/tests/docs_consistency.rs`, which already parses every row
 | Check | Rule | Today |
 |---|---|---|
 | **Column count** | exactly 5 cells after normalizing `\|` | 3 violations |
-| **Idea-cell length** | ≤ 600 chars unless grandfathered | 278 grandfathered |
+| **Idea-cell length** | ≤ 600 chars unless grandfathered | 237 grandfathered |
 | **Status vocabulary** | closed set, default-deny | 4 violations |
 | **No new numbered IDs** | frozen allowlist of today's 403 | 0 (freeze at HEAD) |
 | **Where non-empty** | every row carries a pointer | 0 — tripwire only |
@@ -264,7 +277,7 @@ Two consumers to keep whole:
    rendered HTML, not by the markdown source.
 4. The 4 status violations are resolved to the closed vocabulary.
 5. The grandfather list contains exactly the IDs over cap at the compaction
-   commit, and is strictly smaller than 278.
+   commit, and is strictly smaller than 237.
 6. `make gate` green; `book/src/frontier/` renders without warnings.
 
 ## 7. Scope
@@ -277,7 +290,7 @@ fixes, the 4 status fixes, and a first compaction wave.
 - Renaming or renumbering any existing ID (0026: "no renames, no
   renumbering").
 - Migrating the registry to any other storage (§2).
-- Compacting all 278 over-cap rows in this campaign — that is the burn-down
+- Compacting all 237 over-cap rows in this campaign — that is the burn-down
   §4b exists to enable.
 - Splitting `frontier.md` — considered and rejected as `REJ-3`.
 
@@ -289,11 +302,11 @@ G3 (§8).
 1. **Cap value: 600 chars on the Idea cell.** Adopted from the decision-log
    norm plus the `rejected`-rows anchor. It is a taste call and it is cheap to
    change *now* and expensive later — the grandfather list is computed from it.
-2. **First-wave scope.** Recommendation: compact the **127 `shipped` rows**
-   (87 over cap, 68% — the worst-offending status and the most mechanical,
+2. **First-wave scope.** Recommendation: compact the **130 `shipped` rows**
+   (81 over cap, 62% — the worst-offending status and the most mechanical,
    since their prose is redundant with chronicles they already link). This
    leaves `raw`/`elaborated` for later waves, where the work is judgment
-   (relocate vs trim), not deletion. Alternative: all 278 in one campaign —
+   (relocate vs trim), not deletion. Alternative: all 237 in one campaign —
    rejected as too large to review well.
 3. **The 322 `raw` rows are a triage question this campaign does not answer.**
    §3 reclassifies long ones as mislabeled, but whether an idea captured

@@ -564,7 +564,7 @@ awk '{ line=$0; gsub(/\\\|/,"\001",line);
 wc -l < cli/tests/fixtures/registry-length-waivers.txt
 ```
 
-Expected: `278`. A materially different number means Tasks 1–3 changed row
+Expected: `237`. A materially different number means Tasks 1–3 changed row
 lengths; re-read before proceeding.
 
 - [ ] **Step 2: Write the failing test**
@@ -677,7 +677,7 @@ The registry calls itself 'one line each, scannable and greppable' and is
 Where column carries mandated full blob URLs, and taxing a row for carrying
 pointers is backwards.
 
-278 rows over cap ship waived (the type audit's pending(wave-N) pattern);
+237 rows over cap ship waived (the type audit's pending(wave-N) pattern);
 the list is append-never and a companion test reddens if a compacted row
 keeps its waiver, so it can only shrink."
 ```
@@ -795,7 +795,7 @@ escaping, the closed status vocabulary, and the slug rule."
 
 ### Task 6: The first compaction wave — the `shipped` rows
 
-87 of the 127 `shipped` rows are over cap (68%, the worst-offending status)
+81 of the 130 `shipped` rows are over cap (62%, the worst-offending status)
 and their prose is the most mechanical to remove: it duplicates chronicles the
 Where cell already links.
 
@@ -816,7 +816,7 @@ awk '{ line=$0; gsub(/\\\|/,"\001",line);
   book/src/frontier/idea-registry.md | sort -k2 -rn
 ```
 
-Expected: 87 rows, largest first. Work down the list.
+Expected: 81 rows, largest first. Work down the list.
 
 - [ ] **Step 2: Compact each row**
 
@@ -845,7 +845,7 @@ is the ratchet working — let it drive the loop rather than batching at the end
 grep -c . cli/tests/fixtures/registry-length-waivers.txt
 ```
 
-Expected after the wave: `191` (278 − 87). A different number means some rows
+Expected after the wave: `156` (237 − 81). A different number means some rows
 were not brought under cap; the test names them.
 
 - [ ] **Step 4: Verify no cross-links broke**
@@ -893,7 +893,7 @@ git commit -m "docs(frontier): compact the shipped rows (wave 1 of the burn-down
 Where cells already link. Compacted to one line each; every wiki-link and
 every unbuilt remainder preserved, no row deleted, no ID renamed.
 
-Waiver list 278 -> 191."
+Waiver list 237 -> 156."
 ```
 
 ---
@@ -960,7 +960,7 @@ Capture what this campaign raised, per the capture discipline. New rows take
 
 - A `PROC-` row for the raw-backlog triage question (spec §8.3) — 322 `raw`
   rows whose liveness no test can judge.
-- A `PROC-` row for the burn-down remainder — 191 waived rows across
+- A `PROC-` row for the burn-down remainder — 156 waived rows across
   `raw`/`elaborated`, where the work is judgment (relocate vs trim) rather
   than deletion.
 
