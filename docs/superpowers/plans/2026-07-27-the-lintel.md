@@ -935,7 +935,7 @@ pub use structure::{MAX_CHAMBERS, Structure, structure_at};
 - [ ] **Step 5: Run to verify pass**
 
 Run: `cargo test -p hornvale-vessel structure:: 2>&1 | tail -12`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 6: Confirm the stream manifest regenerates**
 
