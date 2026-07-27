@@ -145,6 +145,7 @@ fn an_injected_spike_recovers() {
         Some(3.0),
         "the recovered spike's length is the recovery signal"
     );
+    assert_eq!(r.stuck, 0.0, "a recovered 3-tick spike is not the alarm");
     assert_eq!(
         r.by_cause["thirst"], 1.0,
         "all distress attributed to thirst"
@@ -161,6 +162,10 @@ fn an_unsatisfiable_need_persists() {
     labels.extend(std::iter::repeat_n(Lost, 12)); // >> the 8-tick chronic threshold
     let r = health_report(&[trace(&labels)]);
     assert_eq!(r.chronicity, 1.0, "the one creature is chronically stuck");
+    assert_eq!(
+        r.stuck, 1.0,
+        "and it never recovered, so the ALARM fires too (§8's conjunction)"
+    );
     assert!(
         r.prevalence > 0.8,
         "distress dominates the span: {}",
@@ -191,6 +196,111 @@ fn by_species_separates_a_stricken_people_from_a_healthy_one() {
         "the stricken people reads distressed"
     );
     assert_eq!(r.by_species["goblin"], 0.0, "the healthy people reads fine");
+}
+
+#[test]
+fn a_long_episode_that_recovers_is_a_hard_patch_not_a_bug() {
+    // THE DISCRIMINATOR (The Temperament §8): "a spike that RECOVERS (short
+    // half-life) is a novel/extreme world event the creatures adapt to —
+    // legitimate; a spike that PERSISTS (no recovery, elevated chronicity) is a
+    // bug." Two independent distress rhythms can weld into one long run —
+    // `HHHH F HHHH`, nine consecutive distress ticks — and then RETURN TO
+    // HEALTH. That is a hard patch in a varied world, not a broken sim: it is
+    // long (so `chronicity` sees it, as a diagnostic) but it ended (so `stuck`,
+    // the alarm, stays silent).
+    use AffectLabel::*;
+    let mut labels = vec![Content, Content];
+    labels.extend([
+        Helpless, Helpless, Helpless, Helpless, Frustrated, Helpless, Helpless, Helpless, Helpless,
+    ]);
+    labels.extend([Content, Content, Content]);
+    let r = health_report(&[trace(&labels)]);
+    assert_eq!(
+        r.chronicity, 1.0,
+        "the welded run is 9 ticks, over the 8-tick threshold: the DIAGNOSTIC sees it"
+    );
+    assert_eq!(
+        r.stuck, 0.0,
+        "but it recovered — a legitimate hard patch, not the bug signal: {r:?}"
+    );
+    assert_eq!(
+        r.recovery_ticks,
+        Some(9.0),
+        "and its length is the recovery half-life: {r:?}"
+    );
+}
+
+#[test]
+fn one_stuck_creature_among_nine_recovering_ones_still_alarms() {
+    // THE MASKING CASE (spec §3): `chronicity` is per-creature but
+    // `recovery_ticks` is a POPULATION aggregate, so conjoining the two
+    // published numbers at population scope fails in the dangerous direction —
+    // this population would read chronicity 1.0 with recovery Some(9.0), i.e.
+    // "long distress that recovers → not a bug," and the one creature that
+    // never recovers would be MASKED. A bug alarm may be noisy; it may not be
+    // silent. `stuck` evaluates the conjunction PER CREATURE, so it fires.
+    use AffectLabel::*;
+    let mut stuck_labels = vec![Content, Content];
+    stuck_labels.extend(std::iter::repeat_n(Helpless, 12)); // never ends
+    let mut population = vec![trace(&stuck_labels)];
+    for _ in 0..9 {
+        let mut recovering = vec![Content, Content];
+        recovering.extend(std::iter::repeat_n(Helpless, 9)); // long, but ends
+        recovering.extend([Content, Content, Content]);
+        population.push(trace(&recovering));
+    }
+    let r = health_report(&population);
+    assert_eq!(
+        r.stuck,
+        1.0 / 10.0,
+        "the one never-recovering creature alarms: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 1.0,
+        "all ten carry a long run, so chronicity cannot discriminate: {r:?}"
+    );
+    assert!(
+        r.recovery_ticks.is_some(),
+        "and nine of them recovered — which at POPULATION scope would have read \
+         healthy, masking the stuck one: {r:?}"
+    );
+}
+
+#[test]
+fn a_short_run_still_open_at_the_trace_end_does_not_alarm() {
+    // RIGHT-CENSORING, deliberately not an alarm (spec §4): a 3-tick run still
+    // open when the trace ends might have recovered one tick later — that is
+    // undecidable from the trace, so only LONG-and-open alarms. This
+    // asymmetry is intentional; do not "fix" it.
+    use AffectLabel::*;
+    let r = health_report(&[trace(&[Content, Content, Lost, Lost, Lost])]);
+    assert_eq!(
+        r.stuck, 0.0,
+        "short and still open is censored, not a bug signal: {r:?}"
+    );
+    assert_eq!(r.chronicity, 0.0, "and it is not even long: {r:?}");
+    assert_eq!(
+        r.recovery_ticks, None,
+        "the run never ended, so nothing recovered: {r:?}"
+    );
+}
+
+#[test]
+fn a_long_run_still_open_at_the_trace_end_is_the_alarm() {
+    // THE BUG SIGNAL as §8 states it, on the reduction alone: long AND never
+    // ended. The counterpart of the censoring test above — the only difference
+    // between them is the run's LENGTH, which is what makes the threshold, not
+    // the openness, the discriminator in the open column.
+    use AffectLabel::*;
+    let mut labels = vec![Content, Content];
+    labels.extend(std::iter::repeat_n(Lost, 10));
+    let r = health_report(&[trace(&labels)]);
+    assert_eq!(r.stuck, 1.0, "long and never ended: the alarm fires: {r:?}");
+    assert_eq!(r.chronicity, 1.0, "and the diagnostic agrees: {r:?}");
+    assert_eq!(
+        r.recovery_ticks, None,
+        "a never-ending spike has no recovery half-life: {r:?}"
+    );
 }
 
 // --- END-TO-END: the synthetic distress harness (followup #5) ---------------
