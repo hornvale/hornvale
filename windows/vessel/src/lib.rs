@@ -5,6 +5,7 @@
 
 mod agent;
 pub mod band;
+pub mod brief;
 pub mod clock;
 mod focalize;
 pub mod interior;
@@ -17,6 +18,7 @@ pub mod streams;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
 pub use band::{Band, CHAMBER_DEPTH_OFFSET, band_of, chamber_depth, truncate_to_walk};
+pub use brief::{Brief, brief_of};
 pub use focalize::*;
 pub use knowledge::*;
 pub use purview::*;
