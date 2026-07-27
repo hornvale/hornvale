@@ -116,9 +116,19 @@ Chronicity reads zero on every measured world, exactly as the new alarm does. Th
 old bound and the new one evaluate identically everywhere the project can
 currently look, which means no observable slack was created and nothing was
 relaxed to let anything through; what changed is which of two coincident readings
-the control is *entitled to* when they eventually part company. No real seed has
-yet produced the long-but-recovered pattern at all — the welded nine-tick run
-above is a planted trace, not a sighting.
+the control is *entitled to* when they eventually part company.
+
+No seed in that sweep produces the long-but-recovered pattern under the physics
+main carries today. But the pattern is not a hypothetical either, and this is the
+part that makes the repair necessary rather than merely tidy: an investigation
+produced it on a real seed. Perturbing one creature's distress rhythms on seed 42
+by a *single tick* welded the four-plus-one-four run described above into nine
+consecutive ticks of distress that then returned to health — and the world's
+overall prevalence *fell*. So the two readings' agreement across the sweep is a
+coincidence of the current physics, not a property of healthy worlds, and a
+one-tick phase shift is enough to part them. The trace this campaign's battery
+uses to pin the case is planted; the sighting that showed the case was reachable
+was not.
 
 That places the burden of proving the alarm can still fire exactly where it
 belongs: not on the healthy worlds, which prove only silence, but on the metric's
@@ -136,8 +146,12 @@ honest — so the reasoning is written down where someone auditing the project f
 that move would look: decision
 [0080](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0080-chronicity-is-a-diagnostic-the-alarm-is-stuck.md)
 records the semantics above, the discipline the demotion was held to, and the
-generalization that a bound demotion occasioned by blocked work owes an entry
-where one occasioned by ordinary drift does not.
+generalization that a bound demotion occasioned by blocked work owes a decision
+entry *of its own*, where one occasioned by ordinary drift is adequately served by
+a clause wherever it comes up. It also records what the new alarm is blind to: it
+reads the *final* episode's fate, so a creature in near-total distress that
+recovers in the last ticks passes every surviving bound — the price of choosing
+fate as the discriminator, named in the record rather than left to be found.
 
 The instrument scores the world; nothing but the instrument changed here. Every
 world is byte-for-byte what it was — no new draw, no new predicate, no epoch — and

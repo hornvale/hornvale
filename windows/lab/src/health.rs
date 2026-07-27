@@ -246,6 +246,19 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
         // recovered one tick after the trace ended, which is right-censoring
         // and undecidable from the trace. Only long-and-open alarms; the
         // asymmetry is intentional (spec §4).
+        //
+        // KNOWN BLIND SPOT (decision 0080, Consequences). `stuck` reads the
+        // FINAL run's fate, so it is silent on a creature in near-total
+        // distress that happens to recover in the last ticks — e.g. distressed
+        // for ticks 1..=38 and Content for 39..=40. That reads `stuck 0.0`
+        // (the long run ended), `chronicity 1.0` and `prevalence ~0.95` (both
+        // unbounded diagnostics), so EVERY surviving bound is green. The 2×2
+        // this reduction implements covers one episode's length and fate, and
+        // never its multiplicity or duty cycle; that is the price of choosing
+        // *fate* as the discriminator, which is what §8 names. Seeing this
+        // class would need a different family member (a longest-run or
+        // distress-duty-cycle diagnostic) — registered as a followup, not
+        // built here.
         if run >= CHRONIC_TICKS {
             stuck_creatures += 1;
         }

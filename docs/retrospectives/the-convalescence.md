@@ -128,6 +128,18 @@ purpose is to detect a fault, ask which way it fails. Noisy is a cost; silent is
 defect. They are not symmetric, and a fix that trades one for the other is a
 regression wearing a repair's clothes.
 
+With one correction the review of this campaign supplied, and it sharpens rather
+than blunts the rule: **"may not be silent" is always relative to the class of
+faults the detector is defined over**, and every detector has a class it is not
+defined over. The one shipped here is no exception — it reads the *final* episode's
+fate, so near-total distress that recovers in the last ticks passes every surviving
+bound (decision 0080 names the class; a duty-cycle diagnostic is the registered
+followup that would see it). Stating the rule absolutely is comfortable and it
+hides exactly the thing worth writing down. So the discipline is not "never ship a
+silent case" — that is unachievable — but **name the class your detector is blind
+to, in the same document where you claim it cannot be silent.** An unstated blind
+spot reads to a later reader as a claim of none.
+
 ## What went smoothly, and why
 
 The 2×2 (length × fate) was written down before the code, and it did two things
@@ -136,3 +148,15 @@ the deliberately-silent cell an *explicit design element* with a test guarding i
 rather than an omission a future reader would try to fix. **Enumerating a small
 product space is a cheap way to turn "did we handle everything?" into a table you
 can point at.**
+
+## Followups
+
+- **A duty-cycle (or longest-run) member of the health family** — the diagnostic
+  that would see the residual class `stuck` is blind to: near-total distress that
+  recovers in the final ticks (`stuck 0.0`, `chronicity 1.0`,
+  `prevalence ≈ 0.95`, every surviving bound green). Either the *longest* distress
+  run in a trace regardless of how it ended, or the fraction of a span spent
+  inside runs of at least `CHRONIC_TICKS`. A diagnostic beside the alarm, not a
+  replacement for it — fate stays the discriminator (decision 0080). Whether such
+  a member should eventually be *bounded* needs its own null-control evidence
+  across the sweep; the seeds' readings for both quantities are currently unknown.

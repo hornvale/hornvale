@@ -221,7 +221,7 @@ written, §7 included.*
 
 §1 says The Temperament §8 "specifies the bug signal differently — and says so
 twice." That is incomplete. §8 also *labels* `chronicity` the alarm, in its
-family bullet list (`2026-07-19-the-temperament-design.md` lines 189-191):
+family bullet list (`2026-07-19-the-temperament-design.md` lines 190-191):
 
 > - **chronicity** — fraction *persistently* stuck (helpless/frustrated ≥ N
 >   ticks). **The bug alarm.**

@@ -127,9 +127,24 @@ fn the_null_control_holds_across_a_seed_sweep() {
     // long distress run that RECOVERS is a hard patch in a varied world, which
     // The Temperament §8 calls legitimate. The alarm is the conjunction — long
     // AND never recovered — which is `stuck`.
+    //
+    // The two assertions BESIDE the alarm exist because `stuck == 0.0` can be
+    // read vacuously: `simulate_world` returns an EMPTY Vec when the locale
+    // build or the settlement lookup fails, and `health_report(&[])` reads
+    // `stuck: frac(0, 0.max(1)) == 0.0`. A control armed by staying quiet must
+    // be able to tell "quiet because healthy" from "quiet because there was
+    // nobody to read" — so the population's non-emptiness and its recovery are
+    // asserted too, matching the seed-42 control beside this one.
     let mut report = Vec::new();
     for seed in [0u64, 1, 2, 7, 42] {
-        let r = health_report(&simulate_world(&world(seed)));
+        let traces = simulate_world(&world(seed));
+        assert!(
+            !traces.is_empty(),
+            "seed {seed} sampled NO creatures: `simulate_world` returned an empty \
+             population (a failed locale build or no settlement), which would read \
+             stuck 0.0 vacuously and pass this control without measuring anything"
+        );
+        let r = health_report(&traces);
         report.push(format!(
             "seed {seed}: stuck {:.4} chronicity {:.4} prevalence {:.4} recovery {:?}",
             r.stuck, r.chronicity, r.prevalence, r.recovery_ticks
@@ -137,6 +152,13 @@ fn the_null_control_holds_across_a_seed_sweep() {
         assert_eq!(
             r.stuck, 0.0,
             "seed {seed} shows STUCK distress (the alarm fired): {r:?}"
+        );
+        assert!(
+            r.recovery_ticks.is_some(),
+            "seed {seed}: a healthy world's distress must be TRANSIENT and RECOVER \
+             — `None` means no distress run ever ended, either because the \
+             population felt nothing at all (an inert sample reads healthy) or \
+             because every run was still open at the 40th tick: {r:?}"
         );
     }
     eprintln!("the-convalescence health-family baseline, per seed:");
@@ -332,6 +354,44 @@ fn a_long_run_still_open_at_the_trace_end_is_the_alarm() {
     assert_eq!(
         r.recovery_ticks, None,
         "a never-ending spike has no recovery half-life: {r:?}"
+    );
+}
+
+#[test]
+fn the_chronic_threshold_is_exact_at_chronic_ticks() {
+    // THE BOUNDARY, pinned exactly. `CHRONIC_TICKS` is 8, and both threshold
+    // sites in `health.rs` read `run >= CHRONIC_TICKS` — one setting the
+    // `chronicity` diagnostic, one setting the `stuck` alarm. Every other
+    // planted run in this file is 3, 9, 10 or 12 ticks, so a `>=` silently
+    // mutated to `>` at either site survives the whole battery. This test
+    // exists to kill that mutation at BOTH sites: a run of exactly 8 must
+    // count (`8 > 8` is false, so a mutated site reads 0.0 here), and a run of
+    // exactly 7 must not (which pins the threshold from below, so it cannot be
+    // satisfied by loosening the comparison instead).
+    use AffectLabel::*;
+
+    let mut exactly_eight = vec![Content, Content];
+    exactly_eight.extend(std::iter::repeat_n(Lost, 8)); // == CHRONIC_TICKS, still open
+    let r = health_report(&[trace(&exactly_eight)]);
+    assert_eq!(
+        r.stuck, 1.0,
+        "a run of exactly CHRONIC_TICKS (8) still open at the end IS the alarm: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 1.0,
+        "and exactly 8 is chronic for the diagnostic too: {r:?}"
+    );
+
+    let mut exactly_seven = vec![Content, Content];
+    exactly_seven.extend(std::iter::repeat_n(Lost, 7)); // one below the threshold
+    let r = health_report(&[trace(&exactly_seven)]);
+    assert_eq!(
+        r.stuck, 0.0,
+        "one tick below the threshold is censored, not the alarm: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 0.0,
+        "and 7 is not chronic for the diagnostic either: {r:?}"
     );
 }
 
