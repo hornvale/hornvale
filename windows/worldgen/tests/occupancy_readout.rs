@@ -199,3 +199,68 @@ fn regenerate_occupancy_readout() {
     )
     .expect("write occupancy.csv fixture");
 }
+
+/// **Preregistered, and NOT met — the campaign's honest headline.**
+///
+/// The Vacancy's exit criterion 6 asked that hot-arid, savanna and boreal each
+/// gain at least one kind *centred* there. Measured against the committed
+/// readout at campaign close:
+///
+/// | region | new kinds present | top occupant |
+/// |---|---|---|
+/// | hot-arid (desert) | giant-scorpion, carrion-crawler, shrieker | **giant-scorpion** (0.0176) — met |
+/// | savanna | rhinoceros, giant-hyena, dire-wolf, gnoll, +5 | treant (0.0581) — NOT met |
+/// | boreal (taiga) | carrion-crawler, rhinoceros, dire-wolf, +6 | treant (0.0273) — NOT met |
+///
+/// So one of three regions gained a top-ranked occupant. The other two gained
+/// real presence and did not gain dominance, and in both the top slot belongs
+/// to a *sessile autotroph* — which is the whole diagnosis. `K = supply × Π
+/// condition` multiplies a supply term spanning orders of magnitude by a
+/// condition product bounded in `[0, 1]`, so the condition niche can only ever
+/// modulate the NPP signal, never select against it. A photosynthate kind rides
+/// that signal everywhere it is green; a predator authored for a specific
+/// climate cannot outrank it there. That is BIO-46, and it is the named
+/// prerequisite for this test.
+///
+/// The gnoll is the sharpest case: a people authored explicitly for hot-arid
+/// desert has **zero** desert occupancy and its largest share is
+/// temperate-forest. Its niche was deliberately left untuned — fitting the
+/// world to a preregistered criterion is the one move that would invalidate
+/// the result.
+///
+/// This test is expected to fail until BIO-46 lands. Its failure is the record.
+#[test]
+#[ignore = "PREREGISTERED, not met: awaits BIO-46 (supply magnitude drowns the condition niche)"]
+fn each_target_region_gains_a_top_ranked_occupant() {
+    let rendered = render_occupancy_readout(1..=30);
+    let mut top: std::collections::BTreeMap<String, (String, f64)> =
+        std::collections::BTreeMap::new();
+    for line in rendered.lines().skip(1) {
+        let f: Vec<&str> = line.split(',').collect();
+        let (kind, biome, mean_k) = (f[0], f[1], f[4].parse::<f64>().unwrap_or(0.0));
+        let e = top
+            .entry(biome.to_string())
+            .or_insert((kind.to_string(), 0.0));
+        if mean_k > e.1 {
+            *e = (kind.to_string(), mean_k);
+        }
+    }
+    let newly_authored = [
+        "giant-scorpion",
+        "giant-hyena",
+        "dire-wolf",
+        "rhinoceros",
+        "giant-constrictor-snake",
+        "carrion-crawler",
+        "shrieker",
+        "gnoll",
+    ];
+    for region in ["desert", "savanna", "taiga"] {
+        let (kind, k) = top.get(region).expect("region is occupied");
+        assert!(
+            newly_authored.contains(&kind.as_str()),
+            "{region}'s top occupant is {kind} ({k}), not a kind this campaign \
+             authored for it - see BIO-46"
+        );
+    }
+}
