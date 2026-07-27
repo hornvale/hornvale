@@ -99,7 +99,7 @@ die: root Taobaa /taobaa/
 earth: root Bee /bee/
 eat: root Goo /goo/
 eclipse: gap (experiential): hobgoblin has no exposure to 'eclipse'
-epipelagic: root Naabea /naabea/
+epipelagic: gap (experiential): no compound recipe for 'epipelagic'
 eye: root Qao /qao/
 fire: root Qea /qea/
 foot: root Boa /boa/
@@ -223,7 +223,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: root Kaa /kaa/
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -251,7 +251,7 @@ brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
 bugbear-kind: root Roqxa /roqxa/
 child: root Rakxa /rakxa/
 cold: gap (experiential): kobold has no exposure to 'cold'
-coral-reef: gap (experiential): no compound recipe for 'coral-reef'
+coral-reef: root Xaro /xaro/
 dark: root Xa /xa/
 day: root Ro /ro/
 desert: gap (experiential): no settlement in or beside desert

@@ -422,9 +422,19 @@ fn a_displaced_people_rolls_downhill_and_the_cascade_is_recorded() {
     eprintln!("ESCARPMENT census: {c:?}");
     // (a) The mask never evicts anyone here: every displacement in this world
     //     is conflict, not climate.
+    //
+    //     `migrated` counts BOTH orderly moves — the climate eviction this
+    //     clause is about, and spec §4.3d's vassal flight, which shares the
+    //     tally deliberately (a flight is a self-directed move, never a
+    //     `fled`). `vassal_flights` is the flight subset, so the climate
+    //     eviction count is the difference, and it is the difference this
+    //     clause has always meant. Comparing `migrated` against zero read as
+    //     the same claim only while no flight happened to fire on this
+    //     fixture, which stopped being true the moment a fleeing vassal kept
+    //     its relation (spec §4.3e) and so had reason to leave more than once.
     assert_eq!(
-        c.migrated, 0,
-        "the mask must never evict anyone here: {c:?}"
+        c.migrated, c.vassal_flights,
+        "the mask must never evict anyone here — every orderly move must be a flight: {c:?}"
     );
     // (b) Conflict fires…
     assert!(c.raided > 0, "no raid fired on the escarpment: {c:?}");
