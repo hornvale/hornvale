@@ -161,6 +161,22 @@ const ASSESS_RATE: f64 = 0.025;
 /// deferred adaptive-demand loop (§4.3) raises an assessment against, so the
 /// clamp is written where the assessment is set rather than bolted on later.
 const ASSESS_MAX: f64 = 0.5;
+/// How fast a patron corrects its demand toward its subordinate's health — a
+/// vassal that grew can bear more, one that shrank is being over-milked (spec
+/// §4.3). The signal is two-signed, so this is a feedback loop rather than the
+/// ratchet a shortfall-driven rule would give: `shortfall = assessment −
+/// remittance` is non-negative by construction and can only ever push the
+/// demand up.
+///
+/// A first-order feedback WITH DELAY (the delay is the epoch step)
+/// period-doubles into chaos above a critical gain, so this constant carries a
+/// stability claim — and spec §4.5 requires that claim be demonstrated rather
+/// than asserted here. `a_long_run_assessment_neither_diverges_nor_absorbs_at_
+/// zero` drives 200 epochs of a two-signed disturbance and holds the series to
+/// a non-growing oscillation inside the clamp, which is the demonstration; this
+/// comment is only its signpost. A save-format constant: changing it re-fights
+/// every world's history.
+const ADAPT_RATE: f64 = 0.2;
 /// The most a maximally insular people withholds from its patron: the share of
 /// its surplus a people with `in_group_radius == 0.0` keeps out of sight (spec
 /// §4.2's concealment term). A maximally expansive people (`1.0`) conceals
@@ -478,15 +494,24 @@ struct Tribute {
     /// subordinate's growth: the demand is what the patron *asks*, never what
     /// it necessarily gets.
     ///
-    /// The term is set the moment a relation forms because that is when the
-    /// patron takes its reading of the land, not when it first comes to
-    /// collect.
+    /// The term is *opened* the moment a relation forms because that is when
+    /// the patron takes its reading of the land, not when it first comes to
+    /// collect. Thereafter it is corrected at every collection against the
+    /// subordinate's health (spec §4.3), so it is what this patron has learned
+    /// about this vassal, not a number frozen at conquest.
     assessment: f64,
     /// The standard day this relation was established — the day the *current*
     /// patron took it, since a patronage transfer re-establishes it. Carried
     /// only so the emitted fact can be dated by when it became true, exactly as
     /// an occupation's end-of-life facts are.
     since: f64,
+    /// The subordinate's population when this patron last collected — set at
+    /// formation, updated at every collection. The health signal is measured
+    /// against it, so the patron reacts to how its vassal has FARED rather
+    /// than to a shortfall it can never see the far side of (spec §4.3: a
+    /// shortfall is `assessment − remittance`, non-negative by construction,
+    /// and so a ratchet).
+    last_seen_population: f64,
 }
 
 /// Which way a raid resolves, decided by the **mobility of the prize**
@@ -1259,18 +1284,29 @@ impl<'a> Bake<'a> {
     /// tribute is wealth, not bodies, and a patron whose winnings entered the
     /// pressure term would starve itself on its own success.
     ///
+    /// Each collection then **corrects the demand** against what the visit
+    /// found (spec §4.3): a vassal larger than the patron last saw it can bear
+    /// more, one that has shrunk is being over-milked. The correction is
+    /// multiplicative in the standing assessment and proportional to the
+    /// *relative* change in the subordinate's population, clamped into
+    /// `[0, eff_capacity × ASSESS_MAX]`. It runs for every live relation
+    /// visited, including one that remitted nothing — a bad year is exactly
+    /// the reading the patron most needs.
+    ///
     /// Deterministic: the relation table is a `BTreeMap`, so the pass runs in
     /// subordinate-index order, and it is snapshotted to a `Vec` first so no
     /// entry's outcome can depend on a mutation made earlier in the same pass.
-    /// Every remittance reads only `assessment` (frozen when the relation
-    /// formed) and `epoch_growth` (frozen by the step loop that has already
-    /// finished), so no entry can read what an earlier one wrote and the order
-    /// is immaterial today. That is a property of what this loop happens to
-    /// read, not one anything enforces: a term that read the patron's `stores`
-    /// — the obvious next reach, since `strength` does — would make the order
-    /// decide the outcome, and the snapshot would then be load-bearing rather
-    /// than belt-and-braces.
-    fn collect_tribute(&mut self, year: f64) {
+    /// Each entry reads only its own snapshotted relation, its own
+    /// subordinate's population, and `epoch_growth` (frozen by the step loop
+    /// that has already finished), and writes only its own key — so no entry
+    /// can read what an earlier one wrote and the order is immaterial. That is
+    /// a property of what this loop happens to read, not one anything
+    /// enforces: a term that read the patron's `stores` — the obvious next
+    /// reach, since `strength` does — would make the order decide the outcome,
+    /// and the snapshot would then be load-bearing rather than
+    /// belt-and-braces. (`era` is read only for the clamp's ceiling, which is
+    /// a property of the subordinate's land.)
+    fn collect_tribute(&mut self, year: f64, era: &EraClimate) {
         let relations: Vec<(usize, Tribute)> = self.tribute.iter().map(|(&s, &t)| (s, t)).collect();
         for (sub, rel) in relations {
             // Cheap, and the failure it guards is silent. `close` dissolves
@@ -1299,6 +1335,32 @@ impl<'a> Bake<'a> {
             // community it moved, and a future caller reaching collection by
             // another route must not silently skip that.
             self.touch(rel.patron, year);
+            // The correction (spec §4.3). The patron reads the vassal it is
+            // leaving against the one it last left: a RELATIVE change, so a
+            // large people and a small one are read on the same scale, and
+            // two-signed, so the demand can ease as well as climb. Zero when
+            // the last reading was zero — a vassal that was not there to be
+            // seen tells the patron nothing, and dividing by it would put a
+            // NaN in the ledger.
+            let now_pop = self.communities[sub].population;
+            let signal = if rel.last_seen_population > 0.0 {
+                (now_pop - rel.last_seen_population) / rel.last_seen_population
+            } else {
+                0.0
+            };
+            // Spec §4.5's divergence bound, applied where the assessment is
+            // written: no patron may demand more than the subordinate's land
+            // could ever produce.
+            let ceiling = self.eff_capacity(era, self.communities[sub].site) * ASSESS_MAX;
+            let next = (rel.assessment + signal * rel.assessment * ADAPT_RATE).clamp(0.0, ceiling);
+            self.tribute.insert(
+                sub,
+                Tribute {
+                    assessment: next,
+                    last_seen_population: now_pop,
+                    ..rel
+                },
+            );
         }
     }
 
@@ -1591,6 +1653,12 @@ impl<'a> Bake<'a> {
                         patron: raider,
                         assessment,
                         since: year,
+                        // The reading the first correction will be measured
+                        // against: what this patron saw when it took the
+                        // relation. A transfer overwrites it, so an incoming
+                        // patron starts from what IT sees rather than
+                        // inheriting its predecessor's memory.
+                        last_seen_population: self.communities[target].population,
                     },
                 );
                 // The one-level-star invariant, checked where it is ESTABLISHED
@@ -1887,7 +1955,7 @@ pub fn bake(
         // Tribute is collected once the whole world has stepped, so there is
         // growth to tax and so no subordinate's remittance depends on whether
         // its patron happened to be stepped before or after it.
-        bake.collect_tribute(year);
+        bake.collect_tribute(year, &era);
         year += cfg.epoch_years;
     }
 
@@ -1950,6 +2018,7 @@ pub fn bake(
 mod tests {
     use super::*;
     use hornvale_topology::{ConnectionGraph, Edge, EdgeKind};
+    use std::cmp::Ordering;
 
     #[test]
     fn traversable_neighbors_excludes_ocean_includes_lanes() {
@@ -2302,6 +2371,7 @@ mod tests {
                 patron,
                 assessment: 1.0e9,
                 since: 0.0,
+                last_seen_population: bake.communities[sub].population,
             },
         );
         (bake, patron, sub)
@@ -2333,7 +2403,7 @@ mod tests {
 
         let patron_pressure_before = bake.pressure_of(patron, &era);
         let patron_population_before = bake.communities[patron].population;
-        bake.collect_tribute(0.0);
+        bake.collect_tribute(0.0, &era);
 
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
@@ -2390,7 +2460,7 @@ mod tests {
         bake.begin_epoch();
         let pressure = bake.pressure_of(sub, &era);
         bake.grow(sub, &era, 0.0, pressure);
-        bake.collect_tribute(0.0);
+        bake.collect_tribute(0.0, &era);
         let stores_after_one = bake.communities[patron].stores;
         let sub_after_one = bake.communities[sub].population;
         assert!(
@@ -2406,7 +2476,7 @@ mod tests {
 
         // A bad year: the subordinate does not grow at all.
         bake.begin_epoch();
-        bake.collect_tribute(25.0);
+        bake.collect_tribute(25.0, &era);
 
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
@@ -2466,7 +2536,7 @@ mod tests {
                 "precondition: the subordinate must actually have grown this \
                  epoch — with no surplus there is nothing to conceal"
             );
-            bake.collect_tribute(0.0);
+            bake.collect_tribute(0.0, &era);
             arms.push((
                 bake.communities[patron].stores,
                 bake.communities[sub].population,
@@ -2560,7 +2630,7 @@ mod tests {
         // Kill the patron WITHOUT going through `close`, so the relation is
         // left dangling exactly as a missed cleanup would leave it.
         bake.communities[patron].alive = false;
-        bake.collect_tribute(0.0);
+        bake.collect_tribute(0.0, &era);
 
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
@@ -2584,7 +2654,7 @@ mod tests {
         bake.grow(sub, &era, 0.0, pressure);
         let corpse_population = bake.communities[sub].population;
         bake.communities[sub].alive = false;
-        bake.collect_tribute(0.0);
+        bake.collect_tribute(0.0, &era);
 
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
@@ -2688,7 +2758,7 @@ mod tests {
             // Who owes as collection begins, and how much has moved so far.
             let owing: Vec<usize> = bake.tribute.keys().copied().collect();
             let before_collection = bake.tally.tribute_collected;
-            bake.collect_tribute(year);
+            bake.collect_tribute(year, &era);
             if bake.tally.tribute_collected > before_collection {
                 milked_epochs += 1;
             }
@@ -3102,6 +3172,7 @@ mod tests {
                 patron,
                 assessment: RICH * ASSESS_RATE,
                 since: 0.0,
+                last_seen_population: RICH / 2.0,
             },
         );
 
@@ -3110,7 +3181,7 @@ mod tests {
         let pressure = bake.pressure_of(sub, &era);
         bake.grow(sub, &era, 0.0, pressure);
         let surplus = bake.communities[sub].population - before;
-        bake.collect_tribute(0.0);
+        bake.collect_tribute(0.0, &era);
 
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
@@ -3122,6 +3193,452 @@ mod tests {
             bake.communities[sub].population > before,
             "a subordinate at peak productivity must keep part of its increment: {} vs {before}",
             bake.communities[sub].population
+        );
+    }
+
+    /// A patron holding one subordinate at the peak of its land's productivity
+    /// (`N = eff/2`), with the relation formed through the real
+    /// [`Bake::maybe_raid`] path so the memory the feedback reads is set the
+    /// way the bake sets it, not the way a test would. Returns the pair and
+    /// the assessment the relation opened at.
+    fn adaptive_pair<'a>(
+        geo: &Geosphere,
+        graphs: &'a [ConnectionGraph],
+        capacity: &'a CellMap<f64>,
+        river_prox: &'a CellMap<f64>,
+        refugia: &'a CellMap<bool>,
+        era: &EraClimate,
+    ) -> (Bake<'a>, usize, usize, f64) {
+        let mut bake = hand_bake(graphs, capacity, river_prox, refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            RICH / 2.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        // 80 clears 50 × RAID_MARGIN, the land is value-flat (so the prize is
+        // the people, not the ground) and the target is productive.
+        bake.maybe_raid(patron, era, 0.0);
+        let opened_at = bake
+            .tribute
+            .get(&sub)
+            .expect("the pair must actually be in a relation")
+            .assessment;
+        (bake, patron, sub, opened_at)
+    }
+
+    /// The exogenous blow the adaptation tests hit a subordinate with: it
+    /// loses a fifth of its people between one collection and the next.
+    ///
+    /// Chosen to be **survivable by the land alone**: at `(1 +
+    /// GROWTH_RATE)² × SHOCK > 1` a community shocked every other epoch still
+    /// recovers, so what the long run measures is the controller's stability
+    /// and not a population dying of the disturbance itself. A harsher blow
+    /// (0.6, tried first) empties the cell whatever the assessment does.
+    ///
+    /// It stands in for the population movers a one-pair fixture cannot fire —
+    /// a war loss (`WAR_LOSS`, 0.3), a famine, a cell turned hostile — and it
+    /// is load-bearing for these tests rather than decorative. **Tribute alone
+    /// can never lower a subordinate's population**: a remittance is capped by
+    /// that epoch's growth increment, so a milked community ends an epoch at
+    /// worst exactly where it began it (`no_subordinate_ends_an_epoch_below_
+    /// where_it_began_it`). The negative half of the health signal therefore
+    /// only ever arrives from *outside* the tribute loop, and a test that did
+    /// not supply it would be measuring a one-signed rule and calling it a
+    /// feedback.
+    const SHOCK: f64 = 0.8;
+
+    #[test]
+    fn a_patron_raises_its_demand_on_a_vassal_that_grew_and_eases_it_on_one_that_shrank() {
+        // Spec §4.3, the corrected mechanism and the whole of it: the patron
+        // feeds back on its subordinate's HEALTH, which is two-signed by
+        // construction. A vassal that grew can bear more; one that shrank is
+        // being over-milked and the demand eases.
+        //
+        // Both directions are asserted in one test deliberately. The rule this
+        // replaces (`assessment += shortfall × ADAPT_RATE`, with
+        // `shortfall = assessment − remittance ≥ 0` by construction) was a
+        // monotone ratchet, and a test that only checked the RISE would have
+        // passed against it and proved nothing at all.
+        //
+        // The two arms differ in exactly one input — whether `SHOCK` fired
+        // between the formation reading and the collection — so nothing but
+        // the sign of the health signal can explain a difference between them.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+
+        // (assessment after collection, the subordinate's population before /
+        // after the epoch, what was remitted) per arm.
+        let mut arms: Vec<(f64, f64, f64, f64)> = Vec::new();
+        for shocked in [false, true] {
+            let (mut bake, patron, sub, opened_at) =
+                adaptive_pair(&geo, &graphs, &capacity, &river_prox, &refugia, &era);
+            assert_eq!(
+                opened_at.to_bits(),
+                (RICH * ASSESS_RATE).to_bits(),
+                "precondition: the relation must open at the assessed rate"
+            );
+            bake.begin_epoch();
+            if shocked {
+                bake.communities[sub].population *= SHOCK;
+            }
+            let seen_last = RICH / 2.0;
+            let pressure = bake.pressure_of(sub, &era);
+            bake.grow(sub, &era, 0.0, pressure);
+            bake.collect_tribute(0.0, &era);
+            let after = bake.communities[sub].population;
+            let assessment = bake
+                .tribute
+                .get(&sub)
+                .expect("the relation must still stand")
+                .assessment;
+            arms.push((
+                assessment,
+                seen_last,
+                after,
+                bake.communities[patron].stores,
+            ));
+        }
+        let (grew_assessment, grew_before, grew_after, grew_remitted) = arms[0];
+        let (shrank_assessment, shrank_before, shrank_after, _) = arms[1];
+
+        // Preconditions, so neither arm can pass on a technicality: the
+        // unshocked vassal must really have ended the epoch larger than the
+        // patron last saw it, and the shocked one really smaller.
+        assert!(
+            grew_after > grew_before,
+            "precondition: the unshocked vassal must have GROWN past what its patron last saw \
+             ({grew_after} vs {grew_before}) — with a flat vassal the signal is zero and \
+             neither arm means anything"
+        );
+        assert!(
+            shrank_after < shrank_before,
+            "precondition: the shocked vassal must have SHRUNK below what its patron last saw \
+             ({shrank_after} vs {shrank_before})"
+        );
+        assert!(
+            grew_remitted > 0.0,
+            "precondition: tribute must have flowed in the growing arm ({grew_remitted})"
+        );
+
+        let opened_at = RICH * ASSESS_RATE;
+        assert!(
+            grew_assessment > opened_at,
+            "a patron whose vassal grew must demand MORE next time: {grew_assessment} vs the \
+             {opened_at} it opened at"
+        );
+        assert!(
+            shrank_assessment < opened_at,
+            "a patron whose vassal shrank must EASE its demand: {shrank_assessment} vs the \
+             {opened_at} it opened at. A one-signed error term is a ratchet, not a feedback \
+             loop, and cannot produce a cycle (spec §4.3)."
+        );
+        assert!(
+            shrank_assessment > 0.0,
+            "and easing must not extinguish the demand: an assessment at exactly zero is an \
+             ABSORBING state under a multiplicative rule ({shrank_assessment})"
+        );
+
+        // The size of the correction, not merely its sign: the demand moves in
+        // proportion to the RELATIVE change in the vassal's population, scaled
+        // by `ADAPT_RATE`. Without this a rule that read the absolute headcount
+        // change, or that moved by a fixed step, would pass on direction alone.
+        for (assessment, before, after, arm) in [
+            (grew_assessment, grew_before, grew_after, "grew"),
+            (shrank_assessment, shrank_before, shrank_after, "shrank"),
+        ] {
+            let signal = (after - before) / before;
+            let expected = opened_at + signal * opened_at * ADAPT_RATE;
+            assert!(
+                (assessment - expected).abs() < 1.0e-12,
+                "{arm} arm: the correction must be ADAPT_RATE × the relative change in the \
+                 vassal's population ({signal}) applied to the standing demand: expected \
+                 {expected}, got {assessment}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_patron_measures_against_its_last_visit_not_against_the_conquest() {
+        // The memory must be REFRESHED at every collection, and the two rules
+        // are told apart by a vassal that is smaller than the patron left it
+        // last time but still larger than it was on the day it was taken:
+        //
+        //   * measured against the last visit (the rule), the signal is
+        //     NEGATIVE and the demand eases;
+        //   * measured against the conquest (a memory frozen at formation),
+        //     the same epoch reads POSITIVE and the demand climbs.
+        //
+        // Opposite signs, so this cannot be satisfied by accident. Without it
+        // the refresh could be deleted with the whole suite still green — the
+        // patron would then be reacting to a reading years stale, which on a
+        // long-lived relation is a different mechanism wearing the same name.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let (mut bake, _patron, sub, opened_at) =
+            adaptive_pair(&geo, &graphs, &capacity, &river_prox, &refugia, &era);
+        let at_conquest = bake.communities[sub].population;
+
+        // Epoch 1: a quiet year. The vassal grows and the demand rises.
+        bake.begin_epoch();
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        bake.collect_tribute(0.0, &era);
+        let after_first = bake.communities[sub].population;
+        let assessment_first = bake
+            .tribute
+            .get(&sub)
+            .expect("the relation must stand")
+            .assessment;
+        assert!(
+            after_first > at_conquest && assessment_first > opened_at,
+            "precondition: the first epoch must leave the vassal larger than it was taken \
+             ({after_first} vs {at_conquest}) and the demand higher than it opened at \
+             ({assessment_first} vs {opened_at})"
+        );
+
+        // Epoch 2: a blow — the same kind of exogenous loss `SHOCK` stands in
+        // for — sized so the vassal ends BETWEEN the two readings.
+        bake.begin_epoch();
+        bake.communities[sub].population = 48.0;
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 25.0, pressure);
+        bake.collect_tribute(25.0, &era);
+        let after_second = bake.communities[sub].population;
+        let assessment_second = bake
+            .tribute
+            .get(&sub)
+            .expect("the relation must stand")
+            .assessment;
+
+        assert!(
+            after_second < after_first && after_second > at_conquest,
+            "precondition: the second epoch must leave the vassal SMALLER than the patron last \
+             left it ({after_second} vs {after_first}) but LARGER than it was at conquest \
+             ({at_conquest}) — otherwise the two readings agree and nothing is being told apart"
+        );
+        assert!(
+            assessment_second < assessment_first,
+            "the patron must read its vassal against its LAST VISIT ({after_first}), where the \
+             signal is negative, not against the conquest ({at_conquest}), where the same epoch \
+             reads as growth: the demand must ease from {assessment_first}, got \
+             {assessment_second}"
+        );
+    }
+
+    #[test]
+    fn no_patron_may_demand_more_than_the_land_could_ever_produce() {
+        // Spec §4.5's divergence bound, stated where the adaptive loop can
+        // actually reach it. The clamp at formation never binds (`ASSESS_RATE`
+        // is far under `ASSESS_MAX`), so before adaptation existed nothing in
+        // the suite could tell a clamped write from an unclamped one — and
+        // deleting the clamp left every test green. A patron returning to find
+        // its vassal several times the size it left is the case that reaches
+        // the ceiling in one step.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            RICH / 2.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        // A standing demand already high on the land, and a memory of a vassal
+        // a tenth of the size the patron now finds.
+        let standing = RICH * ASSESS_MAX * 0.9;
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: standing,
+                since: 0.0,
+                last_seen_population: RICH / 20.0,
+            },
+        );
+
+        bake.begin_epoch();
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        bake.collect_tribute(0.0, &era);
+
+        let ceiling = RICH * ASSESS_MAX;
+        let now = bake.communities[sub].population;
+        let signal = (now - RICH / 20.0) / (RICH / 20.0);
+        let unclamped = standing + signal * standing * ADAPT_RATE;
+        assert!(
+            unclamped > ceiling,
+            "precondition: the correction must actually reach past the ceiling, or the clamp \
+             is not the thing being read ({unclamped} vs {ceiling})"
+        );
+        assert_eq!(
+            bake.tribute
+                .get(&sub)
+                .expect("the relation must still stand")
+                .assessment
+                .to_bits(),
+            ceiling.to_bits(),
+            "the demand must be held at eff_capacity × ASSESS_MAX ({ceiling}), not the \
+             {unclamped} the correction asked for"
+        );
+    }
+
+    #[test]
+    fn a_long_run_assessment_neither_diverges_nor_absorbs_at_zero() {
+        // Spec §4.5's Lorenz claim, DEMONSTRATED. A first-order feedback with
+        // delay — which is exactly what §4.3 is, the delay being the epoch
+        // step — period-doubles into chaos above a critical gain, so
+        // `ADAPT_RATE`'s bound may not be asserted in a comment.
+        //
+        // The multiplicative form carries a second failure mode the additive
+        // one did not: an assessment at exactly `0.0` is ABSORBING
+        // (`signal × 0 × ADAPT_RATE == 0` forever), so a gain large enough to
+        // overshoot through zero kills the relation's demand permanently
+        // rather than making it diverge. Both are checked.
+        //
+        // The subordinate is shocked on alternating epochs (see `SHOCK`), so
+        // the loop is driven in BOTH directions for the whole run rather than
+        // settling onto the one-signed fixed point tribute alone would give it.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let (mut bake, _patron, sub, opened_at) =
+            adaptive_pair(&geo, &graphs, &capacity, &river_prox, &refugia, &era);
+
+        /// Epochs driven — long enough for a period-doubling cascade to show
+        /// itself rather than being hidden in a transient.
+        const EPOCHS: usize = 200;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+        let ceiling = RICH * ASSESS_MAX;
+
+        let mut series: Vec<f64> = vec![opened_at];
+        let mut populations: Vec<f64> = vec![bake.communities[sub].population];
+        let (mut rose, mut eased) = (0_u32, 0_u32);
+        for epoch in 0..EPOCHS {
+            let year = epoch as f64 * EPOCH_YEARS;
+            bake.begin_epoch();
+            if epoch % 2 == 1 {
+                bake.communities[sub].population *= SHOCK;
+            }
+            let pressure = bake.pressure_of(sub, &era);
+            bake.grow(sub, &era, year, pressure);
+            bake.collect_tribute(year, &era);
+            let a = bake
+                .tribute
+                .get(&sub)
+                .expect("the relation must stand for the whole run")
+                .assessment;
+            match a.total_cmp(series.last().expect("seeded")) {
+                Ordering::Greater => rose += 1,
+                Ordering::Less => eased += 1,
+                Ordering::Equal => {}
+            }
+            series.push(a);
+            populations.push(bake.communities[sub].population);
+        }
+
+        // Non-vacuity: the loop must have been driven in both directions, or
+        // "bounded" is a statement about a series that never moved.
+        assert!(
+            rose > 0 && eased > 0,
+            "precondition: the demand must have moved BOTH ways over the run (rose {rose} \
+             times, eased {eased} times) — a one-signed series proves nothing about stability"
+        );
+        // The declared bound (spec §4.5).
+        for (i, &a) in series.iter().enumerate() {
+            assert!(
+                a.is_finite() && (0.0..=ceiling).contains(&a),
+                "epoch {i}: assessment {a} left [0, eff × ASSESS_MAX] = [0, {ceiling}]"
+            );
+            assert!(
+                a > 0.0,
+                "epoch {i}: the assessment reached exactly zero — a multiplicative rule can \
+                 never leave it again (an absorbing state, spec §4.5)"
+            );
+        }
+        // Bounded, and bounded by the DYNAMICS rather than by the clamp: an
+        // assessment pinned to the ceiling would satisfy the bound above while
+        // the loop underneath it had run away.
+        let peak = series
+            .iter()
+            .copied()
+            .max_by(f64::total_cmp)
+            .expect("non-empty");
+        assert!(
+            peak < ceiling,
+            "the assessment rode its clamp ({peak} vs the {ceiling} ceiling): the bound must \
+             come from the feedback, not from the guard-rail behind it"
+        );
+        // Non-divergent: the oscillation's amplitude in the tail may not exceed
+        // its amplitude in the head. A period-doubling cascade shows up here as
+        // a growing relative step.
+        let step = |w: &[f64]| -> f64 {
+            w.windows(2)
+                .map(|p| ((p[1] - p[0]) / p[0]).abs())
+                .max_by(f64::total_cmp)
+                .unwrap_or(0.0)
+        };
+        let quarter = series.len() / 4;
+        let head = step(&series[..quarter]);
+        let tail = step(&series[series.len() - quarter..]);
+        // The measured series settles onto a clean two-cycle whose head and
+        // tail amplitudes agree to ~1e-16, so the comparison is made at a
+        // relative tolerance rather than exactly: what is being rejected is
+        // GROWTH, and float noise on an unchanging amplitude is not growth.
+        const AMPLITUDE_EPS: f64 = 1.0e-9;
+        assert!(
+            tail <= head * (1.0 + AMPLITUDE_EPS),
+            "the assessment's oscillation GREW over the run (head {head}, tail {tail}): a \
+             first-order feedback with delay does that above its critical gain, and \
+             ADAPT_RATE = {ADAPT_RATE} must sit below it"
+        );
+        // The subordinate's fate is deliberately NOT asserted here, and the
+        // omission is a measurement rather than an oversight. Under a
+        // disturbance that never stops, the population's fate is decided by
+        // the disturbance and not by the controller: this fixture's vassal
+        // decays toward zero at EVERY gain tried (it reaches 3.3e-8 at
+        // ADAPT_RATE = 0.2 and 41 at a gain of 5 — the harsher gain "saves" it
+        // only by annihilating the demand), so a survival assertion here would
+        // pin the metronome, not the loop. Survival at the scale the model
+        // actually claims it — a subordinate never ends an epoch below where
+        // it began — is owned by `no_subordinate_ends_an_epoch_below_where_it_
+        // began_it`, over a fixture with no exogenous blow in it at all. What
+        // this run leaves recorded is the shape of the trap: a vassal held
+        // below the size at which its own increment covers the standing demand
+        // is milked flat, and a flat vassal emits signal `0.0`, so the demand
+        // stops easing. That is a finding about the mechanism, not a defect in
+        // it, and spec §5's secondary axis is where it is adjudicated.
+        let low = populations
+            .iter()
+            .copied()
+            .min_by(f64::total_cmp)
+            .expect("non-empty");
+        assert!(
+            low.is_finite() && low >= 0.0,
+            "a population may fall under a disturbance, but never below zero or out of the \
+             reals: {low}"
         );
     }
 
@@ -3347,6 +3864,7 @@ mod tests {
                     patron,
                     assessment: 1.0,
                     since: 0.0,
+                    last_seen_population: bake.communities[s].population,
                 },
             );
         }

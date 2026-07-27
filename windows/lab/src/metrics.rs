@@ -5559,15 +5559,24 @@ mod tests {
         // neither parent's solo-tree finding on its own, since both
         // campaigns' world-byte changes compose (see `almanac`'s seed-42
         // output and `cli/tests/branches_identity.rs`).
+        //
+        // The Tithe's adaptive demand (spec §4.3) moves it again — to a
+        // **coastal tropical-rainforest** cell. Nothing about biomes
+        // changed: a patron that corrects its demand each epoch collects a
+        // different amount, so its subordinates grow and fail on a different
+        // schedule, and seed 42's occupation history — which cells are held
+        // when the bake closes — is redrawn. Which cell goblin's flagship
+        // wins follows the history, as it has followed every world-byte
+        // change before it. Re-derived empirically, not carried.
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
+            MetricValue::Text("tropical-rainforest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

@@ -9,9 +9,9 @@ The measure-don't-narrate payoff check for history-first placement. All values a
 
 ## Seed-42 headline (built to `BuildDepth::Full`)
 
-- **migration-fired-at-volume**: 266 migration events (floor 5). PASS — climate-driven displacement fires at volume.
-- **territories-separated**: mean pairwise region overlap 0.0644 (ceiling 0.25; raw cell-set overlap 0.0000 is a structural 0). PASS — the four goblinoids occupy strongly distinct countries. **The diversity payoff landed.**
-- **stratigraphy-emerged**: 280/386 occupied sites re-occupied (0.7254); depth/capacity correlation -0.2181 (negative). PASS on emergence and on the *coupling*; the negative sign is the falsification finding above.
+- **migration-fired-at-volume**: 222 migration events (floor 5). PASS — climate-driven displacement fires at volume.
+- **territories-separated**: mean pairwise region overlap 0.0584 (ceiling 0.25; raw cell-set overlap 0.0000 is a structural 0). PASS — the four goblinoids occupy strongly distinct countries. **The diversity payoff landed.**
+- **stratigraphy-emerged**: 255/338 occupied sites re-occupied (0.7544); depth/capacity correlation -0.3048 (negative). PASS on emergence and on the *coupling*; the negative sign is the falsification finding above.
 
 ## Cross-seed robustness sweep (Settlements depth)
 
@@ -19,12 +19,12 @@ Per-seed floors: migration >= 5, region overlap < 0.25, re-occupied sites >= 2, 
 
 | seed | migration | region overlap | occupied | restacked | fraction | depth/capacity corr |
 |---|---|---|---|---|---|---|
-| 1 | 42 | 0.0050 | 202 | 86 | 0.4257 | -0.5382 |
-| 2 | 44 | 0.0454 | 186 | 132 | 0.7097 | -0.1473 |
-| 3 | 211 | 0.0157 | 281 | 200 | 0.7117 | -0.3527 |
-| 7 | 93 | 0.0127 | 277 | 136 | 0.4910 | -0.4996 |
-| 13 | 64 | 0.0487 | 206 | 133 | 0.6456 | -0.2872 |
-| 42 | 266 | 0.0644 | 386 | 280 | 0.7254 | -0.2181 |
+| 1 | 56 | 0.0049 | 197 | 95 | 0.4822 | -0.6104 |
+| 2 | 31 | 0.0261 | 183 | 124 | 0.6776 | -0.2250 |
+| 3 | 151 | 0.0153 | 303 | 215 | 0.7096 | -0.2761 |
+| 7 | 61 | 0.0146 | 281 | 163 | 0.5801 | -0.4970 |
+| 13 | 73 | 0.0468 | 214 | 143 | 0.6682 | -0.2778 |
+| 42 | 222 | 0.0584 | 338 | 255 | 0.7544 | -0.3048 |
 | 100 | 277 | 0.0057 | 79 | 38 | 0.4810 | -0.6295 |
-| 256 | 412 | 0.0057 | 143 | 71 | 0.4965 | -0.5624 |
-| 777 | 376 | 0.0561 | 251 | 173 | 0.6892 | -0.2985 |
+| 256 | 425 | 0.0054 | 152 | 74 | 0.4868 | -0.5594 |
+| 777 | 318 | 0.0825 | 256 | 189 | 0.7383 | -0.3117 |
