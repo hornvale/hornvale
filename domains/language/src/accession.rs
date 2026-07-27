@@ -29,6 +29,19 @@
 //! 15-concept Actants cohort back into a 91-concept baseline before adding its
 //! own ~20. Outside a bump the rule is absolute; do not read this exception as
 //! permission to edit a cohort in an ordinary campaign.
+//!
+//! **The bump must be independently necessitated — it is not a lever to pull
+//! for this.** The Wearing's bump was forced by its phonology rework
+//! (`draw_candidate` → `draw_syllables` reads `Phonology::nuclei`, which that
+//! campaign changed), and the re-founding rode along on a regeneration that
+//! was happening anyway. Bumping `ROOT_EPOCH` *in order to* unlock a
+//! re-founding would invert the argument and hollow out the rule above: read
+//! literally, "a bump permits a re-founding" would let any campaign buy its
+//! way past The Accession. The real deterrent is the price — a bump reseeds
+//! every word in every world and owes a full census regeneration and
+//! re-baseline — but the principle does not rest on the price alone. If the
+//! campaign would not have bumped the epoch anyway, it may not re-found the
+//! cohort.
 #![warn(missing_docs)]
 
 /// Concepts grouped by accession epoch: cohort `i` is epoch `i`. Cohort 0 was
