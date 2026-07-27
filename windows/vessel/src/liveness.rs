@@ -6,6 +6,7 @@
 //! (that is later Quickening work); domains are untouched (The Walk §11).
 
 use crate::agent::{settlement_position, walk_depth};
+use crate::clock::{climb_factor, cost_ticks, days_of, ticks_per_local_day};
 use crate::interior::{
     AnchorId, Interior, SeamKind, interior_of, landing, route_within, seam_kind, warmth_at,
 };
@@ -19,7 +20,7 @@ use hornvale_species::{ActivityCycle, MetabolicClass};
 /// A derived non-player agent: a minted entity, a home and a resource room,
 /// its species, and that species' activity-cycle. Derived from the genesis
 /// world, never stored (re-derivable).
-/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness)
+/// type-audit: bare-ok(identifier-text: label), bare-ok(identifier-text: species), bare-ok(ratio: deliberation_latency), bare-ok(ratio: time_horizon), bare-ok(ratio: boldness), bare-ok(ratio: mass_kg)
 #[derive(Clone, Debug)]
 pub struct Npc {
     /// The NPC's minted ledger entity (subject of its future `agent-at` facts).
@@ -83,6 +84,13 @@ pub struct Npc {
     /// elemental does not fear the eldritch. Read by the Danger drive against the
     /// cell's hazards for per-kind fear.
     pub threat_niche: ThreatNiche,
+    /// The species' adult body mass in kilograms (`BiosphereTraits::mass`),
+    /// threaded from `biosphere_registry` at derivation beside the metabolic
+    /// class. Read by the action clock to scale every action's cost
+    /// allometrically (The Action Clock); nothing else consumes it. Bare `f64`
+    /// rather than the kernel's `Mass`, matching `clock::tempo`'s parameter —
+    /// it is only ever consumed as the ratio `mass_kg / REFERENCE_MASS_KG`.
+    pub mass_kg: f64,
     /// A short human label for prose ("the herder").
     pub label: String,
 }
@@ -3481,29 +3489,18 @@ const PLAN_BUDGET: usize = 1_000;
 /// already treats this many node-expansions as "generous for the short
 /// local journeys every derived NPC actually walks" (`PLAN_BUDGET`'s own
 /// doc), and catch-up is exactly that kind of short local journey, just
-/// hopping the interior's anchor graph instead of expanding A* nodes. At
-/// [`MOVE_WITHIN_DURATION`] per hop this is generously past a full day of
-/// continuous replay before the cap can bite (spec §5.3's diagram: "a day"
-/// still reads EXACT), so it is the "a season" column, not "a day", where a
-/// real absence starts landing on the approximate side — a long-running
-/// creature's absence costs O(1) work rather than one iteration per
-/// within-room hop that would otherwise have occurred.
+/// hopping the interior's anchor graph instead of expanding A* nodes. At one
+/// within-room step per hop (`clock::base_ticks`'s `MoveWithin` dial — 1_000
+/// ticks, a hundredth of an Earth-like day at reference mass) this is
+/// generously past a full day of continuous replay before the cap can bite
+/// (spec §5.3's diagram: "a day" still reads EXACT), so it is the "a season"
+/// column, not "a day", where a real absence starts landing on the
+/// approximate side — a long-running creature's absence costs O(1) work
+/// rather than one iteration per within-room hop that would otherwise have
+/// occurred. A creature far heavier than reference pays a longer hop and so
+/// reaches the cap sooner, which is the action clock's intent, not a
+/// regression: a bear crosses a room more slowly than a person does.
 const CATCH_UP_STEP_CAP: usize = PLAN_BUDGET;
-
-/// One action's duration: the one authored action-duration judgment call
-/// (spec §8). Small relative to a drive cycle (SUSTENANCE's ~5.7-day rise) so
-/// a multi-room journey still resolves within a single `wait`.
-const MOVE_DURATION: f64 = 0.1;
-
-/// One WITHIN-ROOM step's duration (The Threshold's crossing, task 6) — a
-/// small fraction of [`MOVE_DURATION`], deliberately: crossing a room is a
-/// much shorter journey than crossing between rooms (at most 8 anchor-hops,
-/// `INTERIOR_WARMTH_BUDGET`'s own justification, versus the mesh-scale
-/// distances a between-room walk covers), so it should cost a proportionally
-/// smaller slice of a `wait`. A round fraction of `MOVE_DURATION` rather than
-/// a fresh guess, so the two movement scales stay comparable by construction
-/// as either is retuned; not itself measured against anything.
-const MOVE_WITHIN_DURATION: f64 = MOVE_DURATION / 10.0;
 
 /// The per-NPC step cap on `DriveMovements::step`'s inner loop — the
 /// strict-progress guard's backstop: even if a decision loop somehow failed
@@ -3630,7 +3627,7 @@ fn eaten_fact(entity: EntityId, day: f64, provenance: &str) -> Fact {
 /// once it knows water — committing a dated `agent-at`/`drank` at each
 /// executed step. Holds a `Terrain` to compute belief and exploration
 /// mid-walk. Run through c6's `tick`.
-/// type-audit: bare-ok(return)
+/// type-audit: bare-ok(ratio: day_length_std)
 pub struct DriveMovements<'a> {
     /// The NPCs this tick advances.
     pub npcs: Vec<Npc>,
@@ -3640,6 +3637,13 @@ pub struct DriveMovements<'a> {
     pub to: WorldTime,
     /// The drive parameters.
     pub params: DriveParams,
+    /// The world's rotation period in standard days (`Calendar::day_length`),
+    /// `None` on a tidally-locked world. The action clock divides the planet's
+    /// day into an exact integer number of ticks (The Action Clock, spec §4.1),
+    /// so the scheduler needs the day length the same way it needs the drive
+    /// parameters. Read by the shared clock (the queue's tick scale) and by
+    /// every charge `advance_one` and `catch_up` make against `clock::days_of`.
+    pub day_length_std: Option<f64>,
     /// The elevation field belief and exploration read.
     pub terrain: &'a dyn Terrain,
 }
@@ -3937,6 +3941,7 @@ fn catch_up(
     frozen: &Ledger,
     out: &[Fact],
     cap: usize,
+    day_length_std: Option<f64>,
 ) -> Mode {
     let mut day = entry_day;
     let mut steps = 0usize;
@@ -3987,13 +3992,21 @@ fn catch_up(
             // against the predicate rather than a fresh `matches!`, so a
             // future replayable action needs no second edit here.
             Intent::Do(action) if is_replayable_in_catch_up(&action) => {
-                let Action::MoveWithin(next) = action else {
-                    unreachable!("is_replayable_in_catch_up currently admits only MoveWithin");
-                };
-                day += MOVE_WITHIN_DURATION;
+                // Charged through the SAME action clock the live walk charges
+                // through (`cost_ticks`, The Action Clock spec §3), with this
+                // creature's own mass — a replay that advanced time at a
+                // different rate than the walk it is reconstructing would drift
+                // from it by construction, which is exactly the second-
+                // derivation failure `decide_step` is shared to avoid. No
+                // terrain factor: a within-room step does not change room, so
+                // there is no elevation pair to climb.
+                day += days_of(cost_ticks(&action, npc.mass_kg, 1.0), day_length_std);
                 if day > horizon {
                     break;
                 }
+                let Action::MoveWithin(next) = action else {
+                    unreachable!("is_replayable_in_catch_up currently admits only MoveWithin");
+                };
                 occupancy.walk(npc.entity, interior, next);
             }
             // A committing action (Drink/Rest/Eat/coarse MoveTo): stop
@@ -4082,56 +4095,54 @@ impl<'a> DriveMovements<'a> {
             self.from,
             &mut afraid_memo,
         );
+        // THE SHARED CLOCK (The Action Clock T5, spec §4): every creature is
+        // queued at the moment it NEXT acts, and the whole population advances
+        // by repeatedly popping whoever acts soonest. The key is
+        // `(ticks, EntityId)` in a `BTreeSet` — integer time so the order is
+        // exact (the `astar` reason: accumulated `f64` addition is not a total
+        // order), with the entity id as the tie-break, so the emitted sequence
+        // is a pure function of the frozen ledger and NEVER of how `npcs`
+        // happened to be listed.
+        //
+        // Perception is untouched by this (spec §5): `alarm` above and each
+        // creature's `memory` below are both built from `frozen` BEFORE anyone
+        // moves, and `advance_one` never sees another creature's mid-tick
+        // state. Interleaving reorders acting, not perceiving — which is what
+        // keeps the alarm wave terminating.
+        //
+        // The per-entity state is the whole of what must survive a pop: the
+        // `Npc`, its `WalkState` (spec §6's nine loop locals), and its
+        // `HazardMemory` — the last of which is here rather than in
+        // `WalkState::begin` because computing it needs `&mut afraid_memo`.
+        // It is a fold over `frozen`, so it is computed ONCE per creature, as
+        // the sequential loop did, and carried rather than recomputed per pop.
+        let mut states: std::collections::BTreeMap<EntityId, (Npc, WalkState, HazardMemory)> =
+            std::collections::BTreeMap::new();
+        let mut queue: std::collections::BTreeSet<(u64, EntityId)> =
+            std::collections::BTreeSet::new();
+        // Ticks per STANDARD day on this world: a local day is exactly
+        // `ticks_per_local_day` ticks (spec §4.1), so this is the inverse of
+        // `clock::days_of` and the two agree to the tick.
+        let per_day = ticks_per_local_day(self.day_length_std) as f64;
+        let scale = match self.day_length_std.filter(|d| d.is_finite() && *d > 0.0) {
+            Some(d) => per_day / d,
+            None => per_day,
+        };
+        let to_ticks = (self.to.day * scale).round() as u64;
+        let from_ticks = (self.from.day * scale).round() as u64;
         for npc in &self.npcs {
-            let mut pos = agent_position(frozen, npc, self.from);
-            // THE THRESHOLD's crossing: derive this room's interior and
-            // arrive at its landing anchor — the entry point for a creature
-            // crossing INTO the room from the coarse (room-graph) layer.
-            // Re-derived (and re-arrived) every time `pos` changes below,
-            // since an `AnchorId` is only meaningful paired with the SPECIFIC
-            // `Interior` it indexes (`Occupancy`'s own doc).
-            let mut interior = interior_of(&pos, self.terrain);
+            let mut st = WalkState::begin(frozen, npc, &self.npcs, self.from, self.terrain);
+            // THE THRESHOLD's crossing: arrive at the landing anchor of the
+            // interior `WalkState::begin` just derived — the entry point for a
+            // creature crossing INTO the room from the coarse (room-graph)
+            // layer. Re-derived (and re-arrived) every time `st.pos` changes in
+            // `advance_one`, since an `AnchorId` is only meaningful paired with
+            // the SPECIFIC `Interior` it indexes (`Occupancy`'s own doc).
             occupancy.arrive(
                 npc.entity,
-                &pos,
-                &interior,
-                seam_kind(self.terrain.is_built(&pos)),
-            );
-            let mut day = self.from.day;
-            // A scratch ledger view isn't available; track drank locally: derive
-            // the starting last-drank day from `frozen`, then simulate forward,
-            // updating a local `last_drank` as we emit `DRANK` facts.
-            let mut last_drank = frozen
-                .find(DRANK)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Likewise the last rest day (The Slumber): fatigue is time since it,
-            // reset when a `rested` fact is emitted.
-            let mut last_rested = frozen
-                .find(RESTED)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Likewise the last meal day (The Provender): hunger is a path
-            // integral since it, reset when an `eaten` fact is emitted.
-            let mut last_ate = frozen
-                .find(EATEN)
-                .filter(|f| f.subject == npc.entity)
-                .filter_map(|f| f.day)
-                .fold(0.0_f64, f64::max);
-            // Belief and exploration state, evolved locally across the walk (the
-            // fold includes this tick's own emitted moves). Seed belief from the
-            // pre-tick history; grow it whenever the agent stands in water.
-            // The Tidings: seed from the BAND's pooled belief (co-located
-            // members share what they know), not the creature's alone.
-            let mut believed = shared_believed_water(
-                frozen,
-                npc,
-                &self.npcs,
-                self.from,
-                self.terrain,
-                PLAN_BUDGET,
+                &st.pos,
+                &st.interior,
+                seam_kind(self.terrain.is_built(&st.pos)),
             );
             // The Haunt + The Phantom: the ground this creature remembers being
             // frightened on — a fold over its committed (pre-tick) history,
@@ -4148,14 +4159,6 @@ impl<'a> DriveMovements<'a> {
                 &self.npcs,
                 &mut afraid_memo,
             );
-            let mut visited: std::collections::BTreeSet<RoomAddr> =
-                std::collections::BTreeSet::new();
-            visited.insert(pos.clone());
-            let mut steps = 0usize;
-            // The commitment mode, carried across this walk's steps (session-
-            // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
-            let mut mode = Mode::Idle;
-
             // THE THRESHOLD's catch-up (task 7, spec §5): close the
             // observer-effect gap this function's own doc names above. The
             // landing anchor `occupancy.arrive` just placed this creature at
@@ -4173,178 +4176,58 @@ impl<'a> DriveMovements<'a> {
             // `occupancy` entries THIS creature alone owns — nothing here
             // reads another creature's occupancy, so which creature catches
             // up first cannot change the result (spec §5.4's own
-            // order-independence requirement).
-            mode = catch_up(
+            // order-independence requirement). It runs BEFORE the shared clock
+            // opens (The Action Clock T5) for the same reason: every creature's
+            // reconstruction reads only `frozen` and its own state, so doing
+            // them all in the setup pass — rather than interleaved with the
+            // queue — keeps the order-independence above trivially true.
+            st.mode = catch_up(
                 room_entry_day(frozen, npc, self.from),
                 self.from.day,
-                &pos,
+                &st.pos,
                 npc,
                 self.terrain,
-                &mut believed,
+                &mut st.believed,
                 &memory,
                 &alarm,
-                &visited,
+                &st.visited,
                 &mut occupancy,
-                &interior,
-                mode,
+                &st.interior,
+                st.mode,
                 &self.params,
                 PLAN_BUDGET,
                 frozen,
                 &out,
                 CATCH_UP_STEP_CAP,
+                self.day_length_std,
             );
 
-            loop {
-                if day > self.to.day || steps >= MAX_STEPS {
-                    break;
-                }
-                steps += 1;
-                // The full drive-stack judgment (`decide_step`, factored out
-                // for The Threshold task 7 — see its own doc): builds the
-                // `Perceived` view and every drive exactly as this walk
-                // always has, and arbitrates. `drive` (thirst's own urgency)
-                // is threaded out for the `Hold` arm's closed-form jump below.
-                let (resolution, drive) = decide_step(
-                    day,
-                    &pos,
-                    npc,
-                    self.terrain,
-                    &mut believed,
-                    &memory,
-                    &alarm,
-                    &visited,
-                    last_drank,
-                    last_ate,
-                    last_rested,
-                    occupancy.at(npc.entity).map(|a| (&interior, a)),
-                    mode,
-                    &self.params,
-                    PLAN_BUDGET,
-                    frozen,
-                    &out,
-                );
-                mode = resolution.mode;
-                match resolution.intent {
-                    Intent::Do(Action::MoveTo(n)) => {
-                        day += MOVE_DURATION;
-                        if day > self.to.day {
-                            break;
-                        }
-                        // Provenance follows the committed errand (the mode):
-                        // thirst distinguishes BELIEVED (beelining a known
-                        // source) from IGNORANT (exploring blind); thermal names
-                        // the comfort-seeking; homing names the sated walk back.
-                        let provenance = match mode {
-                            Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
-                            Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
-                            Mode::Pursuing(DriveKind::Hunger) => {
-                                "foraged toward richer ground (hunger)"
-                            }
-                            Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
-                            Mode::Pursuing(DriveKind::Social) => {
-                                "drifted homeward, missing its people (belonging)"
-                            }
-                            Mode::Pursuing(DriveKind::Thirst) if believed.is_some() => {
-                                "went down to the river it knew (thirst)"
-                            }
-                            Mode::Pursuing(DriveKind::Thirst) => {
-                                "wandered, having found no water yet (thirst)" // ignorant
-                            }
-                            Mode::Homing | Mode::Idle => "walking home (sated)",
-                        };
-                        out.push(agent_at_fact(npc.entity, &n, day, provenance));
-                        visited.insert(n.clone());
-                        pos = n;
-                        // Crossing into a DIFFERENT room: re-derive ITS
-                        // interior and re-arrive at ITS landing anchor. The
-                        // anchor reached in the OLD room's graph means
-                        // nothing here — an `AnchorId` is a vector offset
-                        // into the SPECIFIC `Interior` it indexes.
-                        interior = interior_of(&pos, self.terrain);
-                        occupancy.arrive(
-                            npc.entity,
-                            &pos,
-                            &interior,
-                            seam_kind(self.terrain.is_built(&pos)),
-                        );
-                    }
-                    Intent::Do(Action::Drink) => {
-                        out.push(drank_fact(
-                            npc.entity,
-                            day,
-                            "drank from the river (thirst sated)",
-                        ));
-                        last_drank = day;
-                    }
-                    Intent::Do(Action::Rest) => {
-                        out.push(rested_fact(
-                            npc.entity,
-                            day,
-                            "slept at home (fatigue eased)",
-                        ));
-                        last_rested = day;
-                        // Sleep through the off-phase in one jump to the next
-                        // waking, rather than re-resting every step (The Slumber).
-                        day = next_awake_day(npc.activity, self.terrain, &pos, day);
-                        if day > self.to.day {
-                            break;
-                        }
-                    }
-                    Intent::Do(Action::Eat) => {
-                        out.push(eaten_fact(
-                            npc.entity,
-                            day,
-                            "grazed the productive ground (hunger sated)",
-                        ));
-                        last_ate = day;
-                    }
-                    Intent::Hold => {
-                        // Idle (or unreachable): jump to the next act-crossing
-                        // in closed form rather than spinning day-by-day
-                        // (`hold_step`, shared with catch-up below — see its
-                        // own doc for the physical meaning of the jump and
-                        // the strict-progress guarantee that bounds it).
-                        match hold_step(
-                            day,
-                            &pos,
-                            npc,
-                            self.terrain,
-                            drive,
-                            &self.params,
-                            self.to.day,
-                        ) {
-                            HoldStep::Stall => continue,
-                            HoldStep::GiveUp => break,
-                            HoldStep::Advance(next) => day = next,
-                        }
-                    }
-                    Intent::Do(Action::MoveWithin(next)) => {
-                        // THE THRESHOLD's crossing, now live. Fine movement
-                        // writes NO fact (decision 0069 — `MoveWithin`'s
-                        // effect is bubble-local occupancy, never
-                        // serialized), but it still costs time: a room is
-                        // crossed step by step, not instantaneously, so
-                        // `day` advances by the (much smaller) within-room
-                        // duration rather than standing still.
-                        day += MOVE_WITHIN_DURATION;
-                        if day > self.to.day {
-                            break;
-                        }
-                        // `Thermal::affordance`'s within-room branch only
-                        // ever proposes an anchor reachable by
-                        // `route_within`'s FIRST hop, which is by
-                        // construction adjacent to wherever the creature
-                        // currently stands, so `walk` should always succeed
-                        // here. Its bool return is still checked (not
-                        // `unwrap`ped) rather than leaning on that
-                        // invariant: a refused walk simply leaves the
-                        // creature where it was, having still spent the
-                        // tick's time trying — no different in kind from a
-                        // room-scale `Hold`.
-                        occupancy.walk(npc.entity, &interior, next);
-                    }
-                }
+            queue.insert((from_ticks, npc.entity));
+            states.insert(npc.entity, (npc.clone(), st, memory));
+        }
+        while let Some(&(t, e)) = queue.iter().next() {
+            queue.remove(&(t, e));
+            let Some((npc, st, memory)) = states.get_mut(&e) else {
+                continue;
+            };
+            let npc = npc.clone();
+            let memory = memory.clone();
+            if !self.advance_one(frozen, &npc, st, &mut occupancy, &alarm, &memory, &mut out) {
+                // This creature's walk is over — past `to`, out of `MAX_STEPS`,
+                // or halted by an arm's own stop condition. It is not requeued.
+                continue;
             }
+            // `advance_one` has already advanced `st.day` by what the action
+            // cost, so the requeue time is READ FROM THE STATE rather than
+            // recomputed: one source of truth for when a creature next acts.
+            let next = (st.day * scale).round() as u64;
+            if next > to_ticks {
+                // `round` is monotone, so this can only fire when `st.day`
+                // genuinely exceeds `to.day` — exactly the guard `advance_one`
+                // would apply on the next pop, applied a pop early.
+                continue;
+            }
+            queue.insert((next, e));
         }
         (out, occupancy)
     }
@@ -4356,6 +4239,327 @@ impl<'a> TickSystem for DriveMovements<'a> {
     }
     fn step(&self, frozen: &Ledger) -> Vec<Fact> {
         self.step_with_occupancy(frozen).0
+    }
+}
+
+/// The state of ONE creature's walk through a tick — the nine pieces of
+/// per-creature state that `DriveMovements::step` used to hold in loop locals
+/// (The Action Clock, spec §6).
+///
+/// Hoisting them into a struct is what lets a walk be advanced one action at a
+/// time by [`DriveMovements::advance_one`] instead of run to completion in a
+/// single pass, which in turn is what lets several creatures interleave on a
+/// shared clock. The extraction is behaviour-preserving on its own: the fields
+/// are the same values, initialised in the same way, mutated in the same order.
+///
+/// Tick-local and re-derived, never persisted — like [`Mode`], which it carries.
+struct WalkState {
+    /// Where the creature currently stands.
+    pos: RoomAddr,
+    /// How far into the interval the walk has got.
+    day: f64,
+    /// The day of its most recent drink, `frozen`-seeded and advanced by this
+    /// walk's own emitted `drank` facts.
+    last_drank: f64,
+    /// The day of its most recent sleep, the fatigue twin of `last_drank`.
+    last_rested: f64,
+    /// The day of its most recent meal, the hunger twin of `last_drank`.
+    last_ate: f64,
+    /// The water source it believes in, seeded from the band's pooled belief and
+    /// grown whenever it stands in water.
+    believed: Option<RoomAddr>,
+    /// The cells this walk has already stood on — the explorer's frontier.
+    visited: std::collections::BTreeSet<RoomAddr>,
+    /// How many decisions this walk has taken, against `MAX_STEPS`.
+    steps: usize,
+    /// The commitment mode carried across this walk's steps (hysteresis).
+    mode: Mode,
+    /// The derived interior of the room at `pos` (The Threshold) — the anchor
+    /// graph `Thermal`'s within-room branch routes over, and the graph the
+    /// creature's `Occupancy` entry indexes into. Re-derived every time `pos`
+    /// changes, since an `AnchorId` is only meaningful paired with the SPECIFIC
+    /// `Interior` it indexes (`Occupancy`'s own doc). The tenth piece of
+    /// per-creature walk state, and the one this branch added.
+    interior: Interior,
+}
+
+impl WalkState {
+    /// Open a walk for `npc` at `from`, deriving every field from the FROZEN
+    /// pre-tick ledger — nothing here reads another creature's mid-tick state
+    /// (spec §5), `band` being consulted only through `shared_believed_water`'s
+    /// own frozen reads.
+    fn begin(
+        frozen: &Ledger,
+        npc: &Npc,
+        band: &[Npc],
+        from: WorldTime,
+        terrain: &dyn Terrain,
+    ) -> WalkState {
+        let pos = agent_position(frozen, npc, from);
+        let day = from.day;
+        // A scratch ledger view isn't available; track drank locally: derive
+        // the starting last-drank day from `frozen`, then simulate forward,
+        // updating a local `last_drank` as we emit `DRANK` facts.
+        let last_drank = frozen
+            .find(DRANK)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Likewise the last rest day (The Slumber): fatigue is time since it,
+        // reset when a `rested` fact is emitted.
+        let last_rested = frozen
+            .find(RESTED)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Likewise the last meal day (The Provender): hunger is a path
+        // integral since it, reset when an `eaten` fact is emitted.
+        let last_ate = frozen
+            .find(EATEN)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        // Belief and exploration state, evolved locally across the walk (the
+        // fold includes this tick's own emitted moves). Seed belief from the
+        // pre-tick history; grow it whenever the agent stands in water.
+        // The Tidings: seed from the BAND's pooled belief (co-located
+        // members share what they know), not the creature's alone.
+        let believed = shared_believed_water(frozen, npc, band, from, terrain, PLAN_BUDGET);
+        let mut visited: std::collections::BTreeSet<RoomAddr> = std::collections::BTreeSet::new();
+        visited.insert(pos.clone());
+        let steps = 0usize;
+        // The commitment mode, carried across this walk's steps (session-
+        // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
+        let mode = Mode::Idle;
+        // THE THRESHOLD's crossing: the room's own interior, derived from the
+        // terrain the same way every other read of it is. The caller pairs this
+        // with an `Occupancy::arrive` at its landing anchor — that write needs a
+        // `&mut Occupancy`, which is shared across the whole population and so
+        // lives one level up rather than in this per-creature constructor.
+        let interior = interior_of(&pos, terrain);
+        WalkState {
+            pos,
+            day,
+            last_drank,
+            last_rested,
+            last_ate,
+            believed,
+            visited,
+            steps,
+            mode,
+            interior,
+        }
+    }
+}
+
+impl<'a> DriveMovements<'a> {
+    /// Advance ONE creature by ONE decision-and-act: perceive, arbitrate, act,
+    /// append any emitted facts to `out`, and update `st`. Returns `false` when
+    /// this walk is over — past `to`, out of `MAX_STEPS`, or halted by one of
+    /// the arms' own stop conditions — and `true` when it should be advanced
+    /// again.
+    ///
+    /// Every cross-agent read is FROZEN-based (spec §5): `frozen` is the
+    /// pre-tick ledger and `alarm` and `memory` were both built from it before
+    /// any creature moved. Nothing here can observe another creature's mid-tick
+    /// position, which is what keeps the alarm wave terminating and the emitted
+    /// order a pure function of the frozen ledger.
+    ///
+    /// The eighth argument is the shared `Occupancy` (The Threshold): it is
+    /// population-wide state, keyed by `EntityId`, so it cannot live in the
+    /// per-creature `WalkState` the way the other nine pieces do — the same
+    /// reason `decide_step` and `catch_up` carry the allow below.
+    #[allow(clippy::too_many_arguments)]
+    fn advance_one(
+        &self,
+        frozen: &Ledger,
+        npc: &Npc,
+        st: &mut WalkState,
+        occupancy: &mut Occupancy,
+        alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+        memory: &HazardMemory,
+        out: &mut Vec<Fact>,
+    ) -> bool {
+        if st.day > self.to.day || st.steps >= MAX_STEPS {
+            return false;
+        }
+        st.steps += 1;
+        // One decide step's FULL judgment (`decide_step`, factored out for The
+        // Threshold task 7 — see its own doc): the standing-in-water belief
+        // update, the `Perceived` view, every drive in the stack, and the
+        // arbitration, exactly as this walk has always computed them. Catch-up
+        // (`catch_up`, above) runs this SAME function over its own replay, so
+        // the live walk and the reconstruction of an unobserved creature's
+        // position can never diverge in HOW a resolution is reached from a
+        // given set of arguments. `drive` — thirst's own urgency — is threaded
+        // back out for the `Hold` arm's closed-form jump below.
+        //
+        // The interior handed in is the one this creature is actually standing
+        // in, at the anchor `occupancy` says it stands at (The Threshold task
+        // 6), so `Thermal` can seek warmth WITHIN the room rather than feeling
+        // nothing indoors at all.
+        let (resolution, drive) = decide_step(
+            st.day,
+            &st.pos,
+            npc,
+            self.terrain,
+            &mut st.believed,
+            memory,
+            alarm,
+            &st.visited,
+            st.last_drank,
+            st.last_ate,
+            st.last_rested,
+            occupancy.at(npc.entity).map(|a| (&st.interior, a)),
+            st.mode,
+            &self.params,
+            PLAN_BUDGET,
+            frozen,
+            &*out,
+        );
+        st.mode = resolution.mode;
+        // THE ACTION CLOCK (spec §2 rung 1, §3): every action costs time, and
+        // what it costs depends on the creature doing it. Charged HERE, once,
+        // above the behaviour match, so the cost model is TOTAL by construction
+        // — a future `Action` cannot be added for free by forgetting an arm.
+        // Historically only `MoveTo` charged, and it charged the same flat
+        // `MOVE_DURATION` for every creature over every kind of ground; that
+        // constant is gone, and `clock::base_ticks` is now its single home —
+        // including The Threshold's within-room step, which arrived on this
+        // branch with its own authored `MOVE_WITHIN_DURATION` and is now the
+        // clock's fifth dial instead (`Action::MoveWithin`), at the same tenth
+        // of a `MoveTo` it was authored as, and now scaled by body mass like
+        // every other act: a bear crosses a room more slowly than a person.
+        //
+        // The climb factor is a `MoveTo` modifier alone (spec §3.1) — drinking
+        // is not steeper in the mountains, and a within-room step does not
+        // change room, so there is no elevation pair to read — and it is read
+        // from the terrain BEFORE `st.pos` moves. `Rest` pays here only for
+        // lying down; the sleep itself remains the jump-to-waking below, a
+        // phase and not a cost.
+        //
+        // The interval guard stays exactly where `MoveTo`'s was: charging is
+        // what can carry a walk past `to.day`, so it is checked immediately
+        // after the charge and before anything is emitted.
+        if let Intent::Do(action) = &resolution.intent {
+            let ground = match action {
+                Action::MoveTo(n) => {
+                    climb_factor(self.terrain.elevation(&st.pos), self.terrain.elevation(n))
+                }
+                _ => 1.0,
+            };
+            st.day += days_of(cost_ticks(action, npc.mass_kg, ground), self.day_length_std);
+            if st.day > self.to.day {
+                return false;
+            }
+        }
+        match resolution.intent {
+            Intent::Do(Action::MoveTo(n)) => {
+                // Provenance follows the committed errand (the mode):
+                // thirst distinguishes BELIEVED (beelining a known
+                // source) from IGNORANT (exploring blind); thermal names
+                // the comfort-seeking; homing names the sated walk back.
+                let provenance = match st.mode {
+                    Mode::Pursuing(DriveKind::Thermal) => "sought a kinder clime (comfort)",
+                    Mode::Pursuing(DriveKind::Fatigue) => "turned home, weary, to rest",
+                    Mode::Pursuing(DriveKind::Hunger) => "foraged toward richer ground (hunger)",
+                    Mode::Pursuing(DriveKind::Danger) => "fled the uncanny ground (fear)",
+                    Mode::Pursuing(DriveKind::Social) => {
+                        "drifted homeward, missing its people (belonging)"
+                    }
+                    Mode::Pursuing(DriveKind::Thirst) if st.believed.is_some() => {
+                        "went down to the river it knew (thirst)"
+                    }
+                    Mode::Pursuing(DriveKind::Thirst) => {
+                        "wandered, having found no water yet (thirst)" // ignorant
+                    }
+                    Mode::Homing | Mode::Idle => "walking home (sated)",
+                };
+                out.push(agent_at_fact(npc.entity, &n, st.day, provenance));
+                st.visited.insert(n.clone());
+                st.pos = n;
+                // Crossing into a DIFFERENT room: re-derive ITS interior and
+                // re-arrive at ITS landing anchor. The anchor reached in the
+                // OLD room's graph means nothing here — an `AnchorId` is a
+                // vector offset into the SPECIFIC `Interior` it indexes.
+                st.interior = interior_of(&st.pos, self.terrain);
+                occupancy.arrive(
+                    npc.entity,
+                    &st.pos,
+                    &st.interior,
+                    seam_kind(self.terrain.is_built(&st.pos)),
+                );
+            }
+            Intent::Do(Action::Drink) => {
+                out.push(drank_fact(
+                    npc.entity,
+                    st.day,
+                    "drank from the river (thirst sated)",
+                ));
+                st.last_drank = st.day;
+            }
+            Intent::Do(Action::Rest) => {
+                out.push(rested_fact(
+                    npc.entity,
+                    st.day,
+                    "slept at home (fatigue eased)",
+                ));
+                st.last_rested = st.day;
+                // Sleep through the off-phase in one jump to the next
+                // waking, rather than re-resting every step (The Slumber).
+                st.day = next_awake_day(npc.activity, self.terrain, &st.pos, st.day);
+                if st.day > self.to.day {
+                    return false;
+                }
+            }
+            Intent::Do(Action::Eat) => {
+                out.push(eaten_fact(
+                    npc.entity,
+                    st.day,
+                    "grazed the productive ground (hunger sated)",
+                ));
+                st.last_ate = st.day;
+            }
+            Intent::Do(Action::MoveWithin(next)) => {
+                // THE THRESHOLD's crossing, live. Fine movement writes NO fact
+                // (decision 0069 — `MoveWithin`'s effect is bubble-local
+                // occupancy, never serialized), but it costs time like any
+                // other act; that charge happened above, with every other
+                // action's, so this arm has only the occupancy to update.
+                //
+                // `Thermal::affordance`'s within-room branch only ever proposes
+                // an anchor reachable by `route_within`'s FIRST hop, which is
+                // by construction adjacent to wherever the creature currently
+                // stands, so `walk` should always succeed here. Its bool return
+                // is still checked (not `unwrap`ped) rather than leaning on
+                // that invariant: a refused walk simply leaves the creature
+                // where it was, having still spent the tick's time trying — no
+                // different in kind from a room-scale `Hold`.
+                occupancy.walk(npc.entity, &st.interior, next);
+            }
+            Intent::Hold => {
+                // Idle (or unreachable): jump to the next act-crossing in
+                // closed form rather than spinning day-by-day (`hold_step`,
+                // shared with catch-up — see its own doc for the physical
+                // meaning of the jump and the strict-progress guarantee that
+                // bounds it). `Stall` keeps `st.day` untouched and asks for
+                // another pop; `GiveUp` ends this creature's walk.
+                match hold_step(
+                    st.day,
+                    &st.pos,
+                    npc,
+                    self.terrain,
+                    drive,
+                    &self.params,
+                    self.to.day,
+                ) {
+                    HoldStep::Stall => return true,
+                    HoldStep::GiveUp => return false,
+                    HoldStep::Advance(next) => st.day = next,
+                }
+            }
+        }
+        true
     }
 }
 
@@ -4481,6 +4685,16 @@ pub fn derive_npcs(
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
+            // Body mass (The Action Clock): the allometric driver of every
+            // action's cost. A species missing from the biosphere registry
+            // falls back EXPLICITLY to the clock's reference mass — `tempo`
+            // clamps a nonsense value anyway, but the fallback is stated here
+            // rather than left implicit, so a defaulted creature reads at
+            // exactly tempo 1.0.
+            let mass_kg = biosphere
+                .get_by_label(&species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -4535,6 +4749,7 @@ pub fn derive_npcs(
                 niche,
                 boldness,
                 threat_niche,
+                mass_kg,
                 label,
             }
         })
@@ -4580,6 +4795,13 @@ pub fn derive_wild_npcs(
                 .get_by_label(&species)
                 .map(|t| t.niche.clone())
                 .unwrap_or_else(default_diet_niche);
+            // Body mass (The Action Clock), as in `derive_npcs`: the fauna are
+            // most of the health battery's population, so the wild path must
+            // carry the trait too or the tempo spread collapses.
+            let mass_kg = biosphere
+                .get_by_label(&species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
             let deliberation_latency = psyche
                 .get_by_label(&species)
                 .map(|p| p.deliberation_latency)
@@ -4621,6 +4843,7 @@ pub fn derive_wild_npcs(
                 niche,
                 boldness,
                 threat_niche,
+                mass_kg,
                 label,
             }
         })
@@ -5170,6 +5393,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         // no agent-at yet -> ignorant
@@ -5206,6 +5432,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &dry, 2.0);
@@ -5244,6 +5473,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &far, 2.0); // discovered far first
@@ -5280,6 +5512,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, e, &water, 9.0); // sighting in the future
@@ -5313,6 +5548,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         commit_agent_at(&mut ledger, &reg, other, &water, 2.0); // OTHER stood in water, not e
@@ -5362,6 +5600,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         // Stand in the LARGER-addr source first, then the smaller — so a naive
@@ -5400,6 +5641,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         }
     }
@@ -5423,6 +5667,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: label.into(),
         }
     }
@@ -6014,6 +6261,510 @@ mod tests {
         );
     }
 
+    /// The before-picture fixture for the walk hoist (The Action Clock T3): a
+    /// two-creature planted-terrain world walked over a long interval, chosen
+    /// because it exercises every arm of the decision loop — moves under several
+    /// provenances, a drink, rests across the diurnal off-phase, and meals — so
+    /// the emitted sequence is a wide net for an extraction bug.
+    ///
+    /// Returns the emitted facts rendered as one line per fact:
+    /// `subject|predicate|object|day-bits|provenance`.
+    fn hoist_walk_shape() -> Vec<String> {
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0.clone(), 0.0), (n2.clone(), 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let knower_e = ledger.mint_entity();
+        let knower = shared_belief_npc(knower_e, here.clone(), water.clone(), "knower");
+        let lost_e = ledger.mint_entity();
+        let lost = shared_belief_npc(lost_e, here.clone(), here.clone(), "lost");
+        commit_agent_at(&mut ledger, &reg, knower_e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, knower_e, &here, 1.0);
+        commit_agent_at(&mut ledger, &reg, lost_e, &here, 1.0);
+
+        let sys = DriveMovements {
+            npcs: vec![knower, lost],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
+            terrain: &t,
+        };
+        sys.step(&ledger)
+            .iter()
+            .map(|f| {
+                format!(
+                    "{:?}|{}|{:?}|{:?}|{}",
+                    f.subject,
+                    f.predicate,
+                    f.object,
+                    f.day.map(f64::to_bits),
+                    f.provenance
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_hoisted_walk_emits_exactly_what_the_loop_emitted() {
+        // THE REFACTOR'S WARRANT (The Action Clock T3). The per-creature walk is
+        // being hoisted out of `DriveMovements::step`'s loop into `WalkState` +
+        // `advance_one`, and the claim is that this changes NOTHING. So the
+        // emitted fact sequence — subject, predicate, object, the day's exact
+        // bits, and provenance, IN ORDER — is pinned here against the loop as it
+        // stood before the extraction. Written and passing BEFORE the hoist; it
+        // must still pass after, or the extraction is wrong.
+        //
+        // It is a golden, deliberately: a self-consistency check (run twice, get
+        // the same answer) is satisfied by any deterministic implementation,
+        // including a broken one. Only a recorded before-picture pins the OLD
+        // behaviour.
+        //
+        // REWRITTEN BY HAND at T4 (charging every action), as designed. What
+        // moved is ONLY the days: all eighty facts, their order, their rooms and
+        // their provenances were unchanged, because both creatures stand at the
+        // reference mass (tempo exactly `1.0`) and the terrain is level, so a
+        // move still costs the historical `0.1` days. The shift is the newly
+        // charged actions alone — a drink `0.0015` days, lying down `0.0015`, a
+        // meal `0.03` — accumulating to at most `0.070` days by the end of a
+        // 39-day walk. Two ties the old literal recorded are gone with them:
+        // `drank` no longer shares the arriving move's exact day, and `rested`
+        // no longer shares the preceding meal's.
+        //
+        // REWRITTEN BY HAND AGAIN at T5 (the shared clock), and this time the
+        // move is PURE REORDERING — the cleanest result the fixture could have
+        // given. Compared fact-for-fact against the T4 literal as a multiset,
+        // the eighty facts are IDENTICAL: same subjects, same predicates, same
+        // rooms, the same exact day bits, the same provenances. Not one value
+        // changed. What changed is the sequence they arrive in:
+        //
+        //     before (T4)   1111111111111111111111111111111111111111
+        //                   2222222222222222222222222222222222222222
+        //     after  (T5)   1212121212121212121212121212121212121212
+        //                   1212121212121212121212121212121212121212
+        //
+        // That is the sequential loop — all of one creature's walk, then all of
+        // the next's — giving way to a shared clock. The alternation is perfect
+        // rather than ragged because this fixture's two creatures are twins:
+        // same mass, same home, same terrain, and (via the band's pooled belief)
+        // the same water, so they act in lockstep and every pop is a tie at the
+        // same tick, broken by entity id. A ragged interleave is what
+        // `a_faster_creature_acts_more_often_between_a_slower_ones_actions`
+        // pins, with masses deliberately apart.
+        //
+        // The days being bit-identical is itself the load-bearing evidence for
+        // spec §5: interleaving reordered when each creature ACTED without
+        // changing anything either creature could SEE. Had a cross-agent read
+        // slipped from `frozen` to a mid-tick observation, these twins would
+        // have started to diverge — the second to act would have perceived the
+        // first's new position — and the day bits would have moved. They did
+        // not, so the emitted stream is still a pure function of the pre-tick
+        // ledger.
+        const EXPECTED: &[&str] = &[
+            r#"EntityId(1)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4607189174199458464)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4618178707890180369)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4618180396740040633)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4618855936684146205)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4618857625534006469)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4618970215524690731)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4619082805515374993)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4622982359842724423)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4622983204267654555)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623152089253680950)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4623208384249023081)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4623209228673953213)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4623265523669295344)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4623321818664637475)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4625798470072218419)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625868838816396084)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4625896986314067150)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4625897408526532216)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4625925556024203282)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4625953703521874348)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4627500877643860586)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4627501299856325652)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627557594851667784)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4627585742349338850)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4627586164561803916)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4627614312059474982)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4627642459557146048)|walking home (sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4629181611642296032)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629237906637638164)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4629266054135309230)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4629266476347774296)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4629294623845445362)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4629322771343116428)|walking home (sated)"#,
+            r#"EntityId(1)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(2)|eaten|Flag(true)|Some(4630285181200986277)|grazed the productive ground (hunger sated)"#,
+            r#"EntityId(1)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"EntityId(2)|rested|Flag(true)|Some(4630285392307218810)|slept at home (fatigue eased)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630313539804889875)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"EntityId(2)|agent-at|Text("180339")|Some(4630327613553725408)|went down to the river it knew (thirst)"#,
+            r#"EntityId(1)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"EntityId(2)|drank|Flag(true)|Some(4630327824659957941)|drank from the river (thirst sated)"#,
+            r#"EntityId(1)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("180243")|Some(4630341898408793474)|walking home (sated)"#,
+            r#"EntityId(1)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+            r#"EntityId(2)|agent-at|Text("172046")|Some(4630355972157629007)|walking home (sated)"#,
+        ];
+        let shape = hoist_walk_shape();
+        assert_eq!(
+            shape.len(),
+            EXPECTED.len(),
+            "the walk emitted {} facts, not the recorded {}",
+            shape.len(),
+            EXPECTED.len()
+        );
+        for (i, (got, want)) in shape.iter().zip(EXPECTED.iter()).enumerate() {
+            assert_eq!(
+                got, want,
+                "fact {i} differs from the recorded before-picture"
+            );
+        }
+    }
+
+    /// The charging fixture (The Action Clock T4): the `hoist_walk_shape` world
+    /// reduced to the ONE creature that genuinely reaches the water and drinks.
+    /// Both charging tests want the same walk — one varying its mass, one
+    /// reading the days it emits — so the world is built once here rather than
+    /// invented twice.
+    ///
+    /// Returns the ledger (already carrying the creature's perception history),
+    /// the terrain, and the creature at reference mass.
+    fn charged_walk_fixture() -> (Ledger, PlantedTerrain, Npc) {
+        let reg = {
+            let mut r = agent_at_reg();
+            r.register_predicate(DRANK, false, "drank").unwrap();
+            r.register_predicate(RESTED, false, "rested").unwrap();
+            r.register_predicate(EATEN, false, "eaten").unwrap();
+            r
+        };
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let neighbors = here.neighbors();
+        let n0 = neighbors[0].clone();
+        let n1 = neighbors[1].clone();
+        let n2 = neighbors[2].clone();
+        let water = n1
+            .neighbors()
+            .into_iter()
+            .find(|r| *r != here)
+            .expect("n1 has a neighbor other than home");
+        let t = PlantedTerrain {
+            elevations: [(n0, 0.0), (n2, 0.0)].into_iter().collect(),
+            fresh: [water.clone()].into_iter().collect(),
+            temps: std::collections::BTreeMap::new(),
+            forage: std::collections::BTreeMap::new(),
+            threat: std::collections::BTreeMap::new(),
+            prey: std::collections::BTreeMap::new(),
+        };
+        let e = ledger.mint_entity();
+        let npc = shared_belief_npc(e, here.clone(), water.clone(), "walker");
+        // Stood at the water on day 0, home again by day 1 — the same history
+        // the shared-belief tests give their `knower`, so belief is real.
+        commit_agent_at(&mut ledger, &reg, e, &water, 0.0);
+        commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
+        (ledger, t, npc)
+    }
+
+    #[test]
+    fn a_heavier_creature_covers_less_ground_in_the_same_interval() {
+        // THE CAMPAIGN'S HEADLINE (spec §3, rung 2), at unit level: one world,
+        // one interval, one creature — and the ONLY difference between the runs
+        // is body mass. An action costs `base × (mass/70)^0.25`, so the heavier
+        // creature spends longer on each one and gets less far in the same days.
+        //
+        // The world is deliberately WATERLESS, and the creature ignorant, so it
+        // explores continuously: its walk is bounded by how fast it can move
+        // rather than by how often it gets thirsty. In the water fixture next
+        // door the errand is drive-bound instead — a round trip to a known
+        // river is four moves per thirst cycle whatever the creature weighs, so
+        // mass shifts *when* it drinks (later, as the spec predicts) but not how
+        // many moves fit in the interval. Ground covered is the sharper read.
+        let mut ledger = Ledger::default();
+        let reg = agent_at_reg();
+        let here = raddr(1.0);
+        let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
+        let e = ledger.mint_entity();
+        let base = shared_belief_npc(e, here.clone(), here.clone(), "walker");
+        commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
+        let moves = |mass_kg: f64| {
+            let mut npc = base.clone();
+            npc.mass_kg = mass_kg;
+            let sys = DriveMovements {
+                npcs: vec![npc],
+                from: WorldTime { day: 1.0 },
+                to: WorldTime { day: 40.0 },
+                params: SUSTENANCE,
+                day_length_std: None,
+                terrain: &terrain,
+            };
+            sys.step(&ledger)
+                .iter()
+                .filter(|f| f.predicate == AGENT_AT)
+                .count()
+        };
+        // Not two buckets but a graded spread across the mass band — the spec's
+        // own acceptance prediction (§8), and the reason tempo is derived from
+        // continuous mass rather than the four-valued metabolic class.
+        let walked: Vec<(f64, usize)> = [1.0_f64, 70.0, 5_000.0, 100_000.0]
+            .into_iter()
+            .map(|m| (m, moves(m)))
+            .collect();
+        for pair in walked.windows(2) {
+            let ((lm, lw), (hm, hw)) = (pair[0], pair[1]);
+            assert!(
+                lw > hw,
+                "a {lm} kg creature covered {lw} rooms and a heavier {hm} kg one \
+                 {hw} — the heavier must cover less ground in the same interval"
+            );
+        }
+    }
+
+    #[test]
+    fn drinking_and_eating_now_cost_time() {
+        // RUNG 1 (spec §2): no action is free. Before this task the creature
+        // arrived at the water and drank in the SAME instant — the `drank` fact
+        // carried the arriving `agent-at` fact's exact day (both read
+        // `4618854247834285941` in the T3 golden above). Now the drink consumes
+        // time, so it lands strictly later, by exactly its cost.
+        let (ledger, terrain, npc) = charged_walk_fixture();
+        let mass = npc.mass_kg;
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 40.0 },
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        let drank_day = facts
+            .iter()
+            .find(|f| f.predicate == DRANK)
+            .expect("it drinks")
+            .day
+            .expect("dated");
+        // The arrival is the latest move no later than the drink itself.
+        let arrived = facts
+            .iter()
+            .filter(|f| f.predicate == AGENT_AT)
+            .filter_map(|f| f.day)
+            .filter(|d| *d <= drank_day)
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!(
+            arrived.is_finite(),
+            "it walked to the water before drinking"
+        );
+        assert!(
+            drank_day > arrived,
+            "the drink still happens in the same instant as the arrival ({arrived})"
+        );
+        let expected = crate::clock::days_of(
+            crate::clock::cost_ticks(&Action::Drink, mass, 1.0),
+            // The fixture has no sky, so the clock takes its base rate.
+            None,
+        );
+        assert!(
+            (drank_day - arrived - expected).abs() < 1e-12,
+            "a drink should cost exactly {expected} days; the gap is {}",
+            drank_day - arrived
+        );
+        // The same property across the WHOLE walk: one creature, so every fact
+        // it emits must be strictly later than the one before. That also pins
+        // the `rested`-atop-`eaten` tie the T3 golden recorded (both
+        // `4622963782494261520`) as gone — a meal and lying down cost time too.
+        let mut prev = f64::NEG_INFINITY;
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d > prev,
+                "`{}` at {d} did not advance the clock past {prev}",
+                f.predicate
+            );
+            prev = d;
+        }
+    }
+
+    /// The interleaving fixture (The Action Clock T5): a WATERLESS planted world
+    /// and one home, with a creature of each requested mass minted into the
+    /// ledger in the order given.
+    ///
+    /// Waterless and ignorant for the same reason
+    /// `a_heavier_creature_covers_less_ground_in_the_same_interval` is: every
+    /// creature then explores continuously for the whole interval, so its walk
+    /// is move-bound rather than drive-bound and the emitted sequence is a clean
+    /// read on *who acts when* rather than on how often each gets thirsty.
+    fn interleaving_fixture(masses: &[f64]) -> (Ledger, PlantedTerrain, Vec<Npc>) {
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let here = raddr(1.0);
+        let terrain = PlantedTerrain::dry(std::collections::BTreeMap::new());
+        let mut npcs: Vec<Npc> = Vec::new();
+        for mass_kg in masses {
+            let e = ledger.mint_entity();
+            let mut npc = shared_belief_npc(e, here.clone(), here.clone(), "walker");
+            npc.mass_kg = *mass_kg;
+            commit_agent_at(&mut ledger, &reg, e, &here, 1.0);
+            npcs.push(npc);
+        }
+        (ledger, terrain, npcs)
+    }
+
+    #[test]
+    fn the_emission_order_is_independent_of_the_input_order() {
+        // THE POINT OF THE QUEUE. Order must be a pure function of the frozen
+        // ledger and the clock, not of how `npcs` happened to be listed — the
+        // queue key is `(Ticks, EntityId)`, so a tie at the same simulated
+        // moment is broken by the entity id and never by the caller's vector.
+        // Shuffle the input; get the same sequence, fact for fact.
+        //
+        // Three DIFFERENT masses, so the creatures genuinely fall out of step
+        // with one another and the interleaving is non-trivial: were the order
+        // input-derived, reversing the vector would show it immediately.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0, 1_120.0]);
+        let run = |npcs: Vec<Npc>| {
+            let sys = DriveMovements {
+                npcs,
+                from: WorldTime { day: 1.0 },
+                to: WorldTime { day: 20.0 },
+                params: SUSTENANCE,
+                day_length_std: None,
+                terrain: &terrain,
+            };
+            sys.step(&ledger)
+                .iter()
+                .map(|f| (f.subject, f.predicate.clone(), f.day.map(f64::to_bits)))
+                .collect::<Vec<_>>()
+        };
+        let forward = run(npcs.clone());
+        let reversed = run(npcs.into_iter().rev().collect());
+        assert!(
+            !forward.is_empty(),
+            "the fixture emitted nothing; it cannot pin an order"
+        );
+        assert_eq!(
+            forward, reversed,
+            "emission order must not depend on input order"
+        );
+    }
+
+    #[test]
+    fn a_faster_creature_acts_more_often_between_a_slower_ones_actions() {
+        // INTERLEAVING, OBSERVABLY. Two creatures sixteen-fold apart in mass are
+        // exactly two-fold apart in tempo (`16 ^ 0.25 == 2`), so the lighter one
+        // takes two actions in the time the heavier takes one. Under a shared
+        // clock its facts must appear BETWEEN the heavier one's; under the old
+        // sequential loop they appeared entirely before them.
+        //
+        // The assertion counts SWITCHES of subject along the emitted sequence.
+        // The sequential loop scores exactly one (all of A, then all of B) for
+        // any pair, however far apart in tempo; a scheduler scores many. `>= 2`
+        // is therefore the smallest threshold the old loop cannot reach.
+        let (ledger, terrain, npcs) = interleaving_fixture(&[4.375, 70.0]);
+        let sys = DriveMovements {
+            npcs,
+            from: WorldTime { day: 1.0 },
+            to: WorldTime { day: 20.0 },
+            params: SUSTENANCE,
+            day_length_std: None,
+            terrain: &terrain,
+        };
+        let facts = sys.step(&ledger);
+        let seq: Vec<EntityId> = facts
+            .iter()
+            .filter(|f| f.predicate == AGENT_AT)
+            .map(|f| f.subject)
+            .collect();
+        let switches = seq.windows(2).filter(|w| w[0] != w[1]).count();
+        assert!(
+            switches >= 2,
+            "the two creatures never interleave (switches={switches}, seq={seq:?}) — \
+             the queue is not scheduling, it is still walking each in turn"
+        );
+        // And the emitted days run forward on ONE timeline — up to the tick,
+        // which is the resolution the schedule actually orders at. The sequential
+        // loop jumped the full interval backwards at its single handover (the
+        // second creature restarted at `from`); a shared clock can only ever go
+        // back by less than one tick, because creatures tied at the same rounded
+        // tick are separated by entity id and their exact `f64` days then differ
+        // by whatever float accumulation put inside that tick. Bounding the
+        // regression by a tick is the honest form of "one timeline": asserting
+        // strict monotonicity would be asserting that scheduling happens in
+        // `f64`, which is the thing spec §4 refuses to do.
+        let tick = crate::clock::days_of(crate::clock::Ticks(1), None);
+        let mut prev = f64::NEG_INFINITY;
+        for f in &facts {
+            let d = f.day.expect("every emitted fact is dated");
+            assert!(
+                d >= prev - tick,
+                "`{}` at {d} went back more than a tick past {prev} — \
+                 the clock is not shared",
+                f.predicate
+            );
+            prev = prev.max(d);
+        }
+    }
+
     #[test]
     fn a_colocated_lost_creature_moves_toward_shared_water() {
         // THE TIDINGS, WIRED INTO THE MOVER: a `knower` and a `lost` creature
@@ -6073,6 +6824,9 @@ mod tests {
             from: WorldTime { day: 1.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next =
@@ -6207,6 +6961,59 @@ mod tests {
     }
 
     #[test]
+    fn derived_npcs_carry_their_species_body_mass() {
+        // THE PRECONDITION FOR PER-AGENT TEMPO (The Action Clock T2): if mass
+        // does not reach `Npc`, the action clock's tempo collapses to a
+        // constant and the campaign has no per-agent variation at all.
+        // Asserted on a REAL derived population — both the peopled roster and
+        // the wild fauna, which are most of the health battery's population —
+        // and asserted to VARY: a single value across species means the trait
+        // is being defaulted, not read.
+        let world = hornvale_worldgen::build_world(
+            Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            hornvale_worldgen::SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &hornvale_worldgen::SettlementPins::default(),
+        )
+        .unwrap();
+        let ctx = LocaleContext::build(&world).unwrap();
+        let mut ledger = world.ledger.clone();
+        let home = hornvale_settlement::village_info(&world).unwrap().id;
+        let mut npcs = derive_npcs(&world, &ctx, &mut ledger, 3, home);
+        npcs.extend(derive_wild_npcs(&world, &ctx, &mut ledger, 4));
+        assert!(!npcs.is_empty(), "the probe world derives a population");
+        for n in &npcs {
+            assert!(
+                n.mass_kg.is_finite() && n.mass_kg > 0.0,
+                "{} has a nonsense mass {}",
+                n.species,
+                n.mass_kg
+            );
+            // The registry's own value, not a fallback: the threading reads the
+            // same `biosphere_registry` lookup that supplies the niche.
+            let authored = hornvale_species::biosphere_registry()
+                .get_by_label(&n.species)
+                .map(|t| t.mass.kilograms())
+                .unwrap_or(crate::clock::REFERENCE_MASS_KG);
+            assert_eq!(
+                n.mass_kg, authored,
+                "{}'s mass is the authored trait, not a default",
+                n.species
+            );
+        }
+        let distinct: std::collections::BTreeSet<u64> =
+            npcs.iter().map(|n| n.mass_kg.to_bits()).collect();
+        assert!(
+            distinct.len() > 1,
+            "every species has the same mass — the trait is defaulted, not read: {:?}",
+            npcs.iter()
+                .map(|n| (n.species.as_str(), n.mass_kg))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
     fn seed_42_home_settlements_real_walk_reachability_is_a_measured_t5_finding() {
         // THE CONFLUENCE'S PAYOFF, MEASURED NOT ASSUMED: the earlier pinned
         // finding here (see git history) measured that seed 42's possessed
@@ -6302,6 +7109,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "measure".into(),
         };
         let ledger = Ledger::default();
@@ -6312,6 +7122,9 @@ mod tests {
             // wait" — a real session's `wait` would never span this.
             to: WorldTime { day: 100_000.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next =
@@ -6871,6 +7684,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -6888,6 +7704,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next =
@@ -6974,6 +7793,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // Elevation still steers the exploration prior (downhill), separate
@@ -6991,6 +7813,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         world.ledger = hornvale_kernel::tick(
@@ -7048,6 +7873,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms and the agent
@@ -7061,6 +7889,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10_000.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -7131,6 +7962,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         // No fresh water anywhere, so belief never forms.
@@ -7148,6 +7982,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 1_000_000.0 },
             params: degenerate,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -7199,6 +8036,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herder".into(),
         };
         let t = PlantedTerrain::fresh_only([resource.clone()]);
@@ -7207,6 +8047,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 10.0 },
             params: p,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &t,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -7447,6 +8290,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "wanderer".into(),
         };
 
@@ -7467,6 +8313,9 @@ mod tests {
                 from: WorldTime { day: 1.0 }, // after the seeded history
                 to: WorldTime { day: 60.0 },  // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -7622,6 +8471,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "wanderer".into(),
         };
         // The herd-mate B: knows water (so it beelines and settles, bounded), and
@@ -7639,6 +8491,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "herd-mate".into(),
         };
 
@@ -7729,6 +8584,9 @@ mod tests {
                 from: WorldTime { day: from_day },
                 to: WorldTime { day: 60.0 }, // several thirst cycles (act/rise ≈ 5.7 days)
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -7874,6 +8732,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: BOLDNESS_STEADY,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: label.into(),
         };
 
@@ -7951,6 +8812,9 @@ mod tests {
             from: now,
             to: WorldTime { day: now.day + 1.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next =
@@ -8773,6 +9637,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "creature".into(),
         }
     }
@@ -8930,6 +9797,9 @@ mod tests {
                 niche: default_diet_niche(),
                 boldness: BOLDNESS_STEADY,
                 threat_niche: mortal_threat_niche(),
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "cornered".into(),
             }
         };
@@ -8957,6 +9827,9 @@ mod tests {
                     cold: 0.0,
                     predator: 0.0,
                 },
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "herd-edge".into(),
             }
         };
@@ -8975,6 +9848,9 @@ mod tests {
             from: WorldTime { day: 0.30 },
             to: WorldTime { day: 0.40 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let after1 = hornvale_kernel::tick(&ledger, &[&sys1], &["drive-movements"], &reg).unwrap();
@@ -9021,6 +9897,9 @@ mod tests {
             from: WorldTime { day: 0.40 },
             to: WorldTime { day: 0.55 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let after2 = hornvale_kernel::tick(&after1, &[&sys2], &["drive-movements"], &reg).unwrap();
@@ -9046,6 +9925,9 @@ mod tests {
             from: WorldTime { day: 0.30 },
             to: WorldTime { day: 0.40 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let cafter = hornvale_kernel::tick(&control, &[&csys], &["drive-movements"], &reg).unwrap();
@@ -9384,6 +10266,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
@@ -9492,6 +10377,9 @@ mod tests {
                 niche: default_diet_niche(),
                 boldness: 0.5,
                 threat_niche: mortal_threat_niche(),
+                // The action clock's reference mass (The Action Clock T2): tempo is
+                // exactly `1.0` here, so this fixture's timings are unmoved.
+                mass_kg: crate::clock::REFERENCE_MASS_KG,
                 label: "h".into(),
             };
             // from > both seed days so the frozen ledger holds no future facts and the
@@ -9501,6 +10389,9 @@ mod tests {
                 from: WorldTime { day: 1.0 },
                 to: WorldTime { day: 41.0 },
                 params: SUSTENANCE,
+                // No sky in a planted-terrain fixture: the action clock takes its
+                // base rate (spec §4.1).
+                day_length_std: None,
                 terrain: &terrain,
             };
             let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -9576,6 +10467,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "h".into(),
         };
         let sys = DriveMovements {
@@ -9583,6 +10477,9 @@ mod tests {
             from: WorldTime { day: 0.0 },
             to: WorldTime { day: 40.0 },
             params: SUSTENANCE,
+            // No sky in a planted-terrain fixture: the action clock takes its
+            // base rate (spec §4.1).
+            day_length_std: None,
             terrain: &terrain,
         };
         let next = hornvale_kernel::tick(&ledger, &[&sys], &["drive-movements"], &reg).unwrap();
@@ -10457,6 +11354,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         // Day 100: a metabolizer would be long parched and roasting.
@@ -10507,6 +11407,9 @@ mod tests {
             niche: default_diet_niche(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            // The action clock's reference mass (The Action Clock T2): tempo is
+            // exactly `1.0` here, so this fixture's timings are unmoved.
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "xorn".to_string(),
         };
         let a = affect_of(&ledger, &base, &[], WorldTime { day: 0.5 }, &terrain);
@@ -11073,6 +11976,7 @@ mod tests {
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "human".to_string(),
         };
         let day = WorldTime { day: 0.0 };
@@ -11450,6 +12354,7 @@ mod tests {
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "test".to_string(),
         };
 
@@ -11471,6 +12376,7 @@ mod tests {
             from: WorldTime { day: 0.35 },
             to: WorldTime { day: 1.35 },
             params: SUSTENANCE,
+            day_length_std: None,
             terrain: &hearth_terrain,
         };
         let (_facts, occ) = sys.step_with_occupancy(&ledger);
@@ -11516,6 +12422,7 @@ mod tests {
             from: WorldTime { day: 0.35 },
             to: WorldTime { day: 1.35 },
             params: SUSTENANCE,
+            day_length_std: None,
             terrain: &wild_terrain,
         };
         let (_facts2, occ2) = sys2.step_with_occupancy(&ledger2);
@@ -11846,6 +12753,7 @@ mod tests {
             niche: ResourceVector::new(&[]).unwrap(),
             boldness: 0.5,
             threat_niche: mortal_threat_niche(),
+            mass_kg: crate::clock::REFERENCE_MASS_KG,
             label: "test".to_string(),
         }
     }
@@ -11906,6 +12814,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
+            day_length_std: None,
             terrain: &terrain,
         };
         let (facts, occ) = sys.step_with_occupancy(&ledger);
@@ -12109,6 +13018,7 @@ mod tests {
             &ledger,
             &[],
             CATCH_UP_STEP_CAP,
+            None,
         );
         let after = ledger.len();
 
@@ -12170,6 +13080,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
+            day_length_std: None,
             terrain: &terrain,
         };
         let (_f1, occ_forward) = forward.step_with_occupancy(&ledger);
@@ -12182,6 +13093,7 @@ mod tests {
             from: now,
             to: now,
             params: SUSTENANCE,
+            day_length_std: None,
             terrain: &terrain,
         };
         let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger);
@@ -12274,6 +13186,15 @@ mod tests {
         let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
         let ledger = Ledger::default();
         let entry_day = waking_offset(ActivityCycle::Diurnal);
+        // What ONE replayed within-room hop costs this creature, asked of the
+        // action clock exactly as `catch_up` itself asks (same action, same
+        // mass, no terrain factor, no rotation) — rather than restated as a
+        // literal here, so a retune of the `MoveWithin` dial cannot leave this
+        // test's arithmetic quietly disagreeing with the loop it measures.
+        let step_days = days_of(
+            cost_ticks(&Action::MoveWithin(anchors[0]), npc.mass_kg, 1.0),
+            None,
+        );
 
         let run = |horizon: f64| -> Option<AnchorId> {
             let mut occ = Occupancy::default();
@@ -12302,6 +13223,7 @@ mod tests {
                 &ledger,
                 &[],
                 CAP,
+                None,
             );
             occ.at(npc.entity)
         };
@@ -12309,12 +13231,12 @@ mod tests {
         // UNDER the cap: elapsed allows CAP - 1 = 4 replayed hops, so the
         // loop exhausts its horizon (not the cap) and lands 4 hops down the
         // corridor. The extra half-step of slack absorbs float summation
-        // drift between `entry_day + 4.0 * MOVE_WITHIN_DURATION` (computed
-        // once) and `catch_up`'s own `day += MOVE_WITHIN_DURATION` run four
-        // times in a row — the two need not land on the identical f64, and
-        // an exact boundary would make this test's own arithmetic, not the
-        // mechanism, decide whether the 4th hop lands in time.
-        let under = run(entry_day + 4.5 * MOVE_WITHIN_DURATION);
+        // drift between `entry_day + 4.0 * step_days` (computed once) and
+        // `catch_up`'s own `day += days_of(cost_ticks(..))` run four times in
+        // a row — the two need not land on the identical f64, and an exact
+        // boundary would make this test's own arithmetic, not the mechanism,
+        // decide whether the 4th hop lands in time.
+        let under = run(entry_day + 4.5 * step_days);
         assert_eq!(
             under,
             Some(anchors[4]),

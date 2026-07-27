@@ -42,3 +42,30 @@ if git diff --cached --name-only | grep -qE "^(${census_guard_files})$"; then
         exit 1
     fi
 fi
+
+# The scratch-in-worktree guard. `.superpowers/` is campaign scratch — decision
+# ledgers, sdd notes — and is already in `.gitignore`. But `git add -f`
+# deliberately overrides `.gitignore`, and once a path is tracked the ignore
+# stops applying at all, so a single forced add silently makes the file
+# permanent. That has happened at least twice (a `chore: untrack .superpowers/
+# scratch that slipped past its own gitignore` commit exists, and The Action
+# Clock repeated it while freezing a baseline). The ledger is explicitly NOT
+# the durable record — material entries are promoted into the spec at close —
+# so committing it is always a mistake, never a judgment call.
+#
+# Closing it by construction: no commit may ADD or MODIFY anything under
+# `.superpowers/`. `--diff-filter=d` excludes deletions deliberately —
+# `git rm --cached` is the remediation this hook recommends, and refusing that
+# would leave an already-tracked file impossible to untrack without
+# `--no-verify`. (Found immediately, by this guard refusing its own commit.)
+if git diff --cached --name-only --diff-filter=d | grep -qE '(^|/)\.superpowers/'; then
+    echo "pre-commit: a .superpowers/ path is staged." >&2
+    echo "That directory is campaign SCRATCH and is gitignored; it was almost" >&2
+    echo "certainly added with 'git add -f'. The decision ledger is not the" >&2
+    echo "durable record — promote material entries into the spec instead." >&2
+    echo "" >&2
+    git diff --cached --name-only --diff-filter=d | grep -E '(^|/)\.superpowers/' | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "Unstage with: git rm --cached <path>   (the file stays on disk)" >&2
+    exit 1
+fi

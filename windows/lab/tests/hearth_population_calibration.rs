@@ -281,8 +281,14 @@ fn the_hearth_shows_no_measurable_effect_on_seed_13s_cold_dominated_population()
         "seed 13's warm-built population drifted"
     );
 
-    let traces_live = run_simulation(&ledger, &registry, &npcs, &terrain_live, 40);
-    let traces_inert = run_simulation(&ledger, &registry, &npcs, &terrain_inert, 40);
+    // Both arms take the action clock's BASE rate (`None`), matching the
+    // calendar-free terrain both are built with: this A/B's whole point is that
+    // the two arms differ in ONE thing (`built`), so the rotation the clock
+    // divides must be the same on both sides — and a terrain constructed with
+    // `None` for its calendar has no sky to derive a day from in the first
+    // place (the same reading `synthetic.rs`'s planted scenarios take).
+    let traces_live = run_simulation(&ledger, &registry, &npcs, &terrain_live, 40, None);
+    let traces_inert = run_simulation(&ledger, &registry, &npcs, &terrain_inert, 40, None);
 
     let cold_live = subgroup_report(&cold_idx, &npcs, &traces_live);
     let cold_inert = subgroup_report(&cold_idx, &npcs, &traces_inert);

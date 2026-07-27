@@ -118,6 +118,14 @@ currently look, which means no observable slack was created and nothing was
 relaxed to let anything through; what changed is which of two coincident readings
 the control is *entitled to* when they eventually part company.
 
+(The prevalence and recovery figures above are this campaign's measurement of
+main as it then stood. [The Action Clock](./the-action-clock.md) — the
+investigation referred to below — landed immediately afterwards and moved them by
+at most two hundredths. The claim that matters here is unaffected: chronicity and
+`stuck` both still read zero on all five seeds, and on the *re-measured*
+baseline the one-tick weld no longer occurs at all, because main's own physics
+had moved that seed off the knife edge before this repair applied.)
+
 No seed in that sweep produces the long-but-recovered pattern under the physics
 main carries today. But the pattern is not a hypothetical either, and this is the
 part that makes the repair necessary rather than merely tidy: an investigation
