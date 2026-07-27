@@ -765,6 +765,52 @@ pub fn detritus_supply_field(
     })
 }
 
+/// The `MARINE_FORAGE` supply field (The Vacancy): marine primary production
+/// and the prey web it supports, **0 on every land cell** — the exact mirror
+/// of the terrestrial axes' land mask (see [`DETRITUS_AMBIENT`]'s
+/// terrestrial-supply frame), stated on the supply so no consumer needs a
+/// per-species exemption.
+///
+/// Derived from what climate already computes, never drawn: the cell's marine
+/// biome class sets a productivity multiplier (`Upwelling` highest — climate
+/// documents it as the high-productivity class — then `CoralReef` and
+/// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
+/// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
+/// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
+/// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
+/// class the enum does not have (BIO-45), so making it productive here would
+/// feed vent biomass to photosynthesis-based consumers.
+/// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
+pub fn marine_forage_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    scale: f64,
+) -> hornvale_kernel::CellMap<f64> {
+    let biome = climate.biome_map();
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if !terrain.is_ocean(c) {
+            return 0.0;
+        }
+        let productivity = match biome.get(c) {
+            hornvale_climate::Biome::Upwelling => 1.0,
+            hornvale_climate::Biome::CoralReef | hornvale_climate::Biome::KelpForest => 0.85,
+            hornvale_climate::Biome::Epipelagic => 0.45,
+            hornvale_climate::Biome::Mesopelagic => 0.15,
+            hornvale_climate::Biome::Bathypelagic => 0.05,
+            hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
+            // Chemotrophic in reality; not modellable as forage yet (BIO-45).
+            hornvale_climate::Biome::HydrothermalVent => 0.02,
+            hornvale_climate::Biome::SeaIce => 0.05,
+            // Every land class: unreachable under the `is_ocean` guard above,
+            // but the match must be total and a wrong default here would be a
+            // silent land leak.
+            _ => 0.0,
+        };
+        productivity * scale
+    })
+}
+
 /// The `MINERAL` supply field (BIO-35 Stage 1: The Demesne, task T1): The
 /// Ground's per-cell mineral prospectivity ([`GeneratedTerrain::prospectivity_at`],
 /// `[0,1]`) scaled to the supply range so it is comparable to `base_carrying`
@@ -801,6 +847,18 @@ pub fn mineral_supply_field(
 /// test's doc comment for the measured before/after).
 /// type-audit: bare-ok(ratio)
 const MINERAL_SUPPLY_SCALE: f64 = 1.0;
+
+/// The `MARINE_FORAGE` supply amplitude — the campaign's single marine
+/// calibration knob, following The Demesne's one-knob-per-axis precedent.
+///
+/// Set so a productive shallow marine cell supplies roughly what a productive
+/// land cell supplies, making marine and terrestrial K comparable rather than
+/// one silently dominating. Fit in Task 6 Step 4 against the measured
+/// land/sea supply ratio, not chosen by taste. If one constant cannot make the
+/// two comparable, that is a finding to report (spec §11) — not an invitation
+/// to add a second knob.
+/// type-audit: bare-ok(ratio)
+const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
 /// The per-axis resource supply for one niche at one cell (BIO-35 Stage 1:
 /// The Demesne, task T2): the dot product of the species' uptake vector
@@ -845,9 +903,10 @@ pub fn axis_supply(
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
 /// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
-/// own supply fields, and `ANIMAL_PREY` is Stage 2's placeholder zero (a
-/// later stage's trophic wiring); see [`axis_supply`], Type-II-saturated so
-/// intake plateaus) multiplied by the
+/// own supply fields, `ANIMAL_PREY` is Stage 2's placeholder zero (a later
+/// stage's trophic wiring), and `MARINE_FORAGE` (The Vacancy) reads its own
+/// marine supply field though no shipped kind weights it yet; see
+/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
 /// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
@@ -855,13 +914,16 @@ pub fn axis_supply(
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
 /// sovereignty buffers physiology but not geometry.
 ///
-/// **K is 0 on every submerged cell** (The Tumult's land mask), and by
-/// construction rather than by decree: all five supply axes are terrestrial
-/// (see [`DETRITUS_AMBIENT`]'s terrestrial-supply frame), so a species whose
-/// whole uptake vector points at land resources has no supply at sea and its
-/// saturated intake is 0 there. Nothing in this assembly special-cases water;
-/// an aquatic kind authored onto a future marine supply axis would get a
-/// non-zero K at sea from this same product, unchanged.
+/// **K is 0 on every submerged cell for the whole roster today** (The
+/// Tumult's land mask), and by construction rather than by decree: five of
+/// the six supply axes are terrestrial (see [`DETRITUS_AMBIENT`]'s
+/// terrestrial-supply frame) and the sixth, `MARINE_FORAGE` (The Vacancy),
+/// is marine and has real values at sea — but every shipped kind's uptake
+/// vector still weights it 0, so a species whose whole uptake vector points
+/// at land resources has no supply at sea and its saturated intake is 0
+/// there. Nothing in this assembly special-cases water; a marine kind
+/// authored onto the `MARINE_FORAGE` axis would get a non-zero K at sea from
+/// this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
 pub fn niche_per_species_k(
     geo: &Geosphere,
@@ -888,6 +950,7 @@ pub fn niche_per_species_k(
     let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
     let forage = forage_supply_field(geo, &base_carrying);
     let detritus = detritus_supply_field(geo, terrain);
+    let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
 
     species_biosphere
         .iter()
@@ -900,7 +963,7 @@ pub fn niche_per_species_k(
                 // Rank-restored supply via the extracted helper: the axis
                 // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
                 let per_axis = [
                     (PHOTOSYNTHATE, *base_carrying.get(cell)),
@@ -908,6 +971,7 @@ pub fn niche_per_species_k(
                     (MINERAL, *mineral.get(cell)),
                     (DETRITUS, *detritus.get(cell)),
                     (ANIMAL_PREY, 0.0),
+                    (MARINE_FORAGE, *marine.get(cell)),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
                 let saturated = supply / (1.0 + supply);
@@ -9010,6 +9074,48 @@ mod tests {
         assert!(eq > pole, "equator {eq} > pole {pole}");
     }
 
+    #[test]
+    fn marine_forage_is_zero_on_land_and_positive_in_the_shallows() {
+        // The mirror of the land mask: this axis must not leak onto land, or
+        // the terrestrial roster silently gains a sixth food source.
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let marine = marine_forage_supply_field(geo, &terrain, &climate, MARINE_SUPPLY_SCALE);
+        for cell in geo.cells() {
+            if !terrain.is_ocean(cell) {
+                assert_eq!(
+                    *marine.get(cell),
+                    0.0,
+                    "land cell {cell:?} must read exactly 0.0 on MARINE_FORAGE"
+                );
+            }
+        }
+        assert!(
+            geo.cells()
+                .filter(|&c| terrain.is_ocean(c))
+                .any(|c| *marine.get(c) > 0.0),
+            "at least one ocean cell must have positive marine supply, or the \
+             sea is open in name only and Task 8's kinds would all be ghosts"
+        );
+    }
+
+    #[test]
+    fn the_existing_sixteen_get_no_supply_from_the_marine_axis() {
+        // Every shipped kind's uptake vector must have weight 0.0 on
+        // MARINE_FORAGE, so the new `per_axis` entry contributes an exact
+        // zero to its dot product. This is the assertion that makes Step 6's
+        // byte-identity result a property rather than a coincidence.
+        for (kind, bio) in hornvale_species::biosphere_registry().iter() {
+            assert_eq!(
+                bio.niche.weight(hornvale_kernel::MARINE_FORAGE),
+                0.0,
+                "{kind:?} must not weight the marine axis before Task 8"
+            );
+        }
+    }
+
     /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
     /// rewards the substellar geometry — peaking at the substellar cell,
     /// zero at the antistellar cell (`cos_theta < 0`, floored), and
@@ -9188,10 +9294,12 @@ mod tests {
     fn land_stays_fully_occupied_after_the_gate() {
         // P5 (spec §5): "Land stays fully occupied — every one of the 11,066
         // land cells has a dominant before and after." The Tumult's land mask
-        // (all five supply axes are terrestrial) takes cells OUT of
-        // contention for kinds whose whole uptake vector finds no supply
-        // there; P5's claim is that it never empties a LAND cell of every
-        // kind — every land cell keeps at least one kind with K > 0.
+        // (five of the six supply axes are terrestrial; the sixth,
+        // MARINE_FORAGE, is marine and unweighted by every shipped kind)
+        // takes cells OUT of contention for kinds whose whole uptake vector
+        // finds no supply there; P5's claim is that it never empties a LAND
+        // cell of every kind — every land cell keeps at least one kind with
+        // K > 0.
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
