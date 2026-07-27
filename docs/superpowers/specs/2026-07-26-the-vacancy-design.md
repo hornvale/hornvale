@@ -261,6 +261,31 @@ behavioural and moral canon is not imported (decision 0021, no alignment axis).
 Where a productive cell has no 5E-attested occupant, the cell is left dark and
 recorded rather than filled with an invention.
 
+**Three provenances, and one of them is perishable.** The roster's numbers come
+from three sources with different authorities and — the part that matters —
+very different rates of decay:
+
+| provenance | governs | decays when |
+|---|---|---|
+| 5E canon | `mass`, `potency` (CR/30) | never — an external fixed corpus |
+| real-Earth science | the scaling exponents and calibration anchors (Kleiber's ¾, the 40 kg/60 yr anchor) | never |
+| **measured from this world** | **every `ConditionNiche` optimum** | **every time terrain or climate moves under it** |
+
+Authority runs in that order where they conflict: reality governs derived
+quantities, this world's measurements govern placement, and 5E governs only the
+input magnitude. Real-animal masses are deliberately *not* mixed in for the
+mundane beasts — a roster where "lion" came from biology and "owlbear" from the
+Monster Manual would have incoherent provenance for no gain in a world that is
+not Earth.
+
+The third row is why stage 1's occupancy readout is a **committed artifact and
+not a scratch measurement**: every new kind's condition optima are authored
+against it, on named percentiles, exactly as The Tumult re-authored the existing
+optima against its measured settleable-land table. That table is what let the
+kobold's misplacement be diagnosed at all, and its absence is why the
+misplacement shipped in the first place. Committing the readout hands the next
+re-datum campaign the instrument this one had to build from scratch.
+
 ### 5.1 Terrestrial fauna
 
 | cell to fill | candidate | why this cell |
