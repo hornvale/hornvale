@@ -1042,11 +1042,48 @@ mod tests {
             &interior_with(&[AnchorKind::Ground, AnchorKind::Hearth]),
             &brief(),
         );
-        for banned in ["biome", "elevation", "moisture", "regime", "ground shaded"] {
+        // The locale describer's FIELD LABELS — these catch a wholesale
+        // call-through, which is the failure that was measured at depth 21.
+        for banned in ["biome", "elevation", "moisture", "regime"] {
             assert!(
                 !text.contains(banned),
-                "chamber prose leaked terrain vocabulary {banned:?}: {text}"
+                "chamber prose leaked a terrain field label {banned:?}: {text}"
             );
+        }
+        // And the ADJECTIVES it actually emits (`windows/locale/src/grammar.rs`).
+        // A stylistic bleed — someone hand-writing terrain-flavoured prose —
+        // is likelier than a call-through, and the label list above would miss
+        // it entirely. `" dry"` carries a leading space on purpose so a future
+        // legitimate noun like "laundry" does not trip it.
+        for banned in ["sun-warmed", "shaded", "unremarkable ground", " dry"] {
+            assert!(
+                !text.contains(banned),
+                "chamber prose leaked a terrain adjective {banned:?}: {text}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_branch_ends_in_a_period_with_no_empty_clause() {
+        // The 0-anchor branch was the only one with a punctuation assertion,
+        // and it is the branch a player will almost never see. These are the
+        // common ones.
+        for kinds in [
+            vec![AnchorKind::Ground],
+            vec![AnchorKind::Ground, AnchorKind::Hearth],
+            vec![AnchorKind::Ground, AnchorKind::Hearth, AnchorKind::Bed],
+            vec![
+                AnchorKind::Ground,
+                AnchorKind::Hearth,
+                AnchorKind::Bed,
+                AnchorKind::Vessel,
+            ],
+        ] {
+            let text = describe_chamber(&interior_with(&kinds), &brief());
+            assert!(text.ends_with('.'), "not punctuated: {text:?}");
+            assert!(!text.contains("  "), "double space: {text:?}");
+            assert!(!text.contains(" ."), "empty clause before a period: {text:?}");
+            assert!(!text.contains(",."), "dangling comma: {text:?}");
         }
     }
 
@@ -1104,8 +1141,12 @@ fn noun(kind: AnchorKind) -> Option<&'static str> {
     }
 }
 
-/// One sentence for a chamber: what stands in it, in the interior's own
-/// deterministic anchor order.
+/// A chamber's prose: what stands in it, in the interior's own deterministic
+/// anchor order. Usually one sentence — the single-anchor case reads better as
+/// two ("A small room. A hearth stands here.") — so the invariant that is
+/// actually pinned is that **every branch ends in a period and contains no
+/// empty clause**, not a sentence count. Do not promise "one sentence" here;
+/// an earlier draft did, and the single-anchor branch quietly broke it.
 ///
 /// `brief` is read, not carried: a built place is a *room*, an unbuilt one is a
 /// *hollow*, and that single word is the difference between a dwelling and a
@@ -1151,7 +1192,7 @@ pub use chamber_prose::describe_chamber;
 - [ ] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-vessel chamber_prose:: 2>&1 | tail -12`
-Expected: PASS, 5 tests.
+Expected: PASS, 6 tests.
 
 - [ ] **Step 5: Format, audit, commit**
 
