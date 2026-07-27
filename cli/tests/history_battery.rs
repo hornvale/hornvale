@@ -19,8 +19,13 @@
 //! const comments below record where each one now sits. (The seed-42 floors
 //! themselves did move while this branch was open — main re-synced them with
 //! the light gate for The Sundering — which is a separate change, recorded at
-//! its own const.) The one to watch is the sweep's migration minimum, which
-//! fell to 6 against a floor of 5.
+//! its own const.) **The Tithe (tribute) then re-measured every number here
+//! again** — a milked subordinate is held at its epoch-start population, so
+//! more communities stay small enough for a later era's mask to move them, and
+//! both migration and re-stacking rose sharply. The sweep's migration minimum,
+//! which The Tumult left at 6 against a floor of 5, is back up to 25; the one
+//! to watch now is the depth/capacity correlation, whose median rose from
+//! -0.4741 to -0.3431 (see the sweep-floor comments below).
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -46,7 +51,7 @@ const SWEEP: [u64; 9] = [1, 2, 3, 7, 13, 42, 100, 256, 777];
 // "identical gates" invariant this comment asserts. `MAX_REGION_OVERLAP`
 // already matched.
 //
-// The Tumult (predation) then re-measured both: seed 42 at Full depth measures
+// The Tumult (predation) then re-measured both: seed 42 at Full depth measured
 // 58 climate migrations (was 51 on this campaign's branch point) and 99/227
 // re-occupied sites (was 6/139) — conquest re-seats communities onto new
 // ground, so far more of them meet a later era's habitability flip, and
@@ -54,6 +59,13 @@ const SWEEP: [u64; 9] = [1, 2, 3, 7, 13, 42, 100, 256, 777];
 // both floors; neither floor is raised to track them, because they are
 // inertness floors, not targets, and because raising them here would re-break
 // the identical-gates invariant the re-sync above restored.
+//
+// The Tithe (tribute, task 3) moved them again, the same way and further: seed
+// 42 now measures **198** climate migrations and **243/357** re-occupied sites.
+// Milked subordinates are held at their epoch-start population instead of
+// growing, so far more communities sit small enough to be moved by a later
+// era's mask. Same reading as above: the numbers rose away from the floors, and
+// the floors stay where they are.
 const MIGRATION_FLOOR: u64 = 5;
 const MAX_REGION_OVERLAP: f64 = 0.25;
 const MIN_RESTACKED_SITES: u64 = 1;
@@ -64,12 +76,17 @@ const MIN_RESTACKED_SITES: u64 = 1;
 // here for the first time since the epoch. Migration's minimum fell 11 (seed
 // 13) -> **6** (seed 2) — `migration_events` now correctly excludes
 // conquest-relocations, which more than halved the seed-42 raw count too
-// (133 -> 58). The floor of 5 still holds, but its margin is now ONE event on
+// (133 -> 58). The floor of 5 still holds, but its margin was then ONE event on
 // the thinnest sampled world; it is left where it is rather than lowered (it
 // passes) or raised (that would target the measurement), and the thin margin is
 // recorded here so the next campaign to move this number sees it coming.
 // Restacking moved the other way: the minimum rose 2 (seed 13) -> 26 (seed 2),
 // so `SWEEP_MIN_RESTACKED` has ample headroom.
+//
+// The Tithe (tribute) re-measured both again and both rose: the migration
+// minimum is 25 (seed 2, up from 6) and the restacking minimum 49 (seed 100, up
+// from 26). Neither floor is moved — they are inertness floors, and the margin
+// they had to watch has widened, not narrowed.
 const SWEEP_MIGRATION_FLOOR: u64 = 5;
 const SWEEP_MIN_RESTACKED: u64 = 2;
 
@@ -178,15 +195,21 @@ fn history_gates_full_world_and_cross_seed() {
     //     sea churn forces to be re-occupied repeatedly at tiny populations
     //     (e.g. seed 3 stacks cells 24-27 layers deep at mean peak ~1) — deep
     //     stacks on poor land, a strong NEGATIVE correlation.
-    //   - A SPARSE world with no such churn (seed 2: 62 occupied cells, its
-    //     re-stacks all PRIME land at mean peak ~87 vs 72 for single-occupation
-    //     cells) re-stacks on good land — a genuine POSITIVE correlation, not a
-    //     numerical fluke (all 7 of its restacked cells are consistently
-    //     high-population).
+    //   - A SPARSE world with no such churn (seed 2, when it held 79 occupied
+    //     cells) re-stacked on good land — a genuine POSITIVE correlation, not a
+    //     numerical fluke.
     // The finding "stratigraphy accretes on marginal land" therefore holds as a
-    // robust central tendency (median ~= -0.40, 8/9 negative), and the median
-    // gate keeps its falsification teeth without asserting a universality the
-    // physics no longer supports.
+    // robust central tendency, and the median gate keeps its falsification teeth
+    // without asserting a universality the physics no longer supports.
+    //
+    // Re-measured after The Tithe (tribute, task 3), which raised conflict ~9x
+    // and re-measured every row: all NINE seeds are now negative (the sparse
+    // seed-2 regime went -0.4048 -> **-0.1996** as its occupied set grew 79 ->
+    // 136), and the median moved **-0.4741 -> -0.3431**. The gate still has
+    // teeth and is not moved, but its margin is visibly smaller, with three
+    // seeds now in the -0.16..-0.20 band (3, 777, 2). The next campaign to touch
+    // this number should expect to have to re-argue the finding, not just re-pin
+    // it.
     let mut corrs: Vec<f64> = rows
         .iter()
         .map(|r| r.strat.depth_capacity_correlation)
