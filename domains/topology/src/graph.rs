@@ -49,8 +49,16 @@ impl ConnectionGraph {
     /// `CellId(node_count - 1)`, each starting with no edges.
     /// type-audit: bare-ok(count: node_count)
     pub fn new(node_count: usize) -> Self {
+        // Reserve each adjacency list up front. A geosphere cell has 5-6
+        // neighbours and `add_edge` appends to BOTH endpoints, so a list that
+        // starts empty reallocates ~4 times (1->2->4->8) on its way to its
+        // final length — 40,962 nodes' worth of realloc traffic per graph,
+        // which a DWARF-unwound profile attributed ~2.9% of census samples to
+        // (`add_edge` was the single largest allocator caller). Capacity is
+        // invisible to contents and iteration order, so this cannot move a
+        // byte of output.
         ConnectionGraph {
-            adjacency: vec![Vec::new(); node_count],
+            adjacency: (0..node_count).map(|_| Vec::with_capacity(8)).collect(),
         }
     }
 
