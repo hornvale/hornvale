@@ -73,6 +73,25 @@ mechanism is the reverse audit over species and acts, and the naming behind it.
   design line first. Both are in the followup register; neither should be
   discovered a third time by accident.
 
+
+- **The tripwire fired on first contact with a real case, from another
+  campaign.** The Threshold landed on `main` mid-close and added a fifth
+  `Action` variant (`MoveWithin`) in a campaign that had never heard of this
+  one. The destructure guard refused to compile until it was named — E0004 at
+  two sites — so a new verb could not reach `main` without someone answering
+  what it is called. This is the single strongest piece of evidence the
+  campaign produced, and it was produced by accident: the guard was written
+  against a hypothetical fifth variant on the same day a real one was being
+  written on another branch. Note the asymmetry it confirms — species has no
+  such guard (its roster is data), so the same collision on the species side
+  would have merged silently and waited for a human to read a generated page.
+
+- **A clean textual merge hid a semantic collision, exactly as the preflight
+  warns.** `git merge` reported no conflicts; the compiler reported two. The
+  preflight's "judgment half" text names this case specifically, and the only
+  reason it cost minutes rather than escaping to `main` is that the gate was
+  re-run on the *merged* result rather than trusting the pre-merge green.
+
 ## Confidence Gradient
 
 No re-score, same reasoning as The Accession's close: the nearest bet in
