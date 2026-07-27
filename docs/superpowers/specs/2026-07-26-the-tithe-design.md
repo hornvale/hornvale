@@ -102,13 +102,48 @@ asymmetry is already structural in the bake:
 | term | reads | meaning |
 |---|---|---|
 | **assessment** | the target cell's `eff_capacity` × `ASSESS_RATE` | what the dominant *demands*, set from what it can **see** |
-| **remittance** | `min(assessment, surplus × (1 − concealment))` where **surplus is that epoch's growth increment** — never the standing stock | what the subordinate *hands over*, paid from what it **has** |
+| **remittance** | `min(assessment, (surplus + bleed) × (1 − concealment))`, where **surplus is that epoch's growth increment** and **bleed is what can be taken from the standing stock above `FARM_FLOOR`** | what the subordinate *hands over*, paid from what it **has** |
 | **concealment** | `(1 − in_group_radius) × CONCEAL_MAX` | the gap the subordinate controls — an insular people hides more from outsiders |
 | **shortfall** | `assessment − remittance` | the only signal the dominant reads |
 
 `eff_capacity` and `population` are already two different numbers, so **the information asymmetry
 costs nothing and is fully deterministic**. Land tax has always been assessed on area, never on
 the granary, for exactly this reason.
+
+### 4.2b A greedy patron can bleed its vassal — the third amendment, and it reverses one of this spec's own rules
+
+**Amendment 3 (owner's call, 2026-07-27), made with its costs stated.** Earlier text capped
+remittance at the epoch's growth increment so that tribute would *milk rather than kill*. Task 5's
+implementation measured the consequence: that cap guarantees
+`population_after ≥ population_at_epoch_start`, so **the tribute loop's own health signal can never
+go negative.** The demand eases only when war, famine, climate or crowding hurts the vassal — never
+because the patron over-extracted. §4.3's "over-extract → collapse → relax" therefore **did not
+close inside the mechanism**, and a second bound sat on top of it: once the assessment exceeds a
+vassal's increment the vassal is milked exactly flat, and a flat vassal emits signal `0.0`, so the
+demand stops easing and the pair parks.
+
+Milk-don't-kill and the secular cycle want opposite things. The owner chose the cycle:
+
+```
+bleed      =  max(0, population − FARM_FLOOR)          // what a patron may take from the STOCK
+remittance =  min(assessment, (surplus + bleed) × (1 − concealment))
+```
+
+A patron demanding more than the surplus now genuinely **shrinks** its vassal, the health signal
+goes negative from tribute alone, the demand eases, the vassal recovers — and the loop closes
+inside the mechanism, which is what §1 sells and what neither prior formulation could deliver.
+
+**`FARM_FLOOR` is a floor, not an exemption.** A vassal may be bled down toward it but not through
+it, so tribute alone still cannot drive a community to extinction — §8.3 stands, with its claim
+restated: *no community is farmed below `FARM_FLOOR` by tribute alone.* Set `FARM_FLOOR` at or above
+`VIABLE_MIN` so a bled vassal remains a viable community rather than a husk.
+
+**What this supersedes.** The per-subordinate between-epoch population floor (the guard three tasks
+were built against, and itself the fix for this campaign's third non-binding assertion) is **no
+longer the invariant** — it is replaced by the `FARM_FLOOR` floor, which is the weaker but now-true
+claim. Every seed-42 measurement from Tasks 1–5 becomes a superseded baseline; §5's adjudication
+runs on the post-amendment mechanism, and the pre-amendment numbers are retained in the campaign
+record as the measurement that *motivated* the amendment, not as results.
 
 ### 4.2a Where tribute lands — the store (this is the accumulator)
 
@@ -256,6 +291,15 @@ population over bake time and test for **oscillation** (a dominant non-zero peri
 whether or not the cascade distribution moves. This is a separate claim on a separate axis and is
 adjudicated separately; it must not be bundled into the primary verdict.
 
+**This axis became live only at amendment 3, and that history is part of the result.** Under the
+pre-amendment cap the axis was a *structurally predictable null* — the health signal could not go
+negative from tribute, so no amount of measurement could have found a tribute-driven cycle. §4.2b
+closed that loop deliberately. So a cycle found here is evidence about the amended mechanism and
+must be reported as such; it is **not** evidence that the original milk-don't-kill formulation
+cycles, and any readout that omits the amendment is misleading. Use the **per-relation** tribute
+series, not raw volume — raw volume tracks the relation count and would report the population's
+shape rather than the demand's.
+
 **No constant is tuned toward a heavy tail.** Both outcomes ship. If the mechanism proves inert or
 the world depopulates, that is a calibration finding for Nathan, never a floor.
 
@@ -283,7 +327,8 @@ re-deriving that the `Fact` shape itself does not change.
    changing cell — the thing predation could not do. Specifically: `stores` rise while `pressure`
    does **not**, so a successful extractor does not starve itself (§4.2a). The maximum subordinates
    held by any one community is reported alongside.
-3. **The map is not depopulated** and no community is farmed to extinction by tribute alone;
+3. **The map is not depopulated** and **no community is farmed below `FARM_FLOOR` by tribute
+   alone** (§4.2b's restatement — a vassal may be bled toward the floor, never through it);
    alive-at-`now` stays in the walkable band.
 4. **The headline (§5)** is measured and adjudicated, with the secular-cycle axis reported
    separately.
