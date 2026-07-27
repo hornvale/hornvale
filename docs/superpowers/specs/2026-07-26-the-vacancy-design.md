@@ -274,6 +274,43 @@ explicit allowlist of the four known-void kinds naming this blocker, and the
 task that lands the prey field **deletes the allowlist**. The deletion is the
 proof the fix worked.
 
+### 3.6 What "inhabited" means here — the reach of the supply model
+
+**Found while landing stage 2b, and it qualifies this campaign's headline.**
+
+The per-axis habitat model (`niche_per_species_k`, and therefore both supply
+fields this campaign adds) is **not** the settlement provider. The Living
+Community made the deep-history bake the provider, and the bake reads plain
+`carrying_capacity` — not the per-axis dot product. `windows/worldgen/src/lib.rs`
+says so outright: "the retired `coexist::pack`/`condense_stack` placer is gone
+from genesis; the same niche-differentiated stack still lives in
+`demography_report` for the Lab's coexistence-stack readout."
+
+Two consequences, both measured rather than reasoned:
+
+- **A supply-axis change cannot move settlement outcomes.** Seed 42 condenses
+  203 settlements at the campaign base, with the prey field reverted, and with
+  it applied — identical all three ways. A commit message in stage 2b initially
+  claimed the prey field moved that count 81 → 203 and explained the mechanism
+  in detail; the count had already been 203 on main before the campaign began,
+  and the mechanism does not exist. Corrected in place.
+- **Fauna live in the K field and the coexistence stack, never in the ledger.**
+  Every fauna kind appears exactly once in a generated world — as a registry
+  declaration. Only the four peoples appear substantively. This predates the
+  campaign and is unchanged by it.
+
+So "the sea is inhabited" means precisely: marine kinds have habitat in the
+model, appear in the committed occupancy readout, and compete in the Lab's
+coexistence readout — exactly as the twelve already-viable terrestrial fauna
+do. It does **not** mean a shark appears in a world's ledger, because no fauna
+does. The one kind this campaign puts into worlds is the gnoll, because peoples
+go through the bake's peopled roster.
+
+That is a smaller claim than §1 first implied, and it is the true one. It also
+shrinks the blast radius §7 budgets for stages 3–4: new *fauna* cannot drift
+settlement outcomes, so only the gnoll's stage should move committed genesis
+artifacts.
+
 ## 4. The instrument
 
 ### 4.1 The coverage table
