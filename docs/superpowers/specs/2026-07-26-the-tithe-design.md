@@ -288,6 +288,40 @@ Revolt is the avalanche trigger the headline metric has never had: the cascade d
 never seen a large event, and a patron's failure propagating through its holdings is the first
 mechanism in this campaign that could produce one.
 
+### 4.3e The wounded patron — relation continuity across relocation (amendment 5)
+
+**The measurement.** §4.3d's revolt **never fires**: zero revolts across thirty worlds. The cause is
+structural, not a mis-set threshold. The largest `strength(vassal) / strength(patron)` any relation
+reaches is **1.029** against the 1.5 the rule requires. Forming a relation needs 1.5×, so reversing
+it needs a 2.25× swing; the patron's stores then widen the gap monotonically; and **every path that
+damages a patron kills it outright** — a patron that loses a raid `close`s its record, and closure
+dissolves its whole portfolio. **A patron is never wounded, only healthy or dead**, so the state
+revolt requires does not exist.
+
+**The change.** A community that relocates — closing here and reopening there — **keeps its tribute
+relations**, which transfer to its new community. Only a patron that genuinely *dies* loses them.
+A defeated lord who flees to another holding still holds his vassals' obligation; what he has lost
+is the strength to enforce it. That is precisely the wounded state, and it is defensible on realism
+independently of what it does to the metric: a defeated empire shrinking is more plausible than one
+evaporating.
+
+**Preregistered prediction, written before the implementation exists.** This is the fifth amendment
+in this campaign and the fourth to follow a disappointing measurement. The cumulative shape of that
+is metric-chasing, whatever each local justification — so this one states in advance what it expects,
+and the readout confirms or falsifies a *prediction* rather than reporting a number we then explain:
+
+1. **Revolts will fire.** The max strength ratio should exceed 1.5 where it topped out at 1.029.
+   If revolts remain at zero, the wounded-patron diagnosis was wrong and §4.3d's inertness has some
+   other cause.
+2. **The cascade distribution is the open question, and both branches are informative.** If it moves
+   toward a heavy tail, accumulation-with-a-failure-mode was the missing ingredient — the campaign's
+   thesis confirmed. **If revolts fire and the distribution stays geometric, that is a *stronger*
+   falsification than the current null**: it would show that even accumulation which can fail does
+   not self-organize in this world, and would push the diagnosis from "the structure cannot break"
+   to something deeper.
+3. **No constant is tuned toward either outcome**, and this is the last mechanism. Whatever §5
+   measures after this ships is the campaign's answer.
+
 ### 4.4 Representation and lifecycle
 
 - **Live during the bake** — a relation table on `Bake`, alongside `node_index`. Deterministic
