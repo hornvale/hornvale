@@ -79,6 +79,26 @@ pub use etymology::{
     AppliedRule, Cascade, CascadeRegime, Daughter, Derivation, RuleKind, SoundRule,
     assign_proto_roots, draw_cascade, draw_cascade_with_regime, evolve, proto_root,
 };
+
+/// Test-only door into [`etymology::assign_proto_roots_with_epoch`], whose
+/// injected `epoch_of` lets a property test exercise the accession-epoch
+/// carve (LANG-55) over a synthetic concept universe — the real table is a
+/// `const`, and a test cannot append a cohort to it. `#[doc(hidden)]` rather
+/// than widening `assign_proto_roots_with_epoch` itself to `pub`: the real
+/// function stays `pub(crate)`, with `assign_proto_roots` (fixed to
+/// [`accession::concept_epoch`]) as its only production entry point.
+/// type-audit: bare-ok(identifier-text)
+#[doc(hidden)]
+pub fn assign_proto_roots_with_epoch_for_test(
+    seed: &hornvale_kernel::Seed,
+    family: &str,
+    proto_ph: &Phonology,
+    concepts: &[&str],
+    daughters: &[Daughter],
+    epoch_of: impl Fn(&str) -> u32,
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    etymology::assign_proto_roots_with_epoch(seed, family, proto_ph, concepts, daughters, epoch_of)
+}
 pub use grammar::{
     ConstituentOrder, TongueClause, TongueGap, TongueGrammar, realize_tongue, realize_tongue_deep,
     tongue_grammar,

@@ -355,7 +355,8 @@ pub(crate) fn assign_proto_roots_with_epoch(
         let core = crate::packs::is_core_concept(concept);
         let mut probe = 0u32;
         let form = loop {
-            let candidate = draw_candidate(seed, family, concept, proto_ph, probe);
+            let candidate =
+                draw_candidate(seed, family, concept, proto_ph, probe, epoch_of(concept));
             let taken = used.contains(&candidate);
             let too_close = core
                 && core_forms
@@ -416,6 +417,7 @@ fn draw_candidate(
     concept: &str,
     ph: &Phonology,
     probe: u32,
+    epoch: u32,
 ) -> Vec<Segment> {
     let tier = probe / PROBE_BUDGET;
     let min = PROTO_ROOT_SYLLABLE_RANGE.0 + tier;
@@ -435,7 +437,34 @@ fn draw_candidate(
             .stream()
     };
     let namer = Namer::new(seed, family, ph);
-    let syllables = namer.draw_syllables(&mut stream, min, max, false);
+    // LANG-55, The Wearing: a later-epoch coinage draws from a reserved
+    // region of the SAME-LENGTH form space — its syllables are drawn with a
+    // bias toward closed (non-empty) codas, a region epoch-0 roots are free
+    // to avoid. Additivity then holds by construction of the codomain, not
+    // by the assignment order, so a core (Swadesh) concept registered in a
+    // later campaign keeps its short form instead of forfeiting it to
+    // arrival order (the cost The Accession knowingly took, §3.3). The
+    // `weighty` flag is exactly this bias and already exists for deity
+    // stems ([`Namer::draw_syllables`]).
+    //
+    // `weighty` biases EVERY syllable's coda, not only the final one
+    // (`Namer::choose_coda_template`) — a stronger carve than a single
+    // reserved final coda would need, but harmless: the disjointness
+    // argument only needs *some* reserved region, and every closed-coda
+    // form drawn this way is unreachable from the epoch-0 path regardless
+    // of which syllable carries the closure. If Task 11's inspection finds
+    // the resulting forms read as too heavy, narrow the bias to the final
+    // syllable then, with a measurement, not now on speculation.
+    //
+    // Degradation is deliberate: `draw_syllables(.., weighty = true)` falls
+    // back to the open templates when the phonology admits no closed coda
+    // at all (`choose_coda_template`'s `stream.pick(&closed)` returns
+    // `None` on an empty `closed`, and control falls through to picking
+    // from the FULL `ph.codas`), so the carve becomes the identity rather
+    // than failing. A language that cannot mark its neologisms simply does
+    // not mark them.
+    let weighty = epoch > 0;
+    let syllables = namer.draw_syllables(&mut stream, min, max, weighty);
     crate::naming::segments_of(&syllables)
 }
 
