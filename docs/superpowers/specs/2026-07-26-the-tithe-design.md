@@ -148,14 +148,39 @@ answer to why the crowding build was smooth and raid-free.
 
 ### 4.3 Adaptive demand — the oscillator
 
-Each epoch after collection the dominant adjusts:
-`assessment += shortfall × ADAPT_RATE`.
+**Corrected before implementation; the first formulation could not oscillate.** It read
+`assessment += shortfall × ADAPT_RATE` with `shortfall = assessment − remittance`. But
+`remittance = min(assessment, …) ≤ assessment` by construction, so **shortfall is non-negative
+always** and the rule is a monotone **ratchet** to the ceiling, not a feedback loop. "Over-extract
+→ collapse → tribute falls → demand relaxes" had no mechanism by which demand could ever relax.
+A one-signed error term cannot produce a cycle.
 
-Feedback **with delay** (the delay is the epoch step, free) is an oscillator: over-extract →
-subordinate collapses → tribute falls → demand relaxes → regrowth → over-extract. This reproduces
-the **Ibn Khaldun / Turchin secular cycle** the spec has cited since the pivot, as a *consequence*
-rather than an authored feature — and oscillators parked near a threshold are how SOC systems
-actually sit at criticality, which is precisely what neither prior build achieved.
+**The patron feeds back on its subordinate's *health*, not on the shortfall.** Each epoch after
+collection it compares the subordinate against what it saw last time:
+
+```
+signal      =  (population_now − population_at_last_visit) / population_at_last_visit
+assessment +=  signal × assessment × ADAPT_RATE          // clamped to [0, eff_capacity × ASSESS_MAX]
+```
+
+A vassal that **grew** can bear more, so the demand rises; one that **shrank** is being
+over-milked, so the demand eases. The error term is genuinely **two-signed**, so the loop can
+overshoot in both directions — which is what makes it an oscillator rather than a ratchet. It also
+matches the historical story the spec has cited since the pivot: a tax farmer who kills the village
+collects nothing next year, and learns. Feedback with delay (the delay is the epoch step, free)
+then reproduces the **Ibn Khaldun / Turchin secular cycle** as a *consequence* rather than an
+authored feature — and oscillators parked near a threshold are how SOC systems actually sit at
+criticality, which is precisely what neither prior build achieved.
+
+**The demand must be able to bind, and the original constants made that impossible.** With
+`NEED = 1.0` and `GROWTH_RATE = 0.2`, the logistic increment is
+`0.2 × N × (1 − N/eff)`, maximised at `N = eff/2` and therefore **never exceeding `0.05 × eff`**.
+An `ASSESS_RATE` of `0.1` puts the assessment at `0.1 × eff` — at least twice the largest surplus
+the subordinate's land can ever produce — so `min(assessment, surplus)` selects the surplus branch
+on every world, the assessment is decorative, and adapting it changes no remittance anywhere.
+**`ASSESS_RATE` must therefore sit below the logistic ceiling `GROWTH_RATE / 4`**, and the two
+constants are coupled: any future change to `GROWTH_RATE` re-opens this. A test pins the
+relationship rather than the value, so the coupling cannot rot silently.
 
 ### 4.4 Representation and lifecycle
 
