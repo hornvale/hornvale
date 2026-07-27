@@ -2,7 +2,11 @@
 
 **Campaign:** The Convalescence
 **Date:** 2026-07-26
-**Status:** draft (G3)
+**Status:** Shipped 2026-07-26. **Amended after approval (Addendum A): §8 is
+internally inconsistent, not merely under-read — its bullet list labels
+`chronicity` "The bug alarm", so §1's framing ("the control drifted from its own
+spec") is softer in fact than as written. The design is unchanged; the approved
+text stands, §7 included.**
 **Parent:** `2026-07-19-the-temperament-design.md` §8 — the spec that defines the
 population health family. This campaign restores the alarm that spec specifies.
 **Decisions in force:** 0016 (studies preregister their hypotheses), 0011

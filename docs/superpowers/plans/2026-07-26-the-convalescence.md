@@ -1,5 +1,14 @@
 # The Convalescence Implementation Plan
 
+**Status: complete, merged 2026-07-26.** All three tasks executed and reviewed;
+the whole-branch review's four reservations closed in `0052c541`. Two things this
+plan did not anticipate, recorded here because the plan is where a later reader
+looks for them: the type-audit report needed regenerating **after** the
+mid-campaign absorb of `main`, not only after the code change (the pre-absorb
+regeneration would have reverted main's) — and the seed sweep it moved the bound
+onto could pass on an empty population, so the close made it stricter than the
+plan specified.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Split the population health metric's chronic measure in two — keep
