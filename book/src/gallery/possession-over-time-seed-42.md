@@ -22,13 +22,13 @@ You stand in tropical seasonal forest — buttressed canopy — in the lands of 
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [1529] bugbear of Qvooshtvoagootao
-  [1530] hobgoblin of Vootkeonoagootoaneo
-  [1531] kobold of Xatxoratrro
-  [1532] a wild rust-monster
-  [1533] a wild otyugh
-  [1534] a wild xorn
-  [1535] a wild giant-elk
+  [1470] bugbear of Qvooshtvoagootao
+  [1471] hobgoblin of Vootkeonoagootoaneo
+  [1472] kobold of Xatxoratrro
+  [1473] a wild rust-monster
+  [1474] a wild otyugh
+  [1475] a wild xorn
+  [1476] a wild giant-elk
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5

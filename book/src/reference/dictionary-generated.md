@@ -99,7 +99,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bugbear-kind` | a bugbear | Koa | /koa/ | Kea | Kea → no change → Koa |
 | `child` | one's son or daughter | Daokoa | /daokoa/ | Daekoa | Daekoa → no change → Daokoa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): bugbear has no exposure to 'cold' |
-| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
+| `coral-reef` | a biome class | Doakao | /doakao/ | Doakae | Doakae → no change → Doakao |
 | `dark` | the color term for black/dark hues | Taadoo | /taadoo/ | Taanoo | Taanoo → no change → Taadoo |
 | `day` | the light half of the day-night cycle | Goadao | /goadao/ | Goanae | Goanae → no change → Goadao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
@@ -142,7 +142,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Doodoadaokaa | /doodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Daoqao | /daoqao/ | Naeqae | Naeqae → no change → Daoqao |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | Daakoa | /daakoa/ | Naakoa | Naakoa → no change → Daakoa |
 | `sibling` | one's brother or sister | Boodao | /boodao/ | Peonae | Peonae → no change → Boodao |
 | `sleep` | to rest unconscious | Dooboo | /dooboo/ | Neepeo | Neepeo → no change → Dooboo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
@@ -151,7 +151,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Kaodoa | /kaodoa/ | Kaonea | Kaonea → no change → Kaodoa |
 | `stone` | rock | Daodoa | /daodoa/ | Naonea | Naonea → no change → Daodoa |
 | `sun` | the sun | Doagoo | /doagoo/ | Noagoo | Noagoo → no change → Doagoo |
-| `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
+| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
 | `temperate-forest` | a biome class | Doodoa | /doodoa/ | Noenoa | Noenoa → no change → Doodoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | Toadoo | /toadoo/ | Toaneo | Toaneo → no change → Toadoo |
@@ -342,7 +342,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bugbear-kind` | a bugbear | Roqxa | /roqxa/ | Rroqxat | Rroqxat → finalloss → clustersimplify → Roqxa |
 | `child` | one's son or daughter | Rakxa | /rakxa/ | Rrakxak | Rrakxak → finalloss → clustersimplify → Rakxa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): kobold has no exposure to 'cold' |
-| `coral-reef` | a biome class | Xaro | /xaro/ | Xarok | Xarok → finalloss → Xaro |
+| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
 | `dark` | the color term for black/dark hues | Xa | /xa/ | Xa | Xa → no change → Xa |
 | `day` | the light half of the day-night cycle | Ro | /ro/ | Rot | Rot → finalloss → Ro |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |

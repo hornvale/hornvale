@@ -300,6 +300,14 @@ revolt requires does not exist.
 
 **The change.** A community that relocates — closing here and reopening there — **keeps its tribute
 relations**, which transfer to its new community. Only a patron that genuinely *dies* loses them.
+
+**The continuity is role-asymmetric, and the asymmetry is the point.** A relocating community keeps
+its relations **as patron** — a lord's claim travels with him — but **drops them as subordinate**: a
+vassal that flees is gone. Shipped role-blind first, and measured: obligation that follows the runaway
+turns flight into a change of address rather than an escape, and produces repeat leavers (pooled
+flights 78 → 647, mostly the same communities fleeing again each epoch because fleeing discharged
+nothing). §4.3d's flight is "relocates *rather than continue in that condition*", which only means
+anything if leaving ends the condition.
 A defeated lord who flees to another holding still holds his vassals' obligation; what he has lost
 is the strength to enforce it. That is precisely the wounded state, and it is defensible on realism
 independently of what it does to the metric: a defeated empire shrinking is more plausible than one

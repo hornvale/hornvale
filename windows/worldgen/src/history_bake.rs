@@ -680,9 +680,9 @@ struct Tribute {
     last_seen_population: f64,
 }
 
-/// The tribute relations a community was party to at the instant it closed,
-/// lifted off the live table so that a **relocation** can re-key them onto the
-/// seat it reopens at (spec §4.3e).
+/// The **portfolio** a relocating community takes with it: the relations it
+/// held *as patron* at the instant it closed, lifted off the live table so
+/// that they can be re-keyed onto the seat it reopens at (spec §4.3e).
 ///
 /// This is the whole of the wounded-patron mechanism's state. It exists
 /// because closing and reopening is one *movement* in this bake, not a death
@@ -693,33 +693,36 @@ struct Tribute {
 /// (Famine, a remnant lost on the road, annihilation) never has one taken and
 /// loses everything exactly as before.
 ///
-/// Both roles are carried because a relocating community may be either: a
-/// patron carries its portfolio, a subordinate carries its obligation. It can
-/// never be both — spec §4.4's one-level stars keep the patron set and the
-/// subordinate set disjoint — and [`Bake::carry_relations_to`] asserts that
-/// rather than assuming it.
+/// **The continuity is role-asymmetric, and the asymmetry is the point**
+/// (spec §4.3e). A relocating community keeps its relations as *patron* — a
+/// lord's claim travels with him — and **drops them as subordinate**: a vassal
+/// that flees is gone. So only the patron role is carried here; the
+/// obligation is deliberately left in the table for `close` to dissolve.
+/// Shipped role-blind first and measured: obligation that follows the runaway
+/// turns flight into a change of address rather than an escape, and produced
+/// repeat leavers (pooled flights 78 → 647, mostly the same communities
+/// fleeing again every epoch because fleeing discharged nothing). Spec §4.3d's
+/// flight is "relocates *rather than continue in that condition*", which only
+/// means anything if leaving ends the condition.
 #[derive(Clone, Debug, Default)]
-struct CarriedTribute {
-    /// The relation in which the carrier is the **subordinate**: who it pays,
-    /// and on what terms. `None` if it had no patron.
-    as_subordinate: Option<Tribute>,
-    /// The relations in which the carrier is the **patron**: its portfolio, as
+struct CarriedPortfolio {
+    /// The relations in which the carrier is the **patron**: its vassals, as
     /// `(subordinate index, terms)` pairs in ascending subordinate order
     /// (`BTreeMap` key order, so the carry is order-free).
-    as_patron: Vec<(usize, Tribute)>,
+    vassals: Vec<(usize, Tribute)>,
 }
 
-impl CarriedTribute {
-    /// Nothing carried: the community was party to no relation, or the caller
-    /// is one for which continuity does not apply (a test fixture relocating a
-    /// people that never held or owed anything).
+impl CarriedPortfolio {
+    /// Nothing carried: the community held no vassals, or the caller is one
+    /// for which continuity does not apply (a test fixture relocating a people
+    /// that never held anything).
     ///
     /// Test-only: every production caller of [`Bake::relocate`] carries a real
     /// lift, because every production relocation is a community that closed
-    /// somewhere and might have been party to something.
+    /// somewhere and might have held vassals.
     #[cfg(test)]
-    fn none() -> CarriedTribute {
-        CarriedTribute::default()
+    fn none() -> CarriedPortfolio {
+        CarriedPortfolio::default()
     }
 }
 
@@ -1166,12 +1169,15 @@ impl<'a> Bake<'a> {
     /// top-level caller tallies its own: a community may not vanish from the
     /// world uncounted.
     ///
-    /// `carried` is what the relocating community was party to when it closed
-    /// ([`Bake::lift_relations`], taken by the caller immediately before its
+    /// `carried` is the portfolio the relocating community held when it closed
+    /// ([`Bake::lift_portfolio`], taken by the caller immediately before its
     /// `close`). It is re-keyed onto whichever seat this relocation reaches,
     /// and **dropped on every `Lost` branch** — a remnant that dies on the road
-    /// dies with its relations, exactly as spec §4.4 requires of any real
-    /// death. Callers with nothing to carry pass [`CarriedTribute::none`].
+    /// dies with its vassals, exactly as spec §4.4 requires of any real death.
+    /// A relocating community's own *obligation* never rides along: spec
+    /// §4.3e's continuity is role-asymmetric, so the leaver's patron is left
+    /// behind at the `close`. Callers with nothing to carry pass
+    /// [`CarriedPortfolio::none`].
     #[allow(clippy::too_many_arguments)]
     fn relocate(
         &mut self,
@@ -1184,7 +1190,7 @@ impl<'a> Bake<'a> {
         era: &EraClimate,
         year: f64,
         depth: u32,
-        carried: CarriedTribute,
+        carried: CarriedPortfolio,
     ) -> Relocation {
         if depth >= CASCADE_DEPTH_CAP {
             return Relocation::Lost; // truncated — the last remnant is lost (bounded-size guard)
@@ -1232,9 +1238,9 @@ impl<'a> Bake<'a> {
                 Some(lineage),
                 offset,
             );
-            // It reopened, so it was a move and not a death: what it was party
-            // to comes with it (spec §4.3e).
-            self.carry_relations_to(new_idx, carried);
+            // It reopened, so it was a move and not a death: the vassals it
+            // held come with it (spec §4.3e).
+            self.carry_portfolio_to(new_idx, carried);
             self.touch(new_idx, year);
             // The resettle is tallied HERE, where it happens, rather than at
             // the top-level call site: a cascade's terminal roller reaches
@@ -1273,20 +1279,24 @@ impl<'a> Bake<'a> {
             offset,
         );
         let displacer_id = self.communities[new_idx].id;
-        // The roller's own relations re-key first, while the victim is still
-        // ALIVE: a roller that takes its own vassal's cell keeps that vassal,
-        // whose obligation is then lifted again one line below and carried on
-        // down the chain with it. Doing this after the victim's close would
-        // silently drop exactly that relation (spec §4.3e).
-        self.carry_relations_to(new_idx, carried);
-        let victim_carried = self.lift_relations(victim);
+        // The roller keeps the vassals it holds; the victim keeps the vassals
+        // IT holds and loses its own lord, because being driven off is a
+        // relocation and a relocating community drops its obligation (spec
+        // §4.3e's asymmetry). So a roller that conquers its own vassal's cell
+        // loses that vassal: the entry re-keyed here is dissolved two lines
+        // later by the victim's `close`, exactly as it would be for a vassal
+        // that fled of its own accord. The order of these two lines no longer
+        // decides anything — the guards read liveness, and every entry either
+        // survives both orderings or neither — and is kept for readability.
+        self.carry_portfolio_to(new_idx, carried);
+        let victim_carried = self.lift_portfolio(victim);
         self.close(victim, year, CauseOfEnd::Fled, Ended::By(displacer_id));
         self.touch(new_idx, year);
         self.tally.raided += 1;
         self.tally.fled += 1;
         // The evicted occupant cascades onward, founded from its own (the
         // victim's) community id, carrying what the war and the road left it —
-        // and what it was party to, since being driven off is a move and not a
+        // and the vassals it holds, since being driven off is a move and not a
         // death (spec §4.3e).
         let victim_cascade = match self.relocate(
             v_people,
@@ -1316,7 +1326,7 @@ impl<'a> Bake<'a> {
 
     /// [`Bake::relocate`] for a people that is party to no tribute relation —
     /// the shape every conflict fixture in this file's test module wants, and
-    /// nothing more than the full call with [`CarriedTribute::none`]. It exists
+    /// nothing more than the full call with [`CarriedPortfolio::none`]. It exists
     /// so those fixtures say *carrying nothing* explicitly instead of trailing
     /// an opaque argument, and so the relation-continuity tests, which do pass
     /// a carry, stand out as the ones exercising spec §4.3e.
@@ -1344,7 +1354,7 @@ impl<'a> Bake<'a> {
             era,
             year,
             depth,
-            CarriedTribute::none(),
+            CarriedPortfolio::none(),
         )
     }
 
@@ -1699,14 +1709,16 @@ impl<'a> Bake<'a> {
     ///
     /// **A relocation is not a death, and the difference is made one line
     /// earlier** (spec §4.3e). A community that closes here and reopens
-    /// elsewhere as one movement has already had its relations lifted by
-    /// [`Bake::lift_relations`], so the two removals below find nothing left to
-    /// remove and the carry re-keys them onto the new seat. Every *other* close
-    /// — Famine, a remnant lost on the road, annihilation — reaches this line
-    /// with the relations still in the table and forfeits them, exactly as
-    /// before. So this stays the single unconditional dissolution point:
-    /// preserving is something a caller does deliberately, never something this
-    /// method decides.
+    /// elsewhere as one movement has already had its *portfolio* lifted by
+    /// [`Bake::lift_portfolio`], so the second removal below finds nothing left
+    /// to remove and the carry re-keys it onto the new seat. Its own
+    /// obligation is **not** lifted — the continuity is role-asymmetric — so
+    /// the first removal below still fires, and a vassal that flees leaves its
+    /// patron behind. Every *other* close — Famine, a remnant lost on the road,
+    /// annihilation — reaches this line with everything still in the table and
+    /// forfeits it all, exactly as before. So this stays the single
+    /// unconditional dissolution point: preserving is something a caller does
+    /// deliberately, never something this method decides.
     fn close(&mut self, idx: usize, year: f64, cause: CauseOfEnd, ended_by: Ended) {
         let c = &mut self.communities[idx];
         c.alive = false;
@@ -1724,78 +1736,80 @@ impl<'a> Bake<'a> {
         self.tribute.retain(|_, t| t.patron != idx);
     }
 
-    /// Lift every relation `idx` is party to off the live table and hand it
-    /// back, so a caller that is about to `close` this community **as one half
-    /// of a relocation** can re-key it onto the seat it reopens at
-    /// (spec §4.3e).
+    /// Lift the vassals `idx` holds off the live table and hand them back, so
+    /// a caller that is about to `close` this community **as one half of a
+    /// relocation** can re-key them onto the seat it reopens at (spec §4.3e).
     ///
-    /// Called immediately before [`Bake::close`], whose own two-sided
-    /// dissolution then finds nothing left to remove. That is the whole
-    /// distinction the mechanism turns on: **relocation lifts, death does
-    /// not.** A community lost to Famine, lost on the road, or annihilated
-    /// still forfeits its portfolio and its obligation, because nobody lifted
-    /// them first.
+    /// Called immediately before [`Bake::close`], whose own dissolution then
+    /// finds this portfolio already gone. That is the whole distinction the
+    /// mechanism turns on: **relocation lifts, death does not.** A community
+    /// lost to Famine, lost on the road, or annihilated still forfeits its
+    /// vassals, because nobody lifted them first.
+    ///
+    /// **`idx`'s own obligation is deliberately NOT lifted** — spec §4.3e's
+    /// asymmetry. It stays in the table, so the `close` one line later
+    /// dissolves it exactly as it would for a death, and a vassal that flees
+    /// arrives free. Leaving it in place (rather than lifting and discarding
+    /// it) keeps `close` the single dissolution point in this file: preserving
+    /// is something a caller does deliberately, and everything a caller does
+    /// not lift is dissolved there.
     ///
     /// Deterministic: the portfolio is collected in `BTreeMap` key order and
     /// the table is only ever *shrunk* here, so the lift cannot depend on when
     /// it runs.
-    fn lift_relations(&mut self, idx: usize) -> CarriedTribute {
-        let as_subordinate = self.tribute.remove(&idx);
-        let as_patron: Vec<(usize, Tribute)> = self
+    fn lift_portfolio(&mut self, idx: usize) -> CarriedPortfolio {
+        let vassals: Vec<(usize, Tribute)> = self
             .tribute
             .iter()
             .filter(|(_, t)| t.patron == idx)
             .map(|(&sub, &t)| (sub, t))
             .collect();
-        for (sub, _) in &as_patron {
+        for (sub, _) in &vassals {
             self.tribute.remove(sub);
         }
-        CarriedTribute {
-            as_subordinate,
-            as_patron,
-        }
+        CarriedPortfolio { vassals }
     }
 
-    /// Re-key carried relations onto `new_idx`, the seat a relocating community
-    /// has just reopened at — spec §4.3e's **wounded patron**. The relation is
-    /// the same relation: its assessment, its `since` and its remembered
-    /// population all travel, so a patron that is driven off its land arrives
-    /// still holding its vassals' obligation, having lost only the population
-    /// the war took and the hoard its old community's closure destroyed. What
-    /// this creates is the state the model previously had no room for — a
-    /// patron that is *weakened* rather than dead — which is what spec §4.3d's
-    /// revolt needs in order ever to fire.
+    /// Re-key a carried portfolio onto `new_idx`, the seat a relocating
+    /// community has just reopened at — spec §4.3e's **wounded patron**. Each
+    /// relation is the same relation: its assessment, its `since` and its
+    /// remembered population all travel, so a patron that is driven off its
+    /// land arrives still holding its vassals' obligation, having lost only the
+    /// population the war took and the hoard its old community's closure
+    /// destroyed. What this creates is the state the model previously had no
+    /// room for — a patron that is *weakened* rather than dead — which is what
+    /// spec §4.3d's revolt needs in order ever to fire.
     ///
-    /// **A relation whose other party is not alive is dropped**, in either
-    /// role. Two cases reach that: the counterpart genuinely died, and the
-    /// counterpart is itself mid-relocation (a patron that conquers its own
-    /// vassal's cell drives that vassal onto the road, and the road has not
-    /// ended when this re-key runs). Dropping is the safe reading of both —
+    /// **Only the patron role arrives here**, because only the patron role is
+    /// lifted ([`Bake::lift_portfolio`]). A relocating community's own
+    /// obligation was left behind to be dissolved by its `close`, so a fleeing
+    /// vassal is genuinely gone from its relation rather than merely at a new
+    /// address (spec §4.3e's asymmetry).
+    ///
+    /// **A vassal that is not alive is dropped.** Two cases reach that: it
+    /// genuinely died, and it is itself mid-relocation (a patron that conquers
+    /// its own vassal's cell drives that vassal onto the road, and the road has
+    /// not ended when this re-key runs). Dropping is the safe reading of both —
     /// `tribute` holds community *indices*, so re-keying onto a closed
     /// community would leave a dangling index, the silent corruption spec §4.4
     /// exists to forbid.
     ///
-    /// **One-level stars survive the re-key** (spec §4.4). A carrier is never
-    /// both a patron and a subordinate, so a carry can never fuse two levels on
-    /// its own; but each install is nonetheless checked against the two shapes
-    /// that would introduce depth — a subordinate that has since become a
-    /// patron, and a patron that has since become a subordinate — so the
-    /// invariant is enforced here rather than inherited by argument.
+    /// **One-level stars survive the re-key** (spec §4.4). Each install is
+    /// checked against the two shapes that would introduce depth — a
+    /// subordinate that has since been taken over, and one that has since
+    /// become a patron itself — so the invariant is enforced here rather than
+    /// inherited by argument. The third shape, a *patron* that has become
+    /// somebody's vassal, cannot arise: `new_idx` was opened moments ago by
+    /// every caller and so is party to nothing, and the asymmetry means no
+    /// obligation is carried onto it either.
     ///
     /// Order-independent: every install is into a `BTreeMap` under a fixed key,
     /// and the guards read only liveness and membership, neither of which the
     /// loop's own inserts can flip for a later iteration (the portfolio's keys
-    /// are distinct, and `new_idx` is freshly opened, so it is party to
-    /// nothing).
-    fn carry_relations_to(&mut self, new_idx: usize, carried: CarriedTribute) {
-        debug_assert!(
-            carried.as_subordinate.is_none() || carried.as_patron.is_empty(),
-            "one-level stars (spec §4.4): a community carried both roles — \
-             {} vassals and a patron of its own",
-            carried.as_patron.len()
-        );
-        // The portfolio: each vassal now pays the new seat.
-        for (sub, terms) in carried.as_patron {
+    /// are distinct, and they all name `new_idx` as patron, so no install can
+    /// make a later `sub` look like a patron).
+    fn carry_portfolio_to(&mut self, new_idx: usize, carried: CarriedPortfolio) {
+        for (sub, terms) in carried.vassals {
             if sub == new_idx || !self.communities[sub].alive {
                 continue; // gone, or still on the road: the relation does not survive it
             }
@@ -1809,19 +1823,6 @@ impl<'a> Bake<'a> {
                     ..terms
                 },
             );
-        }
-        // The obligation: the new seat still owes what the old one owed.
-        if let Some(terms) = carried.as_subordinate {
-            let patron = terms.patron;
-            if patron == new_idx || !self.communities[patron].alive {
-                return; // the patron died, or is itself on the road
-            }
-            if self.tribute.contains_key(&patron)
-                || self.tribute.values().any(|t| t.patron == new_idx)
-            {
-                return; // the patron is itself a vassal, or this seat holds vassals: no depth
-            }
-            self.tribute.insert(new_idx, terms);
         }
     }
 
@@ -2178,15 +2179,20 @@ impl<'a> Bake<'a> {
     /// tribute-driven extinction: a vassal bled onto `FARM_FLOOR` cannot flee,
     /// it stays and endures.
     ///
-    /// **What a flight changes is the cell, not the lord.** A flight is a
-    /// relocation, so the obligation is lifted and re-keyed onto the new seat
-    /// exactly as a patron's portfolio is (spec §4.3e) — the rule is
-    /// role-blind, because one that preserved relations across some
-    /// relocations and dissolved them across others would be worse than either
-    /// behaviour alone. A vassal that walked out from under its relation by
-    /// moving would be an *escape* rule; that is a mechanism neither §4.3d nor
-    /// §4.3e states, and adopting it here by omission is exactly what this
-    /// paragraph exists to prevent.
+    /// **A flight ends the relation, and that is the whole of what makes it a
+    /// flight.** Spec §4.3e's continuity is role-asymmetric: a relocating
+    /// community keeps the vassals it holds and drops the lord it owes, so the
+    /// leaver arrives free. Shipped role-blind first and measured — obligation
+    /// that followed the runaway turned flight into a change of address, and
+    /// pooled flights went 78 → 647, overwhelmingly the same communities
+    /// leaving again every epoch because leaving discharged nothing. §4.3d
+    /// calls flight relocating "rather than continue in that condition", which
+    /// only means anything if leaving ends the condition.
+    ///
+    /// The patron is not compensated and does not pursue: it simply stops
+    /// collecting, so its `stores` decay without replacement and it becomes
+    /// beatable — the same emergent chain a revolt starts, reached by the
+    /// vassal's feet instead of its strength.
     ///
     /// Returns whether the community actually left, so a caller can tell a
     /// declined road from an executed one.
@@ -2213,12 +2219,12 @@ impl<'a> Bake<'a> {
         let people = self.records[record].people;
         // Close BEFORE relocating so the cell it is abandoning is free — a
         // people must not be able to flee onto its own site, and `close` frees
-        // the cell only when this community is the one indexed there. Lift
-        // first: a flight is a relocation, so what the leaver was party to
-        // travels with it (spec §4.3e) rather than being dissolved by the
-        // close. Walking out from under the obligation would make flight an
-        // *escape*, which is a different rule from the one §4.3e states.
-        let carried = self.lift_relations(idx);
+        // the cell only when this community is the one indexed there. Lift the
+        // PORTFOLIO first — a leaver that was itself a lord keeps its own
+        // vassals — while its own obligation is deliberately left in the table
+        // for the `close` below to dissolve. That is what makes a flight an
+        // escape rather than a change of address (spec §4.3e).
+        let carried = self.lift_portfolio(idx);
         self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
         self.tally.vassal_flights += 1;
         match self.relocate(
@@ -2289,11 +2295,12 @@ impl<'a> Bake<'a> {
                 Some(dest) if pop * MIGRATE_SURVIVAL >= VIABLE_MIN => {
                     // A climate eviction is the third close-and-reopen in this
                     // file, and it is a MOVE: the people walks to a refuge and
-                    // goes on being whatever it was. Its relations travel with
-                    // it (spec §4.3e) exactly as they do on the raid and flight
-                    // paths — a rule that held on some relocations and not
-                    // others would be worse than either behaviour alone.
-                    let carried = self.lift_relations(idx);
+                    // goes on being whatever it was. Its vassals travel with it
+                    // and its own lord does not (spec §4.3e), exactly as on the
+                    // raid and flight paths — the asymmetry is a property of
+                    // relocation itself, not of any one way of being made to
+                    // move, so it is applied identically at all five sites.
+                    let carried = self.lift_portfolio(idx);
                     self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
                     let new_idx = self.open(
                         people,
@@ -2304,7 +2311,7 @@ impl<'a> Bake<'a> {
                         Some(lineage),
                         offset,
                     );
-                    self.carry_relations_to(new_idx, carried);
+                    self.carry_portfolio_to(new_idx, carried);
                     self.touch(new_idx, year);
                     self.tally.migrated += 1;
                 }
@@ -2645,13 +2652,16 @@ impl<'a> Bake<'a> {
         // cell vacant (it left) and the prize vacant, and the `open` that
         // follows re-indexes the prize onto its new, living occupant.
         //
-        // Both sides are RELOCATING, not dying, so both lift what they are
-        // party to before their close and re-key it at the far end (spec
-        // §4.3e). The raider's lift runs first so that, when a patron conquers
-        // its own vassal's cell, the obligation leaves as the patron's
-        // portfolio entry rather than as the vassal's — one carrier, never two.
-        let raider_carried = self.lift_relations(raider);
-        let loser_carried = self.lift_relations(target);
+        // Both sides are RELOCATING, not dying, so both lift the vassals they
+        // hold before their close and re-key them at the far end (spec §4.3e).
+        // Neither carries its own obligation: the continuity is
+        // role-asymmetric, so a raider that was somebody's vassal buys its
+        // freedom with the move, and so does the loser it drives off. The
+        // raider's lift runs first so that a patron conquering its own
+        // vassal's cell moves that entry out as the patron's portfolio rather
+        // than leaving it to be found twice — one carrier, never two.
+        let raider_carried = self.lift_portfolio(raider);
+        let loser_carried = self.lift_portfolio(target);
         self.close(raider, year, CauseOfEnd::Migrated, Ended::Nature);
         self.close(target, year, CauseOfEnd::Fled, Ended::By(raider_id));
         self.tally.fled += 1;
@@ -2664,7 +2674,7 @@ impl<'a> Bake<'a> {
             Some(raider_lineage),
             raider_offset,
         );
-        self.carry_relations_to(seat, raider_carried);
+        self.carry_portfolio_to(seat, raider_carried);
         self.touch(seat, year);
 
         // The displaced loser rolls downhill, still carrying its (reduced)
@@ -4741,19 +4751,23 @@ mod tests {
         );
         assert_eq!(
             bake.tribute.get(&arrived).map(|t| t.patron),
-            Some(patron),
-            "a flight is a RELOCATION, so the obligation travels with the leaver \
-             (spec §4.3e): what a fleeing vassal changes is its cell, not its lord. \
-             Letting it walk out from under the relation would be an ESCAPE rule — a \
-             different mechanism from the one §4.3d states, and one §4.3e's \
-             relocation-preserves-everything reading rules out"
+            None,
+            "the leaver arrives FREE: spec §4.3e's continuity is role-asymmetric, so a \
+             relocating community drops what it owed. Obligation that followed the runaway \
+             would make flight a change of address rather than the escape §4.3d calls \
+             'relocating rather than continue in that condition'"
+        );
+        assert!(
+            bake.tribute.is_empty(),
+            "…and the relation is gone from the table entirely, not merely re-keyed onto \
+             some other index"
         );
         assert!(
             bake.communities[patron].alive
                 && bake.communities[patron].site == CellId(0)
                 && bake.communities[patron].stores > 0.0,
-            "the patron keeps its cell and what it collected: a vassal walking off its land \
-             costs the patron neither"
+            "the patron keeps its cell and what it already collected: it loses the stream, \
+             not the hoard — the flight is not a raid on it"
         );
 
         // (c) Nothing here was a revolt.
@@ -5161,6 +5175,265 @@ mod tests {
         assert!(
             !bake.tribute.contains_key(&vassal),
             "…and the vassal is free of it"
+        );
+    }
+
+    #[test]
+    fn a_lords_claim_travels_and_a_runaways_obligation_does_not() {
+        // Spec §4.3e, THE ASYMMETRY — and the reason it is one test and not
+        // two. Relocation preserves a community's relations **as patron** and
+        // dissolves them **as subordinate**, so the direction of a relation
+        // decides whether moving carries it. Either arm on its own is
+        // satisfiable by a rule that does not distinguish the roles at all: a
+        // role-blind "relocation preserves everything" passes the patron arm,
+        // and the pre-continuity "closing dissolves everything" passes the
+        // runaway arm. Only the CONJUNCTION, on one fixture, one table, one
+        // pass, binds the asymmetry — and the loyal vassal that stays put is
+        // the control that says the runaway's relation was dropped because it
+        // LEFT, not because the flight pass dissolves relations wholesale.
+        //
+        // The two arms run in sequence on the same three communities:
+        //
+        //   arm A  an attacker covets the lord's better land and evicts it.
+        //          The lord reseats elsewhere STILL HOLDING both vassals —
+        //          the claim travels.
+        //   arm B  the reseated lord's standing demand on one vassal crosses
+        //          `FLIGHT_BURDEN`; that vassal takes the road and arrives
+        //          OWING NOBODY, while the other goes on paying — the
+        //          obligation does not travel.
+        //
+        // Arithmetic, all Neolithic (weight 1.0) in year 0:
+        //   lord     40 pop + 20 stores       → strength 40 + 0.5×20 = 50
+        //   attacker 100 pop on POORER land   → 100 > 50 × RAID_MARGIN = 75, and
+        //                                       the lord's cell is worth more, so
+        //                                       the raid EVICTS
+        //   lord after the war                → 40 × (1 − WAR_LOSS) = 28, hoard lost
+        //   each vassal 20 pop, no stores     → 28 ≤ 20 × RAID_MARGIN = 30, so the
+        //                                       beaten lord cannot eat a vassal on
+        //                                       the road; and 20 ≤ 28 × 1.5, so
+        //                                       neither can revolt against it
+        //   runaway's demand 6 on 20 pop      → 0.3 > FLIGHT_BURDEN = 0.2  (flees)
+        //   stayer's  demand 1 on 20 pop      → 0.05 < FLIGHT_BURDEN       (stays)
+        let (geo, graphs, capacity, river_prox, refugia, era) = {
+            let geo = Geosphere::new(1);
+            let ring = geo.neighbors(CellId(0));
+            let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
+            cascade_world(move |c| match c {
+                CellId(0) => 200.0,            // the lord's prize land
+                c if c == seat => 150.0,       // the attacker's poorer holding
+                c if c == stayer_cell => 60.0, // enough that neither vassal is a husk
+                c if c == runaway_cell => 60.0,
+                _ => POOR,
+            })
+        };
+        /// The lord's people before the war.
+        const LORD_POP: f64 = 40.0;
+        /// The lord's hoard — lost with the old community, which is most of the
+        /// wound (spec §4.2a).
+        const HOARD: f64 = 20.0;
+        /// The attacker: over `LORD_POP` + `HOARD × STORE_WEIGHT` times
+        /// `RAID_MARGIN`, so the raid is certain.
+        const ATTACKER_POP: f64 = 100.0;
+        /// Each vassal's people. Small enough not to revolt against the beaten
+        /// lord, large enough that the beaten lord cannot take its cell on the
+        /// road and that the road is survivable once the demand is paid.
+        const VASSAL_POP: f64 = 20.0;
+        /// The demand that drives the runaway out: above `FLIGHT_BURDEN` of
+        /// what it holds when it pays.
+        const HEAVY_DEMAND: f64 = 6.0;
+        /// The demand the stayer goes on paying: well below `FLIGHT_BURDEN`.
+        const LIGHT_DEMAND: f64 = 1.0;
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let ring = geo.neighbors(CellId(0));
+        let (seat, stayer_cell, runaway_cell) = (ring[0], ring[1], ring[2]);
+        let lord = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            LORD_POP,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        bake.communities[lord].stores = HOARD;
+        let lord_lineage = bake.communities[lord].lineage;
+        let stayer = bake.open(
+            KindId("kobold"),
+            stayer_cell,
+            0.0,
+            VASSAL_POP,
+            Founding::Genesis(stayer_cell),
+            None,
+            0.0,
+        );
+        let runaway = bake.open(
+            KindId("bugbear"),
+            runaway_cell,
+            0.0,
+            VASSAL_POP,
+            Founding::Genesis(runaway_cell),
+            None,
+            0.0,
+        );
+        let runaway_lineage = bake.communities[runaway].lineage;
+        let attacker = bake.open(
+            KindId("hobgoblin"),
+            seat,
+            0.0,
+            ATTACKER_POP,
+            Founding::Genesis(seat),
+            None,
+            0.0,
+        );
+        let light = Tribute {
+            patron: lord,
+            assessment: LIGHT_DEMAND,
+            since: 0.0,
+            last_seen_population: VASSAL_POP,
+        };
+        let heavy = Tribute {
+            patron: lord,
+            assessment: HEAVY_DEMAND,
+            since: 0.0,
+            last_seen_population: VASSAL_POP,
+        };
+        bake.tribute.insert(stayer, light);
+        bake.tribute.insert(runaway, heavy);
+
+        // ─── Arm A: the claim travels ────────────────────────────────────────
+        bake.maybe_raid(attacker, &era, 0.0);
+        assert_eq!(
+            bake.tally.raided, 1,
+            "precondition: the raid must have happened"
+        );
+        assert!(
+            !bake.communities[lord].alive,
+            "precondition: the lord must have LOST its cell — this arm is about what \
+             survives being beaten"
+        );
+        let reseated = bake
+            .communities
+            .iter()
+            .enumerate()
+            .find(|(i, c)| *i != lord && c.alive && c.lineage == lord_lineage)
+            .map(|(i, _)| i)
+            .expect("the beaten lord must be standing somewhere else — it fled, it did not die");
+        for (who, terms, label) in [(stayer, light, "stayer"), (runaway, heavy, "runaway")] {
+            let standing = bake.tribute.get(&who).copied().unwrap_or_else(|| {
+                panic!(
+                    "the {label}'s obligation must have travelled with \
+                     the lord: a relocating community keeps its relations AS PATRON \
+                     (spec §4.3e)"
+                )
+            });
+            assert_eq!(
+                standing.patron, reseated,
+                "the {label}'s relation must name the NEW community, not the closed one — \
+                 a dangling index here is the silent corruption spec §4.4 forbids"
+            );
+            assert_eq!(
+                (
+                    standing.assessment.to_bits(),
+                    standing.since.to_bits(),
+                    standing.last_seen_population.to_bits()
+                ),
+                (
+                    terms.assessment.to_bits(),
+                    terms.since.to_bits(),
+                    terms.last_seen_population.to_bits()
+                ),
+                "…on exactly the terms it stood on: the {label}'s relation was CARRIED, not \
+                 re-formed by some other rule"
+            );
+        }
+        assert_eq!(
+            (
+                bake.tally.subordinations_formed,
+                bake.tally.patronage_transfers
+            ),
+            (0, 0),
+            "nothing was subjugated or transferred in arm A: both relations were carried"
+        );
+        assert_eq!(
+            bake.strength(reseated).to_bits(),
+            (LORD_POP * (1.0 - WAR_LOSS)).to_bits(),
+            "the lord arrived wounded: the war took its share of the people and the hoard \
+             died with the old community"
+        );
+
+        // ─── Arm B: the obligation does not ──────────────────────────────────
+        bake.begin_epoch();
+        let held_when_paying = bake.communities[runaway].population;
+        assert!(
+            held_when_paying * MIGRATE_SURVIVAL >= VIABLE_MIN,
+            "precondition: the runaway must be able to survive the road, or it would endure \
+             and this arm would pass on the wrong branch"
+        );
+        for (who, label) in [(stayer, "stayer"), (runaway, "runaway")] {
+            assert!(
+                bake.strength(reseated) <= bake.strength(who) * RAID_MARGIN,
+                "precondition: the beaten lord must not be able to eat the {label} on the \
+                 road, or arm A's carry would be undone by a raid"
+            );
+        }
+        // `settle_revolts` is driven so the zeros below mean the revolt rule
+        // RAN and declined — not that it was never asked. Nothing here may
+        // pass on the other mechanism's back.
+        bake.settle_revolts();
+        assert_eq!(
+            bake.tally.vassal_revolts, 0,
+            "precondition: neither vassal may throw the lord off — this arm measures flight \
+             alone"
+        );
+        let fleeing = bake.collect_tribute(0.0, &era);
+        assert_eq!(
+            bake.tally.tribute_collection_events, 2,
+            "precondition: BOTH carried relations must have been collected on, or the carry \
+             in arm A was decorative"
+        );
+        bake.resolve_flights(fleeing, &era, 0.0);
+        assert_eq!(
+            bake.tally.vassal_flights, 1,
+            "exactly one vassal was taxed past what its growth law could return"
+        );
+        assert!(
+            !bake.communities[runaway].alive,
+            "…and it closed its occupation and took the road"
+        );
+        let arrived = bake
+            .communities
+            .iter()
+            .enumerate()
+            .find(|(i, c)| *i != runaway && c.alive && c.lineage == runaway_lineage)
+            .map(|(i, _)| i)
+            .expect("the runaway must be standing somewhere else — it left, it did not die");
+        assert_eq!(
+            bake.tribute.get(&arrived).map(|t| t.patron),
+            None,
+            "THE RUNAWAY ARRIVES FREE: a relocating community drops its relations AS \
+             SUBORDINATE (spec §4.3e). An obligation that followed it would make flight a \
+             change of address rather than the escape §4.3d calls 'relocating rather than \
+             continue in that condition'"
+        );
+        // The control. A rule that dissolved relations wholesale at the flight
+        // pass — or one that dropped the carry the moment anything moved —
+        // would satisfy the line above and fail here.
+        assert_eq!(
+            bake.tribute.get(&stayer).map(|t| t.patron),
+            Some(reseated),
+            "…while the vassal that STAYED still owes the same lord: the runaway's relation \
+             ended because it left, not because relations were being dropped"
+        );
+        assert_eq!(
+            bake.tribute.len(),
+            1,
+            "exactly one relation stands: the runaway's is gone from the table entirely, \
+             not re-keyed onto some other index"
+        );
+        assert!(
+            bake.communities[reseated].stores > 0.0,
+            "the lord keeps what it already collected: losing a vassal costs it the stream, \
+             not the hoard"
         );
     }
 

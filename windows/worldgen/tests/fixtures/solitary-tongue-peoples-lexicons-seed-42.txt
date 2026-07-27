@@ -171,7 +171,7 @@ brown: gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7
 bugbear-kind: root Koa /koa/
 child: root Daokoa /daokoa/
 cold: gap (experiential): bugbear has no exposure to 'cold'
-coral-reef: gap (experiential): no compound recipe for 'coral-reef'
+coral-reef: root Doakao /doakao/
 dark: root Taadoo /taadoo/
 day: root Goadao /goadao/
 desert: gap (experiential): no settlement in or beside desert
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: gap (experiential): no compound recipe for 'shrubland'
+shrubland: root Daakoa /daakoa/
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -223,7 +223,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -251,7 +251,7 @@ brown: gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9
 bugbear-kind: root Roqxa /roqxa/
 child: root Rakxa /rakxa/
 cold: gap (experiential): kobold has no exposure to 'cold'
-coral-reef: root Xaro /xaro/
+coral-reef: gap (experiential): no compound recipe for 'coral-reef'
 dark: root Xa /xa/
 day: root Ro /ro/
 desert: gap (experiential): no settlement in or beside desert
