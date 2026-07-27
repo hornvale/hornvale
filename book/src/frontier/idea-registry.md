@@ -31,12 +31,23 @@ restating it.
   - `raw` — captured but not yet elaborated; a stub, not an argument.
   - `rejected` — considered and set aside; the row says why. **This is the
     anti-relitigation payload — the registry's most important status.**
+
+  These six are the whole vocabulary and a drift-check enforces it. Category
+  prefixes are open — coin a new one when an idea needs it — but statuses are
+  not; do not invent a seventh.
 - **Conf** — the essay's confidence tag, condensed (high / med / low /
   taste-gated), or `—` for settled/process rows.
 - **Where** — the essay or record that elaborates it.
 
 When an idea drains into a spec, flip its status and point **Where** at the
 spec: the elaboration relocates, the breadcrumb stays, nothing is lost.
+Repointing **Where** *replaces* a row's prose rather than appending to it —
+the campaign narrative lives in the chronicle the row now links.
+
+**Rows are capped at 600 characters of Idea prose**, enforced in CI. A row is
+a shelf-mark: what the idea is, plus a pointer to where it is argued. If a row
+needs a page, it needs a `frontier.md` essay and a status of `elaborated` —
+not a longer row. The authoring rules live in this directory's `CLAUDE.md`.
 
 ---
 
