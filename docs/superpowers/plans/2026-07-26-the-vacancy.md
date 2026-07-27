@@ -501,10 +501,40 @@ fn every_kind_is_viable_somewhere() {
 
 Implement `kind_is_viable_on(seed, name) -> bool` in the same file: build the world at `BuildDepth::Full` using the same helper as Task 3, call `niche_per_species_k`, and return whether any cell's K for that kind exceeds the viability floor. Use the *same* floor definition the occupancy readout uses — extract it as a shared `const` in this file and have Task 3's file reference the same value if it is not already a published constant; two different floors would let a kind pass one test and fail the other.
 
-- [ ] **Step 2: Run it — expect PASS on the current sixteen**
+- [ ] **Step 2: Run it — expect FOUR failures, and allowlist them**
 
 Run: `cargo test -p hornvale-worldgen --test non_void_roster 2>&1 | tee /tmp/hv-nonvoid.txt`
-Expected: PASS. All sixteen kinds are terrestrial and all are viable today.
+
+Expected: **FAIL**, naming `black-dragon`, `owlbear`, `red-dragon`, `white-dragon`. This is correct and already known — Task 3's readout returned 12 of 16 kinds. Those four are authored as pure-`ANIMAL_PREY` obligate predators, and `ANIMAL_PREY` supply is hard-coded `0.0` in the K assembly (`windows/worldgen/src/lib.rs:910`, "Stage 2's placeholder zero"), so their K is exactly zero on every cell of every seed. They are in the registry and have never existed in any world.
+
+Add them as an **explicit, documented allowlist** — not a weakened assertion:
+
+```rust
+/// The four kinds known to be void, and the single reason all four are.
+///
+/// Each is a pure-`ANIMAL_PREY` obligate predator, and `ANIMAL_PREY` supply is
+/// hard-coded `0.0` in the K assembly, so their carrying capacity is exactly
+/// zero everywhere. They are registered, they satisfy every integrity check,
+/// and they are absent from every world ever generated.
+///
+/// **This allowlist is deleted in Task 6b**, which lands a real prey supply
+/// field. Its deletion is the proof the fix worked — a non-void test that
+/// passes while carrying an allowlist proves nothing about the kinds on it.
+const KNOWN_VOID_PENDING_PREY_SUPPLY: &[&str] =
+    &["black-dragon", "owlbear", "red-dragon", "white-dragon"];
+```
+
+Filter the assertion by that list, and assert its *exact* membership too, so a fifth kind going void cannot hide inside it:
+
+```rust
+assert_eq!(
+    void, KNOWN_VOID_PENDING_PREY_SUPPLY,
+    "the set of void kinds must be exactly the four awaiting prey supply - \
+     a kind appearing here that is not on the list is a new ghost"
+);
+```
+
+Run again. Expected: PASS.
 
 - [ ] **Step 3: Mutation-verify the test actually asserts something**
 
@@ -832,6 +862,117 @@ cargo clippy --workspace --all-targets -- -D warnings
 git add windows/worldgen/src/lib.rs
 git commit -m "feat(worldgen): the marine forage supply field - the sea has supply, nothing eats it yet (the-vacancy T6)"
 ```
+
+---
+
+### Task 6b: The `ANIMAL_PREY` supply field
+
+**Files:**
+- Modify: `windows/worldgen/src/lib.rs` (a new field function beside `forage_supply_field`; the `per_axis` array's `ANIMAL_PREY` entry; the hoisted field construction)
+- Modify: `windows/worldgen/tests/non_void_roster.rs` (delete the allowlist)
+- Modify: `windows/worldgen/tests/fixtures/occupancy.csv` (regenerate)
+
+**Interfaces:**
+- Consumes: `forage_supply_field` (already shipped) and `base_carrying`, both already hoisted in `niche_per_species_k`.
+- Produces: `pub fn prey_supply_field(geo, forage) -> CellMap<f64>`, and four previously-nonexistent kinds appearing in worlds.
+
+**Why this exists.** Task 3's instrument found that `ANIMAL_PREY` supply is hard-coded `0.0`, so the three chromatic dragons and the owlbear have K = 0 on every cell of every seed and have never existed in any world. Task 4 allowlisted them. This task makes them real and deletes the allowlist.
+
+**The design is fixed — do not invent an alternative.** Prey supply is a **scale of the forage field by a trophic-transfer efficiency**, exactly parallel to the shipped `forage_supply_field` being `FORAGE_FRACTION = 0.5` of `base_carrying`. This is Lindeman's ~10% rule: secondary production is roughly a tenth of the primary production supporting it. It is non-circular by construction — it reads primary production, never predator or prey *populations* — and it is land-masked transitively, because forage already is. Do not attempt a population-coupled predator/prey model; that is a later campaign.
+
+- [ ] **Step 1: Add the constant and the field**
+
+```rust
+/// Fraction of grazable forage that becomes prey biomass available to a
+/// predator — Lindeman's trophic-transfer efficiency, ~10%.
+///
+/// The campaign's second and last calibration knob. Deliberately a single
+/// constant scale of [`forage_supply_field`] rather than a population-coupled
+/// predator/prey model: this reads primary production, never predator or prey
+/// populations, so it cannot feed back on itself. A real bidirectional trophic
+/// coupling is BIO-24's campaign, not this one.
+/// type-audit: bare-ok(ratio)
+const PREY_FRACTION: f64 = 0.1;
+
+/// The `ANIMAL_PREY` supply field (The Vacancy): prey biomass as a
+/// trophic-transfer fraction of grazable forage.
+///
+/// Replaces a hard-coded `0.0` that had kept every obligate predator in the
+/// roster — the three chromatic dragons and the owlbear — out of every world
+/// ever generated. Land-masked transitively (forage is already 0 on submerged
+/// cells); marine predators eat `MARINE_FORAGE` instead. Pure, deterministic,
+/// no RNG — a direct scale of an already-computed field.
+/// type-audit: bare-ok(count: forage), bare-ok(count: return)
+pub fn prey_supply_field(
+    geo: &Geosphere,
+    forage: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
+}
+```
+
+- [ ] **Step 2: Wire it in, replacing the placeholder in place**
+
+Hoist it beside the others, after the `forage` binding:
+
+```rust
+    let prey = prey_supply_field(geo, &forage);
+```
+
+Then replace **only** the `ANIMAL_PREY` tuple's value in the `per_axis` array — the entry stays in its existing position, because reordering the array changes the summation order and shifts every existing kind's K:
+
+```rust
+                    (ANIMAL_PREY, *prey.get(cell)),
+```
+
+- [ ] **Step 3: Delete the allowlist**
+
+In `windows/worldgen/tests/non_void_roster.rs`, remove `KNOWN_VOID_PENDING_PREY_SUPPLY`, its filter, and its membership assertion; restore the plain `void == []` assertion from Task 4 Step 1.
+
+```bash
+cargo test -p hornvale-worldgen --test non_void_roster
+```
+
+Expected: PASS with **no allowlist**. If any of the four is still void, the prey field is not reaching it — report which and why rather than restoring the allowlist.
+
+- [ ] **Step 4: Confirm the four kinds actually materialize, and say by how much**
+
+```bash
+cargo test -p hornvale-worldgen --test occupancy_readout regenerate -- --ignored
+cut -d, -f1 windows/worldgen/tests/fixtures/occupancy.csv | tail -n +2 | sort -u | tr '\n' ' '
+```
+
+Expected: all 16 kinds present. Report each new kind's biome and occupancy — a dragon that materializes on 3 cells worldwide is a different outcome from one on 30 000, and both are worth knowing. Note that potency raises a mighty creature's sovereignty floor, so the dragons should tolerate more marginal cells than the owlbear.
+
+- [ ] **Step 5: Reconcile the whole test surface — this stage drifts genesis**
+
+Four kinds appearing where there were none changes the coexistence stack, settlement outcomes, and every downstream readout.
+
+```bash
+cargo nextest run --workspace --no-fail-fast 2>&1 | tee /tmp/hv-t6b.txt
+```
+
+Grep that one file for every failure — do not re-run the suite to read a second line. Classify each: **mechanical** (a settlement count, a population figure, a golden string) → re-pin in this commit. **Non-mechanical** (a property test, a determinism or pin-isolation contract, an architecture test) → **STOP and report**, do not update the assertion.
+
+- [ ] **Step 6: Regenerate the always-run artifacts, in this commit**
+
+```bash
+bash scripts/regenerate-artifacts.sh
+git diff --stat book/src/gallery/ book/src/reference/ book/src/laboratory/
+```
+
+Re-pin what drifted, here, in the drifting commit. Do **not** set `HV_CENSUS=1`.
+
+- [ ] **Step 7: Gate, fmt, commit**
+
+```bash
+make gate 2>&1 | tee /tmp/hv-gate-t6b.txt
+cargo fmt
+git add -A
+git commit -m "feat(worldgen): prey exists - four kinds enter the world for the first time (the-vacancy T6b)"
+```
+
+Put the four kinds' measured occupancy in the commit message.
 
 ---
 

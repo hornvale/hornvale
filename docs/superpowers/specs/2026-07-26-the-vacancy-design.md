@@ -27,6 +27,9 @@ habitat-medium row), BIO-25/26/27, BIO-39, BIO-41 · **Ledger:**
 3. **The marine supply axis** — one new resource axis (id 5) and a supply field
    defined on ocean cells, opening the sea to the habitat model. Pinned
    **byte-identical for the existing sixteen**.
+3b. **A real `ANIMAL_PREY` supply field**, replacing the hard-coded zero that
+   has kept four shipped kinds out of every world ever generated (§3.5). Added
+   after the instrument found them, not before.
 4. **~12–14 biosphere-only fauna**, terrestrial and marine, filling named dark
    cells: three unoccupied land climate regions, five or six marine biomes,
    four dark trait combinations, and one amphibious kind.
@@ -129,8 +132,13 @@ selected against it.
 Witnessed and needing no work: both `Sociality` variants,
 `StatusBasis::{Rank, Knowledge}`, `ActivityCycle::{Diurnal, Nocturnal}`,
 `MetabolicClass::{Endotherm, Ectotherm}`, all four `SocialForm` variants,
-`MINERAL`, `PHOTOSYNTHATE`, `ANIMAL_PREY`, `PLANT_FORAGE`, and
-`Settled × Ectotherm` (kobold).
+`MINERAL`, `PHOTOSYNTHATE`, `PLANT_FORAGE`, and `Settled × Ectotherm` (kobold).
+
+**`ANIMAL_PREY` is the exception, and this table said otherwise until the
+instrument ran.** It is witnessed in four kinds' *uptake vectors* and has no
+*supply* at all — a distinction this section originally missed, because reading
+the registries shows who eats prey and says nothing about whether prey exists.
+See §3.5.
 
 ### 3.2 Climate-region states
 
@@ -215,6 +223,43 @@ reusing an existing one, which this does not do.
 marine axes needs no special case whatsoever — the sparse vector and the
 saturating sum handle it. If an amphibious kind requires any new branch, the
 axis-extension design is wrong, and stage 3 will say so.
+
+### 3.5 The four kinds that never existed
+
+**Found by the instrument on its first run**, which is the strongest validation
+this campaign's premise could have had, and the most awkward.
+
+`ANIMAL_PREY` supply is hard-coded to `0.0` in the K assembly
+(`lib.rs:910` — its own doc calls it "Stage 2's placeholder zero"). The three
+chromatic dragons and the owlbear are authored as pure-`ANIMAL_PREY` obligate
+predators. Zero supply, saturated, multiplied by any condition response, is
+zero: **their K is exactly zero on every cell of every seed.** They are in the
+registry, they satisfy every referential-integrity check, and they are absent
+from every world that has ever been generated. The Vigil gave those dragons
+minds, perception, and a frozen Draconic tongue; nothing has ever carried it.
+
+This is precisely §2's *admissible but void* category — the one this spec says
+must be **refused, not witnessed** — and it was already true on `main` before
+this campaign began. Task 3's readout returned 12 of 16 kinds, and that is how
+it was found.
+
+**The fix ships here** (Nathan, 2026-07-26): a real `ANIMAL_PREY` supply field,
+defined as a **scale of the forage field by a trophic-transfer efficiency**
+(Lindeman's ~10% rule). This is exactly parallel to the shipped
+`forage_supply_field`, which is `FORAGE_FRACTION = 0.5` of `base_carrying` — one
+constant, physically anchored, non-circular (it reads primary production, never
+predator or prey populations), and land-masked transitively because forage
+already is. Marine predators are unaffected; they eat `MARINE_FORAGE`.
+
+Leaving it out was considered and rejected: §5.1's `Gregarious × ANIMAL_PREY`
+predators would have been authored as two *more* ghosts, satisfying exit
+criterion 5 on paper with kinds that do not exist — a campaign about filling
+vacancies contradicting itself to claim one.
+
+The consequence for the plan is deliberate. §4.2's non-void test ships with an
+explicit allowlist of the four known-void kinds naming this blocker, and the
+task that lands the prey field **deletes the allowlist**. The deletion is the
+proof the fix worked.
 
 ## 4. The instrument
 
@@ -432,6 +477,7 @@ the one-regen-per-campaign rule, which would otherwise conflict.
 |---|---|---|
 | **1** | The instrument (§4) against the frozen sixteen, plus the measured biome-occupancy readout stages 3–4 select against. The `Autotroph` doc correction. | none — no behaviour change |
 | **2** | The `MARINE_FORAGE` axis and its supply field (§3.4). No new kind. | **none, and that is the exit gate** — byte-identical for all sixteen |
+| **2b** | The real `ANIMAL_PREY` supply field (§3.5). No new kind. | **genesis — four existing kinds materialize.** Deliberately its own stage so that drift is attributable to the prey field alone, never confused with the new roster |
 | **3** | The fauna (§5.1, §5.2), terrestrial and marine, including the amphibious proof case. | genesis; re-pin always-run goldens in-commit |
 | **4** | The fifth people (§5.3), now including the language/chorus/religion surface. | genesis + language artifacts; re-pin in-commit |
 | **5** | Close: absorb `the-tithe` **first**, then one census regen on `lefford` (`HV_CENSUS=1`), book sweep, retrospective, registry rows. | census goldens |
@@ -446,8 +492,11 @@ Frozen here, before stage 1's measurement runs:
 
 1. The coverage table exists, is committed, and every row's rung is justified by
    a witness list or a named blocker.
-2. The non-void roster test exists, passes on the sixteen, and passes on every
-   kind stages 3 and 4 add.
+2. The non-void roster test exists and passes on **every** kind — the sixteen
+   and everything stages 3 and 4 add. It ships in stage 1 with an explicit
+   allowlist of the four kinds §3.5 found void, and **stage 2b deletes the
+   allowlist**; the deletion is the criterion, because a passing test with an
+   allowlist proves nothing.
 3. Stage 2 is byte-identical: every committed artifact and every existing kind's
    K is unchanged by the axis addition.
 4. `StatusBasis::Generosity` and `DETRITUS`-beyond-otyugh reach **PINNED**.
