@@ -107,8 +107,8 @@ verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser)
   go <dir>         walk a compass exit (n ne e se s sw w nw)
-  enter [thing]    step inside what is built here; once inside, name a thing
-                   the prose mentions to move through an aperture to it
+  enter [way]      step inside what is built here; once inside, 'enter further
+                   in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look mentions, out of doors
   back             retrace your last step
@@ -606,8 +606,13 @@ impl<'w> Session<'w> {
             // Band-aware, for the same reason `look` is: indoors, the nouns
             // `look` named have no authored detail behind them, and the outdoor
             // path would answer "You see no <noun> here." about a thing the
-            // chamber's own prose had just listed.
-            "examine" if self.inside.is_some() => Turn::Out(INDOOR_EXAMINE_REFUSAL.to_string()),
+            // chamber's own prose had just listed. A BARE `examine` is a
+            // different question — the player named nothing — so it still falls
+            // through to `examine`'s own "Examine what?" hint, which is as true
+            // indoors as out.
+            "examine" if self.inside.is_some() && !rest.is_empty() => {
+                Turn::Out(INDOOR_EXAMINE_REFUSAL.to_string())
+            }
             "examine" => self.examine(rest),
             "back" => self.back(),
             "wait" => self.wait(rest),
@@ -741,13 +746,26 @@ impl<'w> Session<'w> {
                 if FURTHER_IN_WORDS.contains(&target.trim().to_lowercase().as_str()) {
                     return Turn::Out("This is as far in as the place goes.".to_string());
                 }
-                // A bare `enter` with a CHOICE of apertures is not "no way" —
-                // it is an unanswered question, and "no way to anywhere" would
-                // be false there. `named_neighbour` only takes a silent default
-                // when exactly one neighbour exists.
-                if target.is_empty() && Self::neighbours(&structure, at).len() > 1 {
+                // A CHOICE of apertures is never "no way" — it is an unanswered
+                // question. Both refusals that land here mean the same thing:
+                // an empty target (`named_neighbour` only defaults with exactly
+                // one neighbour) or a prose noun, which cannot tell two
+                // prose-identical chambers apart. Denying the ways exist would
+                // be as false here as "no way to anywhere" was.
+                let neighbours = Self::neighbours(&structure, at);
+                if neighbours.len() > 1 {
+                    // `structure_at` builds a path graph, so a chamber has at
+                    // most two apertures and this sentence may count them. A
+                    // richer topology (The Precincts) must recount it.
+                    debug_assert_eq!(
+                        neighbours.len(),
+                        2,
+                        "a path-graph chamber has at most two apertures, and this refusal counts them"
+                    );
                     return Turn::Out(
-                        "Enter which way? Say 'further in', or 'out' to leave.".to_string(),
+                        "There are two ways from here; say 'further in' to go deeper, \
+                         or 'out' to leave."
+                            .to_string(),
                     );
                 }
                 return Turn::Out(format!(
@@ -1996,6 +2014,32 @@ mod tests {
     }
 
     #[test]
+    fn a_refusal_in_a_middle_chamber_names_the_tokens_that_work() {
+        // The falsity this replaced: "There is no way to <noun> from here.",
+        // said in a room with two ways, about a noun the room's own prose had
+        // just listed. Both refusals that land there — bare, and an ambiguous
+        // noun — must name the tokens that move instead of denying the ways.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let middle = path_structure(&session.agent.position, 3);
+        session.inside = Some((middle, 1));
+        for line in ["enter", "enter doorway"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("enter must not release"),
+            };
+            assert!(
+                reply.contains("two ways") && reply.contains("further in"),
+                "{line:?} must name the tokens that work: {reply:?}"
+            );
+            assert!(
+                !reply.contains("There is no way"),
+                "a room with two ways must not deny that they exist: {reply:?}"
+            );
+        }
+    }
+
+    #[test]
     fn every_chamber_is_reachable_from_the_threshold_by_input() {
         // `Structure`'s doc promises "every chamber is reachable from
         // `threshold`" — a claim about `links`. This is the player-facing
@@ -2017,6 +2061,14 @@ mod tests {
             .0
             .chambers
             .len();
+        // `total` is a seed draw over `1..=MAX_CHAMBERS`. At 1 the loop below
+        // never runs and the visited-set assertion passes trivially — the exact
+        // vacuity shape this round fixed elsewhere — so pin the fixture instead
+        // of trusting today's draw.
+        assert!(
+            total > 1,
+            "fixture must draw a multi-chamber structure for this test to mean anything"
+        );
         let mut visited = std::collections::BTreeSet::new();
         visited.insert(session.inside.as_ref().unwrap().1);
         for _ in 1..total {
@@ -2074,6 +2126,17 @@ mod tests {
             "look must not name what examine denies, two turns apart: {reply:?}"
         );
         assert_eq!(reply, INDOOR_EXAMINE_REFUSAL);
+        // A BARE `examine` names nothing, so the band guard must not swallow it:
+        // "Examine what?" is as true indoors as out, and the refusal above is an
+        // answer to a question the player did not ask.
+        let bare = match session.handle("examine") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert_eq!(
+            bare, "Examine what?",
+            "a bare `examine` keeps its usage hint indoors"
+        );
         // Out of doors the ordinary path is untouched.
         session.handle("out");
         let outdoors = match session.handle("examine a-noun-no-grain-surfaced") {
