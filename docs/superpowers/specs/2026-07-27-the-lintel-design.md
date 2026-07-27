@@ -165,11 +165,24 @@ structure. This is §7's "APERTURES, NOT STAIRS" taken literally.
 
 ## 7. Determinism and labels
 
-- One new seed-derivation label, declared now rather than at its first bump per
-  0073: **`room/furnishing/v1`** — which chambers a structure has. Chamber
-  *existence* is furnishing-class (what a place has), not layout-class (where
-  things are drawn), so the churny `room/layout/vN` label is not declared by this
-  campaign and is not needed until The Blocking.
+- **`room/furnishing/v1` already exists** — declared by The Hearth
+  (`windows/vessel/src/streams.rs`) and made LIVE by The Threshold. It is **not**
+  reused here: chamber *existence* and pattern *selection* have different blast
+  radii, and 0073's whole point is to split labels by blast radius before the
+  first bump. This campaign declares **`room/chambers/v1`**, which will be the
+  first furnishing-family stream anything actually *draws* from — `selection`
+  takes no seed today ("The Hearth's revised T4 dropped it, since v1's draw is a
+  pure admissibility filter"), so the existing label currently versions a
+  deterministic filter rather than a draw.
+- **The pattern inventory is FROZEN, and not merely by this campaign's scope.**
+  `ROOM_FURNISHING`'s own doc comment states that since The Threshold a creature
+  stands at an anchor and its thermal drive reads the warmth there, so "adding or
+  reordering a pattern is an EPOCH, not a tweak" — and that `selection` admits a
+  pattern requiring another only once that other is present, making inventory
+  ORDER load-bearing. §3's "v1 adds no new anchor kinds" is therefore a hard
+  constraint, not a tidiness preference.
+- The churny `room/layout/vN` label is not declared by this campaign and is not
+  needed until The Blocking.
 - The chamber set and each chamber's `Interior` are pure functions of
   `(brief, address, seed)`; there is no day term in v1, so a chamber does not yet
   read world-time (Amendment 1 §1a.8's requirement lands with the ruin signature,
@@ -249,8 +262,12 @@ structure. This is §7's "APERTURES, NOT STAIRS" taken literally.
 
 ## 12. Flagged for G3
 
-1. **`room/furnishing/v1` is a save-format-class label declaration.** Declared
-   now, per 0073, so the churn has somewhere to go later.
+1. **`room/chambers/v1` is a save-format-class label declaration**, declared now
+   per 0073 rather than at its first bump. It is deliberately *not*
+   `room/furnishing/v1` (which already exists and is live): chamber existence and
+   pattern selection churn independently, and merging them would put a frequent
+   bump inside a label whose blast radius includes every creature's thermal
+   drive history.
 2. **Freezing the walk-band vocabulary column** (§2) is a deliberate
    non-migration that trades correctness-of-scale for byte-identity. The
    alternative — migrate now — is a bigger campaign that moves NPC behaviour and
