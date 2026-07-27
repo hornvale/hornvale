@@ -86,10 +86,28 @@ fn the_null_control_reads_no_chronic_distress() {
     // one where chronicity stays silent AND every distress run recovers
     // (`recovery_ticks.is_some()`). Instantaneous prevalence is not the alarm and
     // is no longer bounded here.
+    //
+    // Re-derived again at The Convalescence: the bound moved one step further
+    // along the same argument. §8 states the bug signal as a CONJUNCTION —
+    // "a spike that persists (NO RECOVERY, elevated chronicity) is a bug",
+    // where a spike that recovers is a legitimate novel world event — and this
+    // assertion checked only the first conjunct, so it fired on episodes that
+    // RECOVERED. Two independent distress rhythms in one creature can weld
+    // into a single long run (`HHHH F HHHH`) that then returns to health;
+    // under §8 that is a hard patch in a varied world, not a broken sim. The
+    // alarm is therefore `stuck` — long AND never ended, evaluated per
+    // creature (a population-scope conjunction would let one genuinely stuck
+    // creature hide behind nine recovering ones). `chronicity` is still
+    // computed and still reported, as a DIAGNOSTIC; it is no longer bounded
+    // here, exactly as `prevalence` was demoted above.
     let a = health_report(&simulate_world(&world(42)));
     let b = health_report(&simulate_world(&world(42)));
     assert_eq!(a, b, "same world -> same report (deterministic)");
-    assert_eq!(a.chronicity, 0.0, "healthy world: no one chronically stuck");
+    assert_eq!(
+        a.stuck, 0.0,
+        "healthy world: no one is STUCK (a long distress run that never \
+         recovered): {a:?}"
+    );
     assert!(
         a.recovery_ticks.is_some(),
         "healthy world: its distress is transient and recovers (never a chronic \
@@ -99,17 +117,31 @@ fn the_null_control_reads_no_chronic_distress() {
 
 #[test]
 fn the_null_control_holds_across_a_seed_sweep() {
-    // Over a small sweep of real worlds, no population reads CHRONIC distress —
+    // Over a small sweep of real worlds, no population reads STUCK distress —
     // the zero is not a seed-42 accident. (Genuine blocked-distress needs a
     // creature boxed in or knowing-but-blocked, which condensed on-water
     // settlements avoid; a healthy world stays healthy.) The bug alarm is armed
     // precisely because this stays quiet.
+    //
+    // `chronicity` is reported per seed, not bounded (The Convalescence): a
+    // long distress run that RECOVERS is a hard patch in a varied world, which
+    // The Temperament §8 calls legitimate. The alarm is the conjunction — long
+    // AND never recovered — which is `stuck`.
+    let mut report = Vec::new();
     for seed in [0u64, 1, 2, 7, 42] {
         let r = health_report(&simulate_world(&world(seed)));
+        report.push(format!(
+            "seed {seed}: stuck {:.4} chronicity {:.4} prevalence {:.4} recovery {:?}",
+            r.stuck, r.chronicity, r.prevalence, r.recovery_ticks
+        ));
         assert_eq!(
-            r.chronicity, 0.0,
-            "seed {seed} shows chronic distress (the alarm fired): {r:?}"
+            r.stuck, 0.0,
+            "seed {seed} shows STUCK distress (the alarm fired): {r:?}"
         );
+    }
+    eprintln!("the-convalescence health-family baseline, per seed:");
+    for line in &report {
+        eprintln!("  {line}");
     }
 }
 
@@ -324,6 +356,11 @@ fn a_stranded_creature_is_scored_chronic_end_to_end() {
         "the stranded creature is chronically stuck: {r:?}"
     );
     assert_eq!(
+        r.stuck, 1.0,
+        "and it never recovers, so the ALARM fires — splitting the measure must \
+         not silence the scenario the metric exists to catch: {r:?}"
+    );
+    assert_eq!(
         r.recovery_ticks, None,
         "a never-ending stranding has no recovery half-life"
     );
@@ -485,6 +522,7 @@ fn a_passing_heat_wave_is_scored_a_recovered_spike_end_to_end() {
         r.chronicity, 0.0,
         "a wave that breaks is not chronic distress: {r:?}"
     );
+    assert_eq!(r.stuck, 0.0, "a wave that breaks never alarms: {r:?}");
     assert!(
         r.recovery_ticks.is_some(),
         "the recovered spike yields a recovery half-life: {r:?}"
