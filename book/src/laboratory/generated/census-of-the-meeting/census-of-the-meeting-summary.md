@@ -1385,8 +1385,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 
 | value | count | share |
 |---|---|---|
-| true | 94 | 18.8% |
-| false | 406 | 81.2% |
+| true | 79 | 15.8% |
+| false | 421 | 84.2% |
 
 ### clean-outgroup-kobold — goblin-solo
 
@@ -1481,12 +1481,12 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | value | count | share |
 |---|---|---|
 | < 0 | 0 | 0.0% |
-| [0, 1) | 228 | 45.6% |
-| [1, 2) | 117 | 23.4% |
-| [2, 3) | 69 | 13.8% |
-| [3, 5) | 37 | 7.4% |
+| [0, 1) | 225 | 45.0% |
+| [1, 2) | 113 | 22.6% |
+| [2, 3) | 72 | 14.4% |
+| [3, 5) | 40 | 8.0% |
 | [5, 8) | 30 | 6.0% |
-| [8, 12) | 13 | 2.6% |
+| [8, 12) | 14 | 2.8% |
 | >= 12 | 6 | 1.2% |
 
 ### homophony-count-hobgoblin — goblin-solo
@@ -1596,8 +1596,8 @@ Seeds 0..500 × 2 pin set(s); 1000 rows; 0 refusals.
 | [0.4, 0.6) | 0 | 0.0% |
 | [0.6, 0.8) | 0 | 0.0% |
 | [0.8, 1) | 0 | 0.0% |
-| >= 1 | 272 | 54.4% |
-| absent | 228 | 45.6% |
+| >= 1 | 275 | 55.0% |
+| absent | 225 | 45.0% |
 
 ### homophony-merger-share-hobgoblin — goblin-solo
 
