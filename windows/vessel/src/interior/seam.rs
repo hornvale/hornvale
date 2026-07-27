@@ -140,12 +140,11 @@ mod tests {
 
     #[test]
     fn wilderness_has_no_threshold_and_that_is_fine() {
+        // `wild()` composes only `Pool`/`Log` (see its own definition above) —
+        // that it carries no `Threshold` is a property of the FIXTURE, not
+        // something `landing` computes, so it is not asserted here. What this
+        // test actually exercises is that `landing` still succeeds without one.
         let i = wild();
-        assert!(
-            !i.ids()
-                .iter()
-                .any(|&a| i.anchor(a).kind == AnchorKind::Threshold)
-        );
         assert!(
             landing(&i, SeamKind::Broad).is_some(),
             "it still has somewhere to arrive"

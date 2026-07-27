@@ -44,7 +44,7 @@ use super::route::route_within;
 /// at-the-fire figure at ≈15–20 °C. `15.0` is chosen from the conservative
 /// (low) end of that range. Full derivation:
 /// `.superpowers/sdd/task-5d-report.md`.
-/// type-audit: bare-ok(ratio)
+/// type-audit: pending(wave-3)
 pub const HEARTH_WARMTH: f64 = 15.0;
 
 /// The multiplier per graph step away from an emitter.

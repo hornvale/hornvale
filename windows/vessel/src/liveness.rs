@@ -1809,8 +1809,14 @@ impl<'a> Thermal<'a> {
     /// `warmest_anchor` call), just stopping short of the `route_within`
     /// step that turns a destination into a first hop. `None` under the
     /// identical conditions `affordance` would decline a within-room move:
-    /// already inside the tolerance band, no interior here, or no anchor
-    /// strictly more comfortable than the current one.
+    /// already inside the tolerance band, no interior here, no anchor
+    /// strictly more comfortable than the current one, or — spec §8a's
+    /// stranding case — a warmer anchor exists but [`route_within`] cannot
+    /// reach it from here. That last check is not optional: this function's
+    /// result is fed straight to [`Occupancy::place`] by catch-up's
+    /// cap-exceeded fallback, which (unlike `walk`) performs no one-hop
+    /// reachability check of its own, so an unguarded `warmest_anchor` call
+    /// would teleport a stranded creature across an impassable edge.
     /// type-audit: bare-ok(count: budget)
     fn preferred_anchor(&self, position: &RoomAddr, budget: usize) -> Option<AnchorId> {
         if self.deviation(position) <= self.niche.width {
@@ -1818,7 +1824,9 @@ impl<'a> Thermal<'a> {
         }
         let (interior, from) = self.interior?;
         let ambient = self.terrain.temperature(position, self.day);
-        warmest_anchor(interior, from, ambient, self.niche.optimum, budget)
+        let target = warmest_anchor(interior, from, ambient, self.niche.optimum, budget)?;
+        route_within(interior, from, target, budget)?;
+        Some(target)
     }
 }
 
@@ -3716,12 +3724,24 @@ fn hold_step(
 /// (`DriveMovements::step_with_occupancy`, right after each creature's
 /// initial landing) calls this SAME function over its own unobserved-span
 /// replay, so catch-up's judgment and the live walk's real execution can
-/// never diverge from each other — this is the campaign's own rejected
-/// alternative (a SEPARATE derivation of where a creature "would be")
-/// avoided by construction, not by discipline. The two callers differ only
-/// in which resolutions each is willing to ACT on
-/// ([`is_replayable_in_catch_up`] restricts catch-up to `MoveWithin`/`Hold`;
-/// the live walk executes everything), never in how a resolution is reached.
+/// never diverge in HOW a resolution is reached from a given set of
+/// arguments — this is the campaign's own rejected alternative (a SEPARATE
+/// derivation of where a creature "would be") avoided by construction, not
+/// by discipline. The two callers differ only in which resolutions each is
+/// willing to ACT on ([`is_replayable_in_catch_up`] restricts catch-up to
+/// `MoveWithin`/`Hold`; the live walk executes everything), never in how a
+/// resolution is reached.
+///
+/// What this function does NOT guarantee by construction: that its
+/// `last_drank`/`last_ate`/`last_rested` arguments are correct FOR `day`. A
+/// caller replaying several days must supply the value each drive would
+/// actually have seen at that point in the replay, not one folded once over
+/// the caller's entire history — a discharge fact landing chronologically
+/// AFTER `day` but before the fold's own evaluation instant would otherwise
+/// suppress every competing drive for days that precede it. Catch-up meets
+/// this obligation via [`last_fact_day_at_or_before`], recomputed every
+/// iteration of its replay loop; that discipline lives in the caller, not
+/// here.
 ///
 /// Mutates `believed` exactly once, at the top, for the same reason the live
 /// walk always has: standing in water updates belief before the view built
@@ -3847,6 +3867,25 @@ fn decide_step(
     (resolution, drive)
 }
 
+/// The subject's most recent `predicate` fact day at or before `day`,
+/// `0.0` if none — the per-day counterpart to the whole-history folds
+/// computed once outside the walk (`drive_at`, `fatigue_at`, and
+/// `step_with_occupancy`'s own `last_drank`/`last_ate`/`last_rested`
+/// locals). Those are correct for a SINGLE evaluation instant; catch-up's
+/// replay loop (below) evaluates many instants across a span that may
+/// itself contain the very fact being folded, so it must re-filter to
+/// `<= day` at each one rather than reuse a value folded over the whole
+/// committed history, which could be looking chronologically PAST the day
+/// it is being asked about.
+fn last_fact_day_at_or_before(ledger: &Ledger, predicate: &str, entity: EntityId, day: f64) -> f64 {
+    ledger
+        .find(predicate)
+        .filter(|f| f.subject == entity)
+        .filter_map(|f| f.day)
+        .filter(|&d| d <= day)
+        .fold(0.0_f64, f64::max)
+}
+
 /// Catch-up's own replay loop (The Threshold task 7, spec §5): reconstruct
 /// where `npc` would actually be standing within its current room right now
 /// (`horizon`), given the ledger shows it entered the room at `entry_day`
@@ -3890,9 +3929,6 @@ fn catch_up(
     hazard: &HazardMemory,
     alarm: &std::collections::BTreeMap<RoomAddr, f64>,
     visited: &std::collections::BTreeSet<RoomAddr>,
-    last_drank: f64,
-    last_ate: f64,
-    last_rested: f64,
     occupancy: &mut Occupancy,
     interior: &Interior,
     mut mode: Mode,
@@ -3911,6 +3947,19 @@ fn catch_up(
             break;
         }
         steps += 1;
+        // Recomputed AT `day`, never once over the whole committed history
+        // (Important 3, The Threshold whole-branch review): the coarse
+        // (room-graph) layer can commit a `drank`/`eaten`/`rested` fact for
+        // this creature on a day INSIDE the span catch-up is still
+        // reconstructing at the within-room resolution, so a fold over the
+        // creature's entire history would find a discharge that
+        // chronologically postdates `day` and wrongly suppress the drive
+        // for every day before it. Filtering to `<= day` at each iteration
+        // is what makes `decide_step` see the world as it actually was on
+        // that day, not as it will be once the gap is fully closed.
+        let last_drank = last_fact_day_at_or_before(frozen, DRANK, npc.entity, day);
+        let last_ate = last_fact_day_at_or_before(frozen, EATEN, npc.entity, day);
+        let last_rested = last_fact_day_at_or_before(frozen, RESTED, npc.entity, day);
         let (resolution, drive) = decide_step(
             day,
             pos,
@@ -3962,9 +4011,12 @@ fn catch_up(
     if cap_reached {
         // The cap was spent before real time caught up: give up stepping
         // through the interior and jump straight to where Thermal wants to
-        // be right now — `preferred_anchor` is the SAME gate and target
-        // `Thermal::affordance`'s own within-room branch uses, so this
-        // cannot suggest a move the live drive itself would have declined.
+        // be right now — `preferred_anchor` is the SAME gate, target, AND
+        // `route_within` reachability check `Thermal::affordance`'s own
+        // within-room branch uses (including spec §8a's stranding case), so
+        // this cannot suggest a move the live drive itself would have
+        // declined, and cannot place the creature across an edge it could
+        // not actually cross.
         let thermal = Thermal {
             niche: npc.temperature_niche,
             terrain,
@@ -4132,9 +4184,6 @@ impl<'a> DriveMovements<'a> {
                 &memory,
                 &alarm,
                 &visited,
-                last_drank,
-                last_ate,
-                last_rested,
                 &mut occupancy,
                 &interior,
                 mode,
@@ -11167,6 +11216,41 @@ mod tests {
     }
 
     #[test]
+    fn preferred_anchor_declines_a_target_that_route_within_cannot_reach() {
+        // The Threshold whole-branch review, Important 2: `preferred_anchor`
+        // feeds catch-up's cap-exceeded fallback straight into
+        // `Occupancy::place`, which — unlike `walk` — performs no one-hop
+        // reachability check of its own. If `preferred_anchor` named a
+        // target `route_within` cannot reach, a stranded creature would be
+        // teleported across the very edge spec §8a says it cannot cross.
+        // Reuses the `stranded` fixture from the `affordance` fallback test
+        // above: a hearth with no edge to the door, so a genuinely warmer
+        // anchor exists but is unroutable.
+        use crate::interior::{AnchorKind, Interior};
+        let mut stranded = Interior::new();
+        let door = stranded.push(AnchorKind::Threshold, None);
+        stranded.push(AnchorKind::Hearth, None);
+
+        let home = raddr(1.0);
+        let day = WorldTime { day: 0.0 };
+        let t = PlantedTerrain::thermal([(home.clone(), -30.0)]);
+        let drive = Thermal {
+            niche: warm_niche(),
+            terrain: &t,
+            day,
+            interior: Some((&stranded, door)),
+        };
+
+        assert_eq!(
+            drive.preferred_anchor(&home, 64),
+            None,
+            "the hearth is warmer but unroutable from the door, so \
+             preferred_anchor must decline rather than name a target \
+             `route_within` cannot reach"
+        );
+    }
+
+    #[test]
     fn thermal_serviceability_scores_the_within_room_step_by_warmth_gained() {
         // Mirrors the `MoveTo` arm's own contract (`urgency_at(here) -
         // urgency_at(there)`), one scale down: the reduction in FELT urgency
@@ -11839,13 +11923,126 @@ mod tests {
             .expect("catch-up leaves the creature standing somewhere");
         assert_ne!(
             end, landing_anchor,
-            "5 unobserved days in a hearth-bearing cold room must NOT still \
+            "1 unobserved day in a hearth-bearing cold room must NOT still \
              read as standing at the door"
         );
         assert!(
             warmth_at(&interior, end, 64) > warmth_at(&interior, landing_anchor, 64),
             "catch-up must leave the creature somewhere strictly warmer than \
              the door it would otherwise still be read at"
+        );
+    }
+
+    #[test]
+    fn catch_up_replay_sees_thirst_before_a_drank_fact_inside_the_window() {
+        // The Threshold whole-branch review, Important 3: `last_drank` (and
+        // its `last_ate`/`last_rested` twins) folded ONCE over a creature's
+        // ENTIRE committed history and reused unchanged for every replayed
+        // day is wrong whenever that fold's own maximum lands INSIDE the
+        // replay window — a day chronologically BEFORE the drink would
+        // wrongly read as already-discharged, because
+        // `integrate_thirst`'s `t <= last_drank` short-circuit sees a
+        // `last_drank` from the future. `last_fact_day_at_or_before` fixes
+        // this by filtering to `<= day` at each iteration; this test pins
+        // both the correct answer AND the exact wrong one the naive
+        // whole-history fold produces, so it fails without the fix.
+        let home = raddr(1.0);
+        // Thermally inert: optimum pinned at the planted ambient with a huge
+        // tolerance band, so Thermal never proposes a competing action and
+        // `decide_step`'s returned thirst urgency is the only thing this
+        // test needs to read.
+        let terrain = PlantedTerrain::thermal([(home.clone(), 20.0)]);
+        let niche = ConditionResponse {
+            optimum: 20.0,
+            width: 50.0,
+            devotion: 0.5,
+        };
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
+
+        let mut reg = hornvale_kernel::ConceptRegistry::default();
+        reg.register_predicate(DRANK, false, "drank").unwrap();
+        let mut ledger = Ledger::default();
+        // The drink lands on day 3 — strictly AFTER the day this test reads
+        // thirst at (day 2), but it is still the only `DRANK` fact in the
+        // creature's whole history, so an unfiltered fold over that history
+        // finds it regardless of which day is being asked about.
+        let drank_day = 3.0;
+        let read_day = 2.0;
+        ledger
+            .commit(drank_fact(npc.entity, drank_day, "test"), &reg)
+            .unwrap();
+
+        let hazard = HazardMemory::default();
+        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
+        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+
+        let correct_last_drank = last_fact_day_at_or_before(&ledger, DRANK, npc.entity, read_day);
+        assert_eq!(
+            correct_last_drank, 0.0,
+            "no drink has been committed as of read_day yet"
+        );
+        let mut believed_correct: Option<RoomAddr> = None;
+        let (_, correct_thirst) = decide_step(
+            read_day,
+            &home,
+            &npc,
+            &terrain,
+            &mut believed_correct,
+            &hazard,
+            &alarm,
+            &visited,
+            correct_last_drank,
+            0.0,
+            0.0,
+            None,
+            Mode::Idle,
+            &SUSTENANCE,
+            PLAN_BUDGET,
+            &ledger,
+            &[],
+        );
+        assert!(
+            correct_thirst > 0.0,
+            "2 days elapsed with no prior drink must show accrued thirst, \
+             not the future drink suppressing it: got {correct_thirst}"
+        );
+
+        // The bug: the naive whole-history fold `catch_up` used to pass
+        // unchanged into every replayed day.
+        let buggy_last_drank = ledger
+            .find(DRANK)
+            .filter(|f| f.subject == npc.entity)
+            .filter_map(|f| f.day)
+            .fold(0.0_f64, f64::max);
+        assert_eq!(
+            buggy_last_drank, drank_day,
+            "sanity check: the unfiltered fold finds the FUTURE drink"
+        );
+        let mut believed_buggy: Option<RoomAddr> = None;
+        let (_, buggy_thirst) = decide_step(
+            read_day,
+            &home,
+            &npc,
+            &terrain,
+            &mut believed_buggy,
+            &hazard,
+            &alarm,
+            &visited,
+            buggy_last_drank,
+            0.0,
+            0.0,
+            None,
+            Mode::Idle,
+            &SUSTENANCE,
+            PLAN_BUDGET,
+            &ledger,
+            &[],
+        );
+        assert_eq!(
+            buggy_thirst, 0.0,
+            "pinning the wrong answer: `integrate_thirst`'s `t <= last_drank` \
+             short-circuit reads the future drink as already-discharged and \
+             zeroes out thirst that should have accrued"
         );
     }
 
@@ -11904,9 +12101,6 @@ mod tests {
             &hazard,
             &alarm,
             &visited,
-            0.0,
-            0.0,
-            0.0,
             &mut occ,
             &interior,
             Mode::Idle,
@@ -12099,9 +12293,6 @@ mod tests {
                 &hazard,
                 &alarm,
                 &visited,
-                0.0,
-                0.0,
-                0.0,
                 &mut occ,
                 &interior,
                 Mode::Idle,

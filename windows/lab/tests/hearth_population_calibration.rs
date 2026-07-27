@@ -293,18 +293,31 @@ fn the_hearth_shows_no_measurable_effect_on_seed_13s_cold_dominated_population()
     // anchor unconditionally, regardless of whether `DriveMovements`' own
     // per-tick walk (Task 6) had actually carried a creature deeper into the
     // room and its hearth's full, undecayed warmth — and re-ran this test a
-    // third time, AFTER that fix, BEFORE looking at the result. The numbers
-    // below (prevalence 0.6967..., chronicity 0.2459..., by_cause[thermal]
-    // 0.5435... for the cold-built group) are IDENTICAL to both prior
-    // readings. This is not a threshold or a sampler tuned to make a number
-    // move — the opposite: the constant moved 15× and the sampler was given
-    // real per-tick position, on independent grounds each time, and the
-    // result did not care either time. `WARMTH_DECAY`, `FURNISHING_COLD_C`,
-    // and `INVENTORY` remain untouched. The paired control's own
-    // re-measurement (Task 8, if it lands) should re-run this exact test: if
-    // it starts failing, that is the signal the mechanism finally moved
-    // something, and this pin should be updated to record the new, real
-    // effect rather than loosened silently.
+    // third time, AFTER that fix, BEFORE looking at the result: prevalence
+    // 0.6967..., chronicity 0.2459..., by_cause[thermal] 0.5435... for the
+    // cold-built group, IDENTICAL to the prior two readings.
+    //
+    // A FOURTH re-run (the whole-branch review close-out) DID move the
+    // absolute numbers — prevalence 0.6980..., chronicity 0.2623...,
+    // by_cause[thermal] 0.5443... — because that review's Important 3 fixed
+    // a real bug in `catch_up`'s replay: `last_drank`/`last_ate`/
+    // `last_rested` were folded ONCE over a creature's entire committed
+    // history and reused for every replayed day, so a discharge fact
+    // landing INSIDE the replay window could suppress a competing drive for
+    // days that chronologically precede it. `run_simulation` drives
+    // `catch_up` every tick, so a genuine behavior fix there was always
+    // going to move this population's trajectory — this is the ONE fix in
+    // that review not on its own do-not-touch list (`HEARTH_WARMTH`,
+    // `WARMTH_DECAY`, `FURNISHING_COLD_C`, `INVENTORY` remain untouched).
+    // What matters for THIS test is unchanged: `cold_live` and `cold_inert`
+    // are still exactly equal to each other post-fix, so the preregistered
+    // null — toggling the hearth produces no measurable effect — still
+    // holds; only the (undirected) absolute reading moved. The paired
+    // control's own re-measurement (Task 8, if it lands) should re-run this
+    // exact test: if it starts failing (`cold_live != cold_inert`), that is
+    // the signal the mechanism finally moved something, and this pin should
+    // be updated to record the new, real effect rather than loosened
+    // silently.
     assert_eq!(
         cold_live, cold_inert,
         "the hearth arming currently produces NO measurable change in the cold-built \
@@ -386,12 +399,16 @@ fn the_landing_anchors_warmth_is_small_next_to_real_cold_built_deviations() {
     );
     // The room's real ambient temperature deviates from ANY authored species
     // niche (widths run 10–28°C in `domains/species`) by far more than this
-    // landing-anchor warmth could ever offset, calibrated or not.
+    // landing-anchor warmth could ever offset, calibrated or not. Stated as a
+    // single claim about `temp` alone (not an `||` against `warmth`, which
+    // the `assert_eq!` above already pins exactly): an `warmth < 1.0`
+    // alternative would pass just as well with `HEARTH_WARMTH` reverted to
+    // its pre-calibration `1.0`, so it could never catch that regression.
     let temp = terrain.temperature(&target.home, WorldTime { day: 0.0 });
     assert!(
-        temp < -20.0 || warmth < 1.0,
-        "either the room is mildly cold (within the recalibrated warmth's own reach of \
-         offsetting), or the warmth read is still small next to the deviation — \
-         got temp={temp}, warmth={warmth}"
+        temp < -20.0,
+        "seed 13's cold-built settlement should deviate far enough that this \
+         test's premise (landing warmth is small next to it) holds regardless \
+         of calibration — got temp={temp}"
     );
 }
