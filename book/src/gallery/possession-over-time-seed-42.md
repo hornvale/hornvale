@@ -27,8 +27,8 @@ Ways on: SE, N, SW.
   [496] kobold of Xatxoratrro
   [497] a wild rust-monster
   [498] a wild otyugh
-  [499] a wild reef-shark
-  [500] a wild xorn
+  [499] a wild xorn
+  [500] a wild carrion-crawler
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5
@@ -48,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (29 stirred).
+Time passes. You sense movement nearby (32 stirred).
 > look
 [room 738918402, day 7]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.

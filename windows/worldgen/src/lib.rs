@@ -1307,11 +1307,29 @@ pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64;
         // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
         // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
         // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        //
+        // …and not a SEA creature. The Vacancy opened the ocean to the habitat
+        // model, but the walk layer this feeds is a terrestrial surface game:
+        // there is no underwater locale, and every agent it mints carries a
+        // freshwater thirst drive it satisfies by pathing to drinkable water. A
+        // shark minted here is therefore permanently, unsatisfiably thirsty —
+        // measured, not theorised: agentifying the reef shark drove the health
+        // battery's null control to 0.94 thirst-caused distress and fired its
+        // bug alarm.
+        //
+        // The test is *predominantly* marine (majority uptake), not marine at
+        // all, so the amphibious kind still walks: a crocodile hauls out, and
+        // its 0.4 sea / 0.6 land vector is exactly the case the surface game
+        // can represent. A real habitat-medium axis (MAP-11) would state this
+        // properly; until then, what a creature eats is the honest proxy for
+        // where it lives, which is the same reasoning the supply mask uses.
         biosphere.get_by_label(label).is_some_and(|b| {
-            matches!(
+            let mobile = matches!(
                 b.social_form,
                 hornvale_species::SocialForm::Solitary | hornvale_species::SocialForm::Gregarious
-            )
+            );
+            let predominantly_marine = b.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.5;
+            mobile && !predominantly_marine
         })
     };
     // Each mobile beast's DENSEST home — the stack settlement where its local
@@ -6379,6 +6397,56 @@ mod tests {
             );
         }
         eprintln!("WILD {:?}", a.iter().map(|(s, _)| s).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn the_wild_never_mints_a_sea_creature() {
+        // The Vacancy: the walk layer this feeds is a terrestrial surface game.
+        // Every agent it mints carries a freshwater thirst drive satisfied by
+        // pathing to drinkable water, so a sea creature minted here is
+        // permanently, unsatisfiably thirsty. Measured before this guard
+        // existed: agentifying the reef shark drove the health battery's null
+        // control to 0.94 thirst-caused distress and fired its bug alarm.
+        //
+        // The bar is *predominantly* marine, not marine at all, so the
+        // amphibious kind still walks — which this test also pins, because a
+        // guard that swept up the crocodile too would be silently over-broad
+        // and nothing else would notice.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let biosphere = hornvale_species::biosphere_registry();
+        // Ask for far more than the roster holds, so the guard is what excludes
+        // a sea creature rather than the `k` cutoff happening to.
+        let wild = wild_concentrations(&world, 100).unwrap();
+        for (species, _pos) in &wild {
+            let marine = biosphere
+                .get_by_label(species)
+                .unwrap_or_else(|| panic!("{species} has a biosphere entry"))
+                .niche
+                .weight(hornvale_kernel::MARINE_FORAGE);
+            assert!(
+                marine <= 0.5,
+                "{species} is predominantly marine ({marine}) and must not be \
+                 agentified by the surface walk"
+            );
+        }
+        // And the amphibious kind is genuinely eligible — it is a `Solitary`
+        // mobile beast whose marine weight sits under the bar, so nothing but
+        // its own abundance decides whether it appears.
+        let croc = biosphere
+            .get_by_label("giant-crocodile")
+            .expect("giant-crocodile has a biosphere entry");
+        assert!(
+            croc.niche.weight(hornvale_kernel::MARINE_FORAGE) <= 0.5
+                && croc.social_form == hornvale_species::SocialForm::Solitary,
+            "the amphibious kind must remain eligible for the wild"
+        );
     }
 
     #[test]
