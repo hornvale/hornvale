@@ -15,6 +15,7 @@ mod purview;
 mod session;
 pub mod snapshot;
 pub mod streams;
+pub mod structure;
 mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
 pub use band::{Band, CHAMBER_DEPTH_OFFSET, band_of, chamber_depth, truncate_to_walk};
@@ -28,6 +29,7 @@ pub use snapshot::{
     SensedChannel, SessionSnapshot, SocialEntry, snapshot_json,
 };
 pub use streams::stream_labels;
+pub use structure::{MAX_CHAMBERS, Structure, structure_at};
 pub use vantage::*;
 
 use std::io::{BufRead, Write};
