@@ -213,6 +213,45 @@ const CONCEAL_MAX: f64 = 0.5;
 /// (goblin, hobgoblin) already sit, so a bake handed no psyche data behaves
 /// like a median patron rather than like the cruellest one.
 const NEUTRAL_HORIZON: f64 = 0.5;
+
+/// The lower edge of the band where a fresh relation can pay for itself, as a
+/// fraction of the vassal's effective capacity — spec §4.3b's **low root**,
+/// ≈ 0.1464 on the shipped constants.
+///
+/// A relation opens demanding `ASSESS_RATE × eff` from a vassal whose own
+/// epoch increment is the logistic `GROWTH_RATE × N × (1 − N/eff)`. Writing
+/// `x = N/eff`, the demand is payable out of growth exactly where
+///
+/// ```text
+/// GROWTH_RATE × x × (1 − x)  ≥  ASSESS_RATE
+/// ```
+///
+/// which is the interval between the two roots of that quadratic,
+/// `x = (1 ∓ sqrt(1 − 4 × ASSESS_RATE / GROWTH_RATE)) / 2`. **Below the low
+/// root the opening demand already exceeds everything the vassal can grow**,
+/// so the patron is eating the stock from the first collection — the crash
+/// basin. `ASSESS_RATE`'s own doc names this band from the other side (it is
+/// why the rate sits at `GROWTH_RATE/8`); this function is the same algebra,
+/// evaluated, so the two cannot drift apart. Derived from the constants rather
+/// than written down as 0.1464 for exactly that reason — it is not an
+/// independent parameter and must never become one.
+///
+/// Degenerate case, stated rather than assumed: at `ASSESS_RATE ≥
+/// GROWTH_RATE/4` the discriminant is negative — the demand exceeds the
+/// largest increment the land can ever yield, so *no* stock is farmable and
+/// the two roots collapse onto `eff/2`. Clamping the discriminant at zero
+/// returns exactly that (0.5), which is the truthful reading and not a
+/// fallback. `the_assessment_can_actually_bind_against_the_logistic_ceiling`
+/// pins the constants away from that regime.
+///
+/// Deterministic: `sqrt` is IEEE-exact and stays intrinsic (it is not one of
+/// the libm-routed transcendentals), and the argument is a ratio of two
+/// compile-time constants, so this is the same bit pattern on every platform.
+fn crash_basin_fraction() -> f64 {
+    let discriminant = (1.0 - 4.0 * ASSESS_RATE / GROWTH_RATE).max(0.0);
+    (1.0 - discriminant.sqrt()) / 2.0
+}
+
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
@@ -1253,6 +1292,53 @@ impl<'a> Bake<'a> {
         (FARM_FLOOR + horizon * ((eff / 2.0) - FARM_FLOOR)).max(FARM_FLOOR)
     }
 
+    /// The smallest community a patron of this people will accept as a vassal,
+    /// read off the vassal's cell (`eff`) and the patron's own horizon — spec
+    /// §4.3b, the same discount rate applied one step earlier, to the decision
+    /// to subordinate *at all*.
+    ///
+    /// **The measurement this exists to answer.** 45.7% of relations opened on
+    /// a community sitting at `DAUGHTER_POP`, which is always below
+    /// [`crash_basin_fraction`] × `eff`: the opening demand exceeded everything
+    /// the vassal could grow, so the patron was eating the stock from the first
+    /// collection. Those relations were doomed at conception, whatever
+    /// [`Bake::target_stock`] later steered them toward — the setpoint decides
+    /// where a *farmable* vassal rests, and says nothing about one that was
+    /// never farmable.
+    ///
+    /// ```text
+    /// min_vassal = horizon × crash_basin_fraction() × eff
+    /// ```
+    ///
+    /// The two ends are the whole content of the rule: an **immediate** patron
+    /// (horizon 0) demands nothing of a target's size and takes anything it can
+    /// beat, while a **generational** one (horizon 1) insists on a going
+    /// concern — a vassal already clear of the crash basin, which is the
+    /// weakest condition under which the relation it is opening can pay for
+    /// itself out of growth. The low root is therefore a *ceiling* on this
+    /// gate, not a floor: no patron ever declines a community that was actually
+    /// farmable, so the rule can trim the doomed openings without making
+    /// subordination inert. The anchor at zero is likewise exact rather than
+    /// nominal — at horizon 0 the term vanishes and the shipped dominance and
+    /// no-spoils vetoes are again the only conditions, so this cannot quietly
+    /// become a floor on vassal size in general.
+    ///
+    /// **At most three thresholds are reachable.** Only bugbear (0.3),
+    /// hobgoblin (0.5) and kobold (0.8) ever become patrons on the shipped
+    /// roster (goblin is raid-vetoed by `RAID_DISPOSITION_MIN`), so this gate
+    /// admits vassals above `0.044 × eff`, `0.073 × eff` and `0.117 × eff`
+    /// respectively — three cuts of the same band, never the continuum the
+    /// formula could express. That bounds the effect, and is said here so it is
+    /// not rediscovered as a surprise.
+    ///
+    /// Reads the raider's **people** and the target's **cell**, and nothing
+    /// else — no population of the patron's, no subordinate count, no stores —
+    /// so it cannot make the candidate scan's outcome depend on iteration
+    /// order, and it consumes no draw.
+    fn min_vassal(&self, people: KindId, eff: f64) -> f64 {
+        self.horizon_of(people) * crash_basin_fraction() * eff
+    }
+
     /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
     /// inhibition, the momentary one. A community whose pressure has reached
     /// `NO_SPOILS_PRESSURE` is already consuming its cell's whole effective
@@ -1688,7 +1774,7 @@ impl<'a> Bake<'a> {
     /// The Tumult's sub-critical measurement said the model was missing. One
     /// scan finds the best target of either kind; there is no second pass.
     ///
-    /// **Three skips guard the subordination branch**, all placed *after* the
+    /// **Four skips guard the subordination branch**, all placed *after* the
     /// covet test so none of them can ever veto an eviction (they decide who
     /// may be milked, never who may be conquered):
     ///
@@ -1702,6 +1788,15 @@ impl<'a> Bake<'a> {
     ///    themselves paying someone.
     /// 3. **The target already pays THIS raider** — nothing further to take
     ///    from it this epoch.
+    /// 4. **The target is too small for this patron to farm** — spec §4.3b's
+    ///    horizon-aware gate ([`Bake::min_vassal`]): a patron with foresight
+    ///    wants a going concern, an immediate one takes anything it can beat.
+    ///    It gates who may be *taken*, never who may be conquered, and a
+    ///    declined target is not a raid — nothing is tallied and nobody is
+    ///    touched. It sits alongside (1)–(3) after the covet test for that
+    ///    reason; moving it above would let a long-horizon raider decline
+    ///    better *land*, which is a different rule entirely
+    ///    (`the_size_gate_never_vetoes_an_eviction`).
     ///
     /// A target paying *someone else* is a live candidate: a second bid
     /// **transfers** the patronage, and the old patron does not contest
@@ -1742,9 +1837,12 @@ impl<'a> Bake<'a> {
     /// break in byte-identity for a fixed physics.
     fn maybe_raid(&mut self, raider: usize, era: &EraClimate, year: f64) {
         let raider_site = self.communities[raider].site;
+        // Read once: it does not vary over the candidate walk, and both the
+        // durable inhibition and the size gate (spec §4.3b) are keyed on it.
+        let raider_people = self.records[self.communities[raider].record].people;
         // The durable inhibition: a timid people never takes the initiative,
         // so it never enters the candidate loop at all.
-        if !self.takes_the_initiative(self.records[self.communities[raider].record].people) {
+        if !self.takes_the_initiative(raider_people) {
             return;
         }
         // Too small to seat itself after the war it is contemplating: decline,
@@ -1782,6 +1880,13 @@ impl<'a> Bake<'a> {
                 continue; // (1) a vassal takes no vassal — no depth (spec §4.4)
             } else if self.tribute.values().any(|tr| tr.patron == t) {
                 continue; // (2) a patron is not subordinated — no depth either
+            } else if self.communities[t].population < self.min_vassal(raider_people, t_val) {
+                // (4) Too small to farm: a patron with foresight passes (spec
+                // §4.3b, `Bake::min_vassal`). Not a raid — nothing is tallied,
+                // nobody is touched; if this is the only candidate the raider
+                // simply does not raid this epoch, which is what "declines"
+                // has to mean for a rule that fires BEFORE any spoil is taken.
+                continue;
             } else if let Some(tr) = self.tribute.get(&t) {
                 // The target already pays someone.
                 //
@@ -3432,6 +3537,252 @@ mod tests {
              — under {MARKEDLY}× apart, which is what a model with NO patron-side term looks \
              like (the pre-amendment state: one extraction rate for every relation in \
              existence)"
+        );
+    }
+
+    #[test]
+    fn a_generational_patron_declines_a_vassal_too_small_to_farm() {
+        // Spec §4.3b, and the measurement that forced it: 45.7% of relations
+        // opened on a community sitting at `DAUGHTER_POP`, always below the low
+        // root (`crash_basin_fraction() × eff`, ≈ 0.1464), where the opening
+        // demand already exceeds everything the vassal can grow. Those
+        // relations were doomed at conception — the setpoint decides where a
+        // FARMABLE vassal rests and says nothing about one that never was.
+        //
+        // BOTH ARMS ARE BOUND ON THE SAME FIXTURE, because either alone proves
+        // nothing: "the generational patron declined" passes trivially on a
+        // fixture where no raid was possible at all, and "the immediate patron
+        // took it" says nothing about foresight. Same world, same pair, same
+        // populations, same cells, same stream; the ONLY difference between the
+        // arms is the patron people's authored `time_horizon`.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        /// The immediate patron's horizon — bugbear's authored value, the
+        /// shortest sighted patron the shipped roster produces.
+        const IMMEDIATE: f64 = 0.3;
+        /// The generational patron's horizon — kobold's authored value, the
+        /// longest sighted one.
+        const GENERATIONAL: f64 = 0.8;
+        /// The patron's population: comfortably over `DAUGHTER_POP ×
+        /// RAID_MARGIN`, so dominance is never what decides either arm.
+        const PATRON_POP: f64 = 40.0;
+
+        // The fixture is only interesting if the vassal sits in the band the
+        // two horizons disagree about — above what an immediate patron
+        // requires, below what a generational one does. Both are read off the
+        // rule rather than written in, so a change to `ASSESS_RATE`,
+        // `GROWTH_RATE` or the horizon values reddens here (as a precondition)
+        // instead of quietly making the test vacuous.
+        let low_root = crash_basin_fraction() * RICH;
+        assert!(
+            DAUGHTER_POP < low_root,
+            "precondition: a fresh daughter ({DAUGHTER_POP}) must sit BELOW the low root \
+             ({low_root}) — that is the measured pathology this rule addresses"
+        );
+        assert!(
+            IMMEDIATE * low_root < DAUGHTER_POP && DAUGHTER_POP < GENERATIONAL * low_root,
+            "precondition: this vassal ({DAUGHTER_POP}) must sit between the two arms' \
+             thresholds ({} and {}), or the arms are not being asked a question they can \
+             answer differently",
+            IMMEDIATE * low_root,
+            GENERATIONAL * low_root
+        );
+
+        // (did a relation form, the subordinate's population after the raid)
+        let mut arms: Vec<(bool, f64)> = Vec::new();
+        for horizon in [IMMEDIATE, GENERATIONAL] {
+            // Only the patron people's entry differs between the arms; every
+            // other people is pinned identically in both.
+            let horizons: BTreeMap<KindId, f64> = [
+                (KindId("goblin"), horizon),
+                (KindId("kobold"), 0.0),
+                (KindId("hobgoblin"), 0.0),
+                (KindId("bugbear"), 0.0),
+            ]
+            .into_iter()
+            .collect();
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+            bake.time_horizon = &horizons;
+            let far = geo.neighbors(CellId(0))[0];
+            // Value-flat land, so `t_val > raider_val` is false and the only
+            // prize on offer is the neighbour's product: a raid here can only
+            // ever resolve as a subordination.
+            let patron = bake.open(
+                KindId("goblin"),
+                CellId(0),
+                0.0,
+                PATRON_POP,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let target = bake.open(
+                KindId("kobold"),
+                far,
+                0.0,
+                DAUGHTER_POP,
+                Founding::Genesis(far),
+                None,
+                0.0,
+            );
+            let index_before = bake.node_index.clone();
+
+            bake.maybe_raid(patron, &era, 0.0);
+
+            let formed = bake.tribute.contains_key(&target);
+            // A DECLINED subordination is not a raid: no spoil is taken, so no
+            // tally moves and nobody is displaced. Asserted on both arms —
+            // subordination never evicts, so these hold whichever way the gate
+            // went, and a gate that quietly tallied a refusal would show here.
+            assert_eq!(
+                bake.tally.raided, 0,
+                "value-flat land: no eviction is available, so nothing may be counted as one"
+            );
+            assert_eq!(
+                bake.tally.fled, 0,
+                "nobody is driven off by a subordination"
+            );
+            assert_eq!(
+                bake.tally.patronage_transfers, 0,
+                "the target was paying nobody: no patronage can have changed hands"
+            );
+            assert_eq!(
+                bake.tally.subordinations_formed,
+                u64::from(formed),
+                "the formation tally must agree with the relation table exactly: a decline \
+                 must count nothing, and a take exactly one"
+            );
+            assert_eq!(
+                bake.node_index, index_before,
+                "neither outcome moves anybody: the one-alive-per-site index must be untouched"
+            );
+            assert!(
+                bake.communities[patron].alive && bake.communities[target].alive,
+                "both communities must survive either outcome"
+            );
+            arms.push((formed, bake.communities[target].population));
+        }
+        let (immediate_took, immediate_left) = arms[0];
+        let (generational_took, generational_left) = arms[1];
+
+        // The non-vacuity arm, asserted POSITIVELY: this fixture is known to be
+        // capable of producing a relation, so "declined" below is a decision
+        // and not an absence of opportunity.
+        assert!(
+            immediate_took,
+            "precondition: the short-horizon patron must actually have TAKEN this vassal — \
+             without that, 'the generational patron declined' is a statement about a fixture \
+             where no subordination was on offer at all"
+        );
+        assert!(
+            !generational_took,
+            "a patron with foresight must decline a vassal too small to farm (spec §4.3b): \
+             this one sits at {DAUGHTER_POP}, under the {} a horizon of {GENERATIONAL} \
+             requires and under the low root {low_root} at which the opening demand stops \
+             exceeding everything the vassal can grow — yet the relation formed anyway",
+            GENERATIONAL * low_root
+        );
+        assert_eq!(
+            immediate_left.to_bits(),
+            generational_left.to_bits(),
+            "the gate must decide whether a relation FORMS, never how big the target is: \
+             {immediate_left} vs {generational_left}"
+        );
+    }
+
+    #[test]
+    fn the_low_root_is_exactly_where_the_opening_demand_stops_being_payable() {
+        // `crash_basin_fraction` is derived, never written down, so what needs
+        // pinning is the ALGEBRA and not the number: at that fraction of a
+        // cell's capacity the vassal's logistic increment exactly equals the
+        // opening demand, and a hair below it the demand wins. A value pinned
+        // as 0.1464 would survive any error in the derivation; this does not.
+        let x = crash_basin_fraction();
+        // Evaluated per unit of `eff` — both sides scale with it, so the
+        // relationship is a statement about the constants alone.
+        let increment_at_root = GROWTH_RATE * x * (1.0 - x);
+        assert!(
+            (increment_at_root - ASSESS_RATE).abs() < 1.0e-12,
+            "the low root {x} must be where the increment ({increment_at_root}) meets the \
+             opening demand ({ASSESS_RATE})"
+        );
+        // The LOW root, not the high one: it must sit below maximum
+        // sustainable yield, or the gate would exclude the whole farmable band.
+        assert!(
+            x > 0.0 && x < 0.5,
+            "the low root {x} must lie strictly between extinction and MSY"
+        );
+        // …and it really is a boundary: just inside the basin the demand
+        // exceeds everything the vassal can grow.
+        let inside = x * 0.99;
+        assert!(
+            GROWTH_RATE * inside * (1.0 - inside) < ASSESS_RATE,
+            "below the root the opening demand must exceed the increment, or the basin is \
+             not a basin"
+        );
+    }
+
+    #[test]
+    fn the_size_gate_never_vetoes_an_eviction() {
+        // The controller note, bound rather than trusted. §4.3b's gate decides
+        // who may be MILKED, never who may be conquered: the eviction branch is
+        // the shipped path and the size test sits after the covet test
+        // precisely so it cannot reach it. Hoisting the gate above that test —
+        // the obvious "simplification", since it reads nothing the covet test
+        // writes — would make a long-horizon raider decline better LAND on
+        // account of how few people stand on it, which is a different rule and
+        // one this campaign never proposed.
+        //
+        // Same too-small target as the decline test, same generational patron;
+        // only the raider's own cell is poorer, which is what turns the prize
+        // from a mobile one into an immobile one.
+        let (geo, graphs, capacity, river_prox, refugia, era) =
+            cascade_world(|c| if c == CellId(0) { POOR } else { RICH });
+        /// kobold's authored horizon — the longest sighted patron the shipped
+        /// roster produces, and so the strictest size gate available.
+        const GENERATIONAL: f64 = 0.8;
+        let horizons: BTreeMap<KindId, f64> =
+            [(KindId("goblin"), GENERATIONAL)].into_iter().collect();
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        bake.time_horizon = &horizons;
+        let far = geo.neighbors(CellId(0))[0];
+        let raider = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            40.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let target = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            DAUGHTER_POP,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        // The precondition that makes the result meaningful: this raider WOULD
+        // have declined this same target as a vassal.
+        assert!(
+            bake.communities[target].population < bake.min_vassal(KindId("goblin"), RICH),
+            "precondition: the gate must bind on this pair ({} vs a minimum of {}), or the \
+             eviction below proves only that the gate was never consulted",
+            bake.communities[target].population,
+            bake.min_vassal(KindId("goblin"), RICH)
+        );
+
+        bake.maybe_raid(raider, &era, 0.0);
+
+        assert_eq!(
+            bake.tally.raided, 1,
+            "better land must still be seized: the size gate may not veto an eviction"
+        );
+        assert_eq!(bake.tally.fled, 1, "the loser must still be driven off");
+        assert!(
+            bake.tribute.is_empty(),
+            "an eviction takes the ground, never a tributary"
         );
     }
 

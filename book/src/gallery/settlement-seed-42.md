@@ -1,6 +1,6 @@
 # The Peoples of Seed 42
 
-The land holds 313 settlement(s).
+The land holds 302 settlement(s).
 The chief bugbear settlement, Qvooshtvoagootao, holds 118 souls amid tropical-seasonal-forest.
 The chief goblin settlement, Zhvekngokngaknoenoanoaboo, holds 88 souls amid temperate-forest.
 The chief hobgoblin settlement, Mjeaqkeomjaenoagoo, holds 112 souls amid tropical-rainforest.
@@ -15,14 +15,14 @@ The chief kobold settlement, Roroqrraxoxo, holds 107 souls amid tropical-seasona
                                                                         
                                                                         
                                                                         
-              o                                                       o 
-              oo                       o                           oooo 
-              ooo                                                 ooo   
-               oo                                   ooo                 
-         ooooo o                                    o@o                 
+              o                                                         
+              oo                       o                           ooo  
+             oooo                                                 ooo   
+                                                     o                  
+         ooooo o                                    o@                  
          oooooo                                                         
-                       ooooooo                                          
-                          o                                             
+                       oooooo                                           
+                      oo oo                                             
                                                                         
                                                                         
                                                                         
