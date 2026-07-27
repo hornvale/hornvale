@@ -95,14 +95,28 @@ pub fn tempo(mass_kg: f64) -> f64 {
     ))
 }
 
-/// The authored base cost of each action, before the creature's tempo. Four
+/// The authored base cost of each action, before the creature's tempo. Five
 /// dials replacing the single historical `MOVE_DURATION`; none is zero, so the
 /// cost model is TOTAL (spec §2 rung 1). `Rest` keeps its jump-to-waking
 /// elsewhere — this is only the cost of the act of lying down.
+///
+/// The match is exhaustive by variant deliberately, the same discipline
+/// `liveness::precondition_reads_committed_state` keeps: a new `Action` must
+/// fail to compile here rather than silently become free.
 pub fn base_ticks(action: &Action) -> Ticks {
     match action {
         // 10_000 ticks = 0.1 days on an Earth-like world: today's MOVE_DURATION.
         Action::MoveTo(_) => Ticks(10_000),
+        // A step WITHIN a room (The Threshold): a tenth of a room-to-room move,
+        // which is the ratio that campaign authored for it (`MOVE_DURATION /
+        // 10.0`), carried over exactly. Crossing a room is at most eight
+        // anchor-hops, against the mesh-scale distances a between-room walk
+        // covers, so it should cost a proportionally smaller slice of a `wait`.
+        // Held here rather than as its own `f64` constant so it scales with body
+        // mass like every other act — a bear crosses a room more slowly than a
+        // person does — and so the two movement scales stay comparable by
+        // construction as either is retuned.
+        Action::MoveWithin(_) => Ticks(1_000),
         // A drink is quick — a couple of minutes.
         Action::Drink => Ticks(150),
         // A meal is not — the better part of an hour.

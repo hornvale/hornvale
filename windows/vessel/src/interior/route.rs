@@ -25,21 +25,15 @@ impl SearchSpace for InteriorSpace<'_> {
         // Adjacency (`Ec`) AND containment (`Ntpp`) are both walkable: standing
         // in the alcove you can step to the hearth inside it, and back out.
         // `is_connected` has always walked both; routing must agree with it, or
-        // the validator accepts rooms a creature cannot cross.
-        let mut out = self.interior.neighbors(*s);
-        if let Some(parent) = self.interior.anchor(*s).within {
-            out.push(parent);
-        }
-        for id in self.interior.ids() {
-            if self.interior.anchor(id).within == Some(*s) {
-                out.push(id);
-            }
-        }
-        // Deterministic and duplicate-free: `neighbors` is already ascending,
-        // but the containment links are appended out of order.
-        out.sort();
-        out.dedup();
-        out.into_iter().map(|n| (n, n, 1)).collect()
+        // the validator accepts rooms a creature cannot cross. `walkable_neighbors`
+        // is the single shared definition (`Occupancy::walk` uses the same one),
+        // so this planner and the thing that executes its plan can never disagree
+        // about what one hop is.
+        self.interior
+            .walkable_neighbors(*s)
+            .into_iter()
+            .map(|n| (n, n, 1))
+            .collect()
     }
 
     fn goal(&self, s: &AnchorId) -> bool {

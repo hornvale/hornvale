@@ -251,6 +251,7 @@
 - [The Snapshot](./chronicle/the-snapshot.md)
 - [The Shudder](./chronicle/the-shudder.md)
 - [The Hearth](./chronicle/the-hearth.md)
+- [The Threshold](./chronicle/the-threshold.md)
 - [The Vigil](./chronicle/the-vigil.md)
 - [The Tumult](./chronicle/the-tumult.md)
 - [The Waterline](./chronicle/the-waterline.md)
