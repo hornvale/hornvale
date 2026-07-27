@@ -2,7 +2,7 @@
 
 # Concept Manifest — the correspondence ledger
 
-Every registered concept is carried across three correspondence ledgers — **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a handle) — or is explicitly, reason-bearingly *absent* from one, an absence that must name why. The *concept* anchor and the *compute* ledger are implicit and omitted below: every registered concept IS modeled, so those columns are always covered. This page is the negative space made honest — the gaps are typed, not silent. The audit also runs in reverse: **orphan phenomena** are kinds the world can emit that no concept names, so an observation exists with nothing to attach it to.
+Every registered concept is carried across three correspondence ledgers — **lexicon** (a word), **perception** (a phenomenon kind), and **cognition** (a handle) — or is explicitly, reason-bearingly *absent* from one, an absence that must name why. The *concept* anchor and the *compute* ledger are implicit and omitted below: every registered concept IS modeled, so those columns are always covered. This page is the negative space made honest — the gaps are typed, not silent. The audit also runs in reverse: **orphan phenomena** are kinds the world can emit that no concept names, so an observation exists with nothing to attach it to; **orphan species** are creatures the world simulates and narrates with no word in any language; **orphan acts** are things creatures do that nothing can be said about. A fourth reverse direction — the player-facing prose vocabulary — is named below but not yet audited.
 
 ## Backlog (the negative space)
 
@@ -10,6 +10,9 @@ Every registered concept is carried across three correspondence ledgers — **le
 Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, bugbear-kind, cold, coral-reef, desert, eclipse, epipelagic, goblin-kind, god, hadal-trench, hearth, heat, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, rain, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tide, tropical-rainforest, tropical-seasonal-forest, tundra, upwelling
 Unperceived (percept gap): abyssal, alpine, bathypelagic, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, earth, eat, epipelagic, eye, fire, foot, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, name, night, one, parent, person, red, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tree, tropical-rainforest, tropical-seasonal-forest, tundra, two, upwelling, water, yellow
 Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, seasonal-cycle, wandering-star
+Orphan species (simulated, no concept names): black-dragon, giant-elk, giant-goat, otyugh, owlbear, red-dragon, rust-monster, treant, twig-blight, white-dragon, woolly-mammoth, xorn
+Orphan acts (performed, no concept names): move, drink, rest
+Prose vocabulary (player-facing words, no concept names): UNAUDITED — the locale relief descriptors, the sky and hydrology prose, and the affect labels are authored English with no concept behind them. Auditing them needs a design line between a nameable thing and mere texture, which no campaign has drawn yet.
 Uncognized (cognition, all pending): 74 concepts [wave-cognition]
 
 Trial balance (per ledger: covered + voids = 76 concepts):

@@ -4069,6 +4069,55 @@ pub enum Action {
     Eat,
 }
 
+impl Action {
+    /// Every action kind the planner can emit, one representative per variant
+    /// — the roster the correspondence audit reconciles against the concept
+    /// registry (The Actants). `MoveTo` carries an address, so its
+    /// representative uses a placeholder: the audit reads only which VARIANTS
+    /// exist, never their payloads.
+    ///
+    /// Kept exhaustive by [`action_variants_must_all_be_rostered`]: a new
+    /// variant fails to compile until it is listed here, so an act can never
+    /// enter the world without the audit noticing it has no word.
+    pub fn all() -> Vec<Action> {
+        vec![
+            Action::MoveTo(RoomAddr {
+                face: 0,
+                path: Vec::new(),
+            }),
+            Action::Drink,
+            Action::Rest,
+            Action::Eat,
+        ]
+    }
+
+    /// The concept name that would name this act, whether or not it is
+    /// registered. The audit reports the ones that are not.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn concept_name(&self) -> &'static str {
+        match self {
+            Action::MoveTo(_) => "move",
+            Action::Drink => "drink",
+            Action::Rest => "rest",
+            Action::Eat => "eat",
+        }
+    }
+}
+
+/// Compile-time tripwire: a new [`Action`] variant breaks this match — every
+/// variant is named and there is no `_` arm — forcing [`Action::all`] and
+/// [`Action::concept_name`] to be revisited. The `manifest.rs` destructure
+/// tripwire applied to an enum. Never remove, never add a wildcard arm.
+#[allow(dead_code)]
+fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
+    match a {
+        Action::MoveTo(_) => "move",
+        Action::Drink => "drink",
+        Action::Rest => "rest",
+        Action::Eat => "eat",
+    }
+}
+
 /// The GOAP planning state A* searches: where the agent is and whether it has
 /// drunk. `Ord` for the deterministic search.
 /// type-audit: bare-ok(flag: hydrated)
