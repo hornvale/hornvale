@@ -8,6 +8,7 @@ mod focalize;
 pub mod interior;
 mod knowledge;
 pub mod liveness;
+mod purview;
 mod session;
 pub mod snapshot;
 pub mod streams;
@@ -15,6 +16,7 @@ mod vantage;
 pub use agent::{Agent, AgentId, mint_flagship, walk_depth};
 pub use focalize::*;
 pub use knowledge::*;
+pub use purview::*;
 pub use session::Session;
 pub use snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,

@@ -54,6 +54,7 @@
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
+- [The Purview, Off a Possession — Seed 42](./gallery/surrounds-seed-42.md)
 
 # The Laboratory
 
@@ -83,6 +84,7 @@
 - [Phonology](./reference/phonology.md)
 - [Scene Schema: tiles v1](./reference/scene-tiles-v1.md)
 - [Scene Schema: tiles-region v1](./reference/scene-tiles-region-v1.md)
+- [Scene Schema: surrounds v1](./reference/scene-surrounds-v1.md)
 - [Scene Schema: system v1](./reference/scene-system-v1.md)
 - [Scene Schema: moons v1](./reference/scene-moons-v1.md)
 - [Scene Schema: neighbors v1](./reference/scene-neighbors-v1.md)
@@ -250,6 +252,12 @@
 - [The Shudder](./chronicle/the-shudder.md)
 - [The Hearth](./chronicle/the-hearth.md)
 - [The Vigil](./chronicle/the-vigil.md)
+- [The Tumult](./chronicle/the-tumult.md)
+- [The Waterline](./chronicle/the-waterline.md)
+- [The Purview](./chronicle/the-purview.md)
+- [The Margin](./chronicle/the-margin.md)
+- [The Reagent](./chronicle/the-reagent.md)
+- [The Convalescence](./chronicle/the-convalescence.md)
 
 # Appendix: The Frontier
 

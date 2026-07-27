@@ -12,5 +12,6 @@ hornvale-worldgen = { path = "../worldgen" }
 hornvale-terrain = { path = "../../domains/terrain" }
 hornvale-climate = { path = "../../domains/climate" }
 hornvale-settlement = { path = "../../domains/settlement" }
+hornvale-locale = { path = "../locale" }
 serde = { workspace = true }
 serde_json = { workspace = true }

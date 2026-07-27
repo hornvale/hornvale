@@ -1142,12 +1142,7 @@ impl hornvale_kernel::Field<f64> for CrustField {
     /// latitude degrees (terrain's declared interpretation, spec §2);
     /// crust is static — time is ignored.
     fn sample(&self, pos: hornvale_kernel::Position, _time: hornvale_kernel::WorldTime) -> f64 {
-        let (lat, lon) = (pos.y.to_radians(), pos.x.to_radians());
-        let p = [
-            math::cos(lat) * math::cos(lon),
-            math::cos(lat) * math::sin(lon),
-            math::sin(lat),
-        ];
+        let p = math::unit_sphere_from_lat_lon(pos.y, pos.x);
         self.thickness_at(p).get()
     }
 }

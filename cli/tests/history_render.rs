@@ -93,6 +93,98 @@ fn a_migrated_goblin_clearing_also_shows_its_doll() {
     assert!(text.contains("migrated"), "{text}");
 }
 
+/// The Tumult (final-review F-1): a **conquest-relocation** does not narrate
+/// as a peaceful climate departure.
+///
+/// `Bake::maybe_raid` closes the conqueror's abandoned record with
+/// `Migrated`/`Ended::Nature` — it left its poorer land for the seat it just
+/// seized — and closes the victim's with `Fled`/`By(the raider)` in the same
+/// year. Read naively, cause `migrated` sent that record down the
+/// climate-abandonment prose and the climate-abandonment residue, so on seed
+/// 42 a majority of the world's "migrated" ruins described a war as a people
+/// that "walked away over a generation" while the victim, one cell over, read
+/// "put to flight by ⟨them⟩". The distinction is query-side (spec §9 forbids a
+/// new cause variant or committed field): the contemporaneous victim IS the
+/// signal.
+#[test]
+fn a_conquerors_abandoned_seat_does_not_read_as_a_climate_departure() {
+    let mut w = test_world();
+    // The conqueror's abandoned record at cell 3: it left in the year 1200.
+    let mut conqueror = base_record(10, "goblin", 3, 340.0);
+    conqueror.ended = Some(1200.0);
+    conqueror.peak_population = 40; // hamlet-scale, so the climate path WOULD leave a doll
+    conqueror.cause = Some(CauseOfEnd::Migrated);
+    conqueror.ended_by = Ended::Nature;
+    // The victim it drove off cell 7, that same year, at its hand.
+    let mut victim = base_record(11, "kobold", 7, 500.0);
+    victim.ended = Some(1200.0);
+    victim.cause = Some(CauseOfEnd::Fled);
+    victim.ended_by = Ended::By(eid(10));
+    let hist = History::new(vec![conqueror, victim], 1250.0);
+    emit_history(&mut w, &hist).unwrap();
+
+    let text = render_site(&w, CellId(3));
+    assert!(
+        !text.contains("the cold drove them on"),
+        "a conquest must not narrate as a climate departure:\n{text}"
+    );
+    assert!(
+        text.contains("they were not driven from this ground")
+            || text.contains("They were not driven from this ground"),
+        "the conqueror's line must say what it was:\n{text}"
+    );
+    assert!(
+        text.contains("cell 7"),
+        "and name the ground they took it from:\n{text}"
+    );
+    assert!(
+        !text.to_lowercase().contains("doll"),
+        "a planned one-season move leaves no forgotten doll:\n{text}"
+    );
+}
+
+/// The control for the case above: a `migrated` record with NO contemporaneous
+/// victim is still a climate departure, and still reads (and leaves residue)
+/// as one. Without this, the fix could pass by narrating every migration as a
+/// conquest.
+#[test]
+fn a_climate_departure_still_reads_as_one_when_a_war_happened_elsewhere() {
+    let mut w = test_world();
+    // The climate migrant at cell 3, gone in 1200 — no victim anywhere.
+    let mut migrant = base_record(10, "goblin", 3, 340.0);
+    migrant.ended = Some(1200.0);
+    migrant.peak_population = 40;
+    migrant.cause = Some(CauseOfEnd::Migrated);
+    migrant.ended_by = Ended::Nature;
+    // An unrelated community driven off cell 7 by a THIRD party, same year.
+    let mut victim = base_record(11, "kobold", 7, 500.0);
+    victim.ended = Some(1200.0);
+    victim.cause = Some(CauseOfEnd::Fled);
+    victim.ended_by = Ended::By(eid(12));
+    let mut raider = base_record(12, "bugbear", 9, 600.0);
+    raider.ended = Some(1200.0);
+    raider.cause = Some(CauseOfEnd::Migrated);
+    raider.ended_by = Ended::Nature;
+    let hist = History::new(vec![migrant, victim, raider], 1250.0);
+    emit_history(&mut w, &hist).unwrap();
+
+    let text = render_site(&w, CellId(3));
+    assert!(
+        text.contains("migrated"),
+        "the climate line is unchanged for a record with no victim:\n{text}"
+    );
+    assert!(
+        text.to_lowercase().contains("doll"),
+        "and it still leaves the climate assemblage:\n{text}"
+    );
+    // The third party at cell 9 IS a conqueror, and reads as one.
+    let raider_text = render_site(&w, CellId(9));
+    assert!(
+        raider_text.contains("were not driven from this ground"),
+        "the real conqueror still reads as one:\n{raider_text}"
+    );
+}
+
 /// A restacked site reads as a stratigraphy: two layers, the newer founded
 /// from the older's fleeing survivors — the ★ `founded_from` thread rendered
 /// in prose.

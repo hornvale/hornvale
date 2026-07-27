@@ -37,14 +37,10 @@ const COAST_FREQ: f64 = 24.0;
 const COAST_OCTAVES: u32 = 5;
 
 /// Unit vector for a latitude/longitude in degrees (inverse of the
-/// kernel's `Geosphere::coord` convention).
+/// kernel's `Geosphere::coord` convention) — the kernel's one lat/lon →
+/// unit-sphere routing (`math::unit_sphere_from_lat_lon`).
 fn direction(latitude: f64, longitude: f64) -> [f64; 3] {
-    let (lat, lon) = (latitude.to_radians(), longitude.to_radians());
-    [
-        math::cos(lat) * math::cos(lon),
-        math::cos(lat) * math::sin(lon),
-        math::sin(lat),
-    ]
+    math::unit_sphere_from_lat_lon(latitude, longitude)
 }
 
 /// Seam-free coastline noise in [−1, 1) at a unit-sphere position: the

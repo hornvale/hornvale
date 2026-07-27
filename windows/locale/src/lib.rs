@@ -50,6 +50,15 @@ pub struct Locale {
     pub longitude: f64,
     /// Inherited biome name (max-weight corner cell).
     pub biome: String,
+    /// The same inherited biome, as the `hornvale_climate::Biome` enum
+    /// `biome`'s prose string was rendered from. `#[serde(skip)]`: this
+    /// carries no wire bytes, so `locale/room/v2`'s serialized shape is
+    /// unchanged — it exists purely so an in-process consumer (e.g.
+    /// `scene/surrounds/v1`) can index by enum identity instead of
+    /// round-tripping through a string, the way `windows/scene/src/lib.rs`
+    /// and `region.rs` already index tile/region biomes.
+    #[serde(skip)]
+    pub biome_kind: Biome,
     /// Blended continuous fields.
     pub fields: LocaleFields,
     /// The three canonical-grid corner cells and their integer weights.
@@ -91,8 +100,9 @@ pub struct LocaleFields {
 }
 
 /// Serialize a `WaterKind` by its stable lowercase-hyphenated name (the
-/// `locale/room/v2` schema's water field), the same convention `biome_name`
-/// uses for `Biome`.
+/// `locale/room/v2` schema's water field). Unlike [`biome_prose_name`], this
+/// stays kebab-case — water has no separate prose noun to protect, so there
+/// is no shared-noun hazard here.
 fn serialize_water_kind<S>(kind: &WaterKind, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -100,7 +110,8 @@ where
     serializer.serialize_str(water_kind_name(*kind))
 }
 
-/// Stable name for a `WaterKind` (owned here, not Debug — mirrors `biome_name`).
+/// Stable name for a `WaterKind` (owned here, not Debug — kebab-case, unlike
+/// [`biome_prose_name`]).
 fn water_kind_name(k: WaterKind) -> &'static str {
     match k {
         WaterKind::Ocean => "ocean",
@@ -265,7 +276,8 @@ impl LocaleContext {
             depth: addr.depth(),
             latitude: quantize(coord.latitude),
             longitude: quantize(coord.longitude),
-            biome: biome_name(biome).to_string(),
+            biome: biome_prose_name(biome).to_string(),
+            biome_kind: biome,
             fields,
             corners: weights
                 .iter()
@@ -426,8 +438,15 @@ fn miami_npp(temperature_c: f64, moisture: f64) -> f64 {
     temp_response.min(moisture.clamp(0.0, 1.0))
 }
 
-/// Stable biome name for the `locale/room/v2` schema (owned here, not Debug).
-fn biome_name(b: Biome) -> &'static str {
+/// Stable, human-readable biome name — spaced, not kebab-case (owned here,
+/// not Debug). This is the prose grain: it is what the `locale/room/v2`
+/// schema's `biome` field carries, and what a player reads. It is distinct
+/// from [`hornvale_climate::Biome::name`], the kebab-case identifier used
+/// for machine-readable catalogs (e.g. `scene/surrounds/v1`'s `biome_legend`
+/// index) — the two must never be confused, or the same biome becomes two
+/// different examinable nouns (The Margin).
+/// type-audit: bare-ok(prose: return)
+pub fn biome_prose_name(b: Biome) -> &'static str {
     match b {
         Biome::Ice => "ice",
         Biome::Tundra => "tundra",

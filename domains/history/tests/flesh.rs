@@ -3,7 +3,8 @@
 //! inputs always produce the same output, with no world or global state.
 
 use hornvale_history::flesh::{
-    Durability, ResidueItem, RoleHandle, Structure, persona_of, residue_of, structures_of,
+    Departure, Durability, ResidueItem, RoleHandle, Structure, persona_of, residue_of,
+    structures_of,
 };
 use hornvale_history::record::{
     CauseOfEnd, Ended, Founding, Function, Notability, OccupationRecord, TechHorizon,
@@ -39,8 +40,8 @@ fn burned_goblin_village() -> OccupationRecord {
 #[test]
 fn flesh_is_deterministic() {
     let occ = burned_goblin_village();
-    let a = residue_of(&occ, 2000.0, Seed(7));
-    let b = residue_of(&occ, 2000.0, Seed(7));
+    let a = residue_of(&occ, 2000.0, Seed(7), Departure::Climate);
+    let b = residue_of(&occ, 2000.0, Seed(7), Departure::Climate);
     assert_eq!(a.items, b.items); // same inputs -> same flesh
     assert_eq!(
         persona_of(RoleHandle(9), Seed(7)),
@@ -51,7 +52,7 @@ fn flesh_is_deterministic() {
 #[test]
 fn a_recently_burned_goblin_hamlet_leaves_a_doll() {
     let occ = burned_goblin_village(); // low notability, young ruin, burned
-    let r = residue_of(&occ, 2000.0, Seed(7)); // died 1980, now 2000 -> 20y old
+    let r = residue_of(&occ, 2000.0, Seed(7), Departure::Climate); // died 1980, now 2000 -> 20y old
     assert!(r.items.contains(&ResidueItem::Doll));
     assert!(!r.items.contains(&ResidueItem::Reliquary)); // that's for a Seat
 }
@@ -62,7 +63,7 @@ fn a_regional_seat_leaves_a_reliquary_even_when_old() {
     occ.notability = Notability::Seat;
     // Very old ruin: personal effects have long since weathered away, but
     // the durable sacred item persists.
-    let r = residue_of(&occ, 50_000.0, Seed(7));
+    let r = residue_of(&occ, 50_000.0, Seed(7), Departure::Climate);
     assert!(r.items.contains(&ResidueItem::Reliquary));
     assert!(!r.items.contains(&ResidueItem::Doll));
 }
@@ -77,14 +78,61 @@ fn a_young_migrated_goblin_hamlet_leaves_a_doll() {
     let mut occ = burned_goblin_village();
     occ.cause = Some(CauseOfEnd::Migrated);
     occ.ended_by = Ended::Nature; // an orderly climate departure, no antagonist
-    let r = residue_of(&occ, 2000.0, Seed(7)); // died 1980, now 2000 -> 20y old
+    let r = residue_of(&occ, 2000.0, Seed(7), Departure::Climate); // died 1980, now 2000 -> 20y old
     assert!(r.items.contains(&ResidueItem::Doll));
 
     // A far-future ruin (age ~48_000 y) has weathered even its durable
     // debris away — beyond DURABLE_TRACE_AGE nothing but eternal finds
     // survive, and a plain hamlet has none.
-    let ancient = residue_of(&occ, 50_000.0, Seed(7));
+    let ancient = residue_of(&occ, 50_000.0, Seed(7), Departure::Climate);
     assert!(ancient.items.is_empty());
+}
+
+#[test]
+fn a_conquerors_abandoned_seat_is_not_a_climate_abandonment() {
+    // The Tumult (final-review F-1). `CauseOfEnd::Migrated` has two producers
+    // since predation: a climate eviction, and a CONQUEROR walking off its own
+    // poorer land onto the ground it just took. The committed cause is the
+    // same for both — the distinction is a fold over the whole record set, so
+    // the caller passes it in. What must not happen is the conqueror's site
+    // silently inheriting the climate-abandonment assemblage.
+    let mut occ = burned_goblin_village();
+    occ.cause = Some(CauseOfEnd::Migrated);
+    occ.ended_by = Ended::Nature; // as `maybe_raid` closes the raider's record
+    let climate = residue_of(&occ, 2000.0, Seed(7), Departure::Climate);
+    let conquest = residue_of(&occ, 2000.0, Seed(7), Departure::Conquest);
+
+    assert_ne!(
+        conquest.items, climate.items,
+        "a conquest-relocation must not leave the climate-abandonment residue"
+    );
+    // The two marks of a slow, unplanned departure are absent: nothing was
+    // forgotten in the grass, and no generation of winnowing scattered stone.
+    assert!(
+        !conquest.items.contains(&ResidueItem::Doll),
+        "a planned one-season move leaves no forgotten doll: {:?}",
+        conquest.items
+    );
+    assert!(
+        !conquest.items.contains(&ResidueItem::WorkedStone),
+        "no generational worked-stone scatter: {:?}",
+        conquest.items
+    );
+    // What nobody carries away still stands in the record.
+    assert!(conquest.items.contains(&ResidueItem::Potsherd));
+    assert!(conquest.items.contains(&ResidueItem::Foundation));
+}
+
+#[test]
+fn a_conquerors_seat_keeps_every_other_causes_residue_untouched() {
+    // `departure` is meaningful for `Migrated` ALONE. A burned village is a
+    // burned village however its neighbours fared that year — this is what
+    // keeps the new parameter from quietly becoming a second cause axis.
+    let occ = burned_goblin_village(); // Burned
+    assert_eq!(
+        residue_of(&occ, 2000.0, Seed(7), Departure::Conquest).items,
+        residue_of(&occ, 2000.0, Seed(7), Departure::Climate).items
+    );
 }
 
 #[test]
@@ -99,7 +147,7 @@ fn an_ancient_migrated_hamlet_leaves_durable_traces_but_no_doll() {
     let mut occ = burned_goblin_village();
     occ.cause = Some(CauseOfEnd::Migrated);
     occ.ended = Some(1500.0);
-    let r = residue_of(&occ, 2000.0, Seed(7)); // age 500 — an ancient ruin
+    let r = residue_of(&occ, 2000.0, Seed(7), Departure::Climate); // age 500 — an ancient ruin
 
     // The durable archaeological record is present…
     assert!(

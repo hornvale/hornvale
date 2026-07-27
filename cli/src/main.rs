@@ -53,6 +53,12 @@ usage:
   hornvale scene moons [--world <PATH>]                emit scene/moons/v1 JSON to stdout
   hornvale scene neighbors [--world <PATH>]            emit scene/neighbors/v1 JSON to stdout
   hornvale scene eclipses --world W --from D --until D   emit scene/eclipses/v1 JSON
+  hornvale scene surrounds [--world <PATH>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
+                            [--render json|ascii]
+                                                      emit scene/surrounds/v1 JSON to stdout, or
+                                                      (--render ascii) the terrain-lens chart
+                                                      (--room and --depth are mutually exclusive —
+                                                      a room id already carries its own depth)
   hornvale history --world <PATH> --site <CELL>
                           read a site's stratigraphy + flesh (the deep history of one cell)
   hornvale connections --world <PATH> --site <CELL>
@@ -385,11 +391,11 @@ fn cmd_repl(args: &[String]) -> Result<(), String> {
     repl::run(&world, stdin.lock(), stdout.lock()).map_err(|e| e.to_string())
 }
 
-/// Parse and validate `--day` for `possess`: a finite, non-negative
-/// standard day (default `0.0` when the flag is absent). Rejects `inf`,
-/// `-inf`, `nan`, and negative values loudly rather than handing the vessel
-/// window a day it cannot observe.
-fn parse_possess_day(args: &[String]) -> Result<f64, String> {
+/// Parse and validate `--day`: a finite, non-negative standard day (default
+/// `0.0` when the flag is absent). Rejects `inf`, `-inf`, `nan`, and
+/// negative values loudly rather than handing a consumer (`possess`, `scene
+/// surrounds`) a day it cannot observe.
+fn parse_day_flag(args: &[String]) -> Result<f64, String> {
     let s = flag_value(args, "--day").unwrap_or("0");
     let day: f64 = s.parse().map_err(|_| format!("bad --day: {s}"))?;
     if !(day.is_finite() && day >= 0.0) {
@@ -403,7 +409,7 @@ fn parse_possess_day(args: &[String]) -> Result<f64, String> {
 /// Parse and validate `--at` for `book` (C8, The Diachronic Book): a
 /// finite, non-negative standard day, or `None` when the flag is absent
 /// (the committed artifact's fixed epoch pair). Mirrors
-/// `parse_possess_day`'s validation.
+/// `parse_day_flag`'s validation.
 fn parse_at_day(args: &[String]) -> Result<Option<f64>, String> {
     let Some(s) = flag_value(args, "--at") else {
         return Ok(None);
@@ -431,7 +437,7 @@ fn cmd_possess(args: &[String]) -> Result<(), String> {
     } else {
         load_world(args)?
     };
-    let day = parse_possess_day(args)?;
+    let day = parse_day_flag(args)?;
     let stdout = std::io::stdout();
     let played = if let Some(path) = flag_value(args, "--script") {
         let script = std::fs::read_to_string(path).map_err(|e| format!("reading {path}: {e}"))?;
@@ -978,13 +984,20 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
 fn cmd_lab_run(args: &[String]) -> Result<(), String> {
     let path = args.get(2).ok_or("lab run requires <PATH>")?;
     let study = hornvale_lab::load_study(std::path::Path::new(path)).map_err(|e| e.to_string())?;
+    let goldens_dir = std::path::Path::new(hornvale_lab::CENSUS_GOLDENS_DIR);
+    // Fail fast, before spending any compute: a census study on the wrong
+    // machine would otherwise run to completion before `publish` (the
+    // load-bearing check — see below) refuses it. `publish` re-checks this
+    // itself, so this is a UX shortcut, not the guard's only enforcement
+    // point (decision 0063; windows/lab/src/census_guard.rs).
+    hornvale_lab::require_canonical_host_for(
+        &study.name,
+        goldens_dir,
+        &hornvale_lab::current_hostname(),
+    )?;
     let result = hornvale_lab::run(&study).map_err(|e| e.to_string())?;
     hornvale_lab::write_csv(&result, std::path::Path::new("lab-out")).map_err(|e| e.to_string())?;
-    let written = hornvale_lab::publish(
-        &result,
-        std::path::Path::new("book/src/laboratory/generated"),
-    )
-    .map_err(|e| e.to_string())?;
+    let written = hornvale_lab::publish(&result, goldens_dir).map_err(|e| e.to_string())?;
     let refusals = result.rows.iter().filter(|r| r.refusal.is_some()).count();
     println!(
         "study {}: {} rows, {} refusals; summary + {} charts published.",
@@ -1053,8 +1066,11 @@ fn cmd_lab_list_metrics() -> Result<(), String> {
 /// renders the night sky's two star populations, the notable neighbor
 /// stars and the background starfield (scene/neighbors/v1), and `scene
 /// eclipses` renders dated eclipse events over a closed `[from, until]` day window
-/// (scene/eclipses/v1). Deterministic; CI drift-checks the committed example
-/// scene.
+/// (scene/eclipses/v1), and `scene surrounds` renders the situated chart around
+/// an observer's room (scene/surrounds/v1) — JSON by default, or (`--render
+/// ascii`) the same `terrain`-lens picture the possession's own `map` verb
+/// draws, via `hornvale_scene::render_surrounds_ascii`. Deterministic; CI
+/// drift-checks the committed example scene.
 fn cmd_scene(args: &[String]) -> Result<(), String> {
     match args.get(1).map(String::as_str) {
         Some("tiles") => {
@@ -1119,14 +1135,126 @@ fn cmd_scene(args: &[String]) -> Result<(), String> {
             println!("{}", hornvale_scene::eclipses_json(&scene));
             Ok(())
         }
+        Some("surrounds") => {
+            // A packed --room id already carries its own depth (it's baked
+            // into the id's path length), so a --depth alongside it can
+            // never be honoured without re-addressing the room at a
+            // different depth — a second, independent geometric operation
+            // this flag has never meant. Reject the combination loudly
+            // rather than silently ignoring whichever one loses. Checked
+            // before `load_world` so a bad combination fails fast, without
+            // needing a world at all.
+            if flag_value(args, "--room").is_some() && flag_value(args, "--depth").is_some() {
+                return Err(
+                    "--room and --depth cannot be combined: the room id already carries its \
+                     own depth. Pass --depth alone (to size a fresh room from the default \
+                     settlement centre) or --room alone (to draw around that exact room)."
+                        .to_string(),
+                );
+            }
+            // Validated before `load_world`, same discipline as the
+            // --room/--depth guard above: a typo'd render mode should fail
+            // fast without needing a world fixture at all.
+            let render_mode = flag_value(args, "--render").unwrap_or("json");
+            if render_mode != "json" && render_mode != "ascii" {
+                return Err(format!(
+                    "unknown --render mode '{render_mode}'; known modes: json, ascii"
+                ));
+            }
+            let world = load_world(args)?;
+            let ctx = hornvale_locale::LocaleContext::build(&world).map_err(|e| e.to_string())?;
+            let depth = match flag_value(args, "--depth") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--depth must be a u32: {e}"))?,
+                None => ctx.globe_level() + 6,
+            };
+            let radius = match flag_value(args, "--radius") {
+                Some(raw) => raw
+                    .parse::<u32>()
+                    .map_err(|e| format!("--radius must be a u32: {e}"))?,
+                None => 4,
+            };
+            let day = parse_day_flag(args)?;
+            let room = match flag_value(args, "--room") {
+                Some(raw) => {
+                    let id = raw
+                        .parse::<u64>()
+                        .map_err(|e| format!("--room must be a packed room id: {e}"))?;
+                    RoomId(id)
+                        .unpack()
+                        .map_err(|e| format!("--room {id} is not a room id: {e:?}"))?
+                }
+                None => {
+                    // Default: the flagship settlement's room — the ground a
+                    // possession actually starts on.
+                    let v = hornvale_settlement::village_info(&world)
+                        .ok_or("this world has no settlement to centre on")?;
+                    settlement_room(&world, v.id, depth)?
+                }
+            };
+            let scene = hornvale_scene::surrounds_scene(&world, &room, radius, WorldTime { day })
+                .map_err(|e| e.to_string())?;
+            if render_mode == "ascii" {
+                // The footer names the observer room's own lateral exits,
+                // the same source the possession's `map` verb reads
+                // (`ExitKind::Edge`, excluding the vertical enter/exit scale
+                // changes) — a second, independent exit computation is
+                // exactly how a CLI caption and the possession's would end
+                // up disagreeing.
+                let locale = ctx
+                    .describe(&room, WorldTime { day })
+                    .map_err(|e| e.to_string())?;
+                let ways: Vec<String> = locale
+                    .exits
+                    .iter()
+                    .filter(|e| e.kind == hornvale_locale::ExitKind::Edge)
+                    .filter_map(|e| match e.direction {
+                        hornvale_locale::Direction::Compass(c) => {
+                            Some(format!("{c:?}").to_uppercase())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                print!(
+                    "{}",
+                    hornvale_scene::render_surrounds_ascii(&scene, "terrain", &ways)
+                );
+            } else {
+                println!("{}", hornvale_scene::surrounds_json(&scene));
+            }
+            Ok(())
+        }
         Some(other) => Err(format!(
-            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
+            "unknown scene kind '{other}'; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
         )),
         None => Err(
-            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses"
+            "scene needs a kind; known kinds: tiles, tiles-region, system, moons, neighbors, eclipses, surrounds"
                 .to_string(),
         ),
     }
+}
+
+/// The room a settlement's coordinates fall in at `depth` — the same lat/lon
+/// → unit-sphere routing `locale --at` uses, so a scene centred on a
+/// settlement lands exactly where a possession mints its agent.
+fn settlement_room(
+    world: &World,
+    id: hornvale_kernel::EntityId,
+    depth: u32,
+) -> Result<RoomAddr, String> {
+    let lat = match world.ledger.value_of(id, hornvale_settlement::LATITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return Err("the settlement has no latitude fact".to_string()),
+    };
+    let lon = match world.ledger.value_of(id, hornvale_settlement::LONGITUDE) {
+        Some(hornvale_kernel::Value::Number(n)) => *n,
+        _ => return Err("the settlement has no longitude fact".to_string()),
+    };
+    Ok(RoomAddr::containing(
+        math::unit_sphere_from_lat_lon(lat, lon),
+        depth,
+    ))
 }
 
 /// Describe a single room as an observable place. Prose by default; `--json`
@@ -1168,13 +1296,7 @@ fn cmd_locale(args: &[String]) -> Result<(), String> {
             .trim()
             .parse()
             .map_err(|_| "bad longitude".to_string())?;
-        let (la, lo) = (lat.to_radians(), lon.to_radians());
-        let position = [
-            math::cos(la) * math::cos(lo),
-            math::cos(la) * math::sin(lo),
-            math::sin(la),
-        ];
-        RoomAddr::containing(position, depth)
+        RoomAddr::containing(math::unit_sphere_from_lat_lon(lat, lon), depth)
     } else {
         return Err("provide --at LAT,LON or --room ID".to_string());
     };
@@ -1446,16 +1568,16 @@ mod tests {
 
     #[test]
     fn bad_day_value_rejects_non_finite_and_negative_spans() {
-        let err = parse_possess_day(&args(&["--day", "inf"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "inf"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "-inf"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "-inf"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "nan"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "nan"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        let err = parse_possess_day(&args(&["--day", "-1"])).unwrap_err();
+        let err = parse_day_flag(&args(&["--day", "-1"])).unwrap_err();
         assert!(err.contains("bad --day"), "unexpected error text: {err}");
-        assert_eq!(parse_possess_day(&args(&["--day", "5"])).unwrap(), 5.0);
-        assert_eq!(parse_possess_day(&args(&[])).unwrap(), 0.0);
+        assert_eq!(parse_day_flag(&args(&["--day", "5"])).unwrap(), 5.0);
+        assert_eq!(parse_day_flag(&args(&[])).unwrap(), 0.0);
     }
 
     #[test]
@@ -1677,5 +1799,58 @@ mod tests {
             err.contains("tiles-region"),
             "known kinds must include tiles-region: {err}"
         );
+    }
+
+    /// `--room` and `--depth` used to silently disagree: a packed room id
+    /// already carries its own depth, so a `--depth` alongside it was read
+    /// and then thrown away. The combination must now be refused loudly —
+    /// checked before `load_world`, so this needs no `--world` fixture.
+    #[test]
+    fn scene_surrounds_rejects_room_and_depth_together() {
+        let err = cmd_scene(&args(&[
+            "scene",
+            "surrounds",
+            "--room",
+            "12345",
+            "--depth",
+            "6",
+        ]))
+        .unwrap_err();
+        assert!(
+            err.contains("--room and --depth cannot be combined"),
+            "unexpected error text: {err}"
+        );
+    }
+
+    #[test]
+    fn scene_surrounds_accepts_room_or_depth_alone() {
+        // Neither call reaches the mutual-exclusivity guard; both must
+        // proceed to `load_world` and fail on the *missing world* instead
+        // (proving the guard itself did not fire).
+        let err = cmd_scene(&args(&["scene", "surrounds", "--room", "12345"])).unwrap_err();
+        assert!(!err.contains("cannot be combined"), "{err}");
+        let err = cmd_scene(&args(&["scene", "surrounds", "--depth", "6"])).unwrap_err();
+        assert!(!err.contains("cannot be combined"), "{err}");
+    }
+
+    /// Validated before `load_world` (same discipline as the --room/--depth
+    /// guard just above), so this needs no `--world` fixture either.
+    #[test]
+    fn scene_surrounds_rejects_an_unknown_render_mode() {
+        let err = cmd_scene(&args(&["scene", "surrounds", "--render", "png"])).unwrap_err();
+        assert!(
+            err.contains("unknown --render mode 'png'") && err.contains("json, ascii"),
+            "unexpected error text: {err}"
+        );
+    }
+
+    #[test]
+    fn scene_surrounds_accepts_known_render_modes() {
+        // Neither call reaches the render-mode guard; both must proceed to
+        // `load_world` and fail on the missing world instead.
+        for mode in ["json", "ascii"] {
+            let err = cmd_scene(&args(&["scene", "surrounds", "--render", mode])).unwrap_err();
+            assert!(!err.contains("unknown --render mode"), "{err}");
+        }
     }
 }

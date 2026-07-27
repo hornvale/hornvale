@@ -380,8 +380,13 @@ fn goblin_flagship_coastal_split_is_pinned() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): 536 -> 535
     // coastal, 235 -> 234 inland.
-    assert_eq!(coastal, 535, "coastal flagship count drifted");
-    assert_eq!(inland, 234, "inland flagship count drifted");
+    //
+    // The Tumult (predation) re-pin; lefford regen, 0063: the deep-history
+    // bake now resolves conflict as predation (covet a richer neighbour's
+    // site, win the fight, seize it), which re-seats flagships on four
+    // worlds: 535 -> 531 coastal, 234 -> 238 inland.
+    assert_eq!(coastal, 531, "coastal flagship count drifted");
+    assert_eq!(inland, 238, "inland flagship count drifted");
 }
 
 #[test]
@@ -446,30 +451,21 @@ fn the_slave_rung_is_an_exact_function_of_rank_surplus_and_scale() {
     }
 }
 
-#[test]
-fn kobold_flagships_are_less_coastal_than_goblin_flagships() {
-    // Preregistered directional hypothesis (spec §9.1); Task 10 pins exact
-    // counts after measurement.
-    let result = &*DRIFT;
-    let idx = |name: &str| result.metric_names.iter().position(|n| *n == name).unwrap();
-    let rate = |col: usize| {
-        let (mut t, mut n) = (0u32, 0u32);
-        for row in &result.rows {
-            match row.values[col] {
-                MetricValue::Flag(true) => {
-                    t += 1;
-                    n += 1
-                }
-                MetricValue::Flag(false) => n += 1,
-                _ => {}
-            }
-        }
-        f64::from(t) / f64::from(n.max(1))
-    };
-    let goblin = rate(idx("goblin-flagship-coastal"));
-    let kobold = rate(idx("kobold-flagship-coastal"));
-    assert!(kobold < goblin, "kobold {kobold:.3} !< goblin {goblin:.3}");
-}
+// RETIRED (The Tumult, 2026-07-26): `kobold_flagships_are_less_coastal_
+// than_goblin_flagships` — the preregistered directional hypothesis of spec
+// §9.1 — is gone from this file, NOT flipped to match the data. It asserted a
+// kobold−goblin difference the shipped model predicts to be exactly ZERO: the
+// deep-history bake is niche-blind end to end (genesis draws both peoples
+// uniformly from one species-blind capacity ranking, and `ConditionNiche`
+// never enters the bake at all), so there is no mechanism by which a
+// highlander's flagship could sit further from the coast than a lowlander's.
+// It passed pre-campaign by ≈0.5 σ of draw noise and failed after the
+// predation epoch by ≈2.2 σ of the same, and the movement was traced in full
+// to flagship-identity RE-SELECTION rather than anyone relocating. The
+// replacement preregisters the re-selection rate itself, against
+// `threat_response` — the one per-people axis the bake does differentiate —
+// in `tests/disposition_calibration.rs`. Evidence:
+// `.superpowers/sdd/coastal-inversion-investigation.md`.
 
 #[test]
 fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
@@ -667,7 +663,12 @@ fn blind_attribution_beats_chance_decisively() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): 703 -> 700
     // correct, 771 -> 768 total.
-    assert_eq!(correct, 700, "blind-attribution count drifted");
+    //
+    // The Tumult (predation) re-pin; lefford regen, 0063: predation re-seats
+    // settlements, so two more attributable pairs land on the correct side
+    // (700 -> 702 correct); the pool itself is unchanged at 768, so accuracy
+    // rises 0.911 -> 0.914, still decisively above the 0.75 floor.
+    assert_eq!(correct, 702, "blind-attribution count drifted");
     assert_eq!(total, 768, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
@@ -985,8 +986,13 @@ fn name_collision_rate_is_measured_and_pinned() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): 50 -> 48
     // zero-collision, 723 -> 722 nonzero-collision, 227 -> 230 absent.
-    assert_eq!(zero, 48, "zero-collision world count drifted");
-    assert_eq!(nonzero, 722, "nonzero-collision world count drifted");
+    //
+    // The Tumult (predation) re-pin; lefford regen, 0063: predation changes
+    // WHICH settlements survive to be named, so five worlds that drew no
+    // duplicate name now do (48 -> 43 zero-collision, 722 -> 727 nonzero);
+    // the absent set (worlds with no measurable rate at all) is unmoved.
+    assert_eq!(zero, 43, "zero-collision world count drifted");
+    assert_eq!(nonzero, 727, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1022,7 +1028,12 @@ fn name_collision_rate_is_measured_and_pinned() {
         //
         // The Sundering (moving-sea epoch; lefford regen, 0063):
         // 0.178_726_790_236_740_12 -> 0.183_235_100_516_883.
-        (mean - 0.183_235_100_516_883).abs() < 1e-6,
+        //
+        // The Tumult (predation) re-pin; lefford regen, 0063: predation
+        // prunes the settlement roster (losers are seized, not merely
+        // displaced), so fewer names are drawn per world and the mean rate
+        // FALLS 0.183_235_100_516_883 -> 0.172_311_535_567_532_45.
+        (mean - 0.172_311_535_567_532_45).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1119,7 +1130,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         //
         // The Sundering (moving-sea epoch; lefford regen, 0063): 771 -> 769
         // present, mean 13.461_308_710_376_134 -> 13.382_874_198_569_583.
-        ("goblin", 769u32, 13.382_874_198_569_583),
+        //
+        // The Tumult (predation) re-pin; lefford regen, 0063: presence is
+        // unmoved at 769 — predation reseats flagships without changing WHICH
+        // worlds seat a goblin one — but the surviving flagships are richer
+        // sites with longer names: mean 13.382_874_198_569_583 ->
+        // 13.411_552_371_911_55.
+        ("goblin", 769u32, 13.411_552_371_911_55),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1138,7 +1155,14 @@ fn name_length_distributions_are_measured_and_pinned() {
         //
         // The Sundering (moving-sea epoch; lefford regen, 0063): 772 -> 769
         // present, mean 12.748_786_009_455_962 -> 12.690_321_674_122_243.
-        ("kobold", 769u32, 12.690_321_674_122_243),
+        //
+        // The Tumult (predation) re-pin; lefford regen, 0063: presence
+        // unmoved at 769, but the kobold mean moves far more than goblin's
+        // (12.690_321_674_122_243 -> 13.094_070_229_388_812) — predation
+        // reseats kobold flagships onto materially different sites, the same
+        // movement that inverts the coastal-rate ordering (see
+        // kobold_flagships_are_less_coastal_than_goblin_flagships).
+        ("kobold", 769u32, 13.094_070_229_388_812),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);
@@ -1249,9 +1273,17 @@ fn null_control_blind_attribution_is_at_chance() {
     //
     // The Sundering (moving-sea epoch; lefford regen, 0063): 325 -> 324
     // indistinguishable, 64 -> 63 decided.
-    assert_eq!(indistinguishable, 324, "indistinguishable count drifted");
-    assert_eq!(decided, 63, "decided count drifted");
-    assert_eq!(picks_twin, 31, "twin-pick count drifted");
+    //
+    // The Tumult (predation) re-pin; lefford regen, 0063: predation adds
+    // another path-dependent step to the bake (who seizes whom depends on
+    // the order sites are evaluated), so one more pair separates: 324 -> 323
+    // indistinguishable, 63 -> 64 decided. The pool is unchanged at 387.
+    assert_eq!(indistinguishable, 323, "indistinguishable count drifted");
+    assert_eq!(decided, 64, "decided count drifted");
+    // The Tumult (predation) re-pin; lefford regen, 0063: 31 -> 32 of the 64
+    // decided pairs pick the twin — an exact 0.500 split, i.e. the null
+    // control lands even closer to chance than before (0.484).
+    assert_eq!(picks_twin, 32, "twin-pick count drifted");
 }
 
 #[test]
@@ -1313,14 +1345,21 @@ fn null_control_distributions_are_within_the_sampling_bound() {
     assert!((head - 0.0).abs() < 1e-9, "head-domain TVD drifted: {head}");
     // The Sundering (moving-sea epoch; lefford regen, 0063):
     // 0.002_570_694_087_403_610_5 -> 0.005167958656330775.
+    // The Tumult (predation) re-pin; lefford regen, 0063: predation deepens
+    // the path-dependence, separating the two solo builds on a few more
+    // seeds — 0.005_167_958_656_330_775 -> 0.007_751_937_984_496_131, still
+    // two orders of magnitude inside the ±0.15 bound asserted above.
     assert!(
-        (cult - 0.005_167_958_656_330_775).abs() < 1e-9,
+        (cult - 0.007_751_937_984_496_131).abs() < 1e-9,
         "cult-form TVD drifted: {cult}"
     );
     // The Sundering (moving-sea epoch; lefford regen, 0063):
     // -0.002_628_737_160_115_815_5 -> -0.003297896904548732.
+    // The Tumult (predation) re-pin; lefford regen, 0063: same cause as the
+    // cult-form movement above — -0.003_297_896_904_548_732 ->
+    // -0.003_956_842_859_287_871, still ~50x inside the ±0.2 bound.
     assert!(
-        (size - -0.003_297_896_904_548_732).abs() < 1e-9,
+        (size - -0.003_956_842_859_287_871).abs() < 1e-9,
         "pantheon-size SMD drifted: {size}"
     );
 }
@@ -1416,7 +1455,12 @@ fn null_control_name_length_smd_is_pinned() {
         // The Sundering (moving-sea epoch; lefford regen, 0063):
         // -0.057_530_513_798_514_59 -> -0.06516184343231343; still well
         // inside the ±0.2 sampling bound.
-        (namelen - -0.065_161_843_432_313_43).abs() < 1e-9,
+        //
+        // The Tumult (predation) re-pin; lefford regen, 0063: predation
+        // reseats settlements in both solo builds alike, so the residual
+        // name-length gap barely moves — -0.065_161_843_432_313_43 ->
+        // -0.064_965_927_887_856_32; still well inside the ±0.2 bound.
+        (namelen - -0.064_965_927_887_856_32).abs() < 1e-9,
         "name-length SMD drifted: {namelen}"
     );
 }

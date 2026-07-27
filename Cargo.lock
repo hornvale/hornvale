@@ -30,6 +30,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hornvale-alchemy"
+version = "0.1.0"
+dependencies = [
+ "hornvale-kernel",
+]
+
+[[package]]
 name = "hornvale-almanac"
 version = "0.1.0"
 dependencies = [
@@ -183,6 +190,7 @@ dependencies = [
  "hornvale-astronomy",
  "hornvale-climate",
  "hornvale-kernel",
+ "hornvale-locale",
  "hornvale-settlement",
  "hornvale-terrain",
  "hornvale-worldgen",
@@ -228,6 +236,7 @@ dependencies = [
  "hornvale-kernel",
  "hornvale-language",
  "hornvale-locale",
+ "hornvale-scene",
  "hornvale-settlement",
  "hornvale-species",
  "hornvale-terrain",
@@ -240,6 +249,7 @@ dependencies = [
 name = "hornvale-worldgen"
 version = "0.1.0"
 dependencies = [
+ "hornvale-alchemy",
  "hornvale-almanac",
  "hornvale-astronomy",
  "hornvale-climate",

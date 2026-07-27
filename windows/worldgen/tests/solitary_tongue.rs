@@ -283,11 +283,30 @@ const PEOPLES: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
 /// including all four is what makes this guard load-bearing rather than
 /// accidentally vacuous for one of the four.
 ///
-/// A drift here on a future commit (never on this one, which captures the
-/// golden) means the `Settled` byte-identity broke -- see
-/// `hornvale_kernel::golden`'s module docs for the accept path
-/// (REBASELINE=1), which is never appropriate for THIS specific guard
-/// without first confirming the drift is deliberate and in scope.
+/// A drift here has TWO possible causes, and they need opposite responses:
+///
+/// 1. **Phonology drift** -- a surviving word RENDERS DIFFERENTLY (`root
+///    Toaneo` -> `root Toanea`). This is the failure this guard was built
+///    for: the `Settled` byte-identity broke, and a wrong regime is being
+///    threaded into a people's lexicon. Do NOT rebaseline; find the bug.
+/// 2. **Exposure drift** -- a word appears or disappears, or a `gap`
+///    changes its REASON (`no compound recipe for 'taiga'` -> `no
+///    settlement in or beside taiga`), while every word present in both
+///    versions stays byte-identical. This is not a language change at all:
+///    it is UPSTREAM SETTLEMENT PLACEMENT moving which biomes a people
+///    lives beside, and the lexicon faithfully reporting the new exposure.
+///    A genesis epoch that re-places settlements is expected to move these
+///    lines.
+///
+/// Tell them apart by diffing the golden and checking whether any `root`/
+/// `compound` line changed into a DIFFERENT `root`/`compound` line. If none
+/// did, it is case 2. (The Tumult's predation epoch, 2026-07-26, was case 2
+/// exactly: 6 of 304 entries moved, all exposure-shaped, and all 188 words
+/// present in both versions byte-identical.)
+///
+/// See `hornvale_kernel::golden`'s module docs for the accept path
+/// (REBASELINE=1), appropriate for case 2 only, and only after confirming
+/// the drift is deliberate and in scope.
 #[test]
 fn peoples_lexicons_are_unchanged_from_the_pre_campaign_golden() {
     let world = generated_world(REFERENCE_SEED);
@@ -304,9 +323,15 @@ fn peoples_lexicons_are_unchanged_from_the_pre_campaign_golden() {
         )),
         &snapshot,
         "a settled people's full seed-42 lexicon drifted from The Solitary Tongue's captured \
-         golden -- every people here is Settled, so cascade_regime_of must resolve each to \
-         CascadeRegime::SETTLED unchanged; a drift here means that byte-identity broke. If \
-         (and only if) this drift is a deliberate, in-scope change, regenerate with \
+         golden. READ THE DIFF BEFORE ACTING -- there are two very different causes. (1) If a \
+         `root`/`compound` line became a DIFFERENT `root`/`compound` line, the phonology moved: \
+         cascade_regime_of is no longer resolving every Settled people to CascadeRegime::SETTLED, \
+         that byte-identity broke, and this is a BUG -- do not rebaseline. (2) If words only \
+         appeared/disappeared or a `gap` merely changed its REASON, while every word present in \
+         both versions is byte-identical, then the language did not change at all: upstream \
+         SETTLEMENT PLACEMENT moved which biomes these peoples live beside, and the lexicon is \
+         correctly reporting the new exposure -- expected after a genesis epoch. Only in case (2), \
+         and only when that placement change is deliberate and in scope, regenerate with \
          REBASELINE=1 and review the diff.",
     );
 }

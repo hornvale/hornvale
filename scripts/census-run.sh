@@ -28,6 +28,17 @@ LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
 
 # Serialize: open the lock fd, then block until it is ours. Closing the fd on
 # exit (any exit) releases it, so the next queued invocation proceeds.
+# Refuse outright on any box but the canonical one: this script's whole premise
+# is that goldens come from one machine. This shell guard covers every SHELL
+# entry point (this script, and the HV_CENSUS=1 branch of
+# regenerate-artifacts.sh); `cargo run -p hornvale -- lab run <census study>`
+# bypasses shell entirely, so it carries its own guard in Rust
+# (windows/lab/src/census_guard.rs, invoked from publish()) reading the same
+# scripts/census-canonical-host.txt this one does (decision 0063).
+# shellcheck source=scripts/census-canonical-host.sh
+. "$(dirname "$0")/census-canonical-host.sh"
+require_canonical_census_host || exit 1
+
 exec 9>"$LOCK"
 echo "census-run: waiting for the census lock ($LOCK) …" >&2
 flock 9
@@ -56,7 +67,7 @@ cd "$run_root"
 if [ "$#" -eq 0 ]; then
     echo "census-run: regenerating the canonical census goldens (HV_CENSUS=1, ~7 min) …" >&2
     HV_CENSUS=1 bash scripts/regenerate-artifacts.sh
-    echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is canonical, decision 0063)." >&2
+    echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is the canonical one, decision 0063)." >&2
 else
     for study in "$@"; do
         echo "census-run: lab run $study …" >&2
