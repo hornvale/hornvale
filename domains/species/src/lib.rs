@@ -812,9 +812,24 @@ pub enum MetabolicClass {
     /// life per kg. Realized rate couples to ambient temperature (deferred,
     /// spec §10 CAP-1).
     Ectotherm,
-    /// Phototroph (plant-folk/fungal analogue). Energy from light; its basal
-    /// rate is SURFACE/area-limited, so the §4 universal exponent does NOT
-    /// apply — activating this class is its own modelling decision. Unused seam.
+    /// Phototroph (plant-folk/fungal analogue). Energy from light.
+    ///
+    /// **Documented intent, not shipped behaviour.** A phototroph's basal rate
+    /// is physically SURFACE/area-limited, so §4's universal ¾ mass exponent
+    /// should not apply to it. It nonetheless does: [`crate::allometry`] gives
+    /// this class `B0_ENDOTHERM` and a pace multiplier of 1.0, so the two
+    /// shipped autotrophs (treant, twig-blight) are computed exactly as
+    /// endotherms of the same mass. The class was witnessed by The Menagerie
+    /// without the modelling decision ever being made, and this doc claimed
+    /// "unused seam" for three campaigns after it stopped being one.
+    ///
+    /// Making it real needs an area-scaling exponent and an autotroph `B0`
+    /// calibrated against a photosynthetic-productivity anchor — a genuine
+    /// modelling call that moves both kinds' life-history and every golden
+    /// they touch, tracked as BIO-42 and deliberately NOT bundled with the
+    /// roster expansion that would destroy its attribution. The current
+    /// divergence is pinned by `autotroph_is_computed_as_an_endotherm_today`
+    /// in `tests/coverage.rs`, so the fix will present as a visible diff.
     Autotroph,
     /// No metabolism (construct/undead analogue). Has no life-history: the
     /// biological traits are `None`. Unused seam.
