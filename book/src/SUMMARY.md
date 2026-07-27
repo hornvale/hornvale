@@ -257,6 +257,7 @@
 - [The Purview](./chronicle/the-purview.md)
 - [The Margin](./chronicle/the-margin.md)
 - [The Reagent](./chronicle/the-reagent.md)
+- [The Convalescence](./chronicle/the-convalescence.md)
 
 # Appendix: The Frontier
 
