@@ -423,7 +423,7 @@ is the one axis The Wearing must not spend."
 ### Task 3: Register the toponymic concepts
 
 **Files:**
-- Modify: `domains/terrain/src/facts.rs` — register the terrain-owned concepts
+- Modify: `domains/terrain/src/lib.rs:123-141` — register the terrain-owned concepts (**not** `facts.rs`, which holds predicates; the concept loop is the `for (name, kind, doc) in [...]` block that registers `stone`/`mountain`/`sea` as full `Manifest`s)
 - Modify: `domains/language/src/packs.rs:49` (`universal_stratum`) and `:439` (`register_concepts`)
 - Modify: `domains/language/src/accession.rs:34` — add all new ids to cohort 0
 
@@ -480,18 +480,28 @@ Expected: FAIL — `hill is not registered`.
 
 - [ ] **Step 3: Register the terrain-owned concepts**
 
-In `domains/terrain/src/facts.rs`, following the existing registration for `stone`/`mountain`/`sea` exactly (same `ConceptKind`, same doc style, one line of prose each). Example shape:
+In `domains/terrain/src/lib.rs`, extend the existing `for (name, kind, doc) in [...]` loop at `:123-141`. Each entry is a `(name, ConceptKind, doc)` triple and the loop wraps it in a full `Manifest` — so a new concept is **one line**, not a new `Manifest` literal:
 
 ```rust
-        ConceptDef {
-            name: "river".to_string(),
-            kind: ConceptKind::Substance,
-            doc: "flowing fresh water across land".to_string(),
-            ..
-        },
+    for (name, kind, doc) in [
+        ("stone", ConceptKind::Substance, "rock"),
+        ("mountain", ConceptKind::Terrain, "high ground"),
+        ("sea", ConceptKind::Terrain, "a body of salt water"),
+        ("hill", ConceptKind::Terrain, "ground that rises above what surrounds it"),
+        ("river", ConceptKind::Terrain, "fresh water running across land"),
+        ("lake", ConceptKind::Terrain, "still fresh water held in a hollow"),
+        ("valley", ConceptKind::Terrain, "low ground between heights"),
+        ("coast", ConceptKind::Terrain, "where the land meets the sea"),
+        ("island", ConceptKind::Terrain, "land the water surrounds"),
+        ("ford", ConceptKind::Terrain, "where a river runs shallow enough to cross"),
+        ("marsh", ConceptKind::Terrain, "soft wet ground"),
+        ("spring", ConceptKind::Terrain, "where water rises from the ground"),
+    ] {
 ```
 
-Read the neighbouring `sea` definition first and match every field it sets — this plan does not reproduce the full `ConceptDef` shape because the surrounding code is the authority on it.
+The loop already sets `lexeme: Correspondent::Present(Lexicalization::Expected)` — which is what makes these concepts lexicalizable — and marks percept/cognition absent. Do not change those; the new entries inherit them, which is correct.
+
+Note `domains/terrain/src/lib.rs:255` iterates `["mountain", "sea"]` in a test; check whether it needs extending.
 
 - [ ] **Step 4: Add all nineteen to the language pack and to cohort 0**
 
