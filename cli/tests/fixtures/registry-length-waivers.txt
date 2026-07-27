@@ -19,7 +19,6 @@ BIO-39
 BIO-40
 BIO-41
 BIO-6
-CLIENT-action-clock
 CLIENT-alive-map
 CLIENT-as-instrument
 CLIENT-choreographer
@@ -69,9 +68,6 @@ LANG-27
 LANG-3
 LANG-32
 LANG-33
-LANG-35
-LANG-36
-LANG-37
 LANG-38
 LANG-39
 LANG-4
@@ -95,7 +91,6 @@ LANG-55
 LANG-7
 LANG-8
 LANG-9
-MAP-10
 MAP-18
 MAP-19
 MAP-20
@@ -127,8 +122,6 @@ MAP-67
 MAP-68
 MAP-69
 MAP-7
-MAP-70
-MAP-71
 MAP-connectors-as-apertures
 MAP-impression
 MAP-perceive-apertures
@@ -168,8 +161,6 @@ SKY-1
 SKY-15
 SKY-19
 SKY-23
-SKY-24
-SKY-25
 SKY-5
 SKY-6
 SKY-7
@@ -185,15 +176,12 @@ SKY-standstills
 SKY-submoon
 SKY-tidal-braking
 SKY-trojan-world
-SOC-10
 SOC-11
 SOC-9
 SOC-belief-sharing
 SOC-contact
-SOC-criticality
 SOC-flagship-selection
 SOC-information-economy
-SOC-inhibition
 SOC-persistent-hearsay
 TOOL-12
 TOOL-13
@@ -225,7 +213,6 @@ UNI-27
 UNI-28
 UNI-29
 UNI-30
-UNI-31
 UNI-32
 UNI-33
 UNI-34
