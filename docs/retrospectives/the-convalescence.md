@@ -160,3 +160,19 @@ can point at.**
   replacement for it — fate stays the discriminator (decision 0080). Whether such
   a member should eventually be *bounded* needs its own null-control evidence
   across the sweep; the seeds' readings for both quantities are currently unknown.
+
+- **Name *which* creature is stuck** (carried forward from this campaign's spec §8,
+  which scoped it out deliberately). A bug alarm that reports "one in ten" is less
+  useful to whoever has to debug it than one that reports "the rust-monster";
+  `by_species` is the nearest existing diagnostic, and it attributes distress
+  prevalence rather than identifying the stuck individual. Genuinely useful,
+  genuinely out of scope here, and it belongs with whoever next faces a red alarm —
+  because that is the moment the requirement becomes concrete rather than imagined.
+
+- **The Temperament never entered its Confidence Gradient bet.** §8 and its success
+  criterion 5 promised this metric would be "re-scored into the Confidence Gradient
+  as a self-scorable bet," and no row in `book/src/open-questions.md` names it — so
+  there was nothing for this campaign's freshness sweep to re-score (decision 0030).
+  Nothing in the book is false as a result; the bet is simply absent. A pre-existing
+  gap in that campaign, recorded here because this is the campaign that discovered
+  it, and not chargeable to either.
