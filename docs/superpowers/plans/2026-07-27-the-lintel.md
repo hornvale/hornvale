@@ -1614,7 +1614,33 @@ Create `book/src/chronicle/the-lintel.md` following a recent sibling's shape (re
 
 - [ ] **Step 4: Write the decision record**
 
-Find the next free number (`ls docs/decisions/ | tail -5`) and create `docs/decisions/NNNN-locale-chamber-place.md` recording the terminology: locale / chamber / place, with "room" unqualified retired. Follow the format in `docs/decisions/README.md`. State the context (the collision produced a wrong design before it was caught), the decision, and the consequence (new doc comments and specs use the band words).
+The highest number on this branch is **0080**, so this record is **0081** — but
+**re-check before you write it**, because parallel campaign sessions mint numbers
+too and a collision is a real merge hazard:
+
+```bash
+ls docs/decisions/ | grep -E "^[0-9]" | tail -3
+make preflight
+```
+
+`make preflight` explicitly checks for a decision filename minted on both sides
+of the merge base. If it reports a collision, take the next free number and say
+so in your report — do not renumber someone else's record.
+
+Create `docs/decisions/0081-locale-chamber-place.md` (or the next free number)
+recording the terminology: **locale** for a macro place (~1.7 km, walk band),
+**chamber** for a micro place (human scale), **place** for either, and "room"
+unqualified retired from new prose and doc comments. Follow the format in
+`docs/decisions/README.md`.
+
+The context is the part worth writing carefully, because it is the reason the
+record exists: `GLOBE_LEVEL = 6` at ~110 km with `walk_depth = globe_level + 6`
+makes a walk-band place ~1.7 km across, and The Hearth's anchor vocabulary
+(`Hearth`, `Bed`, `Alcove`) was written for human scale while deriving for that
+1.7 km locale. The collision produced a wrong design — a metric glyph lattice at
+landscape scale — and it was caught only when someone computed the number. State
+the consequence too: `RoomAddr`/`RoomId` are **not** renamed, because an address
+is correct at every band.
 
 - [ ] **Step 5: Book freshness sweep**
 
@@ -1645,19 +1671,32 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 ```
 Expected: all green, and the final `git diff --exit-code` clean (any drift must already be committed in Step 2).
 
-- [ ] **Step 8a: Run the health null-control explicitly**
+- [ ] **Step 8a: Confirm the health null-control actually RAN**
 
-`make gate-full` runs the `heavy:`-tagged tier but **not** the calibration
-batteries, which carry non-`heavy:` ignore reasons. The spec's success criteria
-name the health null-control, so run it by hand:
+**Correction to an earlier draft of this plan:** `windows/lab/tests/health_calibration.rs`
+carries **no `#[ignore]` attributes** — verified with `grep -c "#\[ignore"` (result: 0)
+and with `cargo nextest list -p hornvale-lab --test health_calibration`, which
+lists its tests. So the battery already runs inside Step 8's
+`cargo nextest run --workspace`, and the earlier draft's
+`-- --ignored` invocation would have run **zero tests and exited 0** — a check
+that reports success while verifying nothing.
+
+So the step is not "run it" but "prove it ran":
 
 ```bash
-cargo test -p hornvale-lab --test health_calibration -- --ignored --nocapture 2>&1 | tail -20
+cargo nextest run -p hornvale-lab --test health_calibration 2>&1 | tail -6
 ```
-Expected: green — chronicity stays zero and every distress run recovers. This is
-a **check**, not this campaign's gate: §2 keeps behaviour still, so a failure here
-means something moved that should not have, not that a threshold needs adjusting.
-Never edit the study to match a new number (decision 0016).
+
+Expected: a **non-zero** test count with all passed, including
+`the_null_control_reads_no_chronic_distress`, `the_null_control_holds_across_a_seed_sweep`,
+`an_injected_spike_recovers`, and `an_unsatisfiable_need_persists`.
+
+**A run reporting `0 tests run` is a FAILURE of this step, not a pass.** Paste the
+count into the report so it is on the record.
+
+This is a **check**, not this campaign's gate: §2 keeps behaviour still, so a
+failure here means something moved that should not have — never edit the study to
+match a new number (decision 0016).
 
 - [ ] **Step 8b: Re-score the Confidence Gradient if a bet moved**
 
