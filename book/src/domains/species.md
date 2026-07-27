@@ -207,6 +207,12 @@ articulation (and lexicon) — and is absent only from Society. The rest of
 the menagerie's biosphere-only fauna (treant, xorn, …) still have no rows in
 any of the peopled registries, and none of this table; their absence there
 is expressed rather than declared, unlike a dragon's now-partial presence.
+They are nonetheless *nameable*: since *The Actants* every kind the world
+simulates carries a concept, so a treant is a thing the vocabulary knows of
+even though nothing about a treant thinks, speaks, or lives socially. The two
+are genuinely independent — being nameable is a fact about the world's
+vocabulary, being minded is a fact about the creature — and conflating them
+is precisely how twelve creatures went four campaigns with no name at all.
 The one biosphere dimension the fauna carry
 distinctly is **potency** — a creature's magical might — assayed, like `mass`,
 from the D&D 5E corpus: it is the kind's adult Challenge Rating over thirty
