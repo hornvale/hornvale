@@ -111,6 +111,27 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "wind",
         "yellow",
     ],
+    // Epoch 1 — The Actants (2026-07-27): the twelve creatures The Menagerie
+    // left unnamed, and the three acts the GOAP roster performs that no
+    // concept named. Appended, never merged into cohort 0, so every word
+    // already spoken keeps its form.
+    &[
+        "black-dragon-kind",
+        "drink",
+        "giant-elk-kind",
+        "giant-goat-kind",
+        "move",
+        "otyugh-kind",
+        "owlbear-kind",
+        "red-dragon-kind",
+        "rest",
+        "rust-monster-kind",
+        "treant-kind",
+        "twig-blight-kind",
+        "white-dragon-kind",
+        "woolly-mammoth-kind",
+        "xorn-kind",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or
@@ -136,10 +157,31 @@ mod tests {
     use super::*;
     use std::collections::BTreeSet;
 
+    /// Cohort 0 is frozen forever: it is the roster whose assignments every
+    /// later cohort is defined not to disturb, so its SIZE is the invariant,
+    /// not the number of cohorts above it. (An earlier version of this test
+    /// also pinned `EPOCH_COHORTS.len() == 1`, which was true the day The
+    /// Accession landed and wrong the moment The Actants appended a cohort —
+    /// the count is expected to grow, the baseline is not.)
     #[test]
-    fn epoch_zero_is_the_landing_roster() {
-        assert_eq!(EPOCH_COHORTS.len(), 1, "one cohort at landing");
-        assert_eq!(EPOCH_COHORTS[0].len(), 76, "76 concepts at The Accession");
+    fn cohort_zero_stays_the_frozen_landing_roster() {
+        assert_eq!(
+            EPOCH_COHORTS[0].len(),
+            76,
+            "cohort 0 is the 76-concept roster frozen at The Accession; \
+             growing it would re-sort concepts that already have assignments — \
+             append a NEW cohort instead"
+        );
+    }
+
+    /// Appending is the only legal growth, so later cohorts must be non-empty
+    /// (an empty cohort is a placeholder nobody filled) and the table must
+    /// only ever grow at the end.
+    #[test]
+    fn later_cohorts_are_non_empty() {
+        for (epoch, cohort) in EPOCH_COHORTS.iter().enumerate().skip(1) {
+            assert!(!cohort.is_empty(), "cohort {epoch} is empty");
+        }
     }
 
     #[test]

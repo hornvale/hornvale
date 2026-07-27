@@ -1341,11 +1341,30 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "tonal propensity, 0 atonal ↔ 1 tonal",
     )?;
 
+    // Every kind the biosphere registry holds, not only the speaking peoples:
+    // a creature the world simulates, places, and narrates is a thing the
+    // vocabulary owes a name, whether or not anyone has a word for it yet. The
+    // roster was peoples-only from The Words until The Actants, which is how
+    // The Menagerie's twelve fauna went four campaigns unnamed. Glosses are
+    // authored rather than derived from the id, so a `giant-elk` reads as "a
+    // giant elk" and not as its own key.
     for (name, doc) in [
         ("goblin-kind", "a goblin"),
         ("kobold-kind", "a kobold"),
         ("hobgoblin-kind", "a hobgoblin"),
         ("bugbear-kind", "a bugbear"),
+        ("treant-kind", "a treant"),
+        ("twig-blight-kind", "a twig blight"),
+        ("giant-elk-kind", "a giant elk"),
+        ("woolly-mammoth-kind", "a woolly mammoth"),
+        ("giant-goat-kind", "a giant goat"),
+        ("otyugh-kind", "an otyugh"),
+        ("xorn-kind", "a xorn"),
+        ("rust-monster-kind", "a rust monster"),
+        ("white-dragon-kind", "a white dragon"),
+        ("red-dragon-kind", "a red dragon"),
+        ("black-dragon-kind", "a black dragon"),
+        ("owlbear-kind", "an owlbear"),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {

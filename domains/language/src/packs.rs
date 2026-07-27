@@ -117,19 +117,19 @@ pub fn universal_stratum() -> &'static [PackEntry] {
         },
         PackEntry {
             concept: "eat",
-            kind: ConceptKind::Quality,
+            kind: ConceptKind::Act,
             doc: "to consume food",
             ladder_rank: 0,
         },
         PackEntry {
             concept: "sleep",
-            kind: ConceptKind::Quality,
+            kind: ConceptKind::Act,
             doc: "to rest unconscious",
             ladder_rank: 0,
         },
         PackEntry {
             concept: "die",
-            kind: ConceptKind::Quality,
+            kind: ConceptKind::Act,
             doc: "to cease living",
             ladder_rank: 0,
         },
@@ -155,6 +155,24 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             concept: "many",
             kind: ConceptKind::Quality,
             doc: "an indefinitely large count",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "drink",
+            kind: ConceptKind::Act,
+            doc: "to swallow liquid",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "move",
+            kind: ConceptKind::Act,
+            doc: "to go from one place to another",
+            ladder_rank: 0,
+        },
+        PackEntry {
+            concept: "rest",
+            kind: ConceptKind::Act,
+            doc: "to stop and recover strength",
             ladder_rank: 0,
         },
         PackEntry {
