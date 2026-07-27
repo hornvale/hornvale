@@ -176,6 +176,8 @@ struct RegistryRow {
     id: String,
     /// The Idea cell — the prose the length cap applies to.
     idea: String,
+    /// The Status cell.
+    status: String,
     /// Pieces the line splits into on *unescaped* pipes; 7 when well-formed.
     cells: usize,
 }
@@ -225,10 +227,12 @@ fn parse_registry(text: &str) -> Vec<RegistryRow> {
         if !looks_like_registry_id(id) {
             continue;
         }
+        let at = |i: usize| pieces.get(i).cloned().unwrap_or_default();
         rows.push(RegistryRow {
             line: idx + 1,
             id: id.clone(),
-            idea: pieces.get(2).cloned().unwrap_or_default(),
+            idea: at(2),
+            status: at(3),
             cells: pieces.len(),
         });
     }
@@ -279,6 +283,67 @@ fn registry_rows_have_five_columns() {
         "malformed registry rows — mdbook truncates these to five cells, \
          shifting the columns left and DROPPING the Where pointer from the \
          published page:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// The closed status vocabulary, per `idea-registry.md`'s "How to read a row".
+/// Unlike the category prefixes — which `registry_id_prefixes` derives from the
+/// file so a newly coined category adapts automatically — this list is
+/// deliberately hard-coded. The category vocabulary is open; the status
+/// vocabulary is closed, and leaving it open by omission is what let
+/// `registered` and three prose-filled Status cells into the file.
+const REGISTRY_STATUSES: [&str; 6] = [
+    "raw",
+    "elaborated",
+    "spec'd",
+    "shipped",
+    "ratified",
+    "rejected",
+];
+
+/// Reduce a Status cell to its bare token: strip `**` emphasis, a trailing
+/// `→ <status>` transition, and any trailing parenthetical (`ratified (0009)`,
+/// `shipped (field half)`).
+fn normalize_status(cell: &str) -> String {
+    let mut s = cell.replace('*', "");
+    if let Some((head, _)) = s.split_once('→') {
+        s = head.to_string();
+    }
+    if let Some((head, _)) = s.split_once('(') {
+        s = head.to_string();
+    }
+    s.trim().to_string()
+}
+
+#[test]
+fn status_normalization_handles_the_documented_forms() {
+    assert_eq!(normalize_status("shipped"), "shipped");
+    assert_eq!(normalize_status("**shipped**"), "shipped");
+    assert_eq!(normalize_status("ratified (0009)"), "ratified");
+    assert_eq!(normalize_status("shipped (field half)"), "shipped");
+    assert_eq!(normalize_status("rejected → ratified"), "rejected");
+    assert_eq!(normalize_status("registered"), "registered"); // not a status
+}
+
+#[test]
+fn registry_statuses_use_the_closed_vocabulary() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| !REGISTRY_STATUSES.contains(&normalize_status(&r.status).as_str()))
+        .map(|r| {
+            format!(
+                "{}:{} — status {:?}",
+                r.id,
+                r.line,
+                r.status.chars().take(60).collect::<String>()
+            )
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry rows whose Status is outside the closed vocabulary \
+         {REGISTRY_STATUSES:?}:\n  {}",
         offenders.join("\n  ")
     );
 }
