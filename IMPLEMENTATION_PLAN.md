@@ -13,7 +13,7 @@ holds.
 **Tests**: line contains a known fauna kind, excludes a peopled kind, and is
 computed from the registry (asserted by comparing against a set built from
 `biosphere_registry()` in the test).
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 2: Orphan actions (A2)
 **Goal**: same, over the GOAP action roster.
@@ -23,18 +23,18 @@ itself in `cli/src/concepts.rs`.
 **Success**: all four actions report as orphans today.
 **Tests**: `all()` covers every variant (tripwire); the line is derived from
 `Action::all()`.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 3: The prose line (A3)
 **Goal**: name the third reverse direction as *unaudited* with its count; do
 not audit it (needs a design line first — followup).
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 4: Stage-A drift check
 **Goal**: prove Stage A moves no world.
 **Success**: seed 42 byte-identical to the merge base;
 `regenerate-artifacts.sh` touches exactly `concept-manifest-generated.md`.
-**Status**: Not Started
+**Status**: Complete
 
 ## Stage 5: The naming (Stage B)
 **Goal**: register the 12 species concepts and the 4 act concepts, at
@@ -50,9 +50,9 @@ accession epoch 1.
 4. Append every new concept to `EPOCH_COHORTS` as cohort 1.
 **Success**: seed 42 ledger byte-identical; artifact diff is added rows only;
 `cli/tests/accession.rs` green.
-**Status**: Not Started
+**Status**: Complete
 
-## Stage 6: Close
+## Stage 6: Close (at G6)
 **Goal**: orphan lines read `none`; A4's tests pass **unchanged** (the proof
 they asserted derivation, not population). Full gate; DoD walk.
-**Status**: Not Started
+**Status**: Complete
