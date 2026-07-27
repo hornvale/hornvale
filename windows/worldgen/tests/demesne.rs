@@ -92,10 +92,16 @@ fn mineral_supply_tracks_prospectivity_spatially() {
     }
 }
 
-/// THE LAND MASK (The Tumult): every v1 resource-supply axis is *terrestrial*
-/// supply, so every species' niche-K is exactly 0 on every submerged cell —
-/// and the mask is a property of the supply fields, not a decree in the K
-/// assembly (see `DETRITUS_AMBIENT`'s terrestrial-supply frame).
+/// THE LAND MASK (The Tumult), extended by THE SEA MASK (The Vacancy T6/T8):
+/// every v1 TERRESTRIAL resource-supply axis is 0 at sea and `MARINE_FORAGE`
+/// is 0 on land — both masks are a property of the supply fields, not a
+/// decree in the K assembly (see `DETRITUS_AMBIENT`'s terrestrial-supply
+/// frame and `marine_forage_supply_field`'s mirror). Before The Vacancy T8
+/// authored any kind onto `MARINE_FORAGE`, this meant EVERY kind's K was 0 at
+/// sea; T8 deliberately broke that for exactly five kinds (four marine plus
+/// the amphibious giant crocodile), so the test below now asserts the mask
+/// held for those five TOO, in its now-correct (not simply "always zero")
+/// form, alongside the original guard for everyone else.
 ///
 /// This states explicitly what a bug used to do by accident. Before The
 /// Tumult's elevation re-datum, `ConditionNiche.elevation` was scored against
@@ -109,11 +115,26 @@ fn mineral_supply_tracks_prospectivity_spatially() {
 /// rust monster and **0.74** for the xorn — a swamp detritivore, a cave
 /// mineral-eater and a burrowing elemental, each mostly at sea.
 ///
-/// MUTATION GUARD: dropping either mask (`mineral_supply_field`'s or
+/// MUTATION GUARD: dropping either land mask (`mineral_supply_field`'s or
 /// `detritus_supply_field`'s) re-admits exactly those three kinds' seabed K
-/// and this test fails on them by name.
+/// and this test fails on them by name; dropping the sea mask
+/// (`marine_forage_supply_field`'s `is_ocean` guard) re-admits marine
+/// carrying capacity on land for the five T8 kinds and fails on THEM.
 #[test]
-fn no_species_draws_carrying_capacity_from_the_seafloor() {
+fn no_species_draws_carrying_capacity_from_the_wrong_medium() {
+    // The four PURELY marine T8 kinds: their niche weights only
+    // `MARINE_FORAGE`, so every terrestrial supply axis contributes an exact
+    // zero to their dot product regardless of that axis's land value — they
+    // must be wholly submerged (dry == 0), the mirror of the land mask.
+    let marine_only: std::collections::BTreeSet<&str> =
+        ["giant-octopus", "giant-squid", "killer-whale", "reef-shark"]
+            .into_iter()
+            .collect();
+    // The amphibious proof case (spec §3.4): weights BOTH a terrestrial axis
+    // and `MARINE_FORAGE`, so its K must be nonzero in BOTH media — the
+    // observable signature of the sparse-uptake, no-special-case design.
+    const AMPHIBIOUS: &str = "giant-crocodile";
+
     let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
     let world = world_42();
     let terrain = terrain_of(&world).expect("terrain reconstructs");
@@ -148,19 +169,35 @@ fn no_species_draws_carrying_capacity_from_the_seafloor() {
     for (tag, k) in &ks {
         let kind = kinds[*tag as usize].0;
         let mut wet = 0.0_f64;
-        let mut total = 0.0_f64;
+        let mut dry = 0.0_f64;
         for c in geo.cells() {
             let v = *k.get(c);
-            total += v;
             if terrain.is_ocean(c) {
                 wet += v;
+            } else {
+                dry += v;
             }
         }
-        assert_eq!(
-            wet, 0.0,
-            "{kind} draws {wet} of its {total} total carrying capacity from submerged cells — \
-             the terrestrial supply axes must be 0 at sea"
-        );
+        let total = wet + dry;
+        if marine_only.contains(kind) {
+            assert_eq!(
+                dry, 0.0,
+                "{kind} draws {dry} of its {total} total carrying capacity from LAND cells — \
+                 a purely marine kind's terrestrial supply axes must be 0"
+            );
+        } else if kind == AMPHIBIOUS {
+            assert!(
+                wet > 0.0 && dry > 0.0,
+                "{kind} is the amphibious proof case: it must draw nonzero K from BOTH \
+                 media, got wet={wet} dry={dry}"
+            );
+        } else {
+            assert_eq!(
+                wet, 0.0,
+                "{kind} draws {wet} of its {total} total carrying capacity from submerged \
+                 cells — the terrestrial supply axes must be 0 at sea"
+            );
+        }
         if total > 0.0 {
             placed_on_land += 1;
         }

@@ -6403,12 +6403,12 @@ mod tests {
                 .collect();
         assert_eq!(settled, four_peoples, "Settled is exactly the four peoples");
 
-        // The wild-agentified `{Solitary, Gregarious}` set: the sixteen mobile,
-        // non-settled kinds (ten pre-Vacancy plus The Vacancy T7's six —
-        // shrieker is `Sessile`, so it stays out of this set) — the same kinds
-        // the retired `¬psyche ∧ ¬autotroph` proxy selected before the dragons
-        // gained a mind (still agentified, now with a temperament to read).
-        // Disjoint from the settling peoples.
+        // The wild-agentified `{Solitary, Gregarious}` set: the twenty-one
+        // mobile, non-settled kinds (ten pre-Vacancy, The Vacancy T7's six,
+        // and T8's five — shrieker is `Sessile`, so it stays out of this
+        // set) — the same kinds the retired `¬psyche ∧ ¬autotroph` proxy
+        // selected before the dragons gained a mind (still agentified, now
+        // with a temperament to read). Disjoint from the settling peoples.
         let mobile_beasts: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
@@ -6426,13 +6426,18 @@ mod tests {
             "carrion-crawler",
             "dire-wolf",
             "giant-constrictor-snake",
+            "giant-crocodile",
             "giant-elk",
             "giant-goat",
             "giant-hyena",
+            "giant-octopus",
             "giant-scorpion",
+            "giant-squid",
+            "killer-whale",
             "otyugh",
             "owlbear",
             "red-dragon",
+            "reef-shark",
             "rhinoceros",
             "rust-monster",
             "white-dragon",
@@ -6443,7 +6448,7 @@ mod tests {
         .collect();
         assert_eq!(
             mobile_beasts, expected_wild,
-            "the {{Solitary, Gregarious}} set is the sixteen mobile non-settled kinds"
+            "the {{Solitary, Gregarious}} set is the twenty-one mobile non-settled kinds"
         );
         assert!(
             settled.is_disjoint(&mobile_beasts),
@@ -9146,16 +9151,33 @@ mod tests {
     }
 
     #[test]
-    fn the_existing_sixteen_get_no_supply_from_the_marine_axis() {
-        // Every shipped kind's uptake vector must have weight 0.0 on
-        // MARINE_FORAGE, so the new `per_axis` entry contributes an exact
-        // zero to its dot product. This is the assertion that makes Step 6's
-        // byte-identity result a property rather than a coincidence.
+    fn kinds_before_the_vacancy_t8_get_no_supply_from_the_marine_axis() {
+        // Every kind that PREDATES The Vacancy T8 must have weight 0.0 on
+        // MARINE_FORAGE, so the `per_axis` entry contributes an exact zero to
+        // its dot product — this was the assertion that made Task 6's Step 6
+        // byte-identity result a property rather than a coincidence, and it
+        // stays a real regression guard for the rest of the roster now that
+        // T8 has deliberately given exactly five kinds (four marine plus the
+        // amphibious giant crocodile) a nonzero weight there. Renamed from
+        // `the_existing_sixteen_...` (its own doc comment always said "before
+        // Task 8" — this is that threshold arriving, not a workaround).
+        let marine_or_amphibious: std::collections::BTreeSet<&str> = [
+            "giant-crocodile",
+            "giant-octopus",
+            "giant-squid",
+            "killer-whale",
+            "reef-shark",
+        ]
+        .into_iter()
+        .collect();
         for (kind, bio) in hornvale_species::biosphere_registry().iter() {
+            if marine_or_amphibious.contains(kind.0) {
+                continue;
+            }
             assert_eq!(
                 bio.niche.weight(hornvale_kernel::MARINE_FORAGE),
                 0.0,
-                "{kind:?} must not weight the marine axis before Task 8"
+                "{kind:?} must not weight the marine axis (only The Vacancy T8's five may)"
             );
         }
     }

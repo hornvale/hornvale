@@ -89,6 +89,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "giant-hyena",
                 "goblin",
                 "hobgoblin",
+                "killer-whale",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
@@ -102,8 +103,12 @@ fn metabolic_class_coverage_matches_the_table() {
             Rung::Witnessed,
             &[
                 "giant-constrictor-snake",
+                "giant-crocodile",
+                "giant-octopus",
                 "giant-scorpion",
+                "giant-squid",
                 "kobold",
+                "reef-shark",
                 "rust-monster",
             ],
         ),
@@ -211,10 +216,14 @@ fn social_form_coverage_matches_the_table() {
                 "black-dragon",
                 "carrion-crawler",
                 "giant-constrictor-snake",
+                "giant-crocodile",
+                "giant-octopus",
                 "giant-scorpion",
+                "giant-squid",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "reef-shark",
                 "rhinoceros",
                 "rust-monster",
                 "white-dragon",
@@ -229,6 +238,7 @@ fn social_form_coverage_matches_the_table() {
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
+                "killer-whale",
                 "woolly-mammoth",
             ],
         ),
@@ -254,24 +264,30 @@ fn social_form_coverage_matches_the_table() {
 fn the_dark_trait_combinations_are_named() {
     // Combinations, not single variants — each is a cell the roster does not
     // occupy, recorded so the vacancy is a decision rather than an oversight.
-    use hornvale_kernel::{ANIMAL_PREY, DETRITUS};
+    use hornvale_kernel::{ANIMAL_PREY, DETRITUS, MARINE_FORAGE};
 
     let bio = biosphere_registry();
 
     // `Gregarious x ANIMAL_PREY`: WITNESSED as of The Vacancy T7 — the giant
     // hyena (savanna) and the dire wolf (boreal) are the roster's first
     // pack-hunting predators; every herder before them was a pure forager.
+    // The Vacancy T8 adds the killer whale, a MARINE witness of the same
+    // combination: `MARINE_FORAGE` is "the sea's single trophic axis"
+    // (kernel doc) — the marine analogue of `ANIMAL_PREY`'s land predation,
+    // so a `Gregarious` kind weighting either axis is a pack-hunting
+    // predator, on land or at sea. The filter below recognizes both.
     let gregarious_predators: Vec<&str> = bio
         .iter()
         .filter(|(_, b)| {
-            b.social_form == SocialForm::Gregarious && b.niche.weight(ANIMAL_PREY) > 0.0
+            b.social_form == SocialForm::Gregarious
+                && (b.niche.weight(ANIMAL_PREY) > 0.0 || b.niche.weight(MARINE_FORAGE) > 0.0)
         })
         .map(|(k, _)| k.0)
         .collect();
     assert_eq!(
         gregarious_predators,
-        vec!["dire-wolf", "giant-hyena"],
-        "Gregarious x ANIMAL_PREY: WITNESSED by The Vacancy T7"
+        vec!["dire-wolf", "giant-hyena", "killer-whale"],
+        "Gregarious x ANIMAL_PREY: WITNESSED by The Vacancy T7; killer-whale adds a marine witness (T8)"
     );
 
     // `Sessile x DETRITUS`: WITNESSED as of The Vacancy T7 — the shrieker, a

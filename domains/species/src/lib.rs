@@ -13,8 +13,8 @@
 use hornvale_kernel::{
     ANIMAL_PREY, Component, ComponentStore, ConceptDef, ConceptKind, ConceptRegistry,
     ConditionResponse, Correspondent, DETRITUS, EntityId, Fact, KindId, Ledger, LedgerError,
-    MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError, ResourceVector, Value,
-    Void, World,
+    MARINE_FORAGE, MINERAL, Manifest, Mass, PHOTOSYNTHATE, PLANT_FORAGE, RegistryError,
+    ResourceVector, Value, Void, World,
 };
 
 mod allometry;
@@ -1105,6 +1105,269 @@ fn shrieker_condition_niche() -> ConditionNiche {
     }
 }
 
+// The Vacancy (T8): four marine kinds plus one amphibious kind, the first
+// roster members to weight `MARINE_FORAGE` (The Vacancy T6). Elevation below
+// is `elevation_at(cell) - sea_level`
+// ([`ConditionNiche`]'s struct doc), so a marine optimum is NEGATIVE — its
+// magnitude is depth. The percentiles cited per kind below come from a
+// throwaway probe (deleted before commit, not part of the suite) that
+// measured `substrate_field`'s elevation reading over every OCEAN cell across
+// seeds 1..=30 — the same sweep `occupancy_readout.rs` uses — bucketed by the
+// cell's `Biome`:
+//
+// | biome | n | min | p5 | p25 | p50 | p75 | p95 | max |
+// |---|---:|---:|---:|---:|---:|---:|---:|---:|
+// | coral-reef | 19586 | -200.0 | -173.4 | -56.7 | -40.0 | -40.0 | -40.0 | -0.0 |
+// | kelp-forest | 13081 | -200.0 | -173.3 | -48.8 | -40.0 | -40.0 | -40.0 | -0.0 |
+// | epipelagic | 5539 | -199.9 | -181.2 | -77.4 | -40.0 | -40.0 | -40.0 | -0.0 |
+// | mesopelagic | 181106 | -1000.0 | -986.4 | -930.5 | -804.7 | -620.5 | -329.9 | -200.0 |
+// | bathypelagic | 264736 | -3991.6 | -2022.1 | -1532.7 | -1262.6 | -1117.9 | -1026.3 | -1000.0 |
+// | abyssal | 4 | -4010.6 | -4010.1 | -4008.1 | -4006.1 | -4004.1 | -4002.4 | -4001.9 |
+//
+// Two things this table settles: (1) the shelf biomes (coral-reef/kelp-forest/
+// epipelagic, all `depth_m < 200` in `classify_marine`) sit almost entirely at
+// a single dominant depth (-40 m — p50 through p95 tie exactly, a shelf-break
+// artifact of the sculpting pipeline, not a modelling choice made here); (2)
+// `Abyssal` is vanishingly rare (4 cells total across the whole 30-seed sweep,
+// right at its 4000 m floor) and `HadalTrench` never occurred at all, so a
+// kind "for" the abyssal is honestly a bathypelagic kind whose tail can reach
+// the boundary, not a kind with a real abyssal stronghold to measure against.
+//
+// `marine_forage_supply_field` (worldgen) keys `MARINE_FORAGE` productivity
+// directly to the cell's biome class (coral-reef/kelp-forest 0.85, epipelagic
+// 0.45, mesopelagic 0.15, bathypelagic 0.05, abyssal/hadal-trench 0.02,
+// upwelling 1.0) rather than to a continuous NPP field the way the land's
+// `PHOTOSYNTHATE`/`PLANT_FORAGE` supply is — so, unlike The Vacancy T7's
+// land kinds (whose `mean_k` ranking was dominated by NPP magnitude,
+// independent of the kind's own target biome — BIO-46), a marine kind's own
+// elevation+temperature optimum is what SELECTS its supply tier, because it
+// selects which biome class the cell classifies as in the first place.
+// Measured per-kind below; `upwelling`'s productivity (1.0) is the one
+// remaining confound, since it can outrank a shelf/deep-water kind's own
+// target biome on cells the kind's wide condition tolerance also reaches.
+//
+// Temperature at every cell (including ocean) is `climate.mean_temperature_at`,
+// a pure function of latitude and elevation-above-sea-level lapse (elevation
+// below sea level applies NO lapse term) — i.e. sea-surface temperature only,
+// uncorrelated with depth (`domains/climate/src/temperature.rs`). Insolation
+// is likewise a pure function of latitude/obliquity (Finding 2, The Vacancy
+// T7 report) — also uncorrelated with depth. Neither axis can therefore
+// distinguish "sunlit shallows" from "aphotic deep water" the way real ocean
+// physics would; a deep-water kind's low insolation/cool temperature
+// optimum below is a thematic placement, not a claim the model enforces
+// depth-linked light or cold. Moisture at every ocean cell is the banded
+// circulation model's base wetness plus a flat +0.3 ocean-proximity bonus
+// (`domains/climate/src/moisture.rs::ocean_bonus`), landing at 0.55 (a
+// sinking/dry band) or 0.90 (a rising/wet band) on spinning worlds — a
+// circulation-band artifact with no marine ecological meaning, so every
+// kind below keeps it wide and low-devotion rather than staking anything on
+// it.
+//
+// CR/mass source: 5E Monster Manual, verified at authoring time (via the SRD
+// mirrors `5esrd.com`/`5thsrd.org`, which reproduce the MM stat blocks under
+// the OGL). As Task 7 found, the MM prints no weight for any beast; masses
+// below are either an author's estimate for the kind's MM size category
+// (marked as such) or, for a kind whose MM name names a real species outright
+// (no "giant" prefix), the real animal's cited mass (the rhinoceros
+// precedent) — both honestly labelled per kind, never presented as read off
+// the stat block the way CR is.
+
+/// Reef shark condition niche: the `CoralReef` witness — a warm, shallow-
+/// shelf specialist. `classify_marine` requires `sst_c > 20` and
+/// `depth_m < 200` for `CoralReef` (checked before the kelp/upwelling
+/// branches), so a reliably tropical, reliably shallow niche lands on the
+/// biome by construction, not by luck. Medium beast, Challenge 1/2 (5E MM,
+/// verified). Mass is the real animal's (no "giant" prefix — the MM's "Reef
+/// Shark" names the real species): a grey reef shark (*Carcharhinus
+/// amblyrhynchos*) averages ~18.5 kg.
+fn reef_shark_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // reliably above the CoralReef sst floor (20C).
+        temperature: ConditionResponse {
+            optimum: 26.0,
+            width: 6.0,
+            devotion: 0.70,
+        },
+        // wide/low-devotion: ocean moisture is a circulation-band artifact
+        // (see block comment), not ecologically meaningful here.
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.35,
+            devotion: 0.25,
+        },
+        // open, sunlit shallows.
+        insolation: ConditionResponse {
+            optimum: 0.20,
+            width: 0.12,
+            devotion: 0.45,
+        },
+        // shelf depth: the dominant coral-reef depth is -40 m (see table).
+        elevation: ConditionResponse {
+            optimum: -40.0,
+            width: 120.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Giant octopus condition niche: the `KelpForest` witness — a cool,
+/// shallow-shelf specialist, `classify_marine`'s mirror image of the reef
+/// shark (`sst_c < 12`, same `depth_m < 200` shelf band). Large beast,
+/// Challenge 1 (5E MM, verified). Mass is an author's estimate for the MM's
+/// Large size category (the "giant" prefix marks this as the fantastical
+/// scale-up, not the real Pacific giant octopus, whose adults top out
+/// around 50 kg): ~180 kg.
+fn giant_octopus_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // reliably below the KelpForest sst ceiling (12C).
+        temperature: ConditionResponse {
+            optimum: 8.0,
+            width: 5.0,
+            devotion: 0.70,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.35,
+            devotion: 0.25,
+        },
+        // cooler, higher-latitude sun than the reef shark's tropics.
+        insolation: ConditionResponse {
+            optimum: 0.12,
+            width: 0.10,
+            devotion: 0.45,
+        },
+        // same shelf band as the reef shark (-40 m dominant depth).
+        elevation: ConditionResponse {
+            optimum: -40.0,
+            width: 120.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Killer whale condition niche: the `Epipelagic` witness and the roster's
+/// first MARINE `Gregarious x ANIMAL_PREY`-class predator (pod-hunting).
+/// `classify_marine` reaches `Epipelagic` only on the SAME `depth_m < 200`
+/// shelf band as the reef shark/giant octopus, at a MID sst (neither the
+/// reef's `> 20` nor the kelp's `< 12`) — real killer whales are cosmopolitan
+/// (all latitudes, all depths), but this model's `Epipelagic` class is
+/// deliberately narrower than that, so the niche below is authored to the
+/// classifier's actual band rather than the animal's full real range. Huge
+/// beast, Challenge 3 (5E MM, verified). Mass is the real animal's (no
+/// "giant" prefix): commonly cited adult male range 3,600-5,400 kg; ~5,400 kg
+/// used here (the top of that commonly cited range, matching the roster's
+/// other apex-scale masses).
+fn killer_whale_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // the mid band between CoralReef's >20C and KelpForest's <12C.
+        temperature: ConditionResponse {
+            optimum: 16.0,
+            width: 4.0,
+            devotion: 0.55,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.35,
+            devotion: 0.25,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.15,
+            width: 0.12,
+            devotion: 0.40,
+        },
+        // same shelf band (-40 m dominant depth); real orcas range far
+        // deeper, but Epipelagic itself is shelf-bound in this model.
+        elevation: ConditionResponse {
+            optimum: -40.0,
+            width: 140.0,
+            devotion: 0.45,
+        },
+    }
+}
+
+/// Giant squid condition niche: the `Bathypelagic`/`Abyssal` witness — a
+/// deep, cold-and-dark-themed specialist. `Abyssal` is nearly unoccupiable
+/// territory in this model (4 cells total across the 30-seed probe sweep,
+/// right at its 4000 m floor — see block comment), so this niche targets
+/// `Bathypelagic`'s bulk (p50 depth 1263 m, p95 1026 m) with a tail reaching
+/// toward the abyssal floor, rather than staking on the abyssal itself. Huge
+/// beast, Challenge 7 (5E MM, verified). Mass is the real animal's (no
+/// "giant" prefix — the MM's "Giant Squid" names the real species,
+/// *Architeuthis dux*): commonly cited large-adult estimates run ~200-275 kg;
+/// ~250 kg used here.
+fn giant_squid_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // cool/dark theming (see block comment: sst is latitude-only, not
+        // depth-linked, so this is thematic, not model-enforced).
+        temperature: ConditionResponse {
+            optimum: 8.0,
+            width: 18.0,
+            devotion: 0.30,
+        },
+        moisture: ConditionResponse {
+            optimum: 0.75,
+            width: 0.35,
+            devotion: 0.25,
+        },
+        // aphotic-dark theming, mirroring the rust monster's cave stake.
+        insolation: ConditionResponse {
+            optimum: 0.05,
+            width: 0.10,
+            devotion: 0.45,
+        },
+        // bathypelagic's bulk (p50 -1262.6 m), width wide enough to reach
+        // toward the abyssal floor (-4000 m) without centring on the
+        // near-void abyssal band itself.
+        elevation: ConditionResponse {
+            optimum: -1500.0,
+            width: 900.0,
+            devotion: 0.55,
+        },
+    }
+}
+
+/// Giant crocodile condition niche: the AMPHIBIOUS proof case (spec §3.4) —
+/// a coastal/estuarine ambush predator whose elevation optimum sits AT sea
+/// level with a wide tolerance, so it scores well on both low-lying coastal
+/// LAND (where its `ANIMAL_PREY` weight draws supply) and shallow marine
+/// shelf cells (where its `MARINE_FORAGE` weight draws supply) — the same
+/// single condition-niche curve read against whichever supply field is
+/// nonzero at that cell, no special case anywhere. Huge beast, Challenge 5
+/// (5E MM, verified). Mass is an author's estimate for the MM's Huge size
+/// category (the "giant" prefix marks the fantastical scale-up; real
+/// saltwater crocodiles top out near 1,000 kg): ~1,000 kg.
+fn giant_crocodile_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // tropical estuarine warmth, like the otyugh/black-dragon swamp tile.
+        temperature: ConditionResponse {
+            optimum: 26.0,
+            width: 8.0,
+            devotion: 0.65,
+        },
+        // moist coastal/estuarine, between the marine axis's ~0.55-0.90 and
+        // the swamp kinds' ~0.80-0.83 stronghold.
+        moisture: ConditionResponse {
+            optimum: 0.65,
+            width: 0.30,
+            devotion: 0.35,
+        },
+        // open coastal sun, like the hyena/rhinoceros savanna tile.
+        insolation: ConditionResponse {
+            optimum: 0.18,
+            width: 0.12,
+            devotion: 0.45,
+        },
+        // AT sea level, wide: reaches both low coastal land (e.g. the
+        // otyugh's 50 m, the black dragon's 50 m) and the shelf's -40 m to
+        // -200 m band.
+        elevation: ConditionResponse {
+            optimum: -20.0,
+            width: 250.0,
+            devotion: 0.45,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1461,6 +1724,68 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 social_form: SocialForm::Sessile,
             },
         ),
+        // The Vacancy (T8): four marine kinds plus the amphibious proof case.
+        // See the block comment above `reef_shark_condition_niche` for the
+        // shared design notes (the measured ocean-depth-by-biome table and
+        // the marine supply/temperature/insolation/moisture caveats).
+        (
+            KindId("reef-shark"),
+            BiosphereTraits {
+                mass: Mass::new(18.5).unwrap(), // real grey reef shark average
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
+                condition_niche: reef_shark_condition_niche(),
+                potency: 0.0, // reef shark — CR 1/2 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("giant-octopus"),
+            BiosphereTraits {
+                mass: Mass::new(180.0).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
+                condition_niche: giant_octopus_condition_niche(),
+                potency: 0.0, // giant octopus — CR 1 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("killer-whale"),
+            BiosphereTraits {
+                mass: Mass::new(5400.0).unwrap(), // real adult male average (upper of range)
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
+                condition_niche: killer_whale_condition_niche(),
+                potency: 0.0, // killer whale — CR 3 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Gregarious,
+            },
+        ),
+        (
+            KindId("giant-squid"),
+            BiosphereTraits {
+                mass: Mass::new(250.0).unwrap(), // real Architeuthis dux, large-adult estimate
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 1.0)]).unwrap(),
+                condition_niche: giant_squid_condition_niche(),
+                potency: 0.0, // giant squid — CR 7 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("giant-crocodile"),
+            BiosphereTraits {
+                mass: Mass::new(1000.0).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                // the amphibious proof case: MARINE_FORAGE (sea) plus
+                // ANIMAL_PREY (land) — no special case, see the condition
+                // niche's doc comment.
+                niche: ResourceVector::new(&[(MARINE_FORAGE, 0.4), (ANIMAL_PREY, 0.6)]).unwrap(),
+                condition_niche: giant_crocodile_condition_niche(),
+                potency: 0.0, // giant crocodile — CR 5 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -1695,6 +2020,13 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("giant-constrictor-snake"), "giant-constrictor-snake"),
         (KindId("carrion-crawler"), "carrion-crawler"),
         (KindId("shrieker"), "shrieker"),
+        // The Vacancy (T8): five more singleton families — same rule as T7's
+        // (no label shared by >= 2 kinds, so no `family_proto` entry needed).
+        (KindId("reef-shark"), "reef-shark"),
+        (KindId("giant-octopus"), "giant-octopus"),
+        (KindId("killer-whale"), "killer-whale"),
+        (KindId("giant-squid"), "giant-squid"),
+        (KindId("giant-crocodile"), "giant-crocodile"),
     ]
     .into_iter()
     .collect()
@@ -1895,8 +2227,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            23,
-            "twenty-three kinds compete for space (The Vacancy T7 added seven)"
+            28,
+            "twenty-eight kinds compete for space (The Vacancy T7 added seven, T8 added five)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -1964,7 +2296,9 @@ mod tests {
         let names: Vec<&str> = bio.ids().map(|k| k.0).collect();
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
-        // biosphere-only fauna); ComponentStore key order is lexicographic.
+        // biosphere-only fauna) and T8 (five more, four marine plus the
+        // amphibious giant crocodile); ComponentStore key order is
+        // lexicographic.
         assert_eq!(
             names,
             vec![
@@ -1973,16 +2307,21 @@ mod tests {
                 "carrion-crawler",
                 "dire-wolf",
                 "giant-constrictor-snake",
+                "giant-crocodile",
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
+                "giant-octopus",
                 "giant-scorpion",
+                "giant-squid",
                 "goblin",
                 "hobgoblin",
+                "killer-whale",
                 "kobold",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "reef-shark",
                 "rhinoceros",
                 "rust-monster",
                 "shrieker",

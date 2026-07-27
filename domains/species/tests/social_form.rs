@@ -39,6 +39,13 @@ fn every_kind_has_the_authored_social_form() {
         ("giant-constrictor-snake", SocialForm::Solitary),
         ("carrion-crawler", SocialForm::Solitary),
         ("shrieker", SocialForm::Sessile),
+        // The Vacancy (T8): four marine kinds and the amphibious giant
+        // crocodile.
+        ("reef-shark", SocialForm::Solitary),
+        ("giant-octopus", SocialForm::Solitary),
+        ("killer-whale", SocialForm::Gregarious),
+        ("giant-squid", SocialForm::Solitary),
+        ("giant-crocodile", SocialForm::Solitary),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
