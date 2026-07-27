@@ -12,6 +12,20 @@ reviewed concept at a time is the guard against the ontology trap (the
 universal schema designed up front, which historically kills projects of
 this kind).
 
+Growing it is cheap, but not free of ceremony. A concept's name feeds the
+language domain's proto-root assignment, which is a single ordered walk that
+re-draws whenever a form is already taken — so a concept added in the middle
+of that order used to displace the words assigned after it. Since
+[The Accession](../chronicle/the-accession.md) every concept carries the
+*generation* it joined in, and generation sorts first, so a newcomer lands
+last and disturbs nothing. The obligation this creates is small and
+absolute: **a newly registered concept must be added to the accession
+register** (`hornvale_language::EPOCH_COHORTS`) as a new cohort, never by
+editing an existing one. A concept that is registered but not accessioned
+reads as generation zero and silently reopens the churn;
+`cli/tests/accession.rs` holds the two rosters against each other in both
+directions so that cannot happen quietly.
+
 ## Naming conventions (ratified at the Campaign 1b review)
 
 Predicate names follow a style guide, not an ontology: the registry's

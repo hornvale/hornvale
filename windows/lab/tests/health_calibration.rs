@@ -86,10 +86,28 @@ fn the_null_control_reads_no_chronic_distress() {
     // one where chronicity stays silent AND every distress run recovers
     // (`recovery_ticks.is_some()`). Instantaneous prevalence is not the alarm and
     // is no longer bounded here.
+    //
+    // Re-derived again at The Convalescence: the bound moved one step further
+    // along the same argument. §8 states the bug signal as a CONJUNCTION —
+    // "a spike that persists (NO RECOVERY, elevated chronicity) is a bug",
+    // where a spike that recovers is a legitimate novel world event — and this
+    // assertion checked only the first conjunct, so it fired on episodes that
+    // RECOVERED. Two independent distress rhythms in one creature can weld
+    // into a single long run (`HHHH F HHHH`) that then returns to health;
+    // under §8 that is a hard patch in a varied world, not a broken sim. The
+    // alarm is therefore `stuck` — long AND never ended, evaluated per
+    // creature (a population-scope conjunction would let one genuinely stuck
+    // creature hide behind nine recovering ones). `chronicity` is still
+    // computed and still reported, as a DIAGNOSTIC; it is no longer bounded
+    // here, exactly as `prevalence` was demoted above.
     let a = health_report(&simulate_world(&world(42)));
     let b = health_report(&simulate_world(&world(42)));
     assert_eq!(a, b, "same world -> same report (deterministic)");
-    assert_eq!(a.chronicity, 0.0, "healthy world: no one chronically stuck");
+    assert_eq!(
+        a.stuck, 0.0,
+        "healthy world: no one is STUCK (a long distress run that never \
+         recovered): {a:?}"
+    );
     assert!(
         a.recovery_ticks.is_some(),
         "healthy world: its distress is transient and recovers (never a chronic \
@@ -99,17 +117,53 @@ fn the_null_control_reads_no_chronic_distress() {
 
 #[test]
 fn the_null_control_holds_across_a_seed_sweep() {
-    // Over a small sweep of real worlds, no population reads CHRONIC distress —
+    // Over a small sweep of real worlds, no population reads STUCK distress —
     // the zero is not a seed-42 accident. (Genuine blocked-distress needs a
     // creature boxed in or knowing-but-blocked, which condensed on-water
     // settlements avoid; a healthy world stays healthy.) The bug alarm is armed
     // precisely because this stays quiet.
+    //
+    // `chronicity` is reported per seed, not bounded (The Convalescence): a
+    // long distress run that RECOVERS is a hard patch in a varied world, which
+    // The Temperament §8 calls legitimate. The alarm is the conjunction — long
+    // AND never recovered — which is `stuck`.
+    //
+    // The two assertions BESIDE the alarm exist because `stuck == 0.0` can be
+    // read vacuously: `simulate_world` returns an EMPTY Vec when the locale
+    // build or the settlement lookup fails, and `health_report(&[])` reads
+    // `stuck: frac(0, 0.max(1)) == 0.0`. A control armed by staying quiet must
+    // be able to tell "quiet because healthy" from "quiet because there was
+    // nobody to read" — so the population's non-emptiness and its recovery are
+    // asserted too, matching the seed-42 control beside this one.
+    let mut report = Vec::new();
     for seed in [0u64, 1, 2, 7, 42] {
-        let r = health_report(&simulate_world(&world(seed)));
-        assert_eq!(
-            r.chronicity, 0.0,
-            "seed {seed} shows chronic distress (the alarm fired): {r:?}"
+        let traces = simulate_world(&world(seed));
+        assert!(
+            !traces.is_empty(),
+            "seed {seed} sampled NO creatures: `simulate_world` returned an empty \
+             population (a failed locale build or no settlement), which would read \
+             stuck 0.0 vacuously and pass this control without measuring anything"
         );
+        let r = health_report(&traces);
+        report.push(format!(
+            "seed {seed}: stuck {:.4} chronicity {:.4} prevalence {:.4} recovery {:?}",
+            r.stuck, r.chronicity, r.prevalence, r.recovery_ticks
+        ));
+        assert_eq!(
+            r.stuck, 0.0,
+            "seed {seed} shows STUCK distress (the alarm fired): {r:?}"
+        );
+        assert!(
+            r.recovery_ticks.is_some(),
+            "seed {seed}: a healthy world's distress must be TRANSIENT and RECOVER \
+             — `None` means no distress run ever ended, either because the \
+             population felt nothing at all (an inert sample reads healthy) or \
+             because every run was still open at the 40th tick: {r:?}"
+        );
+    }
+    eprintln!("the-convalescence health-family baseline, per seed:");
+    for line in &report {
+        eprintln!("  {line}");
     }
 }
 
@@ -145,6 +199,7 @@ fn an_injected_spike_recovers() {
         Some(3.0),
         "the recovered spike's length is the recovery signal"
     );
+    assert_eq!(r.stuck, 0.0, "a recovered 3-tick spike is not the alarm");
     assert_eq!(
         r.by_cause["thirst"], 1.0,
         "all distress attributed to thirst"
@@ -161,6 +216,10 @@ fn an_unsatisfiable_need_persists() {
     labels.extend(std::iter::repeat_n(Lost, 12)); // >> the 8-tick chronic threshold
     let r = health_report(&[trace(&labels)]);
     assert_eq!(r.chronicity, 1.0, "the one creature is chronically stuck");
+    assert_eq!(
+        r.stuck, 1.0,
+        "and it never recovered, so the ALARM fires too (§8's conjunction)"
+    );
     assert!(
         r.prevalence > 0.8,
         "distress dominates the span: {}",
@@ -193,6 +252,149 @@ fn by_species_separates_a_stricken_people_from_a_healthy_one() {
     assert_eq!(r.by_species["goblin"], 0.0, "the healthy people reads fine");
 }
 
+#[test]
+fn a_long_episode_that_recovers_is_a_hard_patch_not_a_bug() {
+    // THE DISCRIMINATOR (The Temperament §8): "a spike that RECOVERS (short
+    // half-life) is a novel/extreme world event the creatures adapt to —
+    // legitimate; a spike that PERSISTS (no recovery, elevated chronicity) is a
+    // bug." Two independent distress rhythms can weld into one long run —
+    // `HHHH F HHHH`, nine consecutive distress ticks — and then RETURN TO
+    // HEALTH. That is a hard patch in a varied world, not a broken sim: it is
+    // long (so `chronicity` sees it, as a diagnostic) but it ended (so `stuck`,
+    // the alarm, stays silent).
+    use AffectLabel::*;
+    let mut labels = vec![Content, Content];
+    labels.extend([
+        Helpless, Helpless, Helpless, Helpless, Frustrated, Helpless, Helpless, Helpless, Helpless,
+    ]);
+    labels.extend([Content, Content, Content]);
+    let r = health_report(&[trace(&labels)]);
+    assert_eq!(
+        r.chronicity, 1.0,
+        "the welded run is 9 ticks, over the 8-tick threshold: the DIAGNOSTIC sees it"
+    );
+    assert_eq!(
+        r.stuck, 0.0,
+        "but it recovered — a legitimate hard patch, not the bug signal: {r:?}"
+    );
+    assert_eq!(
+        r.recovery_ticks,
+        Some(9.0),
+        "and its length is the recovery half-life: {r:?}"
+    );
+}
+
+#[test]
+fn one_stuck_creature_among_nine_recovering_ones_still_alarms() {
+    // THE MASKING CASE (spec §3): `chronicity` is per-creature but
+    // `recovery_ticks` is a POPULATION aggregate, so conjoining the two
+    // published numbers at population scope fails in the dangerous direction —
+    // this population would read chronicity 1.0 with recovery Some(9.0), i.e.
+    // "long distress that recovers → not a bug," and the one creature that
+    // never recovers would be MASKED. A bug alarm may be noisy; it may not be
+    // silent. `stuck` evaluates the conjunction PER CREATURE, so it fires.
+    use AffectLabel::*;
+    let mut stuck_labels = vec![Content, Content];
+    stuck_labels.extend(std::iter::repeat_n(Helpless, 12)); // never ends
+    let mut population = vec![trace(&stuck_labels)];
+    for _ in 0..9 {
+        let mut recovering = vec![Content, Content];
+        recovering.extend(std::iter::repeat_n(Helpless, 9)); // long, but ends
+        recovering.extend([Content, Content, Content]);
+        population.push(trace(&recovering));
+    }
+    let r = health_report(&population);
+    assert_eq!(
+        r.stuck,
+        1.0 / 10.0,
+        "the one never-recovering creature alarms: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 1.0,
+        "all ten carry a long run, so chronicity cannot discriminate: {r:?}"
+    );
+    assert!(
+        r.recovery_ticks.is_some(),
+        "and nine of them recovered — which at POPULATION scope would have read \
+         healthy, masking the stuck one: {r:?}"
+    );
+}
+
+#[test]
+fn a_short_run_still_open_at_the_trace_end_does_not_alarm() {
+    // RIGHT-CENSORING, deliberately not an alarm (spec §4): a 3-tick run still
+    // open when the trace ends might have recovered one tick later — that is
+    // undecidable from the trace, so only LONG-and-open alarms. This
+    // asymmetry is intentional; do not "fix" it.
+    use AffectLabel::*;
+    let r = health_report(&[trace(&[Content, Content, Lost, Lost, Lost])]);
+    assert_eq!(
+        r.stuck, 0.0,
+        "short and still open is censored, not a bug signal: {r:?}"
+    );
+    assert_eq!(r.chronicity, 0.0, "and it is not even long: {r:?}");
+    assert_eq!(
+        r.recovery_ticks, None,
+        "the run never ended, so nothing recovered: {r:?}"
+    );
+}
+
+#[test]
+fn a_long_run_still_open_at_the_trace_end_is_the_alarm() {
+    // THE BUG SIGNAL as §8 states it, on the reduction alone: long AND never
+    // ended. The counterpart of the censoring test above — the only difference
+    // between them is the run's LENGTH, which is what makes the threshold, not
+    // the openness, the discriminator in the open column.
+    use AffectLabel::*;
+    let mut labels = vec![Content, Content];
+    labels.extend(std::iter::repeat_n(Lost, 10));
+    let r = health_report(&[trace(&labels)]);
+    assert_eq!(r.stuck, 1.0, "long and never ended: the alarm fires: {r:?}");
+    assert_eq!(r.chronicity, 1.0, "and the diagnostic agrees: {r:?}");
+    assert_eq!(
+        r.recovery_ticks, None,
+        "a never-ending spike has no recovery half-life: {r:?}"
+    );
+}
+
+#[test]
+fn the_chronic_threshold_is_exact_at_chronic_ticks() {
+    // THE BOUNDARY, pinned exactly. `CHRONIC_TICKS` is 8, and both threshold
+    // sites in `health.rs` read `run >= CHRONIC_TICKS` — one setting the
+    // `chronicity` diagnostic, one setting the `stuck` alarm. Every other
+    // planted run in this file is 3, 9, 10 or 12 ticks, so a `>=` silently
+    // mutated to `>` at either site survives the whole battery. This test
+    // exists to kill that mutation at BOTH sites: a run of exactly 8 must
+    // count (`8 > 8` is false, so a mutated site reads 0.0 here), and a run of
+    // exactly 7 must not (which pins the threshold from below, so it cannot be
+    // satisfied by loosening the comparison instead).
+    use AffectLabel::*;
+
+    let mut exactly_eight = vec![Content, Content];
+    exactly_eight.extend(std::iter::repeat_n(Lost, 8)); // == CHRONIC_TICKS, still open
+    let r = health_report(&[trace(&exactly_eight)]);
+    assert_eq!(
+        r.stuck, 1.0,
+        "a run of exactly CHRONIC_TICKS (8) still open at the end IS the alarm: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 1.0,
+        "and exactly 8 is chronic for the diagnostic too: {r:?}"
+    );
+
+    let mut exactly_seven = vec![Content, Content];
+    exactly_seven.extend(std::iter::repeat_n(Lost, 7)); // one below the threshold
+    let r = health_report(&[trace(&exactly_seven)]);
+    assert_eq!(
+        r.stuck, 0.0,
+        "one tick below the threshold is censored, not the alarm: {r:?}"
+    );
+    assert_eq!(
+        r.chronicity, 0.0,
+        "and 7 is not chronic for the diagnostic either: {r:?}"
+    );
+}
+
 // --- END-TO-END: the synthetic distress harness (followup #5) ---------------
 // The scenarios below drive the REAL sim (`run_simulation` → `affect_of`) into
 // distress and score its own affect output, closing the gap the constructed-
@@ -212,6 +414,11 @@ fn a_stranded_creature_is_scored_chronic_end_to_end() {
     assert_eq!(
         r.chronicity, 1.0,
         "the stranded creature is chronically stuck: {r:?}"
+    );
+    assert_eq!(
+        r.stuck, 1.0,
+        "and it never recovers, so the ALARM fires — splitting the measure must \
+         not silence the scenario the metric exists to catch: {r:?}"
     );
     assert_eq!(
         r.recovery_ticks, None,
@@ -375,6 +582,7 @@ fn a_passing_heat_wave_is_scored_a_recovered_spike_end_to_end() {
         r.chronicity, 0.0,
         "a wave that breaks is not chronic distress: {r:?}"
     );
+    assert_eq!(r.stuck, 0.0, "a wave that breaks never alarms: {r:?}");
     assert!(
         r.recovery_ticks.is_some(),
         "the recovered spike yields a recovery half-life: {r:?}"

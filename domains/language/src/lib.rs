@@ -10,6 +10,7 @@
 /// fact list into one culture's `Account`, plus the dial's distance
 /// measures (distortion, distinctiveness, recoverability) that read it.
 /// Pure and surface-free — the caller supplies the observability table.
+pub mod accession;
 pub mod account;
 /// The clause layer: a language-neutral `ClauseSpec` and the Common
 /// realizer that turns it into a sentence. Generalizes the `render_line`
@@ -65,6 +66,7 @@ pub mod schemas;
 /// `StreamLabel` constants every draw site derives through.
 pub mod streams;
 
+pub use accession::{EPOCH_COHORTS, concept_epoch};
 pub use account::{
     Account, AccountEntry, AccountParams, Disposition, GroundFact, LossReason, NeededConcept,
     Observability, OrderPolicy, Requirement, Stance, account_of, distinctiveness, distortion,

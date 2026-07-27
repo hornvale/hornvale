@@ -386,6 +386,34 @@ by convicting the instrument instead of the world. See
 [Rift-and-Fit](./chronicle/rift-and-fit.md), and [The Census of Coasts
 IV](./laboratory/census-of-coasts-iv.md).
 
+[The Threshold](./chronicle/the-threshold.md) exercised this discipline on a
+bet of its own and got the answer the discipline exists to make possible: **no**.
+It froze, before a line of code, the claim that a cold creature with a fire in
+its house would suffer the cold measurably less than one without — and then
+failed to find it, four times over. What makes that worth recording is not the
+failure but its shape. Each null was designed to kill one candidate explanation
+and did: the fire was too faint (so it was recalculated from an energy balance —
+envelope, infiltration, hearth power, the radiant crowding that is why people
+sit close — the argument written down and committed *before* anything was
+measured again); then the creature never reached the fire (so it was taught to
+cross the room, and did); then the instrument could not see where the creature
+stood (so it was taught to look). Warmth, walk, and witness each eliminated in
+turn, the remaining explanation is not about the machinery at all: **the
+creatures who live where it is cold are either already within their own
+tolerance, or forty to eighty degrees beyond anything a domestic fire could
+offer.** There is nobody in between for a hearth to save.
+
+Two things follow for this chapter. The first is that a preregistered
+prediction is only as good as the *sequence* of measurements behind it — a null
+that eliminates nothing is a wasted run, and four that each eliminate something
+are a result. The second is subtler and concerns the anchor: this bet's own
+warning is that a drift check pins output against change and has no opinion
+about whether the output was ever right. Here the analogue bit at the level of
+the *instrument* — an acceptance protocol verified byte-identity with a command
+that could not, by construction, reflect the layer being changed, and four
+stages of evidence were vacuous before anyone noticed. The check that a
+measurement can move at all belongs beside the measurement, not after it.
+
 ## Precedented but nontrivial (moderate confidence)
 
 - **Lazy retrospective generation** — committing detail only on observation,

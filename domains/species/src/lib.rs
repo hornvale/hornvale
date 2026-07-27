@@ -2252,12 +2252,49 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         "tonal propensity, 0 atonal ↔ 1 tonal",
     )?;
 
+    // Every kind the biosphere registry holds, not only the speaking peoples:
+    // a creature the world simulates, places, and narrates is a thing the
+    // vocabulary owes a name, whether or not anyone has a word for it yet. The
+    // roster was peoples-only from The Words until The Actants, which is how
+    // The Menagerie's twelve fauna went four campaigns unnamed. Glosses are
+    // authored rather than derived from the id, so a `giant-elk` reads as "a
+    // giant elk" and not as its own key.
     for (name, doc) in [
         ("goblin-kind", "a goblin"),
         ("kobold-kind", "a kobold"),
         ("hobgoblin-kind", "a hobgoblin"),
         ("bugbear-kind", "a bugbear"),
+        ("treant-kind", "a treant"),
+        ("twig-blight-kind", "a twig blight"),
+        ("giant-elk-kind", "a giant elk"),
+        ("woolly-mammoth-kind", "a woolly mammoth"),
+        ("giant-goat-kind", "a giant goat"),
+        ("otyugh-kind", "an otyugh"),
+        ("xorn-kind", "a xorn"),
+        ("rust-monster-kind", "a rust monster"),
+        ("white-dragon-kind", "a white dragon"),
+        ("red-dragon-kind", "a red dragon"),
+        ("black-dragon-kind", "a black dragon"),
+        ("owlbear-kind", "an owlbear"),
+        // The Vacancy's thirteen. The Actants' rule — every kind the biosphere
+        // registry holds owes a name, not only the speaking peoples — is what
+        // makes these mandatory rather than optional, and the two campaigns
+        // arrived at the same seam from opposite directions within a week.
+        // Glosses are authored, not derived from the id, so `giant-scorpion`
+        // reads as "a giant scorpion" and not as its own key.
         ("gnoll-kind", "a gnoll"),
+        ("giant-scorpion-kind", "a giant scorpion"),
+        ("giant-hyena-kind", "a giant hyena"),
+        ("dire-wolf-kind", "a dire wolf"),
+        ("rhinoceros-kind", "a rhinoceros"),
+        ("giant-constrictor-snake-kind", "a giant constrictor snake"),
+        ("carrion-crawler-kind", "a carrion crawler"),
+        ("shrieker-kind", "a shrieker"),
+        ("reef-shark-kind", "a reef shark"),
+        ("giant-octopus-kind", "a giant octopus"),
+        ("killer-whale-kind", "a killer whale"),
+        ("giant-squid-kind", "a giant squid"),
+        ("giant-crocodile-kind", "a giant crocodile"),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {

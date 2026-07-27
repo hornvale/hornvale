@@ -652,6 +652,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "black-dragon-kind": {
+        "name": "black-dragon-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a black dragon"
+      },
       "blood": {
         "name": "blood",
         "domain": "language",
@@ -681,6 +687,12 @@
         "domain": "species",
         "kind": "Living",
         "doc": "a bugbear"
+      },
+      "carrion-crawler-kind": {
+        "name": "carrion-crawler-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a carrion crawler"
       },
       "child": {
         "name": "child",
@@ -721,8 +733,20 @@
       "die": {
         "name": "die",
         "domain": "language",
-        "kind": "Quality",
+        "kind": "Act",
         "doc": "to cease living"
+      },
+      "dire-wolf-kind": {
+        "name": "dire-wolf-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a dire wolf"
+      },
+      "drink": {
+        "name": "drink",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to swallow liquid"
       },
       "earth": {
         "name": "earth",
@@ -733,7 +757,7 @@
       "eat": {
         "name": "eat",
         "domain": "language",
-        "kind": "Quality",
+        "kind": "Act",
         "doc": "to consume food"
       },
       "eclipse": {
@@ -765,6 +789,54 @@
         "domain": "language",
         "kind": "Body",
         "doc": "the walking limb-end"
+      },
+      "giant-constrictor-snake-kind": {
+        "name": "giant-constrictor-snake-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant constrictor snake"
+      },
+      "giant-crocodile-kind": {
+        "name": "giant-crocodile-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant crocodile"
+      },
+      "giant-elk-kind": {
+        "name": "giant-elk-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant elk"
+      },
+      "giant-goat-kind": {
+        "name": "giant-goat-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant goat"
+      },
+      "giant-hyena-kind": {
+        "name": "giant-hyena-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant hyena"
+      },
+      "giant-octopus-kind": {
+        "name": "giant-octopus-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant octopus"
+      },
+      "giant-scorpion-kind": {
+        "name": "giant-scorpion-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant scorpion"
+      },
+      "giant-squid-kind": {
+        "name": "giant-squid-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a giant squid"
       },
       "gloom": {
         "name": "gloom",
@@ -850,6 +922,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "killer-whale-kind": {
+        "name": "killer-whale-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a killer whale"
+      },
       "kobold-kind": {
         "name": "kobold-kind",
         "domain": "species",
@@ -892,6 +970,12 @@
         "kind": "Body",
         "doc": "the organ of eating and speech"
       },
+      "move": {
+        "name": "move",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to go from one place to another"
+      },
       "name": {
         "name": "name",
         "domain": "language",
@@ -909,6 +993,18 @@
         "domain": "language",
         "kind": "Quality",
         "doc": "the cardinal number 1"
+      },
+      "otyugh-kind": {
+        "name": "otyugh-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "an otyugh"
+      },
+      "owlbear-kind": {
+        "name": "owlbear-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "an owlbear"
       },
       "parent": {
         "name": "parent",
@@ -934,6 +1030,36 @@
         "kind": "Quality",
         "doc": "the color term for red"
       },
+      "red-dragon-kind": {
+        "name": "red-dragon-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a red dragon"
+      },
+      "reef-shark-kind": {
+        "name": "reef-shark-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a reef shark"
+      },
+      "rest": {
+        "name": "rest",
+        "domain": "language",
+        "kind": "Act",
+        "doc": "to stop and recover strength"
+      },
+      "rhinoceros-kind": {
+        "name": "rhinoceros-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a rhinoceros"
+      },
+      "rust-monster-kind": {
+        "name": "rust-monster-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a rust monster"
+      },
       "savanna": {
         "name": "savanna",
         "domain": "climate",
@@ -958,6 +1084,12 @@
         "kind": "Quality",
         "doc": "cast dark, distinct from open gloom"
       },
+      "shrieker-kind": {
+        "name": "shrieker-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a shrieker"
+      },
       "shrubland": {
         "name": "shrubland",
         "domain": "climate",
@@ -973,7 +1105,7 @@
       "sleep": {
         "name": "sleep",
         "domain": "language",
-        "kind": "Quality",
+        "kind": "Act",
         "doc": "to rest unconscious"
       },
       "snow": {
@@ -1042,6 +1174,12 @@
         "kind": "Celestial",
         "doc": "the rise and fall of the waters under the moons"
       },
+      "treant-kind": {
+        "name": "treant-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a treant"
+      },
       "tree": {
         "name": "tree",
         "domain": "language",
@@ -1066,6 +1204,12 @@
         "kind": "Terrain",
         "doc": "a biome class"
       },
+      "twig-blight-kind": {
+        "name": "twig-blight-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a twig blight"
+      },
       "two": {
         "name": "two",
         "domain": "language",
@@ -1084,11 +1228,29 @@
         "kind": "Substance",
         "doc": "the drinkable liquid"
       },
+      "white-dragon-kind": {
+        "name": "white-dragon-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a white dragon"
+      },
       "wind": {
         "name": "wind",
         "domain": "language",
         "kind": "Substance",
         "doc": "moving air"
+      },
+      "woolly-mammoth-kind": {
+        "name": "woolly-mammoth-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a woolly mammoth"
+      },
+      "xorn-kind": {
+        "name": "xorn-kind",
+        "domain": "species",
+        "kind": "Living",
+        "doc": "a xorn"
       },
       "yellow": {
         "name": "yellow",

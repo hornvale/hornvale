@@ -482,8 +482,15 @@ The shared core is therefore not one list but a set of small **packs**,
 each authored and closed — enough to seed a lexicon, not an aspiration to
 completeness. A **universal stratum** holds what these two species
 actually share by being embodied, terrestrial, mortal, and social: water,
-stone, sun, night, fire, eat, sleep, die, the basic kin terms — small and
-defensible rather than universal in name only. A **color pack** carries the Berlin &
+stone, sun, night, fire, the basic kin terms, and the handful of acts a body
+performs whatever else is true of it — eat, drink, sleep, rest, move, die —
+small and defensible rather than universal in name only. Those acts are the
+vocabulary's verbs, and they are typed as such: an act is something a
+creature *does*, not a property it *has*, which is what separates `drink`
+from `red`. The separation is load-bearing rather than tidy, because the
+same roster is what a creature's planner selects from — every act the world's
+creatures can perform has a word, and the correspondence audit reconciles the
+two rosters against each other in both directions. A **color pack** carries the Berlin &
 Kay ladder — the anthropological finding that a language's color
 vocabulary grows in a fixed implicational order, dark/light before red,
 red before green-or-yellow, green-or-yellow before blue, and so on — and a
@@ -534,7 +541,18 @@ survive *every* daughter's cascade still distinct, so no two core concepts
 are ever homophones in any daughter (core homophony is zero on every seed),
 while the proto stays shared so cognate descent is untouched. Incidental
 collisions among the periphery — a rarely-named biome, a deep colour — are
-left as realistic texture. The cascade's target is fixed and deliberate: it
+left as realistic texture. Because the assignment is a single ordered walk
+that re-draws on collision, a concept's root depends on every concept
+assigned before it and on none assigned after — so *when* a concept entered
+the vocabulary is part of its identity. Each carries the generation in which
+it joined, and generation sorts ahead of everything else, placing a newly
+named thing last in the queue where it can displace nothing. A world's
+vocabulary can therefore grow without disturbing a single word already
+spoken: naming the world's twelve unnamed beasts leaves every existing name,
+in every language, exactly as it was. The price is that priority now follows
+arrival before frequency — a latecomer takes the forms left over, however
+common it proves — which is close enough to how real tongues treat their
+newest coinages to be worth the guarantee. The cascade's target is fixed and deliberate: it
 lands only on the phonology this world already shipped a mouth for, never
 widening or retuning the inventory a name already draws from. A rule that would
 produce a segment outside that inventory applies as the identity function

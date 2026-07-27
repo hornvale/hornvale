@@ -225,7 +225,7 @@ The Ngkoshngta are kobolds.
 
 Baodboa Bboo Bboo Zhaboo. (in the bugbear tongue: "The Baodboa are bugbears.")
 Baobboo Baobboo Bao Zhaboo. (in the bugbear tongue: "Baobboo is the earth.")
-Klokjo Jsha Klo Jso. (in the gnoll tongue: "The Klokjo are gnolls.")
+Klokjo Jsha Bla Jso. (in the gnoll tongue: "The Klokjo are gnolls.")
 Baobboo Jsha Blajso Jso. (in the gnoll tongue: "Baobboo is the earth.")
 Maetmea Gmaapmae. (in the goblin tongue: "The Maetmea are goblins.")
 Baobboo Maopmoe. (in the goblin tongue: "Baobboo is the earth.")
@@ -278,7 +278,7 @@ The Maetmea are goblins — neighbors.
 The Waedwea are hobgoblins — neighbors.
 The Ngkoshngta are kobolds — neighbors.
 Baobboo is the earth with one moon.
-The moon crosses because it is Bla's kin.
+The moon crosses because it is Pja's kin.
 The day returns because Kjojsha walks the sky, briskly.
 
 *In truth, Baobboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
@@ -293,10 +293,10 @@ The Maetmea are goblins — neighbors.
 The Waedwea are hobgoblins — neighbors.
 The Ngkoshngta are kobolds — neighbors.
 Baobboo is the earth with one moon.
-The moon crosses because it answers Bla.
+The moon crosses because it answers Pja.
 The day returns, as all things return.
 
-— though the folk say The moon crosses because it is Bla's kin.
+— though the folk say The moon crosses because it is Pja's kin.
 
 *In truth, Baobboo is a planet orbiting a yellow-white dwarf (F); its day lasts about 1.2 standard days.*
 
@@ -433,7 +433,7 @@ The Jjajjjo are kobolds.
 
 Doozqao Qoozao. (in the bugbear tongue: "The Doozqao are bugbears.")
 Jpaanaa Shooqoa. (in the bugbear tongue: "Jpaanaa is the earth.")
-Naojpaa Jpaonaonoo Noo. (in the gnoll tongue: "The Naojpaa are gnolls.")
+Naojpaa Jpaonaamoa Noo. (in the gnoll tongue: "The Naojpaa are gnolls.")
 Jpaanaa Jpoajpaanaa Noo. (in the gnoll tongue: "Jpaanaa is the earth.")
 Sdeozqae Sgaa Zhteo. (in the goblin tongue: "The Sdeozqae are goblins.")
 Jpaanaa Zhqea Zhteo. (in the goblin tongue: "Jpaanaa is the earth.")

@@ -9,11 +9,43 @@
 use super::anchor::{AnchorId, AnchorKind, Interior};
 use super::route::route_within;
 
-/// The warmth a hearth emits at its own anchor. Authored; the scale is
-/// irrelevant to byte-identity, which is structural — an emitter-free room
-/// yields zero everywhere (the additive-latent pattern).
-/// type-audit: bare-ok(ratio)
-pub const HEARTH_WARMTH: f64 = 1.0;
+/// The warmth a hearth emits at its own anchor, in °C, read with ZERO decay
+/// (`warmth_at` applies `WARMTH_DECAY.powi(0) == 1` at the emitter itself) —
+/// so this is not a whole-room average, it is the boost felt standing right
+/// at the fire, relative to the same room unlit. Byte-identity is structural
+/// regardless of this value's scale (an emitter-free room yields zero
+/// everywhere, the additive-latent pattern), so changing it is safe for
+/// determinism; it is NOT safe for the campaign's own frozen-constant rule
+/// without the reasoning below.
+///
+/// **Provenance (The Threshold, task 5d):** originally an authored
+/// placeholder of `1.0`. Task 5c measured a bit-identical null on seed 13's
+/// cold-dominated population — `1.0` °C, decayed to `0.125` °C at a landing
+/// anchor three hops from the hearth, is a rounding error against the
+/// 40–80 °C real thermal deficits the qualifying rooms carry. The owner then
+/// authorized calibrating this constant from physical reasoning, under the
+/// rule that the argument and number be fixed and committed BEFORE
+/// re-running the measurement (never adjusted to make a result move) — so
+/// this value's provenance is a post-hoc calibration following a null
+/// result, not a first-principles guess: a later reader is entitled to know
+/// that history.
+///
+/// **The physical argument** (a Q/UA energy-balance estimate for a small
+/// pre-modern single-room dwelling with an open hearth): a ≈65 m² envelope
+/// at U≈3 W/(m²·K) plus draughty-infiltration losses at ≈4 air changes/hour
+/// over ≈37 m³ gives a total heat-loss coefficient UA ≈ 245 W/K; a household
+/// hearth delivering ≈1.5–2 kW net into the room (after open-smoke-hole
+/// losses) yields a room-AVERAGE steady-state rise `ΔT = Q/UA ≈ 7 °C`. But
+/// this constant is read at the fire itself, not the room average — radiant
+/// flux and incomplete mixing concentrate the warming there by roughly
+/// 2–3× the room average in experimental hearth reconstructions (the same
+/// effect the preregistration is built on: occupants cluster AT the hearth
+/// rather than being indifferent within an evenly-heated room), putting the
+/// at-the-fire figure at ≈15–20 °C. `15.0` is chosen from the conservative
+/// (low) end of that range. Full derivation:
+/// `.superpowers/sdd/task-5d-report.md`.
+/// type-audit: pending(wave-3)
+pub const HEARTH_WARMTH: f64 = 15.0;
 
 /// The multiplier per graph step away from an emitter.
 /// type-audit: bare-ok(ratio)

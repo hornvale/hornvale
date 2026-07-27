@@ -159,6 +159,33 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
         .filter(|k| !named_kinds.contains(k))
         .collect();
 
+    // Orphan species: kinds the world simulates, places, and narrates that no
+    // concept names. The species analogue of `orphan_phenomena` — a creature
+    // a player can stand in front of, with no word in any language and no row
+    // in the dictionary. Derived from the biosphere registry, never a literal,
+    // so a species added tomorrow shows up here without anyone remembering to.
+    let kind_concepts: std::collections::BTreeSet<String> = registry
+        .concepts()
+        .map(|c| c.name.clone())
+        .filter(|n| n.ends_with("-kind"))
+        .collect();
+    let orphan_species: Vec<String> = hornvale_species::biosphere_registry()
+        .ids()
+        .map(|k| k.0.to_string())
+        .filter(|kind| !kind_concepts.contains(&format!("{kind}-kind")))
+        .collect();
+
+    // Orphan acts: the GOAP action roster, reconciled the same way. An act a
+    // creature performs that no concept names cannot be spoken of, reasoned
+    // about, or given a word — the verb-side twin of an unnamed creature.
+    // `Action::all()` is held exhaustive by a compile-time tripwire, so this
+    // audit cannot silently miss a newly added act.
+    let orphan_acts: Vec<&'static str> = hornvale_vessel::liveness::Action::all()
+        .iter()
+        .map(|a| a.concept_name())
+        .filter(|name| registry.concept(name).is_none())
+        .collect();
+
     let list = |names: &[&str]| {
         if names.is_empty() {
             "none".to_string()
@@ -193,7 +220,10 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
          covered. This page is the negative space made honest — the gaps are typed, not \
          silent. The audit also runs in reverse: **orphan phenomena** are kinds the world \
          can emit that no concept names, so an observation exists with nothing to attach \
-         it to.\n\n",
+         it to; **orphan species** are creatures the world simulates and narrates with no \
+         word in any language; **orphan acts** are things creatures do that nothing can be \
+         said about. A fourth reverse direction — the player-facing prose vocabulary — is \
+         named below but not yet audited.\n\n",
     );
 
     doc.push_str("## Backlog (the negative space)\n\n");
@@ -207,6 +237,22 @@ pub fn render_manifest(registry: &ConceptRegistry) -> String {
         "Orphan phenomena (emitted, no concept names): {}\n",
         list(&orphan_phenomena)
     ));
+    let orphan_species_refs: Vec<&str> = orphan_species.iter().map(String::as_str).collect();
+    doc.push_str(&format!(
+        "Orphan species (simulated, no concept names): {}\n",
+        list(&orphan_species_refs)
+    ));
+    doc.push_str(&format!(
+        "Orphan acts (performed, no concept names): {}\n",
+        list(&orphan_acts)
+    ));
+    doc.push_str(
+        "Prose vocabulary (player-facing words, no concept names): UNAUDITED \
+         — the locale relief descriptors, the sky and hydrology prose, and the \
+         affect labels are authored English with no concept behind them. \
+         Auditing them needs a design line between a nameable thing and mere \
+         texture, which no campaign has drawn yet.\n",
+    );
     doc.push_str(&format!(
         "Uncognized (cognition, all pending): {} concepts{}\n",
         cog.uncognized, waves
@@ -295,6 +341,7 @@ fn kind_kebab(kind: hornvale_kernel::ConceptKind) -> &'static str {
         hornvale_kernel::ConceptKind::Body => "body",
         hornvale_kernel::ConceptKind::Kin => "kin",
         hornvale_kernel::ConceptKind::Quality => "quality",
+        hornvale_kernel::ConceptKind::Act => "act",
     }
 }
 
@@ -358,6 +405,102 @@ mod tests {
         ] {
             assert!(doc.contains(expected), "missing: {expected}");
         }
+    }
+
+    /// The species reverse audit. Asserted on **derivation**, not population:
+    /// Stage B of this campaign empties the orphan set, and a test that
+    /// demanded a non-empty line would have to be weakened or deleted the day
+    /// the campaign succeeded. What must hold in both states is that the line
+    /// is computed from the biosphere registry — so a species added tomorrow
+    /// appears without anyone remembering to update a literal.
+    #[test]
+    fn manifest_render_derives_orphan_species_from_the_biosphere_registry() {
+        let mut registry = ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let doc = render_manifest(&registry);
+        let line = doc
+            .lines()
+            .find(|l| l.starts_with("Orphan species"))
+            .unwrap_or_else(|| panic!("no orphan-species line in the manifest view"));
+
+        // Recompute the expected set independently and require exact agreement.
+        let expected: Vec<String> = hornvale_species::biosphere_registry()
+            .ids()
+            .map(|k| k.0.to_string())
+            .filter(|kind| registry.concept(&format!("{kind}-kind")).is_none())
+            .collect();
+        for kind in &expected {
+            assert!(
+                line.contains(kind.as_str()),
+                "'{kind}' has no `{kind}-kind` concept and must be surfaced; line: {line}"
+            );
+        }
+        // A kind that IS named must never appear. Peopled species have had
+        // concepts since The Words; they are the negative control.
+        for named in ["goblin-kind", "kobold-kind"] {
+            assert!(
+                registry.concept(named).is_some(),
+                "{named} should be registered -- the control is meaningless otherwise"
+            );
+        }
+        // Substring care: "goblin" occurs inside "hobgoblin", so match the
+        // whole comma-separated entry rather than a bare substring.
+        let listed: Vec<&str> = line
+            .split(':')
+            .nth(1)
+            .unwrap_or("")
+            .split(',')
+            .map(str::trim)
+            .collect();
+        assert!(
+            !listed.contains(&"goblin"),
+            "goblin is named by a concept and must not be an orphan; line: {line}"
+        );
+    }
+
+    /// The act reverse audit, same discipline. `Action::all()` is held
+    /// exhaustive by the compile-time tripwire beside it, so this cannot
+    /// silently miss a newly added act.
+    #[test]
+    fn manifest_render_derives_orphan_acts_from_the_action_roster() {
+        let mut registry = ConceptRegistry::default();
+        register_all(&mut registry).unwrap();
+        let doc = render_manifest(&registry);
+        let line = doc
+            .lines()
+            .find(|l| l.starts_with("Orphan acts"))
+            .unwrap_or_else(|| panic!("no orphan-acts line in the manifest view"));
+
+        for act in hornvale_vessel::liveness::Action::all() {
+            let name = act.concept_name();
+            let named = registry.concept(name).is_some();
+            let listed = line
+                .split(':')
+                .nth(1)
+                .unwrap_or("")
+                .split(',')
+                .map(str::trim)
+                .any(|e| e == name);
+            assert_eq!(
+                listed, !named,
+                "'{name}' is listed as an orphan iff it has no concept; \
+                 registered={named}, listed={listed}; line: {line}"
+            );
+        }
+    }
+
+    /// Anti-vacuity for both audits above: they are `iff` assertions, which a
+    /// roster of zero would satisfy trivially.
+    #[test]
+    fn the_reverse_audits_run_over_non_empty_rosters() {
+        assert!(
+            hornvale_species::biosphere_registry().ids().count() >= 16,
+            "the species roster should be non-trivial"
+        );
+        assert!(
+            hornvale_vessel::liveness::Action::all().len() >= 4,
+            "the action roster should be non-trivial"
+        );
     }
 
     #[test]
