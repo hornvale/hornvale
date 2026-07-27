@@ -134,7 +134,7 @@ Byte-identity dies at Task 1. Everything after it is measured against the new ba
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `EPOCH_COHORTS[0]` containing all 91 currently-registered concepts (76 + 15); `ROOT_EPOCH == "v4"`. Task 3 appends ~20 more to this same cohort 0.
+- Produces: `EPOCH_COHORTS[0]` containing all 91 currently-registered concepts (76 + 15); `ROOT_EPOCH == "v4"`. Task 3 appends the campaign's 19 toponymic concepts to this same cohort 0, taking it to 110.
 
 **Why this is legal** (ledger #9, owner call): The Accession's "never edit a
 cohort" rule exists to prevent churn *between* epoch bumps. This campaign is a
@@ -429,7 +429,7 @@ is the one axis The Wearing must not spend."
 
 **Interfaces:**
 - Consumes: cohort 0 at 91 (Task 1).
-- Produces: cohort 0 at 111; `packs::universal_stratum()` listing the 20 new ids; `packs::is_core_concept(c) == true` for all of them.
+- Produces: cohort 0 at **110** (91 + 19); `packs::universal_stratum()` listing the 19 new ids; `packs::is_core_concept(c) == true` for all of them.
 
 **The ownership split** (grounding 4 — "the pack refers, the owner registers"):
 

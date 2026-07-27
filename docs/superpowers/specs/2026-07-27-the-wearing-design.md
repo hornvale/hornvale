@@ -163,7 +163,7 @@ reseeds regardless. The campaign is already a total regeneration.
 So the campaign takes the epoch bump it is already paying for and **re-founds
 the cohort baseline**: `ROOT_EPOCH` goes `v3` → `v4`, and `EPOCH_COHORTS[0]`
 becomes the roster as of The Wearing — the current cohort 0 (76) plus cohort 1
-(15) plus the ~20 new concepts, ≈111 — every one of them sorting by `core_rank`
+(15) plus the 19 new concepts, 110 — every one of them sorting by `core_rank`
 on merit. No false loanwords; LANG-27's Zipf ordering is restored rather than
 deferred again.
 
@@ -276,9 +276,9 @@ Every stage but S5 touches a save-format contract. One epoch bump covers all
 of them; that indivisibility is the argument for the single-campaign shape.
 
 - **S1** bumps `ROOT_EPOCH` `"v3"` → `"v4"` and re-founds `EPOCH_COHORTS[0]` to
-  the ~111-concept roster as of this campaign (ledger #9). Epoch suffix, never
-  a rename. Re-pins `cohort_zero_stays_the_frozen_landing_roster` 76 → ~111.
-- **S2** registers the ~20 new concepts into that re-founded cohort 0, not into
+  the 110-concept roster as of this campaign (ledger #9). Epoch suffix, never
+  a rename. Re-pins `cohort_zero_stays_the_frozen_landing_roster` 76 → 91 → 110.
+- **S2** registers the 19 new concepts into that re-founded cohort 0, not into
   a fresh cohort. `cli/tests/accession.rs` asserts the table and the concept
   registry agree in both directions (`every_registered_concept_has_an_accession_epoch`
   and `every_accessioned_concept_is_actually_registered`); both must stay green.
