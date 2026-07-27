@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-26-the-vacancy-design.md`
 
+**Task count:** 11. The gnoll's body and mind are one task (Task 9), not two: a `Settled` kind without its peopled component set fails `check_integrity`, so splitting them would mean committing a state that fails existing tests — which the project's quality gate forbids outright.
+
 ## Global Constraints
 
 - **No `HashMap`/`HashSet`** anywhere — `BTreeMap`/`BTreeSet`/`Vec` only. Enforced by `clippy.toml` `disallowed-types`.
@@ -846,7 +848,7 @@ Both tasks in this stage drift committed genesis behaviour. The Menagerie's retr
 
 **Interfaces:**
 - Consumes: `windows/worldgen/tests/fixtures/occupancy.csv` (Task 3) — the percentile frame every optimum is authored against.
-- Produces: eight new `KindId`s. Task 8 adds to the same registries; Task 11 measures the result.
+- Produces: eight new `KindId`s. Task 8 adds to the same registries; Task 10 measures the result.
 
 Eight kinds, each promoting a named cell from spec §5.1. **Source every mass and CR from the 5E Monster Manual and state the source in the doc comment**; where a candidate has no MM entry, pick the listed alternative rather than inventing a magnitude.
 
@@ -992,14 +994,20 @@ Put the marine-biome occupancy count and the amphibious result in the commit mes
 
 # Stage 4 — The gnoll
 
-### Task 9: The gnoll's biosphere and taxonomy
+### Task 9: The gnoll, in one commit
 
 **Files:**
-- Modify: `domains/species/src/lib.rs` (`biosphere_registry`, `family_of`, `gnoll_condition_niche`)
+- Modify: `domains/species/src/lib.rs` (`biosphere_registry`, `family_of`, `gnoll_condition_niche`, `psyche_registry`, `society_registry`, `perception_registry`)
+- Modify: `domains/language/src/lib.rs` (`articulation_registry`, `lexicon_registry`)
+- Modify: `domains/species/tests/coverage.rs`, `domains/species/tests/social_form.rs`
 
 **Interfaces:**
 - Consumes: the readout (Task 3).
-- Produces: `KindId("gnoll")` with `social_form: SocialForm::Settled`. Task 10 adds its peopled components — **the world will not build between Tasks 9 and 10**, because `components.rs` requires a `Settled` kind to carry a full peopled component set. Commit Task 9 anyway (it compiles and the species crate's own tests pass), but expect `hornvale-worldgen` tests to fail until Task 10 lands, and say so in the commit message.
+- Produces: `KindId("gnoll")`, a complete fifth people. `StatusBasis::Generosity` reaches its first witness here.
+
+**This task is deliberately one commit, not two.** A `Settled` kind without its peopled component set fails `components.rs`'s referential-integrity check, so every `hornvale-worldgen` test breaks between "add the biosphere row" and "add the peopled rows". The project's quality gate is absolute — every commit compiles and passes existing tests — so the body and the mind land together. Author in the order below (it localises failures), but commit once at the end.
+
+Read `components.rs`'s `check_integrity` first (around lines 280–320) for the exact invariants: `speech ⊆ perception ⊆ mind`, and `society ⟺ minded ∧ social`. A `MalformedKind` error names exactly which registry is missing a row.
 
 **Gnoll follows kobold's shape, not the goblinoids'.** Kobold is the roster's singleton-family people: `family_of` maps it to its own name and it carries **no** `family_proto` entry, because `components.rs` requires a proto only for a label held by ≥2 kinds (`family_proto` holds exactly `goblinoid`, `draconic`, `plant`). So `family_of` gets `(KindId("gnoll"), "gnoll")` and no proto is added.
 
@@ -1011,49 +1019,19 @@ Hot-arid. Cite percentiles from `fixtures/occupancy.csv` in the doc comment, in 
 
 `mass` from the 5E MM (gnolls are ~7 ft humanoids — source the weight, do not estimate it); `metabolic_class: Endotherm`; `potency: 0.0` (mundane CR); `social_form: SocialForm::Settled`; a mixed omnivore niche weighted toward `ANIMAL_PREY`, consistent with a high-variance forager.
 
-- [ ] **Step 3: Verify the species crate alone**
-
-```bash
-cargo test -p hornvale-species 2>&1 | tail -10
-```
-Expected: `coverage.rs` and `social_form.rs` FAIL until their tables list the gnoll — update both now. Then PASS.
-
-- [ ] **Step 4: Commit, expecting a broken worldgen**
-
-```bash
-cargo fmt
-cargo clippy -p hornvale-species --all-targets -- -D warnings
-git add domains/species/
-git commit -m "feat(species): the gnoll's body and niche - peopled components follow in T10 (the-vacancy T9)"
-```
-
----
-
-### Task 10: The gnoll as a people
-
-**Files:**
-- Modify: `domains/species/src/lib.rs` (`psyche_registry`, `society_registry`, `perception_registry`)
-- Modify: `domains/language/src/lib.rs` (`articulation_registry`, `lexicon_registry`)
-
-**Interfaces:**
-- Consumes: Task 9's `KindId("gnoll")`.
-- Produces: a fifth complete people. `StatusBasis::Generosity` reaches its first witness here.
-
-Four component rows plus two language rows. Read `components.rs`'s `check_integrity` first (around lines 280–320) for the exact invariants: `speech ⊆ perception ⊆ mind`, and `society ⟺ minded ∧ social`.
-
-- [ ] **Step 1: The mind and society vectors**
+- [ ] **Step 3: The mind and society vectors**
 
 `MindVector` scalars are ratios in `[0,1]` with 0.5 ≡ the goblin baseline. `SocietyVector` gets **`status_basis: StatusBasis::Generosity`** — the campaign's headline promotion, and the reason this people exists. Justify it in a doc comment from the ecology, not from lore: where forage is scarce and high-variance, sharing a windfall is the status currency.
 
-- [ ] **Step 2: The perception vector**
+- [ ] **Step 4: The perception vector**
 
 Read `activity` off the gnoll's own authored `insolation` optimum, the way The Vigil derived the dragons' schedules. A hot-arid kind at high insolation is `Diurnal`; if you author a low-insolation optimum, it is `Crepuscular` — which would incidentally give that cell its second witness. Note in the doc which way it went and why.
 
-- [ ] **Step 3: The language rows**
+- [ ] **Step 5: The language rows**
 
 Add `articulation_registry` and `lexicon_registry` entries in `domains/language/src/lib.rs`, following kobold's singleton-family shape. No `family_proto` entry (Task 9).
 
-- [ ] **Step 4: Verify integrity, then the full surface**
+- [ ] **Step 6: Verify integrity, then the full surface**
 
 ```bash
 cargo test -p hornvale-species -p hornvale-language 2>&1 | tail -10
@@ -1062,11 +1040,11 @@ cargo nextest run --workspace --no-fail-fast 2>&1 | tee /tmp/hv-t10.txt
 
 A `MalformedKind` error names exactly which registry is missing a row. Then classify every failure as in Task 7 Step 4 — mechanical drift is re-pinned here, non-mechanical stops the task.
 
-- [ ] **Step 5: Update the coverage table's headline row**
+- [ ] **Step 7: Update the coverage table’s headline row**
 
 `status_basis_coverage_matches_the_table` flips `Generosity` from `Rung::Declared` / `&[]` to `Rung::Witnessed` / `&["gnoll"]`.
 
-- [ ] **Step 6: Regenerate always-run artifacts and the readout**
+- [ ] **Step 8: Regenerate always-run artifacts and the readout**
 
 ```bash
 bash scripts/regenerate-artifacts.sh
@@ -1076,18 +1054,18 @@ git diff --stat
 
 The language artifacts (dictionary, chorus) will move here — that is expected for a fifth people. Re-pin in this commit.
 
-- [ ] **Step 7: Gate, fmt, commit**
+- [ ] **Step 9: Gate, fmt, commit**
 
 ```bash
-make gate 2>&1 | tee /tmp/hv-gate-t10.txt
+make gate 2>&1 | tee /tmp/hv-gate-t9.txt
 cargo fmt
 git add -A
-git commit -m "feat(species): the gnoll speaks - a fifth people, and Generosity's first witness (the-vacancy T10)"
+git commit -m "feat(species): the gnoll speaks - a fifth people, and Generosity's first witness (the-vacancy T9)"
 ```
 
 ---
 
-### Task 11: Measure the preregistered exit criteria
+### Task 10: Measure the preregistered exit criteria
 
 **Files:**
 - Create: nothing permanent unless a criterion fails.
@@ -1126,7 +1104,7 @@ Take The Menagerie's honest move: ship the structural deliverables, convert the 
 
 ```bash
 git commit --allow-empty -F - <<'EOF'
-test(the-vacancy): the preregistered verdict on all seven exit criteria (T11)
+test(the-vacancy): the preregistered verdict on all seven exit criteria (T10)
 EOF
 ```
 
@@ -1136,7 +1114,7 @@ Record each criterion's measured result in the message body.
 
 # Stage 5 — Close
 
-### Task 12: Absorb, regenerate, and close
+### Task 11: Absorb, regenerate, and close
 
 **Files:**
 - Create: `book/src/chronicle/the-vacancy.md`, `docs/retrospectives/the-vacancy.md`
@@ -1204,10 +1182,10 @@ The post-G3 ledger digest, save-format and determinism entries first, then the m
 
 ## Self-Review
 
-**Spec coverage.** §1's six deliverables map to T1/T3 (instrument), T4 (non-void), T5–T6 (marine axis), T7–T8 (fauna), T9–T10 (gnoll), T2 (`Autotroph` doc). §4.1→T1, §4.2→T4, §3.3→T2, §3.4→T5/T6, §5.1→T7, §5.2→T8, §5.3→T9/T10, §7's reconciliation→T7/T8/T10 steps 4–5, §8's five stages→the five stage headers, §9's criteria→T11, §11's risks→the STOP-and-report steps and T12 step 1.
+**Spec coverage.** §1's six deliverables map to T1/T3 (instrument), T4 (non-void), T5–T6 (marine axis), T7–T8 (fauna), T9 (gnoll), T2 (`Autotroph` doc). §4.1→T1, §4.2→T4, §3.3→T2, §3.4→T5/T6, §5.1→T7, §5.2→T8, §5.3→T9, §7's reconciliation→T7/T8 steps 4–5 and T9 step 6, §8's five stages→the five stage headers, §9's criteria→T10, §11's risks→the STOP-and-report steps and T11 step 1.
 
-**One spec requirement the plan corrects rather than implements:** §5.1's "a mundane `Crepuscular` witness". `ActivityCycle` lives in `PerceptionVector`, carried only by minded speaking kinds under The Vigil's enforced lattice, so a mundane beast cannot hold one. Task 7 drops the giant badger, records the real blocker, and reports it. Task 10 notes that the gnoll may incidentally provide the second witness depending on its insolation optimum.
+**One spec requirement the plan corrects rather than implements:** §5.1's "a mundane `Crepuscular` witness". `ActivityCycle` lives in `PerceptionVector`, carried only by minded speaking kinds under The Vigil's enforced lattice, so a mundane beast cannot hold one. Task 7 drops the giant badger, records the real blocker, and reports it. Task 9 notes that the gnoll may incidentally provide the second witness depending on its insolation optimum.
 
-**Type consistency.** `MARINE_FORAGE` (id 5, `ResourceKind::Stock`) is defined in T5 and used by the same name in T6 and T8. `marine_forage_supply_field(geo, terrain, climate, scale) -> CellMap<f64>` is defined in T6 step 2 and called in T6 step 3 with `MARINE_SUPPLY_SCALE`. `Rung::{Declared, Witnessed}` is defined in T1 and edited by the same names in T7, T8, T10. `kind_is_viable_on(seed, name) -> bool` is defined and used within T4.
+**Type consistency.** `MARINE_FORAGE` (id 5, `ResourceKind::Stock`) is defined in T5 and used by the same name in T6 and T8. `marine_forage_supply_field(geo, terrain, climate, scale) -> CellMap<f64>` is defined in T6 step 2 and called in T6 step 3 with `MARINE_SUPPLY_SCALE`. `Rung::{Declared, Witnessed}` is defined in T1 and edited by the same names in T7, T8, T9. `kind_is_viable_on(seed, name) -> bool` is defined and used within T4.
 
 **Known deliberate looseness.** Three test bodies (T6 step 5's two, T3's render function) specify contract, schema, and required assertions but delegate world-construction to "the helper the neighbouring tests use" rather than quoting a signature. That is deliberate: I verified the seams these tests consume, but not the test-harness idiom of every file, and quoting a signature I have not read is how a plan invents an API. Each such step names the exact file and nearby test to read first.
