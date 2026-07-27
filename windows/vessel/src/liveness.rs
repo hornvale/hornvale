@@ -1798,6 +1798,28 @@ impl<'a> Thermal<'a> {
             None => self.urgency_of(temp),
         }
     }
+
+    /// The within-room DESTINATION [`Self::affordance`]'s within-room branch
+    /// would eventually walk to, hop by hop — returned directly rather than
+    /// as a first step (The Threshold task 7). Catch-up's cap-exceeded
+    /// fallback (spec §5.3: "places the creature at its drive-preferred
+    /// anchor") needs exactly this, and needs it WITHOUT re-deriving
+    /// `affordance`'s own judgment about whether to move at all: this is
+    /// literally `affordance`'s within-room branch (same gate, same
+    /// `warmest_anchor` call), just stopping short of the `route_within`
+    /// step that turns a destination into a first hop. `None` under the
+    /// identical conditions `affordance` would decline a within-room move:
+    /// already inside the tolerance band, no interior here, or no anchor
+    /// strictly more comfortable than the current one.
+    /// type-audit: bare-ok(count: budget)
+    fn preferred_anchor(&self, position: &RoomAddr, budget: usize) -> Option<AnchorId> {
+        if self.deviation(position) <= self.niche.width {
+            return None;
+        }
+        let (interior, from) = self.interior?;
+        let ambient = self.terrain.temperature(position, self.day);
+        warmest_anchor(interior, from, ambient, self.niche.optimum, budget)
+    }
 }
 
 impl<'a> Drive for Thermal<'a> {
@@ -3440,6 +3462,26 @@ pub fn alarm_field_memo(
 /// (spec §8).
 const PLAN_BUDGET: usize = 1_000;
 
+/// Catch-up's own step cap (The Threshold task 7, spec §5.3): the most
+/// replay iterations — each either a replayed [`Action::MoveWithin`] hop or
+/// a replayed [`Intent::Hold`] — `DriveMovements::step_with_occupancy`'s
+/// bubble-entry catch-up will spend reconstructing a creature's unobserved
+/// within-room position before it gives up hopping and places the creature
+/// directly at its drive-preferred anchor instead
+/// (`Thermal::preferred_anchor`). Deliberately reuses [`PLAN_BUDGET`]'s
+/// VALUE rather than inventing a fresh judgment call: GOAP's own search
+/// already treats this many node-expansions as "generous for the short
+/// local journeys every derived NPC actually walks" (`PLAN_BUDGET`'s own
+/// doc), and catch-up is exactly that kind of short local journey, just
+/// hopping the interior's anchor graph instead of expanding A* nodes. At
+/// [`MOVE_WITHIN_DURATION`] per hop this is generously past a full day of
+/// continuous replay before the cap can bite (spec §5.3's diagram: "a day"
+/// still reads EXACT), so it is the "a season" column, not "a day", where a
+/// real absence starts landing on the approximate side — a long-running
+/// creature's absence costs O(1) work rather than one iteration per
+/// within-room hop that would otherwise have occurred.
+const CATCH_UP_STEP_CAP: usize = PLAN_BUDGET;
+
 /// One action's duration: the one authored action-duration judgment call
 /// (spec §8). Small relative to a drive cycle (SUSTENANCE's ~5.7-day rise) so
 /// a multi-room journey still resolves within a single `wait`.
@@ -3594,6 +3636,348 @@ pub struct DriveMovements<'a> {
     pub terrain: &'a dyn Terrain,
 }
 
+/// The day `npc` entered the room it occupies as of `t` — the day of the
+/// latest committed `agent-at` fact with day ≤ `t.day`, or the world's own
+/// origin (`0.0`) when no such fact exists yet (the same pre-history
+/// fallback [`agent_position`] uses for the ROOM itself: a creature with no
+/// committed history has been home since the world began). This is catch-up's
+/// (The Threshold task 7, spec §5) own "pre-entry state" boundary: the
+/// unobserved span it replays runs from THIS day to `t`, because nothing
+/// between them changed the creature's COARSE position — if it had, a later
+/// `agent-at` would be the latest one instead, and this function would
+/// return that later day.
+fn room_entry_day(ledger: &Ledger, npc: &Npc, t: WorldTime) -> f64 {
+    ledger
+        .find(AGENT_AT)
+        .filter(|f| f.subject == npc.entity)
+        .filter(|f| f.day.map(|d| d <= t.day).unwrap_or(false))
+        .last()
+        .and_then(|f| f.day)
+        .unwrap_or(0.0)
+}
+
+/// The three outcomes [`Intent::Hold`]'s closed-form day-jump can produce —
+/// shared by the live walk and catch-up (The Threshold task 7) so the two
+/// can never disagree about when a Hold makes progress, stalls, or gives up.
+/// Factored out of the walk's own Hold arm (see that call site's doc for the
+/// physical meaning of the jump); the live walk and catch-up differ only in
+/// which `ceiling` bounds the jump (`self.to.day` for the live walk,
+/// `self.from.day` — "now" — for catch-up's own unobserved-span replay).
+enum HoldStep {
+    /// Advance to this day and keep going.
+    Advance(f64),
+    /// The jump is degenerate (`rate_here == 0.0` makes it non-finite) —
+    /// spend this iteration without moving `day`, matching the live walk's
+    /// own `continue`.
+    Stall,
+    /// No progress is possible, or the jump would overshoot `ceiling` — give
+    /// up, matching the live walk's own `break`.
+    GiveUp,
+}
+
+/// [`HoldStep`]'s own computation: thirst's closed-form rise at `pos`
+/// (`rise_at`) projected forward from `drive`'s current level to
+/// `params.act`, capped at `ceiling`. `drive` is threaded in rather than
+/// re-derived, because it is already the exact value [`decide_step`]'s own
+/// `arbitrate` call just used — recomputing it here from the same inputs
+/// would be redundant, not a second judgment, but threading it removes even
+/// that redundancy.
+fn hold_step(
+    day: f64,
+    pos: &RoomAddr,
+    npc: &Npc,
+    terrain: &dyn Terrain,
+    drive: f64,
+    params: &DriveParams,
+    ceiling: f64,
+) -> HoldStep {
+    let rate_here = rise_at(
+        terrain.temperature(pos, WorldTime { day }),
+        npc.metabolic_class,
+        params,
+    );
+    let next_act = day + (params.act - drive) / rate_here;
+    if !next_act.is_finite() {
+        return HoldStep::Stall;
+    }
+    if next_act <= day || next_act > ceiling {
+        return HoldStep::GiveUp;
+    }
+    HoldStep::Advance(next_act)
+}
+
+/// One decide step's FULL judgment — this NPC's complete drive stack, its
+/// [`Perceived`] view, and the arbitrated [`Resolution`] — exactly as the
+/// live per-tick walk has always computed it, plus the thirst drive's own
+/// urgency (the one extra value [`HoldStep`]'s jump needs, returned here so
+/// no caller ever has to re-derive it and risk disagreeing).
+///
+/// Factored out of the walk's inner loop for The Threshold task 7: catch-up
+/// (`DriveMovements::step_with_occupancy`, right after each creature's
+/// initial landing) calls this SAME function over its own unobserved-span
+/// replay, so catch-up's judgment and the live walk's real execution can
+/// never diverge from each other — this is the campaign's own rejected
+/// alternative (a SEPARATE derivation of where a creature "would be")
+/// avoided by construction, not by discipline. The two callers differ only
+/// in which resolutions each is willing to ACT on
+/// ([`is_replayable_in_catch_up`] restricts catch-up to `MoveWithin`/`Hold`;
+/// the live walk executes everything), never in how a resolution is reached.
+///
+/// Mutates `believed` exactly once, at the top, for the same reason the live
+/// walk always has: standing in water updates belief before the view built
+/// from it is assembled, and catch-up's own replayed steps must see that
+/// update too or a creature that wades through water mid-catch-up would
+/// forget it.
+#[allow(clippy::too_many_arguments)]
+fn decide_step(
+    day: f64,
+    pos: &RoomAddr,
+    npc: &Npc,
+    terrain: &dyn Terrain,
+    believed: &mut Option<RoomAddr>,
+    hazard: &HazardMemory,
+    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+    visited: &std::collections::BTreeSet<RoomAddr>,
+    last_drank: f64,
+    last_ate: f64,
+    last_rested: f64,
+    interior: Option<(&Interior, AnchorId)>,
+    mode: Mode,
+    params: &DriveParams,
+    budget: usize,
+    frozen: &Ledger,
+    out: &[Fact],
+) -> (Resolution, f64) {
+    // Standing in water forms/updates belief (nearest-to-home wins) — the
+    // live walk's own first step of every iteration.
+    if is_water(pos, terrain) {
+        *believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
+    }
+    // The temperature-coupled thirst integral, re-derived over the committed
+    // history (`frozen`) PLUS this tick's own emitted moves (`out`) — see the
+    // live walk's own doc for why both are folded together.
+    let mut sightings = agent_sightings(frozen, npc.entity, day);
+    for f in out {
+        if f.subject == npc.entity
+            && f.predicate == AGENT_AT
+            && let Value::Text(s) = &f.object
+            && let Some(d) = f.day
+            && d <= day
+        {
+            sightings.push((d, room_from_text(s)));
+        }
+    }
+    sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    let drive = integrate_thirst(
+        &sightings,
+        &npc.home,
+        last_drank,
+        day,
+        terrain,
+        npc.metabolic_class,
+        params,
+    );
+    let hunger_urgency = integrate_thirst(
+        &sightings,
+        &npc.home,
+        last_ate,
+        day,
+        terrain,
+        npc.metabolic_class,
+        &HUNGER,
+    );
+    let explore_step = lowest_unvisited_neighbor(pos, visited, terrain);
+    let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
+    let view = Perceived {
+        position: pos.clone(),
+        drive,
+        fatigue,
+        believed_water: believed.clone(),
+        believed_hazard: hazard.shunned.clone(),
+        explore_step,
+    };
+    let thirst = Thirst { params: *params };
+    let thermal = Thermal {
+        niche: npc.temperature_niche,
+        terrain,
+        day: WorldTime { day },
+        interior,
+    };
+    let rest = Fatigue {
+        home: npc.home.clone(),
+    };
+    let hunger = Hunger {
+        urgency: hunger_urgency,
+        niche: npc.niche.clone(),
+        terrain,
+        day: WorldTime { day },
+    };
+    let danger = Danger {
+        terrain,
+        threat_niche: npc.threat_niche,
+        boldness: npc.boldness,
+        alarm: Some(alarm),
+        dread: Some(&hazard.dread),
+    };
+    let plan_home = plan_to_room(pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
+    let social = Social {
+        loneliness: loneliness_from_plan(&plan_home),
+        home_step: plan_home.and_then(|p| p.into_iter().next()),
+    };
+    let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
+    let mut drives: Vec<&dyn Drive> = Vec::new();
+    if !ametabolic {
+        drives.push(&thirst);
+        drives.push(&thermal);
+        drives.push(&rest);
+        if !npc.niche.is_zero() {
+            drives.push(&hunger);
+        }
+        drives.push(&danger);
+        drives.push(&social);
+    }
+    let helpless = !ametabolic && learned_helplessness(last_drank, day);
+    let disposition = Disposition {
+        latency: npc.deliberation_latency,
+        horizon: npc.time_horizon,
+        helpless,
+        awake: is_awake(npc.activity, terrain, pos, WorldTime { day }),
+    };
+    let resolution = arbitrate(&view, &npc.home, &drives, &disposition, mode, budget);
+    (resolution, drive)
+}
+
+/// Catch-up's own replay loop (The Threshold task 7, spec §5): reconstruct
+/// where `npc` would actually be standing within its current room right now
+/// (`horizon`), given the ledger shows it entered the room at `entry_day`
+/// and nothing observed it since. Runs [`decide_step`] — the SAME judgment
+/// the live walk uses, never a second derivation — forward from `entry_day`,
+/// replaying only the resolutions [`is_replayable_in_catch_up`] clears
+/// (today exactly `MoveWithin`) plus bare `Hold`s (which touch nothing and
+/// so are equally safe to replay), until ONE of three things happens first:
+/// real time catches up to `horizon` (exact — the common case for a short
+/// absence), a committing action would be needed (stop rather than
+/// fabricate it, spec §5.5 — present tense only), or `cap` replay
+/// iterations are spent with `horizon` still not reached (approximate: give
+/// up stepping through the interior hop by hop and place the creature
+/// straight at its Thermal-preferred anchor instead, spec §5.3's diagram).
+/// Mutates `occupancy` (this creature's entry only) and `believed`
+/// in-place; returns the commitment [`Mode`] catch-up ends in, so the live
+/// walk that follows inherits its hysteresis rather than starting cold.
+///
+/// `cap` is [`CATCH_UP_STEP_CAP`] at the one production call site, but is
+/// threaded as a parameter — matching every other search budget in this
+/// module (`budget: usize`) — so a test can drive this SAME loop at a
+/// small, cheap cap instead of paying for up to 1000 real iterations (each
+/// a full drive-stack arbitration) just to reach the boundary the cap
+/// crossover test needs to sit at. The cap's role in the loop is a property
+/// of its STRUCTURE, not of `CATCH_UP_STEP_CAP`'s particular value.
+///
+/// Commits nothing: every argument other than `occupancy`/`believed`/`mode`
+/// is a shared reference or a plain value, `decide_step` only ever reads
+/// `frozen`, and neither this function nor anything it calls ever touches a
+/// `Ledger` mutably or pushes a `Fact` anywhere — there is no `out: &mut
+/// Vec<Fact>` in this call graph at all for catch-up to write into even by
+/// accident.
+#[allow(clippy::too_many_arguments)]
+fn catch_up(
+    entry_day: f64,
+    horizon: f64,
+    pos: &RoomAddr,
+    npc: &Npc,
+    terrain: &dyn Terrain,
+    believed: &mut Option<RoomAddr>,
+    hazard: &HazardMemory,
+    alarm: &std::collections::BTreeMap<RoomAddr, f64>,
+    visited: &std::collections::BTreeSet<RoomAddr>,
+    last_drank: f64,
+    last_ate: f64,
+    last_rested: f64,
+    occupancy: &mut Occupancy,
+    interior: &Interior,
+    mut mode: Mode,
+    params: &DriveParams,
+    budget: usize,
+    frozen: &Ledger,
+    out: &[Fact],
+    cap: usize,
+) -> Mode {
+    let mut day = entry_day;
+    let mut steps = 0usize;
+    let mut cap_reached = false;
+    'catchup: while day < horizon {
+        if steps >= cap {
+            cap_reached = true;
+            break;
+        }
+        steps += 1;
+        let (resolution, drive) = decide_step(
+            day,
+            pos,
+            npc,
+            terrain,
+            believed,
+            hazard,
+            alarm,
+            visited,
+            last_drank,
+            last_ate,
+            last_rested,
+            occupancy.at(npc.entity).map(|a| (interior, a)),
+            mode,
+            params,
+            budget,
+            frozen,
+            out,
+        );
+        mode = resolution.mode;
+        match resolution.intent {
+            // Requirement 1, straight from the source: an action reaches
+            // this arm only when `is_replayable_in_catch_up` says its
+            // effect is ephemeral — today exactly `MoveWithin`, checked
+            // against the predicate rather than a fresh `matches!`, so a
+            // future replayable action needs no second edit here.
+            Intent::Do(action) if is_replayable_in_catch_up(&action) => {
+                let Action::MoveWithin(next) = action else {
+                    unreachable!("is_replayable_in_catch_up currently admits only MoveWithin");
+                };
+                day += MOVE_WITHIN_DURATION;
+                if day > horizon {
+                    break;
+                }
+                occupancy.walk(npc.entity, interior, next);
+            }
+            // A committing action (Drink/Rest/Eat/coarse MoveTo): stop
+            // rather than fabricate the fact it would write (spec §5.5) —
+            // the live walk that follows picks up here once real time
+            // actually reaches `horizon`.
+            Intent::Do(_) => break 'catchup,
+            Intent::Hold => match hold_step(day, pos, npc, terrain, drive, params, horizon) {
+                HoldStep::Stall => {}
+                HoldStep::GiveUp => break 'catchup,
+                HoldStep::Advance(next) => day = next,
+            },
+        }
+    }
+    if cap_reached {
+        // The cap was spent before real time caught up: give up stepping
+        // through the interior and jump straight to where Thermal wants to
+        // be right now — `preferred_anchor` is the SAME gate and target
+        // `Thermal::affordance`'s own within-room branch uses, so this
+        // cannot suggest a move the live drive itself would have declined.
+        let thermal = Thermal {
+            niche: npc.temperature_niche,
+            terrain,
+            day: WorldTime { day: horizon },
+            interior: occupancy.at(npc.entity).map(|a| (interior, a)),
+        };
+        if let Some(target) = thermal.preferred_anchor(pos, budget) {
+            occupancy.place(npc.entity, pos, target);
+        }
+    }
+    mode
+}
+
 impl<'a> DriveMovements<'a> {
     /// The per-tick walk, returning both the committed `Fact`s AND the final
     /// per-creature [`Occupancy`] each npc's walk reached inside this tick's
@@ -3719,144 +4103,77 @@ impl<'a> DriveMovements<'a> {
             // The commitment mode, carried across this walk's steps (session-
             // sandboxed hysteresis; re-derived, never persisted). Starts Idle.
             let mut mode = Mode::Idle;
+
+            // THE THRESHOLD's catch-up (task 7, spec §5): close the
+            // observer-effect gap this function's own doc names above. The
+            // landing anchor `occupancy.arrive` just placed this creature at
+            // is where a creature crossing the coarse seam RIGHT NOW
+            // arrives — but if the committed ledger shows no room change
+            // since an EARLIER day (`room_entry_day`), the creature has
+            // really been standing somewhere in THIS room, unobserved, ever
+            // since; the true (never-serialized, decision 0069) within-room
+            // position it occupies right now is whatever its own decide
+            // loop would have carried it to over that span, not still the
+            // door. `catch_up` reconstructs it (see that function's own doc
+            // for the mechanism and the cap). Order-independent across
+            // creatures: it reads only `frozen` (fixed for the whole
+            // `step_with_occupancy` call), this creature's own locals, and
+            // `occupancy` entries THIS creature alone owns — nothing here
+            // reads another creature's occupancy, so which creature catches
+            // up first cannot change the result (spec §5.4's own
+            // order-independence requirement).
+            mode = catch_up(
+                room_entry_day(frozen, npc, self.from),
+                self.from.day,
+                &pos,
+                npc,
+                self.terrain,
+                &mut believed,
+                &memory,
+                &alarm,
+                &visited,
+                last_drank,
+                last_ate,
+                last_rested,
+                &mut occupancy,
+                &interior,
+                mode,
+                &self.params,
+                PLAN_BUDGET,
+                frozen,
+                &out,
+                CATCH_UP_STEP_CAP,
+            );
+
             loop {
                 if day > self.to.day || steps >= MAX_STEPS {
                     break;
                 }
                 steps += 1;
-                // Standing in water forms/updates belief (nearest-to-home wins).
-                if is_water(&pos, self.terrain) {
-                    believed = nearer_to_home(&npc.home, believed.take(), pos.clone(), PLAN_BUDGET);
-                }
-                // The temperature-coupled thirst integral (The Kindling),
-                // re-derived over the committed history so far (`frozen` + this
-                // tick's own emitted `out` moves), so the tick's drive matches
-                // `affect_of`'s exactly — one shared fold, no manual alignment.
-                let mut sightings = agent_sightings(frozen, npc.entity, day);
-                for f in &out {
-                    if f.subject == npc.entity
-                        && f.predicate == AGENT_AT
-                        && let Value::Text(s) = &f.object
-                        && let Some(d) = f.day
-                        && d <= day
-                    {
-                        sightings.push((d, room_from_text(s)));
-                    }
-                }
-                sightings.sort_by(|a, b| a.0.total_cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
-                let drive = integrate_thirst(
-                    &sightings,
-                    &npc.home,
+                // The full drive-stack judgment (`decide_step`, factored out
+                // for The Threshold task 7 — see its own doc): builds the
+                // `Perceived` view and every drive exactly as this walk
+                // always has, and arbitrates. `drive` (thirst's own urgency)
+                // is threaded out for the `Hold` arm's closed-form jump below.
+                let (resolution, drive) = decide_step(
+                    day,
+                    &pos,
+                    npc,
+                    self.terrain,
+                    &mut believed,
+                    &memory,
+                    &alarm,
+                    &visited,
                     last_drank,
-                    day,
-                    self.terrain,
-                    npc.metabolic_class,
-                    &self.params,
-                );
-                // Hunger reuses the same Kindling integral over the same
-                // occupancy (The Provender), but since the last MEAL, at the
-                // HUNGER rate — the second consumer of the path-integral.
-                let hunger_urgency = integrate_thirst(
-                    &sightings,
-                    &npc.home,
                     last_ate,
-                    day,
-                    self.terrain,
-                    npc.metabolic_class,
-                    &HUNGER,
+                    last_rested,
+                    occupancy.at(npc.entity).map(|a| (&interior, a)),
+                    mode,
+                    &self.params,
+                    PLAN_BUDGET,
+                    frozen,
+                    &out,
                 );
-                let explore_step = lowest_unvisited_neighbor(&pos, &visited, self.terrain);
-                let fatigue = (FATIGUE_RISE * (day - last_rested)).clamp(0.0, 1.0);
-                let view = Perceived {
-                    position: pos.clone(),
-                    drive,
-                    fatigue,
-                    believed_water: believed.clone(),
-                    believed_hazard: memory.shunned.clone(),
-                    explore_step,
-                };
-                // BOTH drives now compete: thirst (the drank-fold, on the view)
-                // and thermal (the species' niche read against the per-day
-                // temperature at the cell). Where thermal is inactive (a
-                // comfortable cell — planted terrain with no temperature reads
-                // INFINITY → urgency 0), arbitration reduces to thirst-only and
-                // the walk is byte-identical to Stage 0.
-                let thirst = Thirst {
-                    params: self.params,
-                };
-                let thermal = Thermal {
-                    niche: npc.temperature_niche,
-                    terrain: self.terrain,
-                    day: WorldTime { day },
-                    // THE THRESHOLD's crossing: the creature's ACTUAL current
-                    // anchor, tracked by `occupancy` and walked by the
-                    // `MoveWithin` arm below — not merely the room's landing
-                    // anchor. `affect_of_memo`'s stateless snapshot read
-                    // still uses the landing-only reading
-                    // (`landing_interior`); this per-tick walk is the one
-                    // place carrying real per-tick state (`Occupancy`) to
-                    // track something better.
-                    interior: occupancy.at(npc.entity).map(|a| (&interior, a)),
-                };
-                let rest = Fatigue {
-                    home: npc.home.clone(),
-                };
-                let hunger = Hunger {
-                    urgency: hunger_urgency,
-                    niche: npc.niche.clone(),
-                    terrain: self.terrain,
-                    day: WorldTime { day },
-                };
-                let danger = Danger {
-                    terrain: self.terrain,
-                    threat_niche: npc.threat_niche,
-                    boldness: npc.boldness,
-                    // THE ALARM: the tick's mover READS the per-tick field (built
-                    // alarm-free above), so a calm creature beside genuine distress
-                    // catches the alarm and flees. Empty on the settled worlds
-                    // (no primary distress) ⇒ byte-identical.
-                    alarm: Some(&alarm),
-                    // THE SHUDDER: the mover also carries the creature's own
-                    // remembered dread — the transient half of the same fold that
-                    // gave it `believed_hazard`, read at its OWN cell and added
-                    // into the same slot as the sensed alarm. Empty on the settled
-                    // worlds (no emitter ⇒ the fold's fast path records none) ⇒
-                    // byte-identical.
-                    dread: Some(&memory.dread),
-                };
-                // Affiliation (The Belonging): loneliness + home-step, from one
-                // plan home (reused, so urgency is O(1)).
-                let plan_home = plan_to_room(&pos, &npc.home, PLAN_BUDGET, &view.believed_hazard);
-                let social = Social {
-                    loneliness: loneliness_from_plan(&plan_home),
-                    home_step: plan_home.and_then(|p| p.into_iter().next()),
-                };
-                // The metabolism gate (The Kindling): Ametabolic → no drives.
-                // The niche gate (The Provender): an empty diet → no hunger.
-                // Danger (The Dread) and social (The Belonging) ride the same
-                // metabolic gate (a construct does not flinch or pine); danger is
-                // niche-less, social's gregariousness uniform in v1.
-                let ametabolic = matches!(npc.metabolic_class, MetabolicClass::Ametabolic);
-                let mut drives: Vec<&dyn Drive> = Vec::new();
-                if !ametabolic {
-                    drives.push(&thirst);
-                    drives.push(&thermal);
-                    drives.push(&rest);
-                    if !npc.niche.is_zero() {
-                        drives.push(&hunger);
-                    }
-                    drives.push(&danger);
-                    drives.push(&social);
-                }
-                let helpless = !ametabolic && learned_helplessness(last_drank, day);
-                let disposition = Disposition {
-                    latency: npc.deliberation_latency,
-                    horizon: npc.time_horizon,
-                    helpless,
-                    awake: is_awake(npc.activity, self.terrain, &pos, WorldTime { day }),
-                };
-                let resolution =
-                    arbitrate(&view, &npc.home, &drives, &disposition, mode, PLAN_BUDGET);
                 mode = resolution.mode;
                 match resolution.intent {
                     Intent::Do(Action::MoveTo(n)) => {
@@ -3934,41 +4251,23 @@ impl<'a> DriveMovements<'a> {
                     }
                     Intent::Hold => {
                         // Idle (or unreachable): jump to the next act-crossing
-                        // in closed form rather than spinning day-by-day. The
-                        // strict-progress guarantee: `next_act <= day` breaks
-                        // (a thirsty-but-unreachable Hold recomputes the SAME
-                        // next_act every iteration — without this check, that
-                        // spins to `MAX_STEPS` for nothing).
-                        //
-                        // Held at a fixed cell, thirst rises linearly at that
-                        // cell's COUPLED rate (The Kindling: temperature is
-                        // sampled once per occupancy segment, so a held cell has
-                        // a constant rate and the jump stays closed-form): the
-                        // next crossing is `day + (act − drive) / rate_here`.
-                        //
-                        // A degenerate `rate == 0.0` makes `next_act` NaN or
-                        // infinite. Every NaN comparison is `false`, so leaving
-                        // `day` untouched (rather than assigning it) keeps
-                        // `drive` well-defined next iteration. Without this guard
-                        // a NaN `day` makes `drive` NaN, flipping the thirst
-                        // check into the plan-home branch — a budgeted A* search
-                        // every remaining iteration up to `MAX_STEPS`, an
-                        // O(MAX_STEPS * PLAN_BUDGET) blowup (the-surmise T3
-                        // review) instead of the intended cheap spin. `steps >=
-                        // MAX_STEPS` alone still bounds the loop.
-                        let rate_here = rise_at(
-                            self.terrain.temperature(&pos, WorldTime { day }),
-                            npc.metabolic_class,
+                        // in closed form rather than spinning day-by-day
+                        // (`hold_step`, shared with catch-up below — see its
+                        // own doc for the physical meaning of the jump and
+                        // the strict-progress guarantee that bounds it).
+                        match hold_step(
+                            day,
+                            &pos,
+                            npc,
+                            self.terrain,
+                            drive,
                             &self.params,
-                        );
-                        let next_act = day + (self.params.act - drive) / rate_here;
-                        if !next_act.is_finite() {
-                            continue;
+                            self.to.day,
+                        ) {
+                            HoldStep::Stall => continue,
+                            HoldStep::GiveUp => break,
+                            HoldStep::Advance(next) => day = next,
                         }
-                        if next_act <= day || next_act > self.to.day {
-                            break;
-                        }
-                        day = next_act;
                     }
                     Intent::Do(Action::MoveWithin(next)) => {
                         // THE THRESHOLD's crossing, now live. Fine movement
@@ -4703,6 +5002,22 @@ impl Occupancy {
         }
         self.0.insert(who, (room, to));
         true
+    }
+
+    /// Place `who` directly at `at` in `room`, bypassing [`Self::walk`]'s
+    /// one-hop walkability check. The Threshold task 7's own use: catch-up,
+    /// once its replay budget ([`CATCH_UP_STEP_CAP`]) is spent on a
+    /// long-unobserved creature, gives up stepping through the interior hop
+    /// by hop and places it straight at its drive-preferred anchor instead
+    /// (spec §5.3, "beyond a named cap ... places the creature at its
+    /// drive-preferred anchor") — a deliberate skip, not a bug: the whole
+    /// point of a bounded replay budget is that a long absence costs O(1)
+    /// work rather than one iteration per within-room hop that would
+    /// otherwise have occurred. Callers elsewhere should almost always
+    /// prefer [`Self::walk`] — this exists for exactly the one case where
+    /// stepping through is what the budget was spent trying to avoid.
+    pub fn place(&mut self, who: EntityId, room: &RoomAddr, at: AnchorId) {
+        self.0.insert(who, (room.clone(), at));
     }
 
     /// Forget `who` entirely. This is the bubble collapsing (or a creature
@@ -11404,5 +11719,429 @@ mod tests {
         let mut occ = Occupancy::default();
         occ.depart(npc_id(1));
         assert!(occ.at(npc_id(1)).is_none());
+    }
+
+    /// An overlay marking a room BUILT while delegating everything else to a
+    /// planted terrain — the same fixture task 6's own hearth-crossing test
+    /// uses, reused here rather than re-derived: catch-up's tests need a
+    /// composed (`interior_of`) hearth-bearing room exactly as that test did.
+    struct BuiltOverlay<'a> {
+        inner: &'a PlantedTerrain,
+    }
+    impl Terrain for BuiltOverlay<'_> {
+        fn elevation(&self, r: &RoomAddr) -> f64 {
+            self.inner.elevation(r)
+        }
+        fn is_fresh_water(&self, r: &RoomAddr) -> bool {
+            self.inner.is_fresh_water(r)
+        }
+        fn temperature(&self, r: &RoomAddr, d: WorldTime) -> f64 {
+            self.inner.temperature(r, d)
+        }
+        fn is_built(&self, _r: &RoomAddr) -> bool {
+            true
+        }
+    }
+
+    /// A cold-adapted `Npc` standing in `home`, otherwise inert on every
+    /// OTHER drive (ignorant of water, empty diet, no hazards, already
+    /// home) — the shared fixture the catch-up tests below build on, so
+    /// Thermal is provably the ONLY drive that can ever move it.
+    fn cold_thermal_npc(entity: EntityId, home: RoomAddr, niche: ConditionResponse) -> Npc {
+        Npc {
+            entity,
+            home: home.clone(),
+            resource: home,
+            species: "test".to_string(),
+            activity: ActivityCycle::Diurnal,
+            temperature_niche: niche,
+            deliberation_latency: 0.0,
+            time_horizon: 0.0,
+            metabolic_class: MetabolicClass::Endotherm,
+            // An EMPTY diet: no hunger drive to rule out.
+            niche: ResourceVector::new(&[]).unwrap(),
+            boldness: 0.5,
+            threat_niche: mortal_threat_niche(),
+            label: "test".to_string(),
+        }
+    }
+
+    #[test]
+    fn catch_up_reconstructs_the_within_room_position_across_an_unobserved_gap() {
+        // The campaign's own headline scenario (spec §5): a creature that
+        // entered a hearth-bearing room long before this tick's own `from`
+        // must NOT still read as standing at the door — that is the
+        // observer-effect bug this task exists to close. `from == to`
+        // isolates catch-up's own contribution: the live walk below it
+        // gets at most one `decide_step` call, and (as this scenario's
+        // sole active drive, Thermal, can only ever propose `MoveTo` or
+        // `MoveWithin`) that call's `MoveTo`/`MoveWithin` arms both check
+        // `day > self.to.day` BEFORE touching `occupancy` — so any
+        // occupancy progress this test observes is catch-up's alone, not
+        // the live walk's.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // The exact niche/ambient task 6's own hearth-crossing test uses
+        // (see that test's own comment for why: strictly decreasing,
+        // unsaturated urgency at every one of the composed chain's four
+        // anchors).
+        let niche = ConditionResponse {
+            optimum: 6.0,
+            width: 12.0,
+            devotion: 0.5,
+        };
+        let ambient = -19.75;
+        let planted = PlantedTerrain::thermal([
+            (home.clone(), ambient),
+            (ns[0].clone(), ambient),
+            (ns[1].clone(), ambient),
+            (ns[2].clone(), ambient),
+        ]);
+        let terrain = BuiltOverlay { inner: &planted };
+
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let e = ledger.mint_entity();
+        // Entered the room at a waking moment (sidesteps the sleep gate),
+        // long before `from` — the unobserved gap catch-up must close.
+        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        commit_agent_at(&mut ledger, &reg, e, &home, entry_day);
+
+        let npc = cold_thermal_npc(e, home.clone(), niche);
+        // A ONE-day gap — generous for the composed chain's 3-hop journey
+        // (task 6's own finding), but short enough that Fatigue's own
+        // `last_rested` fold (defaulted to `0.0`, no `rested` fact in this
+        // ledger) never crosses `FATIGUE_ACT` (0.85 at `FATIGUE_RISE`
+        // 0.3/day ⇒ ~2.8 days) and competes for the arbitration this test
+        // means to isolate to Thermal.
+        let now = WorldTime {
+            day: entry_day + 1.0,
+        };
+        let sys = DriveMovements {
+            npcs: vec![npc],
+            from: now,
+            to: now,
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let (facts, occ) = sys.step_with_occupancy(&ledger);
+        assert!(
+            facts.is_empty(),
+            "an instantaneous tick (from == to) leaves the live walk nothing \
+             to commit on its own, so every fact here would have to be \
+             catch-up's — and catch-up must commit none: {facts:?}"
+        );
+
+        let interior = interior_of(&home, &terrain);
+        let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
+        let end = occ
+            .at(e)
+            .expect("catch-up leaves the creature standing somewhere");
+        assert_ne!(
+            end, landing_anchor,
+            "5 unobserved days in a hearth-bearing cold room must NOT still \
+             read as standing at the door"
+        );
+        assert!(
+            warmth_at(&interior, end, 64) > warmth_at(&interior, landing_anchor, 64),
+            "catch-up must leave the creature somewhere strictly warmer than \
+             the door it would otherwise still be read at"
+        );
+    }
+
+    #[test]
+    fn catch_up_commits_nothing() {
+        // Requirement 2: catch-up must commit nothing, ever — a projection
+        // rebuild with side effects is a corrupted rebuild (spec §5.4).
+        // Call `catch_up` directly (it never even receives a `&mut Ledger`
+        // to write through) and prove real replay work happened first
+        // (occupancy actually moves off the landing anchor), so the
+        // before/after equality below is not vacuously true because
+        // nothing ran.
+        use crate::interior::AnchorKind;
+        let mut interior = Interior::new();
+        let door = interior.push(AnchorKind::Threshold, None);
+        let hearth = interior.push(AnchorKind::Hearth, None);
+        interior.connect(door, hearth);
+
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // The exact niche/ambient `thermal_serviceability_scores_the_within_
+        // room_step_by_warmth_gained` uses: −15 °C is inside `cold_niche`'s
+        // tolerance once the hearth's own (undecayed) warmth is folded in,
+        // so a single hop from the door reaches comfort. EVERY neighbour
+        // plants the SAME ambient (not just `home`): an UNplanted neighbour
+        // reads `INFINITY`, which `Thermal::urgency_of` treats as "already
+        // comfortable" (`0.0`) — an artifact that would make the room-scale
+        // `MoveTo` candidate falsely outscore the real within-room
+        // improvement `MoveWithin` offers, arbitration never even reaching
+        // this test's own point.
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -15.0),
+            (ns[0].clone(), -15.0),
+            (ns[1].clone(), -15.0),
+            (ns[2].clone(), -15.0),
+        ]);
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), cold_niche());
+
+        let ledger = Ledger::default();
+        let mut occ = Occupancy::default();
+        occ.place(npc.entity, &home, door);
+        let mut believed: Option<RoomAddr> = None;
+        let hazard = HazardMemory::default();
+        let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
+        let visited: std::collections::BTreeSet<RoomAddr> = [home.clone()].into_iter().collect();
+
+        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let before = ledger.len();
+        let _mode = catch_up(
+            entry_day,
+            entry_day + 1.0,
+            &home,
+            &npc,
+            &terrain,
+            &mut believed,
+            &hazard,
+            &alarm,
+            &visited,
+            0.0,
+            0.0,
+            0.0,
+            &mut occ,
+            &interior,
+            Mode::Idle,
+            &SUSTENANCE,
+            PLAN_BUDGET,
+            &ledger,
+            &[],
+            CATCH_UP_STEP_CAP,
+        );
+        let after = ledger.len();
+
+        assert_eq!(
+            occ.at(npc.entity),
+            Some(hearth),
+            "sanity: catch-up must have actually replayed the one hop to the \
+             hearth, or the length equality below proves nothing"
+        );
+        assert_eq!(
+            before, after,
+            "catch-up must never commit a fact to the ledger"
+        );
+    }
+
+    #[test]
+    fn catch_up_is_order_independent_across_creatures() {
+        // spec §5.4: two creatures catching up toward the same hearth must
+        // give the same result in either order — free today (anchors have
+        // no capacity, plans are independent) but silent to break the
+        // moment capacity/`beside(host)` arrives. Assert it now, while it
+        // is still free, so a future capacity change has a red test to
+        // catch the regression at.
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        let niche = ConditionResponse {
+            optimum: 6.0,
+            width: 12.0,
+            devotion: 0.5,
+        };
+        let ambient = -19.75;
+        let planted = PlantedTerrain::thermal([
+            (home.clone(), ambient),
+            (ns[0].clone(), ambient),
+            (ns[1].clone(), ambient),
+            (ns[2].clone(), ambient),
+        ]);
+        let terrain = BuiltOverlay { inner: &planted };
+
+        let entry_day = waking_offset(ActivityCycle::Diurnal);
+        let reg = agent_at_reg();
+        let mut ledger = Ledger::default();
+        let a = ledger.mint_entity();
+        let b = ledger.mint_entity();
+        commit_agent_at(&mut ledger, &reg, a, &home, entry_day);
+        commit_agent_at(&mut ledger, &reg, b, &home, entry_day);
+
+        // A ONE-day gap, same reasoning as the reconstruction test above:
+        // generous for the 3-hop journey, short of Fatigue's own act
+        // threshold.
+        let now = WorldTime {
+            day: entry_day + 1.0,
+        };
+        let forward = DriveMovements {
+            npcs: vec![
+                cold_thermal_npc(a, home.clone(), niche),
+                cold_thermal_npc(b, home.clone(), niche),
+            ],
+            from: now,
+            to: now,
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let (_f1, occ_forward) = forward.step_with_occupancy(&ledger);
+
+        let reversed = DriveMovements {
+            npcs: vec![
+                cold_thermal_npc(b, home.clone(), niche),
+                cold_thermal_npc(a, home.clone(), niche),
+            ],
+            from: now,
+            to: now,
+            params: SUSTENANCE,
+            terrain: &terrain,
+        };
+        let (_f2, occ_reversed) = reversed.step_with_occupancy(&ledger);
+
+        assert_eq!(
+            occ_forward.at(a),
+            occ_reversed.at(a),
+            "creature a's catch-up result must not depend on iteration order"
+        );
+        assert_eq!(
+            occ_forward.at(b),
+            occ_reversed.at(b),
+            "creature b's catch-up result must not depend on iteration order"
+        );
+
+        let interior = interior_of(&home, &terrain);
+        let landing_anchor = landing(&interior, seam_kind(true)).expect("a built room lands");
+        assert_ne!(
+            occ_forward.at(a),
+            Some(landing_anchor),
+            "sanity: this must exercise real catch-up movement, or \
+             order-independence is checking nothing"
+        );
+    }
+
+    #[test]
+    fn catch_up_is_exact_under_the_cap_and_approximate_over_it() {
+        // spec §5.3's own instruction: "put the test AT THE CROSSOVER, not
+        // in the middle of either regime." A corridor interior LONGER than
+        // a small, test-local `cap` (passed directly to `catch_up`,
+        // matching every other search budget in this module — see that
+        // function's own doc for why this is cheap rather than paying for
+        // the real 1000-iteration `CATCH_UP_STEP_CAP`): UNDER the cap,
+        // replay is EXACT — it lands exactly as many hops down the
+        // corridor as the elapsed budget allowed, nowhere near the hearth.
+        // OVER the cap (a longer elapsed budget, still short of what the
+        // FULL corridor needs), the cap — not the horizon — ends the
+        // replay, and the fallback then jumps straight to the hearth,
+        // skipping every anchor still between it and where replay stopped.
+        use crate::interior::AnchorKind;
+        const CAP: usize = 5;
+        const LEN: usize = CAP + 3; // longer than the cap can ever traverse
+        let mut interior = Interior::new();
+        let mut anchors = Vec::with_capacity(LEN);
+        for i in 0..LEN {
+            let kind = if i == LEN - 1 {
+                AnchorKind::Hearth
+            } else {
+                AnchorKind::Ground
+            };
+            let id = interior.push(kind, None);
+            if let Some(&prev) = anchors.last() {
+                interior.connect(prev, id);
+            }
+            anchors.push(id);
+        }
+
+        let home = raddr(1.0);
+        let ns = home.neighbors();
+        // Every neighbour plants the SAME ambient as `home` (not just
+        // `home` itself) — an unplanted neighbour reads `INFINITY`, which
+        // `Thermal::urgency_of` treats as "already comfortable" (`0.0`),
+        // falsely outscoring the real within-room improvement `MoveWithin`
+        // offers (`catch_up_commits_nothing`'s own doc hit this first).
+        //
+        // `cold_niche`'s narrower width (8.0) SATURATES `serviceability`
+        // (which reads the CLAMPED `urgency_of`, unlike `warmest_anchor`'s
+        // own raw-deviation comparison `affordance` uses) once two anchors
+        // both sit more than one band-width past the edge — exactly what a
+        // corridor this long (7 hops of `WARMTH_DECAY`) does by its far
+        // end, making every step past the first read as ZERO improvement
+        // to `arbitrate`'s utility scan even though `affordance` still
+        // wants to take it. Task 6's own hearth-crossing test hit this
+        // same trap and is why its niche is `width: 12.0`, not the
+        // off-the-shelf `cold_niche`/`warm_niche` (see that test's own
+        // comment) — reused here for the same reason, at an ambient
+        // (`−15`) chosen so `urgency_of` stays strictly monotonic and
+        // unsaturated across the WHOLE corridor, not just three hops.
+        let niche = ConditionResponse {
+            optimum: 6.0,
+            width: 12.0,
+            devotion: 0.5,
+        };
+        let terrain = PlantedTerrain::thermal([
+            (home.clone(), -15.0),
+            (ns[0].clone(), -15.0),
+            (ns[1].clone(), -15.0),
+            (ns[2].clone(), -15.0),
+        ]);
+        let npc = cold_thermal_npc(npc_id(1), home.clone(), niche);
+        let ledger = Ledger::default();
+        let entry_day = waking_offset(ActivityCycle::Diurnal);
+
+        let run = |horizon: f64| -> Option<AnchorId> {
+            let mut occ = Occupancy::default();
+            occ.place(npc.entity, &home, anchors[0]);
+            let mut believed: Option<RoomAddr> = None;
+            let hazard = HazardMemory::default();
+            let alarm: std::collections::BTreeMap<RoomAddr, f64> = Default::default();
+            let visited: std::collections::BTreeSet<RoomAddr> =
+                [home.clone()].into_iter().collect();
+            let _mode = catch_up(
+                entry_day,
+                horizon,
+                &home,
+                &npc,
+                &terrain,
+                &mut believed,
+                &hazard,
+                &alarm,
+                &visited,
+                0.0,
+                0.0,
+                0.0,
+                &mut occ,
+                &interior,
+                Mode::Idle,
+                &SUSTENANCE,
+                LEN + 10, // a routing budget generous enough never to be the
+                // limiting factor here — `CAP` is what this test exercises.
+                &ledger,
+                &[],
+                CAP,
+            );
+            occ.at(npc.entity)
+        };
+
+        // UNDER the cap: elapsed allows CAP - 1 = 4 replayed hops, so the
+        // loop exhausts its horizon (not the cap) and lands 4 hops down the
+        // corridor. The extra half-step of slack absorbs float summation
+        // drift between `entry_day + 4.0 * MOVE_WITHIN_DURATION` (computed
+        // once) and `catch_up`'s own `day += MOVE_WITHIN_DURATION` run four
+        // times in a row — the two need not land on the identical f64, and
+        // an exact boundary would make this test's own arithmetic, not the
+        // mechanism, decide whether the 4th hop lands in time.
+        let under = run(entry_day + 4.5 * MOVE_WITHIN_DURATION);
+        assert_eq!(
+            under,
+            Some(anchors[4]),
+            "under the cap, catch-up is EXACT: it must land exactly as far \
+             down the corridor as the elapsed budget allowed, not the hearth"
+        );
+
+        // OVER the cap: elapsed is generous (far more than CAP hops would
+        // need, but still short of the LEN-hop corridor), so the cap ends
+        // the replay after exactly CAP hops, and the fallback jumps
+        // straight to the hearth.
+        let over = run(entry_day + 1.0);
+        assert_eq!(
+            over,
+            Some(anchors[LEN - 1]),
+            "over the cap, catch-up is APPROXIMATE: it must give up hopping \
+             and place the creature directly at its drive-preferred anchor \
+             (the hearth), not merely stop CAP hops down the corridor"
+        );
     }
 }
