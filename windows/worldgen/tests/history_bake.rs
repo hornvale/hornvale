@@ -641,10 +641,11 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
 /// [`value_flat_fixture`]'s world, baked over twenty 25-year epochs — long
 /// enough that the relations it forms have epochs left to actually collect
 /// over. "A relation stands" and "tribute flowed" are genuinely different
-/// claims: a remittance is paid out of the epoch's growth increment (spec
-/// §4.2), so a relation formed on the last epoch of a bake would move nothing
-/// at all. Shared by every value-flat test, so they bake one world between
-/// them rather than two identical ones.
+/// claims: a remittance is paid out of the epoch's growth first and only then
+/// out of the stock standing above `FARM_FLOOR` (spec §4.2b), so a relation
+/// formed on the last epoch of a bake collects once and learns nothing.
+/// Shared by every value-flat test, so they bake one world between them
+/// rather than two identical ones.
 fn value_flat_history() -> hornvale_worldgen::history_bake::History {
     value_flat_history_with(std::collections::BTreeMap::new())
 }
@@ -686,16 +687,18 @@ fn tribute_flows_along_a_standing_relation() {
     // nothing moved along it. What must be true now is that the relation is a
     // conduit — wealth leaves the subordinate and lands in the patron's store.
     //
-    // The other half of §4.2's claim — that being milked is SURVIVABLE — is
-    // deliberately NOT asserted here, because in this fixture no census reading
-    // can carry it. A headcount identity (`alive_at_now == records_total`) is
-    // unreddenable by any tribute defect: starvation needs population at
-    // `COLLAPSE_PRESSURE` times capacity, the logistic growth term is bounded
-    // BY capacity, and tribute only ever LOWERS population — so nobody here can
-    // die however hard they are farmed, and a subordinate drained to nothing
-    // stays alive at zero. The survival claim is bound instead where the state
-    // it is about is visible: `no_subordinate_ends_an_epoch_below_where_it_
-    // began_it` (in `history_bake.rs`) drives the real epoch loop and reads the
+    // The other half of the claim — that being farmed is SURVIVABLE, which
+    // since amendment 3 means "never bled through `FARM_FLOOR`" (spec §4.2b,
+    // §8.3) — is deliberately NOT asserted here, because in this fixture no
+    // census reading can carry it. A headcount identity (`alive_at_now ==
+    // records_total`) is unreddenable by any tribute defect: starvation needs
+    // population at `COLLAPSE_PRESSURE` times capacity, the logistic growth
+    // term is bounded BY capacity, and tribute only ever LOWERS population —
+    // so nobody here can die however hard they are farmed, and a subordinate
+    // drained to nothing stays alive at zero. The survival claim is bound
+    // instead where the state it is about is visible:
+    // `no_subordinate_is_farmed_below_the_farm_floor_by_tribute` (in
+    // `history_bake.rs`) drives the real epoch loop and reads the
     // per-subordinate population between epochs, which a finished `History`
     // does not carry.
     let h = value_flat_history();
@@ -715,48 +718,56 @@ fn tribute_flows_along_a_standing_relation() {
 }
 
 #[test]
-fn concealment_lowers_the_direct_term_over_a_structurally_invariant_fixture() {
+fn concealment_moves_what_a_patron_collects_and_since_the_bleed_it_moves_it_up() {
     // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —
-    // but read narrowly what this fixture can and cannot show (T4 review,
-    // Important 1: the original name, `an_insular_world_yields_less_tribute_
-    // than_an_expansive_one`, stated a whole-world proposition this test does
-    // not measure, and which is FALSE on seed 42).
+    // and **restated at task 5b, because amendment 3 inverted what it
+    // measures.** The history is worth keeping, because the inversion is a
+    // finding about the amended mechanism and not a defect in it:
     //
-    // `value_flat_fixture()` is value-FLAT: every cell is worth the same to
-    // every people, so no raid ever redistributes territory and history
-    // cannot diverge between the two arms. A span sweep (20/40/80/160 epochs)
-    // confirmed formations, alive counts and standing relations are IDENTICAL
-    // between the expansive and insular arms at every span checked —
-    // concealment cannot change WHICH communities exist or WHICH relations
-    // form here, only what moves along the relations that do form. So this
-    // test binds the **direct term only** (an insular people conceals more of
-    // what it already owes, on a world where that is the only thing free to
-    // vary), not the whole-world total. The assertions below are sound and
-    // unweakened; only the name and this comment change.
+    //   * T4 built this as `an_insular_world_yields_less_tribute_than_an_
+    //     expansive_one`, which its own review cut back to a DIRECT-term claim
+    //     (`concealment_lowers_the_direct_term_over_a_structurally_invariant_
+    //     fixture`) after the whole-world proposition proved FALSE on seed 42:
+    //     `tribute_collected` ROSE +9.1% (6002.56 -> 6549.04) with concealment
+    //     switched on, because a concealing vassal lives longer and pays for
+    //     more epochs than it discounts per epoch.
+    //   * Amendment 3 (spec §4.2b) then brought that inversion onto THIS
+    //     fixture too, and the reason is structural rather than incidental.
+    //     Concealment scales the AVAILABILITY (`(surplus + bleed) × (1 −
+    //     concealment)`), and the bleed makes availability the whole stock
+    //     above `FARM_FLOOR` — normally far above the standing demand. So the
+    //     `min` selects the assessment branch on most collections and the
+    //     concealment factor never binds there at all. What concealment now
+    //     does is shield the vassal: it is bled more slowly, stays larger,
+    //     keeps clearing its patron's demand, and therefore pays MORE over the
+    //     span, not less. Measured here: insular 419.87 vs expansive 412.60
+    //     (+1.8%) over 20 epochs and 244 collections in each arm.
     //
-    // **This does NOT generalize, and on seed 42 it is false the other way.**
-    // Concealment lengthens a milked subordinate's life (it dies less, so
-    // relations stand longer instead of collapsing and re-forming), and
-    // standing longer at a lower per-collection rate outweighs the lower rate
-    // itself: seed 42's `tribute_collected` ROSE +9.1% (6002.56 -> 6549.04)
-    // when concealment was switched on, even though the per-collection rate
-    // fell (see `.superpowers/sdd/task-4-report.md`, "What the knob did"). A
-    // structurally-flat fixture like this one cannot show that divergence,
-    // because it has no history left to diverge — the direct term measured
-    // here and the whole-world total are different claims, and only the
-    // direct one is safe to read off this test. Task 6's attribution must
-    // read `tribute_collected` alongside `tribute_collection_events` and
-    // `tribute_relations_at_now`, not sign this term off the direct effect
-    // alone.
+    // **The direct term itself is unmoved and is still bound**, in
+    // `an_insular_subordinate_remits_less_than_an_expansive_one` (in
+    // `history_bake.rs`), which compares the two radii against the SAME state
+    // in a single epoch — the only frame in which "insular remits less" is a
+    // statement about concealment rather than about two different histories.
+    //
+    // What this test binds is the pair of claims that survive the amendment,
+    // and both are sharp:
+    //
+    //   (a) the fixture is genuinely structurally invariant — same formations,
+    //       same transfers, same standing relations, same collections, same
+    //       records, same survivors — so the arms differ in what MOVED and in
+    //       nothing else; and
+    //   (b) concealment is NOT INERT: the totals differ. Delete the term (a
+    //       concealment of zero for everybody) and the two arms become
+    //       bit-identical, which reddens (b) — mutation-verified.
     //
     // The two arms are the same world, the same seed, the same span and the
     // same peoples; they differ in EXACTLY ONE input — the authored
     // `in_group_radius` of the peoples that live in it — so only concealment
-    // can explain the gap between what the patrons collected.
-    //
-    // Both arms must actually collect: an "insular collects less" read off two
-    // worlds where no relation ever formed, or where nothing ever grew to be
-    // taxed, is a pass on two zeros.
+    // can explain the gap between what the patrons collected. Task 6's
+    // attribution must therefore read `tribute_collected` alongside
+    // `tribute_collection_events` and `tribute_relations_at_now`: with the
+    // bleed in place, a concealment knob moves the volume by moving the PAYER,
+    // not by moving the rate.
     let expansive: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 1.0)).collect();
     let insular: std::collections::BTreeMap<KindId, f64> =
@@ -771,17 +782,55 @@ fn concealment_lowers_the_direct_term_over_a_structurally_invariant_fixture() {
     );
     assert!(
         ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
-        "precondition: tribute must flow in BOTH arms — 'less' over two zeros \
+        "precondition: tribute must flow in BOTH arms — a difference over two zeros \
          proves nothing: expansive {}, insular {}",
         ce.tribute_collected,
         ci.tribute_collected
     );
+    // (a) Structural invariance — what makes the comparison clean.
+    for (name, e, i) in [
+        (
+            "subordinations_formed",
+            ce.subordinations_formed,
+            ci.subordinations_formed,
+        ),
+        (
+            "patronage_transfers",
+            ce.patronage_transfers,
+            ci.patronage_transfers,
+        ),
+        (
+            "tribute_relations_at_now",
+            ce.tribute_relations_at_now,
+            ci.tribute_relations_at_now,
+        ),
+        (
+            "tribute_collection_events",
+            ce.tribute_collection_events,
+            ci.tribute_collection_events,
+        ),
+        ("records_total", ce.records_total, ci.records_total),
+        ("alive_at_now", ce.alive_at_now, ci.alive_at_now),
+        ("raided", ce.raided, ci.raided),
+        ("migrated", ce.migrated, ci.migrated),
+        ("collapsed", ce.collapsed, ci.collapsed),
+    ] {
+        assert_eq!(
+            e, i,
+            "the arms must differ in what MOVED and in nothing else: {name} is {e} expansive \
+             vs {i} insular, so this fixture is no longer structurally invariant and the \
+             comparison below would be reading two different histories"
+        );
+    }
+    // (b) …and concealment is not inert. Asserted with its measured SIGN,
+    //     which since the bleed runs the other way: a shielded vassal is a
+    //     larger vassal, and a larger vassal pays more.
     assert!(
-        ci.tribute_collected < ce.tribute_collected,
-        "on this structurally-invariant fixture, an insular people withholds \
-         more so the DIRECT term is lower — this does not generalize to the \
-         whole-world total (see the test's doc comment): \
-         insular {} vs expansive {}",
+        ci.tribute_collected > ce.tribute_collected,
+        "concealment must move what the patrons collected — and since amendment 3 it moves it \
+         UP, because what a vassal hides is people it keeps, and a vassal that keeps its people \
+         goes on clearing its patron's demand instead of being bled onto the floor: insular {} \
+         vs expansive {}. Equal totals mean the term is inert.",
         ci.tribute_collected,
         ce.tribute_collected
     );

@@ -63,7 +63,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
 stone: root Naonea /naonea/
 sun: root Noaboo /noaboo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -143,7 +143,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.6
 stone: root Naonea /naonea/
 sun: root Noagoo /noagoo/
-taiga: root Gaa /gaa/
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toaneo /toaneo/
@@ -233,7 +233,7 @@ tropical-rainforest: root Qoa /qoa/
 tropical-seasonal-forest: root Gootao /gootao/
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Daadaa /daadaa/
-upwelling: gap (experiential): no compound recipe for 'upwelling'
+upwelling: gap (experiential): no settlement in or beside upwelling
 water: root Daokaa /daokaa/
 wind: root Dooqoo /dooqoo/
 yellow: root Qaadoo /qaadoo/
@@ -279,7 +279,7 @@ kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 kobold-kind: root Roro /roro/
 light: root Xaxo /xaxo/
 many: root Rogrra /rogrra/
-mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
+mesopelagic: gap (experiential): no settlement in or beside mesopelagic
 moon: root Roqrra /roqrra/
 mountain: gap (experiential): kobold has no exposure to 'mountain'
 mouth: root Rakxo /rakxo/
@@ -309,7 +309,7 @@ temperate-grassland: gap (experiential): no settlement in or beside temperate-gr
 temperate-rainforest: root Xotro /xotro/
 tide: gap (experiential): kobold has no exposure to 'tide'
 tree: root Rakrra /rakrra/
-tropical-rainforest: root Rorro /rorro/
+tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
 tropical-seasonal-forest: root Ro /ro/
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Roxa /roxa/

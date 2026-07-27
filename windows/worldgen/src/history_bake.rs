@@ -177,6 +177,21 @@ const ASSESS_MAX: f64 = 0.5;
 /// comment is only its signpost. A save-format constant: changing it re-fights
 /// every world's history.
 const ADAPT_RATE: f64 = 0.2;
+/// The population a vassal may be bled down TOWARD but never through (spec
+/// §4.2b). A greedy patron shrinks its vassal — that is what closes the secular
+/// cycle inside the mechanism, because a shrinking vassal is the only way the
+/// health signal §4.3 feeds back on can go negative from tribute itself — but
+/// tribute alone must never end a community, so the floor sits at or above
+/// `VIABLE_MIN` and a bled vassal stays a viable community rather than a husk.
+///
+/// This constant is the amendment that reversed the earlier milk-don't-kill
+/// cap. Under that cap a remittance could not exceed the epoch's growth
+/// increment, so `population_after ≥ population_at_epoch_start` always and the
+/// tribute loop's own signal was non-negative by construction: the demand eased
+/// only when war, famine or climate hurt the vassal, never because the patron
+/// over-extracted. A save-format constant: changing it re-fights every world's
+/// history.
+const FARM_FLOOR: f64 = VIABLE_MIN;
 /// The most a maximally insular people withholds from its patron: the share of
 /// its surplus a people with `in_group_radius == 0.0` keeps out of sight (spec
 /// §4.2's concealment term). A maximally expansive people (`1.0`) conceals
@@ -490,9 +505,9 @@ struct Tribute {
     /// What the patron currently demands per epoch — set from what it can SEE
     /// (the subordinate's cell), never from what the subordinate has
     /// (spec §4.2). Clamped to `[0, eff_capacity × ASSESS_MAX]`. Read by
-    /// [`Bake::collect_tribute`], which pays out the lesser of this and the
-    /// subordinate's growth: the demand is what the patron *asks*, never what
-    /// it necessarily gets.
+    /// [`Bake::collect_tribute`], which pays out the lesser of this and what
+    /// the subordinate holds above `FARM_FLOOR` (spec §4.2b): the demand is
+    /// what the patron *asks*, never what it necessarily gets.
     ///
     /// The term is *opened* the moment a relation forms because that is when
     /// the patron takes its reading of the land, not when it first comes to
@@ -605,9 +620,10 @@ struct Bake<'a> {
     tribute: BTreeMap<usize, Tribute>,
     /// **This epoch's** growth increment per community, indexed exactly as
     /// `communities` is (`open` pushes a zero as it appends). A remittance is
-    /// paid out of the epoch's growth and never out of the standing stock
-    /// (spec §4.2), so collection needs the increment `grow` actually applied
-    /// — the difference between milking a subordinate and killing it.
+    /// paid out of the epoch's growth first and only then out of the standing
+    /// stock, down to `FARM_FLOOR` (spec §4.2b), so collection needs the
+    /// increment `grow` actually applied — both to know what the surplus was
+    /// and to tell it apart from the stock it stands on.
     ///
     /// Zeroed wholesale at the top of every epoch by [`Bake::begin_epoch`]. A
     /// stale increment surviving into the next epoch would be taxed again, and
@@ -1267,18 +1283,34 @@ impl<'a> Bake<'a> {
 
     /// Each patron collects from each of its subordinates: it demands what its
     /// assessment says (set from the cell it can SEE) and receives what the
-    /// subordinate hands over — paid from **that epoch's growth**, never the
-    /// standing stock, which is the difference between milking a community and
-    /// killing it. A fully-taxed subordinate is left exactly where it began the
-    /// epoch; it still grows in any epoch its patron under-assesses, just
-    /// slower.
+    /// subordinate hands over — paid from **that epoch's growth and, beyond it,
+    /// from the standing stock down to `FARM_FLOOR`** (spec §4.2b):
+    ///
+    /// ```text
+    /// bleed      = max(0, stock − FARM_FLOOR)
+    /// remittance = min(assessment, (surplus + bleed) × (1 − concealment))
+    /// ```
+    ///
+    /// **Amendment 3 reversed the earlier rule here, and the reversal is the
+    /// point.** A remittance used to be capped at the epoch's growth increment
+    /// — milk, never kill — which guaranteed `population_after ≥
+    /// population_at_epoch_start` and so made the health signal §4.3 feeds back
+    /// on non-negative from tribute BY CONSTRUCTION: the demand could ease only
+    /// when war, famine or climate hurt the vassal, never because the patron
+    /// over-extracted, and spec §1's over-extract → collapse → relax cycle did
+    /// not close inside the mechanism. A patron demanding more than the surplus
+    /// now genuinely shrinks its vassal, the signal goes negative from tribute
+    /// alone, the demand eases, and the vassal recovers.
+    ///
+    /// `FARM_FLOOR` is a floor and not an exemption: a vassal may be bled
+    /// toward it, never through it, so tribute alone still cannot end a
+    /// community (spec §8.3, restated).
     ///
     /// What is handed over is net of the subordinate's **concealment** (spec
     /// §4.2's third term, [`Bake::concealment_of`]): an insular people hides
-    /// more of its surplus from an outsider. Concealment scales the surplus
-    /// only — the cap is still this epoch's growth increment — so it can only
-    /// ever lower a remittance, never let one reach past the increment into
-    /// the standing stock.
+    /// more of what it owes from an outsider. Concealment scales the payment
+    /// only, so it can only ever lower a remittance — and therefore never
+    /// endanger the floor.
     ///
     /// The remittance lands in `stores`, never in `population` (spec §4.2a):
     /// tribute is wealth, not bodies, and a patron whose winnings entered the
@@ -1317,12 +1349,34 @@ impl<'a> Bake<'a> {
                 continue;
             }
             let surplus = self.epoch_growth[sub].max(0.0);
+            // What a greedy patron may reach into BEYOND the surplus: the stock
+            // standing above the floor (spec §4.2b's `bleed` term). This is the
+            // amendment — a demand larger than the increment now genuinely
+            // shrinks its vassal, which is the only way this loop's own health
+            // signal can go negative.
+            //
+            // Measured on the stock the epoch FOUND — `population` less this
+            // epoch's surplus — and not on `population` itself, which by this
+            // point already carries that surplus. Reading it off `population`
+            // double-counts the increment and lets a remittance reach THROUGH
+            // the floor by up to that increment; measured on this file's own
+            // floor fixture rather than supposed, a vassal that began an epoch
+            // at 3.157 was farmed to 1.746 under a `FARM_FLOOR` of 2.0. The
+            // floor is a floor and not an exemption (spec §4.2b), so the
+            // decomposition the spec states — this epoch's growth PLUS the
+            // stock above the floor — is implemented with `bleed` read against
+            // the stock. Their sum is then exactly what stands above the floor
+            // after growth, so `population_after ≥ FARM_FLOOR` whenever the
+            // stock reached the floor at all, and a stock already below it
+            // (war, famine, crowding — never tribute) is taken no lower.
+            let stock = self.communities[sub].population - surplus;
+            let bleed = (stock - FARM_FLOOR).max(0.0);
             // Concealment scales what is HANDED OVER, never what the cap is
-            // measured against: the ceiling stays this epoch's growth
-            // increment, so a hidden share is one the subordinate keeps, not
-            // one that lets the standing stock be reached for (spec §4.2).
+            // measured against, so a hidden share is one the subordinate keeps
+            // (spec §4.2) — and, since it can only ever LOWER a remittance, the
+            // floor above holds at any concealment.
             let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
-            let remittance = rel.assessment.min(surplus * (1.0 - conceal));
+            let remittance = rel.assessment.min((surplus + bleed) * (1.0 - conceal));
             self.communities[sub].population -= remittance;
             self.communities[rel.patron].stores += remittance;
             self.tally.tribute_collected += remittance;
@@ -2335,9 +2389,11 @@ mod tests {
     /// A patron on prime land beside a subordinate on prime land, with the
     /// relation already standing and its assessment set far above anything the
     /// subordinate's land could produce. The oversized assessment is what makes
-    /// the collection tests *discriminating*: under spec §4.2's rule the
-    /// remittance is then exactly the epoch's growth increment, and under the
-    /// wrong rule (taxing the standing stock) it would be the whole population.
+    /// the collection tests *discriminating*: under spec §4.2b's amended rule
+    /// the remittance is then exactly the epoch's growth increment PLUS the
+    /// stock standing above `FARM_FLOOR`, so the subordinate is bled onto the
+    /// floor exactly — and under a rule that ignored the floor it would be
+    /// bled through it, to nothing.
     fn tribute_pair<'a>(
         geo: &Geosphere,
         graphs: &'a [ConnectionGraph],
@@ -2379,15 +2435,21 @@ mod tests {
 
     #[test]
     fn a_patron_accumulates_stores_without_its_pressure_rising() {
-        // Spec §4.2 + §4.2a, the two halves of the slice's central claim:
-        //   (a) the remittance is paid out of THIS epoch's growth increment,
-        //       never the standing stock — so the subordinate is milked back to
-        //       exactly where it began the epoch, and no further;
+        // Spec §4.2b + §4.2a, the two halves of the slice's central claim:
+        //   (a) the remittance is paid out of THIS epoch's growth increment
+        //       AND the stock standing above `FARM_FLOOR` — so a patron
+        //       demanding more than the surplus bleeds its vassal down onto
+        //       the floor exactly, and no further. (Under the superseded cap
+        //       this half read "milked back to exactly where it began the
+        //       epoch, and no further"; amendment 3 reversed it, because a
+        //       vassal that cannot shrink cannot emit a negative health signal
+        //       and the cycle then never closes inside the mechanism.)
         //   (b) it lands in the patron's `stores`, never its `population`, so
         //       the patron's crowding pressure is bit-for-bit unmoved. A
         //       successful extractor that fed its winnings into `population`
         //       would drive itself into Famine, and the readout would report
         //       "accumulation does not chain" when the truth was self-harm.
+        //       **This half is untouched by the amendment** and stays.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
 
@@ -2405,11 +2467,13 @@ mod tests {
         let patron_population_before = bake.communities[patron].population;
         bake.collect_tribute(0.0, &era);
 
+        let takeable = increment + (sub_before_growth - FARM_FLOOR);
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
-            increment.to_bits(),
-            "the patron must receive exactly this epoch's growth increment \
-             ({increment}), not the standing stock ({sub_before_growth}): got {}",
+            takeable.to_bits(),
+            "the patron must receive exactly this epoch's growth increment ({increment}) plus \
+             the stock standing above the floor ({sub_before_growth} - {FARM_FLOOR}) = \
+             {takeable}: got {}",
             bake.communities[patron].stores
         );
         assert_eq!(
@@ -2423,14 +2487,20 @@ mod tests {
             "stores must never enter the pressure term (spec §4.2a)"
         );
         assert!(
-            (bake.communities[sub].population - sub_before_growth).abs() < 1.0e-9,
-            "a fully-taxed subordinate is milked back to exactly where it \
-             started the epoch, never below it: {} vs {sub_before_growth}",
+            (bake.communities[sub].population - FARM_FLOOR).abs() < 1.0e-9,
+            "a fully-bled subordinate is left on the floor exactly, never below it: {} vs \
+             {FARM_FLOOR} (it began the epoch at {sub_before_growth})",
+            bake.communities[sub].population
+        );
+        assert!(
+            bake.communities[sub].population < sub_before_growth,
+            "…and it ends the epoch BELOW where it began it ({} vs {sub_before_growth}) — the \
+             bleed is what lets the health signal go negative from tribute alone (spec §4.2b)",
             bake.communities[sub].population
         );
         assert_eq!(
             bake.tally.tribute_collected.to_bits(),
-            increment.to_bits(),
+            takeable.to_bits(),
             "the run total must count what actually moved"
         );
         assert_eq!(
@@ -2445,15 +2515,18 @@ mod tests {
         // The growth buffer is strictly per-epoch (spec §4.2's "that epoch's
         // growth"). A stale increment left standing would be re-taxed every
         // epoch forever — the same surplus milked repeatedly out of a community
-        // that never grew again, which is the standing stock by another name.
-        // This is the one test that catches a missing `begin_epoch`; the
-        // growth-vs-stock discrimination itself is asserted next door, in
-        // `a_patron_accumulates_stores_without_its_pressure_rising`.
+        // that never grew again. This is the one test that catches a missing
+        // `begin_epoch`, and it still binds under amendment 3: this fixture's
+        // oversized assessment bleeds the subordinate onto `FARM_FLOOR` in the
+        // first epoch, so in the second the `bleed` term is exactly zero and
+        // `surplus` is the ONLY thing that could move wealth. A stale increment
+        // would move it, and both assertions below would redden.
         //
-        // The between-epochs survival check below is load-bearing rather than
-        // decorative: a rule taxing the stock drains this subordinate to zero
-        // in the FIRST epoch, after which "no growth ⇒ no tribute" would hold
-        // vacuously and the second epoch would prove nothing at all.
+        // The between-epochs survival check is load-bearing rather than
+        // decorative: it is `FARM_FLOOR` that leaves a bled subordinate
+        // standing at all, and without it this subordinate would be drained to
+        // nothing in the FIRST epoch, after which "no growth ⇒ no tribute"
+        // would hold vacuously and the second epoch would prove nothing.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
 
@@ -2481,13 +2554,15 @@ mod tests {
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
             stores_after_one.to_bits(),
-            "an epoch with no growth yields no tribute: {} vs {stores_after_one}",
+            "an epoch with no growth yields no tribute from a subordinate already on the floor: \
+             {} vs {stores_after_one}",
             bake.communities[patron].stores
         );
         assert_eq!(
             bake.communities[sub].population.to_bits(),
             sub_after_one.to_bits(),
-            "a subordinate that did not grow must not be taxed on its stock"
+            "a subordinate that did not grow, and holds nothing above the floor, must hand \
+             over nothing at all"
         );
         assert_eq!(
             bake.tally.tribute_collection_events, 2,
@@ -2674,18 +2749,31 @@ mod tests {
     }
 
     #[test]
-    fn no_subordinate_ends_an_epoch_below_where_it_began_it() {
-        // Spec §8.3's survival claim — tribute MILKS, it never kills — stated
-        // as something a defect can actually redden.
+    fn no_subordinate_is_farmed_below_the_farm_floor_by_tribute() {
+        // Spec §8.3 as amendment 3 restates it (spec §4.2b): tribute may bleed
+        // a vassal TOWARD `FARM_FLOOR` but never through it.
         //
-        // The census-level headcount that used to carry this claim
-        // (`alive_at_now == records_total`, over the integration fixture)
-        // cannot: starvation needs `population >= COLLAPSE_PRESSURE *
-        // capacity`, and the logistic growth term is bounded BY capacity, so
-        // in a quiet world nobody can starve however hard they are farmed —
-        // and a subordinate drained to zero does not die, it sits there alive
-        // at zero. The claim only has teeth against the per-subordinate
-        // population BETWEEN epochs, which `bake()` never exposes.
+        // **This replaces `no_subordinate_ends_an_epoch_below_where_it_began_
+        // it`, which is no longer true and no longer the invariant.** That
+        // guard asserted the milk-don't-kill cap — a remittance bounded by the
+        // epoch's growth increment — and the cap is exactly what the amendment
+        // removed: a bled vassal is now SUPPOSED to end an epoch below where it
+        // began, because that is the only way the tribute loop's own health
+        // signal can go negative and the secular cycle can close inside the
+        // mechanism. What survives from the old test unchanged is the reason it
+        // BOUND: the same hand-driven epoch loop, the same attributability
+        // (nothing but tribute moves a population in this world), and the same
+        // tightness precondition — the floor must be TOUCHED, not merely
+        // respected with slack to spare.
+        //
+        // The census-level headcount cannot carry this claim
+        // (`alive_at_now == records_total`, over the integration fixture):
+        // starvation needs `population >= COLLAPSE_PRESSURE * capacity`, and
+        // the logistic growth term is bounded BY capacity, so in a quiet world
+        // nobody can starve however hard they are farmed — and a subordinate
+        // drained to zero does not die, it sits there alive at zero. The claim
+        // only has teeth against the per-subordinate population BETWEEN epochs,
+        // which `bake()` never exposes.
         //
         // So this drives the bake's own epoch loop by hand — `begin_epoch`,
         // every alive community through `step_community`, then
@@ -2693,20 +2781,18 @@ mod tests {
         // cell is ever worth more than its neighbour, every raid the real rule
         // resolves is a subordination, and (asserted below) no war, eviction or
         // famine fires. `grow` and `collect_tribute` are then the ONLY two
-        // things that move a population, so the floor is attributable to
-        // tribute alone.
+        // things that move a population, so a population at the floor is
+        // attributable to tribute alone.
         //
         // Note (T4 review, Minor 2): `hand_bake` sets `in_group_radius` to
         // `no_radius()` — concealment 0 throughout — so the shipped
         // configuration (every goblinoid authored below full transparency)
         // is never exercised here. The floor holds for ANY concealment by
-        // construction (`conceal` is clamped into `[0, CONCEAL_MAX] =
-        // [0, 0.5]`, so `remittance <= surplus` regardless of the radius),
-        // but this test's precondition cannot simply be re-run at
-        // concealment > 0: once a subordinate keeps part of its surplus,
-        // nobody is milked of their WHOLE increment anymore, so the
-        // `taxed_to_the_floor > 0` tightness precondition below would
-        // redden, not the floor assertion itself. Left at concealment 0
+        // construction (concealment only ever LOWERS a remittance, and the
+        // remittance is bounded by `surplus + bleed` before concealment
+        // touches it), but at concealment > 0 a vassal is bled toward the
+        // floor more slowly, so the `bled_to_the_floor > 0` tightness
+        // precondition below would need a longer run. Left at concealment 0
         // deliberately, not as an oversight.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
@@ -2734,17 +2820,18 @@ mod tests {
             );
         }
 
-        /// Epochs driven — long enough that relations form early and then
-        /// collect for most of the run.
+        /// Epochs driven — long enough that relations form early, collect for
+        /// most of the run, and bleed a vassal all the way down onto the floor.
         const EPOCHS: usize = 20;
         /// Years per driven epoch (the bake's own default step).
         const EPOCH_YEARS: f64 = 25.0;
-        // Slack for the float round-trip of `(p + increment) - increment`; the
-        // floor is otherwise touched exactly, see `taxed_to_the_floor`.
+        // Slack for the float round-trip of `(p + increment) - remittance`; the
+        // floor is otherwise touched exactly, see `bled_to_the_floor`.
         const EPS: f64 = 1.0e-9;
         let mut floor_checks = 0_u32;
         let mut milked_epochs = 0_u32;
-        let mut taxed_to_the_floor = 0_u32;
+        let mut bled_below_where_it_began = 0_u32;
+        let mut bled_to_the_floor = 0_u32;
         for epoch in 0..EPOCHS {
             let year = epoch as f64 * EPOCH_YEARS;
             bake.begin_epoch();
@@ -2771,24 +2858,28 @@ mod tests {
                 };
                 let ended = bake.communities[sub].population;
                 assert!(
-                    ended >= start - EPS,
-                    "epoch {epoch}: subordinate {sub} ended at {ended}, BELOW the {start} \
-                     it began the epoch at. A remittance is capped by that epoch's growth \
-                     (spec §4.2), so tribute may take a community's whole increment and \
-                     never one head of its standing stock."
+                    ended >= FARM_FLOOR - EPS,
+                    "epoch {epoch}: subordinate {sub} was farmed to {ended}, THROUGH the \
+                     {FARM_FLOOR} floor (it began the epoch at {start}). A patron may bleed \
+                     its vassal toward `FARM_FLOOR` but never past it: tribute alone must \
+                     never end a community (spec §4.2b, §8.3)."
                 );
-                if (ended - start).abs() < EPS {
-                    taxed_to_the_floor += 1;
+                if ended < start - EPS {
+                    bled_below_where_it_began += 1;
+                }
+                if (ended - FARM_FLOOR).abs() < EPS {
+                    bled_to_the_floor += 1;
                 }
                 floor_checks += 1;
             }
         }
 
-        // Anti-vacuity: the floor above is worthless unless relations formed,
-        // wealth actually moved along them, and the bound was TIGHT — a
-        // subordinate milked of its whole increment sits exactly ON the floor,
-        // which is what makes "one head below" a reddening difference rather
-        // than slack absorbed by an unspent margin.
+        // Anti-vacuity — the same three guards that made the superseded floor
+        // bind, plus the one the amendment adds. The floor above is worthless
+        // unless relations formed, wealth actually moved along them, the bleed
+        // this floor bounds actually engaged, and the bound was TIGHT: a vassal
+        // bled to exactly `FARM_FLOOR` is what makes "one head below" a
+        // reddening difference rather than slack absorbed by an unspent margin.
         assert!(
             bake.tally.subordinations_formed > 0,
             "precondition: a relation must form before any floor means anything"
@@ -2804,10 +2895,16 @@ mod tests {
             bake.tally.tribute_collected
         );
         assert!(
-            taxed_to_the_floor > 0,
-            "precondition: some subordinate must have been milked of its WHOLE \
-             increment, or the floor is never touched and never discriminating \
-             ({floor_checks} readings, none tight)"
+            bled_below_where_it_began > 0,
+            "precondition: the bleed must have ENGAGED — some subordinate must have ended an \
+             epoch below where it began it ({floor_checks} readings, none bled). A floor that \
+             only ever bounds a population moving upward is not being read at all (spec §4.2b)."
+        );
+        assert!(
+            bled_to_the_floor > 0,
+            "precondition: some subordinate must have been bled ONTO the floor, or the floor \
+             is never touched and never discriminating ({floor_checks} readings, \
+             {bled_below_where_it_began} bled, none tight)"
         );
         // Attributability: nothing else in this world moves a population.
         assert_eq!(
@@ -2821,6 +2918,176 @@ mod tests {
         assert_eq!(
             bake.tally.migrated, 0,
             "no cell turns hostile here: a migration would confound the floor"
+        );
+    }
+
+    #[test]
+    fn an_over_milked_vassal_shrinks_and_its_patron_eases_off() {
+        // Spec §4.2b, the whole point of amendment 3: the "over-extract →
+        // collapse → relax" cycle §1 sells must close INSIDE the tribute
+        // mechanism, not through the rest of the model.
+        //
+        // Under the superseded cap it could not. A remittance bounded by the
+        // epoch's growth increment guarantees `population_after ≥
+        // population_at_epoch_start`, so the health signal §4.3 feeds back on
+        // was non-negative from tribute by construction: the demand eased only
+        // when war, famine, climate or crowding hurt the vassal. Here the full
+        // arc is asserted in order, on a fixture where **nothing but tribute
+        // can shrink the vassal**:
+        //
+        //   1. the vassal ends an epoch BELOW where it began it (the bleed),
+        //   2. its patron's demand then FALLS (the signal went negative from
+        //      tribute alone, which is the loop closing), and
+        //   3. it is never bled through `FARM_FLOOR`.
+        //
+        // The world is value-flat, so eviction cannot fire; `raided`,
+        // `migrated` and `collapsed` are all asserted zero, so a falling
+        // population provably has exactly one cause. The relation forms through
+        // the real `maybe_raid` path and the pair is driven through the bake's
+        // own epoch loop, so the demand that over-reaches is the one the bake
+        // sets (`eff_capacity × ASSESS_RATE`), not one a test wrote in.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        // 40 clears 10 × RAID_MARGIN four times over, and the land is
+        // value-flat, so the only prize on offer is the neighbour's product.
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            40.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            10.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+
+        /// Epochs driven — long enough for the relation to form, over-reach,
+        /// bleed the vassal down and ease off.
+        const EPOCHS: usize = 20;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+        /// Slack for the float round-trip of `(p + increment) - remittance`.
+        const EPS: f64 = 1.0e-9;
+
+        // The first epoch in which the bleed engaged, and the arc it produced:
+        // (epoch, population at epoch start, population after collection,
+        //  demand the collection ran on, demand it left behind).
+        let mut first_bleed: Option<(usize, f64, f64, f64, f64)> = None;
+        let mut bled = 0_u32;
+        let mut eased_after_a_bleed = 0_u32;
+        let mut low = bake.communities[sub].population;
+        for epoch in 0..EPOCHS {
+            let year = epoch as f64 * EPOCH_YEARS;
+            bake.begin_epoch();
+            let began = bake.communities[sub].population;
+            let alive: Vec<usize> = (0..bake.communities.len())
+                .filter(|&i| bake.communities[i].alive)
+                .collect();
+            for idx in alive {
+                bake.step_community(idx, &era, year);
+            }
+            // The standing demand the collection is about to run on, read AFTER
+            // formation so the epoch a relation opens in counts too.
+            let demanded = bake.tribute.get(&sub).map(|t| (t.patron, t.assessment));
+            bake.collect_tribute(year, &era);
+            let ended = bake.communities[sub].population;
+            low = low.min(ended);
+            let Some((patron_before, demand_before)) = demanded else {
+                continue; // not yet subordinated
+            };
+            let (patron_after, demand_after) = bake
+                .tribute
+                .get(&sub)
+                .map(|t| (t.patron, t.assessment))
+                .expect("the relation must still stand: nothing closes in this world");
+            // The arc is only readable while the SAME patron holds the vassal —
+            // a transfer resets the assessment to the new patron's opening
+            // demand, which would look like an easing and is not one.
+            assert_eq!(
+                patron_before, patron_after,
+                "epoch {epoch}: the patronage changed hands mid-epoch; a transfer resets the \
+                 demand and the easing arc below would be reading the reset, not the feedback"
+            );
+            assert_eq!(
+                patron_after, patron,
+                "epoch {epoch}: the vassal must be held by the patron this fixture built"
+            );
+            if ended < began - EPS {
+                bled += 1;
+                if demand_after < demand_before {
+                    eased_after_a_bleed += 1;
+                }
+                if first_bleed.is_none() {
+                    first_bleed = Some((epoch, began, ended, demand_before, demand_after));
+                }
+            }
+        }
+
+        // Attributability: nothing else in this world moves a population, so a
+        // vassal that shrank was shrunk by tribute.
+        assert_eq!(
+            bake.tally.raided, 0,
+            "value-flat world: no eviction, so no war loss can be mistaken for the bleed"
+        );
+        assert_eq!(
+            bake.tally.migrated, 0,
+            "no cell turns hostile here: a migration would confound the bleed"
+        );
+        assert_eq!(
+            bake.tally.collapsed, 0,
+            "nobody starves here: a famine death would confound the bleed"
+        );
+        assert!(
+            bake.tally.tribute_collected > 0.0,
+            "precondition: tribute must actually have flowed ({})",
+            bake.tally.tribute_collected
+        );
+
+        let (epoch, began, ended, demand_before, demand_after) = first_bleed.expect(
+            "the bleed never engaged: no epoch left the vassal below where it began it, so the \
+             health signal never went negative from tribute and the cycle does not close inside \
+             the mechanism (spec §4.2b)",
+        );
+        // (1) the bleed.
+        assert!(
+            ended < began - EPS,
+            "epoch {epoch}: the vassal must end BELOW where it began ({ended} vs {began})"
+        );
+        // (2) …and the demand eased BECAUSE of it. The demand it eased from
+        //     must be non-zero, or "the assessment fell" is a statement about a
+        //     demand that was already extinguished.
+        assert!(
+            demand_before > 0.0,
+            "epoch {epoch}: precondition — the standing demand must be non-zero before it can \
+             meaningfully fall ({demand_before})"
+        );
+        assert!(
+            demand_after < demand_before,
+            "epoch {epoch}: the vassal shrank from {began} to {ended} — from TRIBUTE, nothing \
+             else moves a population here — so the patron must ease its demand: {demand_after} \
+             vs the {demand_before} it collected on. This is the arc amendment 3 exists to \
+             close (spec §4.2b)."
+        );
+        assert_eq!(
+            bled, eased_after_a_bleed,
+            "every epoch that bled the vassal must have eased the demand ({bled} bled, \
+             {eased_after_a_bleed} eased): a bleed that left the demand standing is a signal \
+             that did not reach the controller"
+        );
+        // (3) …and the floor held throughout.
+        assert!(
+            low >= FARM_FLOOR - EPS,
+            "the vassal was bled THROUGH the floor to {low} (floor {FARM_FLOOR}): a patron may \
+             bleed toward it, never past it (spec §4.2b, §8.3)"
         );
     }
 
@@ -3250,15 +3517,20 @@ mod tests {
     /// (0.6, tried first) empties the cell whatever the assessment does.
     ///
     /// It stands in for the population movers a one-pair fixture cannot fire —
-    /// a war loss (`WAR_LOSS`, 0.3), a famine, a cell turned hostile — and it
-    /// is load-bearing for these tests rather than decorative. **Tribute alone
-    /// can never lower a subordinate's population**: a remittance is capped by
-    /// that epoch's growth increment, so a milked community ends an epoch at
-    /// worst exactly where it began it (`no_subordinate_ends_an_epoch_below_
-    /// where_it_began_it`). The negative half of the health signal therefore
-    /// only ever arrives from *outside* the tribute loop, and a test that did
-    /// not supply it would be measuring a one-signed rule and calling it a
-    /// feedback.
+    /// a war loss (`WAR_LOSS`, 0.3), a famine, a cell turned hostile.
+    ///
+    /// **It was load-bearing before amendment 3 and is merely a disturbance
+    /// after it.** Under the superseded cap a remittance could not exceed the
+    /// epoch's growth increment, so tribute alone could never lower a
+    /// subordinate's population, the negative half of the health signal could
+    /// only ever arrive from *outside* the tribute loop, and a test that did
+    /// not supply it would have been measuring a one-signed rule and calling it
+    /// a feedback. Since spec §4.2b a greedy patron shrinks its vassal by
+    /// itself (`an_over_milked_vassal_shrinks_and_its_patron_eases_off` asserts
+    /// exactly that, with no shock anywhere in it). The shock is kept here
+    /// because these two tests are about the CONTROLLER's stability under a
+    /// disturbance it does not cause, which is a different question from
+    /// whether the loop closes.
     const SHOCK: f64 = 0.8;
 
     #[test]
@@ -3625,11 +3897,17 @@ mod tests {
         // actually claims it — a subordinate never ends an epoch below where
         // it began — is owned by `no_subordinate_ends_an_epoch_below_where_it_
         // began_it`, over a fixture with no exogenous blow in it at all. What
-        // this run leaves recorded is the shape of the trap: a vassal held
-        // below the size at which its own increment covers the standing demand
-        // is milked flat, and a flat vassal emits signal `0.0`, so the demand
-        // stops easing. That is a finding about the mechanism, not a defect in
-        // it, and spec §5's secondary axis is where it is adjudicated.
+        // this run leaves recorded is the shape of the trap the pre-amendment
+        // rule had: a vassal held below the size at which its own increment
+        // covered the standing demand was milked exactly flat, and a flat
+        // vassal emits signal `0.0`, so the demand stopped easing. Spec §4.2b
+        // is the answer to that trap — a vassal below that size is now bled
+        // instead of held flat, so it emits a NEGATIVE signal and the demand
+        // eases — and the trap survives here only in the degenerate corner
+        // where the vassal is already sitting on `FARM_FLOOR` with nothing
+        // above it to give. Survival at the scale the model claims it is owned
+        // by `no_subordinate_is_farmed_below_the_farm_floor_by_tribute`, over a
+        // fixture with no exogenous blow in it at all.
         let low = populations
             .iter()
             .copied()
