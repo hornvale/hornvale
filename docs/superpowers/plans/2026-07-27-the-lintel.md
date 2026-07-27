@@ -410,6 +410,13 @@ a committed-history input via the thermal drive."
 
 - [ ] **Step 1: Write the failing tests**
 
+**Register the module in the same step.** Add `pub mod brief;` to
+`windows/vessel/src/lib.rs` now, *before* running the tests. A test-only file
+that is not in the module tree is not compiled at all, so the test filter
+matches **zero tests** and you learn nothing from Step 2 — "it failed to
+compile" is the signal you want, not "0 tests ran". (Task 1's implementer hit
+exactly this and worked around it; the plan is corrected here.)
+
 Create `windows/vessel/src/brief.rs`:
 
 ```rust
@@ -670,6 +677,11 @@ Add inside the existing `hornvale_kernel::stream_labels! { … }` block in `wind
 ```
 
 - [ ] **Step 2: Write the failing tests**
+
+**Register the module in the same step** — add `pub mod structure;` to
+`windows/vessel/src/lib.rs` before running the tests, or the file is not
+compiled and the filter matches zero tests rather than failing (see Task 3's
+note).
 
 Create `windows/vessel/src/structure.rs` with the doc header and tests:
 
@@ -939,6 +951,11 @@ so the stream position never depends on how many collisions occurred."
 **Why this exists rather than reusing the locale describer — measured, not assumed.** `hornvale locale --world W --at 10,20 --depth 21` returns `biome: bathypelagic · elevation -4149 m · regime: unremarkable ground sun-warmed dry in a hollow`. It runs at chamber depth and produces *terrain* prose, with the micro-regime descriptor changing per depth because the noise samples at the room's own scale. Pointed at a 3 m room it would describe a dwelling as seafloor.
 
 - [ ] **Step 1: Write the failing tests**
+
+**Register the module in the same step** — add `pub mod chamber_prose;` to
+`windows/vessel/src/lib.rs` before running the tests, or the file is not
+compiled and the filter matches zero tests rather than failing (see Task 3's
+note).
 
 Create `windows/vessel/src/chamber_prose.rs`:
 
