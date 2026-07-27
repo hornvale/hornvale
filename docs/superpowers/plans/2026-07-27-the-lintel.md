@@ -756,7 +756,13 @@ mod tests {
     }
 
     #[test]
-    fn a_different_seed_or_locale_gives_a_different_structure() {
+    fn a_different_locale_gives_a_different_structure() {
+        // NOTE the honest name. This asserts only LOCALE-keying, and it is
+        // near-tautological: `child_path` clones the locale's path before
+        // appending drawn digits, so two locales differ at the inherited prefix
+        // whatever the draw does. Kept because the prefix-inheritance property
+        // is itself worth pinning — but it does NOT show the seed is read.
+        // `the_draw_is_keyed_to_the_world_seed` below is what covers that.
         let here = structure_at(&locale(), &built_brief(), Seed(42), WALK).expect("built");
         let mut elsewhere_path = locale().path;
         elsewhere_path[0] = (elsewhere_path[0] + 1) % 4;
@@ -768,6 +774,23 @@ mod tests {
         assert_ne!(
             here.chambers, there.chambers,
             "a structure is keyed to its own locale"
+        );
+    }
+
+    #[test]
+    fn the_draw_is_keyed_to_the_world_seed() {
+        // Hold the locale FIXED and vary only the seed. Asserting that two
+        // arbitrary seeds differ would be a coin flip on a small space (a count
+        // in 1..=4 plus 18 drawn bits), so assert the weaker non-flaky property
+        // that actually matters: the seed is read at all.
+        let l = locale();
+        let b = built_brief();
+        let structures: Vec<_> = (0..8u64)
+            .map(|s| structure_at(&l, &b, Seed(s), WALK).expect("built"))
+            .collect();
+        assert!(
+            structures.iter().any(|s| *s != structures[0]),
+            "eight seeds at one locale produced identical structures — the draw ignores the world seed"
         );
     }
 
@@ -817,6 +840,15 @@ use hornvale_kernel::{RoomAddr, Seed};
 /// would make "every deep address is a place" true by accident.
 /// type-audit: bare-ok(count)
 pub const MAX_CHAMBERS: usize = 4;
+
+// The collision scan in `structure_at` varies only the LAST base-4 digit
+// (`RoomAddr.path` holds child indices 0..4; `pack` rejects anything else), so
+// it can only guarantee a free value while `MAX_CHAMBERS <= 4`: with at most
+// `MAX_CHAMBERS - 1` prior chambers sharing a prefix, pigeonhole leaves one of
+// the four digit values open. Raising `MAX_CHAMBERS` past 4 without widening the
+// scan reintroduces an unbounded loop — so the coupling is asserted at compile
+// time rather than left as a coincidence of two independent `4`s.
+const _: () = assert!(MAX_CHAMBERS <= 4);
 
 /// The sparse set of chambers standing at one built locale.
 /// type-audit: bare-ok(index: links)
