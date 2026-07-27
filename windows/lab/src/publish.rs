@@ -1,6 +1,7 @@
 //! Publish a run result's summary and charts as book artifacts.
 
 use crate::RunResult;
+use crate::census_guard::{current_hostname, require_canonical_host_for};
 use crate::chart::charts_for;
 use crate::summary::render_summary;
 use std::fs;
@@ -40,7 +41,15 @@ fn remove_stale_artifacts(dir: &Path) -> std::io::Result<()> {
 /// subdirectories are untouched by construction.
 ///
 /// Returns the written paths, sorted.
+///
+/// Refuses (decision 0063) if `result.study.name` is a census study and
+/// `base_dir` is the committed goldens directory, unless running on the
+/// canonical census host — see `crate::census_guard`. Every caller inherits
+/// this: it is the choke point every publish route funnels through.
 pub fn publish(result: &RunResult, base_dir: &Path) -> std::io::Result<Vec<PathBuf>> {
+    require_canonical_host_for(&result.study.name, base_dir, &current_hostname())
+        .map_err(|message| std::io::Error::new(std::io::ErrorKind::PermissionDenied, message))?;
+
     let study_dir = base_dir.join(&result.study.name);
     fs::create_dir_all(&study_dir)?;
 

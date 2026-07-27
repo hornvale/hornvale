@@ -118,3 +118,4 @@ In the context of <situation>, facing <problem/forces>, we decided
 | [0076](0076-the-situated-pole-is-egocentric-and-knowledge-limited.md) | The scene protocol's situated pole is egocentric and knowledge-limited | Accepted |
 | [0077](0077-zoom-in-the-room-mesh-is-path-truncation.md) | Zoom in the room mesh is path truncation; the chart may show a scale the body cannot enter | Accepted |
 | [0078](0078-thresholded-classification-artifacts-are-platform-local.md) | An artifact dominated by thresholded classifications is drift-checked platform-locally, not in CI | Accepted |
+| [0079](0079-census-goldens-are-authored-on-one-enforced-host.md) | Census goldens are authored on one host, and it is enforced | Accepted |
