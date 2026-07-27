@@ -213,6 +213,32 @@ const CONCEAL_MAX: f64 = 0.5;
 /// (goblin, hobgoblin) already sit, so a bake handed no psyche data behaves
 /// like a median patron rather than like the cruellest one.
 const NEUTRAL_HORIZON: f64 = 0.5;
+/// How many OTHER vassals a patron must hold for its effective horizon to fall
+/// to half its authored one — spec §4.3c's portfolio effect, expressed as the
+/// one number the shape needs.
+///
+/// A patron holding many vassals treats each as more expendable, so it extracts
+/// harder from every one of them: the alternatives it has to any single
+/// relation are what make that relation disposable. This is why empires are
+/// crueller to distant provinces than to the core, and it produces the cruelty
+/// **structurally** — from the shape of the relation table — rather than
+/// authoring it as a personality.
+///
+/// **Why this matters beyond flavour.** The per-people axis
+/// ([`Bake::horizon_of`]) reaches only three values patron-side, and the short
+/// extreme (bugbear, 0.3) is also the only `Communal` short-horizon people, so
+/// a strategy read off `time_horizon` alone is partly confounded with
+/// `sociality` in any world-level reading. The holdings count is a property of
+/// the relation table, so it varies independently of that confound.
+///
+/// Three is chosen against the measured range rather than fitted: live worlds
+/// reach `max_subordinates` 6, so a patron at the observed maximum applies
+/// `1/(1 + 5/3) = 0.375` of its authored horizon — a kobold at the top of the
+/// distribution behaves about as an authored bugbear does, which is the
+/// intended reading (the biggest holder is as short-sighted as the shortest-
+/// sighted people) and not further. A save-format constant: changing it
+/// re-fights every world's history.
+const PORTFOLIO_HALVING: f64 = 3.0;
 
 /// The lower edge of the band where a fresh relation can pay for itself, as a
 /// fraction of the vassal's effective capacity — spec §4.3b's **low root**,
@@ -1253,6 +1279,59 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// The horizon a patron of this people actually applies to ONE relation,
+    /// given how many **other** vassals it holds — spec §4.3c's portfolio
+    /// effect, the campaign's second and structural source of strategy
+    /// variation.
+    ///
+    /// ```text
+    /// effective = horizon / (1 + others / PORTFOLIO_HALVING)
+    /// ```
+    ///
+    /// `others` is the count of the patron's *further* holdings, never the
+    /// relation in hand: a patron with a single vassal has no alternative to
+    /// it and applies its authored horizon unchanged, which keeps the anchor of
+    /// this rule exactly on the §4.3a behaviour it modulates. At the raid site
+    /// the same reading is "the vassals I already hold" — the alternatives to
+    /// the one I am contemplating — so both call sites pass the same quantity.
+    ///
+    /// **The shape is a hyperbola, and the choice is not arbitrary.** Three
+    /// properties are required and this is the simplest form with all of them:
+    ///
+    /// * **Monotone** — strictly decreasing in `others`, so more holdings
+    ///   always means a shorter horizon and the rule can never reverse itself
+    ///   on some range of the count.
+    /// * **Bounded and sign-safe** — the result lies in `(0, horizon]` for
+    ///   every count, so no patron can wrap into a negative or nonsensical
+    ///   horizon however many vassals it accumulates. A linear
+    ///   `horizon × (1 − others/K)` would go negative past `K` and would need a
+    ///   clamp that then flattens the top of the distribution; this saturates
+    ///   toward zero on its own.
+    /// * **Diminishing** — the step from one holding to two moves the horizon
+    ///   far more than the step from eight to nine, which is the right story:
+    ///   the FIRST alternative is what makes a vassal expendable, and the
+    ///   twentieth adds little.
+    ///
+    /// It also avoids the exponential's transcendental: this is one division,
+    /// IEEE-exact and libm-free, so it is the same bits on every platform
+    /// without going through `kernel::math` at all.
+    ///
+    /// **What the model does NOT have is marginality.** Spec §4.3c's image is
+    /// an empire crueller to its *distant provinces* than to its core, but a
+    /// one-level star carries no ordering over its points — no distance, no
+    /// seniority, no rank — so the shortening applies uniformly across a
+    /// patron's whole portfolio rather than picking out the marginal vassals.
+    /// The aggregate the spec asks for (a large holder extracts harder) is
+    /// produced; the within-portfolio gradient is not, and inventing an order
+    /// to fake it would be authoring the cruelty rather than deriving it.
+    ///
+    /// Reads the patron's **people** and a **count taken from the relation
+    /// table**, and nothing mutable — see [`Bake::collect_tribute`], which
+    /// snapshots the counts before the pass for exactly that reason.
+    fn effective_horizon(&self, people: KindId, others: usize) -> f64 {
+        self.horizon_of(people) / (1.0 + others as f64 / PORTFOLIO_HALVING)
+    }
+
     /// The stock a patron of this people steers its vassal toward — the
     /// setpoint the demand aims at (spec §4.3a), read off the vassal's cell
     /// (`eff`, what the patron can SEE) and the patron's own horizon.
@@ -1282,13 +1361,21 @@ impl<'a> Bake<'a> {
     /// whose capacity supports twice the floor the raw interpolation already
     /// sits above it.
     ///
-    /// Reads the patron's **people** and the subordinate's **cell** — both
-    /// immutable across a collection pass — so [`Bake::collect_tribute`]'s
-    /// order-independence survives this term. Nothing here reads the patron's
-    /// `stores`, `population` or subordinate count, which is exactly the reach
-    /// that would make the iteration order decide the outcome.
-    fn target_stock(&self, people: KindId, eff: f64) -> f64 {
-        let horizon = self.horizon_of(people);
+    /// **The horizon read here is the EFFECTIVE one** ([`Bake::
+    /// effective_horizon`]): a patron holding `others` further vassals aims
+    /// lower at every one of them, so a busy patron's setpoint sits nearer the
+    /// floor than a quiet patron of the same people (spec §4.3c). At
+    /// `others == 0` the term vanishes and this is exactly §4.3a's rule.
+    ///
+    /// Reads the patron's **people**, the subordinate's **cell**, and a
+    /// **count snapshotted before the collection pass** — none of them moving
+    /// across that pass — so [`Bake::collect_tribute`]'s order-independence
+    /// survives this term. Nothing here reads the patron's `stores` or
+    /// `population`, and nothing reads the LIVE relation table, which is
+    /// exactly the reach that would make the iteration order decide the
+    /// outcome.
+    fn target_stock(&self, people: KindId, others: usize, eff: f64) -> f64 {
+        let horizon = self.effective_horizon(people, others);
         (FARM_FLOOR + horizon * ((eff / 2.0) - FARM_FLOOR)).max(FARM_FLOOR)
     }
 
@@ -1331,12 +1418,24 @@ impl<'a> Bake<'a> {
     /// formula could express. That bounds the effect, and is said here so it is
     /// not rediscovered as a surprise.
     ///
-    /// Reads the raider's **people** and the target's **cell**, and nothing
-    /// else — no population of the patron's, no subordinate count, no stores —
-    /// so it cannot make the candidate scan's outcome depend on iteration
-    /// order, and it consumes no draw.
-    fn min_vassal(&self, people: KindId, eff: f64) -> f64 {
-        self.horizon_of(people) * crash_basin_fraction() * eff
+    /// **The horizon read here is the EFFECTIVE one** ([`Bake::
+    /// effective_horizon`]), and the composition with spec §4.3c is a real
+    /// consequence rather than an oversight: a patron that already holds
+    /// `others` vassals applies a shortened horizon, which lowers its own
+    /// minimum, so **a busy patron takes vassals a quiet one of the same people
+    /// would decline**. That is the same sentence §4.3c is written in — an
+    /// empire acquiring provinces it will farm carelessly — read at the moment
+    /// of acquisition instead of the moment of collection, and it is measured
+    /// rather than special-cased away.
+    ///
+    /// Reads the raider's **people**, the target's **cell**, and how many
+    /// vassals the raider holds — the last read ONCE, above the candidate walk
+    /// in [`Bake::maybe_raid`], since nothing in that walk mutates the relation
+    /// table. It reads no population of the patron's and no stores, so it
+    /// cannot make the candidate scan's outcome depend on the order of the
+    /// walk, and it consumes no draw.
+    fn min_vassal(&self, people: KindId, others: usize, eff: f64) -> f64 {
+        self.effective_horizon(people, others) * crash_basin_fraction() * eff
     }
 
     /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
@@ -1552,6 +1651,19 @@ impl<'a> Bake<'a> {
     /// a property of the subordinate's land.)
     fn collect_tribute(&mut self, year: f64, era: &EraClimate) {
         let relations: Vec<(usize, Tribute)> = self.tribute.iter().map(|(&s, &t)| (s, t)).collect();
+        // How many vassals each patron holds, taken from the SNAPSHOT and not
+        // from the live table (spec §4.3c). The count is what the portfolio
+        // effect reads, and reading it live would be the exact fragility this
+        // method's doc warns about: `self.tribute` is written inside the loop,
+        // so a live count would make every relation's outcome a function of
+        // where in the pass it was reached. (Today's writes replace a key with
+        // the same patron and so cannot move a count — which is precisely the
+        // kind of accident that stops being true one edit later.) Deterministic
+        // container, and the whole map is built before a single mutation.
+        let mut holdings: BTreeMap<usize, usize> = BTreeMap::new();
+        for (_, rel) in &relations {
+            *holdings.entry(rel.patron).or_insert(0) += 1;
+        }
         for (sub, rel) in relations {
             // Cheap, and the failure it guards is silent. `close` dissolves
             // both directions of every relation a dying community was party to
@@ -1591,7 +1703,14 @@ impl<'a> Bake<'a> {
             // documents below survives the new term.
             let sub_eff = self.eff_capacity(era, self.communities[sub].site);
             let patron_people = self.records[self.communities[rel.patron].record].people;
-            let target = self.target_stock(patron_people, sub_eff);
+            // …and by how many OTHER vassals this patron holds (spec §4.3c):
+            // the alternatives to this relation are what make it expendable, so
+            // the relation in hand is excluded. A patron holding only this one
+            // has no alternatives and applies its authored horizon unchanged.
+            // The count came from the snapshot above, so it is the same
+            // whatever order this pass runs in.
+            let others = holdings.get(&rel.patron).copied().unwrap_or(1) - 1;
+            let target = self.target_stock(patron_people, others, sub_eff);
             let bleed = (stock - target).max(0.0);
             // A vassal standing BELOW the setpoint is left to recover, not
             // merely taxed less: only the growth that carries it past the line
@@ -1857,6 +1976,16 @@ impl<'a> Bake<'a> {
         // candidate walk — but applied per-candidate, inside the else-chain,
         // so a vassal can still *evict*.
         let raider_is_vassal = self.tribute.contains_key(&raider);
+        // How many vassals this raider already holds — spec §4.3c's portfolio
+        // effect, read at the moment of acquisition. Hoisted for the same
+        // reason as the two bindings above: nothing in the candidate walk
+        // mutates the relation table, so the count cannot vary across it, and
+        // reading it once makes that structural rather than incidental.
+        let raider_holds = self
+            .tribute
+            .values()
+            .filter(|tr| tr.patron == raider)
+            .count();
         // (target index, that cell's value, the target's strength, its cell,
         //  and how a raid on it would resolve)
         let mut best: Option<(usize, f64, f64, CellId, Spoil)> = None;
@@ -1880,7 +2009,9 @@ impl<'a> Bake<'a> {
                 continue; // (1) a vassal takes no vassal — no depth (spec §4.4)
             } else if self.tribute.values().any(|tr| tr.patron == t) {
                 continue; // (2) a patron is not subordinated — no depth either
-            } else if self.communities[t].population < self.min_vassal(raider_people, t_val) {
+            } else if self.communities[t].population
+                < self.min_vassal(raider_people, raider_holds, t_val)
+            {
                 // (4) Too small to farm: a patron with foresight passes (spec
                 // §4.3b, `Bake::min_vassal`). Not a raid — nothing is tallied,
                 // nobody is touched; if this is the only candidate the raider
@@ -3690,6 +3821,266 @@ mod tests {
     }
 
     #[test]
+    fn a_busy_patron_extracts_harder_from_the_same_vassal_than_a_quiet_one() {
+        // Spec §4.3c, the portfolio effect — and the reason it is worth having
+        // on top of §4.3a: the per-people axis reaches only THREE values
+        // patron-side (bugbear 0.3 / hobgoblin 0.5 / kobold 0.8, goblin being
+        // raid-vetoed), and bugbear is both the short extreme AND the only
+        // `Communal` short-horizon people, so any world-level reading off
+        // `time_horizon` alone is partly confounded with `sociality`. The
+        // subordinate count is a property of the RELATION TABLE, not of a
+        // people, so it varies independently of that confound.
+        //
+        // **The two arms hold the patron people and its authored horizon
+        // FIXED** and differ in exactly one thing: how many OTHER vassals the
+        // same patron holds. Anything that varied the horizon here would be
+        // re-measuring §4.3a.
+        //
+        // The measurement is the campaign's own definition of extraction rate —
+        // remitted ÷ the vassal's standing population — and NOT total wealth.
+        // Those two disagree, which is the whole content of §4.3a: a patron
+        // sitting at maximum sustainable yield collects the largest absolute
+        // stream there is. "Extracts harder" means it takes a bigger share of a
+        // smaller vassal, so the rate is the statistic and the resting
+        // population is its shadow; both are asserted.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        /// The patron people's authored horizon, IDENTICAL on both arms —
+        /// kobold's value, the longest sighted the shipped roster reaches, so
+        /// the shortening has the widest room to show.
+        const HORIZON: f64 = 0.8;
+        /// How many further vassals the busy patron holds. Five holdings in
+        /// total is inside the range live worlds actually reach
+        /// (`max_subordinates` measured 6 at T5d), so this is not an
+        /// extrapolation off the end of the model.
+        const EXTRAS: usize = 4;
+        /// The population every vassal opens at — comfortably above the
+        /// quiet patron's setpoint, so BOTH arms bleed on the first collection
+        /// and neither reading starts from an empty relation.
+        const VASSAL_POP: f64 = 60.0;
+        /// The patron's own population. It never raids in this fixture (only
+        /// `grow` and `collect_tribute` are driven), so this is only its
+        /// standing size.
+        const PATRON_POP: f64 = 40.0;
+        /// Epochs driven — long enough for each arm to settle at its own
+        /// setpoint and for the settled rate, not the opening bleed, to
+        /// dominate the reading.
+        const EPOCHS: usize = 40;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+
+        // Only the patron people's entry carries the horizon; every other
+        // people is pinned identically on both arms, so a people change could
+        // not explain a difference even if one occurred.
+        let horizons: BTreeMap<KindId, f64> = [
+            (KindId("goblin"), HORIZON),
+            (KindId("kobold"), 0.0),
+            (KindId("hobgoblin"), 0.0),
+            (KindId("bugbear"), 0.0),
+        ]
+        .into_iter()
+        .collect();
+
+        // (total remitted by the focus vassal, the summed population it was
+        //  read against, where it was left standing)
+        let mut arms: Vec<(f64, f64, f64)> = Vec::new();
+        for extras in [0, EXTRAS] {
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+            bake.time_horizon = &horizons;
+            let ring = geo.neighbors(CellId(0));
+            assert!(
+                ring.len() > EXTRAS,
+                "precondition: the patron's cell must have room for {EXTRAS} further vassals \
+                 beside the focus one ({} neighbours)",
+                ring.len()
+            );
+            let patron = bake.open(
+                KindId("goblin"),
+                CellId(0),
+                0.0,
+                PATRON_POP,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            // The focus vassal — bit-for-bit the same community on both arms.
+            let focus = bake.open(
+                KindId("kobold"),
+                ring[0],
+                0.0,
+                VASSAL_POP,
+                Founding::Genesis(ring[0]),
+                None,
+                0.0,
+            );
+            let mut vassals = vec![focus];
+            for site in ring.iter().copied().skip(1).take(extras) {
+                vassals.push(bake.open(
+                    KindId("kobold"),
+                    site,
+                    0.0,
+                    VASSAL_POP,
+                    Founding::Genesis(site),
+                    None,
+                    0.0,
+                ));
+            }
+            // Relations are seated by hand rather than raided into existence,
+            // so the arms differ in the relation TABLE and in nothing else —
+            // no raid runs, no tally moves, and the extra vassals cannot reach
+            // the focus one through any path but the patron's holdings count.
+            // The assessment is deliberately oversized (this file's collection
+            // idiom, cf. `tribute_pair`): with the demand never binding, the
+            // remittance is exactly what stands above the patron's setpoint, so
+            // the reading is about the setpoint and nothing else.
+            for &v in &vassals {
+                bake.tribute.insert(
+                    v,
+                    Tribute {
+                        patron,
+                        assessment: 1.0e9,
+                        since: 0.0,
+                        last_seen_population: bake.communities[v].population,
+                    },
+                );
+            }
+
+            let mut taken = 0.0;
+            let mut population_seen = 0.0;
+            for epoch in 0..EPOCHS {
+                let year = epoch as f64 * EPOCH_YEARS;
+                bake.begin_epoch();
+                for &v in &vassals {
+                    let pressure = bake.pressure_of(v, &era);
+                    bake.grow(v, &era, year, pressure);
+                }
+                let before = bake.communities[focus].population;
+                bake.collect_tribute(year, &era);
+                // `grow` has already run and nothing else in this fixture moves
+                // a population, so the drop across the collection IS the focus
+                // vassal's remittance.
+                taken += (before - bake.communities[focus].population).max(0.0);
+                population_seen += before;
+            }
+            assert_eq!(
+                bake.tally.raided, 0,
+                "no raid is driven here: a war loss must not be mistaken for extraction"
+            );
+            assert_eq!(
+                bake.tally.collapsed, 0,
+                "nobody starves here: a famine death would confound the reading"
+            );
+            assert_eq!(
+                bake.tribute.len(),
+                vassals.len(),
+                "every seated relation must still stand: a dissolution would change the count \
+                 mid-run and the arms would no longer differ in one thing"
+            );
+            arms.push((taken, population_seen, bake.communities[focus].population));
+        }
+        let (quiet_took, quiet_seen, quiet_left) = arms[0];
+        let (busy_took, busy_seen, busy_left) = arms[1];
+
+        assert!(
+            quiet_took > 0.0 && busy_took > 0.0,
+            "precondition: BOTH patrons must actually have extracted from this vassal — \
+             'extracted harder' asserted over two zeros proves nothing: quiet took \
+             {quiet_took}, busy took {busy_took}"
+        );
+        let quiet_rate = quiet_took / quiet_seen;
+        let busy_rate = busy_took / busy_seen;
+        /// How much higher the busy patron's extraction rate must run for the
+        /// difference to be a STRUCTURAL strategy rather than float noise. A
+        /// rule that ignores the holdings count makes the two arms bit-identical
+        /// (ratio 1.0), so any margin above one reddens it; this one is set well
+        /// clear of that while still far under what the shipped
+        /// `PORTFOLIO_HALVING` produces at four extra vassals.
+        const MARKEDLY: f64 = 1.25;
+        assert!(
+            busy_rate > quiet_rate * MARKEDLY,
+            "a patron holding many vassals must treat each as more expendable (spec §4.3c): \
+             holding {EXTRAS} others it extracted at {busy_rate} of standing population, \
+             holding none at {quiet_rate} — under {MARKEDLY}× apart, which is what a model \
+             whose effective horizon ignores the holdings count looks like"
+        );
+        assert!(
+            busy_left < quiet_left,
+            "…and the shadow of that rate is a smaller vassal: the busy patron left \
+             {busy_left}, the quiet one {quiet_left}"
+        );
+    }
+
+    #[test]
+    fn a_patrons_effective_horizon_falls_monotonically_and_never_wraps() {
+        // The three shape requirements spec §4.3c's rule has to meet, bound
+        // rather than trusted — because the obvious formulation fails the
+        // second of them. A linear `horizon × (1 − others/K)` is monotone and
+        // anchored, and goes NEGATIVE past `K` holdings: a sufficiently
+        // successful patron would then steer its vassals to a setpoint below
+        // the floor, i.e. the rule would silently become an extermination
+        // order at the top of the distribution. Live worlds reach
+        // `max_subordinates` 6 today, but nothing bounds that, so the shape —
+        // not a clamp bolted on after it — has to be what makes it impossible.
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        /// The patron people's authored horizon under test — kobold's value,
+        /// the longest sighted the shipped roster reaches.
+        const HORIZON: f64 = 0.8;
+        /// How far up the holdings count to walk. Far past anything a live
+        /// world has produced (`max_subordinates` 6 at T5d), which is the
+        /// point: nothing in the model bounds a patron's holdings, so the rule
+        /// must stay sane where the measurements do not reach.
+        const ABSURD: usize = 500;
+        let horizons: BTreeMap<KindId, f64> = [(KindId("goblin"), HORIZON)].into_iter().collect();
+        bake.time_horizon = &horizons;
+
+        // (1) Anchored: holding no OTHER vassal applies the authored horizon
+        // exactly, so this rule modulates §4.3a rather than displacing it.
+        assert_eq!(
+            bake.effective_horizon(KindId("goblin"), 0).to_bits(),
+            bake.horizon_of(KindId("goblin")).to_bits(),
+            "a patron with a single vassal has no alternative to it and must apply its \
+             authored horizon unchanged"
+        );
+
+        // (2) Monotone, and (3) bounded into `(0, horizon]` the whole way up.
+        let mut previous = bake.effective_horizon(KindId("goblin"), 0);
+        for others in 1..=ABSURD {
+            let h = bake.effective_horizon(KindId("goblin"), others);
+            assert!(
+                h < previous,
+                "the effective horizon must fall strictly with every further holding: \
+                 {others} others gave {h}, {} others gave {previous}",
+                others - 1
+            );
+            assert!(
+                h > 0.0 && h <= HORIZON,
+                "the effective horizon must stay inside (0, {HORIZON}] at every count — a \
+                 patron with {others} vassals read {h}, which is a horizon no setpoint rule \
+                 can mean"
+            );
+            previous = h;
+        }
+
+        // …and the setpoint it feeds inherits the bound: even at an absurd
+        // holdings count the vassal is steered TOWARD the floor, never through
+        // it, which is the failure a sign flip would actually cause.
+        let target = bake.target_stock(KindId("goblin"), ABSURD, RICH);
+        assert!(
+            target >= FARM_FLOOR,
+            "a setpoint under the most extreme portfolio the shape admits must still sit at \
+             or above the floor: {target} vs {FARM_FLOOR}"
+        );
+        assert!(
+            target < bake.target_stock(KindId("goblin"), 0, RICH),
+            "…and below the quiet patron's setpoint, or the rule is doing nothing"
+        );
+    }
+
+    #[test]
     fn the_low_root_is_exactly_where_the_opening_demand_stops_being_payable() {
         // `crash_basin_fraction` is derived, never written down, so what needs
         // pinning is the ALGEBRA and not the number: at that fraction of a
@@ -3766,11 +4157,11 @@ mod tests {
         // The precondition that makes the result meaningful: this raider WOULD
         // have declined this same target as a vassal.
         assert!(
-            bake.communities[target].population < bake.min_vassal(KindId("goblin"), RICH),
+            bake.communities[target].population < bake.min_vassal(KindId("goblin"), 0, RICH),
             "precondition: the gate must bind on this pair ({} vs a minimum of {}), or the \
              eviction below proves only that the gate was never consulted",
             bake.communities[target].population,
-            bake.min_vassal(KindId("goblin"), RICH)
+            bake.min_vassal(KindId("goblin"), 0, RICH)
         );
 
         bake.maybe_raid(raider, &era, 0.0);
@@ -3808,12 +4199,12 @@ mod tests {
         let msy = RICH / 2.0;
         let neutral = FARM_FLOOR + NEUTRAL_HORIZON * (msy - FARM_FLOOR);
         assert_eq!(
-            bake.target_stock(KindId("goblin"), RICH).to_bits(),
+            bake.target_stock(KindId("goblin"), 0, RICH).to_bits(),
             neutral.to_bits(),
             "an unauthored people must be read at the middle of the axis, not at its bottom"
         );
         assert!(
-            bake.target_stock(KindId("goblin"), RICH) > FARM_FLOOR,
+            bake.target_stock(KindId("goblin"), 0, RICH) > FARM_FLOOR,
             "…and the middle of the axis must not collapse onto the floor, which is what \
              'absent means zero' would silently mean here"
         );
@@ -3830,7 +4221,7 @@ mod tests {
         bake.time_horizon = &broken;
         for people in ["goblin", "kobold", "bugbear"] {
             assert_eq!(
-                bake.target_stock(KindId(people), RICH).to_bits(),
+                bake.target_stock(KindId(people), 0, RICH).to_bits(),
                 neutral.to_bits(),
                 "a non-finite horizon must read as the neutral middle, not propagate"
             );
@@ -3866,14 +4257,14 @@ mod tests {
             marginal / 2.0
         );
         assert_eq!(
-            bake.target_stock(KindId("goblin"), marginal).to_bits(),
+            bake.target_stock(KindId("goblin"), 0, marginal).to_bits(),
             FARM_FLOOR.to_bits(),
             "a setpoint on marginal land must be raised back to the floor, never left below it"
         );
         // A dead cell (an era has made it worthless) is the degenerate case of
         // the same thing.
         assert_eq!(
-            bake.target_stock(KindId("goblin"), 0.0).to_bits(),
+            bake.target_stock(KindId("goblin"), 0, 0.0).to_bits(),
             FARM_FLOOR.to_bits(),
             "and a cell the era has killed must not put the setpoint at zero"
         );

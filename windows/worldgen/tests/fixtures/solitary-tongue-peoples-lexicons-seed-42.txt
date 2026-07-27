@@ -63,7 +63,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
 stone: root Naonea /naonea/
 sun: root Noaboo /noaboo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -223,7 +223,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -243,7 +243,7 @@ headedness: HeadFirst
 
 abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
-bathypelagic: gap (experiential): no settlement in or beside bathypelagic
+bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 blood: root Ra /ra/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
 bone: root Xo /xo/
@@ -294,7 +294,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Rarakrarogrra /rarakrarogrra/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Xogrra /xogrra/
-shrubland: gap (experiential): no settlement in or beside shrubland
+shrubland: root Roro /roro/
 sibling: root Rotrra /rotrra/
 sleep: root Roqxa /roqxa/
 snow: gap (experiential): kobold has no exposure to 'snow'

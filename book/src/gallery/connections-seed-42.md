@@ -33,7 +33,7 @@ larger region.
 The connections of Mjoexaenoenoa
 ================================
 
-Mjoexaenoenoa is linked by sea-lane to Kvoashngoodoodoa, Xoekqoonoagoo, and Vngetxngetnoenoanoaboo -- a current-borne crossing, not a road.
+Mjoexaenoenoa is linked by sea-lane to Kvoashngoodoodoa, Vngaoshngookvooshdoodoa, and Vngetxngetnoenoanoaboo -- a current-borne crossing, not a road.
 A natural route runs to Njoeqteakboanoenoanoagoo, Vngetxngetnoenoanoaboo, Qgeavoonoagoo, and Tgeongjoenoenoanoagoo, by land, over the easiest ground the terrain allows -- a pass, never a paved road.
 
 Mjoexaenoenoa's region holds only 1977 cells -- cut off from the wider world: no route this graph knows of crosses the gap that separates it from the largest region (3525 cells). 10 real regions divide the known world in all.

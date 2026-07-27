@@ -1,6 +1,6 @@
 # The Peoples of Seed 42
 
-The land holds 241 settlement(s).
+The land holds 245 settlement(s).
 The chief bugbear settlement, Vngaobvaoqoa, holds 110 souls amid tropical-rainforest.
 The chief goblin settlement, Fnetzhfodxngebbeetaonoaboo, holds 84 souls amid tropical-seasonal-forest.
 The chief hobgoblin settlement, Mjaogkoangjaogeetao, holds 82 souls amid tropical-seasonal-forest.
@@ -14,20 +14,20 @@ The chief kobold settlement, Rogxaxatxorotxaqxa, holds 109 souls amid temperate-
                                                                         
                                                                         
                                                    oo                   
-                                                o  oo                   
+                                                o                       
                                                                         
                                                                         
-                                                  oo                    
-                                                  oo                    
-                                                    oo                  
+                                                   o                    
+                                                  oooo                  
+                                                   ooo                  
                                                                         
                                                                         
                                                                         
                                                                         
                                                                         
-                    ooooo                       ooo                     
+                                                ooo                     
+                   oooooo                        o                      
                    ooooooo                                              
-                   oooooo                                               
                     oooooo                                              
                                                                         
                                                                         
