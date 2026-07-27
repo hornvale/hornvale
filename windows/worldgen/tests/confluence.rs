@@ -365,6 +365,21 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // fix is Stage 2's `ANIMAL_PREY` field wiring, which restores the axis
     // peopled species actually depend on most (bugbear's niche is 85%
     // `ANIMAL_PREY`) — re-pin/re-band here once that lands.
+    //
+    // UPDATE (The Vacancy, task 6b): `ANIMAL_PREY` supply is real now
+    // (`prey_supply_field`, a `PREY_FRACTION = 0.1` trophic-transfer scale of
+    // `forage_supply_field`, replacing the placeholder zero). Re-measured
+    // seed 42: **203** — not just a recovery back toward the pre-Demesne
+    // ~108, but past it, because the peopled roster's `ANIMAL_PREY` weights
+    // (bugbear 0.85, goblin 0.5, kobold 0.45, hobgoblin 0.35) now add a real
+    // nonzero resource-supply term on top of `PLANT_FORAGE` rather than
+    // reading zero, raising K broadly rather than merely restoring it. Still
+    // comfortably inside [75, 400], so the band is not re-fit — it was
+    // deliberately widened rather than narrowed at T3 and a wide band that
+    // still holds needs no further tuning. Left un-narrowed rather than
+    // re-tightened around 203: this is a single-seed reading, and the
+    // campaign's later occupancy/coexistence tasks are the right place to
+    // decide whether a tighter band is warranted.
     assert!(
         (75..=400).contains(&count),
         "seed 42 settlement count {count} left the sane [75, 400] band after the-demesne's \

@@ -36,19 +36,6 @@ use std::collections::BTreeSet;
 /// floors would let a kind pass one test and fail the other.
 const VIABILITY_FLOOR: f64 = hornvale_demography::FLOOR;
 
-/// The four kinds known to be void, and the single reason all four are.
-///
-/// Each is a pure-`ANIMAL_PREY` obligate predator, and `ANIMAL_PREY` supply is
-/// hard-coded `0.0` in the K assembly, so their carrying capacity is exactly
-/// zero everywhere. They are registered, they satisfy every integrity check,
-/// and they are absent from every world ever generated.
-///
-/// **This allowlist is deleted in Task 6b**, which lands a real prey supply
-/// field. Its deletion is the proof the fix worked - a non-void test that
-/// passes while carrying an allowlist proves nothing about the kinds on it.
-const KNOWN_VOID_PENDING_PREY_SUPPLY: &[&str] =
-    &["black-dragon", "owlbear", "red-dragon", "white-dragon"];
-
 /// The set of kind names viable (K at or above [`VIABILITY_FLOOR`] on at
 /// least one cell) on the world built from `seed`. Builds the world and the
 /// registries once and checks every kind against it in a single pass,
@@ -127,11 +114,11 @@ fn every_kind_is_viable_somewhere() {
     void.sort_unstable();
 
     assert_eq!(
-        void, KNOWN_VOID_PENDING_PREY_SUPPLY,
-        "the set of void kinds must be exactly the four awaiting prey supply - \
-         a kind appearing here that is not on the list is a new ghost. Either \
-         the condition niche is authored outside the range any world produces \
-         (the BIO-39 class: check the optima against \
+        void,
+        Vec::<&'static str>::new(),
+        "every kind must be viable somewhere - a kind appearing here is a \
+         ghost. Either the condition niche is authored outside the range any \
+         world produces (the BIO-39 class: check the optima against \
          tests/fixtures/occupancy.csv percentiles), or the uptake vector \
          points at supply axes that are zero everywhere the condition terms \
          allow (an aquatic niche before a marine supply axis exists)."

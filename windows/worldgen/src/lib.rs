@@ -753,6 +753,33 @@ pub fn forage_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
+/// Fraction of grazable forage that becomes prey biomass available to a
+/// predator — Lindeman's trophic-transfer efficiency, ~10%.
+///
+/// The campaign's second and last calibration knob. Deliberately a single
+/// constant scale of [`forage_supply_field`] rather than a population-coupled
+/// predator/prey model: this reads primary production, never predator or prey
+/// populations, so it cannot feed back on itself. A real bidirectional trophic
+/// coupling is BIO-24's campaign, not this one.
+/// type-audit: bare-ok(ratio)
+const PREY_FRACTION: f64 = 0.1;
+
+/// The `ANIMAL_PREY` supply field (The Vacancy): prey biomass as a
+/// trophic-transfer fraction of grazable forage.
+///
+/// Replaces a hard-coded `0.0` that had kept every obligate predator in the
+/// roster — the three chromatic dragons and the owlbear — out of every world
+/// ever generated. Land-masked transitively (forage is already 0 on submerged
+/// cells); marine predators eat `MARINE_FORAGE` instead. Pure, deterministic,
+/// no RNG — a direct scale of an already-computed field.
+/// type-audit: bare-ok(count: forage), bare-ok(count: return)
+pub fn prey_supply_field(
+    geo: &Geosphere,
+    forage: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
+}
+
 /// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
 /// **0 on submerged cells** — the terrestrial-supply frame stated as a field
 /// rather than as a bare constant, so the detritus axis carries the same land
@@ -910,8 +937,9 @@ pub fn axis_supply(
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
 /// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
-/// own supply fields, `ANIMAL_PREY` is Stage 2's placeholder zero (a later
-/// stage's trophic wiring), and `MARINE_FORAGE` (The Vacancy) reads its own
+/// own supply fields, `ANIMAL_PREY` reads [`prey_supply_field`] (The
+/// Vacancy: a trophic-transfer fraction of grazable forage, no longer a
+/// placeholder zero), and `MARINE_FORAGE` (The Vacancy) reads its own
 /// marine supply field though no shipped kind weights it yet; see
 /// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
@@ -958,6 +986,7 @@ pub fn niche_per_species_k(
     let forage = forage_supply_field(geo, &base_carrying);
     let detritus = detritus_supply_field(geo, terrain);
     let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
+    let prey = prey_supply_field(geo, &forage);
 
     species_biosphere
         .iter()
@@ -977,7 +1006,7 @@ pub fn niche_per_species_k(
                     (PLANT_FORAGE, *forage.get(cell)),
                     (MINERAL, *mineral.get(cell)),
                     (DETRITUS, *detritus.get(cell)),
-                    (ANIMAL_PREY, 0.0),
+                    (ANIMAL_PREY, *prey.get(cell)),
                     (MARINE_FORAGE, *marine.get(cell)),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
@@ -9449,11 +9478,32 @@ mod tests {
     ///   made and is untouched by it. This is task 6's original finding,
     ///   confirmed still true after the-demesne; it awaits a body-mass /
     ///   sovereignty-devotion retune, not a resource-supply change.
-    /// - **Still `#[ignore]`d, Stage 2 (`ANIMAL_PREY` field)**: no
+    /// - **Still `#[ignore]`d at the time, Stage 2 (`ANIMAL_PREY` field)**: no
     ///   chromatic dragon (or `owlbear`) ever wins a cell — their pure-
     ///   `ANIMAL_PREY` niche reads Stage 1's placeholder-zero supply, so
     ///   they can never out-compete a species riding a real axis. Trophic
     ///   wiring is explicitly Stage 2's job.
+    ///
+    /// UPDATE (The Vacancy, task 6b): [`prey_supply_field`] landed —
+    /// `ANIMAL_PREY` reads a real, nonzero `PREY_FRACTION` scale of grazable
+    /// forage instead of a placeholder zero. Re-measured: the breakdown is
+    /// `[xorn: 4277, rust-monster: 3873, twig-blight: 2263, kobold: 653]` —
+    /// still 4 distinct dominants, still zero dragons, and `xorn`/`rust-
+    /// monster`/`twig-blight` counts all moved (kobold displaces `goblin` as
+    /// the 4th; every peopled kind's own K shifted too, since kobold/goblin/
+    /// hobgoblin/bugbear all carry nonzero `ANIMAL_PREY` weights — see
+    /// `confluence.rs`'s settlement-count test). The dragon bullet's
+    /// "awaits Stage 2" reasoning is now stale in the direction that
+    /// mattered least: viability was never the same bar as per-cell
+    /// dominance. Dragons ARE viable now (`non_void_roster.rs`'s allowlist
+    /// is deleted; see the occupancy readout), but still never win the
+    /// arg-max — the SAME Kleiber home-range effect that keeps `treant` from
+    /// winning against `twig-blight` applies to a 2200-2700 kg dragon just
+    /// as it does to an 1800 kg treant. This test
+    /// ([`menagerie_dragon_stronghold_awaits_animal_prey_stage_2`]) is
+    /// therefore reclassified from "awaiting Stage 2" to the SAME mass/
+    /// sovereignty-calibration bucket as `treant`'s test — see its doc
+    /// comment for the measured detail.
     ///
     /// Returns every kind's name (biosphere order, the `tag`-indexable
     /// slice), the per-kind dominant-cell count, and that count re-keyed by
@@ -9521,10 +9571,13 @@ mod tests {
     /// BIO-35): the campaign's stated ambition is `>= 6` distinct dominants
     /// incl. treant/xorn/dragon strongholds. Stage 1 (abiotic) reaches 4 —
     /// the gap to 6 is the treant mass-calibration (below, `#[ignore]`d) + the
-    /// dragon/`ANIMAL_PREY` Stage-2 field (below, `#[ignore]`d) + the still-OPEN
-    /// peoples-diversity problem (the goblinoid niches don't span the new
-    /// axes). The `>= 6` bar is DELIBERATELY NOT weakened — it stays pinned as
-    /// an ignored target-to-reach, not silently rebased to the observed value.
+    /// dragon mass-calibration (below, `#[ignore]`d; re-measured after The
+    /// Vacancy's `ANIMAL_PREY` field, task 6b — real prey supply made
+    /// dragons VIABLE but did not close this gap, since it is a body-mass
+    /// effect, not a resource-axis one) + the still-OPEN peoples-diversity
+    /// problem (the goblinoid niches don't span the new axes). The `>= 6`
+    /// bar is DELIBERATELY NOT weakened — it stays pinned as an ignored
+    /// target-to-reach, not silently rebased to the observed value.
     const PREREGISTERED_DISTINCT_DOMINANTS_TARGET: usize = 6;
 
     /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
@@ -9561,16 +9614,23 @@ mod tests {
     }
 
     /// STILL `#[ignore]`d — the PREREGISTERED `>= 6` target, honestly unmet
-    /// (BIO-35 the-demesne T3, measured not faked): Stage 1 reaches
-    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4. Reaching
+    /// (re-measured after The Vacancy task 6b): Stage 1 still reaches only
+    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4 (`xorn`, `rust-monster`,
+    /// `twig-blight`, `kobold` at seed 42 — `kobold` displaced `goblin` as
+    /// the 4th once `ANIMAL_PREY` supply went real). Reaching
     /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`] = 6 needs the treant
-    /// mass-calibration + the dragon/`ANIMAL_PREY` Stage-2 field + the open
-    /// peoples-diversity problem. Kept (not deleted, not weakened) so the
-    /// original ambition stands ready to re-run once those land.
+    /// mass-calibration + the dragon mass-calibration (real prey supply
+    /// landed in task 6b and made dragons viable, but did not close this
+    /// gap — see
+    /// [`menagerie_dragon_stronghold_awaits_animal_prey_stage_2`]'s doc
+    /// comment) + the open peoples-diversity problem. Kept (not deleted,
+    /// not weakened) so the original ambition stands ready to re-run once
+    /// those land.
     #[test]
-    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; \
-                the gap to 6 is treant mass-calibration + dragon/ANIMAL_PREY (Stage 2) + \
-                the open peoples-diversity problem. Not weakened — stands as the target."]
+    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; the \
+                gap to 6 is treant mass-calibration + dragon mass-calibration (ANIMAL_PREY \
+                supply is real as of The Vacancy task 6b, but viability isn't dominance) + the \
+                open peoples-diversity problem. Not weakened — stands as the target."]
     fn menagerie_distinct_dominants_reach_the_preregistered_six() {
         let (_names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         assert!(
@@ -9612,17 +9672,34 @@ mod tests {
         );
     }
 
-    /// STILL `#[ignore]`d — Stage 2 (`ANIMAL_PREY` field), BIO-35 the-demesne
-    /// T3: no chromatic dragon (a pure-`ANIMAL_PREY` niche) ever wins a
-    /// full-roster per-cell dominance comparison, because Stage 1's
-    /// `ANIMAL_PREY` supply is a placeholder zero — a species reading it
-    /// can never out-compete one riding a real (nonzero) axis. Awaits the
-    /// trophic/prey-field wiring a later stage adds.
+    /// STILL `#[ignore]`d — mass/sovereignty calibration, NOT missing prey
+    /// supply (re-measured, The Vacancy task 6b): [`prey_supply_field`]
+    /// landed, giving `ANIMAL_PREY` a real nonzero supply (a `PREY_FRACTION`
+    /// scale of grazable forage), and the four pure-`ANIMAL_PREY` kinds are
+    /// now measurably viable — `every_kind_is_viable_somewhere`
+    /// (`non_void_roster.rs`) passes with no allowlist, and the occupancy
+    /// readout shows each dragon and the owlbear present on ~114k-143k
+    /// cells across 10 biomes. But viable is not the same bar as this test:
+    /// re-measured post-wiring, the full-roster dominant breakdown is
+    /// `[xorn: 4277, rust-monster: 3873, twig-blight: 2263, kobold: 653]` —
+    /// still zero dragons. The root cause is the SAME Kleiber home-range
+    /// effect already traced for `treant`
+    /// ([`menagerie_treant_stronghold_awaits_mass_calibration`]): a
+    /// chromatic dragon (2200-2700 kg) has a home range large enough that
+    /// its resource-share advantage never survives the per-INDIVIDUAL
+    /// density conversion `coexist::pack` applies, so a numerous
+    /// small-bodied competitor with any nonzero share on the same cell
+    /// always wins the arg-max. Prey supply fixed VIABILITY (K > 0
+    /// somewhere); it was never going to fix DOMINANCE, which is a body-mass
+    /// /sovereignty-devotion question orthogonal to which resource axis is
+    /// wired. Awaits the same mass/sovereignty retune as `treant`, not
+    /// further trophic wiring.
     #[test]
-    #[ignore = "Stage 2 (ANIMAL_PREY field): chromatic dragons' pure-ANIMAL_PREY niche reads \
-                Stage 1's placeholder-zero ANIMAL_PREY supply, so no dragon can ever win a \
-                per-cell density comparison against a species riding a real axis; awaiting the \
-                trophic/prey-field wiring (BIO-35 Stage 2)."]
+    #[ignore = "mass/sovereignty calibration (re-measured, The Vacancy task 6b): ANIMAL_PREY \
+                supply is real now (prey_supply_field) and all four pure-ANIMAL_PREY kinds are \
+                viable, but no dragon wins a per-cell dominance comparison — same Kleiber \
+                home-range effect documented for treant, a body-mass/sovereignty-devotion \
+                retune orthogonal to the resource-axis fix this task made."]
     fn menagerie_dragon_stronghold_awaits_animal_prey_stage_2() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         let dominates_a_cell = |name: &str| {
