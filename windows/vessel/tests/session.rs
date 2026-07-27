@@ -69,8 +69,14 @@ fn go_moves_and_back_retraces() {
     assert_eq!(s.agent().position, home, "back retraces");
 }
 
+/// The refusal is DIRECTIONAL as of The Lintel: coarse-ward (`exit`, toward
+/// possessing a settlement or a culture) is still refused with the byte-pinned
+/// sentence, but fine-ward (`enter`) now descends — see
+/// `windows/vessel/tests/the_lintel.rs`. This test therefore narrowed to the
+/// half it still covers, deliberately: The Seam's contract that BOTH directions
+/// refuse was overturned by this campaign, not accidentally broken by it.
 #[test]
-fn vertical_exits_refuse_diegetically() {
+fn the_coarse_ward_exit_refuses_diegetically() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let before = s.agent().position.clone();
@@ -80,11 +86,28 @@ fn vertical_exits_refuse_diegetically() {
     };
     assert!(out.contains("grain of the world"), "diegetic refusal");
     assert_eq!(s.agent().position, before, "no movement");
-    let out = match s.handle("enter") {
-        Turn::Out(t) => t,
+}
+
+/// Descending must never move the WALK-band position: the band change lives in
+/// session state, so `enter` leaves `agent().position` exactly where it was.
+/// That is what keeps `map`, `whoami`, `purview` and the NPC layer — all of
+/// which read that field — unchanged by being indoors.
+#[test]
+fn entering_leaves_the_walk_band_position_alone() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let before = s.agent().position.clone();
+    match s.handle("enter") {
+        Turn::Out(_) => {}
         _ => panic!("enter must not release"),
     };
-    assert!(out.contains("grain of the world"));
+    assert_eq!(
+        s.agent().position,
+        before,
+        "the possession's walk-band position is untouched by descent"
+    );
+    s.handle("out");
+    assert_eq!(s.agent().position, before);
 }
 
 #[test]

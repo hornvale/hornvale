@@ -9,7 +9,7 @@ use crate::interior::{AnchorKind, Interior};
 
 /// The noun for an anchor kind, as prose says it. `Ground` has no noun: it is
 /// the chamber's own floor, not a thing standing in it.
-fn noun(kind: AnchorKind) -> Option<&'static str> {
+pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
     match kind {
         AnchorKind::Ground => None,
         AnchorKind::Hearth => Some("a hearth"),
@@ -21,6 +21,19 @@ fn noun(kind: AnchorKind) -> Option<&'static str> {
         AnchorKind::Pool => Some("a still pool"),
         AnchorKind::Log => Some("a fallen log"),
     }
+}
+
+/// Every noun a chamber's prose will name, in the interior's own deterministic
+/// anchor order. The ONE catalogue: `describe_chamber` renders from it and the
+/// session's `enter <named>` resolves against it, so a player can only ever be
+/// asked to name a thing the prose actually said (the same discipline The
+/// Purview's chart follows in sharing the prose's nouns).
+pub(crate) fn chamber_nouns(interior: &Interior) -> Vec<&'static str> {
+    interior
+        .ids()
+        .iter()
+        .filter_map(|&id| noun(interior.anchor(id).kind))
+        .collect()
 }
 
 /// A chamber's prose: what stands in it, in the interior's own deterministic
@@ -37,11 +50,7 @@ fn noun(kind: AnchorKind) -> Option<&'static str> {
 /// type-audit: bare-ok(prose: return)
 pub fn describe_chamber(interior: &Interior, brief: &Brief) -> String {
     let place = if brief.built { "room" } else { "hollow" };
-    let nouns: Vec<&'static str> = interior
-        .ids()
-        .iter()
-        .filter_map(|&id| noun(interior.anchor(id).kind))
-        .collect();
+    let nouns = chamber_nouns(interior);
     match nouns.len() {
         0 => format!("A bare {place}, its floor swept and its corners empty."),
         1 => format!("A small {place}. {} stands here.", capitalize(nouns[0])),

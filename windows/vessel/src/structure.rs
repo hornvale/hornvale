@@ -51,6 +51,17 @@ pub fn structure_at(
     seed: Seed,
     walk_depth: u32,
 ) -> Option<Structure> {
+    // `extra` below is an unchecked `u32` subtraction that underflows if
+    // `locale` is ever deeper than `chamber_depth(walk_depth)`. It was
+    // unreachable while nothing called this; the session's `enter` is the first
+    // caller, so state the precondition where it can be caught in a debug run
+    // instead of leaving it as a comment. Callers truncate (`truncate_to_walk`)
+    // before calling.
+    debug_assert_eq!(
+        locale.depth(),
+        walk_depth,
+        "structure_at takes a WALK-band locale"
+    );
     if !brief.built {
         return None;
     }

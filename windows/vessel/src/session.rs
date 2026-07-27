@@ -88,6 +88,9 @@ verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser)
   go <dir>         walk a compass exit (n ne e se s sw w nw)
+  enter [thing]    step inside what is built here; once inside, name a thing
+                   the prose mentions to move through an aperture to it
+  out              step back out of doors
   examine <thing>  anything look mentions
   back             retrace your last step
   wait [N]         let N days pass overhead (default 1); the world moves too
@@ -165,6 +168,16 @@ pub struct Session<'w> {
     /// central claim.
     /// type-audit: bare-ok(prose: last_text)
     last_text: String,
+    /// The structure the possession is inside, if any, and which chamber. `None`
+    /// at the walk band. Never serialized: a band change is session state, so
+    /// entering and leaving cannot alter the world (decision 0069's property,
+    /// obtained by construction).
+    ///
+    /// The possessed agent's own `position` stays at the WALK band throughout —
+    /// descent is recorded here, not there — so every walk-band read (`map`,
+    /// `whoami`, `purview`, the snapshot, the NPC layer) is untouched by being
+    /// indoors.
+    inside: Option<(crate::structure::Structure, usize)>,
 }
 
 impl<'w> Session<'w> {
@@ -268,6 +281,7 @@ impl<'w> Session<'w> {
             occupancy: Occupancy::default(),
             turn: 0,
             last_text: String::new(),
+            inside: None,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -562,6 +576,11 @@ impl<'w> Session<'w> {
         }
         let turn = match verb {
             "" => Turn::Out(String::new()),
+            // `look` is the one existing verb that must become band-aware:
+            // inside a structure it renders the chamber, out of doors the
+            // locale. Everything else reads `self.agent.position`, which never
+            // leaves the walk band, so nothing else changes.
+            "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" => self.out(self.describe_here()),
             "map" => self.map(rest),
             "go" => self.go(rest),
@@ -577,7 +596,12 @@ impl<'w> Session<'w> {
             "soothe" => self.act_on_disposition(rest, -1),
             "write" => Turn::Out(self.write(rest)),
             "consult" => Turn::Out(self.consult()),
-            "enter" | "exit" => Turn::Out(
+            "enter" => self.enter(rest),
+            "out" => self.leave(),
+            // Coarse-ward is still refused: possessing a settlement, a culture
+            // or a civilization is a deferred arc of its own (0077). This
+            // sentence is byte-pinned in the galleries — do not reword it.
+            "exit" => Turn::Out(
                 "The grain of the world resists; that way lies another scale of things."
                     .to_string(),
             ),
@@ -653,6 +677,12 @@ impl<'w> Session<'w> {
         };
         let from = std::mem::replace(&mut self.agent.position, dest);
         self.trail.push(from);
+        // Walking laterally is walking out of doors: a structure belongs to ONE
+        // locale, so carrying `inside` across a step would leave the session
+        // holding chambers that descend from the locale behind it. Clearing it
+        // is what keeps `look` honest after a `go`; it changes no output, since
+        // `go` renders the locale either way.
+        self.inside = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -664,10 +694,212 @@ impl<'w> Session<'w> {
             return Turn::Out("You have not walked anywhere yet.".to_string());
         };
         self.agent.position = prev;
+        // Same reason as `go`: the trail is a walk-band trail, so retracing it
+        // is retracing out of doors.
+        self.inside = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
         self.out(self.describe_here())
+    }
+
+    /// Descend into the structure at this locale, or move to a named chamber
+    /// within the one already entered. Apertures, not stairs (§7): movement
+    /// inside is by name, never by compass, because a chamber address is
+    /// identity and carries no bearing.
+    fn enter(&mut self, target: &str) -> Turn {
+        // Already inside: `enter <named>` steps through an aperture.
+        if let Some((structure, at)) = self.inside.clone() {
+            let Some(next) = self.named_neighbour(&structure, at, target) else {
+                // A bare `enter` with a CHOICE of apertures is not "no way" —
+                // it is an unanswered question, and "no way to anywhere" would
+                // be false there. `named_neighbour` only takes a silent default
+                // when exactly one neighbour exists.
+                if target.is_empty() && Self::neighbours(&structure, at).len() > 1 {
+                    return Turn::Out(
+                        "Enter which way? Name what lies through one of the ways on.".to_string(),
+                    );
+                }
+                return Turn::Out(format!(
+                    "There is no way to {} from here.",
+                    if target.is_empty() {
+                        "anywhere"
+                    } else {
+                        target
+                    }
+                ));
+            };
+            self.inside = Some((structure, next));
+            return self.out(self.describe_chamber_here());
+        }
+        let brief = self.brief_here();
+        let Some(structure) = crate::structure::structure_at(
+            &crate::band::truncate_to_walk(&self.agent.position, self.walk_depth()),
+            &brief,
+            self.world.seed,
+            self.walk_depth(),
+        ) else {
+            return Turn::Out("Nothing here is built; there is nothing to enter.".to_string());
+        };
+        let at = structure
+            .chambers
+            .iter()
+            .position(|c| *c == structure.threshold)
+            .expect("the threshold is one of the chambers");
+        self.inside = Some((structure, at));
+        self.out(self.describe_chamber_here())
+    }
+
+    /// Step back out of doors: `out` leaves the STRUCTURE, not one chamber —
+    /// there is no chamber trail, so it returns to the locale from wherever
+    /// inside the possession had got to. (A "back one chamber" step would want
+    /// its own trail, the way `back` has one for the walk band; nothing asks
+    /// for it yet, and inventing an unused one would be a second thing to keep
+    /// correct.) Already out of doors, it says so rather than erroring.
+    fn leave(&mut self) -> Turn {
+        match self.inside.take() {
+            None => Turn::Out("You are already out of doors.".to_string()),
+            Some(_) => self.out(self.describe_here()),
+        }
+    }
+
+    /// The world's walk depth, as this session's locale context defines it.
+    /// A free function in `agent`, wrapped here so the handlers read as
+    /// session state rather than as a module path.
+    /// type-audit: bare-ok(count: return)
+    fn walk_depth(&self) -> u32 {
+        crate::agent::walk_depth(&self.ctx)
+    }
+
+    /// The terrain provider, built exactly as every other reader in this module
+    /// builds it. NOT `LocaleTerrain::new`: that leaves `built: None`, which
+    /// reads as *everything unbuilt*, and `enter` would then report nothing
+    /// built anywhere.
+    fn terrain_here(&self) -> LocaleTerrain<'_> {
+        LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+        )
+    }
+
+    /// The brief for wherever the possession currently stands.
+    fn brief_here(&self) -> crate::brief::Brief {
+        let terrain = self.terrain_here();
+        crate::brief::brief_of(
+            self.world,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
+            &self.agent.position,
+            &terrain,
+            self.walk_depth(),
+        )
+    }
+
+    /// The chambers one aperture away from `at`, in `links` order. Undirected:
+    /// a link names its pair either way round.
+    fn neighbours(structure: &crate::structure::Structure, at: usize) -> Vec<usize> {
+        structure
+            .links
+            .iter()
+            .filter_map(|&(a, b)| {
+                if a == at {
+                    Some(b)
+                } else if b == at {
+                    Some(a)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Resolve `target` to a chamber one aperture away: a case-insensitive
+    /// substring of one of the destination's own PROSE nouns (`chamber_nouns`,
+    /// the same catalogue `describe_chamber` renders from — a player is only
+    /// ever asked to name a thing the prose said). An empty `target` takes the
+    /// sole neighbour, if there is exactly one; with a choice to make, silence
+    /// is not an answer.
+    fn named_neighbour(
+        &self,
+        structure: &crate::structure::Structure,
+        at: usize,
+        target: &str,
+    ) -> Option<usize> {
+        let neighbours = Self::neighbours(structure, at);
+        let target = target.trim().to_lowercase();
+        if target.is_empty() {
+            return match neighbours.as_slice() {
+                [only] => Some(*only),
+                _ => None,
+            };
+        }
+        let terrain = self.terrain_here();
+        neighbours.into_iter().find(|&n| {
+            crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+                &structure.chambers[n],
+                &terrain,
+                self.walk_depth(),
+            ))
+            .iter()
+            .any(|noun| noun.to_lowercase().contains(&target))
+        })
+    }
+
+    /// The chamber rendering, in `describe_here`'s own shape one band down:
+    /// address, prose, ways on. `[chamber …]` rather than `[room …]` because
+    /// the band word IS the information — an id at depth 21 is not a locale.
+    /// The ways are `out` plus one entry per aperture, named by the thing the
+    /// destination's prose leads with, which is exactly what `enter <named>`
+    /// accepts.
+    fn describe_chamber_here(&self) -> Result<String, VesselError> {
+        let Some((structure, at)) = self.inside.as_ref() else {
+            // Unreachable through `handle` (every caller checks first), but a
+            // silent fabrication of chamber prose while out of doors would be
+            // worse than a loud error.
+            return Err(VesselError::Build(
+                "no chamber to describe: the possession is out of doors".to_string(),
+            ));
+        };
+        let chamber = &structure.chambers[*at];
+        let terrain = self.terrain_here();
+        let brief = self.brief_here();
+        let interior = crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth());
+        let id = chamber
+            .pack()
+            // `RoomAddrError` implements `Debug` but not `Display`, the same
+            // constraint `snapshot` documents at its own `pack` call.
+            .map_err(|e| VesselError::Build(format!("{e:?}")))?
+            .0;
+        let mut ways = vec!["out".to_string()];
+        for n in Self::neighbours(structure, *at) {
+            let beyond =
+                crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
+                    &structure.chambers[n],
+                    &terrain,
+                    self.walk_depth(),
+                ));
+            // Name the aperture by what lies through it, article stripped so
+            // the footer reads as a list of things to `enter`. A chamber whose
+            // prose names nothing can only be described by its direction of
+            // travel.
+            let named = beyond
+                .first()
+                .map(|noun| strip_article(noun).to_string())
+                .unwrap_or_else(|| "further in".to_string());
+            if !ways.contains(&named) {
+                ways.push(named);
+            }
+        }
+        Ok(format!(
+            "[chamber {}, day {}]\n{}\nWays on: {}.",
+            id,
+            self.day.day,
+            crate::chamber_prose::describe_chamber(&interior, &brief),
+            ways.join(", ")
+        ))
     }
 
     fn wait(&mut self, arg: &str) -> Turn {
@@ -1295,6 +1527,15 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up",
         ),
     }
+}
+
+/// A prose noun without its indefinite article — `"a hearth"` → `"hearth"`.
+/// The catalogue stores nouns as prose says them (sentence-ready); a list of
+/// ways on wants the bare thing.
+fn strip_article(noun: &str) -> &str {
+    noun.strip_prefix("a ")
+        .or_else(|| noun.strip_prefix("an "))
+        .unwrap_or(noun)
 }
 
 /// Parse a compass token (case-insensitive, long names allowed).
