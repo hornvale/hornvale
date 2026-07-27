@@ -656,6 +656,16 @@ new becomes playable — what is playable becomes legible.**
 
 ### 6.2 Campaign 2 — The Action Clock
 
+> **SHIPPED 2026-07-26**, and the gap statement below is **corrected by the
+> build** — see the [spec](2026-07-26-the-action-clock-design.md) §1 and the
+> [chronicle](../../../book/src/chronicle/the-action-clock.md). "Nothing
+> schedules time at action granularity" was too strong: `MoveTo` already cost
+> 0.1 days, and `Rest`/`Hold` already *jumped* to the next waking and the next
+> act-crossing — an event-driven scheduler in embryo. The true gap was three
+> things, not one absence: three of five actions were free, the single cost was
+> uniform across every creature, and the jump machinery belonged to no clock.
+> All three rungs shipped (total cost, allometric per-agent tempo, interleaving).
+
 Per-agent action cost: the one genuine gap. Crossing Wolverson's subsystem
 inventory against Hornvale's mechanisms (§7) found eleven cells already
 answered, refused, or better answered here, and exactly one hole — **nothing

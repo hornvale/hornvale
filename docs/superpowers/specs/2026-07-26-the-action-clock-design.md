@@ -2,10 +2,13 @@
 
 **Campaign:** The Action Clock — campaign 2 of The Rose Window
 **Date:** 2026-07-26
-**Status:** BUILT, BLOCKED AT G6 (2026-07-26) — all six tasks implemented
-(`071fb429` clock, `37ded590` mass + day length, `6d26b0a0` the hoist
-byte-identical, `a2a9716e` the charge, `45e0ca3a` interleaving). **The gate is
-red on a preregistered stop and must not be re-pinned here** — see §11.
+**Status:** SHIPPED (2026-07-26) — all six tasks implemented (`071fb429` clock,
+`37ded590` mass + day length, `6d26b0a0` the hoist byte-identical, `a2a9716e`
+the charge, `45e0ca3a` interleaving), parked at G6 on a preregistered stop, and
+closed after re-measurement against a re-frozen baseline. **The stop was never
+re-pinned here** — the metric was repaired by its own campaign (The
+Convalescence, decision 0080) and the prediction then confirmed on its original
+terms anyway. Full record in §11.
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md` §4.1 (four clocks)
 and §6.2; **Amendment 1** (§1a) for the program as amended.
 **Decisions in force:** 0021 (derive, never author per-creature), 0033
@@ -347,3 +350,84 @@ frozen-read constraint; the drift protocol.
 5. **[interaction] The Threshold is in flight and touches the same loop.**
    Both campaigns edit `DriveMovements::step`. Sequencing or a deliberate merge
    plan is an owner call, not autopilot's.
+
+## 11. The park, the stop, and the re-measurement (durable record)
+
+This section is what the park commit (`f30a03ce`) said it was writing and did
+not: its message claims "Records the full measurement table durably, since the
+ledger is gitignored scratch," but its diff was the status header alone. The
+table below is recovered from that scratch ledger, which survived only because
+the worktree was not cleaned in the interval.
+
+### 11.1 The stop, as it fired (retired measurement, `adafe55c`)
+
+`chronicity` moved `0.0 → 0.1` on seed 42 — a preregistered **stop** (§8,
+decision 0016). `make gate` was red on exactly two tests, both the chronicity
+null control; fmt, clippy, type-audit and the other 2121 tests passed.
+
+The investigation found no pathology. One creature of ten (the 90 kg
+rust-monster) carried a 9-tick distress run: four `Helpless/Thirst`, ONE
+`Frustrated/Fatigue`, four `Helpless/Thirst`. The 4-tick thirst block is seed
+42's ordinary cadence — goblin, bugbear and giant-elk all show it, all
+sub-threshold at 4 < `CHRONIC_TICKS` = 8. What made this one chronic is that the
+tick *bridging* the two blocks was itself a distress label rather than the
+`Searching`/`Eager` that breaks every other creature's run. The alarm fired on a
+BRIDGED run across two causes, not on a creature blocked for 8 ticks. The
+creature was not worse off — seed 42's prevalence actually *fell*.
+
+`health_report` counted consecutive distress LABELS, cause-agnostic, so two
+separately-recoverable rhythms that phase-aligned read as one chronic episode.
+
+**Why this campaign could not fix it.** The null control's own comment defined
+the alarm as chronicity > 0 AND `recovery_ticks == None` while asserting only
+the first, so applying its documented philosophy would have made the gate green.
+That is exactly why the campaign was not entitled to do it: a campaign may not
+repair the instrument judging it. Owner decision — park, fix the metric as its
+own campaign, then land this. That campaign was **The Convalescence** (decision
+0080: chronicity is a diagnostic, the alarm is `stuck`).
+
+### 11.2 The re-measurement (`0e93b7a1`, after absorbing 112 commits)
+
+The `adafe55c` baseline was **retired, not reused**: main had moved five code
+campaigns, `HealthReport` had gained a field, the species roster had changed,
+and the battery's own wall-clock had fallen 446 s → 266 s on main's own work.
+Baseline re-frozen from `origin/main` @ `f845283d`.
+
+| seed | prevalence (base → new) | chronicity | stuck | recovery_ticks (base → new) |
+|---|---|---|---|---|
+| 0  | 0.260000 → 0.260000 (0)       | 0.0 → 0.0 | 0.0 → 0.0 | 4.000000 → 4.000000 (0) |
+| 1  | 0.312500 → 0.332500 (+0.0200) | 0.0 → 0.0 | 0.0 → 0.0 | 4.047619 → 3.821429 (−0.226) |
+| 2  | 0.105000 → 0.107500 (+0.0025) | 0.0 → 0.0 | 0.0 → 0.0 | 3.400000 → 3.181818 (−0.218) |
+| 7  | 0.180000 → 0.170000 (−0.0100) | 0.0 → 0.0 | 0.0 → 0.0 | 2.560000 → 2.666667 (+0.107) |
+| 42 | 0.140000 → 0.137500 (−0.0025) | 0.0 → 0.0 | 0.0 → 0.0 | 3.833333 → 3.615385 (−0.218) |
+
+`danger`, `social` and `thermal` by-cause are 0.0 on every seed, both sides.
+Battery wall-clock 250.65 s vs 266.36 s baseline (one run each).
+
+**The stop cleared on its own original terms.** `chronicity` reads 0.000000 on
+all five seeds including 42 — so §8's prediction 4 is satisfied as preregistered,
+without leaning on decision 0080. The alarm `stuck` is also 0.0 everywhere, so
+the campaign is green under both the old bound and the new one. The `HHHH F
+HHHH` weld was a phase artifact of `adafe55c`'s physics; main's own changes moved
+seed 42 off that knife edge before the repair applied. **Nothing in the cost
+model was implicated by the investigation, and nothing in it was touched.**
+
+### 11.3 The seven predictions, as preregistered
+
+1. **CONFIRMED** — `a_heavier_creature_covers_less_ground_in_the_same_interval`.
+2. **CONFIRMED** — `tempo` monotone in mass, unity at 70 kg by construction:
+   kobold 13.6 kg → 0.66391154, xorn 55 kg → 0.94149098, hobgoblin 74.8 kg →
+   1.0167189.
+3. **CONFIRMED** — seed 42's derived population spans 7 species and **7 distinct
+   tempi**, 0.66391154 → 1.5923137. Measured directly, because the pin that
+   guards it asserts only `distinct > 1`, which two buckets would satisfy.
+4. **CONFIRMED** (REFUTED at `adafe55c`) — chronicity 0.0 on all five seeds.
+5. Reported, not judged — |Δ prevalence| ≤ 0.02, both signs present.
+6. **CONFIRMED, sharply** — seed 42's xorn (Ametabolic) trace is 40/40
+   `Content/None` and byte-identical between baseline and branch, while the
+   metabolic creatures beside it moved. The metabolism gate leaves an Ametabolic
+   creature's `drives` vector empty, so it never selects an action.
+7. **CONFIRMED** — `danger` and `social` by-cause 0.0 on all five seeds.
+
+Six confirmed and one refuted at the park; **all seven confirmed** on the
+re-measurement.

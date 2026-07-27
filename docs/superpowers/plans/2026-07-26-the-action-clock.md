@@ -1,5 +1,12 @@
 # The Action Clock — Implementation Plan
 
+**Status: COMPLETE (2026-07-26).** All six tasks shipped. T6's evidence was
+taken twice: once at the park (`adafe55c` baseline, six of seven predictions
+confirmed, chronicity a preregistered stop) and again at the close, against a
+baseline **re-frozen** from `origin/main` @ `f845283d` after absorbing 112
+commits — where all seven confirm. The first readout is retired, not carried
+forward; the durable record of both is spec §11.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use
 > `superpowers:subagent-driven-development` to implement this plan task-by-task
 > (and `dispatching-hornvale-subagents` for every dispatch). Steps use checkbox
