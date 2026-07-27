@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** Complete 2026-07-27. Task 6's wave was cut from 81 rows to the 43 over 1500 characters by owner decision mid-execution; see the retrospective.
+
 **Goal:** Make `book/src/frontier/idea-registry.md` an index again — five
 default-deny form checks in `cli/tests/docs_consistency.rs`, a guidance rewrite
 that names where displaced prose goes, and a first compaction wave.

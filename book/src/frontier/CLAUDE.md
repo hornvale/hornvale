@@ -78,7 +78,8 @@ Links between these two files stay relative. Links to anything under
 `https://github.com/hornvale/hornvale/blob/main/docs/…` — because those
 files are not published in the book. The drift-check
 (`cargo test -p hornvale --test docs_consistency`) validates both kinds and
-enforces ToC completeness and ID uniqueness. Fix the doc, not the test.
+enforces ToC completeness and ID uniqueness, alongside the row-form rules
+above. Fix the doc, not the test.
 
 ## Boundary
 

@@ -2,7 +2,7 @@
 
 **Campaign:** The Shelf-Mark
 **Date:** 2026-07-27
-**Status:** Draft — awaiting G3
+**Status:** Shipped 2026-07-27 (campaign *The Shelf-Mark*). §7's first wave was cut at execution time, by owner decision, from all 81 over-cap `shipped` rows to the 43 over 1500 characters; the remainder is the burn-down the ratchet exists to enable, captured as a registry row.
 **Decisions in force:** `0026-slugs-not-numbers` (registry rows are
 category+slug; its registry provisions survive supersession by 0043), 0028
 (the `pending(wave-N)` grandfather pattern), 0013 (DoD includes the book),
