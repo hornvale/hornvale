@@ -2,7 +2,11 @@
 
 **Campaign:** The Hoist
 **Date:** 2026-07-27
-**Status:** spec, awaiting G3 review
+**Status:** SHIPPED — see [The Hoist](../../../book/src/chronicle/the-hoist.md)
+and the plan's Measured section (`docs/superpowers/plans/2026-07-27-the-hoist.md`).
+Result: **-24.3%** on the census probe, byte-identical; `terrain_of` gone from
+the census profile entirely. Predicted 15-20%; the excess was a third
+double-sculpt site (`history_for`) found by the call-site audit.
 **Predecessor:** The Local Census, which shipped the consumer side of the
 Single Sculpt idiom and explicitly deferred this piece ("Fix D", the
 view-chain double sculpt, "changes `build_world_to`'s signature") to a

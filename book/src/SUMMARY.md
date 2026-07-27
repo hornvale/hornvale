@@ -262,6 +262,7 @@
 - [The Action Clock](./chronicle/the-action-clock.md)
 - [The Accession](./chronicle/the-accession.md)
 - [The Actants](./chronicle/the-actants.md)
+- [The Hoist](./chronicle/the-hoist.md)
 
 # Appendix: The Frontier
 
