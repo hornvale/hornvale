@@ -1651,7 +1651,53 @@ Update the room-mesh chapter and the possession/game chapters where "room" now n
 
 - [ ] **Step 6: Flip the registry rows**
 
-In `book/src/frontier/idea-registry.md`: flip `CLIENT-scale-bands` and `CLIENT-brief-is-the-contract` to `shipped` with **Where** repointed at the chronicle and spec; and **correct `CLIENT-depth-follows-content`**, which still describes automatic band transitions — overturned by ledger #12, since transitions happen only at thresholds.
+In `book/src/frontier/idea-registry.md`. Registry discipline: a row keeps its ID
+forever, flips status, and repoints **Where** — never rewritten to erase what it
+used to claim (`book/src/frontier/CLAUDE.md`).
+
+**(a)** Flip `CLIENT-scale-bands` and `CLIENT-brief-is-the-contract` from `raw` to
+`shipped`, repointing **Where** at `[The Lintel chronicle](../chronicle/the-lintel.md)`
+plus a GitHub blob URL for the spec — note the link convention: links inside the
+book stay relative, links to anything under `docs/` are
+`https://github.com/hornvale/hornvale/blob/main/docs/…` blob URLs, and the
+drift-check validates both kinds.
+
+**(b)** Amend `CLIENT-depth-follows-content` (line ~655). Its opening claim —
+*"the body occupies the finest band that has content"* — was **overturned** as a
+mechanism, and its closing sentence calling the band-transition rule "the open
+part, deliberately unsettled here" is now **settled**. Append this to the row's
+text, before the status columns, rather than rewriting what is there:
+
+> **AMENDED 2026-07-27 (The Lintel).** The automatic reading of this row is
+> overturned: a body does **not** drift to the finest band with content, because
+> automatic band transitions reintroduce thrashing one level up — a player pacing
+> a village boundary would flip bands every step, which is §4.3's named
+> demand-paging failure mode. **The band changes only at a threshold, and
+> thresholds are always visible** (`AnchorKind::Threshold`, already the two-level
+> seam). The good consequence survives for a better reason: fine bands exist only
+> inside structures, so there is no fine band to be in once you step out the gate.
+> The action-cost half — a stride's cost scaling with its band's extent — is
+> untouched. The "open part" named below is therefore closed.
+
+- [ ] **Step 6a: Re-score the Confidence Gradient bet this campaign moves**
+
+`book/src/open-questions.md` is bulleted prose, not a table. Under **"Precedented
+but nontrivial (moderate confidence)"** the first bullet is:
+
+> **Lazy retrospective generation** — committing detail only on observation,
+> consistent with a statistical prior. … the observe-then-commit loop is not yet
+> built.
+
+This campaign moves that bet **halfway, and only halfway** — say so precisely
+rather than claiming it shipped. The *derive-on-demand* half now exists at chamber
+scale: a chamber's existence, interior and prose are derived from `(brief, address,
+seed)` when someone walks in, and nothing is stored. The *commit-on-observation*
+half does **not** exist and was deliberately excluded — The Lintel commits nothing
+at all, which is what keeps it byte-identical. Promotion-on-touch remains unbuilt.
+
+Re-score that bullet in those terms (decision 0030 requires the re-score; it does
+not require the bet to have moved *forward* on every axis). If you conclude the bet
+did not move, say that in the retrospective instead of silently skipping the step.
 
 - [ ] **Step 7: Retrospective**
 
