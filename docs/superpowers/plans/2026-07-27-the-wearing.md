@@ -52,6 +52,42 @@ Run against the real tree before writing this plan. Each changed something the s
    it; and repair is the identity for attested native material (The Speakable),
    so a worn native compound survives repair unchanged.
 
+## Test-fixture correction (applies to every task's test snippet)
+
+**The test snippets below were written against a misremembered API and three
+of them do not compile as printed.** Task 2's implementer found this; the
+correction applies to Tasks 6 and 8 as well. Use these forms:
+
+- `Seed` is a **tuple struct**: write `Seed(42)`, not `Seed::new(42)`.
+- `draw_phonology` takes **three** arguments — `(&Seed, &str, &Envelope)`.
+
+Follow the codebase's own helper (`domains/language/tests/speakable_properties.rs:38`)
+rather than hand-rolling one:
+
+```rust
+fn permissive_proto() -> Phonology {
+    draw_phonology(
+        &Seed(37),
+        "proto",
+        &Envelope {
+            labiality: 1.0,
+            vowel_space: 1.0,
+            voicing: 1.0,
+            sibilance: 1.0,
+            voice_loudness: 1.0,
+            tonality: 0.0,
+            exotic: ExoticSeg::None,
+        },
+    )
+}
+```
+
+Where a later task's snippet says `draw_phonology(&seed, "goblin")`, build the
+phonology this way instead and say so in your report. **Where a snippet needs a
+`Vec<Segment>` value, build it from the drawn phonology's own inventory — never
+hand-construct `Segment` variants**, which is the mistake that makes a test
+pass against a phonology that could not have produced the value.
+
 ## Global Constraints
 
 - **Branch `the-wearing`, worktree `~/.config/superpowers/worktrees/hornvale/the-wearing`.** Off `origin/main` at `3a7092c3`.
