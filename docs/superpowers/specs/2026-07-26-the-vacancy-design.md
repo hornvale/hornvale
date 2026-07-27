@@ -297,7 +297,19 @@ re-datum campaign the instrument this one had to build from scratch.
 | tropical, `Ectotherm` apex | giant constrictor snake | hot-wet is covered by peoples and a dragon, not by an ectotherm |
 | `DETRITUS`, second witness | carrion crawler | detritus has exactly one witness (otyugh) |
 | `Sessile × DETRITUS` | shrieker / violet fungus | a genuinely new cell, not a third plant — a decomposer that cannot move |
-| `Crepuscular`, mundane witness | giant badger | the cycle's only witness today is a dragon |
+| ~~`Crepuscular`, mundane witness~~ | ~~giant badger~~ | **withdrawn at plan-review — not authorable as fauna** (see below) |
+
+**A cell this spec listed without checking the lattice.** `ActivityCycle` is a
+field of `PerceptionVector`, and `perception_registry` is keyed to minded
+*speaking* kinds only — The Vigil enforces `speech ⊆ perception ⊆ mind`, so a
+kind added to perception without speech fails `check_integrity` at load. A
+mundane beast therefore **cannot carry an `ActivityCycle` at all**, and "a
+mundane `Crepuscular` witness" is unauthorable without widening the perception
+registry, which would break that lattice for one cell's sake. The cell is
+withdrawn; `Crepuscular`'s single-witness state stays recorded in the coverage
+table naming *this* blocker rather than the absence of a candidate. The fifth
+people may incidentally supply the second witness depending on its authored
+insolation optimum (§5.3).
 
 ### 5.2 Marine and amphibious fauna
 
@@ -334,18 +346,22 @@ scarce and high-variance, sharing a windfall is the status currency, and
 provision-based standing is the well-attested arid-land pattern. It is derived
 from the environment, not imported from lore.
 
-Candidates for Nathan's sign-off at G3 (authoring the world's creatures is a
-taste call, per The Menagerie's spec §2):
+**The kind is the gnoll** (Nathan, G3, 2026-07-26 — authoring the world's
+creatures is a taste call, per The Menagerie's spec §2). Arid/savanna, mundane
+CR so `potency` is 0, and a family distinct from every existing one. Its 5E
+canon is scavenger-predator, which the sim reads as body and diet only —
+decision 0021 means none of its lore morality comes with it.
 
-- **Gnoll** — arid/savanna, mundane CR, distinct family. Strong fit for a
-  high-variance forager; its 5E canon is scavenger-predator, which the sim
-  reads as body and diet only.
-- **Arid lizardfolk** — `Ectotherm` (already witnessed by kobold, so no new
-  cell there), but ectothermy is a genuine desert adaptation and it puts the
-  most physiologically distinct people in the harshest region.
-- **Thri-kreen** — desert insectoid; the most distinct body plan of the three,
-  and the one whose articulation and phonology would diverge furthest from the
-  goblinoid baseline.
+Discarded: arid lizardfolk (`Ectotherm` is already witnessed by kobold, so it
+opened no new cell) and thri-kreen.
+
+**Gnoll follows kobold's shape, not the goblinoids'.** Kobold is the roster's
+existing singleton-family people: `family_of` maps it to its own name, and it
+carries no `family_proto` entry, because `components.rs` requires a proto only
+for a label held by ≥2 kinds (verified — `family_proto` holds exactly
+`goblinoid`, `draconic`, `plant`). Gnoll is therefore authored as a singleton
+family with its own articulation and lexicon and **no proto**, which is the
+cheaper of the two peopled shapes and the one with a working precedent.
 
 ## 6. Deliberately left dark
 
