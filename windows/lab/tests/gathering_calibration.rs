@@ -116,14 +116,9 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // the-rains moisture epoch reshapes habitable capacity by latitude — that
     // the AWS-golden lag never re-pinned; the preregistered floor of 3 still
     // clears decisively.
-    // The Vacancy (roster 16 -> 29 kinds; lefford regen, 0063): thirteen new
-    // kinds compete in the coexistence stack and a real ANIMAL_PREY supply
-    // field replaced a hard-coded zero, so capacity redistributes slightly
-    // (21.0365 -> 20.8640, a 0.8% move); the preregistered floor of 3 still
-    // clears decisively.
     assert!(
-        (mean - 20.8640).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.8640)"
+        (mean - 21.0365).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~21.0365)"
     );
 }
 
@@ -191,14 +186,9 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // slightly equatorward (15.3811 -> 15.0837); the preregistered
     // directional claim asserted above — below the uniform-sphere baseline
     // of 32.7 — is untouched and still clears by better than 2x.
-    // The Vacancy (roster 16 -> 29 kinds + real prey supply; lefford regen,
-    // 0063): 15.0837 -> 15.2813, a very slight poleward shift; the
-    // preregistered directional claim asserted above — below the
-    // uniform-sphere baseline of 32.7 — is untouched and still clears by
-    // better than 2x.
     assert!(
-        (mean - 15.2813).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.2813)"
+        (mean - 15.0837).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.0837)"
     );
 }
 

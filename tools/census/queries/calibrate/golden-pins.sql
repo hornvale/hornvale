@@ -28,10 +28,6 @@
 -- (Resync 2026-07-22, The Sundering (moving-sea epoch) regen on lefford
 -- (0063): the moving-sea epoch re-placed every world again; all drifted
 -- literals below were re-synced to calibration.rs in this same commit.)
--- (Resync 2026-07-27, The Vacancy regen on lefford (0063): the roster grew
--- 16 -> 29 kinds and ANIMAL_PREY gained a real supply field, so thirteen new
--- competitors reseat settlements and most placement-derived values moved.
--- Every literal below is re-synced FROM calibration.rs, which stays primary.)
 -- (Resync 2026-07-26, The Tumult (predation epoch) regen on lefford (0063):
 -- the deep-history bake now resolves conflict as predation — a community
 -- covets a richer neighbour's site, wins the fight and seizes it — so the
@@ -272,40 +268,40 @@ namelen_stats AS (
 ),
 checks AS (
   SELECT 'locked-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)' AS pin,
-         CAST(locked_eternal AS DOUBLE) AS computed, 149.0 AS pinned, locked_eternal = 149 AS ok FROM agg
+         CAST(locked_eternal AS DOUBLE) AS computed, 151.0 AS pinned, locked_eternal = 151 AS ok FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 41 -> 40.
   SELECT 'locked-ambient per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(locked_ambient AS DOUBLE), 39.0, locked_ambient = 39 FROM agg
+         CAST(locked_ambient AS DOUBLE), 40.0, locked_ambient = 40 FROM agg
   UNION ALL
   SELECT 'spinning-yet-eternal per-people head count (calibration.rs::a_frozen_sky_never_heads_a_cyclic_pantheon)',
-         CAST(spinning_eternal_exceptions AS DOUBLE), 11.0, spinning_eternal_exceptions = 11 FROM agg
+         CAST(spinning_eternal_exceptions AS DOUBLE), 9.0, spinning_eternal_exceptions = 9 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 536 -> 535.
   -- The Tumult (predation) re-pin, 0063: 535 -> 531.
   SELECT 'goblin flagship coastal count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_coastal AS DOUBLE), 552.0, flagship_coastal = 552 FROM agg
+         CAST(flagship_coastal AS DOUBLE), 531.0, flagship_coastal = 531 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 235 -> 234.
   -- The Tumult (predation) re-pin, 0063: 234 -> 238.
   SELECT 'goblin flagship inland count (calibration.rs::goblin_flagship_coastal_split_is_pinned)',
-         CAST(flagship_inland AS DOUBLE), 214.0, flagship_inland = 214 FROM agg
+         CAST(flagship_inland AS DOUBLE), 238.0, flagship_inland = 238 FROM agg
   UNION ALL
   SELECT 'moonless-solar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
          CAST(moonless_solar AS DOUBLE), 33.0, moonless_solar = 33 FROM agg
   UNION ALL
   SELECT 'moonless-lunar kobold head count (calibration.rs::goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar)',
-         CAST(moonless_lunar AS DOUBLE), 61.0, moonless_lunar = 61 FROM agg
+         CAST(moonless_lunar AS DOUBLE), 63.0, moonless_lunar = 63 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 703 -> 700.
   -- The Tumult (predation) re-pin, 0063: 700 -> 702 (the 768-row pool is
   -- unchanged, so accuracy rises 0.911 -> 0.914).
   SELECT 'blind-attribution correct count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_correct AS DOUBLE), 695.0, blind_correct = 695 FROM agg
+         CAST(blind_correct AS DOUBLE), 702.0, blind_correct = 702 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 768.
   SELECT 'blind-attribution total count (calibration.rs::blind_attribution_beats_chance_decisively)',
-         CAST(blind_total AS DOUBLE), 759.0, blind_total = 759 FROM agg
+         CAST(blind_total AS DOUBLE), 768.0, blind_total = 768 FROM agg
   UNION ALL
   SELECT 'mooned+spinning blind-attribution mismatches (calibration.rs::blind_attribution_beats_chance_decisively, correct_mooned == total_mooned)',
          CAST(mooned_spinning_mismatches AS DOUBLE), 0.0, mooned_spinning_mismatches = 0 FROM agg
@@ -313,12 +309,12 @@ checks AS (
   -- The Sundering (moving-sea epoch, 0063): 50 -> 48.
   -- The Tumult (predation) re-pin, 0063: 48 -> 43.
   SELECT 'zero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_zero AS DOUBLE), 39.0, collision_zero = 39 FROM agg
+         CAST(collision_zero AS DOUBLE), 43.0, collision_zero = 43 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 723 -> 722.
   -- The Tumult (predation) re-pin, 0063: 722 -> 727.
   SELECT 'nonzero-collision world count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         CAST(collision_nonzero AS DOUBLE), 731.0, collision_nonzero = 731 FROM agg
+         CAST(collision_nonzero AS DOUBLE), 727.0, collision_nonzero = 727 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 227 -> 230.
   SELECT 'absent name-collision-rate count (calibration.rs::name_collision_rate_is_measured_and_pinned)',
@@ -327,33 +323,33 @@ checks AS (
   -- The Sundering (moving-sea epoch, 0063): 0.178_726_790_236_740_12 ->
   -- 0.183_235_100_516_883.
   -- The Tumult (predation) re-pin, 0063: 0.183_235_100_516_883 ->
-  -- 0.185_804_141_557_143 (predation prunes the roster, so fewer names
+  -- 0.172_311_535_567_532_45 (predation prunes the roster, so fewer names
   -- are drawn per world and the rate FALLS).
   SELECT 'mean name-collision-rate (calibration.rs::name_collision_rate_is_measured_and_pinned)',
-         collision_mean, 0.185_804_141_557_143, abs(collision_mean - 0.185_804_141_557_143) < 1e-6 FROM agg
+         collision_mean, 0.172_311_535_567_532_45, abs(collision_mean - 0.172_311_535_567_532_45) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 771 -> 769.
   SELECT 'goblin name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(goblin_len_present AS DOUBLE), 766.0, goblin_len_present = 766 FROM agg
+         CAST(goblin_len_present AS DOUBLE), 769.0, goblin_len_present = 769 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 13.461_308_710_376_134 ->
   -- 13.382_874_198_569_583.
   -- The Tumult (predation) re-pin, 0063: 13.382_874_198_569_583 ->
-  -- 13.397_077_864_229_757.
+  -- 13.411_552_371_911_55.
   SELECT 'mean goblin name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         goblin_len_mean, 13.397_077_864_229_757, abs(goblin_len_mean - 13.397_077_864_229_757) < 1e-6 FROM agg
+         goblin_len_mean, 13.411_552_371_911_55, abs(goblin_len_mean - 13.411_552_371_911_55) < 1e-6 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 772 -> 769.
   SELECT 'kobold name-length present-row count (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         CAST(kobold_len_present AS DOUBLE), 762.0, kobold_len_present = 762 FROM agg
+         CAST(kobold_len_present AS DOUBLE), 769.0, kobold_len_present = 769 FROM agg
   UNION ALL
   -- The Sundering (moving-sea epoch, 0063): 12.748_786_009_455_962 ->
   -- 12.690_321_674_122_243.
   -- The Tumult (predation) re-pin, 0063: 12.690_321_674_122_243 ->
-  -- 13.211_758_902_624_661 (kobold moves far more than goblin — the same
+  -- 13.094_070_229_388_812 (kobold moves far more than goblin — the same
   -- reseating that inverts the coastal-rate ordering).
   SELECT 'mean kobold name length (calibration.rs::name_length_distributions_are_measured_and_pinned)',
-         kobold_len_mean, 13.211_758_902_624_661, abs(kobold_len_mean - 13.211_758_902_624_661) < 1e-6 FROM agg
+         kobold_len_mean, 13.094_070_229_388_812, abs(kobold_len_mean - 13.094_070_229_388_812) < 1e-6 FROM agg
   UNION ALL
   SELECT 'mean goblin hue-depth (calibration.rs::goblin_hue_depth_exceeds_kobold_hue_depth)',
          goblin_hue_mean, 4.0, abs(goblin_hue_mean - 4.0) < 1e-6 FROM agg
