@@ -6403,10 +6403,12 @@ mod tests {
                 .collect();
         assert_eq!(settled, four_peoples, "Settled is exactly the four peoples");
 
-        // The wild-agentified `{Solitary, Gregarious}` set: the ten mobile,
-        // non-settled kinds — the same kinds the retired `¬psyche ∧ ¬autotroph`
-        // proxy selected before the dragons gained a mind (still agentified,
-        // now with a temperament to read). Disjoint from the settling peoples.
+        // The wild-agentified `{Solitary, Gregarious}` set: the sixteen mobile,
+        // non-settled kinds (ten pre-Vacancy plus The Vacancy T7's six —
+        // shrieker is `Sessile`, so it stays out of this set) — the same kinds
+        // the retired `¬psyche ∧ ¬autotroph` proxy selected before the dragons
+        // gained a mind (still agentified, now with a temperament to read).
+        // Disjoint from the settling peoples.
         let mobile_beasts: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
@@ -6421,11 +6423,17 @@ mod tests {
             .collect();
         let expected_wild: std::collections::BTreeSet<&'static str> = [
             "black-dragon",
+            "carrion-crawler",
+            "dire-wolf",
+            "giant-constrictor-snake",
             "giant-elk",
             "giant-goat",
+            "giant-hyena",
+            "giant-scorpion",
             "otyugh",
             "owlbear",
             "red-dragon",
+            "rhinoceros",
             "rust-monster",
             "white-dragon",
             "woolly-mammoth",
@@ -6435,7 +6443,7 @@ mod tests {
         .collect();
         assert_eq!(
             mobile_beasts, expected_wild,
-            "the {{Solitary, Gregarious}} set is the ten mobile non-settled kinds"
+            "the {{Solitary, Gregarious}} set is the sixteen mobile non-settled kinds"
         );
         assert!(
             settled.is_disjoint(&mobile_beasts),

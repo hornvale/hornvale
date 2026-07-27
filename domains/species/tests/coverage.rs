@@ -82,13 +82,17 @@ fn metabolic_class_coverage_matches_the_table() {
             &[
                 "black-dragon",
                 "bugbear",
+                "carrion-crawler",
+                "dire-wolf",
                 "giant-elk",
                 "giant-goat",
+                "giant-hyena",
                 "goblin",
                 "hobgoblin",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "rhinoceros",
                 "white-dragon",
                 "woolly-mammoth",
             ],
@@ -96,7 +100,12 @@ fn metabolic_class_coverage_matches_the_table() {
         (
             MetabolicClass::Ectotherm,
             Rung::Witnessed,
-            &["kobold", "rust-monster"],
+            &[
+                "giant-constrictor-snake",
+                "giant-scorpion",
+                "kobold",
+                "rust-monster",
+            ],
         ),
         // WITNESSED but NOT exercised: allometry computes Autotroph exactly as
         // Endotherm despite the class doc's surface-limited claim. See BIO-42
@@ -104,7 +113,7 @@ fn metabolic_class_coverage_matches_the_table() {
         (
             MetabolicClass::Autotroph,
             Rung::Witnessed,
-            &["treant", "twig-blight"],
+            &["shrieker", "treant", "twig-blight"],
         ),
         // The sole carrier of the `None` life-history branch.
         (MetabolicClass::Ametabolic, Rung::Witnessed, &["xorn"]),
@@ -159,7 +168,16 @@ fn activity_cycle_coverage_matches_the_table() {
             Rung::Witnessed,
             &["black-dragon", "bugbear", "kobold"],
         ),
-        // Witnessed only by a dragon; stage 3 adds a mundane witness.
+        // Witnessed only by a dragon, and stays that way: The Vacancy T7
+        // withdrew the planned mundane witness (giant badger) at plan-review.
+        // `ActivityCycle` is a field of `PerceptionVector`, and
+        // `perception_registry` is keyed to minded SPEAKING kinds only —
+        // `speech ⊆ perception ⊆ mind` (The Vigil) — so a mundane beast
+        // cannot carry an `ActivityCycle` under the current component
+        // layout at all. A mundane `Crepuscular` witness is therefore not
+        // authorable as fauna without widening the perception registry,
+        // which would break The Vigil's enforced lattice. This cell's
+        // single-dragon witness is a structural ceiling, not an oversight.
         (
             ActivityCycle::Crepuscular,
             Rung::Witnessed,
@@ -184,16 +202,20 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Sessile,
             Rung::Witnessed,
-            &["treant", "twig-blight"],
+            &["shrieker", "treant", "twig-blight"],
         ),
         (
             SocialForm::Solitary,
             Rung::Witnessed,
             &[
                 "black-dragon",
+                "carrion-crawler",
+                "giant-constrictor-snake",
+                "giant-scorpion",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "rhinoceros",
                 "rust-monster",
                 "white-dragon",
                 "xorn",
@@ -202,7 +224,13 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Gregarious,
             Rung::Witnessed,
-            &["giant-elk", "giant-goat", "woolly-mammoth"],
+            &[
+                "dire-wolf",
+                "giant-elk",
+                "giant-goat",
+                "giant-hyena",
+                "woolly-mammoth",
+            ],
         ),
         (
             SocialForm::Settled,
@@ -230,7 +258,9 @@ fn the_dark_trait_combinations_are_named() {
 
     let bio = biosphere_registry();
 
-    // `Gregarious x ANIMAL_PREY`: every herder today is a pure forager.
+    // `Gregarious x ANIMAL_PREY`: WITNESSED as of The Vacancy T7 — the giant
+    // hyena (savanna) and the dire wolf (boreal) are the roster's first
+    // pack-hunting predators; every herder before them was a pure forager.
     let gregarious_predators: Vec<&str> = bio
         .iter()
         .filter(|(_, b)| {
@@ -240,11 +270,13 @@ fn the_dark_trait_combinations_are_named() {
         .collect();
     assert_eq!(
         gregarious_predators,
-        Vec::<&str>::new(),
-        "Gregarious x ANIMAL_PREY is DECLARED; stage 3 witnesses it"
+        vec!["dire-wolf", "giant-hyena"],
+        "Gregarious x ANIMAL_PREY: WITNESSED by The Vacancy T7"
     );
 
-    // `Sessile x DETRITUS`: both Sessile kinds are photosynthate autotrophs.
+    // `Sessile x DETRITUS`: WITNESSED as of The Vacancy T7 — the shrieker, a
+    // decomposer that cannot move. treant/twig-blight remain photosynthate
+    // autotrophs; the shrieker is the roster's first Sessile detritivore.
     let sessile_detritivores: Vec<&str> = bio
         .iter()
         .filter(|(_, b)| b.social_form == SocialForm::Sessile && b.niche.weight(DETRITUS) > 0.0)
@@ -252,8 +284,8 @@ fn the_dark_trait_combinations_are_named() {
         .collect();
     assert_eq!(
         sessile_detritivores,
-        Vec::<&str>::new(),
-        "Sessile x DETRITUS is DECLARED; stage 3 witnesses it"
+        vec!["shrieker"],
+        "Sessile x DETRITUS: WITNESSED by The Vacancy T7"
     );
 
     // A minded `Gregarious` kind — decision 0068's whole reason for existing,

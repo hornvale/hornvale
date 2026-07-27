@@ -801,6 +801,307 @@ fn owlbear_condition_niche() -> ConditionNiche {
     }
 }
 
+// The Vacancy (T7): seven terrestrial fauna, each authored against
+// `windows/worldgen/tests/fixtures/occupancy.csv` (the committed occupancy
+// readout) as it stood before this task's regen. Two structural facts read
+// off `niche_per_species_k` (worldgen) shaped every niche below: (1) the
+// `ANIMAL_PREY`/`PLANT_FORAGE` supply terms both derive from
+// `forage_supply_field`, itself a fraction of the NPP-based `base_carrying`
+// field, which collapses toward 0 wherever `carrying_capacity`'s aridity term
+// pushes hostility high (desert-band cells, moisture < 0.2) — this is why
+// EVERY existing NPP-fed kind (giant-elk, giant-goat, woolly-mammoth, the
+// four peoples, the three dragons, owlbear) carries no desert row at all in
+// the readout; (2) `DETRITUS`'s supply is `DETRITUS_AMBIENT`, a flat land-mask
+// constant untouched by aridity, which is why otyugh/rust-monster/xorn are the
+// only kinds that reach desert and ice today. Elevation optima below cite the
+// settleable-land percentile table on [`ConditionNiche`]'s doc (p15=142,
+// p25=621, p35=1004, p50=1561, p65=2166, p75=2651, p85=3251, p95=4148 m above
+// sea level).
+
+/// Giant scorpion condition niche: the hot-arid DESERT specialist — the
+/// largest land gap in the pre-T7 readout. Every existing `ANIMAL_PREY`/
+/// `PLANT_FORAGE` consumer carries zero desert rows (see the block comment
+/// above); the niche below weights `DETRITUS` over `ANIMAL_PREY` (0.7/0.3,
+/// an opportunistic scavenger reading rather than a pure predator)
+/// specifically so the supply term is not dominated by the NPP-linked
+/// `ANIMAL_PREY` axis, which collapses in desert the way any predator's
+/// would. **Measured, not fully achieved**: this raised the scorpion's
+/// desert `mean_k` from 0.0081 (0.7/0.3 weighting) to 0.0176 (this 0.3/0.7
+/// weighting) in the regenerated readout, and desert is now the scorpion's
+/// #2 biome by `mean_k` (behind only tropical-rainforest, 0.0198) — a real,
+/// competitive desert presence, clearly ahead of every prior desert
+/// occupant (otyugh/rust-monster/xorn all sit at or below 0.014 there) —
+/// but not the outright #1 biome. See this crate's T7 task report for why:
+/// `insolation` is a pure function of latitude (`annual_mean_insolation`),
+/// uncorrelated with canopy/shade, so it barely differentiates hot biomes
+/// from one another, and `DETRITUS`'s flat land-mask supply still leaves
+/// wetter hot biomes with a small residual `ANIMAL_PREY` edge. Ectotherm
+/// (the third, after kobold and rust-monster). Large beast, Challenge 3
+/// (5E Monster Manual, verified at authoring time; `potency` stays 0.0 —
+/// mundane, not the dragon/plant/elemental supernatural set). Mass is an
+/// author's estimate for the MM's Large size category (no weight is
+/// printed in the stat block); ~300 kg, a horse-scale armored predator.
+fn giant_scorpion_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // hottest optimum in the roster — the desert's hot band (>=20C).
+        temperature: ConditionResponse {
+            optimum: 32.0,
+            width: 10.0,
+            devotion: 0.80,
+        },
+        // deep in the desert moisture band (<0.20); the DETRITUS share on
+        // the niche (below) is what keeps this survivable rather than void.
+        moisture: ConditionResponse {
+            optimum: 0.10,
+            width: 0.12,
+            devotion: 0.75,
+        },
+        // the highest-sun optimum in the roster — open desert exposure.
+        insolation: ConditionResponse {
+            optimum: 0.24,
+            width: 0.10,
+            devotion: 0.65,
+        },
+        // desert basin lowland, below p25 (621 m).
+        elevation: ConditionResponse {
+            optimum: 400.0,
+            width: 1000.0,
+            devotion: 0.45,
+        },
+    }
+}
+
+/// Giant hyena condition niche: the SAVANNA witness of `Gregarious ×
+/// ANIMAL_PREY` — before this task every herder in the roster was a pure
+/// forager (`the_dark_trait_combinations_are_named`, pre-T7: empty). Savanna
+/// carries real NPP-fed supply today (giant-elk's savanna mean_k = 0.0214,
+/// pre-regen readout), so a pure `ANIMAL_PREY` predator is safe here, unlike
+/// the desert case above. Large beast, Challenge 1 (5E MM, verified). Mass
+/// is an author's estimate for the MM's Large size category; ~160 kg, above
+/// a real spotted hyena's scale to match "giant."
+fn giant_hyena_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 25.0,
+            width: 9.0,
+            devotion: 0.75,
+        },
+        // mid-savanna band (0.20-0.45).
+        moisture: ConditionResponse {
+            optimum: 0.32,
+            width: 0.13,
+            devotion: 0.70,
+        },
+        // open savanna sun.
+        insolation: ConditionResponse {
+            optimum: 0.19,
+            width: 0.10,
+            devotion: 0.55,
+        },
+        // savanna lowland, below p25 (621 m).
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 1400.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Dire wolf condition niche: the BOREAL witness of `Gregarious ×
+/// ANIMAL_PREY` — the same dark combination as the giant hyena, a second
+/// climate. Taiga carries real NPP-fed supply (giant-elk's taiga mean_k =
+/// 0.0096, pre-regen readout), so predation is viable here too. Cold but
+/// held well clear of the `Ice` cutoff (-20 C) and centred above taiga's
+/// moisture split (>=0.30-0.35, vs. the drier tundra split) so the pack
+/// reads as taiga, not tundra. Elevation kept low (below p15, 142 m) because
+/// taiga's tree line falls toward ~400-1600 m at the high latitudes taiga
+/// occupies (`tree_line_m`); a higher optimum here would bleed into `Alpine`.
+/// Large beast, Challenge 1 (5E MM, verified). Mass is an author's estimate
+/// for the MM's Large size category; ~150 kg, matching the giant hyena's
+/// scale for the shared cell.
+fn dire_wolf_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: -3.0,
+            width: 8.0,
+            devotion: 0.75,
+        },
+        // above taiga's moisture split, distinguishing it from tundra.
+        moisture: ConditionResponse {
+            optimum: 0.45,
+            width: 0.18,
+            devotion: 0.60,
+        },
+        // low boreal sun.
+        insolation: ConditionResponse {
+            optimum: 0.06,
+            width: 0.07,
+            devotion: 0.55,
+        },
+        // low, well clear of the high-latitude tree line.
+        elevation: ConditionResponse {
+            optimum: 300.0,
+            width: 1100.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Rhinoceros condition niche: the herbivore prey base for the giant hyena
+/// (savanna) — the hot-arid/savanna cell. A pure `PLANT_FORAGE` grazer inherits
+/// the same desert-NPP collapse the giant elk/goat/mammoth already show (see
+/// the block comment above), so this is authored savanna-dominant with an
+/// arid lean toward the desert margin, not as a true desert occupant — the
+/// honest placement for an NPP-fed herbivore. Large beast, Challenge 2 (5E
+/// MM, verified). Unlike the fantastical menagerie, "Rhinoceros" in the MM
+/// **is** the real animal, so its mass is sourced from the real species
+/// rather than estimated: ~2300 kg, a white rhinoceros adult male average.
+/// Solitary (real rhinos are not herd animals), distinguishing its
+/// `SocialForm` from the roster's other grazers.
+fn rhinoceros_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 25.0,
+            width: 10.0,
+            devotion: 0.65,
+        },
+        // savanna-leaning, arid edge — spans toward the desert margin
+        // without centring on it (see doc: a pure grazer cannot stake true
+        // desert the way the scorpion's DETRITUS-blended niche can).
+        moisture: ConditionResponse {
+            optimum: 0.24,
+            width: 0.16,
+            devotion: 0.55,
+        },
+        insolation: ConditionResponse {
+            optimum: 0.20,
+            width: 0.11,
+            devotion: 0.50,
+        },
+        // savanna lowland.
+        elevation: ConditionResponse {
+            optimum: 450.0,
+            width: 1500.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Giant constrictor snake condition niche: the TROPICAL `Ectotherm` apex —
+/// "hot-wet is covered by peoples and a dragon, not by an ectotherm" (spec
+/// §5.1). Shares the black dragon's wet-lowland climate tile (moisture
+/// optimum 0.80, elevation 50 m) but as a mundane, non-buffered predator: no
+/// `potency`, so devotion is tighter here than the dragon's soft preference.
+/// Huge beast, Challenge 2 (5E MM, verified). Mass is an author's estimate
+/// for the MM's Huge size category; ~500 kg, scaled up from a real large
+/// anaconda for a "giant" fantasy constrictor.
+fn giant_constrictor_snake_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        temperature: ConditionResponse {
+            optimum: 27.0,
+            width: 7.0,
+            devotion: 0.80,
+        },
+        // tropical-rainforest wet.
+        moisture: ConditionResponse {
+            optimum: 0.78,
+            width: 0.16,
+            devotion: 0.75,
+        },
+        // shaded canopy floor, like the black dragon's ambush and the
+        // otyugh's swamp.
+        insolation: ConditionResponse {
+            optimum: 0.11,
+            width: 0.09,
+            devotion: 0.45,
+        },
+        // lowland, p15 (142 m).
+        elevation: ConditionResponse {
+            optimum: 150.0,
+            width: 900.0,
+            devotion: 0.50,
+        },
+    }
+}
+
+/// Carrion crawler condition niche: the second `DETRITUS` witness (otyugh is
+/// the first). `DETRITUS`'s supply (`DETRITUS_AMBIENT`) is a flat land-mask
+/// constant with no spatial variation, so this niche is deliberately placed
+/// AWAY from the otyugh's warm/wet swamp stronghold (temperature 23,
+/// moisture 0.83, elevation 50) — a cool, shaded, moderate-moisture tile —
+/// so the two `DETRITUS` witnesses are genuinely differentiated, not a near-
+/// duplicate pair. Large monstrosity, Challenge 2 (5E MM, verified;
+/// `potency` stays 0.0 — monstrosity is not in this campaign's supernatural
+/// set, matching the owlbear precedent). Mass is an author's estimate for
+/// the MM's Large size category; ~200 kg.
+fn carrion_crawler_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // cool, unlike the otyugh's warm 23 C.
+        temperature: ConditionResponse {
+            optimum: 3.0,
+            width: 9.0,
+            devotion: 0.55,
+        },
+        // moist forest litter, below the otyugh's wettest-cell stake.
+        moisture: ConditionResponse {
+            optimum: 0.55,
+            width: 0.22,
+            devotion: 0.55,
+        },
+        // shaded/cave-adjacent, tighter than the otyugh's wide-neutral 0.30.
+        insolation: ConditionResponse {
+            optimum: 0.05,
+            width: 0.07,
+            devotion: 0.55,
+        },
+        elevation: ConditionResponse {
+            optimum: 350.0,
+            width: 1200.0,
+            devotion: 0.40,
+        },
+    }
+}
+
+/// Shrieker condition niche: `Sessile × DETRITUS` — a genuinely new cell
+/// (both existing `Sessile` kinds, treant/twig-blight, are `PHOTOSYNTHATE`
+/// autotrophs), a decomposer that cannot move. Medium plant, Challenge 0
+/// (5E MM, verified) — `potency` is `0.0` either way (`CR/30 = 0`), so this
+/// kind does not have to resolve whether "plant" belongs to the supernatural
+/// set for it. Mass is an author's estimate for the MM's Medium size
+/// category, consistent with the MM's own "human-sized mushroom" framing;
+/// ~35 kg. The deepest-shade insolation optimum in the roster (tighter than
+/// even the rust monster's cave preference) is this kind's signature: a
+/// stationary decomposer that cannot walk toward better light has to be
+/// authored INTO the darkness it needs, not merely tolerant of it.
+fn shrieker_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // temperate, between the goblin's warm-marginal and the dire wolf's
+        // cold.
+        temperature: ConditionResponse {
+            optimum: 11.0,
+            width: 9.0,
+            devotion: 0.55,
+        },
+        // moist forest floor.
+        moisture: ConditionResponse {
+            optimum: 0.58,
+            width: 0.18,
+            devotion: 0.55,
+        },
+        // deepest shade in the roster — a sessile decomposer's hard stake.
+        insolation: ConditionResponse {
+            optimum: 0.03,
+            width: 0.05,
+            devotion: 0.70,
+        },
+        elevation: ConditionResponse {
+            optimum: 400.0,
+            width: 1300.0,
+            devotion: 0.35,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1077,6 +1378,86 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 social_form: SocialForm::Solitary,
             },
         ),
+        // The Vacancy (T7): seven terrestrial fauna. See the block comment
+        // above `giant_scorpion_condition_niche` for the shared design notes
+        // (the NPP/desert supply trap and the elevation percentile table).
+        (
+            KindId("giant-scorpion"),
+            BiosphereTraits {
+                mass: Mass::new(300.0).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 0.3), (DETRITUS, 0.7)]).unwrap(),
+                condition_niche: giant_scorpion_condition_niche(),
+                potency: 0.0, // giant scorpion — CR 3 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("giant-hyena"),
+            BiosphereTraits {
+                mass: Mass::new(160.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: giant_hyena_condition_niche(),
+                potency: 0.0, // giant hyena — CR 1 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Gregarious,
+            },
+        ),
+        (
+            KindId("dire-wolf"),
+            BiosphereTraits {
+                mass: Mass::new(150.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: dire_wolf_condition_niche(),
+                potency: 0.0, // dire wolf — CR 1 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Gregarious,
+            },
+        ),
+        (
+            KindId("rhinoceros"),
+            BiosphereTraits {
+                mass: Mass::new(2300.0).unwrap(), // real white rhinoceros adult male average
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap(),
+                condition_niche: rhinoceros_condition_niche(),
+                potency: 0.0, // rhinoceros — CR 2 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("giant-constrictor-snake"),
+            BiosphereTraits {
+                mass: Mass::new(500.0).unwrap(),
+                metabolic_class: MetabolicClass::Ectotherm,
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 1.0)]).unwrap(),
+                condition_niche: giant_constrictor_snake_condition_niche(),
+                potency: 0.0, // giant constrictor snake — CR 2 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("carrion-crawler"),
+            BiosphereTraits {
+                mass: Mass::new(200.0).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
+                condition_niche: carrion_crawler_condition_niche(),
+                potency: 0.0, // carrion crawler — CR 2 (5E MM); mundane, potency stays 0
+                social_form: SocialForm::Solitary,
+            },
+        ),
+        (
+            KindId("shrieker"),
+            BiosphereTraits {
+                mass: Mass::new(35.0).unwrap(),
+                metabolic_class: MetabolicClass::Autotroph,
+                niche: ResourceVector::new(&[(DETRITUS, 1.0)]).unwrap(),
+                condition_niche: shrieker_condition_niche(),
+                potency: 0.0, // shrieker — CR 0 (5E MM); CR/30 = 0 regardless of set
+                social_form: SocialForm::Sessile,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -1300,6 +1681,17 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("red-dragon"), "draconic"),
         (KindId("black-dragon"), "draconic"),
         (KindId("owlbear"), "owlbear"),
+        // The Vacancy (T7): seven singleton families — none shares a family
+        // label with another kind, so none needs a `family_proto` entry in
+        // `hornvale_language` (a proto is only required once a label is
+        // carried by >= 2 kinds).
+        (KindId("giant-scorpion"), "giant-scorpion"),
+        (KindId("giant-hyena"), "giant-hyena"),
+        (KindId("dire-wolf"), "dire-wolf"),
+        (KindId("rhinoceros"), "rhinoceros"),
+        (KindId("giant-constrictor-snake"), "giant-constrictor-snake"),
+        (KindId("carrion-crawler"), "carrion-crawler"),
+        (KindId("shrieker"), "shrieker"),
     ]
     .into_iter()
     .collect()
@@ -1498,7 +1890,11 @@ mod tests {
         let psy = psyche_registry();
         let per = perception_registry();
 
-        assert_eq!(bio.len(), 16, "sixteen kinds compete for space");
+        assert_eq!(
+            bio.len(),
+            23,
+            "twenty-three kinds compete for space (The Vacancy T7 added seven)"
+        );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
         assert_eq!(bio_ids, fam_ids, "family covers exactly the biosphere set");
@@ -1564,21 +1960,29 @@ mod tests {
         let bio = biosphere_registry();
         let names: Vec<&str> = bio.ids().map(|k| k.0).collect();
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
-        // alongside the four peoples); ComponentStore key order is lexicographic.
+        // alongside the four peoples), then with The Vacancy's T7 (seven more
+        // biosphere-only fauna); ComponentStore key order is lexicographic.
         assert_eq!(
             names,
             vec![
                 "black-dragon",
                 "bugbear",
+                "carrion-crawler",
+                "dire-wolf",
+                "giant-constrictor-snake",
                 "giant-elk",
                 "giant-goat",
+                "giant-hyena",
+                "giant-scorpion",
                 "goblin",
                 "hobgoblin",
                 "kobold",
                 "otyugh",
                 "owlbear",
                 "red-dragon",
+                "rhinoceros",
                 "rust-monster",
+                "shrieker",
                 "treant",
                 "twig-blight",
                 "white-dragon",

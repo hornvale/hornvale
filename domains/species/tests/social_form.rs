@@ -31,6 +31,14 @@ fn every_kind_has_the_authored_social_form() {
         ("white-dragon", SocialForm::Solitary),
         ("red-dragon", SocialForm::Solitary),
         ("black-dragon", SocialForm::Solitary),
+        // The Vacancy (T7): seven terrestrial fauna.
+        ("giant-scorpion", SocialForm::Solitary),
+        ("giant-hyena", SocialForm::Gregarious),
+        ("dire-wolf", SocialForm::Gregarious),
+        ("rhinoceros", SocialForm::Solitary),
+        ("giant-constrictor-snake", SocialForm::Solitary),
+        ("carrion-crawler", SocialForm::Solitary),
+        ("shrieker", SocialForm::Sessile),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
