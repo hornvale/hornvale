@@ -89,6 +89,38 @@ block before dispatching* — is what caught it, and it caught two more besides.
 **Write the precondition into the plan, addressed to the person who will resume
 it.** It is worth more than the plan's confidence.
 
+## A frozen prediction can be outlived by its world
+
+At close, absorbing main broke the four-times-replicated null — and broke it
+**in the predicted direction**. Another campaign's history rework had moved seed
+13 from 92 settlements to 104, and on that world the hearth lowers prevalence by
+about 0.004, entirely within one species.
+
+The temptation is obvious and was declined. A preregistration is a claim about a
+specific world, and this one was sealed against a world that no longer exists;
+reading a favourable delta off a changed world afterwards is the same post-hoc
+move the campaign had already refused twice (once over the calibration constant,
+once over the cold-temperature gate). The four nulls stand as measured. The new
+delta is recorded, unclaimed, with re-measurement named as the follow-up.
+
+Two durable things came out of it:
+
+- **A test's name is a claim.** `..._shows_no_measurable_effect_...` had become
+  false, so it was renamed to what it now asserts — that the effect stays small
+  and never harms. A test whose name outlives its assertion is a lie with a
+  green tick beside it.
+- **Bound the surprise rather than asserting its absence.** The A/B now asserts a
+  *safety* property (a hearth never makes a creature worse) and a *magnitude
+  bound* (the delta stays near where it was recorded), with the message telling
+  the next person to re-run the protocol rather than widen the bound. That
+  survives a moving world in a way `assert_eq!` could not, and it still fails
+  loudly if the effect ever becomes real.
+
+This is the third pin in this campaign rewritten from a value to an invariant,
+and the reason is always the same: parallel campaigns move the world underneath
+each other, and a pin on someone else's physics reddens for their improvements
+while saying nothing about your own claim.
+
 ## Smaller notes
 
 - **A default chosen for a good reason becomes the permanent answer.**

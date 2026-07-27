@@ -89,6 +89,26 @@ The world, as it stands, does not have those people indoors.
 
 That is not a failure of the fire. It is a finding about who lives where.
 
+## And then the ground moved
+
+While all this was being settled, another hand was reshaping how a world's
+history is laid down, and the place the measurement had been taken stopped
+being the place it was. Where there had been ninety-two settlements there were
+now a hundred and four.
+
+On that new ground the fire does something. Very little — one creature in two
+thousand feels the cold less for having one, and only among the hobgoblins —
+but the little it does is in the direction that was predicted.
+
+It would be easy, and wrong, to call that the answer. The prediction was sealed
+against a world that no longer exists, and finding a favourable number
+afterwards in a world that has changed is precisely the move the sealing was
+meant to prevent. So it is written down and left unclaimed: the four empty
+answers were honest measurements of the world as it was, and this is an
+observation about the world as it now is, awaiting a measurement of its own.
+
+What is claimed is narrower and safer: a fire never makes a creature colder.
+
 ## What was found by making something move
 
 Twice, a thing that had been checked turned out to have been checked for the
