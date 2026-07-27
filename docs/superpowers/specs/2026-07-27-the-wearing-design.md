@@ -148,9 +148,36 @@ longest forms in the language — the precise opposite of the campaign's purpose
 S1 ships LANG-55 as registered: reserve a phonotactic shape epoch-0 roots
 cannot occupy and draw later coinages from it, so additivity holds by
 construction of the form space rather than of the assignment order, and core
-concepts keep their short forms. The cost — newer words audibly marked as newer
-— is loanword phonology, and is realism rather than a defect. This also lifts
-the constraint The Accession placed above LANG-27.
+concepts keep their short forms.
+
+**LANG-55's cost is not paid by this campaign's own additions** (owner call
+2026-07-27, ledger #9). The reserved subspace marks later-epoch words as
+audibly newer — correct for genuine neologisms, wrong for `hill`, `river`,
+`ford`, `coast`, `high`, `low`. No language borrows "hill"; marking these as
+loans would encode a gap in *our model* as a fact about *the world*,
+permanently. And the additivity LANG-55 protects is moot **inside** this
+campaign: `draw_candidate` (`etymology.rs:434`) calls `draw_syllables`, which
+reads `ph.nuclei`, which S4 changes — so every proto-root in every language
+reseeds regardless. The campaign is already a total regeneration.
+
+So the campaign takes the epoch bump it is already paying for and **re-founds
+the cohort baseline**: `ROOT_EPOCH` goes `v3` → `v4`, and `EPOCH_COHORTS[0]`
+becomes the roster as of The Wearing — the current cohort 0 (76) plus cohort 1
+(15) plus the ~20 new concepts, ≈111 — every one of them sorting by `core_rank`
+on merit. No false loanwords; LANG-27's Zipf ordering is restored rather than
+deferred again.
+
+The Accession's rule ("never edit an existing cohort") is preserved in spirit:
+cohorts are frozen *between* epoch bumps, and an epoch bump is precisely when a
+baseline is legitimately re-founded — the "deliberate regeneration uses an
+epoch suffix" contract. `cohort_zero_stays_the_frozen_landing_roster`
+(`domains/language/src/accession.rs:167`) is re-pinned from 76 to the new
+baseline, with the bump as its stated justification. This touches an invariant
+that landed the same day, which is why it was brought to Nathan rather than
+auto-resolved.
+
+LANG-55 still ships, and still does its job — it protects every concept
+addition made *after* this campaign, when additivity is no longer moot.
 
 ### S2 — Descriptor breadth (LANG-9)
 
@@ -248,12 +275,15 @@ is the cheapest stage in the campaign.
 Every stage but S5 touches a save-format contract. One epoch bump covers all
 of them; that indivisibility is the argument for the single-campaign shape.
 
-- **S1** reseeds proto-root assignment for later-epoch concepts. Epoch suffix,
-  never a rename (`ROOT_EPOCH`, currently `"v3"`).
-- **S2** appends a cohort to `EPOCH_COHORTS`. Additive by construction — that is
-  what The Accession bought, and `cli/tests/accession.rs` asserts the table and
-  the concept registry agree in both directions. The concept registry is itself
-  a determinism contract: registration feeds the lexicon proto-root walk.
+- **S1** bumps `ROOT_EPOCH` `"v3"` → `"v4"` and re-founds `EPOCH_COHORTS[0]` to
+  the ~111-concept roster as of this campaign (ledger #9). Epoch suffix, never
+  a rename. Re-pins `cohort_zero_stays_the_frozen_landing_roster` 76 → ~111.
+- **S2** registers the ~20 new concepts into that re-founded cohort 0, not into
+  a fresh cohort. `cli/tests/accession.rs` asserts the table and the concept
+  registry agree in both directions (`every_registered_concept_has_an_accession_epoch`
+  and `every_accessioned_concept_is_actually_registered`); both must stay green.
+  The concept registry is itself a determinism contract: registration feeds the
+  lexicon proto-root walk.
 - **S3** introduces a name epoch (a `/v3` leg on the naming stream). Stream
   consumption order is a contract: the pin-isolation tests in
   `domains/astronomy/tests/genesis_properties.rs` and
