@@ -6,7 +6,15 @@
 //!
 //! - `Declared`  — the variant or branch exists; nothing carries it.
 //! - `Witnessed` — at least one kind carries it.
-//! - `Pinned`    — a test fails if it breaks.
+//!
+//! The campaign's wider ladder has a third rung, `Pinned` ("a test fails if it
+//! breaks"), which deliberately has no [`Rung`] variant: **appearing in this
+//! table with a witness list IS the pin.** A witnessed state listed here cannot
+//! silently lose its witness or gain an unintended one without failing one of
+//! the tests below, so `Witnessed`-and-listed and `Pinned` are the same claim,
+//! and a second variant would let them drift apart. A state promoted to
+//! `Witnessed` here is therefore what the campaign's exit criteria mean by
+//! reaching `Pinned`.
 //!
 //! This table deliberately does NOT assert that every declared variant has a
 //! witness. Deliberately-empty cells are legitimate creature-design
