@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** Complete — shipped 2026-07-26. Tasks 5b/5c/5d/6b were added during execution (a live `is_built`, the population sweep, the calibration, the sampler fix); Task 8's paired control was run four times and is pinned as a heavy test.
+
 **Goal:** Make The Hearth's fine layer *live* — a real room derives a real interior, a creature stands at an anchor, and a drive reads a field where it stands.
 
 **Architecture:** Eight tasks in two stages. Stage A builds every piece **byte-identically** — seams, derivation, the fine movement action, occupancy — because none of it is read by any outcome. Stage B opens with one small task that arms it: `Thermal::warmth` flips from `None` to `Some`. That is the single boundary at which byte-identity dies, and it is known before any code is written.

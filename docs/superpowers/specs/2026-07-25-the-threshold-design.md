@@ -3,7 +3,7 @@
 **Campaign:** The Threshold — the derivation and occupancy campaign named in
 The Hearth's spec §9.1. The Hearth's **other half**, not its successor.
 **Date:** 2026-07-25
-**Status:** draft (G3)
+**Status:** Shipped 2026-07-26 (campaign *The Threshold*, registry `CLIENT-fine-layer-live`). **The preregistered prediction in §6 was FALSIFIED** — four nulls, each eliminating a candidate explanation; see the chronicle and §6.1's disposition in the ledger.
 **Parent:** `2026-07-25-the-hearth-design.md` §9.1 and §11; the Rose Window
 metaplan **Amendment 1** (§1a).
 **Branch:** `the-threshold`, off `the-hearth` — this campaign consumes The
