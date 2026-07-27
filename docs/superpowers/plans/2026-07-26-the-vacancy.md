@@ -562,8 +562,15 @@ git commit -m "test(the-vacancy): refuse a ghost - no kind may be void everywher
 
 - [ ] **Step 5: Stage 1 gate**
 
-Run: `make gate 2>&1 | tee /tmp/hv-gate-s1.txt`
-Expected: PASS, and **`git status` shows no modified generated artifact**. Stage 1 changes no behaviour; if any committed artifact drifted, stop and report — something in the "instrument" is not inert.
+```bash
+make gate 2>&1 | tee /tmp/hv-gate-s1.txt
+bash scripts/regenerate-artifacts.sh
+git status --short
+```
+
+Expected: gate PASS, and `git status` shows **no modified generated artifact**.
+
+**Both commands are required.** `make gate` is `fmt-check clippy type-audit test` — it never invokes `regenerate-artifacts.sh`, so a clean `git status` after the gate alone proves nothing about artifact drift: nothing rewrote those files. Only the regen can move them. (This was found in the Task 5 review, after two stages had been "verified" with the invalid procedure.)
 
 ---
 
@@ -674,14 +681,15 @@ Expected: PASS.
 
 - [ ] **Step 5: The real gate — nothing anywhere drifted**
 
-Run: `make gate 2>&1 | tee /tmp/hv-gate-t5.txt`
-Expected: PASS. Then:
-
 ```bash
+make gate 2>&1 | tee /tmp/hv-gate-t5.txt
+bash scripts/regenerate-artifacts.sh
 git status --short
 ```
 
-Expected: **only `kernel/src/ecology.rs` modified.** A drifted almanac, map, registry dump, or lab study means the basis extension was not inert — stop and report which artifact moved rather than re-pinning it. This is the task's exit condition; "the tests pass" is not sufficient.
+Expected: gate PASS, and **only `kernel/src/ecology.rs` modified.**
+
+**Both commands are required** — `make gate` never runs the regen, so a clean `git status` after the gate alone cannot see artifact drift at all. A drifted almanac, map, registry dump, or lab study means the basis extension was not inert — stop and report which artifact moved rather than re-pinning it. This is the task's exit condition; "the tests pass" is not sufficient.
 
 - [ ] **Step 6: fmt, clippy, commit**
 
@@ -797,7 +805,9 @@ Then extend the `per_axis` array (lines 905–911), **appending** and updating t
                 ];
 ```
 
-Do **not** reorder the existing five entries. `axis_supply` sums in slice order and float addition is not associative.
+Do **not** reorder the existing five entries — the array's order is the summation order, and with NONZERO weights float addition genuinely is non-associative here (unlike the zero-weight basis case, where reordering is exact and the hazard is tie-breaking instead).
+
+**Three adjacent doc sites now say "five" and must be reconciled in this task** (found in the Task 5 review): `windows/worldgen/src/lib.rs` lines ~848, ~859 ("all five supply axes are terrestrial" — no longer true once the sixth is marine), and ~9191. Update the prose to match what the array actually holds.
 
 - [ ] **Step 4: Fit the amplitude, and record the measurement**
 
@@ -841,14 +851,15 @@ Fill both bodies following the idiom of the existing supply-field tests in that 
 
 - [ ] **Step 6: The gate — the stage's exit condition is zero drift**
 
-Run: `make gate 2>&1 | tee /tmp/hv-gate-t6.txt`
-Expected: PASS. Then:
-
 ```bash
+make gate 2>&1 | tee /tmp/hv-gate-t6.txt
+bash scripts/regenerate-artifacts.sh
 git status --short
 cargo test -p hornvale-worldgen --test occupancy_readout -- --ignored
 cargo test -p hornvale-worldgen --test non_void_roster
 ```
+
+**The regen is required** — `make gate` never runs it, so the gate alone cannot see artifact drift.
 
 Expected: only `windows/worldgen/src/lib.rs` modified; **the occupancy readout fixture unchanged** (no kind gained marine occupancy, because none weights the axis yet); non-void still passes.
 

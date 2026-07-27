@@ -219,6 +219,19 @@ test, not an expectation, and it is stage 2's exit gate. Adding a *new* id is
 the sanctioned extension; the hazard the kernel warns about is changing or
 reusing an existing one, which this does not do.
 
+**Corrected after the stage-2 review.** This spec originally justified
+"append, never insert" by float non-associativity. That rationale is **wrong for
+a zero-weight axis**: `x + 0.0 == x` exactly at every position, so a mid-slice
+insert — even a prepend — leaves every sum bit-identical, which a mutation test
+confirmed. The real hazard is **positional tie-breaking**: a niche's dominant
+axis anchors at `v1_basis()[0]` and only a *strictly* greater weight displaces
+the leader, so basis position decides every tie, including the total tie of the
+zero vector. Prepending an axis would silently change what a zero-weight niche
+resolves to and flip its off-chain trophic classification. The rule is
+unchanged; the reason it exists is not what this spec first said, and the
+distinction matters because an author checking the stated rationale would find
+nothing wrong and ship the reorder.
+
 **The amphibious kind is the proof.** A kind weighting both terrestrial and
 marine axes needs no special case whatsoever — the sparse vector and the
 saturating sum handle it. If an amphibious kind requires any new branch, the
