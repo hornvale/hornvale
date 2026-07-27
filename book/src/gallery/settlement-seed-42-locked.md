@@ -1,6 +1,6 @@
 # The Peoples of Seed 42
 
-The land holds 71 settlement(s).
+The land holds 212 settlement(s).
 The chief bugbear settlement, Vngaobvaoqoa, holds 110 souls amid tropical-rainforest.
 The chief goblin settlement, Fnetzhfodxngebbeetaonoaboo, holds 84 souls amid tropical-seasonal-forest.
 The chief hobgoblin settlement, Mjaogkoangjaogeetao, holds 82 souls amid tropical-seasonal-forest.
@@ -13,7 +13,7 @@ The chief kobold settlement, Rogxaxatxorotxaqxa, holds 109 souls amid temperate-
                                                                         
                                                                         
                                                                         
-                                                   ooo                  
+                                                   oo                   
                                                 o                       
                                                                         
                                                                         
@@ -25,10 +25,10 @@ The chief kobold settlement, Rogxaxatxorotxaqxa, holds 109 souls amid temperate-
                                                                         
                                                                         
                                                                         
-                                                 o                      
-                   oooo                                                 
-                    o                                                   
-                       oo                                               
+                       o                         oo                     
+                   oooooo                                               
+                   oooooooo                                             
+                   oooooooo                                             
                                                                         
                                                                         
 ```

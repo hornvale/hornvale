@@ -4219,6 +4219,15 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.society.get(&k).map(|s| (k, s.in_group_radius)))
         .collect();
+    // The Tithe §4.3a's extraction strategy, resolved on the same channel:
+    // `time_horizon` rides `MindVector` beside the disposition above, so a
+    // people whose psyche is missing is simply absent from the map and is read
+    // at the neutral middle of the axis (never at zero, which would make an
+    // unauthored patron the cruellest one there is).
+    cfg.time_horizon = peoples
+        .iter()
+        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
+        .collect();
     let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras

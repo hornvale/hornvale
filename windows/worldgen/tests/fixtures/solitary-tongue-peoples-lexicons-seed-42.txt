@@ -63,7 +63,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
 stone: root Naonea /naonea/
 sun: root Noaboo /noaboo/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: gap (experiential): no settlement in or beside shrubland
+shrubland: root Daakoa /daakoa/
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -223,7 +223,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: gap (experiential): no settlement in or beside taiga
+taiga: gap (experiential): no compound recipe for 'taiga'
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -233,7 +233,7 @@ tropical-rainforest: root Qoa /qoa/
 tropical-seasonal-forest: root Gootao /gootao/
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Daadaa /daadaa/
-upwelling: gap (experiential): no settlement in or beside upwelling
+upwelling: gap (experiential): no compound recipe for 'upwelling'
 water: root Daokaa /daokaa/
 wind: root Dooqoo /dooqoo/
 yellow: root Qaadoo /qaadoo/
@@ -243,7 +243,7 @@ headedness: HeadFirst
 
 abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
-bathypelagic: gap (experiential): no settlement in or beside bathypelagic
+bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 blood: root Ra /ra/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
 bone: root Xo /xo/
@@ -279,7 +279,7 @@ kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 kobold-kind: root Roro /roro/
 light: root Xaxo /xaxo/
 many: root Rogrra /rogrra/
-mesopelagic: gap (experiential): no settlement in or beside mesopelagic
+mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
 moon: root Roqrra /roqrra/
 mountain: gap (experiential): kobold has no exposure to 'mountain'
 mouth: root Rakxo /rakxo/
@@ -309,7 +309,7 @@ temperate-grassland: gap (experiential): no settlement in or beside temperate-gr
 temperate-rainforest: root Xotro /xotro/
 tide: gap (experiential): kobold has no exposure to 'tide'
 tree: root Rakrra /rakrra/
-tropical-rainforest: gap (experiential): no compound recipe for 'tropical-rainforest'
+tropical-rainforest: root Rorro /rorro/
 tropical-seasonal-forest: root Ro /ro/
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Roxa /roxa/

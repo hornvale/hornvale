@@ -198,6 +198,21 @@ const FARM_FLOOR: f64 = VIABLE_MIN;
 /// nothing. A save-format constant: changing it re-fights every world's
 /// history.
 const CONCEAL_MAX: f64 = 0.5;
+/// The horizon a patron whose people carries no authored `time_horizon` is
+/// read at — the middle of the axis (spec §4.3a), never its bottom.
+///
+/// Every other authored-psychology lookup in this bake fails open to
+/// "unaffected": an absent disposition does not veto ([`Bake::
+/// takes_the_initiative`]), an absent `in_group_radius` conceals nothing
+/// ([`Bake::concealment_of`]). There is no unaffected value on this axis —
+/// the horizon does not switch extraction on or off, it only says *where* the
+/// patron aims — and `0.0` is emphatically not it: zero is the shortest
+/// sighted patron in the family, the one that strips its vassal to
+/// `FARM_FLOOR` and holds it there. The neutral reading is therefore the
+/// midpoint, which is also where two of the four authored settling peoples
+/// (goblin, hobgoblin) already sit, so a bake handed no psyche data behaves
+/// like a median patron rather than like the cruellest one.
+const NEUTRAL_HORIZON: f64 = 0.5;
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
@@ -247,7 +262,7 @@ const CASCADE_BINS: usize = 12;
 /// rules read (the raid rule's durable inhibition, and the subordinate's
 /// concealment). Years are bare `f64` (absolute, no wall-clock). Not `Copy`:
 /// the authored maps are owned, and the config is always passed by reference.
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: in_group_radius)
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: in_group_radius), bare-ok(ratio: time_horizon)
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
@@ -271,12 +286,30 @@ pub struct BakeConfig {
     /// the map conceals nothing, so a bake given no society data behaves
     /// exactly as it did before concealment existed.
     pub in_group_radius: BTreeMap<KindId, f64>,
+    /// Each people's `MindVector.time_horizon` (immediate 0 ↔ generational 1)
+    /// — authored species data, never drawn, looked up by the composition root
+    /// and handed in here because the bake reads only kernel types. It is the
+    /// **patron's** half of the negotiation: the discount rate a dominant
+    /// applies to its vassal's future, which fixes the stock it steers that
+    /// vassal toward (spec §4.3a, [`Bake::target_stock`]). A people ABSENT
+    /// from the map is read at `NEUTRAL_HORIZON` — the middle of the authored
+    /// axis, NOT zero, which would mean "strip to the floor" and is the
+    /// harshest patron in the family rather than an unaffected one.
+    ///
+    /// **Only three values are reachable patron-side on the shipped roster.**
+    /// The four settling peoples are authored bugbear 0.3 / goblin 0.5 /
+    /// hobgoblin 0.5 / kobold 0.8, and goblin's `threat_response` (0.5) sits
+    /// under `RAID_DISPOSITION_MIN`, so a goblin community never takes the
+    /// initiative and therefore never becomes a patron. The variety this rule
+    /// can produce is bounded by that: three horizons, two of them distinct
+    /// from the neutral middle.
+    pub time_horizon: BTreeMap<KindId, f64>,
 }
 
 impl BakeConfig {
     /// The default bake span: two millennia in 25-year epochs, with no
-    /// authored psychology (nobody vetoed, nobody conceals — the composition
-    /// root fills both maps in).
+    /// authored psychology (nobody vetoed, nobody conceals, every patron reads
+    /// at the neutral horizon — the composition root fills all three maps in).
     pub fn default_millennia() -> BakeConfig {
         BakeConfig {
             start_year: 0.0,
@@ -284,6 +317,7 @@ impl BakeConfig {
             epoch_years: 25.0,
             disposition: BTreeMap::new(),
             in_group_radius: BTreeMap::new(),
+            time_horizon: BTreeMap::new(),
         }
     }
 }
@@ -588,6 +622,9 @@ struct Bake<'a> {
     /// Each people's authored `in_group_radius`, borrowed off the
     /// [`BakeConfig`] — the concealment [`Bake::concealment_of`] reads.
     in_group_radius: &'a BTreeMap<KindId, f64>,
+    /// Each people's authored `time_horizon`, borrowed off the [`BakeConfig`]
+    /// — the patron's discount rate [`Bake::target_stock`] reads.
+    time_horizon: &'a BTreeMap<KindId, f64>,
     /// Every occupation record, in commit order.
     records: Vec<OccupationRecord>,
     /// Every community's live state, in commit order (dead ones retained).
@@ -630,14 +667,26 @@ struct Bake<'a> {
     /// again, on a community that never grew after it — the standing stock by
     /// another name, arrived at by accident.
     ///
-    /// **That clear is load-bearing**, not decorative: `grow` *accumulates*
-    /// into this buffer rather than overwriting it, so an epoch that did not
-    /// start from zero would carry the previous epoch's surplus forward and let
-    /// it be taxed a second time (`last_epochs_growth_is_never_taxed_twice`
-    /// reddens if the clear is suppressed). The invariant §4.2 rests on is
-    /// "this epoch's growth", not "`grow` happens to run exactly once for
-    /// everybody" — a rule that grew a community twice in an epoch, or grew
-    /// only some of them, must not make the difference silent.
+    /// **The clear was load-bearing until amendment 4, and is not any more —
+    /// stated because a stale claim here would be worse than none.** `grow`
+    /// *accumulates* into this buffer rather than overwriting it, so an epoch
+    /// that did not start from zero carries the previous epoch's surplus
+    /// forward; under the pre-setpoint rule that surplus was taxed a second
+    /// time, and `last_epochs_growth_is_never_taxed_twice` reddened when the
+    /// clear was suppressed. Under spec §4.3a's setpoint the take is
+    /// `population − target` however it is decomposed — the two terms
+    /// [`Bake::collect_tribute`] splits it into shift in opposite directions
+    /// by exactly the same amount when this buffer is stale — so a stale
+    /// increment can no longer move a remittance at all. **Mutation-verified
+    /// in that direction (T5c): suppressing the clear now reddens nothing.**
+    ///
+    /// The buffer is therefore read only for the harvest/bleed *split* — which
+    /// part of the take came out of the year's increment and which out of the
+    /// standing stock. That split is presentational today; it is kept because
+    /// the deferred levers (spec §9's assessment staleness, and any rule that
+    /// bounds a demand by production rather than by stock) need the increment
+    /// back, and because losing it would leave `collect_tribute` unable to say
+    /// what it is taking. Do not restate it as a bound.
     epoch_growth: Vec<f64>,
     /// The running event tally.
     tally: BakeCensus,
@@ -1145,6 +1194,65 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// How far ahead a people plans when it holds somebody — its authored
+    /// `MindVector.time_horizon` (immediate 0 ↔ generational 1), read as the
+    /// **discount rate** it applies to its vassal's future (spec §4.3a).
+    ///
+    /// A people with no authored psyche is read at `NEUTRAL_HORIZON` rather
+    /// than at zero: this axis has no "unaffected" value, and zero is the
+    /// cruellest patron in the family, not an absent one. A non-finite
+    /// horizon falls back the same way — the same fail-safe direction
+    /// [`Bake::takes_the_initiative`] and [`Bake::concealment_of`] already
+    /// take — and an out-of-range one is clamped into `[0, 1]`, so no authored
+    /// value can push a setpoint outside the band between the floor and
+    /// maximum sustainable yield.
+    fn horizon_of(&self, people: KindId) -> f64 {
+        match self.time_horizon.get(&people) {
+            None => NEUTRAL_HORIZON,
+            Some(&h) if !h.is_finite() => NEUTRAL_HORIZON,
+            Some(&h) => h.clamp(0.0, 1.0),
+        }
+    }
+
+    /// The stock a patron of this people steers its vassal toward — the
+    /// setpoint the demand aims at (spec §4.3a), read off the vassal's cell
+    /// (`eff`, what the patron can SEE) and the patron's own horizon.
+    ///
+    /// **This is renewable-resource economics, and the vassal's logistic
+    /// growth makes the mapping exact.** The epoch increment is `GROWTH_RATE ×
+    /// N × (1 − N/eff)`, whose peak — maximum sustainable yield — sits at
+    /// `N = eff/2`. A patron maximising the *discounted stream* holds its
+    /// vassal at that peak, so its relation persists indefinitely; one
+    /// maximising *this epoch* strips the stock to the floor and is left with
+    /// a husk. The horizon interpolates between them:
+    ///
+    /// ```text
+    /// target = FARM_FLOOR + horizon × (eff/2 − FARM_FLOOR)
+    /// ```
+    ///
+    /// Between the two ends lie the protection racket and the Danegeld: the
+    /// family is **generated, not enumerated**. Extinction is then Clark's
+    /// case — optimal only for the shortest-sighted holder — rather than a
+    /// special-cased outcome.
+    ///
+    /// **`FARM_FLOOR` remains a floor, not an exemption.** On land too poor to
+    /// carry `2 × FARM_FLOOR`, the interpolation would put the setpoint
+    /// *below* the floor and a patron steering to it would reach through the
+    /// one bound spec §8.3 does not permit crossing, so the result is raised
+    /// back to the floor. The clamp binds only on marginal cells; on any cell
+    /// whose capacity supports twice the floor the raw interpolation already
+    /// sits above it.
+    ///
+    /// Reads the patron's **people** and the subordinate's **cell** — both
+    /// immutable across a collection pass — so [`Bake::collect_tribute`]'s
+    /// order-independence survives this term. Nothing here reads the patron's
+    /// `stores`, `population` or subordinate count, which is exactly the reach
+    /// that would make the iteration order decide the outcome.
+    fn target_stock(&self, people: KindId, eff: f64) -> f64 {
+        let horizon = self.horizon_of(people);
+        (FARM_FLOOR + horizon * ((eff / 2.0) - FARM_FLOOR)).max(FARM_FLOOR)
+    }
+
     /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
     /// inhibition, the momentary one. A community whose pressure has reached
     /// `NO_SPOILS_PRESSURE` is already consuming its cell's whole effective
@@ -1272,10 +1380,14 @@ impl<'a> Bake<'a> {
 
     /// Open a new epoch: zero every community's growth buffer.
     ///
-    /// A remittance is paid from *that epoch's* growth (spec §4.2), so the
-    /// buffer must hold this epoch's increments and nothing else. Rebuilt by
-    /// length rather than filled in place so it stays parallel to
-    /// `communities` even if a caller ever appends by some other route.
+    /// The buffer must hold this epoch's increments and nothing else, so that
+    /// [`Bake::collect_tribute`] can say which part of a remittance came out
+    /// of the year's growth (spec §4.2). Since amendment 4 that split no
+    /// longer *bounds* anything — see `Bake::epoch_growth` — so this clear is
+    /// no longer the guard it was; it is what keeps the reported
+    /// decomposition true. Rebuilt by length rather than filled in place so it
+    /// stays parallel to `communities` even if a caller ever appends by some
+    /// other route.
     fn begin_epoch(&mut self) {
         self.epoch_growth.clear();
         self.epoch_growth.resize(self.communities.len(), 0.0);
@@ -1284,12 +1396,26 @@ impl<'a> Bake<'a> {
     /// Each patron collects from each of its subordinates: it demands what its
     /// assessment says (set from the cell it can SEE) and receives what the
     /// subordinate hands over — paid from **that epoch's growth and, beyond it,
-    /// from the standing stock down to `FARM_FLOOR`** (spec §4.2b):
+    /// from the standing stock down to the patron's own setpoint** (spec
+    /// §4.2b, §4.3a):
     ///
     /// ```text
-    /// bleed      = max(0, stock − FARM_FLOOR)
-    /// remittance = min(assessment, (surplus + bleed) × (1 − concealment))
+    /// target     = FARM_FLOOR + horizon × (eff/2 − FARM_FLOOR)   // ≥ FARM_FLOOR
+    /// bleed      = max(0, stock − target)
+    /// harvest    = max(0, surplus − max(0, target − stock))
+    /// remittance = min(assessment, (harvest + bleed) × (1 − concealment))
     /// ```
+    ///
+    /// **Where the line sits is the patron's character** ([`Bake::
+    /// target_stock`]): a generational people steers its vassal to maximum
+    /// sustainable yield and holds a relation indefinitely; an immediate one
+    /// steers it to the floor and strips. `harvest + bleed` is exactly what
+    /// stands above the setpoint after this epoch's growth — the split names
+    /// which part of the take came out of the year's increment and which out
+    /// of the standing stock, and the two are separated here rather than
+    /// summed straight off `population` because the increment is already IN
+    /// `population` by the time collection runs, which is what made the
+    /// pre-amendment expression reach through its own floor.
     ///
     /// **Amendment 3 reversed the earlier rule here, and the reversal is the
     /// point.** A remittance used to be capped at the epoch's growth increment
@@ -1370,13 +1496,32 @@ impl<'a> Bake<'a> {
             // stock reached the floor at all, and a stock already below it
             // (war, famine, crowding — never tribute) is taken no lower.
             let stock = self.communities[sub].population - surplus;
-            let bleed = (stock - FARM_FLOOR).max(0.0);
+            // The line the reach stops at is the patron's SETPOINT, not the
+            // bare floor (spec §4.3a's amendment 4). It is read off the
+            // patron's people — its authored horizon — and the subordinate's
+            // cell, the two things a patron brings to the relation and can
+            // see; `target_stock` carries the derivation. Both are immutable
+            // across a collection pass, so the order-independence this method
+            // documents below survives the new term.
+            let sub_eff = self.eff_capacity(era, self.communities[sub].site);
+            let patron_people = self.records[self.communities[rel.patron].record].people;
+            let target = self.target_stock(patron_people, sub_eff);
+            let bleed = (stock - target).max(0.0);
+            // A vassal standing BELOW the setpoint is left to recover, not
+            // merely taxed less: only the growth that carries it past the line
+            // is harvested. Without this a below-target vassal hands over its
+            // whole increment every epoch, is held exactly flat forever, and no
+            // horizon can move it — which is the floor-pinned attractor the
+            // investigation measured (79.2% of relations, frozen for the rest
+            // of the bake).
+            let harvest = (surplus - (target - stock).max(0.0)).max(0.0);
             // Concealment scales what is HANDED OVER, never what the cap is
             // measured against, so a hidden share is one the subordinate keeps
             // (spec §4.2) — and, since it can only ever LOWER a remittance, the
-            // floor above holds at any concealment.
+            // setpoint (and with it the floor beneath it) holds at any
+            // concealment.
             let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
-            let remittance = rel.assessment.min((surplus + bleed) * (1.0 - conceal));
+            let remittance = rel.assessment.min((harvest + bleed) * (1.0 - conceal));
             self.communities[sub].population -= remittance;
             self.communities[rel.patron].stores += remittance;
             self.tally.tribute_collected += remittance;
@@ -1405,7 +1550,7 @@ impl<'a> Bake<'a> {
             // Spec §4.5's divergence bound, applied where the assessment is
             // written: no patron may demand more than the subordinate's land
             // could ever produce.
-            let ceiling = self.eff_capacity(era, self.communities[sub].site) * ASSESS_MAX;
+            let ceiling = sub_eff * ASSESS_MAX;
             let next = (rel.assessment + signal * rel.assessment * ADAPT_RATE).clamp(0.0, ceiling);
             self.tribute.insert(
                 sub,
@@ -1921,6 +2066,7 @@ pub fn bake(
         refugia,
         disposition: &cfg.disposition,
         in_group_radius: &cfg.in_group_radius,
+        time_horizon: &cfg.time_horizon,
         records: Vec::new(),
         communities: Vec::new(),
         node_index: BTreeMap::new(),
@@ -2185,6 +2331,7 @@ mod tests {
             refugia: &refugia,
             disposition: no_disposition(),
             in_group_radius: no_radius(),
+            time_horizon: strips_to_the_floor(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -2301,6 +2448,32 @@ mod tests {
         &NONE
     }
 
+    /// The `time_horizon` map a hand-built [`Bake`] uses when the test is not
+    /// about extraction strategy: **every settling people at zero**, so every
+    /// hand-built patron is a maximally short-sighted one whose setpoint is
+    /// `FARM_FLOOR` exactly.
+    ///
+    /// Deliberately NOT the empty map. Absent, a people reads at
+    /// `NEUTRAL_HORIZON`, whose setpoint sits at `(FARM_FLOOR + eff/2)/2` —
+    /// far above the populations these fixtures open at — so every bleed and
+    /// floor test would collect nothing and pass vacuously on a demand that
+    /// never binds. Zero reproduces the pre-amendment-4 rule (strip to the
+    /// floor) exactly, which is the behaviour those tests were written against
+    /// and still assert. The fallback itself is covered separately, by
+    /// `an_unauthored_patron_is_read_at_the_neutral_middle`, and the strategy
+    /// axis by `a_generational_patron_leaves_a_markedly_larger_vassal_than_an_
+    /// immediate_one`, which overrides this map on both arms.
+    fn strips_to_the_floor() -> &'static BTreeMap<KindId, f64> {
+        static IMMEDIATE: std::sync::LazyLock<BTreeMap<KindId, f64>> =
+            std::sync::LazyLock::new(|| {
+                ["goblin", "kobold", "hobgoblin", "bugbear"]
+                    .into_iter()
+                    .map(|k| (KindId(k), 0.0))
+                    .collect()
+            });
+        &IMMEDIATE
+    }
+
     /// A hand-built [`Bake`] over [`cascade_world`]'s inputs, with an empty
     /// record set and a fixed stream.
     fn hand_bake<'a>(
@@ -2318,6 +2491,7 @@ mod tests {
             refugia,
             disposition,
             in_group_radius: no_radius(),
+            time_horizon: strips_to_the_floor(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -2511,22 +2685,36 @@ mod tests {
     }
 
     #[test]
-    fn last_epochs_growth_is_never_taxed_twice() {
-        // The growth buffer is strictly per-epoch (spec §4.2's "that epoch's
-        // growth"). A stale increment left standing would be re-taxed every
-        // epoch forever — the same surplus milked repeatedly out of a community
-        // that never grew again. This is the one test that catches a missing
-        // `begin_epoch`, and it still binds under amendment 3: this fixture's
-        // oversized assessment bleeds the subordinate onto `FARM_FLOOR` in the
-        // first epoch, so in the second the `bleed` term is exactly zero and
-        // `surplus` is the ONLY thing that could move wealth. A stale increment
-        // would move it, and both assertions below would redden.
+    fn a_vassal_at_its_patrons_setpoint_hands_over_nothing() {
+        // **Repointed at T5c, because its old claim stopped being one.** This
+        // was `last_epochs_growth_is_never_taxed_twice`: the growth buffer is
+        // strictly per-epoch, and a stale increment left standing used to be
+        // re-taxed every epoch forever, so this was the one test that caught a
+        // missing `begin_epoch`. Amendment 4 (spec §4.3a) ended that: the take
+        // is `population − target` however it is decomposed, so the buffer's
+        // staleness cannot move a remittance and suppressing the clear now
+        // reddens nothing — mutation-verified in that direction rather than
+        // supposed. Renaming it is the honest option; leaving a green test
+        // standing for a property it no longer tests is the failure mode this
+        // campaign has already been caught by four times.
+        //
+        // What the same fixture and the same assertions DO bind, and bind
+        // sharply, is the setpoint's own resting state. This fixture's patron
+        // is a maximally short-sighted one (`strips_to_the_floor`), so its
+        // target is `FARM_FLOOR`; its oversized assessment bleeds the
+        // subordinate onto that target in the first epoch. In the second — a
+        // bad year, no growth at all — the vassal stands exactly ON the
+        // setpoint, and a patron that steers toward a setpoint must take
+        // NOTHING from a vassal already sitting on it. A rule that reached
+        // past its own target (or that treated "nothing to take" as "take what
+        // is there") moves wealth here, and both assertions redden.
         //
         // The between-epochs survival check is load-bearing rather than
-        // decorative: it is `FARM_FLOOR` that leaves a bled subordinate
-        // standing at all, and without it this subordinate would be drained to
-        // nothing in the FIRST epoch, after which "no growth ⇒ no tribute"
-        // would hold vacuously and the second epoch would prove nothing.
+        // decorative: it is the setpoint (here `FARM_FLOOR`) that leaves a bled
+        // subordinate standing at all, and without it this subordinate would be
+        // drained to nothing in the FIRST epoch, after which "at the setpoint ⇒
+        // no tribute" would hold vacuously and the second epoch would prove
+        // nothing.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
 
@@ -2554,15 +2742,15 @@ mod tests {
         assert_eq!(
             bake.communities[patron].stores.to_bits(),
             stores_after_one.to_bits(),
-            "an epoch with no growth yields no tribute from a subordinate already on the floor: \
-             {} vs {stores_after_one}",
+            "an epoch with no growth yields no tribute from a subordinate already standing on \
+             its patron's setpoint: {} vs {stores_after_one}",
             bake.communities[patron].stores
         );
         assert_eq!(
             bake.communities[sub].population.to_bits(),
             sub_after_one.to_bits(),
-            "a subordinate that did not grow, and holds nothing above the floor, must hand \
-             over nothing at all"
+            "a subordinate that did not grow, and holds nothing above its patron's setpoint, \
+             must hand over nothing at all"
         );
         assert_eq!(
             bake.tally.tribute_collection_events, 2,
@@ -3088,6 +3276,255 @@ mod tests {
             low >= FARM_FLOOR - EPS,
             "the vassal was bled THROUGH the floor to {low} (floor {FARM_FLOOR}): a patron may \
              bleed toward it, never past it (spec §4.2b, §8.3)"
+        );
+    }
+
+    #[test]
+    fn a_generational_patron_leaves_a_markedly_larger_vassal_than_an_immediate_one() {
+        // Spec §4.3a — the first test in this campaign that binds PATRON-SIDE
+        // character, and the failure it exists to catch is the one the
+        // extraction investigation measured: across 2258 relations over seeds
+        // 1..=24, `assessment_at_formation / eff_capacity` took exactly ONE
+        // value (0.025). The only per-people input anywhere in the tribute
+        // rule was the VASSAL's concealment, so a Sopranos bust-out and a
+        // Roman census were not merely the same code path — nothing in the
+        // model could tell them apart even in principle.
+        //
+        // The two arms differ in EXACTLY ONE input: the **patron** people's
+        // authored `time_horizon`. Same world, same pair, same populations,
+        // same stream, same concealment (none), and every other people pinned
+        // at the same horizon in both arms, so a vassal that a kobold daughter
+        // ever came to hold is held on identical terms in both. Nothing but
+        // the patron's discount rate can explain a difference.
+        //
+        // The two values are the authored ones the shipped roster actually
+        // reaches patron-side (bugbear 0.3, kobold 0.8; goblin's 0.5 is
+        // raid-vetoed and hobgoblin sits at the neutral middle), applied to
+        // this fixture's patron people so that the people itself — and
+        // therefore its concealment, disposition and tech — is held fixed.
+        //
+        // Non-vacuity is asserted, not assumed: BOTH arms must actually have
+        // extracted something from this vassal, or "the generational patron
+        // left it larger" would pass on a fixture where nobody extracted at
+        // all — which is precisely what a rule with no patron-side term looks
+        // like when the demand happens never to bind.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        /// The immediate patron's horizon — bugbear's authored value, the
+        /// shortest sighted patron the shipped roster can produce.
+        const IMMEDIATE: f64 = 0.3;
+        /// The generational patron's horizon — kobold's authored value, the
+        /// longest sighted one.
+        const GENERATIONAL: f64 = 0.8;
+        /// Epochs driven: long enough for the relation to form, for the
+        /// adaptive demand to climb into contact with the vassal's increment,
+        /// and for each arm to settle around its own setpoint.
+        const EPOCHS: usize = 40;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+
+        // (what this vassal handed over in total, what it was left standing at)
+        let mut arms: Vec<(f64, f64)> = Vec::new();
+        for horizon in [IMMEDIATE, GENERATIONAL] {
+            // Only the patron people's entry differs between the arms; every
+            // other people is pinned identically in both.
+            let horizons: BTreeMap<KindId, f64> = [
+                (KindId("goblin"), horizon),
+                (KindId("kobold"), 0.0),
+                (KindId("hobgoblin"), 0.0),
+                (KindId("bugbear"), 0.0),
+            ]
+            .into_iter()
+            .collect();
+            let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+            bake.time_horizon = &horizons;
+            let far = geo.neighbors(CellId(0))[0];
+            // 40 clears 10 × RAID_MARGIN four times over, and the land is
+            // value-flat, so the only prize on offer is the neighbour's
+            // product: the raid subordinates rather than evicts.
+            let patron = bake.open(
+                KindId("goblin"),
+                CellId(0),
+                0.0,
+                40.0,
+                Founding::Genesis(CellId(0)),
+                None,
+                0.0,
+            );
+            let sub = bake.open(
+                KindId("kobold"),
+                far,
+                0.0,
+                10.0,
+                Founding::Genesis(far),
+                None,
+                0.0,
+            );
+            let mut taken = 0.0;
+            for epoch in 0..EPOCHS {
+                let year = epoch as f64 * EPOCH_YEARS;
+                bake.begin_epoch();
+                let alive: Vec<usize> = (0..bake.communities.len())
+                    .filter(|&i| bake.communities[i].alive)
+                    .collect();
+                for idx in alive {
+                    bake.step_community(idx, &era, year);
+                }
+                let before_collection = bake.communities[sub].population;
+                bake.collect_tribute(year, &era);
+                // Nothing but `grow` and `collect_tribute` moves a population
+                // in this world (asserted below), and `grow` has already run,
+                // so the drop across the collection IS this vassal's
+                // remittance — attributable without instrumenting the bake.
+                taken += (before_collection - bake.communities[sub].population).max(0.0);
+            }
+            // The reading is only attributable while a patron of the arm's
+            // people holds the vassal: a takeover by a people pinned at 0.0 in
+            // both arms would erase the contrast rather than fake it, but it
+            // would also mean the number is no longer about this parameter.
+            let held_by = bake
+                .tribute
+                .get(&sub)
+                .map(|t| bake.records[bake.communities[t.patron].record].people)
+                .expect("the vassal must still be paying somebody: nothing closes in this world");
+            assert_eq!(
+                held_by,
+                KindId("goblin"),
+                "the vassal must still be held by a patron of the people this arm varies"
+            );
+            assert!(
+                bake.communities[patron].alive,
+                "the patron this fixture built must still be standing"
+            );
+            assert_eq!(
+                bake.tally.raided, 0,
+                "value-flat world: no eviction, so no war loss can be mistaken for extraction"
+            );
+            assert_eq!(
+                bake.tally.migrated, 0,
+                "no cell turns hostile here: a migration would confound the reading"
+            );
+            assert_eq!(
+                bake.tally.collapsed, 0,
+                "nobody starves here: a famine death would confound the reading"
+            );
+            arms.push((taken, bake.communities[sub].population));
+        }
+        let (immediate_took, immediate_left) = arms[0];
+        let (generational_took, generational_left) = arms[1];
+
+        assert!(
+            immediate_took > 0.0 && generational_took > 0.0,
+            "precondition: BOTH patrons must actually have extracted from this vassal — \
+             'left it larger' asserted over an arm that took nothing proves nothing: \
+             immediate took {immediate_took}, generational took {generational_took}"
+        );
+        /// How much larger a generational patron's vassal must stand than an
+        /// immediate one's for the difference to be a STRATEGY rather than
+        /// float noise. The setpoints differ by a factor of 2.5 on this
+        /// fixture's land (`FARM_FLOOR + h × (eff/2 − FARM_FLOOR)` at
+        /// h = 0.3 vs 0.8), so a rule that reads the horizon at all clears
+        /// this comfortably and one that ignores it cannot clear it at all.
+        const MARKEDLY: f64 = 1.5;
+        assert!(
+            generational_left > immediate_left * MARKEDLY,
+            "the patron's horizon must set where it steers its vassal (spec §4.3a): the \
+             generational patron left {generational_left}, the immediate one {immediate_left} \
+             — under {MARKEDLY}× apart, which is what a model with NO patron-side term looks \
+             like (the pre-amendment state: one extraction rate for every relation in \
+             existence)"
+        );
+    }
+
+    #[test]
+    fn an_unauthored_patron_is_read_at_the_neutral_middle() {
+        // Controller note, and the one place this rule could silently become
+        // its own opposite. Every other authored-psychology lookup in this
+        // bake fails open to "unaffected" — an absent disposition does not
+        // veto, an absent radius conceals nothing. On this axis there is no
+        // unaffected value, and the tempting default (`0.0`, "no data, no
+        // number") is the CRUELLEST patron in the family: it strips its vassal
+        // to `FARM_FLOOR` and holds it there. A bake handed no psyche data
+        // must behave like a median patron instead.
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let none: BTreeMap<KindId, f64> = BTreeMap::new();
+        bake.time_horizon = &none;
+
+        let msy = RICH / 2.0;
+        let neutral = FARM_FLOOR + NEUTRAL_HORIZON * (msy - FARM_FLOOR);
+        assert_eq!(
+            bake.target_stock(KindId("goblin"), RICH).to_bits(),
+            neutral.to_bits(),
+            "an unauthored people must be read at the middle of the axis, not at its bottom"
+        );
+        assert!(
+            bake.target_stock(KindId("goblin"), RICH) > FARM_FLOOR,
+            "…and the middle of the axis must not collapse onto the floor, which is what \
+             'absent means zero' would silently mean here"
+        );
+
+        // A non-finite authored value falls back the same way, rather than
+        // poisoning the setpoint (and with it the remittance) with a NaN.
+        let broken: BTreeMap<KindId, f64> = [
+            (KindId("goblin"), f64::NAN),
+            (KindId("kobold"), f64::INFINITY),
+            (KindId("bugbear"), f64::NEG_INFINITY),
+        ]
+        .into_iter()
+        .collect();
+        bake.time_horizon = &broken;
+        for people in ["goblin", "kobold", "bugbear"] {
+            assert_eq!(
+                bake.target_stock(KindId(people), RICH).to_bits(),
+                neutral.to_bits(),
+                "a non-finite horizon must read as the neutral middle, not propagate"
+            );
+        }
+    }
+
+    #[test]
+    fn a_setpoint_never_sits_below_the_farm_floor() {
+        // `FARM_FLOOR` is a floor, not an exemption (spec §4.2b/§8.3), and the
+        // interpolation `FARM_FLOOR + h × (eff/2 − FARM_FLOOR)` breaches it on
+        // its own: on land too poor to carry `2 × FARM_FLOOR`, `eff/2` sits
+        // BELOW the floor, the bracket goes negative, and a long-horizon
+        // patron would steer its vassal to a setpoint under the one bound
+        // tribute may never cross. Marginal cells are exactly where a farmed
+        // community is least able to survive it.
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| RICH);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let horizons: BTreeMap<KindId, f64> = [(KindId("goblin"), 1.0)].into_iter().collect();
+        bake.time_horizon = &horizons;
+
+        // Land whose whole capacity is under twice the floor — the regime the
+        // clamp exists for. Asserted to BE that regime, so the case cannot
+        // stop being exercised without reddening.
+        let marginal = FARM_FLOOR;
+        assert!(
+            marginal / 2.0 < FARM_FLOOR,
+            "precondition: this cell's MSY ({}) must sit below the floor ({FARM_FLOOR}), or the \
+             clamp is not being exercised",
+            marginal / 2.0
+        );
+        assert_eq!(
+            bake.target_stock(KindId("goblin"), marginal).to_bits(),
+            FARM_FLOOR.to_bits(),
+            "a setpoint on marginal land must be raised back to the floor, never left below it"
+        );
+        // A dead cell (an era has made it worthless) is the degenerate case of
+        // the same thing.
+        assert_eq!(
+            bake.target_stock(KindId("goblin"), 0.0).to_bits(),
+            FARM_FLOOR.to_bits(),
+            "and a cell the era has killed must not put the setpoint at zero"
         );
     }
 

@@ -718,7 +718,7 @@ fn tribute_flows_along_a_standing_relation() {
 }
 
 #[test]
-fn concealment_moves_what_a_patron_collects_and_since_the_bleed_it_moves_it_up() {
+fn concealment_moves_what_a_patron_collects_and_under_the_setpoint_it_moves_it_down() {
     // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —
     // and **restated at task 5b, because amendment 3 inverted what it
     // measures.** The history is worth keeping, because the inversion is a
@@ -737,11 +737,24 @@ fn concealment_moves_what_a_patron_collects_and_since_the_bleed_it_moves_it_up()
     //     concealment)`), and the bleed makes availability the whole stock
     //     above `FARM_FLOOR` — normally far above the standing demand. So the
     //     `min` selects the assessment branch on most collections and the
-    //     concealment factor never binds there at all. What concealment now
-    //     does is shield the vassal: it is bled more slowly, stays larger,
-    //     keeps clearing its patron's demand, and therefore pays MORE over the
-    //     span, not less. Measured here: insular 419.87 vs expansive 412.60
+    //     concealment factor never binds there at all. What concealment then
+    //     did was shield the vassal: it was bled more slowly, stayed larger,
+    //     kept clearing its patron's demand, and therefore paid MORE over the
+    //     span, not less. Measured then: insular 419.87 vs expansive 412.60
     //     (+1.8%) over 20 epochs and 244 collections in each arm.
+    //   * **Amendment 4 (spec §4.3a) flipped it back, and the flip is the
+    //     amendment working.** The reach now stops at the patron's setpoint
+    //     rather than at `FARM_FLOOR`, so availability is what stands above
+    //     that setpoint — a much smaller number, of the order of the epoch's
+    //     increment — and it is no longer far above the standing demand. The
+    //     `min` therefore selects the availability branch often, where the
+    //     concealment factor DOES bind, and a hidden share is once again
+    //     simply a share not handed over. The shielding effect that reversed
+    //     the sign at T5b is gone with the thing it shielded against: a vassal
+    //     is not bled toward a floor it cannot recover from any more, so
+    //     concealment has far less to save it from. Measured here: insular
+    //     306.43 vs expansive 324.89 (−5.7%), over the same structurally
+    //     invariant fixture.
     //
     // **The direct term itself is unmoved and is still bound**, in
     // `an_insular_subordinate_remits_less_than_an_expansive_one` (in
@@ -765,9 +778,11 @@ fn concealment_moves_what_a_patron_collects_and_since_the_bleed_it_moves_it_up()
     // `in_group_radius` of the peoples that live in it — so only concealment
     // can explain the gap between what the patrons collected. Task 6's
     // attribution must therefore read `tribute_collected` alongside
-    // `tribute_collection_events` and `tribute_relations_at_now`: with the
-    // bleed in place, a concealment knob moves the volume by moving the PAYER,
-    // not by moving the rate.
+    // `tribute_collection_events` and `tribute_relations_at_now`: the sign of
+    // this term has moved twice under two amendments without the term itself
+    // changing a line, because what it multiplies — the availability branch —
+    // changed shape underneath it. A volume reading alone cannot tell "moved
+    // the rate" from "moved the payer", and here it has been each in turn.
     let expansive: std::collections::BTreeMap<KindId, f64> =
         peoples().into_iter().map(|k| (k, 1.0)).collect();
     let insular: std::collections::BTreeMap<KindId, f64> =
@@ -823,14 +838,17 @@ fn concealment_moves_what_a_patron_collects_and_since_the_bleed_it_moves_it_up()
         );
     }
     // (b) …and concealment is not inert. Asserted with its measured SIGN,
-    //     which since the bleed runs the other way: a shielded vassal is a
-    //     larger vassal, and a larger vassal pays more.
+    //     which under the setpoint runs the direct way again: what a vassal
+    //     hides is a share it does not hand over, and the availability branch
+    //     — the only place the factor binds — is now the branch that is
+    //     usually selected.
     assert!(
-        ci.tribute_collected > ce.tribute_collected,
-        "concealment must move what the patrons collected — and since amendment 3 it moves it \
-         UP, because what a vassal hides is people it keeps, and a vassal that keeps its people \
-         goes on clearing its patron's demand instead of being bled onto the floor: insular {} \
-         vs expansive {}. Equal totals mean the term is inert.",
+        ci.tribute_collected < ce.tribute_collected,
+        "concealment must move what the patrons collected — and under the setpoint (amendment \
+         4) it moves it DOWN again, because the reach stops at the patron's target rather than \
+         at the floor, so availability is of the order of the epoch's increment and the \
+         concealment factor actually binds: insular {} vs expansive {}. Equal totals mean the \
+         term is inert.",
         ci.tribute_collected,
         ce.tribute_collected
     );
