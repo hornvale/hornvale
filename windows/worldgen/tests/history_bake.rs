@@ -715,8 +715,40 @@ fn tribute_flows_along_a_standing_relation() {
 }
 
 #[test]
-fn an_insular_world_yields_less_tribute_than_an_expansive_one() {
-    // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair.
+fn concealment_lowers_the_direct_term_over_a_structurally_invariant_fixture() {
+    // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair —
+    // but read narrowly what this fixture can and cannot show (T4 review,
+    // Important 1: the original name, `an_insular_world_yields_less_tribute_
+    // than_an_expansive_one`, stated a whole-world proposition this test does
+    // not measure, and which is FALSE on seed 42).
+    //
+    // `value_flat_fixture()` is value-FLAT: every cell is worth the same to
+    // every people, so no raid ever redistributes territory and history
+    // cannot diverge between the two arms. A span sweep (20/40/80/160 epochs)
+    // confirmed formations, alive counts and standing relations are IDENTICAL
+    // between the expansive and insular arms at every span checked —
+    // concealment cannot change WHICH communities exist or WHICH relations
+    // form here, only what moves along the relations that do form. So this
+    // test binds the **direct term only** (an insular people conceals more of
+    // what it already owes, on a world where that is the only thing free to
+    // vary), not the whole-world total. The assertions below are sound and
+    // unweakened; only the name and this comment change.
+    //
+    // **This does NOT generalize, and on seed 42 it is false the other way.**
+    // Concealment lengthens a milked subordinate's life (it dies less, so
+    // relations stand longer instead of collapsing and re-forming), and
+    // standing longer at a lower per-collection rate outweighs the lower rate
+    // itself: seed 42's `tribute_collected` ROSE +9.1% (6002.56 -> 6549.04)
+    // when concealment was switched on, even though the per-collection rate
+    // fell (see `.superpowers/sdd/task-4-report.md`, "What the knob did"). A
+    // structurally-flat fixture like this one cannot show that divergence,
+    // because it has no history left to diverge — the direct term measured
+    // here and the whole-world total are different claims, and only the
+    // direct one is safe to read off this test. Task 6's attribution must
+    // read `tribute_collected` alongside `tribute_collection_events` and
+    // `tribute_relations_at_now`, not sign this term off the direct effect
+    // alone.
+    //
     // The two arms are the same world, the same seed, the same span and the
     // same peoples; they differ in EXACTLY ONE input — the authored
     // `in_group_radius` of the peoples that live in it — so only concealment
@@ -746,7 +778,9 @@ fn an_insular_world_yields_less_tribute_than_an_expansive_one() {
     );
     assert!(
         ci.tribute_collected < ce.tribute_collected,
-        "an insular people withholds more, so an insular world is taxed less: \
+        "on this structurally-invariant fixture, an insular people withholds \
+         more so the DIRECT term is lower — this does not generalize to the \
+         whole-world total (see the test's doc comment): \
          insular {} vs expansive {}",
         ci.tribute_collected,
         ce.tribute_collected

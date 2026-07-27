@@ -236,6 +236,15 @@ fn history_gates_full_world_and_cross_seed() {
     // occupant — seed 2 alone at **-0.1473**, its weakest reading yet, while
     // seeds 3 and 777 fell back to -0.3527 and -0.2985. Seed 2 is the sparse
     // regime this comment describes, and it is the seed to watch.
+    //
+    // T4 review, Minor 4: this comment under-recorded that seed 42's OWN
+    // `depth_capacity_correlation` (line 1's Full-depth assertion, not the
+    // sweep above) also weakened here: **-0.3274 -> -0.2181**, now the
+    // SECOND-weakest reading behind seed 2's -0.1473. Seed 42 is not in the
+    // sweep's shallow band (it is measured separately, at `BuildDepth::Full`
+    // rather than `Settlements`), so it did not show up in the "band emptied
+    // to a single occupant" reading above — but it moved in the same
+    // direction and is worth watching alongside seed 2.
     let mut corrs: Vec<f64> = rows
         .iter()
         .map(|r| r.strat.depth_capacity_correlation)

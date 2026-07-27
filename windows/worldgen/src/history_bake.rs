@@ -285,7 +285,7 @@ pub struct TributeRelation {
 /// (conflict must fire on a *value* gradient, in worlds with land to spare, and
 /// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
 /// redistribute the world, not depopulate it).
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: tribute_collected), bare-ok(count: max_stores_at_now), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist)
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: tribute_collected), bare-ok(count: max_stores_at_now), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist), bare-ok(count: tribute_collection_events)
 // `Eq` is deliberately absent: the two accumulator readouts below are `f64`,
 // and a census is only ever compared for equality in assertions (`PartialEq`),
 // never used as a key.
@@ -352,6 +352,24 @@ pub struct BakeCensus {
     /// `[2^i, 2^(i+1))`. The raw material of The Tumult's power-law
     /// falsification metric. Not committed to save format (diagnostic only).
     pub cascade_hist: [u64; CASCADE_BINS],
+    /// The number of collection EVENTS resolved over the whole bake — one
+    /// per (relation × epoch) pass through [`Bake::collect_tribute`]'s loop
+    /// body for a still-live relation, incremented unconditionally there
+    /// (even when the remittance it produces is `0.0`). A **flow**, exactly
+    /// like `tribute_collected` above (which it is the event-count twin
+    /// of), not a snapshot like `tribute_relations_at_now`.
+    ///
+    /// Added so rate and volume can be separated at all (T4 review, Important
+    /// 2): `tribute_collected` alone confounds *how much per collection* with
+    /// *how many collections happened*, and on seed 42 both moved at once —
+    /// concealment lowered the per-collection rate but lengthened relations'
+    /// standing lifespans, so the run total (a rate integrated over volume)
+    /// moved the OPPOSITE way from the rate. `tribute_collected /
+    /// tribute_collection_events` is the mean per-collection remittance; read
+    /// alongside `tribute_relations_at_now` and `subordinations_formed` it is
+    /// what an attribution needs to tell "collected less per visit" apart
+    /// from "was visited more/fewer times".
+    pub tribute_collection_events: u64,
 }
 
 impl BakeCensus {
@@ -1049,9 +1067,24 @@ impl<'a> Bake<'a> {
     /// The radius is a ratio in `[0, 1]` by construction (`SocietyVector`), and
     /// is clamped anyway: a radius above 1 would otherwise give a *negative*
     /// concealment — a subordinate that remits more than it produced.
+    ///
+    /// **Non-finite fails safe** (T4 review, Minor 1): `SocietyVector.
+    /// in_group_radius` is a bare `pub f64` whose `[0, 1]` contract is a doc
+    /// comment only, so nothing structurally prevents NaN or an infinity from
+    /// reaching here (today's authored values make it unreachable in
+    /// practice). `f64::clamp` returns NaN for a NaN input, and `collect_
+    /// tribute`'s cap is `assessment.min(surplus * (1.0 - conceal))` —
+    /// `f64::min` DISCARDS a NaN operand rather than propagating it, so an
+    /// unguarded NaN concealment would silently void the growth cap and let a
+    /// remittance reach into the standing stock, the one thing spec §4.2
+    /// forbids. [`Bake::takes_the_initiative`] already fails safe on a
+    /// non-finite disposition (its `>=` comparison is simply `false` for
+    /// NaN); this mirrors that by treating any non-finite radius as
+    /// concealing nothing rather than voiding the cap.
     fn concealment_of(&self, people: KindId) -> f64 {
         match self.in_group_radius.get(&people) {
             None => 0.0,
+            Some(&r) if !r.is_finite() => 0.0,
             Some(&r) => (1.0 - r.clamp(0.0, 1.0)) * CONCEAL_MAX,
         }
     }
@@ -1242,6 +1275,7 @@ impl<'a> Bake<'a> {
             self.communities[sub].population -= remittance;
             self.communities[rel.patron].stores += remittance;
             self.tally.tribute_collected += remittance;
+            self.tally.tribute_collection_events += 1;
             // A no-op in today's call sequence — `grow` touched the patron at
             // this same `year` and this same population earlier in the epoch,
             // and collection moves `stores`, which `touch` does not read. Kept
@@ -2314,6 +2348,11 @@ mod tests {
             increment.to_bits(),
             "the run total must count what actually moved"
         );
+        assert_eq!(
+            bake.tally.tribute_collection_events, 1,
+            "one live relation collected once: the event counter (T4 review, \
+             Important 2) must count the visit, not the wealth"
+        );
     }
 
     #[test]
@@ -2364,6 +2403,13 @@ mod tests {
             bake.communities[sub].population.to_bits(),
             sub_after_one.to_bits(),
             "a subordinate that did not grow must not be taxed on its stock"
+        );
+        assert_eq!(
+            bake.tally.tribute_collection_events, 2,
+            "T4 review, Important 2: the event counter must count the VISIT, \
+             not the wealth — it must still climb in the zero-growth second \
+             epoch even though nothing was collected in it, or rate and \
+             volume cannot be told apart from a run total alone"
         );
     }
 
@@ -2432,6 +2478,55 @@ mod tests {
             insular_kept > expansive_kept,
             "what is concealed stays with the subordinate: insular kept \
              {insular_kept}, expansive kept {expansive_kept}"
+        );
+    }
+
+    #[test]
+    fn a_non_finite_radius_conceals_nothing() {
+        // T4 review, Minor 1. `SocietyVector.in_group_radius` carries its
+        // `[0, 1]` contract only as a doc comment — nothing structurally
+        // stops a NaN or an infinity from reaching `concealment_of`, even
+        // though today's authored values never produce one. Unguarded, a NaN
+        // radius would flow through `f64::clamp` (NaN in, NaN out) into
+        // `conceal = NaN`, and `collect_tribute`'s cap
+        // `assessment.min(surplus * (1.0 - conceal))` would then evaluate to
+        // `assessment` — `f64::min` DISCARDS a NaN operand — reaching straight
+        // past the growth-increment ceiling into the standing stock, the one
+        // thing spec §4.2 forbids. The guard must treat ANY non-finite input
+        // (NaN, +inf, -inf) as "conceal nothing", the same failure direction
+        // `takes_the_initiative` already takes on a non-finite disposition.
+        let goblin_radius: BTreeMap<KindId, f64> =
+            [(KindId("goblin"), f64::NAN)].into_iter().collect();
+        let kobold_radius: BTreeMap<KindId, f64> =
+            [(KindId("kobold"), f64::INFINITY)].into_iter().collect();
+        let bugbear_radius: BTreeMap<KindId, f64> = [(KindId("bugbear"), f64::NEG_INFINITY)]
+            .into_iter()
+            .collect();
+
+        let geo = Geosphere::new(1);
+        let graphs = vec![full_land_graph(&geo)];
+        let capacity = CellMap::from_fn(&geo, |_| 100.0);
+        let river_prox = CellMap::from_fn(&geo, |_| 0.0);
+        let refugia = CellMap::from_fn(&geo, |_| false);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+
+        bake.in_group_radius = &goblin_radius;
+        assert_eq!(
+            bake.concealment_of(KindId("goblin")).to_bits(),
+            0.0f64.to_bits(),
+            "a NaN radius must conceal nothing, not void the growth cap"
+        );
+        bake.in_group_radius = &kobold_radius;
+        assert_eq!(
+            bake.concealment_of(KindId("kobold")).to_bits(),
+            0.0f64.to_bits(),
+            "an infinite radius must conceal nothing either"
+        );
+        bake.in_group_radius = &bugbear_radius;
+        assert_eq!(
+            bake.concealment_of(KindId("bugbear")).to_bits(),
+            0.0f64.to_bits(),
+            "and neither must a negative-infinite one"
         );
     }
 
@@ -2515,6 +2610,19 @@ mod tests {
         // famine fires. `grow` and `collect_tribute` are then the ONLY two
         // things that move a population, so the floor is attributable to
         // tribute alone.
+        //
+        // Note (T4 review, Minor 2): `hand_bake` sets `in_group_radius` to
+        // `no_radius()` — concealment 0 throughout — so the shipped
+        // configuration (every goblinoid authored below full transparency)
+        // is never exercised here. The floor holds for ANY concealment by
+        // construction (`conceal` is clamped into `[0, CONCEAL_MAX] =
+        // [0, 0.5]`, so `remittance <= surplus` regardless of the radius),
+        // but this test's precondition cannot simply be re-run at
+        // concealment > 0: once a subordinate keeps part of its surplus,
+        // nobody is milked of their WHOLE increment anymore, so the
+        // `taxed_to_the_floor > 0` tightness precondition below would
+        // redden, not the floor assertion itself. Left at concealment 0
+        // deliberately, not as an oversight.
         let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
         let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
         // One strong community ringed by weaker, productive ones: it out-muscles
