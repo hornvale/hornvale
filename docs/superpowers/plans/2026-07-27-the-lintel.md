@@ -165,16 +165,15 @@ pub fn band_of(addr: &RoomAddr, walk_depth: u32) -> Band {
 /// Every walk-band-keyed datum (the settlement-territory set, the locale
 /// describer, the climate read) must be consulted with this, never with a raw
 /// chamber address. An address at or above the walk band is returned unchanged,
-/// so callers may apply this unconditionally.
+/// so callers may apply this unconditionally — which is the whole point, and the
+/// only thing this adds over the kernel primitive it delegates to.
 /// type-audit: bare-ok(count: walk_depth)
 pub fn truncate_to_walk(addr: &RoomAddr, walk_depth: u32) -> RoomAddr {
-    if addr.depth() <= walk_depth {
-        return addr.clone();
-    }
-    RoomAddr {
-        face: addr.face,
-        path: addr.path[..walk_depth as usize].to_vec(),
-    }
+    // `RoomAddr::ancestor` (kernel/src/room.rs) already does the bounds-checked
+    // slice and returns `None` when `walk_depth` is deeper than the address.
+    // Delegate: re-deriving the slice here would duplicate a save-format-
+    // adjacent primitive, and a second copy is a second thing to get wrong.
+    addr.ancestor(walk_depth).unwrap_or_else(|| addr.clone())
 }
 ```
 
