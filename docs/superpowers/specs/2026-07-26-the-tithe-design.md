@@ -217,6 +217,77 @@ on every world, the assessment is decorative, and adapting it changes no remitta
 constants are coupled: any future change to `GROWTH_RATE` re-opens this. A test pins the
 relationship rather than the value, so the coupling cannot rot silently.
 
+### 4.3a Extraction strategy — the patron's horizon is a discount rate (amendment 4)
+
+**The measurement that forced this.** An investigation across seeds 1–24 found
+`assessment_at_formation / eff_capacity` takes **exactly one value, 0.025, across all 2258
+relations**. There is no patron-side term anywhere in the tribute rule — the only per-people input
+is the *vassal's* concealment. A Sopranos bust-out and a Roman census are not merely the same code
+path; nothing in the model could distinguish them even in principle. Every patron takes the whole
+growth increment forever, and 79.2% of relations crash to the floor in a median two epochs.
+
+**The lift.** Substituting the *source* of the demand — from "the cell's capacity" to "the
+discounted future stream" — turns extraction into **renewable-resource economics**, and the
+vassal's logistic growth makes the mapping exact: **maximum sustainable yield sits at `N = eff/2`**,
+the peak of the increment the bake already computes. A patron maximising the discounted stream holds
+its vassal *at* that peak; one maximising this epoch strips the stock. Same rule, one parameter.
+
+**`MindVector.time_horizon` (immediate 0 ↔ generational 1) is that parameter** — authored, spread
+(bugbear 0.3 / hobgoblin 0.5 / kobold 0.8), and currently unread by the bake. It reaches the bake
+through the same `BakeConfig` channel as `disposition` and `in_group_radius`.
+
+```
+target_n  =  FARM_FLOOR + horizon × (eff_capacity/2 − FARM_FLOOR)
+```
+
+A generational patron targets MSY and its relation persists indefinitely; an immediate one targets
+the floor and strips. Between them lie the protection racket and the Danegeld — the family is
+**generated, not enumerated.**
+
+**The horizon sets the setpoint; §4.3's health feedback is the controller that reaches it.** They
+are not rivals: the patron targets from what it can *see* (`eff_capacity`), the vassal's true
+population is partly hidden (§4.2), and the health signal corrects the resulting mis-estimate. The
+feedback becomes two-signed around a *meaningful* target rather than around whatever happened.
+
+**Extinction becomes Clark's case, and that is exactly the intent.** In resource economics,
+extermination is optimal when the discount rate exceeds the resource's intrinsic growth rate. So a
+subjugated people *can* be destroyed — but only by the shortest-sighted patrons, as a consequence of
+the same optimisation rather than a special case. That also shrinks the terminal-conflict defect
+(§4.2b's bleed leaves a vassal unable to survive being raided, killing the cascade at depth 0):
+deep bleeding becomes **rare** instead of universal.
+
+### 4.3b Horizon-aware subordination
+
+Measured: **45.7% of relations open on a fresh daughter at `DAUGHTER_POP = 8`**, always below the
+low root (`N/eff = 0.1464`) — doomed at conception, which is why the crash basin is the default
+outcome regardless of extraction rate. A patron with foresight does not subordinate a community too
+small to farm. The minimum vassal a patron will take therefore scales with its horizon: a
+generational patron wants a going concern, an immediate one takes anything it can beat.
+
+### 4.3c The portfolio effect
+
+A patron holding many vassals treats each as more expendable, so it extracts harder from the
+marginal ones — historically why empires are crueler to distant provinces than to the core. The
+patron's **effective** horizon shortens as its subordinate count rises. The input already exists
+(`max_subordinates` is tracked). This produces cruelty structurally rather than authoring it as a
+trait, and gives strategy a second source of variation on top of the per-people one.
+
+### 4.3d Vassal agency — flight and revolt, both structural
+
+The subjugated are not limited to passive concealment. Both responses are **total functions of
+frozen state — no agent decision, no new draw**:
+
+- **Flight.** When the burden exceeds a threshold, the vassal relocates rather than continue in that
+  condition, using the existing `relocate` path. It is leaving, not being driven off.
+- **Revolt.** When `strength(vassal) > strength(patron) × RAID_MARGIN`, the relation dissolves. The
+  patron then loses that tribute, so its stores fall, so it becomes beatable by *others* — a chain
+  that is **emergent rather than engineered**, and distinct from §9's deferred collapse-release,
+  which frees a whole network in one relaxation by construction.
+
+Revolt is the avalanche trigger the headline metric has never had: the cascade distribution has
+never seen a large event, and a patron's failure propagating through its holdings is the first
+mechanism in this campaign that could produce one.
+
 ### 4.4 Representation and lifecycle
 
 - **Live during the bake** — a relation table on `Bake`, alongside `node_index`. Deterministic
@@ -305,7 +376,14 @@ the world depopulates, that is a calibration finding for Nathan, never a floor.
 
 ## 6. Scope
 
-Slice 2 is the minimal accumulating structure: the subordination trigger, the three-term
+**Amendment 4 ended this slice's claim to be minimal, deliberately and on the owner's call.** It was
+scoped as "the minimal accumulating structure"; it is now that plus a strategy family (§4.3a),
+horizon-aware subordination (§4.3b), the portfolio effect (§4.3c), and vassal agency (§4.3d). The
+four cohere around one idea — extraction strategy as a discount-rate family — and each was forced by
+a measurement rather than proposed speculatively. They are recorded here as an honest scope change,
+not folded in silently.
+
+Slice 2 is the accumulating structure: the subordination trigger, the three-term
 negotiation, adaptive demand, and lifecycle. **The knobs stacked here are opposed** — assessment
 raises extraction, concealment lowers it — so, per The Tumult's sequencing lesson, they ship in
 **measured stages with a seed-42 readout between each** (`history_for`, not a full census regen —
@@ -321,6 +399,14 @@ re-deriving that the `Fact` shape itself does not change.
 
 ## 8. Success criteria — measure, don't narrate
 
+0. **Strategies are actually various** (§4.3a's whole point). The distribution of extraction
+   behaviour across patrons must be **multi-modal, not a single attractor** — the pre-amendment
+   state had `assessment / eff_capacity` at exactly one value across all 2258 relations, which is
+   the failure this criterion exists to detect. Report the spread of extraction rate and of relation
+   lifetime *by patron people*, and the share of relations ending in each fate: persisted to `now`,
+   vassal fled, vassal revolted, vassal extinguished, patron fell. **Extinction must be the
+   exception and must concentrate among short-horizon patrons** — if the bloodiest outcome is
+   common, or is spread evenly across horizons, the discount model is not doing what §4.3a claims.
 1. **Subordination fires.** Seed-42 forms tribute relations at volume, on targets the shipped
    covet gate would have ignored — proving branch 2 is new motive, not a relabelling.
 2. **The structure accumulates.** A dominant's strength measurably rises from tribute without it
