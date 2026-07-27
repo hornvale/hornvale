@@ -819,6 +819,7 @@ use hornvale_kernel::{RoomAddr, Seed};
 pub const MAX_CHAMBERS: usize = 4;
 
 /// The sparse set of chambers standing at one built locale.
+/// type-audit: bare-ok(index: links)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Structure {
     /// The chamber `enter` arrives in from the locale.
@@ -827,7 +828,6 @@ pub struct Structure {
     pub chambers: Vec<RoomAddr>,
     /// Undirected apertures as index pairs into `chambers`. Connected, so
     /// every chamber is reachable from `threshold`.
-    /// type-audit: bare-ok(index)
     pub links: Vec<(usize, usize)>,
 }
 
@@ -911,12 +911,17 @@ Run:
 ```bash
 cargo run -q -p hornvale -- streams | grep -n "room/chambers/v1"
 ```
-Expected: the new label appears. Then regenerate the committed manifest page and inspect the diff — it should contain **only** the new row:
+Expected: the new label appears. Then regenerate the committed manifest page and inspect the diff — it should contain **only** the new row.
+
+**The generated file is `book/src/reference/stream-manifest-generated.md`**, not `stream-manifest.md`: the un-suffixed page is an `{{#include}}` wrapper and writing the dump into it would clobber the wrapper. Use the exact command the CI drift-check uses — find it with:
 ```bash
-cargo run -q -p hornvale -- streams > book/src/reference/stream-manifest.md
-git diff --stat book/src/reference/
+grep -n "streams" .github/workflows/ci.yml scripts/regenerate-artifacts.sh
 ```
-If the file path differs, find it with `grep -rln "stream manifest" book/src/reference/`.
+then run that command and inspect:
+```bash
+git diff --stat book/src/reference/
+git diff book/src/reference/
+```
 
 - [ ] **Step 7: Format, audit, commit**
 
