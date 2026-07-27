@@ -165,38 +165,131 @@ fn every_frontier_section_is_listed_in_the_contents() {
     );
 }
 
+/// One parsed row of the idea registry's tables. `cells` counts the pieces the
+/// line splits into on unescaped pipes — a well-formed five-column row splits
+/// into seven (an empty piece before the leading `|` and after the trailing
+/// one).
+struct RegistryRow {
+    /// 1-based line number in `idea-registry.md`, for error messages.
+    line: usize,
+    /// The ID cell (`MAP-7`, `SKY-eclipse-seasons`).
+    id: String,
+    /// The Idea cell — the prose the length cap applies to.
+    idea: String,
+    /// Pieces the line splits into on *unescaped* pipes; 7 when well-formed.
+    cells: usize,
+}
+
+/// A sentinel standing in for `\|` while splitting, so an escaped pipe (which
+/// GFM renders as a literal `|` inside a cell) never counts as a separator.
+/// Restored before any cell is returned, so lengths and text stay faithful.
+const ESCAPED_PIPE: char = '\u{1}';
+
+/// True when `cell` is a registry ID: a category prefix, a hyphen, and either a
+/// number with an optional sub-letter (`MAP-9`, `MAP-9a` — the frozen numbered
+/// era) or a lowercase slug (`SKY-eclipse-seasons` — decision
+/// `0026-slugs-not-numbers`). Anything else is a header or separator cell.
+fn looks_like_registry_id(cell: &str) -> bool {
+    cell.split_once('-').is_some_and(|(pre, post)| {
+        let numbered = post.starts_with(|c: char| c.is_ascii_digit())
+            && post
+                .trim_end_matches(|c: char| c.is_ascii_lowercase())
+                .chars()
+                .all(|c| c.is_ascii_digit());
+        let slug = post.starts_with(|c: char| c.is_ascii_lowercase())
+            && post
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+        !pre.is_empty()
+            && pre.chars().all(|c| c.is_ascii_uppercase())
+            && !post.is_empty()
+            && (numbered || slug)
+    })
+}
+
+/// Parse `text` as the idea registry, returning one entry per ID-bearing table
+/// row. Header and separator rows are skipped.
+fn parse_registry(text: &str) -> Vec<RegistryRow> {
+    let mut rows = Vec::new();
+    for (idx, line) in text.lines().enumerate() {
+        if !line.starts_with("| ") {
+            continue;
+        }
+        let masked = line.replace("\\|", &ESCAPED_PIPE.to_string());
+        let pieces: Vec<String> = masked
+            .split('|')
+            .map(|p| p.replace(ESCAPED_PIPE, "\\|").trim().to_string())
+            .collect();
+        // pieces[0] is the empty text before the leading `|`.
+        let Some(id) = pieces.get(1) else { continue };
+        if !looks_like_registry_id(id) {
+            continue;
+        }
+        rows.push(RegistryRow {
+            line: idx + 1,
+            id: id.clone(),
+            idea: pieces.get(2).cloned().unwrap_or_default(),
+            cells: pieces.len(),
+        });
+    }
+    rows
+}
+
+/// Every ID-bearing row of the idea registry.
+fn registry_rows() -> Vec<RegistryRow> {
+    parse_registry(&read(
+        &repo_root().join("book/src/frontier/idea-registry.md"),
+    ))
+}
+
+#[test]
+fn an_escaped_pipe_is_not_a_column_separator() {
+    // The trap this parser exists to avoid: a naive split on '|' counts the
+    // escaped pipes inside a code span as separators and reports a well-formed
+    // row as broken. Both rows below are five-column rows; only the second is
+    // malformed.
+    let ok = "| MAP-1 | uses `a \\| b` in prose | raw | med | [x](y.md) |";
+    let broken = "| MAP-2 | uses `a | b` unescaped | raw | med | [x](y.md) |";
+    let rows = parse_registry(&format!("{ok}\n{broken}\n"));
+    assert_eq!(rows.len(), 2, "both rows should parse as registry rows");
+    assert_eq!(rows[0].cells, 7, "escaped pipes must not split the cell");
+    assert_eq!(
+        rows[0].idea, "uses `a \\| b` in prose",
+        "the escape must survive parsing intact"
+    );
+    assert_eq!(rows[1].cells, 8, "a bare pipe must split the cell");
+}
+
+#[test]
+fn registry_rows_have_five_columns() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.cells != 7)
+        .map(|r| {
+            format!(
+                "{}:{} ({} columns, expected 5) — escape bare `|` in prose as `\\|`",
+                r.id,
+                r.line,
+                r.cells - 2
+            )
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "malformed registry rows — mdbook truncates these to five cells, \
+         shifting the columns left and DROPPING the Where pointer from the \
+         published page:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
 #[test]
 fn registry_ids_are_unique() {
-    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
     let mut seen = BTreeSet::new();
     let mut dupes = Vec::new();
-    for line in registry.lines() {
-        let Some(rest) = line.strip_prefix("| ") else {
-            continue;
-        };
-        let cell = rest.split('|').next().unwrap_or("").trim();
-        // An ID is a category prefix, a hyphen, and either a number with an
-        // optional sub-letter (MAP-9, MAP-9a, LANG-1 — the frozen numbered
-        // era) or a lowercase slug (SKY-eclipse-seasons — decision
-        // `0026-slugs-not-numbers`). Anything else is a header or separator
-        // cell.
-        let looks_like_id = cell.split_once('-').is_some_and(|(pre, post)| {
-            let numbered = post.starts_with(|c: char| c.is_ascii_digit())
-                && post
-                    .trim_end_matches(|c: char| c.is_ascii_lowercase())
-                    .chars()
-                    .all(|c| c.is_ascii_digit());
-            let slug = post.starts_with(|c: char| c.is_ascii_lowercase())
-                && post
-                    .chars()
-                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
-            !pre.is_empty()
-                && pre.chars().all(|c| c.is_ascii_uppercase())
-                && !post.is_empty()
-                && (numbered || slug)
-        });
-        if looks_like_id && !seen.insert(cell.to_string()) {
-            dupes.push(cell.to_string());
+    for row in registry_rows() {
+        if !seen.insert(row.id.clone()) {
+            dupes.push(format!("{}:{}", row.id, row.line));
         }
     }
     assert!(
@@ -246,22 +339,12 @@ fn the_confidence_gradient_links_resolve() {
 /// `BIO`, …), parsed from the ID column so the book lint auto-adapts when a new
 /// prefix is coined rather than hard-coding a list that rots.
 fn registry_id_prefixes() -> BTreeSet<String> {
-    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
-    let mut prefixes = BTreeSet::new();
-    for line in registry.lines() {
-        let Some(rest) = line.strip_prefix("| ") else {
-            continue;
-        };
-        let cell = rest.split('|').next().unwrap_or("").trim();
-        if let Some((pre, post)) = cell.split_once('-')
-            && !pre.is_empty()
-            && pre.chars().all(|c| c.is_ascii_uppercase())
-            && post.starts_with(|c: char| c.is_ascii_digit())
-        {
-            prefixes.insert(pre.to_string());
-        }
-    }
-    prefixes
+    registry_rows()
+        .iter()
+        .filter_map(|r| r.id.split_once('-'))
+        .filter(|(_, post)| post.starts_with(|c: char| c.is_ascii_digit()))
+        .map(|(pre, _)| pre.to_string())
+        .collect()
 }
 
 /// The first registry ID (`EXP-3`, `MAP-9a`) appearing in `text` as a whole
