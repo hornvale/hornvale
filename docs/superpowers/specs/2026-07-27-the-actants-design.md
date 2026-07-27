@@ -2,12 +2,17 @@
 
 **Campaign:** The Actants
 **Date:** 2026-07-27
-**Status:** DRAFT — at G3, awaiting review
+**Status:** DRAFT — at G3, awaiting review. **§3–§4 revised 2026-07-27** after
+the ordering defect was diagnosed; the naming is no longer expensive.
+**Depends on:** The Accession (`2026-07-27-the-accession-design.md`), which
+must land first. Stage B is byte-identical behind it and world-perturbing
+without it.
 **Decisions in force:** 0025 (one concept name, one owner), 0073 (epoch
 granularity is declared), 0063 (census regen is local-canonical), 0011,
 0020.
 **Registry:** MAP-27 (the verb as reaction), UNI-21 (the self-reflective
-ledger — the capability schema as a derived view).
+ledger — the capability schema as a derived view), LANG-55 (the codomain
+subspace — The Accession's successor).
 
 ## 1. The gap
 
@@ -81,113 +86,91 @@ so there is no row in which to record their absence — which is precisely why
 no check could catch The Menagerie. **Closing the gap therefore requires a
 mechanism outside the manifest, not a new `Void` variant.**
 
-## 3. Registering a concept is a cosmological edit (verified)
+## 3. Registering a concept was expensive; that was a separable defect
 
-The obvious fix — add twelve manifests with honest `Gap` lexemes — is the
-expensive half, and the reason is load-bearing enough to state as a finding.
+The obvious fix — add twelve manifests with honest `Gap` lexemes — measured as
+world-perturbing when this spec was first drafted: 70 place-name facts moved
+and 11 artifacts churned. Diagnosing *why* turned out to be the more valuable
+finding, and it is not this campaign's to fix.
 
-`domains/language/src/lexicon.rs:279-289` assigns proto-roots over a
-universe that is **every registered concept**, Steeped/KnowsOf/Unknown
-alike, deliberately: it keeps roots world-independent so cognates match
-across worlds that expose different concepts. The assignment is injective
-and merger-aware, resolved by open addressing. So the *cardinality and
-alphabetical membership* of the registry is load-bearing: inserting a
-concept changes the occupied-form set seen by every concept sorting after it,
-and roots reshuffle.
+`assign_proto_roots` orders the concept universe `(core_rank, id)` and walks
+it, each concept drawing a proto-root and probing when its form is taken. A
+concept's assignment therefore depends only on concepts sorted at or before
+it — so an addition is free **iff** it sorts last, which ordering by id does
+not arrange. Ten of the twelve kinds were free; `treant` cost 5 facts and
+`otyugh` 65, summing exactly to the 70 measured when all twelve land at once.
+Additivity was a coin flip.
 
-Measured, not reasoned — spike on this branch (all 16 kinds registered from
-`biosphere_registry()`, then reverted):
+That is **The Accession**'s defect, now specced separately: order by
+`(epoch, core_rank, id)` so a new concept always lands strictly last.
+Verified by spike — all 16 kinds registered, ledger **byte-identical**,
+artifacts 4 files `+127 / -7` (added rows only), no almanac churn, no census.
 
 ```
-$ cargo run -q -p hornvale -- new --seed 42
-  base : 7466 facts, village Qvooshtvoagootao
-  spike: 7466 facts, village Qvooshtvoagootao
-  seed equal: True     ledger equal: FALSE
-  positions differing: 70   predicates affected: [('name', 70)]
-    "Zhvekngokngaknoenoanoaboo" -> "Zhvekngokngakbaonoanoaboo"
-    "Roroqrraxoxo"              -> "Rarraroqrraxoxo"
-
-$ bash scripts/regenerate-artifacts.sh   (censuses SKIPPED)
-  11 artifacts changed, 361 insertions / 241 deletions
-  3 almanacs, connections, settlement, the-book, scene-tiles,
-  concept-registry, concept-manifest, dictionary, proto-goblinoid
+                    before Accession   behind Accession
+ledger              70 facts moved     BYTE-IDENTICAL
+artifacts           11 files           4 files (added rows)
+census              regen required     not required
 ```
 
-Seventy place names move. Existing *saved* worlds keep their names (names are
-committed facts; manifests are `#[serde(skip)]`), so nothing corrupts — but
-the same seed stops reproducing the same world, which is the determinism
-contract that matters for goldens. The census and the calibration battery
-would need rebaselining on top of the 11 artifacts; **neither was run — that
-is a carve-out requiring authorization (decision 0063).**
-
-Three consequences:
-
-1. **Excluding gap concepts from the universe is not available.** It would
-   make root assignment world-dependent and break cognate safety — the exact
-   invariant the comment at `lexicon.rs:281` exists to protect.
-2. **The cost is per-batch, not per-concept.** One reshuffle, one regen,
-   whether the batch is 1 concept or 40. Drip-feeding naming across
-   campaigns is therefore the maximally expensive policy — and it is the
-   policy currently in force by default.
-3. **The registry's cardinality is a physical constant of the world.** The
-   intended effect of registering a concept is a dictionary row; the actual
-   effect is that every place name in every world changes. Growing it
-   incidentally inside an unrelated campaign is the error.
+**Consequence for this campaign:** the naming is no longer a costed "naming
+day" needing census authorization. It is an ordinary additive change, so
+Stage B folds back in — behind The Accession, and only behind it.
 
 ## 4. What this campaign does
 
-Take the teeth now at zero world-drift; schedule the naming as its own
-authorized batch.
+Two stages, both zero world-drift, the second conditional on The Accession
+having landed.
 
-### Stage A — the reverse audit generalized (zero drift)
+### Stage A — the reverse audit generalized
 
-Mirror the orphan-phenomena mechanism, which is precedent-exact for
-"realized thing, no concept names it," onto the two registries that lack it.
+Mirror the orphan-phenomena mechanism, which is precedent-exact for "realized
+thing, no concept names it," onto the two registries that lack it. Stage A is
+independent of The Accession and could land in either order.
 
 **A1. Orphan species.** In `cli/src/concepts.rs`, alongside `orphan_phenomena`:
-kinds in `hornvale_species::biosphere_registry()` for which no
-`{kind}-kind` concept is registered. Rendered as a new backlog line.
+kinds in `hornvale_species::biosphere_registry()` for which no `{kind}-kind`
+concept is registered. Rendered as a new backlog line.
 
 **A2. Orphan actions.** Same, over the action roster. `Action` has no
-reflection, so it gains an exhaustive `all()` guarded by the house
-destructure tripwire — a new variant then **cannot compile** without being
-listed, which is a strictly stronger guard than species can have (whose
-roster is data-driven). Each variant maps to its concept name
-(`MoveTo`→`move`, `Drink`→`drink`, `Rest`→`rest`, `Eat`→`eat`); those with
-no registered concept are orphans. All four are orphans today.
+reflection, so it gains an exhaustive `all()` guarded by the house destructure
+tripwire — a new variant then **cannot compile** without being listed, a
+strictly stronger guard than species can have (whose roster is data-driven).
+Each variant maps to its concept name (`MoveTo`→`move`, `Drink`→`drink`,
+`Rest`→`rest`, `Eat`→`eat`); those with no registered concept are orphans. All
+four are orphans today.
 
-**A3. Prose language.** The backlog line and the page's framing paragraph
-name the third reverse direction as *unaudited*, with its count, and stop
-there. Auditing it needs a design line between "a nameable thing" and
-"texture" (`windows/locale/src/grammar.rs`'s 32 relief descriptors — "a
-boulder field", "erg dunes" — are arguably not nouns the dictionary owes a
-row). Registered as a followup, not built.
+**A3. Prose language.** The backlog line and the page's framing name the third
+reverse direction as *unaudited*, with its count, and stop there. Auditing it
+needs a design line between "a nameable thing" and "texture"
+(`windows/locale/src/grammar.rs`'s 32 relief descriptors — "a boulder field",
+"erg dunes" — are arguably not nouns the dictionary owes a row). Followup, not
+built.
 
-**A4. Tests.** Mirroring `manifest_render_lists_orphan_phenomena`: assert
-the orphan-species line contains a known fauna kind and excludes a peopled
-kind; assert the orphan-actions line is derived from `Action::all()` and not
-a literal. Non-vacuity: a test that fails if the orphan sets are *empty*
-would invert on Stage B, so the assertion is on **derivation**, not
-population — the guard is that a new species or action changes the generated
-page, which CI's drift check then fails.
+**A4. Tests.** Mirroring `manifest_render_lists_orphan_phenomena`. Non-vacuity:
+a test asserting the orphan sets are *non-empty* would invert the moment Stage
+B lands, so the assertion is on **derivation** — that the line is computed from
+`biosphere_registry()` / `Action::all()` and not a literal. The guard is that a
+new species or action changes the generated page, which CI's drift check then
+fails.
 
-Stage A changes one generated artifact (`concept-manifest-generated.md`,
-two added lines). No world moves. No census.
+### Stage B — the naming
 
-### Stage B — the naming day (NOT built here; costed for authorization)
+Register all 12 species concepts and the 4 act concepts at epoch 1, adding
+`ConceptKind::Act` for the verbs. Byte-identical behind The Accession;
+asserted, not assumed (success criterion 3). Stage A's orphan lines go empty
+for species and actions, which is exactly why A4 asserts derivation rather
+than population.
 
-Register all 12 species concepts and the 4 act concepts in **one** batch,
-with `ConceptKind::Act` added for the verbs, paying one reshuffle. Requires:
-an epoch declaration per decision 0073, a full artifact regen, a local
-census regen, and a calibration rebaseline. Presented at G3 as a decision
-for Nathan, not executed. Two sub-questions it must settle:
+Two sub-questions it settles:
 
-- Doc text for hyphenated ids: `format!("a {kind}")` yields "a giant-elk".
-  Prefer an authored gloss per kind ("a giant elk").
-- Whether the 4 act concepts belong to `language` (Swadesh-adjacent, joining
-  `eat`/`sleep`/`die`) or to a new owner. Decision 0025 forces one owner;
-  `eat` is already owned by `language`, which argues for `language` and for
-  re-kinding `eat`/`sleep`/`die` to `Act` in the same batch.
+- **Doc text.** `format!("a {kind}")` yields "a giant-elk". Prefer an authored
+  gloss per kind ("a giant elk").
+- **Owner.** Decision 0025 forces one owner per concept name. `eat` is already
+  owned by `language`, which argues for `language` for the act concepts, and
+  for re-kinding `eat`/`sleep`/`die` from `Quality` to `Act` in the same
+  change.
+
 
 ## 5. Explicitly not in scope
 
@@ -200,14 +183,24 @@ for Nathan, not executed. Two sub-questions it must settle:
   force a decision for all 76 existing concepts.
 - Auditing prose vocabulary (A3 names it; a design line is owed first).
 - Predicate → concept reconciliation (the fourth empty branch; unmeasured).
+- The ordering fix itself — that is The Accession. This campaign consumes it
+  and must not reimplement or work around it.
 
 ## 6. Success criteria
 
 1. `hornvale concepts --manifest` lists orphan species and orphan actions,
-   both non-empty today, both derived from their registries.
+   derived from `biosphere_registry()` / `Action::all()` rather than literals.
 2. Adding a 17th species, or a fifth `Action`, changes the generated page —
    and for `Action`, fails to compile until listed.
-3. `git diff` after `scripts/regenerate-artifacts.sh` touches exactly one
-   file, and no `name` fact in seed 42 moves (the Stage-A drift bound,
-   asserted by rebuilding seed 42 and diffing the ledger).
-4. `make gate` green; type-audit clean (pub-boundary change in vessel).
+3. **Stage A** moves no world: seed 42's ledger byte-identical to the merge
+   base, and `scripts/regenerate-artifacts.sh` touches exactly one file
+   (`concept-manifest-generated.md`).
+4. **Stage B** moves no world either: with The Accession landed and the 16
+   concepts registered at epoch 1, seed 42's ledger is byte-identical and the
+   artifact diff is added rows only (measured at spike: 4 files, `+127 / -7`).
+   `otyugh-kind` is the regression case — the 65-fact offender before the
+   ordering fix.
+5. After Stage B the orphan-species and orphan-action lines read `none`, and
+   the tests still pass **unchanged** — the proof that A4 asserted derivation
+   and not population.
+6. `make gate` green; type-audit clean (pub-boundary change in vessel).
