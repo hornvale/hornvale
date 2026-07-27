@@ -1,6 +1,6 @@
 # The Vacancy — Design
 
-**Status:** Draft for G3 review (2026-07-26) · **Author:** Claude (campaign-
+**Status:** COMPLETE — merged 2026-07-27; see [the chronicle](../../../book/src/chronicle/the-vacancy.md) and [retrospective](../../retrospectives/the-vacancy.md). Originally: draft for G3 review (2026-07-26) · **Author:** Claude (campaign-
 autopilot) · **Decider:** Nathan · **Registry:** BIO-37 (the roster-generation
 half — this campaign is its first instantiation), MAP-11 (the water half of the
 habitat-medium row), BIO-25/26/27, BIO-39, BIO-41 · **Ledger:**

@@ -10,7 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-26-the-vacancy-design.md`
 
-**Task count:** 11. The gnoll's body and mind are one task (Task 9), not two: a `Settled` kind without its peopled component set fails `check_integrity`, so splitting them would mean committing a state that fails existing tests — which the project's quality gate forbids outright.
+**Status:** COMPLETE — all tasks done, merged 2026-07-27.
+
+**Task count:** 11 (12 with the mid-campaign Task 6b). The gnoll's body and mind are one task (Task 9), not two: a `Settled` kind without its peopled component set fails `check_integrity`, so splitting them would mean committing a state that fails existing tests — which the project's quality gate forbids outright.
 
 ## Global Constraints
 
