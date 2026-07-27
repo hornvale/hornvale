@@ -1442,7 +1442,81 @@ Add the two handlers near `fn go`:
     }
 ```
 
-Add the three small helpers the handlers use (`brief_here`, `describe_chamber_here`, `named_neighbour`, `walk_depth`) beside them. `named_neighbour` matches `target` against the chamber's own prose nouns, sharing the noun catalogue with `describe_chamber` exactly as The Purview's chart shares the prose's nouns; with an empty `target` and exactly one neighbour, take it.
+Add the four small helpers the handlers use beside them. Three integration facts,
+verified on this branch, that determine how they must be written:
+
+**1. `LocaleContext` does not expose its cell index, so add the accessor.** It
+has `climate()`, `terrain()` and `globe_level()` but its `index:
+NearestCellIndex` field is private, and `brief_of` needs it. Add to
+`windows/locale/src/lib.rs`, beside the existing `climate()` accessor:
+
+```rust
+    /// The cached nearest-cell index — the reuse seam for a caller that must
+    /// resolve an address to a cell itself (the same role `terrain()` plays for
+    /// the terrain provider). Building a second index would duplicate a
+    /// structure this context exists to hold once.
+    pub fn nearest_index(&self) -> &NearestCellIndex {
+        &self.index
+    }
+```
+
+**2. Build the terrain the way `Session` already does — NOT with
+`LocaleTerrain::new`.** `LocaleTerrain::new(ctx)` leaves `built: None`, which
+reads as *everything unbuilt*, so `enter` would report "nothing here is built"
+everywhere and the task would look broken for a reason nothing points at. Copy
+the construction `Session::focalized` already uses (`session.rs:303-309`):
+
+```rust
+        let terrain = LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+        );
+```
+
+**3. `walk_depth` is a free function, not a method:** `crate::agent::walk_depth(&self.ctx)`.
+
+So `brief_here` reads:
+
+```rust
+    /// The brief for wherever the possession currently stands.
+    fn brief_here(&self) -> crate::brief::Brief {
+        let terrain = LocaleTerrain::with_fields(
+            &self.ctx,
+            self.calendar.as_ref(),
+            self.predator.as_ref(),
+            self.prey.as_ref(),
+            Some(&self.built),
+        );
+        crate::brief::brief_of(
+            self.world,
+            self.ctx.climate().geosphere(),
+            self.ctx.nearest_index(),
+            &self.agent.position,
+            &terrain,
+            crate::agent::walk_depth(&self.ctx),
+        )
+    }
+```
+
+`describe_chamber_here` derives the current chamber's interior with
+`chamber_interior_of(chamber, &terrain, walk_depth)` — building `terrain` the
+same way — and renders it with `describe_chamber(&interior, &brief)`.
+
+`named_neighbour` matches `target` against the chamber's own prose nouns, sharing
+the noun catalogue with `describe_chamber` exactly as The Purview's chart shares
+the prose's nouns; with an empty `target` and exactly one neighbour, take it.
+
+**One inherited precondition to close here.** `structure_at` computes
+`let extra = (depth - locale.depth()) as usize;` — an unchecked `u32`
+subtraction that underflows if `locale` is ever deeper than
+`chamber_depth(walk_depth)`. It has been unreachable because nothing called it;
+this task is the first caller. Add a `debug_assert_eq!(locale.depth(),
+walk_depth, "structure_at takes a WALK-band locale")` at the top of
+`structure_at`, and pass it a truncated address at the call site (the handler
+already does, via `truncate_to_walk`).
 
 - [ ] **Step 4: Run to verify pass**
 
