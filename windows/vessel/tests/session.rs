@@ -97,10 +97,19 @@ fn entering_leaves_the_walk_band_position_alone() {
     let world = seam_world();
     let (mut s, _) = Session::start(&world, &opts()).unwrap();
     let before = s.agent().position.clone();
-    match s.handle("enter") {
-        Turn::Out(_) => {}
+    let reply = match s.handle("enter") {
+        Turn::Out(t) => t,
         _ => panic!("enter must not release"),
     };
+    // Without this, the test passes whether `enter` descended or answered
+    // "Nothing here is built" — and position-invariance is trivially true in
+    // the second case. `Session::start` mints the flagship in its own
+    // settlement, whose locale IS settlement territory, so a refusal here is a
+    // real failure and not a geography accident.
+    assert!(
+        !reply.starts_with("Nothing here is built"),
+        "the flagship's own locale is built, so this must actually descend: {reply:?}"
+    );
     assert_eq!(
         s.agent().position,
         before,

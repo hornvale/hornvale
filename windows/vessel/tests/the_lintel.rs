@@ -116,7 +116,10 @@ fn entering_and_leaving_commits_nothing() {
     let w = world();
     let (mut session, _) = Session::start(&w, &PossessOpts::default()).expect("possession starts");
     let before = session.committed_agent_at_count();
-    let _ = enter_somewhere_built(&mut session, 12);
+    // `expect`, not `let _`: the guard is only meaningful if a descent actually
+    // happened. Discarding the result would pass just as well on a session that
+    // never got inside anything.
+    enter_somewhere_built(&mut session, 12).expect("a descent must actually happen to be guarded");
     let _ = session.handle("out");
     assert_eq!(
         session.committed_agent_at_count(),
