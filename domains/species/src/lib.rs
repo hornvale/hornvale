@@ -1368,6 +1368,67 @@ fn giant_crocodile_condition_niche() -> ConditionNiche {
     }
 }
 
+// The Vacancy (T9): the fifth people — the gnoll. Hot-arid DESERT
+// specialist, the same climate tile `giant_scorpion_condition_niche` claims
+// (`classify_land`, `domains/climate/src/biome.rs`: `Desert` requires
+// `temp_c >= 20` and `moisture < 0.2`), but read as a pack-hunting Settled
+// people rather than a solitary scavenger. Elevation cites the same
+// settleable-land percentile table as every other people
+// ([`ConditionNiche`]'s doc: p15=142, p25=621, p35=1004, p50=1561, p65=2166,
+// p75=2651, p85=3251, p95=4148 m above sea level). The pre-T9 desert
+// occupants in the committed `windows/worldgen/tests/fixtures/occupancy.csv`
+// give the competitive landscape this niche is authored into: giant-scorpion
+// mean_k 0.0176 (desert's current best occupant), otyugh 0.0138,
+// rust-monster 0.0042, shrieker 0.0031, xorn 0.0012 (all `desert`,
+// `cells_occupied` 8020, the 30-seed sweep). **BIO-46 applies unmodified**:
+// `mean_k` is dominated by the NPP-linked `ANIMAL_PREY`/`PLANT_FORAGE`
+// supply term, which collapses in desert exactly as it does for every other
+// omnivore/predator in the roster (the block comment above
+// `giant_scorpion_condition_niche` walks the mechanism); a genuinely
+// hot-arid-authored gnoll is therefore not expected to out-rank the
+// DETRITUS-fed desert incumbents on raw `mean_k`, and this niche was not
+// re-weighted chasing that rank (see the measured ranking in this crate's
+// T9 task report).
+fn gnoll_condition_niche() -> ConditionNiche {
+    ConditionNiche {
+        // hot desert band, clear of the >=20C floor with margin (compare
+        // giant-scorpion's 32.0, the roster's hottest optimum).
+        temperature: ConditionResponse {
+            optimum: 29.0,
+            width: 9.0,
+            devotion: 0.80,
+        },
+        // deep in the desert moisture band (<0.20), mirroring the
+        // giant-scorpion's stake on the same climate tile.
+        moisture: ConditionResponse {
+            optimum: 0.12,
+            width: 0.12,
+            devotion: 0.75,
+        },
+        // LOW, shade-seeking — the ecological choice behind this kind's
+        // Crepuscular activity (see `perception_registry`): a desert pack
+        // hunter that forages at the cooler margins of the day and shelters
+        // through the peak heat, the same real-world strategy spotted
+        // hyenas use. Insolation is a pure function of latitude
+        // (BIO-47) — this is theming, not a claim the model enforces
+        // canopy/shade, the same caveat every "shaded" niche in this file
+        // already carries (rust-monster's cave stake, black-dragon's swamp
+        // ambush).
+        insolation: ConditionResponse {
+            optimum: 0.08,
+            width: 0.10,
+            devotion: 0.45,
+        },
+        // desert basin lowland, below p25 (621 m) — the same band
+        // giant-scorpion (400 m) and giant-hyena (500 m, savanna) stake.
+        elevation: ConditionResponse {
+            optimum: 500.0,
+            width: 1300.0,
+            devotion: 0.40,
+        },
+    }
+}
+
 /// A species' metabolic strategy. Selects the allometric normalization
 /// coefficient (B₀) and the per-class pace multiplier; the scaling
 /// *exponents* are universal across classes (spec §4).
@@ -1786,6 +1847,35 @@ pub fn biosphere_registry() -> ComponentStore<KindId, BiosphereTraits> {
                 social_form: SocialForm::Solitary,
             },
         ),
+        // The Vacancy (T9): the fifth people. `family_of` follows kobold's
+        // shape — a singleton family, no `family_proto` entry (see the
+        // `family_of` doc below).
+        (
+            KindId("gnoll"),
+            BiosphereTraits {
+                // 5E MM prints no weight (the same finding Task 7 made for
+                // every beast, generalizing here to a humanoid): the MM's own
+                // stat block and flavor text give CR 1/2 and "stands well
+                // over six feet tall" but no number in pounds. The Midgard
+                // Heroes Handbook's gnoll entry (an OGL 5E sourcebook, via
+                // the 5esrd.com SRD mirror) is the closest sourced figure —
+                // "females range 7 to 8 feet and weigh more than 250 pounds;
+                // males average 6 inches and 30 pounds less" — consistent
+                // with the ~300 lb figure repeated across independent
+                // secondary D&D compilations for the species' adult average.
+                // 300 lb = 136.1 kg used here: sourced from the best
+                // available published numbers, not authored from scratch.
+                mass: Mass::new(136.1).unwrap(),
+                metabolic_class: MetabolicClass::Endotherm,
+                // mixed omnivore weighted toward ANIMAL_PREY — a pack
+                // hunter that also forages, not a pure predator (contrast
+                // bugbear's 0.85 ANIMAL_PREY lean).
+                niche: ResourceVector::new(&[(ANIMAL_PREY, 0.65), (PLANT_FORAGE, 0.35)]).unwrap(),
+                condition_niche: gnoll_condition_niche(),
+                potency: 0.0, // gnoll — CR 1/2 (5E MM); mundane like the other four peoples
+                social_form: SocialForm::Settled,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -1856,6 +1946,22 @@ pub fn psyche_registry() -> ComponentStore<KindId, MindVector> {
                 time_horizon: 0.90,
             },
         ),
+        // The Vacancy (T9): the fifth people.
+        (
+            KindId("gnoll"),
+            MindVector {
+                // stands and fights rather than fleeing — a frenzied,
+                // reckless pack predator (5E's Rampage trait reads the same
+                // temperament from the mechanics side).
+                threat_response: 0.85,
+                // impulsive, not deliberate: decisions arrive fast, driven
+                // by opportunity rather than careful weighing.
+                deliberation_latency: 0.2,
+                // short-horizon: a high-variance forager cannot plan far
+                // past the next windfall, so it does not try to.
+                time_horizon: 0.2,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -1897,6 +2003,41 @@ pub fn society_registry() -> ComponentStore<KindId, SocietyVector> {
                 sociality: Sociality::Communal,
                 status_basis: StatusBasis::Rank,
                 in_group_radius: 0.3,
+            },
+        ),
+        // The Vacancy (T9): the fifth people, and `StatusBasis::Generosity`'s
+        // first witness — the campaign's headline promotion (see
+        // `tests/coverage.rs`'s `status_basis_coverage_matches_the_table`).
+        //
+        // Justified from the ECOLOGY, not from lore (decision 0021: no 5E
+        // moral canon rides along — 5E supplies mass and CR only, nothing
+        // else). `gnoll_condition_niche` stakes the desert climate tile:
+        // hot, deep in the `< 0.20` moisture band. A forager there faces
+        // resource windfalls that are both SCARCE and HIGH-VARIANCE — a kill
+        // or a find feeds many mouths at once, then nothing for a stretch.
+        // Human forager ethnography shows the standard adaptive response to
+        // exactly this variance profile is a WIDER reciprocal food-sharing
+        // network, not a narrower one: pooling risk across more partners
+        // smooths the individual variance each forager alone cannot smooth
+        // (the same risk-pooling logic behind !Kung/Ache-style meat-sharing
+        // norms). A pack that shares a windfall widely, rather than hoarding
+        // it, is the one whose members survive the droughts between finds —
+        // so what earns standing is provisioning the group, not winning it
+        // by force or hoarding lore. `in_group_radius` is authored wide
+        // (0.7, above the goblin baseline) for the same reason: an
+        // expansive "us" is the risk-pooling network's natural shape.
+        (
+            KindId("gnoll"),
+            SocietyVector {
+                // packs follow a leader (authority shape); Generosity below
+                // is what a leader must DO to hold that standing, not how
+                // the pack is organized.
+                sociality: Sociality::Hierarchic,
+                status_basis: StatusBasis::Generosity,
+                // wide: windfall-sharing risk-pooling networks extend "us"
+                // broadly, the adaptive response to a scarce, high-variance
+                // forage base.
+                in_group_radius: 0.7,
             },
         ),
     ]
@@ -1981,6 +2122,27 @@ pub fn perception_registry() -> ComponentStore<KindId, PerceptionVector> {
                 sky_attention: 0.15,
             },
         ),
+        // The Vacancy (T9): the fifth people. `activity` is read off the
+        // gnoll's own authored `gnoll_condition_niche().insolation` optimum
+        // (0.08, LOW), the way The Vigil derived the dragons' schedules: a
+        // desert forager that shelters through the day's peak heat and
+        // hunts at the cooler margins is `Crepuscular`, not `Diurnal` — the
+        // real strategy spotted hyenas use, and the ecological reason
+        // behind the low insolation optimum in the first place (see that
+        // niche's doc comment). This gives `ActivityCycle::Crepuscular` its
+        // second witness, alongside white-dragon
+        // (`tests/coverage.rs`'s `activity_cycle_coverage_matches_the_table`).
+        (
+            KindId("gnoll"),
+            PerceptionVector {
+                activity: ActivityCycle::Crepuscular,
+                // hunts at dusk/dawn/night: above the goblin baseline.
+                night_vision: 0.75,
+                // ground-focused pack predator tracking prey and scent, not
+                // sky-rapt.
+                sky_attention: 0.3,
+            },
+        ),
     ]
     .into_iter()
     .collect()
@@ -2027,6 +2189,13 @@ pub fn family_of() -> ComponentStore<KindId, &'static str> {
         (KindId("killer-whale"), "killer-whale"),
         (KindId("giant-squid"), "giant-squid"),
         (KindId("giant-crocodile"), "giant-crocodile"),
+        // The Vacancy (T9): the fifth people. Follows kobold's shape, not
+        // the goblinoids' — `family_of` maps a singleton-family people to
+        // its own name, and `hornvale_language`'s `family_proto` carries no
+        // "gnoll" entry, because `check_integrity` requires a proto only for
+        // a label held by >= 2 kinds (goblinoid/draconic/plant, the roster's
+        // only multi-member families).
+        (KindId("gnoll"), "gnoll"),
     ]
     .into_iter()
     .collect()
@@ -2088,6 +2257,7 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         ("kobold-kind", "a kobold"),
         ("hobgoblin-kind", "a hobgoblin"),
         ("bugbear-kind", "a bugbear"),
+        ("gnoll-kind", "a gnoll"),
     ] {
         registry.register_manifest(Manifest {
             concept: ConceptDef {
@@ -2227,8 +2397,8 @@ mod tests {
 
         assert_eq!(
             bio.len(),
-            28,
-            "twenty-eight kinds compete for space (The Vacancy T7 added seven, T8 added five)"
+            29,
+            "twenty-nine kinds compete for space (The Vacancy T7 added seven, T8 added five, T9 added the gnoll)"
         );
         let bio_ids: Vec<_> = bio.ids().collect();
         let fam_ids: Vec<_> = fam.ids().collect();
@@ -2244,11 +2414,11 @@ mod tests {
                 "perceiver {kind:?} carries a mind (perception ⊆ psyche)"
             );
         }
-        assert_eq!(psy.len(), 7, "four peoples + three minded dragons");
+        assert_eq!(psy.len(), 8, "five peoples + three minded dragons");
         assert_eq!(
             per.len(),
-            7,
-            "perception is the four peoples + the three dragons (The Vigil)"
+            8,
+            "perception is the five peoples + the three dragons (The Vigil)"
         );
         for kind in psy.ids() {
             assert!(bio.contains(kind), "minded {kind:?} has a biosphere row");
@@ -2264,6 +2434,7 @@ mod tests {
             "kobold-kind",
             "hobgoblin-kind",
             "bugbear-kind",
+            "gnoll-kind",
         ] {
             let c = r
                 .concept(name)
@@ -2296,9 +2467,9 @@ mod tests {
         let names: Vec<&str> = bio.ids().map(|k| k.0).collect();
         // The roster grew with the Task 4 menagerie (12 biosphere-only fauna
         // alongside the four peoples), then with The Vacancy's T7 (seven more
-        // biosphere-only fauna) and T8 (five more, four marine plus the
-        // amphibious giant crocodile); ComponentStore key order is
-        // lexicographic.
+        // biosphere-only fauna), T8 (five more, four marine plus the
+        // amphibious giant crocodile), and T9 (the gnoll, the fifth people);
+        // ComponentStore key order is lexicographic.
         assert_eq!(
             names,
             vec![
@@ -2314,6 +2485,7 @@ mod tests {
                 "giant-octopus",
                 "giant-scorpion",
                 "giant-squid",
+                "gnoll",
                 "goblin",
                 "hobgoblin",
                 "killer-whale",
@@ -2480,9 +2652,9 @@ mod tests {
     }
 
     #[test]
-    fn the_four_peoples_have_distinct_temperature_optima() {
+    fn the_five_peoples_have_distinct_temperature_optima() {
         let bio = biosphere_registry();
-        let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear"]
+        let opts: Vec<f64> = ["kobold", "goblin", "hobgoblin", "bugbear", "gnoll"]
             .iter()
             .map(|n| {
                 bio.get(&KindId(n))
@@ -2662,7 +2834,10 @@ mod tests {
     #[test]
     fn society_registry_holds_exactly_the_settled_peoples() {
         let society: Vec<_> = society_registry().ids().map(|k| k.0).collect();
-        assert_eq!(society, vec!["bugbear", "goblin", "hobgoblin", "kobold"]);
+        assert_eq!(
+            society,
+            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
+        );
         // dragons are minded (psyche) but not Settled — no society vector
         assert!(society_registry().get(&KindId("red-dragon")).is_none());
         assert!(psyche_registry().get(&KindId("red-dragon")).is_some());

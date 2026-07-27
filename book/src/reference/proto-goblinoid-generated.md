@@ -58,6 +58,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `fire` | flame and heat | *Qea | /qea/ |
 | `foot` | the walking limb-end | *Doa | /doa/ |
 | `gloom` | the deepest, starless dark | *Noa | /noa/ |
+| `gnoll-kind` | a gnoll | *Kaenoe | /kaenoe/ |
 | `goblin-kind` | a goblin | *Nea | /nea/ |
 | `god` | a deity | *Neetaa | /neetaa/ |
 | `green` | the color term for green | *Keoqae | /keoqae/ |

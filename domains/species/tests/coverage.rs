@@ -87,6 +87,7 @@ fn metabolic_class_coverage_matches_the_table() {
                 "giant-elk",
                 "giant-goat",
                 "giant-hyena",
+                "gnoll",
                 "goblin",
                 "hobgoblin",
                 "killer-whale",
@@ -144,9 +145,11 @@ fn status_basis_coverage_matches_the_table() {
             &["bugbear", "goblin", "hobgoblin"],
         ),
         (StatusBasis::Knowledge, Rung::Witnessed, &["kobold"]),
-        // DECLARED, no witness. Blocker: none — this is a productive vacancy,
-        // and stage 4's gnoll is its intended first witness.
-        (StatusBasis::Generosity, Rung::Declared, &[]),
+        // WITNESSED as of The Vacancy T9: the gnoll, the campaign's headline
+        // promotion. Justified from the ecology (a scarce, high-variance
+        // desert forage base rewards windfall-sharing), not from lore — see
+        // `society_registry`'s doc comment on the gnoll's `SocietyVector`.
+        (StatusBasis::Generosity, Rung::Witnessed, &["gnoll"]),
     ];
     for (basis, rung, witnesses) in expected {
         let actual = status_basis_witnesses(*basis);
@@ -173,20 +176,17 @@ fn activity_cycle_coverage_matches_the_table() {
             Rung::Witnessed,
             &["black-dragon", "bugbear", "kobold"],
         ),
-        // Witnessed only by a dragon, and stays that way: The Vacancy T7
-        // withdrew the planned mundane witness (giant badger) at plan-review.
-        // `ActivityCycle` is a field of `PerceptionVector`, and
-        // `perception_registry` is keyed to minded SPEAKING kinds only —
-        // `speech ⊆ perception ⊆ mind` (The Vigil) — so a mundane beast
-        // cannot carry an `ActivityCycle` under the current component
-        // layout at all. A mundane `Crepuscular` witness is therefore not
-        // authorable as fauna without widening the perception registry,
-        // which would break The Vigil's enforced lattice. This cell's
-        // single-dragon witness is a structural ceiling, not an oversight.
+        // Witnessed by a dragon since The Vigil; a mundane beast still cannot
+        // carry an `ActivityCycle` at all (`perception_registry` is keyed to
+        // minded SPEAKING kinds only — `speech ⊆ perception ⊆ mind`), but a
+        // SPEAKING kind can: The Vacancy T9's gnoll is read off its own
+        // authored low insolation optimum (a desert forager sheltering
+        // through the day's peak heat), giving this cell its second witness
+        // and its first non-dragon one.
         (
             ActivityCycle::Crepuscular,
             Rung::Witnessed,
-            &["white-dragon"],
+            &["gnoll", "white-dragon"],
         ),
     ];
     for (cycle, rung, witnesses) in expected {
@@ -245,7 +245,7 @@ fn social_form_coverage_matches_the_table() {
         (
             SocialForm::Settled,
             Rung::Witnessed,
-            &["bugbear", "goblin", "hobgoblin", "kobold"],
+            &["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
         ),
     ];
     for (form, rung, witnesses) in expected {

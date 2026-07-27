@@ -289,6 +289,27 @@ pub mod speech {
                     exotic: ExoticManner::None,
                 },
             ),
+            // The Vacancy (T9): the fifth people. Follows kobold's singleton-
+            // family shape — a species crate `family_of` entry ("gnoll") with
+            // no `family_proto` counterpart, so this row is the gnoll tongue's
+            // whole articulation, not a daughter of a shared ancestral vector.
+            // A long muzzle constrains lip rounding (low labiality) and
+            // vowel space; loud whooping/yipping calls carry across open
+            // desert distances (high voice_loudness), a real behavioural
+            // trait of the pack-hunting canid/hyena body plan this kind's
+            // condition niche and biosphere already commit to.
+            (
+                KindId("gnoll"),
+                ArticulationVector {
+                    labiality: 0.35,
+                    vowel_space: 0.35,
+                    voicing: 0.6,
+                    sibilance: 0.55,
+                    voice_loudness: 0.85,
+                    tonality: 0.0,
+                    exotic: ExoticManner::None,
+                },
+            ),
         ]
         .into_iter()
         .collect()
@@ -383,6 +404,18 @@ pub mod speech {
                     artisan: "wyrm",
                     shaman: "wyrm",
                     top: "wyrm",
+                },
+            ),
+            // The Vacancy (T9): the fifth people's stopgap vocabulary.
+            (
+                KindId("gnoll"),
+                Lexicon {
+                    noun: "camp",
+                    worker_override: Some("gleaner"),
+                    warrior: "hunter",
+                    artisan: "fletcher",
+                    shaman: "bonecaster",
+                    top: "packlord",
                 },
             ),
         ]

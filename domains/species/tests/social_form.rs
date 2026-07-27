@@ -46,6 +46,8 @@ fn every_kind_has_the_authored_social_form() {
         ("killer-whale", SocialForm::Gregarious),
         ("giant-squid", SocialForm::Solitary),
         ("giant-crocodile", SocialForm::Solitary),
+        // The Vacancy (T9): the fifth people.
+        ("gnoll", SocialForm::Settled),
     ];
     for (name, sf) in expected {
         assert_eq!(social_form_of(name), *sf, "{name}");
@@ -53,10 +55,11 @@ fn every_kind_has_the_authored_social_form() {
 }
 
 #[test]
-fn settled_kinds_are_exactly_the_four_peoples() {
+fn settled_kinds_are_exactly_the_five_peoples() {
     // The byte-identity keystone: the settlement roster (and every gate re-keyed
-    // off the retired "has a psyche" proxy onto `Settled`) is exactly the four
-    // peoples — the same set the pre-Eremite psyche key-set held. After The
+    // off the retired "has a psyche" proxy onto `Settled`) is exactly the
+    // settling peoples — the same set the pre-Eremite psyche key-set held for
+    // the original four. The Vacancy T9 adds the gnoll, a fifth. After The
     // Eremite the dragons carry a mind while staying Solitary, so psyche is a
     // SUPERSET of Settled (Settled ⊆ psyche), not equal — hence a named pin.
     let bio = biosphere_registry();
@@ -68,8 +71,8 @@ fn settled_kinds_are_exactly_the_four_peoples() {
         .collect();
     assert_eq!(
         settled,
-        ["bugbear", "goblin", "hobgoblin", "kobold"],
-        "Settled is exactly the four peoples (ascending KindId)"
+        ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+        "Settled is exactly the five peoples (ascending KindId)"
     );
     for &name in &settled {
         assert!(

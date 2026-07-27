@@ -12,24 +12,24 @@ use hornvale_worldgen::components::WorldComponents;
 #[test]
 fn assemble_holds_every_kind_and_passes_integrity() {
     let wc = WorldComponents::assemble().expect("well-formed roster");
-    // biosphere = the canonical entity set (all 28 kinds today — The Vacancy
-    // T7 added seven, T8 added five: four marine plus the amphibious giant
-    // crocodile).
-    assert_eq!(wc.biosphere.len(), 28);
+    // biosphere = the canonical entity set (all 29 kinds today — The Vacancy
+    // T7 added seven, T8 added five (four marine plus the amphibious giant
+    // crocodile), T9 added the gnoll).
+    assert_eq!(wc.biosphere.len(), 29);
     // Nested capacities (The Eremite, tightened by The Vigil): perception ⊆
     // psyche — every perceiver is minded — and psyche ⊆ biosphere. Since The
     // Vigil the dragons perceive too, so perception and psyche coincide at
-    // seven; the subset assertion is kept (not replaced by equality) because a
+    // eight; the subset assertion is kept (not replaced by equality) because a
     // future non-speaking perceiver — an owl with eyes and no words — must
     // stay expressible.
     for k in wc.perception.ids() {
         assert!(wc.psyche.contains(k), "perceiver {k:?} carries a mind");
     }
-    assert_eq!(wc.psyche.len(), 7, "four peoples + three minded dragons");
+    assert_eq!(wc.psyche.len(), 8, "five peoples + three minded dragons");
     assert_eq!(
         wc.perception.len(),
-        7,
-        "the four peoples + the three dragons perceive (The Vigil)"
+        8,
+        "the five peoples + the three dragons perceive (The Vigil)"
     );
     for k in wc.psyche.ids() {
         assert!(
@@ -46,8 +46,8 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let lex = hornvale_language::lexicon_registry();
     // The Solitary Tongue gave the three chromatic dragons a frozen Draconic
     // tongue; The Vigil gave them eyes. Articulation and lexicon are keyed to
-    // exactly the MINDED kinds — the psyche key-set (four peoples + three
-    // dragons, 7) — and perception now coincides with them.
+    // exactly the MINDED kinds — the psyche key-set (five peoples + three
+    // dragons, 8) — and perception now coincides with them.
     let minded: Vec<_> = wc.psyche.ids().collect();
     assert_eq!(
         art.ids().collect::<Vec<_>>(),
@@ -64,16 +64,17 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     // have failed if any speaker lacked perception, so re-deriving that same
     // subset relation here would just restate an enforced rule and pass
     // vacuously every time `assemble()` succeeds. What `check_integrity`
-    // does NOT pin is which seven kinds occupy the roster today — a
+    // does NOT pin is which eight kinds occupy the roster today — a
     // subset-only invariant is silent on names. Assert the roster fact
     // instead: at THIS commit, perception coincides with articulation
-    // exactly, by name — the four settling peoples plus the three chromatic
+    // exactly, by name — the five settling peoples plus the three chromatic
     // dragons — spelled out so a future non-speaking perceiver (an owl with
     // eyes and no words) reads as a real change to this list, not a passing
     // test that never looked.
     let named_roster: Vec<hornvale_kernel::KindId> = [
         "black-dragon",
         "bugbear",
+        "gnoll",
         "goblin",
         "hobgoblin",
         "kobold",
@@ -86,7 +87,7 @@ fn language_speech_registries_cover_exactly_the_peopled_kinds() {
     let perceivers: Vec<_> = wc.perception.ids().copied().collect();
     assert_eq!(
         perceivers, named_roster,
-        "perception must key exactly the four peoples + three dragons, by name (The Vigil)"
+        "perception must key exactly the five peoples + three dragons, by name (The Vigil)"
     );
     assert_eq!(
         art.ids().copied().collect::<Vec<_>>(),

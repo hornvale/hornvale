@@ -315,10 +315,12 @@ const BASELINE_DOMINANT_KINDS_42: usize = 2;
 /// BASELINE peopled-by kind count at seed 42. The Living Community epoch made
 /// the deep-history bake the settlement provider: it seeds EVERY goblinoid
 /// people its own proto-communities (they persist by lineage, not by winning
-/// local coexistence dominance), so all four peoples are peopled-by kinds now
-/// — re-pinned 2 -> 4 (measured on the epoch; this is a placement-provider
-/// change, orthogonal to T2's per-axis supply thesis).
-const BASELINE_PEOPLED_KINDS_42: usize = 4;
+/// local coexistence dominance), so all four peoples were peopled-by kinds —
+/// re-pinned 2 -> 4 (measured on the epoch; this is a placement-provider
+/// change, orthogonal to T2's per-axis supply thesis). The Vacancy T9 adds a
+/// fifth people (the gnoll), measured at seed 42 to also place a settlement —
+/// re-pinned 4 -> 5.
+const BASELINE_PEOPLED_KINDS_42: usize = 5;
 /// BASELINE union (dominant ∪ peopled-by) distinct kind count at seed 42.
 const BASELINE_UNION_KINDS_42: usize = 4;
 
@@ -497,12 +499,19 @@ fn k_biomass_gradient_grounding_is_unaffected_by_the_vector_supply() {
     // one (`carrying_inputs_of`/`species_carrying_input`/`carrying_capacity`),
     // so this ratio is BY CONSTRUCTION the pure scalar-path reading and the
     // vector supply cannot move it. The absolute value tracks the climate
-    // inputs: it was 31.2563 pre-Rains (confluence.rs) and is 31.1236 after
+    // inputs: it was 31.2563 pre-Rains (confluence.rs) and 31.1236 after
     // absorbing The Rains' moisture epoch (a 0.4% shift in the tropical/polar
-    // NPP balance, still far above the preregistered floor of 3).
+    // NPP balance). **This loop sums the scalar K across every `Settled`
+    // psyche kind** (`for (kind, psych) in wc.psyche.iter()`, filtered to
+    // `Settled`), so a genuinely new competing Settled people is, by the
+    // test's own construction, a new term in `trop_sum`/`pole_sum` — not
+    // vector-supply contamination. The Vacancy T9 adds the gnoll (a hot-arid
+    // desert people, contributing more to the tropical sum than the polar
+    // one), moving the ratio to 30.8158 — still far above the preregistered
+    // floor of 3.
     assert!(
-        (ratio - 31.1236).abs() < 1e-3,
-        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~31.1236, the post-Rains \
+        (ratio - 30.8158).abs() < 1e-3,
+        "capacity-by-abs-latitude drifted: {ratio:.4} (expected ~30.8158, the post-T9 \
          merged-tree scalar-path reading) — something outside the-demesne's per-axis \
          supply fields moved this K"
     );

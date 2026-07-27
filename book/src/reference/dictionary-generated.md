@@ -31,6 +31,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Ggoasdao | /ggoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ggoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
 | `gloom` | the deepest, starless dark | Gdooggoo | /gdooggoo/ | Gwoengngee | Gwoengngee → no change → Gdooggoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): black-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): black-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): black-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -112,6 +113,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Qoa | /qoa/ | Qea | Qea → no change → Qoa |
 | `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
 | `gloom` | the deepest, starless dark | Doa | /doa/ | Noa | Noa → no change → Doa |
+| `gnoll-kind` | a gnoll | Kaodoo | /kaodoo/ | Kaenoe | Kaenoe → no change → Kaodoo |
 | `goblin-kind` | a goblin | Doa | /doa/ | Nea | Nea → no change → Doa |
 | `god` | a deity | Dootaa | /dootaa/ | Neetaa | Neetaa → no change → Dootaa |
 | `green` | the color term for green | Kooqao | /kooqao/ | Keoqae | Keoqae → no change → Kooqao |
@@ -166,6 +168,88 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `wind` | moving air | Dooqoo | /dooqoo/ | Noeqoo | Noeqoo → no change → Dooqoo |
 | `yellow` | the color term for yellow | Qaadoo | /qaadoo/ | Qaadeo | Qaadeo → no change → Qaadoo |
 
+## Gnoll
+
+| Concept | Gloss | Word | IPA | Proto | Derivation |
+|---|---|---|---|---|---|
+| `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
+| `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
+| `blood` | the circulating fluid of a body | Mzoaq | /mzoaq/ | Mzoaq | Mzoaq → no change → Mzoaq |
+| `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
+| `bone` | the rigid frame of a body | Ngshoog | /ŋʃoog/ | Ngshoog | Ngshoog → no change → Ngshoog |
+| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
+| `bugbear-kind` | a bugbear | Dsoap | /dsoap/ | Dsoap | Dsoap → no change → Dsoap |
+| `child` | one's son or daughter | Gzhoof | /gʒoof/ | Gzhoof | Gzhoof → no change → Gzhoof |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): gnoll has no exposure to 'cold' |
+| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
+| `dark` | the color term for black/dark hues | Gsaoq | /gsaoq/ | Gsaoq | Gsaoq → no change → Gsaoq |
+| `day` | the light half of the day-night cycle | Ngshaap | /ŋʃaap/ | Ngshaap | Ngshaap → no change → Ngshaap |
+| `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
+| `die` | to cease living | Dzhaaq | /dʒaaq/ | Tzhaaq | Tzhaaq → lenition → Dzhaaq |
+| `earth` | the ground underfoot | Nsaav | /nsaav/ | Nsaav | Nsaav → no change → Nsaav |
+| `eat` | to consume food | Pshoavngshood | /pʃoavŋʃood/ | Pshoavngshood | Pshoavngshood → no change → Pshoavngshood |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): gnoll has no exposure to 'eclipse' |
+| `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
+| `eye` | the organ of sight | Dsaog | /dsaog/ | Dsaog | Dsaog → no change → Dsaog |
+| `fire` | flame and heat | Qsaopnshoov | /qsaopnʃoov/ | Qsaopnshoov | Qsaopnshoov → no change → Qsaopnshoov |
+| `foot` | the walking limb-end | Mzoodqsaag | /mzoodqsaag/ | Mzootqsaag | Mzootqsaag → lenition → Mzoodqsaag |
+| `gloom` | the deepest, starless dark | Gzhoov | /gʒoov/ | Gzhoov | Gzhoov → no change → Gzhoov |
+| `gnoll-kind` | a gnoll | Nshaad | /nʃaad/ | Nshaad | Nshaad → no change → Nshaad |
+| `goblin-kind` | a goblin | Msooddzhoad | /msooddʒoad/ | Msooddzhoat | Msooddzhoat → lenition → Msooddzhoad |
+| `god` | a deity | Dzhaogpzhaog | /dʒaogpʒaog/ | Dzhaogpzhaog | Dzhaogpzhaog → no change → Dzhaogpzhaog |
+| `green` | the color term for green | Gzhaod | /gʒaod/ | Gzhaot | Gzhaot → lenition → Gzhaod |
+| `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
+| `hand` | the manipulating limb-end | Nshaov | /nʃaov/ | Nshaov | Nshaov → no change → Nshaov |
+| `hearth` | the fire at the center of a home | Ngshoopqzaog | /ŋʃoopqzaog/ | Ngshoopqzaog | Ngshoopqzaog → no change → Ngshoopqzaog |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gnoll has no exposure to 'heat' |
+| `hobgoblin-kind` | a hobgoblin | Ngsaaqdzhaov | /ŋsaaqdʒaov/ | Ngsaaqtzhaov | Ngsaaqtzhaov → lenition → Ngsaaqdzhaov |
+| `home` | one's dwelling | Mshoap | /mʃoap/ | Mshoap | Mshoap → no change → Mshoap |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
+| `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `kobold-kind` | a kobold | Gshaov | /gʃaov/ | Gshaov | Gshaov → no change → Gshaov |
+| `light` | the color term for white/light hues | Psaopgzaoq | /psaopgzaoq/ | Psaopgzaoq | Psaopgzaoq → no change → Psaopgzaoq |
+| `many` | an indefinitely large count | Nzhoog | /nʒoog/ | Nzhoog | Nzhoog → no change → Nzhoog |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
+| `moon` | a moon | Ngsoad | /ŋsoad/ | Ngsoad | Ngsoad → no change → Ngsoad |
+| `mountain` | high ground | — | — | — | gap (experiential): gnoll has no exposure to 'mountain' |
+| `mouth` | the organ of eating and speech | Gsaad | /gsaad/ | Gsaad | Gsaad → no change → Gsaad |
+| `name` | a word that identifies one who bears it | Mzhaov | /mʒaov/ | Mzhaov | Mzhaov → no change → Mzhaov |
+| `night` | the dark half of the day-night cycle | Mzhoovnzaaf | /mʒoovnzaaf/ | Mzhoovnzaaf | Mzhoovnzaaf → no change → Mzhoovnzaaf |
+| `one` | the cardinal number 1 | Psooqnzoox | /psooqnzoox/ | Psooqnzoox | Psooqnzoox → no change → Psooqnzoox |
+| `parent` | one's father or mother | Ngzhaoq | /ŋʒaoq/ | Ngzhaoq | Ngzhaoq → no change → Ngzhaoq |
+| `person` | a person; a member of a people (the autonym root) | Msoax | /msoax/ | Msoax | Msoax → no change → Msoax |
+| `rain` | liquid precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'rain' |
+| `red` | the color term for red | Nshaavngsaag | /nʃaavŋsaag/ | Nshaavngsaag | Nshaavngsaag → no change → Nshaavngsaag |
+| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `sea` | a body of salt water | Nshoagnzhoog | /nʃoagnʒoog/ | — | compound: `many` + `water` |
+| `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
+| `shadow` | cast dark, distinct from open gloom | Mzaaqdzhood | /mzaaqdʒood/ | Mzaaqtzhood | Mzaaqtzhood → lenition → Mzaaqdzhood |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `sibling` | one's brother or sister | Nshaaqmsaop | /nʃaaqmsaop/ | Nshaaqmsaop | Nshaaqmsaop → no change → Nshaaqmsaop |
+| `sleep` | to rest unconscious | Dzhoav | /dʒoav/ | Tzhoav | Tzhoav → lenition → Dzhoav |
+| `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
+| `spirit` | a lesser or unseen supernatural presence | Ngsooddzaav | /ŋsooddzaav/ | Ngsootdzaav | Ngsootdzaav → lenition → Ngsooddzaav |
+| `star` | a fixed point of light in the night sky | Gzaof | /gzaof/ | Gzaof | Gzaof → no change → Gzaof |
+| `starlit` | dark faintly lit by stars | Qshaafmsoof | /qʃaafmsoof/ | Qshaafmsoof | Qshaafmsoof → no change → Qshaafmsoof |
+| `stone` | rock | Ngzhoop | /ŋʒoop/ | Ngzhoop | Ngzhoop → no change → Ngzhoop |
+| `sun` | the sun | Ngshooqnzhoad | /ŋʃooqnʒoad/ | Ngshooqnzhoat | Ngshooqnzhoat → lenition → Ngshooqnzhoad |
+| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
+| `temperate-forest` | a biome class | Gshaognshaap | /gʃaognʃaap/ | Gshaognshaap | Gshaognshaap → no change → Gshaognshaap |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gnoll has no exposure to 'tide' |
+| `tree` | a woody plant | Dshooq | /dʃooq/ | Tshooq | Tshooq → lenition → Dshooq |
+| `tropical-rainforest` | a biome class | Gzaadmzhooq | /gzaadmʒooq/ | Gzaatmzhooq | Gzaatmzhooq → lenition → Gzaadmzhooq |
+| `tropical-seasonal-forest` | a biome class | Nzhaof | /nʒaof/ | Nzhaof | Nzhaof → no change → Nzhaof |
+| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `two` | the cardinal number 2 | Qzhaoddzaof | /qʒaoddzaof/ | Qzhaottzaof | Qzhaottzaof → lenition → Qzhaoddzaof |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
+| `water` | the drinkable liquid | Nshoag | /nʃoag/ | Nshoag | Nshoag → no change → Nshoag |
+| `wind` | moving air | Gzhaoqnshood | /gʒaoqnʃood/ | Gzhaoqnshoot | Gzhaoqnshoot → lenition → Gzhaoqnshood |
+| `yellow` | the color term for yellow | Msood | /msood/ | Msood | Msood → no change → Msood |
+
 ## Goblin
 
 | Concept | Gloss | Word | IPA | Proto | Derivation |
@@ -193,6 +277,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Tea | /tea/ | Qea | Qea → no change → Tea |
 | `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
 | `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `gnoll-kind` | a gnoll | Kaenoe | /kaenoe/ | Kaenoe | Kaenoe → no change → Kaenoe |
 | `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
 | `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
 | `green` | the color term for green | Keotae | /keotae/ | Keoqae | Keoqae → no change → Keotae |
@@ -235,14 +320,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): goblin has no exposure to 'tide' |
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
 | `tropical-rainforest` | a biome class | Toa | /toa/ | Qoa | Qoa → no change → Toa |
 | `tropical-seasonal-forest` | a biome class | Beetao | /beetao/ | Geetao | Geetao → no change → Beetao |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
-| `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |
 | `wind` | moving air | Noetoo | /noetoo/ | Noeqoo | Noeqoo → no change → Noetoo |
 | `yellow` | the color term for yellow | Taadeo | /taadeo/ | Qaadeo | Qaadeo → no change → Taadeo |
@@ -274,6 +359,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Qea | /qea/ | Qea | Qea → no change → Qea |
 | `foot` | the walking limb-end | Boa | /boa/ | Doa | Doa → no change → Boa |
 | `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `gnoll-kind` | a gnoll | Gaenoe | /gaenoe/ | Kaenoe | Kaenoe → lenition → Gaenoe |
 | `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
 | `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
 | `green` | the color term for green | Geoqae | /geoqae/ | Keoqae | Keoqae → lenition → Geoqae |
@@ -300,7 +386,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `person` | a person; a member of a people (the autonym root) | Neegoa | /neegoa/ | Neekoa | Neekoa → lenition → Neegoa |
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Neanao | /neanao/ | Neanao | Neanao → no change → Neanao |
-| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
 | `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
@@ -320,10 +406,10 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): hobgoblin has no exposure to 'tide' |
 | `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | Qoa | /qoa/ | Qoa | Qoa → no change → Qoa |
-| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tropical-seasonal-forest` | a biome class | Geetao | /geetao/ | Geetao | Geetao → no change → Geetao |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
-| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Baogaa | /baogaa/ | Daokaa | Daokaa → lenition → Baogaa |
 | `wind` | moving air | Noeqoo | /noeqoo/ | Noeqoo | Noeqoo → no change → Noeqoo |
 | `yellow` | the color term for yellow | Qaabeo | /qaabeo/ | Qaadeo | Qaadeo → no change → Qaabeo |
@@ -334,7 +420,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Rag | Rag → finalloss → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Xo | /xo/ | Xo | Xo → no change → Xo |
@@ -355,6 +441,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Roro | /roro/ | Rorok | Rorok → finalloss → Roro |
 | `foot` | the walking limb-end | Rogrro | /rogrro/ | Rogrrog | Rogrrog → finalloss → Rogrro |
 | `gloom` | the deepest, starless dark | Rara | /rara/ | Rrara | Rrara → clustersimplify → Rara |
+| `gnoll-kind` | a gnoll | Ra | /ra/ | Ra | Ra → no change → Ra |
 | `goblin-kind` | a goblin | Xoro | /xoro/ | Xorog | Xorog → finalloss → Xoro |
 | `god` | a deity | Roqro | /roqro/ | Rroqro | Rroqro → clustersimplify → Roqro |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -370,7 +457,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `kobold-kind` | a kobold | Roro | /roro/ | Rorot | Rorot → finalloss → Roro |
 | `light` | the color term for white/light hues | Xaxo | /xaxo/ | Xaxo | Xaxo → no change → Xaxo |
 | `many` | an indefinitely large count | Rogrra | /rogrra/ | Rogrra | Rogrra → no change → Rogrra |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Roqrra | /roqrra/ | Roqrrat | Roqrrat → finalloss → Roqrra |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Rakxo | /rakxo/ | Rrakxot | Rrakxot → finalloss → clustersimplify → Rakxo |
@@ -394,13 +481,13 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Ra | /ra/ | Rraq | Rraq → finalloss → clustersimplify → Ra |
 | `stone` | rock | Xa | /xa/ | Xaq | Xaq → finalloss → Xa |
 | `sun` | the sun | Rogxa | /rogxa/ | Rrogxa | Rrogxa → clustersimplify → Rogxa |
-| `taiga` | a biome class | Ro | /ro/ | Rog | Rog → finalloss → Ro |
+| `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Xatxo | /xatxo/ | Xatxo | Xatxo → no change → Xatxo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | Xotro | /xotro/ | Xotrot | Xotrot → finalloss → Xotro |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `tree` | a woody plant | Rakrra | /rakrra/ | Rrakrra | Rrakrra → clustersimplify → Rakrra |
-| `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |
+| `tropical-rainforest` | a biome class | Rorro | /rorro/ | Rrorrog | Rrorrog → finalloss → clustersimplify → Rorro |
 | `tropical-seasonal-forest` | a biome class | Ro | /ro/ | Ro | Ro → no change → Ro |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `two` | the cardinal number 2 | Roxa | /roxa/ | Rroxa | Rroxa → clustersimplify → Roxa |
@@ -436,6 +523,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Ddoasdao | /ddoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ddoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
 | `gloom` | the deepest, starless dark | Djooddoo | /djooddoo/ | Gwoengngee | Gwoengngee → no change → Djooddoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): red-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): red-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): red-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -517,6 +605,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `fire` | flame and heat | Ngngoasdao | /ŋŋoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ngngoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
 | `gloom` | the deepest, starless dark | Ddoongngoo | /ddooŋŋoo/ | Gwoengngee | Gwoengngee → no change → Ddoongngoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): white-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): white-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): white-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -631,6 +720,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `fire` | flame and heat | *Qea /qea/ | Qoa /qoa/ | Tea /tea/ | Qea /qea/ | *Qea → Qoa / Tea / Qea |
 | `foot` | the walking limb-end | *Doa /doa/ | Doa /doa/ | Doa /doa/ | Boa /boa/ | *Doa → Doa / Doa / Boa |
 | `gloom` | the deepest, starless dark | *Noa /noa/ | Doa /doa/ | Noa /noa/ | Noa /noa/ | *Noa → Doa / Noa / Noa |
+| `gnoll-kind` | a gnoll | *Kaenoe /kaenoe/ | Kaodoo /kaodoo/ | Kaenoe /kaenoe/ | Gaenoe /gaenoe/ | *Kaenoe → Kaodoo / Kaenoe / Gaenoe |
 | `goblin-kind` | a goblin | *Nea /nea/ | Doa /doa/ | Nea /nea/ | Nea /nea/ | *Nea → Doa / Nea / Nea |
 | `god` | a deity | *Neetaa /neetaa/ | Dootaa /dootaa/ | Neetaa /neetaa/ | Neetaa /neetaa/ | *Neetaa → Dootaa / Neetaa / Neetaa |
 | `green` | the color term for green | *Keoqae /keoqae/ | Kooqao /kooqao/ | Keotae /keotae/ | Geoqae /geoqae/ | *Keoqae → Kooqao / Keotae / Geoqae |
@@ -656,8 +746,10 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `stone` | rock | *Naonea /naonea/ | Daodoa /daodoa/ | Naonea /naonea/ | Naonea /naonea/ | *Naonea → Daodoa / Naonea / Naonea |
 | `sun` | the sun | *Noagoo /noagoo/ | Doagoo /doagoo/ | Noaboo /noaboo/ | Noagoo /noagoo/ | *Noagoo → Doagoo / Noaboo / Noagoo |
 | `temperate-forest` | a biome class | *Noenoa /noenoa/ | Doodoa /doodoa/ | Noenoa /noenoa/ | Noenoa /noenoa/ | *Noenoa → Doodoa / Noenoa / Noenoa |
+| `temperate-rainforest` | a biome class | *Toaneo /toaneo/ | Toadoo /toadoo/ | Toaneo /toaneo/ | Toaneo /toaneo/ | *Toaneo → Toadoo / Toaneo / Toaneo |
 | `tree` | a woody plant | *Koonee /koonee/ | Koodoo /koodoo/ | Koonee /koonee/ | Goonee /goonee/ | *Koonee → Koodoo / Koonee / Goonee |
 | `tropical-rainforest` | a biome class | *Qoa /qoa/ | Qoa /qoa/ | Toa /toa/ | Qoa /qoa/ | *Qoa → Qoa / Toa / Qoa |
+| `tropical-seasonal-forest` | a biome class | *Geetao /geetao/ | Gootao /gootao/ | Beetao /beetao/ | Geetao /geetao/ | *Geetao → Gootao / Beetao / Geetao |
 | `two` | the cardinal number 2 | *Naanaa /naanaa/ | Daadaa /daadaa/ | Naanaa /naanaa/ | Naanaa /naanaa/ | *Naanaa → Daadaa / Naanaa / Naanaa |
 | `water` | the drinkable liquid | *Daokaa /daokaa/ | Daokaa /daokaa/ | Daokaa /daokaa/ | Baogaa /baogaa/ | *Daokaa → Daokaa / Daokaa / Baogaa |
 | `wind` | moving air | *Noeqoo /noeqoo/ | Dooqoo /dooqoo/ | Noetoo /noetoo/ | Noeqoo /noeqoo/ | *Noeqoo → Dooqoo / Noetoo / Noeqoo |

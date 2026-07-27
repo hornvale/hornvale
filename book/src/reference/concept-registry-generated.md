@@ -173,6 +173,7 @@
 | `fire` | language | substance | flame and heat |
 | `foot` | language | body | the walking limb-end |
 | `gloom` | language | quality | the deepest, starless dark |
+| `gnoll-kind` | species | living | a gnoll |
 | `goblin-kind` | species | living | a goblin |
 | `god` | religion | social | a deity |
 | `green` | language | quality | the color term for green |

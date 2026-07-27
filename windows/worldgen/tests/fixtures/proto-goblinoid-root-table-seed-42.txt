@@ -21,6 +21,7 @@ eye: Nookoa /nookoa/
 fire: Naonao /naonao/
 foot: Doaqao /doaqao/
 gloom: Neanao /neanao/
+gnoll-kind: Peapoa /peapoa/
 goblin-kind: Noe /noe/
 god: Naa /naa/
 green: Deanaa /deanaa/

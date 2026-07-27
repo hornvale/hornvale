@@ -22,13 +22,13 @@ You stand in tropical seasonal forest — buttressed canopy — in the lands of 
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [494] bugbear of Qvooshtvoagootao
-  [495] hobgoblin of Vootkeonoagootoaneo
-  [496] kobold of Xatxoratrro
-  [497] a wild rust-monster
-  [498] a wild otyugh
-  [499] a wild xorn
-  [500] a wild carrion-crawler
+  [505] bugbear of Qvooshtvoagootao
+  [506] hobgoblin of Feamjeafeoqoanoagoo
+  [507] gnoll of Gzaadmzhooqdsootngsootqzhoof
+  [508] a wild rust-monster
+  [509] a wild otyugh
+  [510] a wild xorn
+  [511] a wild carrion-crawler
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5
@@ -40,7 +40,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (25 stirred).
+Time passes. You sense movement nearby (21 stirred).
 > look
 [room 738918402, day 6]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (32 stirred).
+Time passes. You sense movement nearby (22 stirred).
 > look
 [room 738918402, day 7]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
@@ -56,28 +56,13 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
-hobgoblin of Vootkeonoagootoaneo:
-- canonical name of an entity: hobgoblin of Vootkeonoagootoaneo (asserted by the-quickening)
-- an agent's position on a day: 663552109 (asserted by wandered, having found no water yet (thirst), day 5.1)
-- an agent's position on a day: 663552077 (asserted by wandered, having found no water yet (thirst), day 5.2)
-- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.2)
-- an agent's position on a day: 663552461 (asserted by wandered, having found no water yet (thirst), day 5.7)
-- an agent's position on a day: 663552301 (asserted by wandered, having found no water yet (thirst), day 5.8)
-- an agent's position on a day: 663552365 (asserted by wandered, having found no water yet (thirst), day 5.9)
-- an agent's position on a day: 663552269 (asserted by wandered, having found no water yet (thirst), day 6)
-- an agent's position on a day: 663553805 (asserted by wandered, having found no water yet (thirst), day 6.1)
-- an agent's position on a day: 663553165 (asserted by wandered, having found no water yet (thirst), day 6.2)
-- an agent's position on a day: 663553261 (asserted by wandered, having found no water yet (thirst), day 6.3)
-- an agent's position on a day: 663553229 (asserted by wandered, having found no water yet (thirst), day 6.4)
-- an agent's position on a day: 663553421 (asserted by wandered, having found no water yet (thirst), day 6.5)
-- an agent's position on a day: 663553069 (asserted by wandered, having found no water yet (thirst), day 6.6)
-- an agent's position on a day: 663553133 (asserted by wandered, having found no water yet (thirst), day 6.7)
-- an agent's position on a day: 663553037 (asserted by wandered, having found no water yet (thirst), day 6.8)
-- an agent's position on a day: 663559181 (asserted by wandered, having found no water yet (thirst), day 6.9)
-- an agent's position on a day: 663556621 (asserted by wandered, having found no water yet (thirst), day 7)
+hobgoblin of Feamjeafeoqoanoagoo:
+- canonical name of an entity: hobgoblin of Feamjeafeoqoanoagoo (asserted by the-quickening)
+- an agent satisfied its sustenance goal: true (asserted by drank from the river (thirst sated), day 5)
+- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5)
 
 > wait 90
-Time passes. You sense movement nearby (402 stirred).
+Time passes. You sense movement nearby (387 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
