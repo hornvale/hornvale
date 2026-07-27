@@ -3,8 +3,11 @@
 //! world's minds, the temporal analog of the correspondence-completeness audit.
 //!
 //! It runs the vessel drive-simulation forward N days over a world's derived
-//! creatures, reads each one's felt state per tick through `affect_of` (spec
-//! §7), and reduces the per-creature affect time series to a distress FAMILY
+//! creatures, reads each one's felt state per tick through `affect_of_memo_
+//! occupied` (spec §7; occupancy-aware since The Threshold task 6b — see
+//! `run_simulation`'s own doc for why the sampler needed a real `Occupancy`
+//! rather than always reading a room's landing anchor), and reduces the
+//! per-creature affect time series to a distress FAMILY
 //! (not one number): prevalence, chronicity, recovery-rate, by-cause, and
 //! by-species. Searching (normal seeking) is excluded — only the negative-
 //! valence regions count as distress (spec §8). Deterministic: a pure function
@@ -14,8 +17,8 @@ use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
 use hornvale_vessel::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo, built_rooms, derive_npcs,
-    waking_offset,
+    PrimaryAfraidMemo, RESTED, SUSTENANCE, Terrain, affect_of_memo_occupied, built_rooms,
+    derive_npcs, waking_offset,
 };
 use std::collections::BTreeMap;
 
@@ -58,9 +61,26 @@ fn is_distress(label: AffectLabel) -> bool {
 /// Run the drive-simulation forward over `npcs` on `terrain`, reading each
 /// creature's affect after every tick. The ledger evolves in a clone (the
 /// session-sandbox discipline); `terrain` and `npcs` are the scenario. Pure and
-/// deterministic (`DriveMovements::step` draws nothing new; `affect_of` is a
-/// read). This is the shared core of both the real-world sweep and the
+/// deterministic (`DriveMovements::step` draws nothing new; the affect read is
+/// a read). This is the shared core of both the real-world sweep and the
 /// synthetic null-control / injected-fault scenarios.
+///
+/// **The Threshold task 6b:** this used to sample through `affect_of_memo`,
+/// which has no per-tick state of its own and so always read interior warmth
+/// at a room's landing anchor — the doorway a creature crossing in arrives
+/// at — regardless of where its walk that tick actually carried it. That
+/// made the battery structurally blind to `Thermal::warmth`'s within-room
+/// seeking (a creature genuinely standing at a hearth read as cold as one
+/// standing at the threshold three hops away), which is an instrument gap,
+/// not a physics one: the preregistered prediction (spec §7) can only be
+/// tested if the sampler reports what the creature actually experienced.
+/// `DriveMovements::step_with_occupancy` already derives exactly that per
+/// tick (task 6) but discards it once `step` returns; this now also calls it
+/// directly — a second, PURE re-evaluation of the same frozen ledger and
+/// system alongside the `tick()` call that applies its facts, not a second
+/// simulation with different consequences — purely to recover the
+/// `Occupancy` [`affect_of_memo_occupied`] needs to read warmth at the anchor
+/// a creature actually reached.
 /// type-audit: bare-ok(count: ticks)
 pub fn run_simulation(
     seed_ledger: &Ledger,
@@ -80,6 +100,14 @@ pub fn run_simulation(
             params: SUSTENANCE,
             terrain,
         };
+        // Recover this tick's within-room `Occupancy` alongside the facts
+        // `tick()` (below) commits — the same walk, read twice: once here for
+        // the ephemeral occupancy `step`'s `TickSystem` impl otherwise
+        // discards, once inside `tick()` for the committed `Fact`s. Both
+        // calls read the identical frozen `ledger`, so this changes nothing
+        // about how the world evolves — only what the affect sample below
+        // gets to see.
+        let (_facts, occupancy) = sys.step_with_occupancy(&ledger);
         // The kernel tick applies the drive-movement facts; the same headless
         // step `Session::wait` runs, minus the player.
         ledger = match tick(&ledger, &[&sys], &["drive-movements"], registry) {
@@ -100,13 +128,14 @@ pub fn run_simulation(
             let now = WorldTime {
                 day: (day - 1.0) + waking_offset(npc.activity),
             };
-            traces[i].push(affect_of_memo(
+            traces[i].push(affect_of_memo_occupied(
                 &ledger,
                 npc,
                 npcs,
                 now,
                 terrain,
                 &mut afraid_memo,
+                Some(&occupancy),
             ));
         }
     }

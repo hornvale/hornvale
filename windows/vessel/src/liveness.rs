@@ -3138,7 +3138,9 @@ pub fn affect_of(
 /// [`affect_of`] sharing a caller-owned [`PrimaryAfraidMemo`] — for the lab's
 /// headless sim, whose per-tick affect reads over one post-tick ledger fold the
 /// SAME emitters' primary-fear across every creature; the memo collapses those
-/// re-derivations to one `affect_of` per `(emitter, day)`.
+/// re-derivations to one `affect_of` per `(emitter, day)`. Reads interior
+/// warmth at the room's landing anchor only — see [`affect_of_memo_occupied`]
+/// for the occupancy-aware sibling this delegates to with `occupancy: None`.
 pub fn affect_of_memo(
     frozen: &Ledger,
     npc: &Npc,
@@ -3146,6 +3148,51 @@ pub fn affect_of_memo(
     day: WorldTime,
     terrain: &dyn Terrain,
     memo: &mut PrimaryAfraidMemo,
+) -> Affect {
+    affect_of_memo_occupied(frozen, npc, band, day, terrain, memo, None)
+}
+
+/// [`affect_of_memo`], but given a caller-owned [`Occupancy`] to read the
+/// creature's ACTUAL within-room anchor from, when it has one on record
+/// there, instead of unconditionally defaulting to the room's landing anchor
+/// (The Threshold task 6b).
+///
+/// **Why the sampler needed this.** `DriveMovements::step_with_occupancy`
+/// (task 6) already tracks where a creature's own per-tick walk carries it —
+/// a cold creature that crosses a hearth-bearing room to stand at the fire
+/// really does end up warmer there than at the room's threshold. But the
+/// population-health battery does not read that walk: it re-derives each
+/// creature's felt state through this STATELESS function, which has no
+/// per-tick state of its own to consult and so always fell back to
+/// [`landing_interior`] — the doorway a creature crossing INTO a room lands
+/// at, never wherever it may have actually walked since. The sampler was
+/// reporting a colder read than the creature ever experienced, not because
+/// the physics were wrong, but because the instrument measuring them could
+/// not see past the doorway. That is a defect in what gets SAMPLED, argued
+/// on its own terms — a monitoring gap the preregistered prediction (spec
+/// §7) needs closed to be tested at all, independent of which way closing it
+/// moves any measurement.
+///
+/// **The room-consistency guard is load-bearing.** An `Occupancy` captured at
+/// one point in time (e.g. `step_with_occupancy`'s tick-end snapshot) can
+/// legitimately describe a creature that has since crossed into, or out of,
+/// the room `day` resolves it to — `agent_position` reads the committed,
+/// time-correct room; the passed-in `occupancy` may be stale relative to it.
+/// [`Occupancy::anchor_in`] is consulted with the room `agent_position`
+/// actually returns, and yields the tracked anchor ONLY when it still
+/// belongs to that same room; a mismatch (or no `occupancy` at all) falls
+/// back to [`landing_interior`] exactly as [`affect_of_memo`] always did —
+/// never a foreign `AnchorId` read against a room's freshly-derived
+/// `Interior`, which [`crate::interior::warmth_at`] has no bounds check
+/// against.
+pub fn affect_of_memo_occupied(
+    frozen: &Ledger,
+    npc: &Npc,
+    band: &[Npc],
+    day: WorldTime,
+    terrain: &dyn Terrain,
+    memo: &mut PrimaryAfraidMemo,
+    occupancy: Option<&Occupancy>,
 ) -> Affect {
     let pos = agent_position(frozen, npc, day);
     let last_drank = frozen
@@ -3184,10 +3231,20 @@ pub fn affect_of_memo(
     // THE THRESHOLD's arming: the room `view.position` is in, ACTUALLY derives
     // an interior now, owned here so `thermal` below can borrow it — see
     // `landing_interior`'s own doc for why "landing" is the right anchor for
-    // this stateless snapshot read, which (unlike `DriveMovements::step`'s
-    // per-tick walk, The Threshold task 6) has no per-tick `Occupancy` to
-    // carry a creature's ACTUAL within-room position across.
-    let here = landing_interior(&view.position, terrain);
+    // a stateless snapshot read with nothing better to consult.
+    //
+    // Task 6b: when a caller HAS a real `Occupancy` (its own per-tick walk's
+    // result, or one it inherited), and that occupancy still places this
+    // creature in the SAME room `view.position` names, read warmth at the
+    // anchor it actually stands at instead — `Occupancy::anchor_in` is the
+    // room-checked accessor that refuses a stale cross-room anchor rather
+    // than handing back one `warmth_at` could misread against the wrong
+    // graph. No `occupancy`, or one that disagrees about the room, is exactly
+    // the pre-task-6b behaviour: landing, unconditionally.
+    let here = occupancy
+        .and_then(|occ| occ.anchor_in(npc.entity, &view.position))
+        .map(|anchor| (interior_of(&view.position, terrain), anchor))
+        .or_else(|| landing_interior(&view.position, terrain));
     let thermal = Thermal {
         niche: npc.temperature_niche,
         terrain,
@@ -3428,14 +3485,18 @@ const INTERIOR_WARMTH_BUDGET: usize = 64;
 /// Threshold's crossing) needs to ask the interior about anchors other than
 /// the one the caller happens to hand it.
 ///
-/// This is `affect_of_memo`'s helper specifically — its stateless snapshot
-/// read has no per-tick state to carry a creature's ACTUAL within-room
-/// position across, so it always reads the LANDING anchor: the same anchor
-/// `Occupancy::arrive` places a freshly-arrived creature at, and therefore
-/// the correct reading for a read with nowhere to remember anything deeper.
-/// `DriveMovements::step`'s per-tick walk (The Threshold task 6) does carry
-/// state — a real [`Occupancy`] — across its own loop, so it derives the
-/// interior itself and tracks the anchor directly rather than calling this.
+/// This is `affect_of_memo`'s (and `affect_of_memo_occupied`'s FALLBACK)
+/// helper — a stateless snapshot read with no `Occupancy` in hand, or one
+/// that no longer agrees which room the creature is in, has nothing better
+/// to consult than the LANDING anchor: the same anchor `Occupancy::arrive`
+/// places a freshly-arrived creature at, and therefore the correct reading
+/// for a read with nowhere to remember anything deeper. `DriveMovements::
+/// step`'s per-tick walk (The Threshold task 6) does carry state — a real
+/// [`Occupancy`] — across its own loop, so it derives the interior itself and
+/// tracks the anchor directly rather than calling this; `affect_of_memo_
+/// occupied` (task 6b) sits in between, preferring a caller-supplied
+/// `Occupancy`'s real answer when one is available and room-consistent, and
+/// falling back to this landing read otherwise.
 ///
 /// `None` only for the pathological interior with no landing at all (an
 /// empty one). `interior_of` never composes one in practice (even wilderness
@@ -3542,7 +3603,18 @@ impl<'a> DriveMovements<'a> {
     /// visible after `step` returns). [`TickSystem::step`] is a thin wrapper
     /// discarding the second element; production code only ever wants the
     /// facts.
-    fn step_with_occupancy(&self, frozen: &Ledger) -> (Vec<Fact>, Occupancy) {
+    ///
+    /// `pub` (The Threshold task 6b) beyond this crate's own tests: the
+    /// population-health battery (`hornvale_lab::health::run_simulation`) is
+    /// a second, legitimate consumer of the discarded element — it drives
+    /// this same walk through `kernel::tick` for the committed facts, and
+    /// separately calls this directly (a second, pure re-evaluation of the
+    /// SAME frozen ledger and system, not a second simulation with different
+    /// consequences) purely to recover the `Occupancy` its stateless affect
+    /// sampler needs to read warmth where a creature actually walked to
+    /// rather than always at its room's landing anchor. See
+    /// [`affect_of_memo_occupied`] for the read this occupancy feeds.
+    pub fn step_with_occupancy(&self, frozen: &Ledger) -> (Vec<Fact>, Occupancy) {
         let mut out: Vec<Fact> = Vec::new();
         // THE THRESHOLD's crossing (task 6): which anchor each creature
         // stands at, tracked across this tick's own walk. Shared across
@@ -3585,6 +3657,7 @@ impl<'a> DriveMovements<'a> {
             let mut interior = interior_of(&pos, self.terrain);
             occupancy.arrive(
                 npc.entity,
+                &pos,
                 &interior,
                 seam_kind(self.terrain.is_built(&pos)),
             );
@@ -3824,6 +3897,7 @@ impl<'a> DriveMovements<'a> {
                         interior = interior_of(&pos, self.terrain);
                         occupancy.arrive(
                             npc.entity,
+                            &pos,
                             &interior,
                             seam_kind(self.terrain.is_built(&pos)),
                         );
@@ -4536,31 +4610,68 @@ pub fn plan_to_room(
 /// follows suit rather than inventing a parallel identity for the same thing.
 ///
 /// Two creatures standing at the same anchor is intentional, not an
-/// oversight: the map is a `BTreeMap<EntityId, AnchorId>`, one entry per
-/// creature, and nothing here enforces exclusivity over the value side. A
-/// hearth crowded with three NPCs is a legitimate occupancy, the same way a
-/// room can hold more than one creature at the coarser scale.
+/// oversight: the map is a `BTreeMap<EntityId, (RoomAddr, AnchorId)>`, one
+/// entry per creature, and nothing here enforces exclusivity over the value
+/// side. A hearth crowded with three NPCs is a legitimate occupancy, the same
+/// way a room can hold more than one creature at the coarser scale.
+///
+/// The map's value carries the room ALONGSIDE the anchor (The Threshold task
+/// 6b) rather than the anchor alone, and this is a safety property, not a
+/// convenience: `AnchorId` is a raw vector offset (see above), so it is only
+/// meaningful paired with the SPECIFIC `Interior` that produced it —
+/// `Interior::anchor` indexes straight into its `Vec` with no bounds check
+/// against a foreign graph, so reading a stale anchor from one room's
+/// interior against a DIFFERENT room's (smaller) one is not merely wrong, it
+/// can panic. Recording the room lets a caller holding an `Occupancy` from a
+/// PAST moment (e.g. a stateless affect read that only has this tick's
+/// finished walk to consult, not a live position mid-walk — see
+/// [`affect_of_memo_occupied`]) verify the anchor it is about to read still
+/// belongs to the room it is about to pair it with, via [`Self::anchor_in`],
+/// before ever handing it to [`crate::interior::warmth_at`].
 #[derive(Debug, Default)]
-pub struct Occupancy(std::collections::BTreeMap<EntityId, AnchorId>);
+pub struct Occupancy(std::collections::BTreeMap<EntityId, (RoomAddr, AnchorId)>);
 
 impl Occupancy {
     /// Where `who` currently stands, or `None` if it has not arrived (or has
     /// since departed). Both ends of a creature's stay in a room are
     /// legitimately "nowhere in particular" — there is no sentinel anchor for
-    /// "not here", only the absence of an entry.
+    /// "not here", only the absence of an entry. Room-blind: a caller pairing
+    /// this anchor with an `Interior` it did not just derive from the SAME
+    /// room this creature is actually in should use [`Self::anchor_in`]
+    /// instead, which checks that for you.
     pub fn at(&self, who: EntityId) -> Option<AnchorId> {
-        self.0.get(&who).copied()
+        self.0.get(&who).map(|(_, anchor)| *anchor)
+    }
+
+    /// Where `who` currently stands, but ONLY if that is inside `room` —
+    /// `None` both when `who` has not arrived anywhere and when it has, but
+    /// in some OTHER room than `room`. This is [`Self::at`]'s safe sibling
+    /// for a caller that does not itself track which room produced the
+    /// `Interior` it is about to pair the anchor with (The Threshold task
+    /// 6b's `affect_of_memo_occupied`, reading a tick-old `Occupancy` against
+    /// a freshly re-derived room): a mismatch here means the creature moved
+    /// rooms since this anchor was recorded, and the caller must fall back to
+    /// its own room-only answer (e.g. [`landing_interior`]) rather than risk
+    /// [`crate::interior::warmth_at`] indexing a foreign `Interior` with a
+    /// stale offset.
+    pub fn anchor_in(&self, who: EntityId, room: &RoomAddr) -> Option<AnchorId> {
+        self.0
+            .get(&who)
+            .and_then(|(r, anchor)| (r == room).then_some(*anchor))
     }
 
     /// Place `who` at the anchor a seam of `kind` lands at in `interior`
-    /// ([`landing`]) — the entry point for a creature crossing into the room
+    /// ([`landing`]) — the entry point for a creature crossing into `room`
     /// from the coarse (room-graph) layer. An empty interior has no landing
     /// at all ([`landing`] returns `None`); arriving into one is a no-op
     /// rather than a panic, since an interior with zero anchors has nowhere
-    /// for anyone to be recorded standing.
-    pub fn arrive(&mut self, who: EntityId, interior: &Interior, kind: SeamKind) {
+    /// for anyone to be recorded standing. `room` is recorded alongside the
+    /// anchor (see the struct doc) so a later, room-checked read
+    /// ([`Self::anchor_in`]) can tell this arrival apart from one in some
+    /// other room.
+    pub fn arrive(&mut self, who: EntityId, room: &RoomAddr, interior: &Interior, kind: SeamKind) {
         if let Some(at) = landing(interior, kind) {
-            self.0.insert(who, at);
+            self.0.insert(who, (room.clone(), at));
         }
     }
 
@@ -4570,7 +4681,10 @@ impl Occupancy {
     /// contains). Returns whether the move happened — a creature that has
     /// not arrived anywhere, or a target that is not reachable in one hop
     /// from its current anchor, is refused rather than silently teleported,
-    /// since a graph walk that skips edges is not a walk at all.
+    /// since a graph walk that skips edges is not a walk at all. The room
+    /// recorded at the last [`Self::arrive`] carries over unchanged — a
+    /// within-room walk never crosses a room boundary, so there is nothing
+    /// for it to update.
     ///
     /// This MUST use the same one-hop definition [`route_within`]'s planner
     /// does (The Threshold task 6's own bug: an earlier version checked only
@@ -4581,13 +4695,13 @@ impl Occupancy {
     /// this cannot drift from the planner again.
     /// type-audit: bare-ok(flag: return)
     pub fn walk(&mut self, who: EntityId, interior: &Interior, to: AnchorId) -> bool {
-        let Some(here) = self.at(who) else {
+        let Some((room, here)) = self.0.get(&who).cloned() else {
             return false;
         };
         if !interior.walkable_neighbors(here).contains(&to) {
             return false;
         }
-        self.0.insert(who, to);
+        self.0.insert(who, (room, to));
         true
     }
 
@@ -11126,15 +11240,16 @@ mod tests {
     fn a_creature_arrives_at_the_seam_landing() {
         use crate::interior::AnchorKind;
         let interior = built_interior_with_ground();
+        let room = raddr(1.0);
         let mut narrow = Occupancy::default();
-        narrow.arrive(npc_id(1), &interior, SeamKind::Narrow);
+        narrow.arrive(npc_id(1), &room, &interior, SeamKind::Narrow);
         let at_narrow = narrow
             .at(npc_id(1))
             .expect("an arrived creature stands somewhere");
         assert_eq!(interior.anchor(at_narrow).kind, AnchorKind::Threshold);
 
         let mut broad = Occupancy::default();
-        broad.arrive(npc_id(2), &interior, SeamKind::Broad);
+        broad.arrive(npc_id(2), &room, &interior, SeamKind::Broad);
         let at_broad = broad
             .at(npc_id(2))
             .expect("an arrived creature stands somewhere");
@@ -11155,7 +11270,7 @@ mod tests {
         // the insert rather than unwrap into a panic.
         let interior = Interior::new();
         let mut occ = Occupancy::default();
-        occ.arrive(npc_id(1), &interior, SeamKind::Narrow);
+        occ.arrive(npc_id(1), &raddr(1.0), &interior, SeamKind::Narrow);
         assert!(
             occ.at(npc_id(1)).is_none(),
             "an empty interior has no landing, so arrival records nothing"
@@ -11166,7 +11281,7 @@ mod tests {
     fn occupancy_is_empty_until_arrival_and_forgotten_on_departure() {
         let mut occ = Occupancy::default();
         assert!(occ.at(npc_id(1)).is_none());
-        occ.arrive(npc_id(1), &built_interior(), SeamKind::Narrow);
+        occ.arrive(npc_id(1), &raddr(1.0), &built_interior(), SeamKind::Narrow);
         assert!(occ.at(npc_id(1)).is_some());
         occ.depart(npc_id(1));
         assert!(
@@ -11179,8 +11294,9 @@ mod tests {
     fn walking_requires_adjacency() {
         use crate::interior::AnchorKind;
         let i = built_interior(); // threshold -- hearth
+        let room = raddr(1.0);
         let mut occ = Occupancy::default();
-        occ.arrive(npc_id(1), &i, SeamKind::Narrow);
+        occ.arrive(npc_id(1), &room, &i, SeamKind::Narrow);
         let hearth = i
             .ids()
             .iter()
@@ -11199,7 +11315,7 @@ mod tests {
         let mut disconnected = built_interior();
         let stray = disconnected.push(AnchorKind::Bed, None);
         let mut occ2 = Occupancy::default();
-        occ2.arrive(npc_id(2), &disconnected, SeamKind::Narrow);
+        occ2.arrive(npc_id(2), &raddr(2.0), &disconnected, SeamKind::Narrow);
         assert!(
             !occ2.walk(npc_id(2), &disconnected, stray),
             "a non-adjacent target must be rejected"
@@ -11229,7 +11345,7 @@ mod tests {
         let hearth = i.push(AnchorKind::Hearth, Some(alcove));
         i.connect(ground, alcove);
         let mut occ = Occupancy::default();
-        occ.arrive(npc_id(1), &i, SeamKind::Broad);
+        occ.arrive(npc_id(1), &raddr(1.0), &i, SeamKind::Broad);
         assert_eq!(
             occ.at(npc_id(1)),
             Some(ground),

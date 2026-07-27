@@ -11,8 +11,9 @@
 //!
 //! This file answers that worry with a real sweep rather than a bigger
 //! battery sample, and then measures the preregistered prediction on the
-//! population it finds. Two things came out of it, and both are pinned
-//! below rather than asserted away:
+//! population it finds. Three things came out of it (the third added by The
+//! Threshold task 6b, after the health battery's sampler itself was fixed),
+//! and all are pinned below rather than asserted away:
 //!
 //! 1. **Cold-built settlements are not rare.** Over seeds 0..15, 4 of 15
 //!    carry at least one (seed 13 alone carries 61 of its 92 settlements —
@@ -46,32 +47,49 @@
 //!    urgency read — as the reason nothing moves.
 //!
 //!    Traced one level further (not asserted here, but load-bearing for
-//!    reading this file): `interior_warmth_here` reads warmth at the
-//!    LANDING anchor — the Threshold, since Occupancy's per-tick tracking
-//!    (Task 6, "the creature crosses the room") has not landed in this
-//!    worktree — which sits 3 graph-hops from the composed Hearth
-//!    (`the-threshold`→`the-ground` hub→`the-alcove`→`the-fire`). At
+//!    reading this file): at the time this null was FIRST measured (task 5c,
+//!    re-measured post-calibration at task 5d), `interior_warmth_here` read
+//!    warmth at the LANDING anchor — the Threshold, since Occupancy's
+//!    per-tick tracking (Task 6, "the creature crosses the room") had not yet
+//!    landed in this worktree — which sits 3 graph-hops from the composed
+//!    Hearth (`the-threshold`→`the-ground` hub→`the-alcove`→`the-fire`). At
 //!    `WARMTH_DECAY = 0.5`/hop and the recalibrated `HEARTH_WARMTH = 15.0`
 //!    that is `HEARTH_WARMTH * 0.5^3 = 1.875`°C — no longer the old
-//!    sub-1°C-at-best rounding error, but still a handful of degrees. Every
-//!    qualifying cold-built room this sweep found sits at a real temperature
-//!    dozens of degrees past its resident species' niche tolerance (species
-//!    widths run 10–28°C; seed 13's cold-built rooms range from a hair under
-//!    the 5°C gate down to −73°C), so a few-degrees-at-best additive nudge
-//!    still cannot move the discrete distress read at ANY point in that
-//!    range — either the room is mild enough that the niche's own tolerance
-//!    already absorbs it (no baseline distress to reduce), or it is cold
-//!    enough that thermal urgency is already clamped to its ceiling (a
-//!    handful more °C of warmth is still a rounding error against a
-//!    40–80°C deviation). This is a real, structural finding about where
-//!    this campaign's own program currently stands (Tasks 6–8 — seeking,
-//!    catch-up, and the paired control — unbuilt), not a defect in Task
-//!    5/5b's arming and not a sign the recalibration picked the wrong
-//!    number — the physical argument for `15.0` in
-//!    `.superpowers/sdd/task-5d-report.md` was written and committed BEFORE
-//!    this file's own tests were re-run, so there is no number left to
-//!    re-tune to chase this particular population's silence. `WARMTH_DECAY`,
-//!    `FURNISHING_COLD_C`, and `INVENTORY` remain untouched by both task 5d
+//!    sub-1°C-at-best rounding error, but still a handful of degrees.
+//!
+//! 3. **Fixing that landing-anchor sampling gap does not move the null
+//!    either.** Task 6 later gave `DriveMovements::step_with_occupancy` a
+//!    real per-tick `Occupancy` (a cold creature genuinely crosses a
+//!    hearth-bearing room to stand at the fire), but the health battery's
+//!    `affect_of_memo` sampler had no per-tick state of its own to read that
+//!    from, and still always fell back to the landing anchor — the sampler,
+//!    not the physics, was capping what this file could ever measure. Task
+//!    6b closed that gap (`affect_of_memo_occupied`, threaded through
+//!    `run_simulation`), so the test below now reads warmth at wherever each
+//!    creature's own walk that tick actually put it — up to the FULL
+//!    un-decayed `HEARTH_WARMTH = 15.0` for a creature that reaches the fire
+//!    itself, not just the 3-hop-decayed `1.875`. The null held anyway,
+//!    UNCHANGED TO THE BIT (the same `prevalence 0.6967...`,
+//!    `chronicity 0.2459...`, `by_cause[thermal] 0.5435...` this file's own
+//!    header already quotes). That rules out the landing-anchor sampling
+//!    gap as the explanation too, and confirms the one this file already
+//!    gave: every qualifying cold-built room this sweep found sits at a real
+//!    temperature dozens of degrees past its resident species' niche
+//!    tolerance (species widths run 10–28°C; seed 13's cold-built rooms
+//!    range from a hair under the 5°C gate down to −73°C), so even the FULL
+//!    hearth-side warmth cannot move the discrete distress read at ANY point
+//!    in that range — either the room is mild enough that the niche's own
+//!    tolerance already absorbs it (no baseline distress to reduce), or it
+//!    is cold enough that thermal urgency is already clamped to its ceiling
+//!    (15°C of warmth is still a rounding error against a 40–80°C
+//!    deviation). This is a real, structural finding about where this
+//!    campaign's own program currently stands, not a defect in Task 5/5b's
+//!    arming, not a sign the recalibration (task 5d) picked the wrong
+//!    number, and not a sign the sampler fix (task 6b) was somehow
+//!    incomplete — three independent explanations (the placeholder
+//!    constant, the sampling gap, and the population's own scale) have now
+//!    each been tested and ruled out in turn. `WARMTH_DECAY`,
+//!    `FURNISHING_COLD_C`, and `INVENTORY` remain untouched by task 5d
 //!    and this file.
 
 use hornvale_kernel::WorldTime;
@@ -260,27 +278,33 @@ fn the_hearth_shows_no_measurable_effect_on_seed_13s_cold_dominated_population()
     let warm_live = subgroup_report(&warm_idx, &npcs, &traces_live);
     let warm_inert = subgroup_report(&warm_idx, &npcs, &traces_inert);
 
-    // THE PINNED NULL, RE-MEASURED AFTER CALIBRATION: the preregistered
-    // "measurably lower thermal distress" still does not show up here.
-    // Toggling the hearth on and off changes NOTHING in the cold-built
-    // population's distress read — not prevalence, not chronicity, not the
-    // thermal share of by-cause, not even in the last representable bit. Task
-    // 5c pinned this null at the original placeholder `HEARTH_WARMTH = 1.0`;
-    // task 5d then argued `15.0` from physics (a Q/UA energy-balance
-    // estimate, `.superpowers/sdd/task-5d-report.md`), committed that
-    // argument and the constant BEFORE re-running this test, and re-ran it —
-    // the numbers below (prevalence 0.6967..., chronicity 0.2459...,
-    // by_cause[thermal] 0.5435... for the cold-built group) are IDENTICAL to
-    // task 5c's own reading at the 15×-smaller constant. This is not a
-    // threshold tuned to make a number move — the opposite: the number was
-    // moved 15× on independent physical grounds and the result did not care.
-    // `WARMTH_DECAY`, `FURNISHING_COLD_C`, and `INVENTORY` remain untouched.
-    // A future task that lands Occupancy tracking through this path (Task 6,
-    // "the creature crosses the room") or the paired control's own
-    // re-measurement (Task 8) should re-run this exact test: if it starts
-    // failing, that is the signal the mechanism finally moved something, and
-    // this pin should be updated to record the new, real effect rather than
-    // loosened silently.
+    // THE PINNED NULL, RE-MEASURED AFTER CALIBRATION AND AFTER THE SAMPLER
+    // FIX: the preregistered "measurably lower thermal distress" still does
+    // not show up here. Toggling the hearth on and off changes NOTHING in
+    // the cold-built population's distress read — not prevalence, not
+    // chronicity, not the thermal share of by-cause, not even in the last
+    // representable bit. Task 5c pinned this null at the original
+    // placeholder `HEARTH_WARMTH = 1.0`; task 5d then argued `15.0` from
+    // physics (a Q/UA energy-balance estimate,
+    // `.superpowers/sdd/task-5d-report.md`), committed that argument and the
+    // constant BEFORE re-running this test, and re-ran it — unchanged. Task
+    // 6b then closed a SEPARATE gap — this test's own sampler
+    // (`run_simulation`) previously read interior warmth at a room's landing
+    // anchor unconditionally, regardless of whether `DriveMovements`' own
+    // per-tick walk (Task 6) had actually carried a creature deeper into the
+    // room and its hearth's full, undecayed warmth — and re-ran this test a
+    // third time, AFTER that fix, BEFORE looking at the result. The numbers
+    // below (prevalence 0.6967..., chronicity 0.2459..., by_cause[thermal]
+    // 0.5435... for the cold-built group) are IDENTICAL to both prior
+    // readings. This is not a threshold or a sampler tuned to make a number
+    // move — the opposite: the constant moved 15× and the sampler was given
+    // real per-tick position, on independent grounds each time, and the
+    // result did not care either time. `WARMTH_DECAY`, `FURNISHING_COLD_C`,
+    // and `INVENTORY` remain untouched. The paired control's own
+    // re-measurement (Task 8, if it lands) should re-run this exact test: if
+    // it starts failing, that is the signal the mechanism finally moved
+    // something, and this pin should be updated to record the new, real
+    // effect rather than loosened silently.
     assert_eq!(
         cold_live, cold_inert,
         "the hearth arming currently produces NO measurable change in the cold-built \
@@ -299,15 +323,20 @@ fn the_hearth_shows_no_measurable_effect_on_seed_13s_cold_dominated_population()
     );
 }
 
-/// Isolates the mechanism the test above only observes the absence of: the
-/// `warmth_at` value a creature actually reads is capped by the graph
-/// distance from its landing anchor (the Threshold, absent Occupancy
-/// tracking — see this file's header) to the composed Hearth, which
-/// (even after task 5d's recalibration of `HEARTH_WARMTH` from `1.0` to a
-/// physically-argued `15.0`, `.superpowers/sdd/task-5d-report.md`) is still
-/// small relative to the temperature deviations any qualifying cold-built
-/// room in this sweep actually carries. Cheap (one interior derivation, no
-/// simulation), so it is not gated behind the heavy tier.
+/// Puts a number on the LANDING anchor specifically — a creature's warmth
+/// read the moment it crosses into a room, before any within-room seeking
+/// (Task 6) has had a chance to carry it anywhere closer to the fire: even
+/// after task 5d's recalibration of `HEARTH_WARMTH` from `1.0` to a
+/// physically-argued `15.0` (`.superpowers/sdd/task-5d-report.md`), the
+/// landing anchor's 3-graph-hop-decayed share of it is still small relative
+/// to the temperature deviations any qualifying cold-built room in this
+/// sweep actually carries. This is a lower bound, not the whole story since
+/// task 6b: the heavy test above now samples warmth at wherever a creature's
+/// own walk actually put it (up to the full, undecayed `HEARTH_WARMTH` at
+/// the fire itself), and finds the null holds even there — this test's own
+/// number is the floor that finding sits above, not the ceiling it is capped
+/// by. Cheap (one interior derivation, no simulation), so it is not gated
+/// behind the heavy tier.
 #[test]
 fn the_landing_anchors_warmth_is_small_next_to_real_cold_built_deviations() {
     let w = world(13);
