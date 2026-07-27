@@ -63,7 +63,7 @@ star: root Naetoa /naetoa/
 starlit: gap (perceptual): luminance rank 3 exceeds depth 1 from night-vision 0.5
 stone: root Naonea /naonea/
 sun: root Noaboo /noaboo/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
@@ -99,7 +99,7 @@ die: root Taobaa /taobaa/
 earth: root Bee /bee/
 eat: root Goo /goo/
 eclipse: gap (experiential): hobgoblin has no exposure to 'eclipse'
-epipelagic: gap (experiential): no compound recipe for 'epipelagic'
+epipelagic: root Naabea /naabea/
 eye: root Qao /qao/
 fire: root Qea /qea/
 foot: root Boa /boa/
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: root Daakoa /daakoa/
+shrubland: gap (experiential): no compound recipe for 'shrubland'
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -223,7 +223,7 @@ star: root Daotoa /daotoa/
 starlit: root Kaodoa /kaodoa/
 stone: root Daodoa /daodoa/
 sun: root Doagoo /doagoo/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: root Kaa /kaa/
 temperate-forest: root Doodoa /doodoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Toadoo /toadoo/
@@ -294,7 +294,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Rarakrarogrra /rarakrarogrra/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Xogrra /xogrra/
-shrubland: root Roro /roro/
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Rotrra /rotrra/
 sleep: root Roqxa /roqxa/
 snow: gap (experiential): kobold has no exposure to 'snow'

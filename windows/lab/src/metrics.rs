@@ -5573,15 +5573,24 @@ mod tests {
         // fewer daughters, so seed 42 closes with 97 live records instead of
         // 292 and a different cell wins. Re-derived empirically at each step,
         // never carried.
+        //
+        // **The Tithe's vassal agency (task 5f, spec §4.3d) moves it to a
+        // coastal tropical-rainforest cell.** Six vassals on seed 42 now walk
+        // away from patrons whose demand they could not regrow, and a
+        // departure both frees a cell and re-seats a people elsewhere — so the
+        // `DAUGHTER_PROB` draw sequence downstream of the first flight shifts
+        // and the whole occupation history is redrawn, exactly as every
+        // world-byte change in this list has redrawn it. Nothing about biomes
+        // changed.
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
+            MetricValue::Text("tropical-rainforest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

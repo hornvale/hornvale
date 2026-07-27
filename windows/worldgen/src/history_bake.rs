@@ -239,6 +239,36 @@ const NEUTRAL_HORIZON: f64 = 0.5;
 /// sighted people) and not further. A save-format constant: changing it
 /// re-fights every world's history.
 const PORTFOLIO_HALVING: f64 = 3.0;
+/// The share of itself a vassal hands over in ONE epoch above which it stops
+/// paying and **leaves** — spec §4.3d's flight, the first of the two answers
+/// the subjugated have beyond concealment.
+///
+/// Derived from `GROWTH_RATE` rather than written down as a number, for the
+/// same reason [`crash_basin_fraction`] is: it is not an independent parameter
+/// and must never become one. The vassal's own per-capita increment is the
+/// logistic `GROWTH_RATE × (1 − N/eff)`, whose supremum over every stock the
+/// land admits is `GROWTH_RATE` itself. A remittance taking a larger share of
+/// the community than that is therefore one **no management of its own stock
+/// could ever regrow** — not merely a hard year, but a demand outside the
+/// whole envelope of the vassal's biology. That is the natural reading of
+/// "intolerable" in a model whose only growth law is this one, and it is the
+/// strongest form of the statement the crash basin already makes from the
+/// other side.
+///
+/// **Disclosure on the value, because a threshold is a choice about meaning.**
+/// A weaker anchor was available and was considered: the road out costs
+/// `1 − MIGRATE_SURVIVAL` (0.1) of the community, once, so a purely
+/// arithmetical vassal would leave the moment a single epoch's tribute
+/// exceeded the entire price of leaving — which, over an eighty-epoch bake,
+/// is very nearly every standing relation. That reading makes flight the
+/// *default* outcome of subordination rather than its limit, and would decide
+/// spec §5's headline by evacuating the relation table instead of by letting
+/// accumulated structure fail. `GROWTH_RATE` is chosen instead: the vassal
+/// bears a burden it can grow back and leaves one it cannot. Twice the road
+/// cost, and not fitted to any measured outcome — the cascade histogram was
+/// not consulted in picking it. A save-format constant: changing it re-fights
+/// every world's history.
+const FLIGHT_BURDEN: f64 = GROWTH_RATE;
 
 /// The lower edge of the band where a fresh relation can pay for itself, as a
 /// fraction of the vassal's effective capacity — spec §4.3b's **low root**,
@@ -430,7 +460,7 @@ pub struct TributeRelation {
 /// (conflict must fire on a *value* gradient, in worlds with land to spare, and
 /// stay at zero in value-flat ones) read against `alive_at_now` (conquest must
 /// redistribute the world, not depopulate it).
-/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: tribute_collected), bare-ok(count: max_stores_at_now), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist), bare-ok(count: tribute_collection_events)
+/// type-audit: bare-ok(count: grew), bare-ok(count: founded), bare-ok(count: migrated), bare-ok(count: raided), bare-ok(count: fled), bare-ok(count: collapsed), bare-ok(count: resettled), bare-ok(count: subordinations_formed), bare-ok(count: patronage_transfers), bare-ok(count: tribute_relations_at_now), bare-ok(count: max_subordinates), bare-ok(count: tribute_collected), bare-ok(count: max_stores_at_now), bare-ok(count: records_total), bare-ok(count: alive_at_now), bare-ok(count: cascade_hist), bare-ok(count: tribute_collection_events), bare-ok(count: vassal_flights), bare-ok(count: vassal_revolts)
 // `Eq` is deliberately absent: the two accumulator readouts below are `f64`,
 // and a census is only ever compared for equality in assertions (`PartialEq`),
 // never used as a key.
@@ -440,7 +470,13 @@ pub struct BakeCensus {
     pub grew: u64,
     /// Daughter-founding events (a comfortable community spawned a daughter).
     pub founded: u64,
-    /// Migration events (a community relocated off a cell turned hostile).
+    /// Migration events — an ORDERLY, self-directed move. Two paths reach it:
+    /// a community relocated off a cell the era turned hostile, and (spec
+    /// §4.3d) a vassal that walked away from a patron whose demand it would
+    /// not go on paying. Both are leavings, so both belong here and neither
+    /// belongs in `fled`, which means *driven off by a raider* and nothing
+    /// else. `vassal_flights` below counts the second path on its own, so the
+    /// two are separable without conflating either with eviction.
     pub migrated: u64,
     /// Raid events (a community conquered a weaker neighbour's better land,
     /// moving onto the seized site).
@@ -515,6 +551,22 @@ pub struct BakeCensus {
     /// what an attribution needs to tell "collected less per visit" apart
     /// from "was visited more/fewer times".
     pub tribute_collection_events: u64,
+    /// **Flights**: a vassal whose burden crossed `FLIGHT_BURDEN` closed its
+    /// occupation and relocated rather than go on paying (spec §4.3d). A
+    /// **flow**, and a strict subset of `migrated` — every flight is also an
+    /// orderly move, and it is deliberately NOT in `fled`, which counts being
+    /// driven off by a raider. A vassal too small to survive the road does not
+    /// take it, so this counts departures, never deaths.
+    pub vassal_flights: u64,
+    /// **Revolts**: a standing relation dissolved because the vassal had come
+    /// to out-muscle its patron by `RAID_MARGIN` (spec §4.3d). A **flow**, and
+    /// the only path by which a relation ends with BOTH parties still alive
+    /// and in place — dissolution-on-closure (spec §4.4) kills a community,
+    /// and a patronage transfer replaces one patron with another rather than
+    /// freeing anybody. Exactly one relation ends per event: the freed
+    /// vassal's siblings are untouched, and any further loss is the patron's
+    /// own weakening working through the shipped rules.
+    pub vassal_revolts: u64,
 }
 
 impl BakeCensus {
@@ -1649,7 +1701,50 @@ impl<'a> Bake<'a> {
     /// and the snapshot would then be load-bearing rather than
     /// belt-and-braces. (`era` is read only for the clamp's ceiling, which is
     /// a property of the subordinate's land.)
-    fn collect_tribute(&mut self, year: f64, era: &EraClimate) {
+    ///
+    /// # It returns whom it drove out, and does not act on it
+    ///
+    /// Spec §4.3d gives the subjugated two answers beyond concealment, and the
+    /// epoch runs them **around** this method rather than inside it
+    /// ([`bake`]'s loop is where the sequence is spelled out):
+    ///
+    /// ```text
+    /// settle_revolts()          // 1. the vassals strong enough to refuse do
+    /// collect_tribute()  -> …   // 2. the rest pay, and say who is leaving
+    /// resolve_flights(…)        // 3. those who are leaving go
+    /// ```
+    ///
+    /// **Revolt is settled BEFORE collection.** A vassal that can already
+    /// out-muscle its patron by `RAID_MARGIN` is not milked on the way out:
+    /// the strength comparison is a fact about the state the epoch hands over,
+    /// and collecting first would credit a patron with a tribute nobody in the
+    /// world was in a position to compel. It is also what keeps the two
+    /// mechanisms independent — a revolting vassal never reaches the
+    /// collection that could have produced a burden, so no event is ever both.
+    ///
+    /// **Flight is resolved AFTER collection, and is returned rather than
+    /// executed**, for two reasons that both matter:
+    ///
+    /// - The burden a vassal leaves over is a quantity this pass *produces* —
+    ///   the remittance actually handed over, as a share of the community that
+    ///   handed it over — so it cannot be known one line earlier. The vassal
+    ///   pays, learns the price of staying, and goes.
+    /// - A flight **moves people**: it closes a community and relocates it,
+    ///   which can evict a holder, cascade, and dissolve relations belonging
+    ///   to other entries of this very pass. Executed inline it would make
+    ///   each entry's outcome depend on where in the pass it was reached, and
+    ///   — worse — it would end this method's standing property that
+    ///   **nothing but tribute moves a population across a collection**. Every
+    ///   test in this file that reads a remittance as a population difference
+    ///   depends on that property; with relocation inside, a neighbour's
+    ///   flight rolling over a vassal would read as a tribute of 30% of it.
+    ///
+    /// So the departures are returned, and [`Bake::resolve_flights`] is a
+    /// separate step of the epoch.
+    fn collect_tribute(&mut self, year: f64, era: &EraClimate) -> Vec<usize> {
+        // Whom this epoch's collection drove out. Recorded inside the loop and
+        // returned — see the note above.
+        let mut fleeing: Vec<usize> = Vec::new();
         let relations: Vec<(usize, Tribute)> = self.tribute.iter().map(|(&s, &t)| (s, t)).collect();
         // How many vassals each patron holds, taken from the SNAPSHOT and not
         // from the live table (spec §4.3c). The count is what the portfolio
@@ -1727,6 +1822,18 @@ impl<'a> Bake<'a> {
             // concealment.
             let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
             let remittance = rel.assessment.min((harvest + bleed) * (1.0 - conceal));
+            // The burden: what was handed over as a share of the community
+            // that handed it over, measured against the population the demand
+            // was met out of — this epoch's growth included, since that
+            // increment is what the vassal had when it paid. A share above
+            // `FLIGHT_BURDEN` is one the vassal's own growth law could not
+            // regrow at any stock, and it leaves (spec §4.3d). Recorded here
+            // and acted on after the pass; a zero or negative population
+            // cannot produce a burden and is left to the paths that own it.
+            let paid_from = self.communities[sub].population;
+            if paid_from > 0.0 && remittance > paid_from * FLIGHT_BURDEN {
+                fleeing.push(sub);
+            }
             self.communities[sub].population -= remittance;
             self.communities[rel.patron].stores += remittance;
             self.tally.tribute_collected += remittance;
@@ -1766,6 +1873,146 @@ impl<'a> Bake<'a> {
                 },
             );
         }
+        fleeing
+    }
+
+    /// Execute the departures [`Bake::collect_tribute`] returned — spec
+    /// §4.3d's flight, at the one place in the epoch where moving people
+    /// cannot be mistaken for extraction.
+    ///
+    /// The list arrives in subordinate-index order (`BTreeMap` key order, the
+    /// order the collection pass built it in), and is executed in that order.
+    /// One flight can close another would-be leaver by cascading over it,
+    /// which [`Bake::take_flight`] handles by checking the community is still
+    /// alive; that is the whole of the coupling between entries, and it is why
+    /// the order — while deterministic — is stated rather than left to be
+    /// inferred.
+    fn resolve_flights(&mut self, fleeing: Vec<usize>, era: &EraClimate, year: f64) {
+        for sub in fleeing {
+            self.take_flight(sub, era, year);
+        }
+    }
+
+    /// Every vassal that has come to out-muscle its patron throws it off —
+    /// spec §4.3d's **revolt**, and the second of the two answers the
+    /// subjugated have beyond concealment.
+    ///
+    /// The test is the bake's own dominance test, read the other way round:
+    /// `strength(vassal) > strength(patron) × RAID_MARGIN`. A relation is
+    /// only ever imposed by a patron that cleared exactly that margin over its
+    /// target, so a revolt requires the balance to have swung by `RAID_MARGIN`
+    /// squared since — it is not the mirror of the raid rule loosened, it is
+    /// the same threshold with the roles exchanged. Structural, total, and
+    /// **draw-free**: nobody decides to revolt, it is a thing that has become
+    /// true of two populations and two hoards.
+    ///
+    /// **Exactly one relation ends per revolt, and that is the whole design.**
+    /// Freeing the patron's other vassals in the same breath is spec §9's
+    /// deferred *collapse-release*, which frees a network by construction and
+    /// would settle spec §5's headline by fiat. What happens here instead is
+    /// that the patron loses this vassal's stream, so its `stores` decay
+    /// without replacement, so its `strength` falls, so it becomes beatable —
+    /// by its remaining vassals on some later epoch, and by third parties
+    /// through the shipped raid rule. The chain is **emergent**: every link in
+    /// it is a mechanism that already shipped, and none of them is reached
+    /// from here.
+    ///
+    /// **Termination.** This pass only ever *removes* entries, from a snapshot
+    /// taken before the first removal, so it visits each standing relation at
+    /// most once and cannot re-enter. A revolt does change strengths' *usage*
+    /// downstream (a poorer patron is a likelier target next epoch), but
+    /// nothing within this epoch re-reads the table after the pass except the
+    /// collection it precedes.
+    ///
+    /// Deterministic: `BTreeMap` key order over a `Vec` snapshot, and the
+    /// comparison reads only populations, stores and tech — none of which this
+    /// pass writes — so the outcome is the same whatever order it runs in.
+    fn settle_revolts(&mut self) {
+        let standing: Vec<(usize, usize)> = self
+            .tribute
+            .iter()
+            .map(|(&sub, t)| (sub, t.patron))
+            .collect();
+        for (sub, patron) in standing {
+            // The same cheap coherence guard the collection pass carries: a
+            // dead party's relation should already be gone (spec §4.4), and a
+            // corpse throwing off a corpse would show up nowhere.
+            if !self.communities[sub].alive || !self.communities[patron].alive {
+                continue;
+            }
+            if self.strength(sub) > self.strength(patron) * RAID_MARGIN {
+                self.tribute.remove(&sub);
+                self.tally.vassal_revolts += 1;
+            }
+        }
+    }
+
+    /// A vassal whose burden crossed `FLIGHT_BURDEN` walks off its cell —
+    /// spec §4.3d's **flight**. It is *leaving*, not being driven off: the
+    /// occupation closes as `CauseOfEnd::Migrated` by `Ended::Nature`, exactly
+    /// as a climate migration does, and the event is tallied as a `migrated`
+    /// and a `vassal_flights`, **never** as a `fled` — that counter means
+    /// driven off by a raider, and pooling the two would corrupt the census
+    /// the campaign reports.
+    ///
+    /// The move itself is the shipped [`Bake::relocate`] path, so a fleeing
+    /// people takes the best home in the nearest ring that offers it one, on
+    /// the same terms as any other homeless people: marginal vacant ground, or
+    /// a holding it can beat. A flight can therefore displace somebody and
+    /// cascade — a real second source of avalanches, recorded into the same
+    /// histogram at the same place [`Bake::maybe_raid`] records its own.
+    ///
+    /// **A community too small to survive the road does not take it.** The
+    /// same `pop × MIGRATE_SURVIVAL ≥ VIABLE_MIN` guard the climate migration
+    /// carries applies here, and it is what keeps flight from becoming a
+    /// tribute-driven extinction: a vassal bled onto `FARM_FLOOR` cannot flee,
+    /// it stays and endures. The relation is dissolved by `close` (spec §4.4's
+    /// two-sided cleanup), not by a special case here.
+    ///
+    /// Returns whether the community actually left, so a caller can tell a
+    /// declined road from an executed one.
+    fn take_flight(&mut self, idx: usize, era: &EraClimate, year: f64) -> bool {
+        // A cascade earlier in this same pass may already have closed it.
+        if !self.communities[idx].alive {
+            return false;
+        }
+        let (record, pop, lineage, offset, id, site) = {
+            let c = &self.communities[idx];
+            (
+                c.record,
+                c.population,
+                c.lineage,
+                c.tech_offset,
+                c.id,
+                c.site,
+            )
+        };
+        let arriving = pop * MIGRATE_SURVIVAL;
+        if arriving < VIABLE_MIN {
+            return false; // too small to survive leaving: it endures instead
+        }
+        let people = self.records[record].people;
+        // Close BEFORE relocating so the cell it is abandoning is free — a
+        // people must not be able to flee onto its own site, and `close` frees
+        // the cell only when this community is the one indexed there.
+        self.close(idx, year, CauseOfEnd::Migrated, Ended::Nature);
+        self.tally.vassal_flights += 1;
+        match self.relocate(people, arriving, lineage, id, offset, site, era, year, 0) {
+            // `resettled` is tallied inside `relocate`, at the branch that
+            // reaches vacant ground; only the migration itself is added here.
+            Relocation::Settled { cascade: 0 } => self.tally.migrated += 1,
+            Relocation::Settled { cascade } => {
+                self.tally.migrated += 1;
+                self.tally.record_cascade(cascade);
+            }
+            // It left and died on the road — nothing reachable was habitable
+            // or beatable. The same reading `step_community`'s climate
+            // migration takes when no refuge exists, and the same tally
+            // `relocate` uses for a remnant lost deeper in a chain: a
+            // community may not vanish from the world uncounted.
+            Relocation::Lost => self.tally.collapsed += 1,
+        }
+        true
     }
 
     /// Update a community's peak population and monotone tech from its current
@@ -2390,8 +2637,14 @@ pub fn bake(
         }
         // Tribute is collected once the whole world has stepped, so there is
         // growth to tax and so no subordinate's remittance depends on whether
-        // its patron happened to be stepped before or after it.
-        bake.collect_tribute(year, &era);
+        // its patron happened to be stepped before or after it. Spec §4.3d's
+        // two vassal answers bracket it, and the bracket IS the rule: a vassal
+        // strong enough to refuse refuses before it is milked, and one that
+        // pays a burden it could never regrow leaves after it has paid.
+        // `collect_tribute`'s own doc carries the argument for both positions.
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(year, &era);
+        bake.resolve_flights(fleeing, &era, year);
         year += cfg.epoch_years;
     }
 
@@ -4077,6 +4330,343 @@ mod tests {
         assert!(
             target < bake.target_stock(KindId("goblin"), 0, RICH),
             "…and below the quiet patron's setpoint, or the rule is doing nothing"
+        );
+    }
+
+    #[test]
+    fn a_vassal_taxed_past_what_it_can_regrow_leaves() {
+        // Spec §4.3d, FLIGHT — the first of the two answers the subjugated
+        // have beyond concealment. A demand taking a larger share of the
+        // community than its own growth law could ever return
+        // (`FLIGHT_BURDEN`) is one it will not go on paying: it closes its
+        // occupation and takes the road.
+        //
+        // Three things this test binds that a weaker one would not:
+        //   (a) **Non-vacuity.** The relation must have existed and tribute
+        //       must actually have flowed, so "it ended" is not trivially
+        //       true of a fixture where nobody was ever subordinated.
+        //   (b) **It LEFT — it was not driven off.** `fled` means evicted by a
+        //       raider and nothing else; a flight tallied there would corrupt
+        //       the census the campaign reports. The record must close as an
+        //       orderly `Migrated`/`Ended::Nature`, and the people must turn
+        //       up alive somewhere else.
+        //   (c) **Independence from revolt.** The vassal is pinned well below
+        //       its patron's strength, and `vassal_revolts` is asserted zero,
+        //       so nothing here can pass on the other mechanism's back.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        /// The vassal's population: far enough above `VIABLE_MIN /
+        /// MIGRATE_SURVIVAL` that the road is survivable, so the departure is
+        /// a real choice of this rule and not a husk that could not have gone
+        /// anywhere.
+        const VASSAL_POP: f64 = 20.0;
+        /// The patron's population: over `VASSAL_POP × RAID_MARGIN`, so the
+        /// vassal cannot revolt and this fixture measures flight alone.
+        const PATRON_POP: f64 = 40.0;
+        /// The standing demand. Above `FLIGHT_BURDEN` of what the vassal holds
+        /// when it pays, and far below the `bleed` this fixture makes
+        /// available (the whole stock above a floor-targeting patron's
+        /// setpoint), so the remittance is exactly the demand and the burden
+        /// is exactly what the arithmetic says.
+        ///
+        /// **No `grow` is driven here.** The remittance comes out of the
+        /// standing stock, which is a real collection path and keeps the
+        /// `DAUGHTER_PROB` draw out of the fixture — a daughter of this
+        /// vassal's own lineage would be indistinguishable from the community
+        /// the flight founds, and the arrival check below would then be
+        /// satisfiable by the wrong event.
+        const DEMAND: f64 = 6.0;
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            PATRON_POP,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            VASSAL_POP,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        let sub_lineage = bake.communities[sub].lineage;
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: DEMAND,
+                since: 0.0,
+                last_seen_population: VASSAL_POP,
+            },
+        );
+        assert!(
+            bake.strength(sub) <= bake.strength(patron) * RAID_MARGIN,
+            "precondition: the vassal must NOT be able to revolt, or this fixture measures \
+             the wrong mechanism"
+        );
+
+        bake.begin_epoch();
+        let before_collection = bake.communities[sub].population;
+        assert!(
+            before_collection * MIGRATE_SURVIVAL >= VIABLE_MIN,
+            "precondition: the vassal must be big enough to survive the road, or it would \
+             endure rather than leave and this test would pass on the wrong branch"
+        );
+        // The epoch's three tribute steps, in `bake`'s own order. `settle_
+        // revolts` is driven too, so `vassal_revolts == 0` below means the
+        // revolt rule RAN and declined — not that it was never asked.
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(0.0, &era);
+        bake.resolve_flights(fleeing, &era, 0.0);
+
+        // (a) The relation existed and tribute genuinely flowed out of it.
+        assert_eq!(
+            bake.tally.tribute_collection_events, 1,
+            "precondition: the relation must have been collected on, or 'it ended' is vacuous"
+        );
+        assert!(
+            bake.tally.tribute_collected > before_collection * FLIGHT_BURDEN,
+            "precondition: the remittance ({}) must exceed {FLIGHT_BURDEN} of the {} the vassal \
+             was holding when it paid, or the threshold was never crossed",
+            bake.tally.tribute_collected,
+            before_collection
+        );
+
+        // (b) It left, and left as a leaving.
+        assert_eq!(
+            bake.tally.vassal_flights, 1,
+            "the vassal must have taken flight (spec §4.3d)"
+        );
+        assert_eq!(
+            bake.tally.migrated, 1,
+            "a flight is an orderly, self-directed move — the same tally a climate migration takes"
+        );
+        assert_eq!(
+            bake.tally.fled, 0,
+            "a flight must NEVER be tallied as `fled`: that counter means driven off by a raider"
+        );
+        assert_eq!(
+            bake.tally.raided, 0,
+            "nobody raided anybody here — the vassal walked"
+        );
+        assert!(
+            !bake.communities[sub].alive,
+            "the fleeing community's occupation must be closed"
+        );
+        let rec = &bake.records[bake.communities[sub].record];
+        assert_eq!(
+            (rec.cause, rec.ended_by),
+            (Some(CauseOfEnd::Migrated), Ended::Nature),
+            "it left of its own accord: an orderly migration, ended by nobody"
+        );
+        assert!(
+            !bake.tribute.contains_key(&sub),
+            "…and the relation is gone with it"
+        );
+        let arrived = bake
+            .communities
+            .iter()
+            .enumerate()
+            .find(|(i, c)| *i != sub && c.alive && c.lineage == sub_lineage)
+            .map(|(i, _)| i)
+            .expect("the fleeing people must be standing somewhere else — it left, it did not die");
+        assert_ne!(
+            bake.communities[arrived].site, far,
+            "…on a different cell from the one it abandoned"
+        );
+        assert!(
+            bake.communities[patron].alive
+                && bake.communities[patron].site == CellId(0)
+                && bake.communities[patron].stores > 0.0,
+            "the patron keeps its cell and what it collected — flight costs it the STREAM, \
+             not the hoard"
+        );
+
+        // (c) Nothing here was a revolt.
+        assert_eq!(
+            bake.tally.vassal_revolts, 0,
+            "independence: this fixture must exercise flight alone"
+        );
+    }
+
+    #[test]
+    fn a_vassal_that_outgrows_its_patron_throws_off_the_relation() {
+        // Spec §4.3d, REVOLT — and the campaign's first mechanism by which
+        // accumulated structure can FAIL rather than merely accumulate. When
+        // `strength(vassal) > strength(patron) × RAID_MARGIN` the relation
+        // dissolves, and the vassal is genuinely free afterward.
+        //
+        // "The table shrank" is satisfiable by a bug that drops relations
+        // wholesale, so freedom is asserted from both ends: the entry is gone,
+        // AND the patron collects nothing further from a vassal that is still
+        // alive, still on its cell, and still growing. The epoch it revolts in
+        // it is not milked either — spec §4.3d's revolt is tested BEFORE
+        // collection, so a community strong enough to refuse does refuse.
+        //
+        // Independence from flight is asserted throughout: the demand is small
+        // enough that no burden ever crosses `FLIGHT_BURDEN`, and
+        // `vassal_flights` must stay zero.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        /// The vassal's population — under `PATRON_POP / RAID_MARGIN`, so the
+        /// relation opens perfectly legitimate.
+        const VASSAL_POP: f64 = 20.0;
+        /// The patron's population while it still holds the whip hand.
+        const PATRON_POP: f64 = 40.0;
+        /// What the patron is left with after the world breaks it (a war, a
+        /// famine, a cell the ice took) — chosen so the vassal clears
+        /// `RAID_MARGIN` over it and not by an inch: nothing in this file
+        /// moves it there, the test does, because *why* the balance swung is
+        /// not what this rule reads.
+        const BROKEN_PATRON_POP: f64 = 5.0;
+        /// A modest standing demand: well under `FLIGHT_BURDEN` of the
+        /// vassal's population, so flight can never fire here.
+        const DEMAND: f64 = 1.0;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            PATRON_POP,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            VASSAL_POP,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: DEMAND,
+                since: 0.0,
+                last_seen_population: VASSAL_POP,
+            },
+        );
+
+        // Epoch 1 — the relation is real and tribute is flowing out of it.
+        // The remittance is paid out of the standing stock (a floor-targeting
+        // patron's whole `bleed`), so no `grow` is driven and the fixture
+        // consumes no `DAUGHTER_PROB` draw.
+        bake.begin_epoch();
+        let stores_before = bake.communities[patron].stores;
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(0.0, &era);
+        bake.resolve_flights(fleeing, &era, 0.0);
+        assert!(
+            bake.communities[patron].stores > stores_before,
+            "precondition: the patron must actually have been collecting — 'the relation ended' \
+             proves nothing about a relation that never paid"
+        );
+        assert!(
+            bake.tribute.contains_key(&sub),
+            "precondition: and the relation must still be standing going into the swing"
+        );
+        assert_eq!(
+            (bake.tally.vassal_revolts, bake.tally.vassal_flights),
+            (0, 0),
+            "precondition: neither mechanism has fired yet"
+        );
+
+        // The balance swings — the patron is broken by something this rule
+        // does not care about, and the vassal now out-muscles it.
+        bake.communities[patron].population = BROKEN_PATRON_POP;
+        assert!(
+            bake.strength(sub) > bake.strength(patron) * RAID_MARGIN,
+            "precondition: the vassal must now clear the dominance margin over its patron"
+        );
+        let patron_stores = bake.communities[patron].stores;
+        let vassal_population = bake.communities[sub].population;
+        let events_before = bake.tally.tribute_collection_events;
+        bake.begin_epoch();
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(EPOCH_YEARS, &era);
+        bake.resolve_flights(fleeing, &era, EPOCH_YEARS);
+
+        assert_eq!(
+            bake.tally.vassal_revolts, 1,
+            "the relation must dissolve when the vassal out-muscles its patron (spec §4.3d)"
+        );
+        assert!(
+            !bake.tribute.contains_key(&sub),
+            "…and the entry must be gone from the relation table"
+        );
+        assert_eq!(
+            bake.tally.tribute_collection_events, events_before,
+            "a vassal that revolts is not milked on the way out: revolt is settled BEFORE \
+             collection, so no remittance is credited that nobody could have compelled"
+        );
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            patron_stores.to_bits(),
+            "…so the patron's hoard does not move in the epoch it loses the relation"
+        );
+        assert_eq!(
+            bake.communities[sub].population.to_bits(),
+            vassal_population.to_bits(),
+            "…and nothing was taken out of the vassal either"
+        );
+        assert!(
+            bake.communities[sub].alive && bake.communities[sub].site == far,
+            "the vassal is FREE, not dead: it keeps its people and its cell (a revolt is not \
+             an eviction)"
+        );
+        assert!(
+            bake.communities[patron].alive,
+            "…and its former patron is still standing — one relation ended, not a network \
+             (spec §9's collapse-release stays deferred)"
+        );
+        assert_eq!(
+            bake.tally.vassal_flights, 0,
+            "independence: this fixture must exercise revolt alone"
+        );
+
+        // …and it STAYS free. Restore the patron to its full strength and run
+        // another epoch: it collects nothing, because the relation is gone.
+        // Without this, "the table shrank" would be satisfiable by a bug that
+        // drops entries while the collection carries on regardless.
+        bake.communities[patron].population = PATRON_POP;
+        let patron_stores = bake.communities[patron].stores;
+        let events_before = bake.tally.tribute_collection_events;
+        bake.begin_epoch();
+        assert!(
+            bake.communities[sub].population
+                > bake.target_stock(KindId("goblin"), 0, RICH) + DEMAND,
+            "precondition: the freed vassal still stands well above what its former patron \
+             steers a vassal to, so a live relation would certainly have collected the whole \
+             demand from it — 'nothing was collected' is therefore about the relation being \
+             gone, not about there being nothing to take"
+        );
+        bake.settle_revolts();
+        let fleeing = bake.collect_tribute(2.0 * EPOCH_YEARS, &era);
+        bake.resolve_flights(fleeing, &era, 2.0 * EPOCH_YEARS);
+        assert_eq!(
+            bake.tally.tribute_collection_events, events_before,
+            "the patron must stop collecting from a vassal that has thrown it off"
+        );
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            patron_stores.to_bits(),
+            "…and its stores must not grow from it again"
+        );
+        assert_eq!(
+            bake.tally.vassal_revolts, 1,
+            "one relation, one revolt: a dissolved relation cannot revolt twice"
         );
     }
 
