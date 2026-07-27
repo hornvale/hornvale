@@ -821,13 +821,14 @@ fn owlbear_condition_niche() -> ConditionNiche {
 /// Giant scorpion condition niche: the hot-arid DESERT specialist — the
 /// largest land gap in the pre-T7 readout. Every existing `ANIMAL_PREY`/
 /// `PLANT_FORAGE` consumer carries zero desert rows (see the block comment
-/// above); the niche below weights `DETRITUS` over `ANIMAL_PREY` (0.7/0.3,
-/// an opportunistic scavenger reading rather than a pure predator)
-/// specifically so the supply term is not dominated by the NPP-linked
-/// `ANIMAL_PREY` axis, which collapses in desert the way any predator's
-/// would. **Measured, not fully achieved**: this raised the scorpion's
-/// desert `mean_k` from 0.0081 (0.7/0.3 weighting) to 0.0176 (this 0.3/0.7
-/// weighting) in the regenerated readout, and desert is now the scorpion's
+/// above); the niche below weights `DETRITUS` **over** `ANIMAL_PREY` — the
+/// shipped vector is `ANIMAL_PREY 0.3, DETRITUS 0.7`, an opportunistic
+/// scavenger reading rather than a pure predator — specifically so the supply
+/// term is not dominated by the NPP-linked `ANIMAL_PREY` axis, which collapses
+/// in desert the way any predator's would. **Measured, not fully achieved**:
+/// this raised the scorpion's desert `mean_k` from 0.0081 under the
+/// prey-dominant vector (`ANIMAL_PREY 0.7, DETRITUS 0.3`) to 0.0176 under the
+/// shipped detritus-dominant one, and desert is now the scorpion's
 /// #2 biome by `mean_k` (behind only tropical-rainforest, 0.0198) — a real,
 /// competitive desert presence, clearly ahead of every prior desert
 /// occupant (otyugh/rust-monster/xorn all sit at or below 0.014 there) —
@@ -913,9 +914,11 @@ fn giant_hyena_condition_niche() -> ConditionNiche {
 /// 0.0096, pre-regen readout), so predation is viable here too. Cold but
 /// held well clear of the `Ice` cutoff (-20 C) and centred above taiga's
 /// moisture split (>=0.30-0.35, vs. the drier tundra split) so the pack
-/// reads as taiga, not tundra. Elevation kept low (below p15, 142 m) because
-/// taiga's tree line falls toward ~400-1600 m at the high latitudes taiga
-/// occupies (`tree_line_m`); a higher optimum here would bleed into `Alpine`.
+/// reads as taiga, not tundra. Elevation kept low — 300 m, which sits between
+/// p15 (142 m) and p25 (621 m) of settleable land, i.e. the low fifth without
+/// being at the floor — because taiga's tree line falls toward ~400-1600 m at
+/// the high latitudes taiga occupies (`tree_line_m`); a higher optimum here
+/// would bleed into `Alpine`.
 /// Large beast, Challenge 1 (5E MM, verified). Mass is an author's estimate
 /// for the MM's Large size category; ~150 kg, matching the giant hyena's
 /// scale for the shared cell.
