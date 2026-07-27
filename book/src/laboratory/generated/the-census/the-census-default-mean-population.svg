@@ -10,11 +10,10 @@
 <text x="50" y="36.0" font-size="11" fill="currentColor" opacity="0.75" text-anchor="end">1000</text>
 <text x="91.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="91.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 91.5 252.0)">&lt; 0</text>
-<rect x="132.3" y="82.6" width="60.4" height="153.4" fill="#5b8dd9" rx="2" />
-<text x="162.5" y="78.6" font-size="11" fill="currentColor" text-anchor="middle">767</text>
+<rect x="132.3" y="82.0" width="60.4" height="154.0" fill="#5b8dd9" rx="2" />
+<text x="162.5" y="78.0" font-size="11" fill="currentColor" text-anchor="middle">770</text>
 <text x="162.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 162.5 252.0)">[0, 100)</text>
-<rect x="203.3" y="235.4" width="60.4" height="0.6" fill="#5b8dd9" rx="2" />
-<text x="233.5" y="231.4" font-size="11" fill="currentColor" text-anchor="middle">3</text>
+<text x="233.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="233.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 233.5 252.0)">[100, 200)</text>
 <text x="304.5" y="232.0" font-size="11" fill="currentColor" text-anchor="middle">0</text>
 <text x="304.5" y="252.0" font-size="11" fill="currentColor" opacity="0.85" text-anchor="end" transform="rotate(-30 304.5 252.0)">[200, 300)</text>

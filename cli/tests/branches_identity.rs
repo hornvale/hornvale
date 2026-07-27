@@ -243,18 +243,33 @@ fn goblin_names_are_rebaselined_not_frozen() {
     );
 }
 
-/// (7) Coexistence-stack world invariant, reframed post-cutover: bugbear
-/// and kobold — the two peoples that never win a settlement's dominance
-/// under the niche-differentiated-K coexistence stack — are still PRESENT
-/// (a strictly positive density fraction) in at least one settlement's
-/// composition in the shared, unpinned seed-42 world. Composition commits
-/// no ledger fact of its own (only a settlement's dominant species does,
-/// via `peopled-by`), so this recomputes the same coexistence stack
-/// genesis built via `hornvale_worldgen::demography_report` — the pure,
-/// deterministic accessor that mirrors genesis's own
+/// (7) Coexistence-stack world invariant, reframed post-cutover: every
+/// people is PRESENT (a strictly positive density fraction) in at least one
+/// settlement's composition in the shared, unpinned seed-42 world, and the
+/// bugbear — the one people that still never wins a settlement's dominance
+/// under the niche-differentiated-K coexistence stack — is present anyway.
+/// Composition commits no ledger fact of its own (only a settlement's
+/// dominant species does, via `peopled-by`), so this recomputes the same
+/// coexistence stack genesis built via `hornvale_worldgen::demography_report`
+/// — the pure, deterministic accessor that mirrors genesis's own
 /// `niche_per_species_k` → `coexist::pack` → `stack_condense::condense_stack`
 /// pipeline byte-for-byte at the frozen `BETA`/`FLOOR` constants — over the
 /// same peopled-only roster filter genesis's unpinned path applies.
+///
+/// **Premise revised by The Tumult's elevation re-datum.** This test used to
+/// assert that *kobold* never wins dominance either — "The Niche's accepted
+/// 2-way result" — and it held for exactly the wrong reason: the condition
+/// niche's elevation axis was scored against the isostatic reference datum
+/// rather than height above sea level, which put the kobold's authored
+/// highland optimum above most worlds' highest land and crushed its fit
+/// everywhere (see [`hornvale_species::ConditionNiche`]). With the axis
+/// re-datumed the kobold is a real competitor on high ground: at seed 42 it
+/// now takes 4 of 216 stack settlements (it took 0 of 105 before), and its
+/// presence rises from 31 of 105 settlements to all 216. The invariant that
+/// survives, and is asserted below, is the one this test was always for —
+/// **never-dominant does not mean absent** — now carried by the bugbear,
+/// whose stronghold axis is moisture rather than elevation and which the
+/// re-datum leaves shut out of dominance exactly as before.
 #[test]
 fn bugbear_and_kobold_are_present_in_settlement_composition() {
     let world = default_generated_seed_42();
@@ -299,26 +314,54 @@ fn bugbear_and_kobold_are_present_in_settlement_composition() {
             .unwrap_or_else(|| panic!("{species} must be in the peopled roster")) as u32
     };
 
+    let dominance = |species: &str| -> usize {
+        let tag = tag_of(species);
+        report
+            .stack_settlements
+            .iter()
+            .filter(|s| s.dominant == tag)
+            .count()
+    };
+
+    // Present-but-not-dominant, the invariant this test exists for.
     for species in ["bugbear", "kobold"] {
         let tag = tag_of(species);
-        assert!(
-            !report.stack_settlements.iter().any(|s| s.dominant == tag),
-            "{species} must never win a settlement's dominance under the \
-             niche-differentiated-K coexistence stack at seed 42 — The \
-             Niche's accepted 2-way result (goblin/hobgoblin dominate,\
-             bugbear/kobold never do); if this now fails, the coexistence \
-             balance shifted and this test's premise needs revisiting"
-        );
         assert!(
             report.stack_settlements.iter().any(|s| s
                 .composition
                 .iter()
                 .any(|(id, frac)| *id == tag && *frac > 0.0)),
             "{species} must hold a strictly positive density fraction in \
-             at least one settlement's composition — present even though \
-             never dominant; got none"
+             at least one settlement's composition; got none"
         );
     }
+    assert_eq!(
+        dominance("bugbear"),
+        0,
+        "bugbear must still never win a settlement's dominance at seed 42 — \
+         its stronghold axis is moisture, which the elevation re-datum did \
+         not touch; if this now fails, the coexistence balance shifted and \
+         this test's premise needs revisiting"
+    );
+
+    // The re-datum's payoff, pinned as a band rather than an exact count so a
+    // later niche re-authoring re-measures rather than merely re-pins: the
+    // kobold wins high ground somewhere, but stays a minority holder behind
+    // the hobgoblin. Measured at seed 42: 4 of 216 (0 of 105 before the fix).
+    let total = report.stack_settlements.len();
+    let kobold = dominance("kobold");
+    assert!(
+        kobold > 0,
+        "kobold must win at least one settlement's dominance at seed 42 — the \
+         whole point of the elevation re-datum is that its highland stronghold \
+         became occupiable; got 0 of {total}"
+    );
+    assert!(
+        kobold * 10 <= total,
+        "kobold holds {kobold} of {total} stack settlements — a highland \
+         specialist should stay a minority holder (<= 10%); a larger share \
+         means the niche balance shifted and this pin needs re-measuring"
+    );
 }
 
 /// (6) Family inventory-closure: every goblinoid daughter's every `Root`

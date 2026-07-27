@@ -589,3 +589,49 @@ the territory overlap held (0.0466). It stays in the checkable tier; what it did
 *not* resolve — the *volume* of the diaspora, throttled by the world's ample
 vacant land and by peoples settling glacially-stable ground — it handed, with
 measurements, to conflict-as-criticality.
+
+**And conflict-as-criticality has now been tested, and the bet lost.** This
+chapter has to be able to say that, or its scores are decoration. The wager was
+that organised conflict, once it emerged rather than being floored, would
+**self-organize to criticality** — that the size distribution of cascading
+displacement would be a power law, the signature of a system holding itself at
+its own critical point. It was always a bet at the *top* of the checkability
+gradient in the good sense: preregistered, instrument-gradable, adjudicable by
+the Laboratory without a human read. *The Tumult* built it and graded it.
+Conflict does now emerge — seed 42, which never crowds, resolves 76 conquests
+driven by coveted value rather than by density, and the map gains population
+rather than losing it. The distribution is **not** a power law and is not close
+to one: pooled over a hundred seeds and 2974 conquests, nothing chains beyond
+size three, the support spans 0.48 decades against a preregistered threshold of
+about 1.5, the per-octave decay is roughly 46-fold where a heavy tail falls two-
+to fourfold, and the branching ratio measures **σ ≈ 0.051** against a critical
+value of 1 — stable to three figures across a 3.3× change of sample. Geometric
+with a hard cutoff, deeply sub-critical. No constant was tuned toward the
+hypothesis at any point.
+
+The honest rescore is therefore: **the criticality bet moves from open to
+falsified for the mechanism as built** — not "partially confirmed", not
+"promising". What it does *not* move is the underlying question, and the
+distinction is the useful part. Two builds now bracket it from opposite sides.
+The first, a crowding sandpile, had a **drive and no dissipation**, so every
+avalanche ran to the depth cap — an artifact, not a tail. The second has
+**dissipation and no accumulation**: each hop of a cascade costs real
+population, every victim is weaker than whoever displaced it, and a chain dies
+within a hop or two, with nothing stored *between* relaxations whose release
+could make a large event. Criticality needs both terms, and the missing one has
+a name and a shape — a standing dominance relation that concentrates value into
+a topple-able structure, whose collapse frees a whole subordinate network at
+once. So the residual bet is narrower and better armed than the original: not
+"does conflict self-organize?" but "does accumulation-plus-dissipation
+self-organize, on this world, at this resolution?" — with a measured null
+result to beat rather than a prior to defend.
+
+Two notes for the gradient itself. First, this is the chapter's second bet
+driven to a verdict by instrument rather than by taste, after The Chorus — and
+the **first whose verdict was no**, which is the more informative of the two
+outcomes and the one a confidence map exists to be able to record. Second, the
+falsification cost roughly one campaign and produced a sharper successor
+question; the alternative — shipping the mechanism and narrating it as
+criticality — would have cost nothing and taught nothing, and the drift-check
+would have re-ratified the narration every time it ran. A bet is only worth
+placing at this altitude if losing it is allowed to be published as a loss.

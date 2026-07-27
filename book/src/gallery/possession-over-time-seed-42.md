@@ -22,13 +22,13 @@ You stand in tropical seasonal forest — buttressed canopy — in the lands of 
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
-  [216] bugbear of Qvooshtvoagootao
-  [217] kobold of Xatxoratrro
-  [218] bugbear of Shngaodvaashqoa
-  [219] a wild rust-monster
-  [220] a wild otyugh
-  [221] a wild xorn
-  [222] a wild giant-elk
+  [482] bugbear of Qvooshtvoagootao
+  [483] hobgoblin of Vootkeonoagootoaneo
+  [484] kobold of Xatxoratrro
+  [485] a wild rust-monster
+  [486] a wild otyugh
+  [487] a wild xorn
+  [488] a wild giant-elk
 > needs
 The bugbear of Qvooshtvoagootao seems content.
 > wait 5
@@ -40,7 +40,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (23 stirred).
+Time passes. You sense movement nearby (15 stirred).
 > look
 [room 738918402, day 6]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: The sun, a yellow dwarf (G), sinks toward evening. The light is golden. The days are near their longest. The sky is a flat overcast.
@@ -48,7 +48,7 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao settles down to rest.
 > wait 1
-Time passes. You sense movement nearby (22 stirred).
+Time passes. You sense movement nearby (11 stirred).
 > look
 [room 738918402, day 7]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
@@ -56,9 +56,26 @@ Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.
 > why hobgoblin
-No one here answers to 'hobgoblin' (see 'npcs').
+hobgoblin of Vootkeonoagootoaneo:
+- canonical name of an entity: hobgoblin of Vootkeonoagootoaneo (asserted by the-quickening)
+- an agent's position on a day: 663552109 (asserted by wandered, having found no water yet (thirst), day 5.10167)
+- an agent's position on a day: 663552077 (asserted by wandered, having found no water yet (thirst), day 5.20334)
+- an agent rested (eased its fatigue) on a day: true (asserted by slept at home (fatigue eased), day 5.20487)
+- an agent's position on a day: 663552461 (asserted by wandered, having found no water yet (thirst), day 5.70654)
+- an agent's position on a day: 663552301 (asserted by wandered, having found no water yet (thirst), day 5.80821)
+- an agent's position on a day: 663552365 (asserted by wandered, having found no water yet (thirst), day 5.90988)
+- an agent's position on a day: 663552269 (asserted by wandered, having found no water yet (thirst), day 6.10167)
+- an agent's position on a day: 663553805 (asserted by wandered, having found no water yet (thirst), day 6.20334)
+- an agent's position on a day: 663553165 (asserted by wandered, having found no water yet (thirst), day 6.30501)
+- an agent's position on a day: 663553261 (asserted by wandered, having found no water yet (thirst), day 6.40668)
+- an agent's position on a day: 663553229 (asserted by wandered, having found no water yet (thirst), day 6.50835)
+- an agent's position on a day: 663553421 (asserted by wandered, having found no water yet (thirst), day 6.61002)
+- an agent's position on a day: 663553069 (asserted by wandered, having found no water yet (thirst), day 6.71169)
+- an agent's position on a day: 663553133 (asserted by wandered, having found no water yet (thirst), day 6.81336)
+- an agent's position on a day: 663553037 (asserted by wandered, having found no water yet (thirst), day 6.91503)
+
 > wait 90
-Time passes. You sense movement nearby (1052 stirred).
+Time passes. You sense movement nearby (220 stirred).
 > look
 [room 738918402, day 97]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

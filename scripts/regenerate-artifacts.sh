@@ -24,6 +24,17 @@
 # rebaseline produces the full set.
 set -euo pipefail
 
+# CENSUS HOST GUARD, hoisted to the top: with HV_CENSUS=1 this script writes
+# the committed census goldens, which only the canonical box may author
+# (decision 0063). Checked BEFORE the ~4 minutes of other regeneration, so a
+# wrong-machine run is refused in a second rather than after the work.
+if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
+    # shellcheck source=scripts/census-canonical-host.sh
+    . "$(dirname "$0")/census-canonical-host.sh"
+    require_canonical_census_host || exit 1
+fi
+
+
 # Root from the script's own location, not `git rev-parse` — the remote gate
 # runs this in an rsync'd tree that is not a git repository.
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -206,22 +217,60 @@ run -p hornvale -- scene neighbors --world "$wsky" > book/src/gallery/scene-neig
 run -p hornvale -- scene eclipses --world "$wsky" --from 0 --until 2000 > book/src/gallery/scene-eclipses-seed-42.json
 run -p hornvale -- scene surrounds --world "$wsky" > book/src/gallery/scene-surrounds-seed-42.json
 
+# The Purview's legibility surface (The Margin): the same scene/surrounds/v1
+# chart the JSON export above carries, rendered through --render ascii at
+# three genuinely different seed-42 observers -- the flagship settlement
+# (uniform, kept for continuity with the possession transcript), a coastline
+# half a degree east of Mjoexaenoenoa where the neighbourhood's own room mix
+# reads land against ocean, and a room at latitude -10, longitude 0 that
+# crosses a base-icosahedron face seam.
+#
+# `book/src/gallery/surrounds-seed-42.md` is hand-authored prose, NOT
+# generated here -- edit it directly. Only the three CHARTS it `{{#include}}`s
+# are regenerated, each to its own small file under generated/surrounds-
+# seed-42/, following the `{{#include generated/<study>/...}}` convention the
+# lab pages already use (book/src/laboratory/). This is the fix for the
+# failure mode the previous shape had: the whole page used to be `printf`'d
+# from here, so a direct edit to the committed .md was silently destroyed on
+# the next regen. These chart files are `scene surrounds --render
+# ascii`'s exact, drift-checked output -- excluded from CI's strict
+# byte-drift check (ci.yml) for the same libm-threshold reason as
+# scene-surrounds-seed-42.json, since they render the identical
+# `biome`/`water`/`relief` classifications; the hand-authored .md that
+# includes them carries no such exposure and is checked normally.
+echo "regenerate-artifacts: the legibility surface (the purview, off a possession)" >&2
+mkdir -p book/src/gallery/generated/surrounds-seed-42
+{
+    printf '$ hornvale scene surrounds --world world.json --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/flagship.txt
+{
+    printf '$ hornvale scene surrounds --world world.json --room 897392747 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 897392747 --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/coastline.txt
+{
+    printf '$ hornvale scene surrounds --world world.json --room 724698318 --render ascii\n'
+    run -p hornvale -- scene surrounds --world "$wsky" --room 724698318 --render ascii
+} > book/src/gallery/generated/surrounds-seed-42/seam.txt
+
 # Censuses are still opt-in (HV_CENSUS=1) so the everyday gate stays fast:
 # skipped BY DEFAULT, and SKIP_CENSUS=1 (CI's fast probe path) also skips.
 # But since decision 0063 (The Local Census cut the per-world cost ~285 → ~8
-# CPU-s) the sanctioned refresh is LOCAL: run `HV_CENSUS=1 bash
-# scripts/regenerate-artifacts.sh` once per campaign at the pre-merge close —
-# the full ~2000-world census takes ~7 min — keeping the fixtures current with
-# main instead of lagging. `make regen-remote` (the AWS box) is ABANDONED —
-# this box is the single canonical platform (AWS differs on ~0.1% of
-# discrete-count metrics, so it can't be a parallel reference; supersedes the
-# AWS-only mandate of 0046, decision 0063).
+# CPU-s) the sanctioned refresh is a local run ON THE CANONICAL BOX
+# (`lefford`): `HV_CENSUS=1 bash scripts/regenerate-artifacts.sh` once per
+# campaign at the pre-merge close — the full ~2000-world census takes ~7 min —
+# keeping the fixtures current with main instead of lagging. `make
+# regen-remote` (the AWS box) is ABANDONED. Note "local" means "not AWS", NOT
+# "whichever machine you are on": `lefford` is the single canonical platform,
+# because boxes differ on ~0.1% of discrete-count metrics (0063). The guard
+# below enforces that; see scripts/census-canonical-host.sh.
 if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
-    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min local)" >&2
+    # (host already verified at the top of this script)
+    echo "regenerate-artifacts: lab censuses (release; HV_CENSUS=1; ~7 min, canonical box)" >&2
     run_release -p hornvale -- lab run studies/the-census.study.json
     run_release -p hornvale -- lab run studies/census-of-the-meeting.study.json
 else
-    echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 to refresh; ~7 min local since decision 0063)" >&2
+    echo "regenerate-artifacts: censuses SKIPPED (HV_CENSUS=1 on the canonical box to refresh; ~7 min, decision 0063)" >&2
 fi
 
 echo "regenerate-artifacts: type-audit report" >&2

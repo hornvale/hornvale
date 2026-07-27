@@ -2226,6 +2226,18 @@ is an **emergent limit-cycle** of the structural dynamics, predator–prey
 shaped (bugbears grow by raiding goblins, goblins decline, the raid starves,
 goblins recover, it returns).
 
+*(Built and measured — SOC-criticality, The Tumult. The loop is real and it
+needs no floor: conquest fires on **coveted value down a strength gradient**,
+not on crowding, and it fires on a world that never crowds. But it is nothing
+like a critical system — the branching ratio measures σ ≈ 0.051 over 2974
+conquests and no chain exceeds size three. The passage above is right that the
+loop emerges and wrong to expect scale-free avalanches from it, because a
+one-shot conquest **dissipates without accumulating**: nothing is stored between
+relaxations whose release could be a large event. The stored structure is a
+standing dominance relation — tribute, subordination, and the collapse that
+frees a whole network at once — which is SOC-contact's territory and the next
+slice.)*
+
 **The present is the same field, evaluated later** (this is the [derived-view
 architecture](#the-derived-view-architecture--the-game-layer-as-readouts-over-one-ledger)
 extended to the time axis). There is no special "now": the whole timeline is

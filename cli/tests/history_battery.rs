@@ -11,6 +11,16 @@
 //! stratigraphy accretes on MARGINAL land — a NEGATIVE depth/capacity
 //! correlation, falsifying the preregistered positive hypothesis) are explained
 //! in the light-gate module docs and the generated `summary.md`.
+//!
+//! **The Tumult (predation) re-measured every number here** — the epoch moves
+//! which communities survive and where, so both the seed-42 headline and the
+//! whole cross-seed sweep shifted, and the committed report was regenerated
+//! from this run. The campaign moved no floor; the measurements moved, and the
+//! const comments below record where each one now sits. (The seed-42 floors
+//! themselves did move while this branch was open — main re-synced them with
+//! the light gate for The Sundering — which is a separate change, recorded at
+//! its own const.) The one to watch is the sweep's migration minimum, which
+//! fell to 6 against a floor of 5.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -28,19 +38,38 @@ const SWEEP: [u64; 9] = [1, 2, 3, 7, 13, 42, 100, 256, 777];
 
 // Seed-42 gates (identical to the light gates — the full-cascade build must not
 // disturb the Settlements-depth placement these measure).
+//
 // Re-synced with the light gate (`history_gates.rs`) for The Sundering's
 // moving-sea epoch, which re-scoped the sibling gate (migration 51→12, fewer
 // re-stacks) but missed this heavy-tier twin: `MIGRATION_FLOOR` 20→5 and
 // `MIN_RESTACKED_SITES` 3→1 now match the light gate exactly, restoring the
 // "identical gates" invariant this comment asserts. `MAX_REGION_OVERLAP`
 // already matched.
+//
+// The Tumult (predation) then re-measured both: seed 42 at Full depth measures
+// 58 climate migrations (was 51 on this campaign's branch point) and 99/227
+// re-occupied sites (was 6/139) — conquest re-seats communities onto new
+// ground, so far more of them meet a later era's habitability flip, and
+// re-occupation stacks accordingly. The measurements moved UP and away from
+// both floors; neither floor is raised to track them, because they are
+// inertness floors, not targets, and because raising them here would re-break
+// the identical-gates invariant the re-sync above restored.
 const MIGRATION_FLOOR: u64 = 5;
 const MAX_REGION_OVERLAP: f64 = 0.25;
 const MIN_RESTACKED_SITES: u64 = 1;
 
-// Cross-seed floors, set below the sweep's measured MINIMA (migration 11,
-// restacked 2 — both on seed 13): every sampled world must clear these, proving
-// the phenomena are not a seed-42 artifact.
+// Cross-seed floors, set below the sweep's measured MINIMA.
+//
+// The Tumult (predation) re-pin: the sweep minima MOVED and were re-measured
+// here for the first time since the epoch. Migration's minimum fell 11 (seed
+// 13) -> **6** (seed 2) — `migration_events` now correctly excludes
+// conquest-relocations, which more than halved the seed-42 raw count too
+// (133 -> 58). The floor of 5 still holds, but its margin is now ONE event on
+// the thinnest sampled world; it is left where it is rather than lowered (it
+// passes) or raised (that would target the measurement), and the thin margin is
+// recorded here so the next campaign to move this number sees it coming.
+// Restacking moved the other way: the minimum rose 2 (seed 13) -> 26 (seed 2),
+// so `SWEEP_MIN_RESTACKED` has ample headroom.
 const SWEEP_MIGRATION_FLOOR: u64 = 5;
 const SWEEP_MIN_RESTACKED: u64 = 2;
 
@@ -206,7 +235,12 @@ fn render_report(
          world — ample vacant habitable land — glacially-displaced communities \
          migrate to empty cells instead of crowding into raids (raids ~ 0), so the \
          displacement gate is re-pointed at `census(bake).migrated`, read off the \
-         ledger. Raid-driven displacement is deferred to campaign C3.\n",
+         ledger. Raid-driven displacement is deferred to campaign C3. *(C3, The \
+         Tumult, has since arrived: raids are no longer ~ 0 — seed 42 resolves 76 \
+         conquests, driven by coveted VALUE rather than by crowding. This gate \
+         still measures climate displacement only; `migration_events` excludes \
+         conquest-relocations by design, and conflict displacement is measured \
+         separately in `windows/worldgen/tests/history_tumult.rs`.)*\n",
     );
     md.push_str(
         "2. **Stratigraphy accretes on MARGINAL land.** The preregistered \

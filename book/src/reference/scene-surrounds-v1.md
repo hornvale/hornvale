@@ -150,7 +150,13 @@ every mark and every terrain class the document surfaced, ordered by `noun`.
 It is deliberately the same shape as the noun catalog the prose renderer
 produces, so a consumer can offer one vocabulary over both — the map and the
 prose being two grains of one lens rather than two descriptions that happen
-to agree.
+to agree. A biome's `legend` noun is therefore its **spaced prose name**
+(`tropical seasonal forest`), the same noun the prose renderer uses for it —
+not the kebab-case identifier `biome_legend` indexes into
+(`tropical-seasonal-forest`). `legend` is player-facing text; `biome_legend`
+is the machine-readable index catalog. Using the identifier in `legend`
+would give a player two different examinable nouns for one biome, one per
+grain, defeating the point of a shared catalog (The Margin).
 
 ## Legends and ordering
 
@@ -272,16 +278,31 @@ schema's stated audience, alongside the CLI) needs BigInt-aware parsing for
 ## Getting one
 
 ```
-hornvale scene surrounds --world <path> [--room <ID>] [--radius <N>] [--depth <D>]
+hornvale scene surrounds [--world <path>] [--room <ID> | --depth <D>] [--radius <N>] [--day <D>]
+                          [--render json|ascii]
 ```
 
 This prints one `scene/surrounds/v1` document to standard output. `--world`
-defaults to `world.json`. With no `--room`, the chart centres on the
-flagship settlement's own room at `--depth` (default: the walk depth,
-`globe_level + 6`) — the same ground a possession starts on. `--radius`
-defaults to 4 (31 cells). The committed example,
+defaults to `world.json`. `--room` and `--depth` are mutually exclusive: a
+packed room id already carries its own depth baked into its path length, so
+combining them is a hard error rather than a silent pick of one over the
+other. With no `--room`, the chart centres on the flagship settlement's own
+room at `--depth` (default: the walk depth, `globe_level + 6`) — the same
+ground a possession starts on; with `--room`, it centres on that exact room
+instead, at whatever depth it already carries. `--radius` defaults to 4 (31
+cells). `--day` (default 0) selects which day's `here` cell to observe. The
+committed example,
 [`scene-surrounds-seed-42.json`](../gallery/scene-surrounds-seed-42.json),
 is produced this way against the seed-42 sky world.
+
+`--render` defaults to `json`, this schema. `--render ascii` renders the
+same document through `hornvale_scene::render_surrounds_ascii`'s `terrain`
+lens — the same renderer a possession's own `map` verb draws from, so the
+CLI can produce the picture outside a session. The footer's `ways on:`
+line is the observer room's own lateral exits (`ExitKind::Edge`), read from
+`hornvale_locale` the same way `map` reads them for the walked room.
+[The gallery page](../gallery/surrounds-seed-42.md) shows several observers
+rendered this way.
 
 ## Determinism
 

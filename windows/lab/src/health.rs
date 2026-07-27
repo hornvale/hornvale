@@ -5,10 +5,10 @@
 //! It runs the vessel drive-simulation forward N days over a world's derived
 //! creatures, reads each one's felt state per tick through `affect_of` (spec
 //! §7), and reduces the per-creature affect time series to a distress FAMILY
-//! (not one number): prevalence, chronicity, recovery-rate, by-cause, and
-//! by-species. Searching (normal seeking) is excluded — only the negative-
-//! valence regions count as distress (spec §8). Deterministic: a pure function
-//! of the world, the same session-sandboxed tick run headless.
+//! (not one number): prevalence, chronicity, stuck (the alarm), recovery-rate,
+//! by-cause, and by-species. Searching (normal seeking) is excluded — only the
+//! negative-valence regions count as distress (spec §8). Deterministic: a pure
+//! function of the world, the same session-sandboxed tick run headless.
 
 use hornvale_kernel::{Ledger, World, WorldTime, tick};
 use hornvale_locale::LocaleContext;
@@ -184,14 +184,21 @@ pub fn simulate_world(world: &World) -> Vec<AffectTrace> {
 /// affect traces. Every fraction is in `0.0..=1.0`; `recovery_ticks` is the
 /// mean length of a distress spike that DID recover (shorter = more resilient),
 /// `None` when there were no recovered spikes.
-/// type-audit: bare-ok(ratio: prevalence), bare-ok(ratio: chronicity), bare-ok(count: recovery_ticks), bare-ok(ratio: by_cause), bare-ok(ratio: by_species)
+/// type-audit: bare-ok(ratio: prevalence), bare-ok(ratio: chronicity), bare-ok(ratio: stuck), bare-ok(count: recovery_ticks), bare-ok(ratio: by_cause), bare-ok(ratio: by_species)
 #[derive(Clone, Debug, PartialEq)]
 pub struct HealthReport {
     /// Fraction of creature-ticks in distress (instantaneous prevalence).
     pub prevalence: f64,
     /// Fraction of creatures with a distress run of at least `CHRONIC_TICKS` —
-    /// the bug alarm (persistently stuck, not transiently seeking).
+    /// a DIAGNOSTIC, not the alarm. A long run that RECOVERED is a hard patch
+    /// in a varied world, which The Temperament §8 calls legitimate; see
+    /// `stuck` for the bug signal.
     pub chronicity: f64,
+    /// Fraction of creatures with a distress run of at least `CHRONIC_TICKS`
+    /// **that never ended** — THE BUG ALARM: §8's conjunction ("elevated
+    /// chronicity, no recovery"), evaluated per creature so one stuck creature
+    /// among many recovering ones cannot be masked by a population aggregate.
+    pub stuck: f64,
     /// Mean length (ticks) of a distress spike that recovered; `None` if none
     /// did (a healthy world with no spikes, or one where every spike persisted).
     pub recovery_ticks: Option<f64>,
@@ -206,6 +213,7 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
     let mut distress_ticks = 0usize;
     let mut total_ticks = 0usize;
     let mut chronic_creatures = 0usize;
+    let mut stuck_creatures = 0usize;
     let mut recovered_runs: Vec<usize> = Vec::new();
     // by-cause: distress ticks attributed to the pursued drive's kind.
     let mut cause_thirst = 0usize;
@@ -248,8 +256,32 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
                 run = 0;
             }
         }
-        // A run still open at the end never recovered — it is chronic, not a
-        // recovered spike (already reflected in `chronic` if long enough).
+        // A run still open at the end never recovered. If it is also LONG, this
+        // creature is STUCK — the conjunction §8 names as the bug signal ("no
+        // recovery, elevated chronicity"), read per creature. A run open at the
+        // end is necessarily the last one, so this single check catches every
+        // never-ended run.
+        //
+        // A SHORT open run is deliberately NOT an alarm: it might have
+        // recovered one tick after the trace ended, which is right-censoring
+        // and undecidable from the trace. Only long-and-open alarms; the
+        // asymmetry is intentional (spec §4).
+        //
+        // KNOWN BLIND SPOT (decision 0080, Consequences). `stuck` reads the
+        // FINAL run's fate, so it is silent on a creature in near-total
+        // distress that happens to recover in the last ticks — e.g. distressed
+        // for ticks 1..=38 and Content for 39..=40. That reads `stuck 0.0`
+        // (the long run ended), `chronicity 1.0` and `prevalence ~0.95` (both
+        // unbounded diagnostics), so EVERY surviving bound is green. The 2×2
+        // this reduction implements covers one episode's length and fate, and
+        // never its multiplicity or duty cycle; that is the price of choosing
+        // *fate* as the discriminator, which is what §8 names. Seeing this
+        // class would need a different family member (a longest-run or
+        // distress-duty-cycle diagnostic) — registered as a followup, not
+        // built here.
+        if run >= CHRONIC_TICKS {
+            stuck_creatures += 1;
+        }
         if chronic {
             chronic_creatures += 1;
         }
@@ -279,6 +311,7 @@ pub fn health_report(traces: &[AffectTrace]) -> HealthReport {
     HealthReport {
         prevalence: frac(distress_ticks, total_ticks),
         chronicity: frac(chronic_creatures, traces.len().max(1)),
+        stuck: frac(stuck_creatures, traces.len().max(1)),
         recovery_ticks,
         by_cause,
         by_species,

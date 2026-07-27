@@ -66,7 +66,7 @@ sun: root Noaboo /noaboo/
 taiga: gap (experiential): no settlement in or beside taiga
 temperate-forest: root Noenoa /noenoa/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
-temperate-rainforest: root Toaneo /toaneo/
+temperate-rainforest: gap (experiential): no settlement in or beside temperate-rainforest
 tide: gap (experiential): goblin has no exposure to 'tide'
 tree: root Koonee /koonee/
 tropical-rainforest: root Toa /toa/
@@ -150,7 +150,7 @@ temperate-rainforest: root Toaneo /toaneo/
 tide: gap (experiential): hobgoblin has no exposure to 'tide'
 tree: root Goonee /goonee/
 tropical-rainforest: root Qoa /qoa/
-tropical-seasonal-forest: root Geetao /geetao/
+tropical-seasonal-forest: gap (experiential): no compound recipe for 'tropical-seasonal-forest'
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Naanaa /naanaa/
 upwelling: gap (experiential): no compound recipe for 'upwelling'
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: gap (experiential): no compound recipe for 'shrubland'
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -233,7 +233,7 @@ tropical-rainforest: root Qoa /qoa/
 tropical-seasonal-forest: root Gootao /gootao/
 tundra: gap (experiential): no settlement in or beside tundra
 two: root Daadaa /daadaa/
-upwelling: gap (experiential): no compound recipe for 'upwelling'
+upwelling: gap (experiential): no settlement in or beside upwelling
 water: root Daokaa /daokaa/
 wind: root Dooqoo /dooqoo/
 yellow: root Qaadoo /qaadoo/
@@ -279,7 +279,7 @@ kelp-forest: gap (experiential): no settlement in or beside kelp-forest
 kobold-kind: root Roro /roro/
 light: root Xaxo /xaxo/
 many: root Rogrra /rogrra/
-mesopelagic: gap (experiential): no compound recipe for 'mesopelagic'
+mesopelagic: gap (experiential): no settlement in or beside mesopelagic
 moon: root Roqrra /roqrra/
 mountain: gap (experiential): kobold has no exposure to 'mountain'
 mouth: root Rakxo /rakxo/
@@ -303,7 +303,7 @@ star: root Rogra /rogra/
 starlit: root Ra /ra/
 stone: root Xa /xa/
 sun: root Rogxa /rogxa/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: root Ro /ro/
 temperate-forest: root Xatxo /xatxo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Xotro /xotro/

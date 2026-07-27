@@ -6,7 +6,7 @@
 
 use crate::{Feature, SceneError, features_of};
 use hornvale_kernel::{RoomAddr, World, WorldTime};
-use hornvale_locale::{Locale, LocaleContext};
+use hornvale_locale::{Locale, LocaleContext, biome_prose_name};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -323,12 +323,7 @@ fn settlement_marks(world: &World, depth: u32) -> BTreeMap<u64, Vec<Mark>> {
             latitude,
             longitude,
         } = f;
-        let (la, lo) = (latitude.to_radians(), longitude.to_radians());
-        let position = [
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-            hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-            hornvale_kernel::math::sin(la),
-        ];
+        let position = hornvale_kernel::math::unit_sphere_from_lat_lon(latitude, longitude);
         let Ok(id) = RoomAddr::containing(position, depth).pack() else {
             continue;
         };
@@ -348,7 +343,11 @@ fn settlement_marks(world: &World, depth: u32) -> BTreeMap<u64, Vec<Mark>> {
 }
 
 /// The chart's noun catalog: every mark's noun, plus one entry per distinct
-/// terrain class drawn, plus the observer's own room.
+/// terrain class drawn, plus the observer's own room. Biome nouns use the
+/// spaced prose name ([`biome_prose_name`]), not the kebab-case identifier
+/// `biome_legend` indexes into — the legend is player-facing text, and using
+/// the prose name here makes the biome a noun shared with the prose
+/// renderer's own catalog, joining the two grains on one datum (The Margin).
 fn legend_of(
     cells: &[SurroundsCell],
     here: &Locale,
@@ -361,7 +360,7 @@ fn legend_of(
         }
         let biome = catalog
             .get(c.biome as usize)
-            .map(|b| b.name().to_string())
+            .map(|b| biome_prose_name(*b).to_string())
             .unwrap_or_default();
         acc.entry(biome.clone()).or_insert_with(|| {
             format!(
@@ -414,13 +413,8 @@ mod tests {
         // mints its agent, so the gallery scene shows the walked ground.
         let v = hornvale_settlement::village_info(w).expect("seed 42 has a village");
         let (lat, lon) = place_latlon(w, v.id).expect("the flagship has coordinates");
-        let (la, lo) = (lat.to_radians(), lon.to_radians());
         RoomAddr::containing(
-            [
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-                hornvale_kernel::math::sin(la),
-            ],
+            hornvale_kernel::math::unit_sphere_from_lat_lon(lat, lon),
             depth,
         )
     }
@@ -476,13 +470,8 @@ mod tests {
     #[test]
     fn a_seam_observer_carries_no_coordinate_on_seam_cells() {
         let w = world();
-        let (la, lo) = ((-10.0_f64).to_radians(), 0.0_f64.to_radians());
         let seam_observer = RoomAddr::containing(
-            [
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::cos(lo),
-                hornvale_kernel::math::cos(la) * hornvale_kernel::math::sin(lo),
-                hornvale_kernel::math::sin(la),
-            ],
+            hornvale_kernel::math::unit_sphere_from_lat_lon(-10.0, 0.0),
             12,
         );
         assert_eq!(

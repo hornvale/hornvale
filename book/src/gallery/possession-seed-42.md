@@ -19,7 +19,7 @@ Ways on: SE, N, SW.
  +++++++
   +++++
   ways on: SE, N, SW
-  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy, tropical-seasonal-forest
+  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy, tropical seasonal forest
 
 > examine a fern-choked draw shaded dry in a hollow
 You see no a fern-choked draw shaded dry in a hollow here.
@@ -39,7 +39,7 @@ Ways on: NE, NW, S.
  +++++++
   + + +
   ways on: NE, NW, S
-  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy sun-warmed in a hollow, tropical-seasonal-forest
+  legend: Qvooshtvoagootao, bugbear of Qvooshtvoagootao, buttressed canopy sun-warmed in a hollow, tropical seasonal forest
 
 > go ne
 [room 739115106, day 0]
@@ -50,7 +50,7 @@ Ways on: N, SW, SE.
 You stand in tropical seasonal forest — buttressed canopy in a hollow — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 Ways on: NE, NW, S.
 > wait 90
-Time passes. You sense movement nearby (946 stirred).
+Time passes. You sense movement nearby (226 stirred).
 > examine sky
 Night. The vast moon shows its first-quarter face. The small, distant moon shows its last-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
 > knows
