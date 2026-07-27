@@ -82,11 +82,44 @@ pub const MINERAL: ResourceAxis = ResourceAxis {
     kind: ResourceKind::Stock,
 };
 
-/// The v1 resource-axis basis, in ascending id order. The basis is open —
-/// later campaigns may register further axes with higher ids — so this
-/// slice is a snapshot of what's registered today, not a closed enum.
+/// Marine primary production and the prey web it supports — the sea's single
+/// trophic axis at this fidelity.
+///
+/// Deliberately conflates what the land resolves into three axes
+/// (`PHOTOSYNTHATE` → `PLANT_FORAGE` → `ANIMAL_PREY`), because one axis needs
+/// one calibration knob and three would need three. The consequence is real
+/// and worth knowing: a reef grazer and a pelagic apex predator are
+/// differentiated only by their condition-response curves, not by what they
+/// eat, so marine food-chain *length* is not yet an emergent property. Splitting
+/// it is BIO-44, and costs only new ids — never a reinterpretation of this one.
+///
+/// `Stock` rather than `Field`: what a consumer eats here is standing biomass,
+/// even though its supply is derived from production.
+pub const MARINE_FORAGE: ResourceAxis = ResourceAxis {
+    id: 5,
+    label: "marine forage",
+    kind: ResourceKind::Stock,
+};
+
+/// The registered resource-axis basis, in ascending id order. The basis is
+/// open — later campaigns may register further axes with higher ids — so this
+/// slice is a snapshot of what's registered today, not a closed enum. The
+/// name is historical (`v1` predates the sea) and is kept because renaming it
+/// would churn four call sites for no behavioural gain.
+///
+/// **Append only.** Consumers sum `weight(axis)` across this slice in order,
+/// and float addition is not associative: inserting an axis anywhere but the
+/// end reorders those sums and shifts results in the last ULP. Appending a
+/// zero-weight axis is exact.
 pub fn v1_basis() -> &'static [ResourceAxis] {
-    &[PHOTOSYNTHATE, PLANT_FORAGE, ANIMAL_PREY, DETRITUS, MINERAL]
+    &[
+        PHOTOSYNTHATE,
+        PLANT_FORAGE,
+        ANIMAL_PREY,
+        DETRITUS,
+        MINERAL,
+        MARINE_FORAGE,
+    ]
 }
 
 /// A sparse resource-utilization vector: axis id to non-negative weight.
@@ -268,6 +301,31 @@ mod tests {
     #[test]
     fn rejects_negative_weight() {
         assert!(ResourceVector::new(&[(MINERAL, -0.1)]).is_err());
+    }
+
+    #[test]
+    fn a_trailing_zero_weight_axis_does_not_perturb_a_terrestrial_niche() {
+        // The stage-2 keystone: every existing kind's niche must be numerically
+        // untouched by the basis extension. Both properties below are what make
+        // that true, and both are checked rather than assumed.
+        let terrestrial =
+            ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap();
+
+        // 1. The new axis contributes an exact zero.
+        assert_eq!(terrestrial.weight(MARINE_FORAGE), 0.0);
+
+        // 2. Summing over the extended basis is bit-identical to summing over the
+        //    five-axis prefix — the property that keeps `coexist.rs` and
+        //    `niche.rs` byte-identical.
+        let over_full: f64 = v1_basis().iter().map(|a| terrestrial.weight(*a)).sum();
+        let over_prefix: f64 = v1_basis()[..5].iter().map(|a| terrestrial.weight(*a)).sum();
+        assert_eq!(over_full.to_bits(), over_prefix.to_bits());
+
+        // 3. Overlap against another terrestrial niche is unchanged by the
+        //    extension (Pianka gains only zero terms).
+        let other = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
+        let overlap = terrestrial.overlap(&other);
+        assert!(overlap > 0.0 && overlap <= 1.0);
     }
 
     #[test]
