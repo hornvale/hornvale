@@ -210,3 +210,33 @@ describes the alarm.
 4. **[design] The censored cell does not alarm** (§4). A short-and-open run is
    undecidable from the trace; long-and-open alarms. Stated so a later reader
    does not "fix" the asymmetry.
+
+---
+
+## Addendum A — §8 is internally inconsistent (2026-07-26, after approval)
+
+*Appended after this spec was approved at G3, during review of the campaign's
+closing documentation. The approved text above is unchanged and stands as
+written, §7 included.*
+
+§1 says The Temperament §8 "specifies the bug signal differently — and says so
+twice." That is incomplete. §8 also *labels* `chronicity` the alarm, in its
+family bullet list (`2026-07-19-the-temperament-design.md` lines 189-191):
+
+> - **chronicity** — fraction *persistently* stuck (helpless/frustrated ≥ N
+>   ticks). **The bug alarm.**
+
+Against that bullet the null control matched its mandate exactly. So §8 is
+**internally inconsistent** rather than merely under-read: its bullet-list label
+names one quantity the alarm, while its discriminator paragraph (lines 197-202)
+and its evidence battery (lines 259-263) both state the signal as a conjunction.
+
+This campaign resolves the contradiction toward §8's **reasoning** — the
+discriminator paragraph and the battery, which give the reason recovery is what
+separates a hard world from a broken sim — rather than toward its one-line label,
+which gives none.
+
+The design is unchanged by this: `stuck`, the demotion of `chronicity`, the
+censored cell and the acceptance list are all as specified above. What this
+addendum corrects is the account of *what was wrong*. Recorded here and in
+decision 0080 rather than by editing approved text.

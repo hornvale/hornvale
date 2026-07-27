@@ -57,9 +57,10 @@ not a number that varies but a number that stays quiet: it is a regression
 alarm, armed precisely by reading zero on every healthy world, that would fire
 the moment the cognition layer broke in a way that left a mind stuck. (Which
 member of the family reads that zero was later sharpened: this campaign bounded
-*chronicity* alone, and [The Convalescence](./the-convalescence.md) moved the
-bound onto the conjunction the design had actually stated — distress that is both
-long-running and never recovers — leaving chronicity as a diagnostic.) And with
+*chronicity* by itself — a distress run's length, with nothing asked about its
+fate — and [The Convalescence](./the-convalescence.md) moved the bound onto the
+conjunction the design had also stated, distress that is both long-running *and*
+never recovers, leaving chronicity as a diagnostic.) And with
 creatures now reading cold and heat against their niche and acting on the
 discomfort, those two concepts finally earn their cognitive handle — the
 correspondence audit's cognition column moves from nothing covered to its first

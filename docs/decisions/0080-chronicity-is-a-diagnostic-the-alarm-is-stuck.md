@@ -37,12 +37,24 @@ are bad.
 **Why per creature.** The tempting fix is to conjoin the two numbers already
 published — `chronicity` high *and* `recovery_ticks == None`. It is worse than
 the drift it repairs. `chronicity` is per-creature; `recovery_ticks` is a
-**population mean**. One genuinely stuck creature among nine recovering ones
-reads chronicity 1.0 with recovery `Some(9.0)`, so a population-scope
-conjunction calls that population healthy and **masks the stuck creature** — it
-trades a false positive for a false negative. A bug alarm may be noisy; it may
-not be silent. `stuck` evaluates the conjunction inside one creature's trace, and
+**population mean**. One genuinely stuck creature among nine recovering ones (all
+ten carrying a long run) reads chronicity 1.0 with recovery `Some(9.0)`, so a
+population-scope conjunction calls that population healthy and **masks the stuck
+creature** — it trades a false positive for a false negative. Note that the
+discriminator there is `Some` against `None`, presence of any recovery at all, not
+its magnitude: 9.0 is in fact *elevated* beside the 2.56–4.04 the measured worlds
+read, and the conjunction still passes the population as well. A bug alarm may be
+noisy; it may not be silent. `stuck` evaluates the conjunction inside one
+creature's trace, and
 `one_stuck_creature_among_nine_recovering_ones_still_alarms` pins it.
+
+That fix is not hypothetical: the precedent below already wrote it. The comment
+above the failing assertion (`windows/lab/tests/health_calibration.rs:84-85`)
+spells the alarm out as "`chronicity > 0` and `recovery_ticks == None`" — the
+right conjunction at the wrong scope, between a per-creature fraction and a
+population mean. So the prose that outran its assertion was not a correct check
+merely left unwritten; transcribed literally it would have produced exactly the
+masking-prone form rejected here.
 
 **Why short-and-still-open does not alarm.** A short distress run still open when
 the trace ends is **right-censored**: it might have recovered one tick after the
@@ -60,24 +72,29 @@ and the new one evaluate identically on every measured world. This is a
 discriminator upgrade, not a relaxation, and it creates no observable slack.
 
 **Precedent it extends.** *the-living-community* demoted `prevalence` from bound
-to diagnostic for the same reason and citing the same spec — a varied world
-carries momentary blips that recover, and loosening a number to pass would have
-been the seed-shopping [0016](0016-studies-preregister-hypotheses.md) forbids, so
-it anchored on
-the metric's philosophy instead. That demotion left only a comment in
-`windows/lab/tests/health_calibration.rs` and no decision entry. This one
-finishes the move it began and reaches the quantity §8 actually named.
+to diagnostic for the same reason — a varied world carries momentary blips that
+recover, and loosening a number to pass would have been the seed-shopping
+[0016](0016-studies-preregister-hypotheses.md) forbids, so it anchored on
+the metric's philosophy instead. (Its comment cites that philosophy as "The
+Slumber §7/§8"; the Slumber spec carries no numbered sections, so the citation
+does not resolve — but the move it names is the same one, and the substance is
+0016's.) That demotion **is** in the decision log:
+[0073](0073-epoch-granularity-is-declared.md) records it, as a supporting clause
+under "pin invariants, not values." What it does not have is an entry of its own.
+This one finishes the move it began and reaches the quantity §8 actually named.
 
-**Why this one earns an entry where that one did not.** That demotion was
-occasioned by ordinary drift. This one was occasioned by the red control blocking
-work — and a bound demotion under those circumstances is structurally
-indistinguishable, from the outside, from rationalized seed-shopping. The only
-defence is that the change stands entirely on its own spec and its own synthetic
-scenarios, and a defence is worthless where nobody looks for it. A
-process-integrity audit — "did this project ever loosen a bound to unblock a
-campaign?" — reads `docs/decisions/`; it does not read a comment inside a test
-file. So the record must be greppable from here, and it must record the
-**discipline** as well as the metric semantics:
+**Why this one earns an entry of its own.** That demotion was occasioned by
+ordinary drift. This one was occasioned by the red control blocking work — and a
+bound demotion under those circumstances is structurally indistinguishable, from
+the outside, from rationalized seed-shopping. The only defence is that the change
+stands entirely on its own spec and its own synthetic scenarios, and a defence is
+worth what its findability is worth. A process-integrity audit — "did this project
+ever loosen a bound to unblock a campaign?" — reads `docs/decisions/`, and the
+precedent is indeed there; but it is there inside an entry *titled about epoch
+granularity*, reachable by content-grepping the log rather than by reading its
+index. That serves an auditor who already suspects the question, and not one who
+does not. A first-class entry under its own title is what this campaign owes, and
+it must record the **discipline** as well as the metric semantics:
 
 - justified from The Temperament §8, the metric's defining spec, and from
   nothing else;
@@ -99,5 +116,13 @@ not an edit. And the alarm now has a liveness obligation the old one did not: it
 reads zero on every healthy world *by construction of the world*, so the
 scenarios that make it fire must keep being maintained, because they are the only
 thing proving it can.
+
+**See also.** [0073](0073-epoch-granularity-is-declared.md), whose "pin
+invariants, not values" obligation cites the `prevalence` demotion as its
+in-tree precedent. Its present-tense phrasing of the surviving invariant —
+"chronicity stays zero; every distress run recovers" — is the reading this
+decision supersedes: the invariant is now *`stuck` stays zero; every distress run
+recovers*, with `chronicity` reported and unbounded. 0073 stands as written;
+decisions supersede rather than get edited.
 
 Ratified at *The Convalescence*'s merge gate.

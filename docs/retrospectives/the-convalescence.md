@@ -18,20 +18,42 @@ test asserted one conjunct.
 
 Nothing in the failing test's own output could have revealed that, because the
 test agreed with itself: the code, the assertion, and the value it produced were
-all consistent. The disagreement was between the test and its *mandate*, and a
-mandate lives in a spec.
+all consistent.
+
+The honest version of the finding is a step more awkward than "the test drifted."
+That same §8 *labels* chronicity "the bug alarm" in its family bullet list, in as
+many words — so the control was faithful to the spec's label and unfaithful to the
+spec's reasoning, and the disagreement was not between the test and its mandate
+but *inside the mandate*. The campaign resolved it toward the reasoning, because
+the discriminator paragraph and the evidence battery both state the conjunction
+and both give the reason recovery matters, while the label gives none. Only
+reading the section end to end shows that there was a choice to be made at all.
 
 **The rule:** when a preregistered control fails, the first document to open is the
-one that defined what the control is for — not the control.
+one that defined what the control is for — not the control. And read the whole of
+it: a one-line label and the paragraph explaining it can point in different
+directions, and when they do, the fix is an argument about the spec rather than a
+lookup in it.
 
 ## A comment and its assertion had drifted apart, and that is greppable
 
 The strongest evidence for the diagnosis was already sitting in the file. The
-comment block above the failing assertion described the alarm correctly, as the
-conjunction, in prose — and the assertion below it checked half of that.
+comment block above the failing assertion described the alarm as the conjunction,
+in prose — and the assertion below it checked half of that.
 *the-living-community* had written that comment while narrowing a *different*
-bound, got the philosophy right in words, and did not carry it all the way into
-the check.
+bound, got the shape of the philosophy right in words, and did not carry it all
+the way into the check.
+
+It got the shape right and the **scope** wrong, which is the sharper half of the
+lesson. The comment (`windows/lab/tests/health_calibration.rs:84-85`) spells the
+alarm out as "`chronicity > 0` and `recovery_ticks == None`" — a conjunction
+between a per-creature fraction and a population mean, which is exactly the
+masking-prone form this campaign rejected on scope grounds (below). So the prose
+was not a correct check merely left unwritten. It was a *different* wrong check,
+one an implementer could have transcribed faithfully into an assertion and ended
+up worse off than the drift they were repairing. **A comment that outruns its
+assertion is a lead, not a specification** — it tells you where to look, and it
+still has to be checked against the spec before being promoted.
 
 That is a specific and recognizable failure mode: **a comment that states a
 stronger invariant than the assertion beneath it.** It is worse than an absent
@@ -70,17 +92,23 @@ naming as a reusable procedure:
 5. **Measure whether anything was actually loosened.** Here the old and new bounds
    read identically on every measured world — which is a *finding*, and the single
    most load-bearing sentence in the record.
-6. **Write it down where an audit looks.** A test comment is invisible to the
-   question "did this project ever loosen a bound to unblock work?" A decision
-   entry is not (see decision 0080).
+6. **Write it down where an audit looks, under its own title.** A test comment is
+   invisible to the question "did this project ever loosen a bound to unblock
+   work?" A clause inside an entry about something else is better but still only
+   reachable by someone already content-grepping for it — which is what the
+   precedent here got: decision 0073 records the `prevalence` demotion as its
+   "pin invariants, not values" example, under a title about epoch granularity. A
+   dedicated entry is reachable from the index (decision 0080). Findability is a
+   spectrum, and an entry's title is most of it.
 
 Steps 1–4 are discipline; 5 and 6 are what make the discipline *checkable by
 someone else later*, which is the only kind that survives.
 
 The corollary that generalizes: **a bound demotion occasioned by blocked work owes
-a decision entry; one occasioned by ordinary drift does not.** The precedent this
-campaign extended left only a comment, and that was fine for its circumstances.
-Circumstances determine where the record has to live.
+a decision entry of its own; one occasioned by ordinary drift is adequately served
+by a clause wherever it comes up.** The precedent this campaign extended got the
+latter, and that was proportionate to its circumstances. Circumstances determine
+not just whether the record exists but how findable it has to be.
 
 ## "These two published numbers agree" is not a composition rule
 
