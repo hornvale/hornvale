@@ -537,14 +537,14 @@ struct Bake<'a> {
     /// again, on a community that never grew after it — the standing stock by
     /// another name, arrived at by accident.
     ///
-    /// **That clear is currently redundant, and is kept anyway** (measured:
-    /// suppressing it reddens no test). `step_community` calls `grow` for every
-    /// community that survives its own turn, and one that does not survive is
-    /// dead — so today every entry a collection can reach was written this
-    /// epoch regardless. The invariant §4.2 rests on is "this epoch's growth",
-    /// not "`grow` happens to run for everybody", and a rule that grew only
-    /// some communities per epoch would make the difference silent, wrong, and
-    /// invisible: it would tax a remembered surplus.
+    /// **That clear is load-bearing**, not decorative: `grow` *accumulates*
+    /// into this buffer rather than overwriting it, so an epoch that did not
+    /// start from zero would carry the previous epoch's surplus forward and let
+    /// it be taxed a second time (`last_epochs_growth_is_never_taxed_twice`
+    /// reddens if the clear is suppressed). The invariant §4.2 rests on is
+    /// "this epoch's growth", not "`grow` happens to run exactly once for
+    /// everybody" — a rule that grew a community twice in an epoch, or grew
+    /// only some of them, must not make the difference silent.
     epoch_growth: Vec<f64>,
     /// The running event tally.
     tally: BakeCensus,
@@ -1611,7 +1611,15 @@ impl<'a> Bake<'a> {
         // negative tribute back to its patron.
         let increment = c.population - before;
         c.stores *= STORE_DECAY;
-        self.epoch_growth[idx] = increment;
+        // ACCUMULATE, never overwrite: the buffer's meaning is "this epoch's
+        // growth", not "the last growth call's increment". `grow` has one call
+        // site and runs at most once per community per epoch today, so `+=` and
+        // `=` are the same arithmetic on every world this bake produces (seed 42
+        // is byte-identical either way). They differ only if that ever stops
+        // holding, and then `=` would silently discard the earlier increment —
+        // an under-collection with no symptom. `begin_epoch` zeroes the buffer,
+        // so nothing carries across epochs.
+        self.epoch_growth[idx] += increment;
         self.touch(idx, year);
         self.tally.grew += 1;
 
@@ -2316,6 +2324,173 @@ mod tests {
             bake.tally.tribute_collected.to_bits(),
             0.0f64.to_bits(),
             "and nothing is tallied as having moved"
+        );
+
+        // The OTHER half of the same guard, on its own pair: a corpse is not
+        // taxed either. Asserted separately because the two halves are separate
+        // conditions — with only the patron case above, deleting the
+        // subordinate half of the guard leaves the suite green while a dead
+        // community pays tribute to a live patron.
+        let (mut bake, patron, sub) = tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
+        bake.begin_epoch();
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        let corpse_population = bake.communities[sub].population;
+        bake.communities[sub].alive = false;
+        bake.collect_tribute(0.0);
+
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            0.0f64.to_bits(),
+            "a corpse pays nobody: the patron's store must stay empty"
+        );
+        assert_eq!(
+            bake.communities[sub].population.to_bits(),
+            corpse_population.to_bits(),
+            "and nothing is taken off the corpse itself"
+        );
+        assert_eq!(
+            bake.tally.tribute_collected.to_bits(),
+            0.0f64.to_bits(),
+            "and nothing is tallied as having moved"
+        );
+    }
+
+    #[test]
+    fn no_subordinate_ends_an_epoch_below_where_it_began_it() {
+        // Spec §8.3's survival claim — tribute MILKS, it never kills — stated
+        // as something a defect can actually redden.
+        //
+        // The census-level headcount that used to carry this claim
+        // (`alive_at_now == records_total`, over the integration fixture)
+        // cannot: starvation needs `population >= COLLAPSE_PRESSURE *
+        // capacity`, and the logistic growth term is bounded BY capacity, so
+        // in a quiet world nobody can starve however hard they are farmed —
+        // and a subordinate drained to zero does not die, it sits there alive
+        // at zero. The claim only has teeth against the per-subordinate
+        // population BETWEEN epochs, which `bake()` never exposes.
+        //
+        // So this drives the bake's own epoch loop by hand — `begin_epoch`,
+        // every alive community through `step_community`, then
+        // `collect_tribute` — over a value-flat world: uniform capacity, so no
+        // cell is ever worth more than its neighbour, every raid the real rule
+        // resolves is a subordination, and (asserted below) no war, eviction or
+        // famine fires. `grow` and `collect_tribute` are then the ONLY two
+        // things that move a population, so the floor is attributable to
+        // tribute alone.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        // One strong community ringed by weaker, productive ones: it out-muscles
+        // each of them four-fold (clear of `RAID_MARGIN`), and their land is no
+        // better than its own, so the only prize on offer is their product.
+        bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            40.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        for &n in geo.neighbors(CellId(0)) {
+            bake.open(
+                KindId("kobold"),
+                n,
+                0.0,
+                10.0,
+                Founding::Genesis(n),
+                None,
+                0.0,
+            );
+        }
+
+        /// Epochs driven — long enough that relations form early and then
+        /// collect for most of the run.
+        const EPOCHS: usize = 20;
+        /// Years per driven epoch (the bake's own default step).
+        const EPOCH_YEARS: f64 = 25.0;
+        // Slack for the float round-trip of `(p + increment) - increment`; the
+        // floor is otherwise touched exactly, see `taxed_to_the_floor`.
+        const EPS: f64 = 1.0e-9;
+        let mut floor_checks = 0_u32;
+        let mut milked_epochs = 0_u32;
+        let mut taxed_to_the_floor = 0_u32;
+        for epoch in 0..EPOCHS {
+            let year = epoch as f64 * EPOCH_YEARS;
+            bake.begin_epoch();
+            let began: Vec<f64> = bake.communities.iter().map(|c| c.population).collect();
+            let alive: Vec<usize> = (0..bake.communities.len())
+                .filter(|&i| bake.communities[i].alive)
+                .collect();
+            for idx in alive {
+                bake.step_community(idx, &era, year);
+            }
+            // Who owes as collection begins, and how much has moved so far.
+            let owing: Vec<usize> = bake.tribute.keys().copied().collect();
+            let before_collection = bake.tally.tribute_collected;
+            bake.collect_tribute(year);
+            if bake.tally.tribute_collected > before_collection {
+                milked_epochs += 1;
+            }
+            for sub in owing {
+                // A community opened DURING this epoch (a daughter) has no
+                // epoch-start population to compare against — and grew nothing,
+                // so it owed nothing either.
+                let Some(&start) = began.get(sub) else {
+                    continue;
+                };
+                let ended = bake.communities[sub].population;
+                assert!(
+                    ended >= start - EPS,
+                    "epoch {epoch}: subordinate {sub} ended at {ended}, BELOW the {start} \
+                     it began the epoch at. A remittance is capped by that epoch's growth \
+                     (spec §4.2), so tribute may take a community's whole increment and \
+                     never one head of its standing stock."
+                );
+                if (ended - start).abs() < EPS {
+                    taxed_to_the_floor += 1;
+                }
+                floor_checks += 1;
+            }
+        }
+
+        // Anti-vacuity: the floor above is worthless unless relations formed,
+        // wealth actually moved along them, and the bound was TIGHT — a
+        // subordinate milked of its whole increment sits exactly ON the floor,
+        // which is what makes "one head below" a reddening difference rather
+        // than slack absorbed by an unspent margin.
+        assert!(
+            bake.tally.subordinations_formed > 0,
+            "precondition: a relation must form before any floor means anything"
+        );
+        assert!(
+            floor_checks > 0,
+            "precondition: the floor must have been read at least once"
+        );
+        assert!(
+            milked_epochs > 0,
+            "precondition: tribute must actually have flowed in some epoch \
+             (collected {})",
+            bake.tally.tribute_collected
+        );
+        assert!(
+            taxed_to_the_floor > 0,
+            "precondition: some subordinate must have been milked of its WHOLE \
+             increment, or the floor is never touched and never discriminating \
+             ({floor_checks} readings, none tight)"
+        );
+        // Attributability: nothing else in this world moves a population.
+        assert_eq!(
+            bake.tally.raided, 0,
+            "value-flat world: no eviction, so no war loss can be mistaken for tribute"
+        );
+        assert_eq!(
+            bake.tally.collapsed, 0,
+            "nobody starves here: a famine death would confound the floor"
+        );
+        assert_eq!(
+            bake.tally.migrated, 0,
+            "no cell turns hostile here: a migration would confound the floor"
         );
     }
 

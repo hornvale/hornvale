@@ -594,26 +594,7 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
     // the covet test is false on every pair in every era. Any raid this world
     // resolves is therefore the new branch, and `raided == 0` is asserted
     // alongside so the test cannot pass by the old mechanism firing.
-    let (geo, cap, river, eras, refugia) = value_flat_fixture();
-    let people = peoples();
-    let cfg = BakeConfig {
-        start_year: 0.0,
-        end_year: 500.0,
-        epoch_years: 25.0,
-        ..BakeConfig::default_millennia()
-    };
-    let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
-    let h = bake(
-        Seed(42),
-        &geo,
-        &cap,
-        &river,
-        &eras,
-        &refugia,
-        &people,
-        &cfg,
-        &graphs,
-    );
+    let h = value_flat_history();
     let c = census(&h);
     // (a) The world really is value-flat and quiet: no eviction, no climate
     //     displacement, nobody starved. Nothing here can explain a raid.
@@ -657,12 +638,14 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
     );
 }
 
-/// The value-flat world, baked long enough that the relations it forms have
-/// epochs left to actually collect over. "A relation stands" and "tribute
-/// flowed" are genuinely different claims — a remittance is paid out of the
-/// epoch's growth increment (spec §4.2), so a relation formed on the last
-/// epoch of a bake would move nothing at all.
-fn subordination_fixture_long() -> hornvale_worldgen::history_bake::History {
+/// [`value_flat_fixture`]'s world, baked over twenty 25-year epochs — long
+/// enough that the relations it forms have epochs left to actually collect
+/// over. "A relation stands" and "tribute flowed" are genuinely different
+/// claims: a remittance is paid out of the epoch's growth increment (spec
+/// §4.2), so a relation formed on the last epoch of a bake would move nothing
+/// at all. Shared by every value-flat test, so they bake one world between
+/// them rather than two identical ones.
+fn value_flat_history() -> hornvale_worldgen::history_bake::History {
     let (geo, cap, river, eras, refugia) = value_flat_fixture();
     let people = peoples();
     let cfg = BakeConfig {
@@ -686,13 +669,24 @@ fn subordination_fixture_long() -> hornvale_worldgen::history_bake::History {
 }
 
 #[test]
-fn tribute_flows_along_a_standing_relation_and_nobody_is_farmed_to_death() {
+fn tribute_flows_along_a_standing_relation() {
     // Spec §4.2/§4.2a over a REAL bake: Task 2 built the standing relation but
     // nothing moved along it. What must be true now is that the relation is a
-    // conduit — wealth leaves the subordinate and lands in the patron's store —
-    // and that being milked is survivable, because a remittance is capped by
-    // that epoch's growth and can therefore never eat into the standing stock.
-    let h = subordination_fixture_long();
+    // conduit — wealth leaves the subordinate and lands in the patron's store.
+    //
+    // The other half of §4.2's claim — that being milked is SURVIVABLE — is
+    // deliberately NOT asserted here, because in this fixture no census reading
+    // can carry it. A headcount identity (`alive_at_now == records_total`) is
+    // unreddenable by any tribute defect: starvation needs population at
+    // `COLLAPSE_PRESSURE` times capacity, the logistic growth term is bounded
+    // BY capacity, and tribute only ever LOWERS population — so nobody here can
+    // die however hard they are farmed, and a subordinate drained to nothing
+    // stays alive at zero. The survival claim is bound instead where the state
+    // it is about is visible: `no_subordinate_ends_an_epoch_below_where_it_
+    // began_it` (in `history_bake.rs`) drives the real epoch loop and reads the
+    // per-subordinate population between epochs, which a finished `History`
+    // does not carry.
+    let h = value_flat_history();
     let c = census(&h);
     assert!(
         c.subordinations_formed > 0,
@@ -705,14 +699,6 @@ fn tribute_flows_along_a_standing_relation_and_nobody_is_farmed_to_death() {
     assert!(
         c.max_stores_at_now > 0.0,
         "the flow must LAND: some patron must hold a store at now: {c:?}"
-    );
-    // §8.3: no community is farmed to extinction by tribute alone. In this
-    // fixture the mask evicts nobody and no land is worth taking, so the only
-    // way a record could die is starvation — and a remittance bounded by the
-    // epoch's growth cannot starve anyone.
-    assert_eq!(
-        c.alive_at_now, c.records_total,
-        "tribute must milk, never kill: {c:?}"
     );
 }
 
