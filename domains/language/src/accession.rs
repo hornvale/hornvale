@@ -59,8 +59,9 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
     // Epoch 0 — the baseline roster re-founded at The Wearing's v4 root-epoch
     // bump (2026-07-27): the original 76-concept landing roster from The
     // Accession, merged with the 15-concept Actants cohort (The Actants,
-    // 2026-07-27), for 91 concepts sorted by core_rank on merit. Legal only
-    // at a root-epoch bump — see ledger #9 and the module doc above.
+    // 2026-07-27) for 91, plus the 19 toponymic concepts The Wearing itself
+    // adds (Task 3) for 110 — all sorted by core_rank on merit. Legal only at
+    // a root-epoch bump — see ledger #9 and the module doc above.
     &[
         "abyssal",
         "alpine",
@@ -72,6 +73,7 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "brown",
         "bugbear-kind",
         "child",
+        "coast",
         "cold",
         "coral-reef",
         "dark",
@@ -86,33 +88,46 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "eye",
         "fire",
         "foot",
+        "ford",
         "giant-elk-kind",
         "giant-goat-kind",
         "gloom",
         "goblin-kind",
         "god",
+        "great",
         "green",
         "hadal-trench",
         "hand",
         "hearth",
         "heat",
+        "high",
+        "hill",
         "hobgoblin-kind",
         "home",
         "hydrothermal-vent",
         "ice",
+        "island",
         "kelp-forest",
         "kobold-kind",
+        "lake",
         "light",
+        "little",
+        "low",
         "many",
+        "marsh",
         "mesopelagic",
         "moon",
         "mountain",
         "mouth",
         "move",
         "name",
+        "new",
         "night",
+        "north",
+        "old",
         "one",
         "otyugh-kind",
+        "over",
         "owlbear-kind",
         "parent",
         "person",
@@ -120,6 +135,7 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "red",
         "red-dragon-kind",
         "rest",
+        "river",
         "rust-monster-kind",
         "savanna",
         "sea",
@@ -129,7 +145,9 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "sibling",
         "sleep",
         "snow",
+        "south",
         "spirit",
+        "spring",
         "star",
         "starlit",
         "stone",
@@ -146,7 +164,9 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "tundra",
         "twig-blight-kind",
         "two",
+        "under",
         "upwelling",
+        "valley",
         "water",
         "white-dragon-kind",
         "wind",
@@ -183,14 +203,14 @@ mod tests {
     /// assignments every later cohort is defined not to disturb. It is
     /// re-founded only by a campaign that bumps `ROOT_EPOCH`, when every root
     /// reseeds anyway and there is no churn left to prevent (The Wearing,
-    /// 2026-07-27: 76 + the 15-concept Actants cohort = 91, before that
-    /// campaign's own additions land in Task 3).
+    /// 2026-07-27: 76 + the 15-concept Actants cohort + the 19 toponymic
+    /// concepts of Task 3 = 110).
     #[test]
     fn cohort_zero_stays_the_frozen_landing_roster() {
         assert_eq!(
             EPOCH_COHORTS[0].len(),
-            91,
-            "cohort 0 is the 91-concept roster re-founded at The Wearing's \
+            110,
+            "cohort 0 is the 110-concept roster re-founded at The Wearing's \
              v4 root-epoch bump; growing it OUTSIDE such a bump would re-sort \
              concepts that already have assignments — append a NEW cohort instead"
         );

@@ -77,3 +77,28 @@ fn the_parity_check_is_over_a_non_empty_roster() {
         "registry and accession register must agree exactly"
     );
 }
+
+/// The Wearing: every toponymic concept the campaign added is registered,
+/// accessioned, and core — a periphery concept would sort after core inside
+/// its cohort and take a longer form, which for `hill` and `river` is exactly
+/// backwards (these are the highest-frequency morphemes in the name corpus).
+#[test]
+fn the_toponymic_concepts_are_registered_and_core() {
+    const TOPONYMIC: &[&str] = &[
+        "hill", "river", "lake", "valley", "coast", "island", "ford", "marsh", "spring", "high",
+        "low", "great", "little", "new", "old", "under", "over", "north", "south",
+    ];
+    let registered = registered();
+    let accessioned = accessioned();
+    for concept in TOPONYMIC {
+        assert!(registered.contains(*concept), "{concept} is not registered");
+        assert!(
+            accessioned.contains(*concept),
+            "{concept} has no accession epoch"
+        );
+        assert!(
+            hornvale_language::packs::is_core_concept(concept),
+            "{concept} is periphery; it must be core to win a short form"
+        );
+    }
+}
