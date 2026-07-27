@@ -178,6 +178,8 @@ struct RegistryRow {
     idea: String,
     /// The Status cell.
     status: String,
+    /// The Where cell — the pointer to where the idea is argued.
+    where_cell: String,
     /// Pieces the line splits into on *unescaped* pipes; 7 when well-formed.
     cells: usize,
 }
@@ -233,6 +235,7 @@ fn parse_registry(text: &str) -> Vec<RegistryRow> {
             id: id.clone(),
             idea: at(2),
             status: at(3),
+            where_cell: at(5),
             cells: pieces.len(),
         });
     }
@@ -344,6 +347,54 @@ fn registry_statuses_use_the_closed_vocabulary() {
         offenders.is_empty(),
         "registry rows whose Status is outside the closed vocabulary \
          {REGISTRY_STATUSES:?}:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// The numbered registry IDs that existed when decision
+/// `0026-slugs-not-numbers`'s freeze was finally applied to registry rows.
+/// Append-never: an ID may leave this list only by leaving the registry, which
+/// never happens (rows are permanent). A *new* numbered ID fails.
+fn frozen_numbered_ids() -> BTreeSet<&'static str> {
+    include_str!("fixtures/registry-numbered-ids.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+#[test]
+fn no_new_numbered_registry_ids() {
+    let frozen = frozen_numbered_ids();
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| {
+            r.id.split_once('-')
+                .is_some_and(|(_, post)| post.starts_with(|c: char| c.is_ascii_digit()))
+        })
+        .filter(|r| !frozen.contains(r.id.as_str()))
+        .map(|r| format!("{}:{}", r.id, r.line))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "new numbered registry IDs — decision `0026-slugs-not-numbers` requires \
+         category+slug for new rows (`LANG-exonyms`, not `LANG-6`); the \
+         numbered era is frozen, not extended:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+#[test]
+fn every_registry_row_carries_a_pointer() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.where_cell.is_empty() || r.where_cell == "—")
+        .map(|r| format!("{}:{}", r.id, r.line))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry rows with an empty Where cell — a row is a pointer; without \
+         one there is nothing to point at:\n  {}",
         offenders.join("\n  ")
     );
 }
