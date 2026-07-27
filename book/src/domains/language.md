@@ -534,7 +534,18 @@ survive *every* daughter's cascade still distinct, so no two core concepts
 are ever homophones in any daughter (core homophony is zero on every seed),
 while the proto stays shared so cognate descent is untouched. Incidental
 collisions among the periphery — a rarely-named biome, a deep colour — are
-left as realistic texture. The cascade's target is fixed and deliberate: it
+left as realistic texture. Because the assignment is a single ordered walk
+that re-draws on collision, a concept's root depends on every concept
+assigned before it and on none assigned after — so *when* a concept entered
+the vocabulary is part of its identity. Each carries the generation in which
+it joined, and generation sorts ahead of everything else, placing a newly
+named thing last in the queue where it can displace nothing. A world's
+vocabulary can therefore grow without disturbing a single word already
+spoken: naming the world's twelve unnamed beasts leaves every existing name,
+in every language, exactly as it was. The price is that priority now follows
+arrival before frequency — a latecomer takes the forms left over, however
+common it proves — which is close enough to how real tongues treat their
+newest coinages to be worth the guarantee. The cascade's target is fixed and deliberate: it
 lands only on the phonology this world already shipped a mouth for, never
 widening or retuning the inventory a name already draws from. A rule that would
 produce a segment outside that inventory applies as the identity function

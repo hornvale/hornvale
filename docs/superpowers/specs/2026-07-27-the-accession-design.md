@@ -2,13 +2,16 @@
 
 **Campaign:** The Accession
 **Date:** 2026-07-27
-**Status:** DRAFT — at G3, awaiting review
+**Status:** SHIPPED (2026-07-27) — all four stages implemented (`d1ef9e2d`).
+Seed 42 byte-identical (whole world), zero artifact drift, `make gate` green
+(2218 passed). Chronicle: `book/src/chronicle/the-accession.md`;
+retrospective: `docs/retrospectives/the-accession.md`.
 **Successor:** The Actants (`2026-07-27-the-actants-design.md`) stacks behind
 this and cannot land byte-identically without it.
 **Decisions in force:** 0033 (quantize at emit only), 0073 (epoch granularity
 is declared), 0063 (census regen is local-canonical), 0009 (models author,
 dice roll — and the one place it does not apply; §2).
-**Registry:** LANG-* (a new row is owed for the codomain subspace, §6).
+**Registry:** LANG-55 (the codomain subspace, §6 — registered by this campaign); LANG-27 annotated (the epoch sort now outranks frequency-weighted length).
 
 ## 1. The defect
 
