@@ -646,12 +646,24 @@ fn a_strong_community_subordinates_a_productive_neighbour_it_would_not_evict() {
 /// at all. Shared by every value-flat test, so they bake one world between
 /// them rather than two identical ones.
 fn value_flat_history() -> hornvale_worldgen::history_bake::History {
+    value_flat_history_with(std::collections::BTreeMap::new())
+}
+
+/// [`value_flat_history`] with an authored `in_group_radius` map — the one
+/// input the concealment arms differ in. An empty map is the fail-open the
+/// composition root hands a bake whose peoples carry no `SocietyVector`, so
+/// `value_flat_history()` is exactly the world every other value-flat test
+/// reads.
+fn value_flat_history_with(
+    in_group_radius: std::collections::BTreeMap<KindId, f64>,
+) -> hornvale_worldgen::history_bake::History {
     let (geo, cap, river, eras, refugia) = value_flat_fixture();
     let people = peoples();
     let cfg = BakeConfig {
         start_year: 0.0,
         end_year: 500.0,
         epoch_years: 25.0,
+        in_group_radius,
         ..BakeConfig::default_millennia()
     };
     let graphs: Vec<ConnectionGraph> = eras.iter().map(|_| full_land_graph(&geo)).collect();
@@ -699,6 +711,45 @@ fn tribute_flows_along_a_standing_relation() {
     assert!(
         c.max_stores_at_now > 0.0,
         "the flow must LAND: some patron must hold a store at now: {c:?}"
+    );
+}
+
+#[test]
+fn an_insular_world_yields_less_tribute_than_an_expansive_one() {
+    // Spec §4.2's concealment term over a REAL bake, not a hand-driven pair.
+    // The two arms are the same world, the same seed, the same span and the
+    // same peoples; they differ in EXACTLY ONE input — the authored
+    // `in_group_radius` of the peoples that live in it — so only concealment
+    // can explain the gap between what the patrons collected.
+    //
+    // Both arms must actually collect: an "insular collects less" read off two
+    // worlds where no relation ever formed, or where nothing ever grew to be
+    // taxed, is a pass on two zeros.
+    let expansive: std::collections::BTreeMap<KindId, f64> =
+        peoples().into_iter().map(|k| (k, 1.0)).collect();
+    let insular: std::collections::BTreeMap<KindId, f64> =
+        peoples().into_iter().map(|k| (k, 0.0)).collect();
+
+    let ce = census(&value_flat_history_with(expansive));
+    let ci = census(&value_flat_history_with(insular));
+
+    assert!(
+        ce.subordinations_formed > 0 && ci.subordinations_formed > 0,
+        "precondition: relations must form in both arms: expansive {ce:?}, insular {ci:?}"
+    );
+    assert!(
+        ce.tribute_collected > 0.0 && ci.tribute_collected > 0.0,
+        "precondition: tribute must flow in BOTH arms — 'less' over two zeros \
+         proves nothing: expansive {}, insular {}",
+        ce.tribute_collected,
+        ci.tribute_collected
+    );
+    assert!(
+        ci.tribute_collected < ce.tribute_collected,
+        "an insular people withholds more, so an insular world is taxed less: \
+         insular {} vs expansive {}",
+        ci.tribute_collected,
+        ce.tribute_collected
     );
 }
 

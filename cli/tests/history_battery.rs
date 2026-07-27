@@ -25,7 +25,12 @@
 //! both migration and re-stacking rose sharply. The sweep's migration minimum,
 //! which The Tumult left at 6 against a floor of 5, is back up to 25; the one
 //! to watch now is the depth/capacity correlation, whose median rose from
-//! -0.4741 to -0.3431 (see the sweep-floor comments below).
+//! -0.4741 to -0.3431 (see the sweep-floor comments below). **The Tithe's
+//! concealment term (task 4) re-measured them a third time**, because it lets
+//! a subordinate keep part of its surplus and so changes who survives where:
+//! the sweep migration minimum rose again to 42 (seed 1) and the median
+//! correlation moved back out to -0.3527. Every gate still passes; no floor
+//! has moved since the re-sync below.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -61,11 +66,18 @@ const SWEEP: [u64; 9] = [1, 2, 3, 7, 13, 42, 100, 256, 777];
 // the identical-gates invariant the re-sync above restored.
 //
 // The Tithe (tribute, task 3) moved them again, the same way and further: seed
-// 42 now measures **198** climate migrations and **243/357** re-occupied sites.
+// 42 measured **198** climate migrations and **243/357** re-occupied sites.
 // Milked subordinates are held at their epoch-start population instead of
 // growing, so far more communities sit small enough to be moved by a later
 // era's mask. Same reading as above: the numbers rose away from the floors, and
 // the floors stay where they are.
+//
+// The Tithe's concealment term (task 4) moved them once more, again upward:
+// seed 42 now measures **266** climate migrations and **280/386** re-occupied
+// sites, region overlap 0.0644 (ceiling 0.25). A concealing subordinate keeps
+// part of its surplus, so it is a different community in a different place
+// when the next era's mask arrives — the whole history diverges. Floors
+// unchanged, for the same reason.
 const MIGRATION_FLOOR: u64 = 5;
 const MAX_REGION_OVERLAP: f64 = 0.25;
 const MIN_RESTACKED_SITES: u64 = 1;
@@ -83,10 +95,17 @@ const MIN_RESTACKED_SITES: u64 = 1;
 // Restacking moved the other way: the minimum rose 2 (seed 13) -> 26 (seed 2),
 // so `SWEEP_MIN_RESTACKED` has ample headroom.
 //
-// The Tithe (tribute) re-measured both again and both rose: the migration
-// minimum is 25 (seed 2, up from 6) and the restacking minimum 49 (seed 100, up
-// from 26). Neither floor is moved — they are inertness floors, and the margin
-// they had to watch has widened, not narrowed.
+// The Tithe (tribute, task 3) re-measured both again and both rose: the
+// migration minimum was 25 (seed 2, up from 6) and the restacking minimum 49
+// (seed 100, up from 26). Neither floor is moved — they are inertness floors,
+// and the margin they had to watch has widened, not narrowed.
+//
+// The Tithe's concealment term (task 4) re-measured both a third time and they
+// moved in OPPOSITE directions: the migration minimum rose again to **42**
+// (seed 1, floor 5) while the restacking minimum FELL to **38** (seed 100,
+// floor 2, down from 49). Both still clear their floors by a wide margin, and
+// neither floor moves; the restacking minimum is the one to watch, since it is
+// the first of these numbers to fall since the epoch.
 const SWEEP_MIGRATION_FLOOR: u64 = 5;
 const SWEEP_MIN_RESTACKED: u64 = 2;
 
@@ -210,6 +229,13 @@ fn history_gates_full_world_and_cross_seed() {
     // seeds now in the -0.16..-0.20 band (3, 777, 2). The next campaign to touch
     // this number should expect to have to re-argue the finding, not just re-pin
     // it.
+    //
+    // Re-measured again after the concealment term (task 4): all nine seeds
+    // stay negative and the median moved back OUT to **-0.3527**, so the gate
+    // recovered margin rather than losing it. The band emptied to a single
+    // occupant — seed 2 alone at **-0.1473**, its weakest reading yet, while
+    // seeds 3 and 777 fell back to -0.3527 and -0.2985. Seed 2 is the sparse
+    // regime this comment describes, and it is the seed to watch.
     let mut corrs: Vec<f64> = rows
         .iter()
         .map(|r| r.strat.depth_capacity_correlation)

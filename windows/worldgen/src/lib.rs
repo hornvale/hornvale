@@ -4211,6 +4211,14 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
         .collect();
+    // The Tithe §4.2's concealment term, resolved on the same channel and with
+    // the same fallback: `in_group_radius` rides `SocietyVector`, which only
+    // `Settled` kinds carry (decision 0068) — a people without one is absent
+    // from the map and conceals nothing.
+    cfg.in_group_radius = peoples
+        .iter()
+        .filter_map(|&k| wc.society.get(&k).map(|s| (k, s.in_group_radius)))
+        .collect();
     let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras

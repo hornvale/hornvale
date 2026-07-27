@@ -146,6 +146,12 @@ const ASSESS_RATE: f64 = 0.1;
 /// deferred adaptive-demand loop (§4.3) raises an assessment against, so the
 /// clamp is written where the assessment is set rather than bolted on later.
 const ASSESS_MAX: f64 = 0.5;
+/// The most a maximally insular people withholds from its patron: the share of
+/// its surplus a people with `in_group_radius == 0.0` keeps out of sight (spec
+/// §4.2's concealment term). A maximally expansive people (`1.0`) conceals
+/// nothing. A save-format constant: changing it re-fights every world's
+/// history.
+const CONCEAL_MAX: f64 = 0.5;
 /// Candidate cells (highest-capacity habitable of the earliest era) the
 /// genesis seeding draws proto-sites from. Kept well above the total genesis
 /// community count so every people finds its own vacant sites rather than
@@ -191,11 +197,11 @@ pub const CASCADE_DEPTH_CAP: u32 = 256;
 const CASCADE_BINS: usize = 12;
 
 /// Configuration for a deep-history bake: the span of years to simulate, the
-/// epoch step, and the authored per-people disposition the raid rule's durable
-/// inhibition reads. Years are bare `f64` (absolute, no wall-clock). Not
-/// `Copy`: `disposition` is an owned map, and the config is always passed by
-/// reference.
-/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition)
+/// epoch step, and the authored per-people psychology the raid and tribute
+/// rules read (the raid rule's durable inhibition, and the subordinate's
+/// concealment). Years are bare `f64` (absolute, no wall-clock). Not `Copy`:
+/// the authored maps are owned, and the config is always passed by reference.
+/// type-audit: bare-ok(count: start_year), bare-ok(count: end_year), bare-ok(count: epoch_years), bare-ok(ratio: disposition), bare-ok(ratio: in_group_radius)
 #[derive(Clone, Debug, PartialEq)]
 pub struct BakeConfig {
     /// The year the ancient world is seeded at (inclusive).
@@ -211,17 +217,27 @@ pub struct BakeConfig {
     /// inhibition); a people ABSENT from the map is not vetoed, so a bake given
     /// no disposition data behaves exactly as it did before the gate existed.
     pub disposition: BTreeMap<KindId, f64>,
+    /// Each people's `SocietyVector.in_group_radius` (insular 0 ↔ expansive 1)
+    /// — authored species data, never drawn, looked up by the composition root
+    /// and handed in here because the bake reads only kernel types. It sets
+    /// how much of its surplus a subordinate hides from its patron (spec
+    /// §4.2's concealment term, `Bake::concealment_of`); a people ABSENT from
+    /// the map conceals nothing, so a bake given no society data behaves
+    /// exactly as it did before concealment existed.
+    pub in_group_radius: BTreeMap<KindId, f64>,
 }
 
 impl BakeConfig {
     /// The default bake span: two millennia in 25-year epochs, with no
-    /// authored disposition (nobody vetoed — the composition root fills it in).
+    /// authored psychology (nobody vetoed, nobody conceals — the composition
+    /// root fills both maps in).
     pub fn default_millennia() -> BakeConfig {
         BakeConfig {
             start_year: 0.0,
             end_year: 2000.0,
             epoch_years: 25.0,
             disposition: BTreeMap::new(),
+            in_group_radius: BTreeMap::new(),
         }
     }
 }
@@ -496,6 +512,9 @@ struct Bake<'a> {
     /// [`BakeConfig`] — the durable inhibition [`Bake::takes_the_initiative`]
     /// reads.
     disposition: &'a BTreeMap<KindId, f64>,
+    /// Each people's authored `in_group_radius`, borrowed off the
+    /// [`BakeConfig`] — the concealment [`Bake::concealment_of`] reads.
+    in_group_radius: &'a BTreeMap<KindId, f64>,
     /// Every occupation record, in commit order.
     records: Vec<OccupationRecord>,
     /// Every community's live state, in commit order (dead ones retained).
@@ -1011,6 +1030,32 @@ impl<'a> Bake<'a> {
         }
     }
 
+    /// The share of its surplus a people hides from its patron — spec §4.2's
+    /// **concealment** term, the subordinate's half of the negotiation.
+    ///
+    /// The information asymmetry costs nothing because it is already
+    /// structural: the dominant assesses what it can SEE (the subordinate
+    /// cell's `eff_capacity`, which land tax has always been levied on) while
+    /// the subordinate hands over out of what it HAS (`population`). Those are
+    /// two different numbers already, and the gap is the subordinate's to
+    /// manage.
+    ///
+    /// An insular people (`in_group_radius` → 0) hides most: it draws its
+    /// in-group tightly and an outsider sees little of what it holds. An
+    /// expansive one (→ 1) hides nothing. A people with no authored society —
+    /// every non-`Settled` kind carries none — conceals nothing, so a bake
+    /// handed no data behaves exactly as it did before the term existed.
+    ///
+    /// The radius is a ratio in `[0, 1]` by construction (`SocietyVector`), and
+    /// is clamped anyway: a radius above 1 would otherwise give a *negative*
+    /// concealment — a subordinate that remits more than it produced.
+    fn concealment_of(&self, people: KindId) -> f64 {
+        match self.in_group_radius.get(&people) {
+            None => 0.0,
+            Some(&r) => (1.0 - r.clamp(0.0, 1.0)) * CONCEAL_MAX,
+        }
+    }
+
     /// Whether a community is worth raiding at all — spec §4.2a's **no-spoils**
     /// inhibition, the momentary one. A community whose pressure has reached
     /// `NO_SPOILS_PRESSURE` is already consuming its cell's whole effective
@@ -1155,6 +1200,13 @@ impl<'a> Bake<'a> {
     /// epoch; it still grows in any epoch its patron under-assesses, just
     /// slower.
     ///
+    /// What is handed over is net of the subordinate's **concealment** (spec
+    /// §4.2's third term, [`Bake::concealment_of`]): an insular people hides
+    /// more of its surplus from an outsider. Concealment scales the surplus
+    /// only — the cap is still this epoch's growth increment — so it can only
+    /// ever lower a remittance, never let one reach past the increment into
+    /// the standing stock.
+    ///
     /// The remittance lands in `stores`, never in `population` (spec §4.2a):
     /// tribute is wealth, not bodies, and a patron whose winnings entered the
     /// pressure term would starve itself on its own success.
@@ -1181,7 +1233,12 @@ impl<'a> Bake<'a> {
                 continue;
             }
             let surplus = self.epoch_growth[sub].max(0.0);
-            let remittance = rel.assessment.min(surplus);
+            // Concealment scales what is HANDED OVER, never what the cap is
+            // measured against: the ceiling stays this epoch's growth
+            // increment, so a hidden share is one the subordinate keeps, not
+            // one that lets the standing stock be reached for (spec §4.2).
+            let conceal = self.concealment_of(self.records[self.communities[sub].record].people);
+            let remittance = rel.assessment.min(surplus * (1.0 - conceal));
             self.communities[sub].population -= remittance;
             self.communities[rel.patron].stores += remittance;
             self.tally.tribute_collected += remittance;
@@ -1692,6 +1749,7 @@ pub fn bake(
         river_prox,
         refugia,
         disposition: &cfg.disposition,
+        in_group_radius: &cfg.in_group_radius,
         records: Vec::new(),
         communities: Vec::new(),
         node_index: BTreeMap::new(),
@@ -1954,6 +2012,7 @@ mod tests {
             river_prox: &river_prox,
             refugia: &refugia,
             disposition: no_disposition(),
+            in_group_radius: no_radius(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -2061,6 +2120,15 @@ mod tests {
         &NONE
     }
 
+    /// The `in_group_radius` map a hand-built [`Bake`] uses when the test is
+    /// not about concealment: empty, so nobody hides anything (the same
+    /// fail-open the composition root sees when a people carries no
+    /// `SocietyVector`).
+    fn no_radius() -> &'static BTreeMap<KindId, f64> {
+        static NONE: BTreeMap<KindId, f64> = BTreeMap::new();
+        &NONE
+    }
+
     /// A hand-built [`Bake`] over [`cascade_world`]'s inputs, with an empty
     /// record set and a fixed stream.
     fn hand_bake<'a>(
@@ -2077,6 +2145,7 @@ mod tests {
             river_prox,
             refugia,
             disposition,
+            in_group_radius: no_radius(),
             records: Vec::new(),
             communities: Vec::new(),
             node_index: BTreeMap::new(),
@@ -2295,6 +2364,74 @@ mod tests {
             bake.communities[sub].population.to_bits(),
             sub_after_one.to_bits(),
             "a subordinate that did not grow must not be taxed on its stock"
+        );
+    }
+
+    #[test]
+    fn an_insular_subordinate_remits_less_than_an_expansive_one() {
+        // Spec §4.2's third term: the dominant taxes what it can SEE
+        // (`eff_capacity`), the subordinate holds what it HAS (`population`),
+        // and **concealment is the gap the subordinate controls**. An insular
+        // people (`in_group_radius` → 0) hides more from outsiders than an
+        // expansive one.
+        //
+        // The two arms differ in EXACTLY ONE input — the subordinate people's
+        // authored `in_group_radius` — so nothing but concealment can explain
+        // a difference between them. Same world, same pair, same assessment,
+        // same growth increment, same stream.
+        //
+        // Non-vacuity is asserted, not assumed: if concealment were applied to
+        // the assessment cap instead of the surplus (or if both arms collected
+        // nothing at all) a bare "insular remits less" could pass on two
+        // zeros, so both arms are required to have actually moved wealth.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        // `tribute_pair`'s subordinate is the kobold. Only its entry differs.
+        let expansive: BTreeMap<KindId, f64> = [(KindId("kobold"), 1.0)].into_iter().collect();
+        let insular: BTreeMap<KindId, f64> = [(KindId("kobold"), 0.0)].into_iter().collect();
+
+        // (remitted, what the subordinate was left holding) per arm.
+        let mut arms: Vec<(f64, f64)> = Vec::new();
+        for radius in [&expansive, &insular] {
+            let (mut bake, patron, sub) =
+                tribute_pair(&geo, &graphs, &capacity, &river_prox, &refugia);
+            bake.in_group_radius = radius;
+            bake.begin_epoch();
+            let before = bake.communities[sub].population;
+            let pressure = bake.pressure_of(sub, &era);
+            bake.grow(sub, &era, 0.0, pressure);
+            let increment = bake.communities[sub].population - before;
+            assert!(
+                increment > 0.0,
+                "precondition: the subordinate must actually have grown this \
+                 epoch — with no surplus there is nothing to conceal"
+            );
+            bake.collect_tribute(0.0);
+            arms.push((
+                bake.communities[patron].stores,
+                bake.communities[sub].population,
+            ));
+        }
+        let (expansive_remitted, expansive_kept) = arms[0];
+        let (insular_remitted, insular_kept) = arms[1];
+
+        assert!(
+            expansive_remitted > 0.0 && insular_remitted > 0.0,
+            "precondition: tribute must flow in BOTH arms — 'less' asserted \
+             over two zeros proves nothing: expansive {expansive_remitted}, \
+             insular {insular_remitted}"
+        );
+        assert!(
+            insular_remitted < expansive_remitted,
+            "an insular people withholds MORE from its patron: insular \
+             remitted {insular_remitted}, expansive {expansive_remitted}"
+        );
+        // The withheld share is not destroyed — it stays with the people who
+        // hid it. Without this a concealment implemented as "burn the
+        // difference" would pass the comparison above.
+        assert!(
+            insular_kept > expansive_kept,
+            "what is concealed stays with the subordinate: insular kept \
+             {insular_kept}, expansive kept {expansive_kept}"
         );
     }
 
