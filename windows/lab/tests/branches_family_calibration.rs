@@ -250,10 +250,15 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // Census regen (The Living Community epoch, history-first placement,
     // lefford 0063): re-measured on the regenerated 1000-seed census
     // (hobgoblin 2.485 -> 2.486).
-    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Vacancy (roster 16 -> 29 kinds; lefford regen, 0063): hobgoblin
+    // 2.486 -> 2.487 — a discrete count flipping on ~1 seed, the same
+    // one-unit granularity every prior regen note records. Goblin and bugbear
+    // are unmoved, and the aggregate ordering asserted below still holds.
+    assert!((mh - 2.487).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
-    assert!((mb - 4.481).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    // The Vacancy: bugbear 4.481 -> 4.483 (same one-seed granularity).
+    assert!((mb - 4.483).abs() < 1e-9, "bugbear mean drifted: {mb}");
     assert!(
         mb >= mg && mg >= mh,
         "loudness ordering failed in aggregate: bugbear {mb} >= goblin {mg} >= hobgoblin {mh}"
@@ -273,7 +278,11 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // regen, commit 1c954d0): per-seed rates re-measured below.
     assert_eq!(bg, 859, "bugbear>=goblin rate drifted: {bg}/{n}");
     assert_eq!(gh, 718, "goblin>=hobgoblin rate drifted: {gh}/{n}");
-    assert_eq!(bh, 908, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
+    // The Vacancy (roster 16 -> 29 + real prey supply; lefford regen, 0063):
+    // one seed's bugbear/hobgoblin comparison flips, 908 -> 909. bugbear>=goblin
+    // (859) and goblin>=hobgoblin (718) are unmoved. Recorded, not asserted as
+    // an invariant — that is this half of the test's whole purpose.
+    assert_eq!(bh, 909, "bugbear>=hobgoblin rate drifted: {bh}/{n}");
     assert_eq!(chain, 586, "full-chain per-seed rate drifted: {chain}/{n}");
 }
 
@@ -359,13 +368,20 @@ fn homophony_count_is_measured_and_pinned() {
     // The Tumult (predation epoch; lefford regen, 0063): predation reseats
     // settlements and reshapes each daughter's periphery homophony draws —
     // goblin 1.823 -> 1.812; hobgoblin/bugbear/kobold below.
-    assert!((mg - 1.812).abs() < 1e-9, "goblin mean drifted: {mg}");
+    // The Vacancy (roster 16 -> 29 kinds + a real ANIMAL_PREY supply field;
+    // lefford regen, 0063): thirteen new competitors and prey supply where
+    // there was a hard-coded zero reseat settlements, which reshapes every
+    // daughter's periphery naming draws — goblin 1.812 -> 1.997, hobgoblin
+    // 1.572 -> 1.747, bugbear 6.584 -> 7.159, kobold 1.9 -> 2.042. Bugbear
+    // stays highest among the goblinoid daughters by better than 3x, the
+    // claim this test actually guards.
+    assert!((mg - 1.997).abs() < 1e-9, "goblin mean drifted: {mg}");
     // hobgoblin 1.571 -> 1.572, bugbear 6.57 -> 6.584, kobold 1.902 -> 1.9
     // (same cause); bugbear stays highest among the goblinoid daughters, the
     // claim this test actually guards.
-    assert!((mh - 1.572).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.584).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 1.9).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mh - 1.747).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 7.159).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.042).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
