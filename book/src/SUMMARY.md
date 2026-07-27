@@ -260,6 +260,7 @@
 - [The Convalescence](./chronicle/the-convalescence.md)
 - [The Action Clock](./chronicle/the-action-clock.md)
 - [The Accession](./chronicle/the-accession.md)
+- [The Actants](./chronicle/the-actants.md)
 
 # Appendix: The Frontier
 

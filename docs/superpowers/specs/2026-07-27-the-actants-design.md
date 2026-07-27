@@ -2,8 +2,12 @@
 
 **Campaign:** The Actants
 **Date:** 2026-07-27
-**Status:** DRAFT — at G3, awaiting review. **§3–§4 revised 2026-07-27** after
-the ordering defect was diagnosed; the naming is no longer expensive.
+**Status:** SHIPPED (2026-07-27) — Stage A (`ff5af857`) and Stage B
+(`a6d12340`). 91 concepts, seed-42 ledger byte-identical, `make gate` green
+(2222 passed). §4 said all four acts were orphans; three were (`eat` was
+already a Swadesh entry) — the code derived the right answer.
+Chronicle: `book/src/chronicle/the-actants.md`; retrospective:
+`docs/retrospectives/the-actants.md`.
 **Depends on:** The Accession (`2026-07-27-the-accession-design.md`), which
 must land first. Stage B is byte-identical behind it and world-perturbing
 without it.
