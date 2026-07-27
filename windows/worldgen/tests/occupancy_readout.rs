@@ -172,7 +172,7 @@ fn render_occupancy_readout(seeds: RangeInclusive<u64>) -> String {
 }
 
 #[test]
-#[ignore = "heavy: 30 full-depth worlds; regenerates the committed occupancy readout"]
+#[ignore = "heavy: live-worldgen battery (minutes); deferred from the commit gate to make gate-full"]
 fn occupancy_readout_is_current() {
     let rendered = render_occupancy_readout(1..=30);
     let committed = include_str!("fixtures/occupancy.csv");
@@ -184,7 +184,13 @@ fn occupancy_readout_is_current() {
 }
 
 #[test]
-#[ignore = "heavy: regenerates the fixture"]
+// Deliberately NOT a `heavy:` reason. The heavy tier is what `make gate-full`
+// runs, and this test WRITES the fixture — running it there would have CI
+// silently rewrite the artifact the drift check above exists to check, so a
+// drifted readout would self-heal instead of failing. Run it by hand when a
+// change is meant to move the readout. Same rationale as the census fixtures'
+// non-heavy reasons.
+#[ignore = "regenerates the committed occupancy fixture; run by hand - the drift check above is the gate"]
 fn regenerate_occupancy_readout() {
     let rendered = render_occupancy_readout(1..=30);
     std::fs::write(
