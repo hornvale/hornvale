@@ -490,16 +490,17 @@ Expected: FAIL — `cannot find type Brief`; possibly also an unresolved `hornva
 
 - [ ] **Step 3: Implement**
 
-**First check the import path.** `hornvale-vessel` depends on `hornvale-worldgen`, not on `hornvale-history` directly. Run:
+**The import path is already resolved — do not re-derive it.** Verified on this branch:
 
-```bash
-grep -n "hornvale-history" windows/vessel/Cargo.toml windows/worldgen/Cargo.toml
-grep -rn "pub use.*record::\|pub use hornvale_history" windows/worldgen/src/lib.rs | head
-```
+- `windows/worldgen/Cargo.toml:15` depends on `hornvale-history`; `windows/vessel/Cargo.toml` does **not**.
+- `worldgen` re-exports the history *functions* (`occupation_records`, `occupations_by_cell`) but **not** the record *types* — `history_emit.rs:15` imports them privately with `use hornvale_history::record::{…}`.
+- So the record types are not nameable through `hornvale_worldgen`, and a struct field of type `Option<Function>` needs the dependency.
 
-Use whichever is true:
-- If `worldgen` re-exports the record types, import them through `hornvale_worldgen::…` and use that path in the tests too.
-- If it does not, add `hornvale-history = { path = "../../domains/history" }` to `windows/vessel/Cargo.toml`. This is architecturally legal (a window may depend on a domain) but `cli/tests/architecture.rs` enforces the dependency allowlist, so run `cargo test -p hornvale --test architecture` immediately after and fix the allowlist entry if the test names one.
+Therefore: **add `hornvale-history = { path = "../../domains/history" }` to `windows/vessel/Cargo.toml`** and import with `use hornvale_history::record::{Function, Notability, TechHorizon};`.
+
+This is legal under the layering constitution — `cli/tests/architecture.rs:134`'s `windows_depend_only_on_kernel_domains_and_windows` permits a window to depend on a domain, and the external-dependency allowlist governs only external crates, not path deps. Run `cargo test -p hornvale --test architecture` after the change to confirm, and note that the same test renders a layering page (`the_layering_page_matches_the_enforced_graph`), so **a new edge may require regenerating that page** — if the test fails on the render rather than the rule, regenerate the page it names rather than editing the test.
+
+`KindId` is `hornvale_kernel::KindId` (`kernel/src/ledger.rs:46`, a `pub struct KindId(pub &'static str)`) — already reachable, no new import needed beyond the kernel.
 
 Then add above the test module:
 
