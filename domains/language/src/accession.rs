@@ -20,11 +20,22 @@
 //! existing cohort**: a concept that changed epoch would re-sort, which is
 //! exactly the churn this module exists to prevent. Retired concepts stay
 //! listed — their slot is spent either way.
+//!
+//! **The one exception, and its boundary.** That rule is scoped to the
+//! interval *between* epoch bumps. A campaign that bumps `ROOT_EPOCH` is a
+//! declared total regeneration — every root reseeds regardless, so there is no
+//! churn left to prevent — and it may therefore re-found cohort 0 as the
+//! roster at that bump. The Wearing (2026-07-27) did exactly this, merging the
+//! 15-concept Actants cohort back into a 91-concept baseline before adding its
+//! own ~20. Outside a bump the rule is absolute; do not read this exception as
+//! permission to edit a cohort in an ordinary campaign.
 #![warn(missing_docs)]
 
-/// Concepts grouped by accession epoch: cohort `i` is epoch `i`. Cohort 0 is
-/// the registry as it stood when The Accession landed (2026-07-27); every
-/// later campaign appends its own cohort rather than editing an earlier one.
+/// Concepts grouped by accession epoch: cohort `i` is epoch `i`. Cohort 0 was
+/// the registry as it stood when The Accession landed (2026-07-27), and was
+/// re-founded at The Wearing's v4 root-epoch bump (2026-07-27) to fold in the
+/// Actants cohort; every later campaign appends its own cohort rather than
+/// editing an earlier one.
 ///
 /// `cli/tests/accession.rs` asserts this table and the concept registry agree
 /// in both directions — a concept registered with no cohort entry would
@@ -32,11 +43,16 @@
 /// failure mode an authored table has.
 /// type-audit: bare-ok(identifier-text)
 pub const EPOCH_COHORTS: &[&[&str]] = &[
-    // Epoch 0 — the baseline roster at The Accession (76 concepts).
+    // Epoch 0 — the baseline roster re-founded at The Wearing's v4 root-epoch
+    // bump (2026-07-27): the original 76-concept landing roster from The
+    // Accession, merged with the 15-concept Actants cohort (The Actants,
+    // 2026-07-27), for 91 concepts sorted by core_rank on merit. Legal only
+    // at a root-epoch bump — see ledger #9 and the module doc above.
     &[
         "abyssal",
         "alpine",
         "bathypelagic",
+        "black-dragon-kind",
         "blood",
         "blue",
         "bone",
@@ -49,6 +65,7 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "day",
         "desert",
         "die",
+        "drink",
         "earth",
         "eat",
         "eclipse",
@@ -56,6 +73,8 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "eye",
         "fire",
         "foot",
+        "giant-elk-kind",
+        "giant-goat-kind",
         "gloom",
         "goblin-kind",
         "god",
@@ -76,13 +95,19 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "moon",
         "mountain",
         "mouth",
+        "move",
         "name",
         "night",
         "one",
+        "otyugh-kind",
+        "owlbear-kind",
         "parent",
         "person",
         "rain",
         "red",
+        "red-dragon-kind",
+        "rest",
+        "rust-monster-kind",
         "savanna",
         "sea",
         "sea-ice",
@@ -101,36 +126,20 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "temperate-grassland",
         "temperate-rainforest",
         "tide",
+        "treant-kind",
         "tree",
         "tropical-rainforest",
         "tropical-seasonal-forest",
         "tundra",
+        "twig-blight-kind",
         "two",
         "upwelling",
         "water",
-        "wind",
-        "yellow",
-    ],
-    // Epoch 1 — The Actants (2026-07-27): the twelve creatures The Menagerie
-    // left unnamed, and the three acts the GOAP roster performs that no
-    // concept named. Appended, never merged into cohort 0, so every word
-    // already spoken keeps its form.
-    &[
-        "black-dragon-kind",
-        "drink",
-        "giant-elk-kind",
-        "giant-goat-kind",
-        "move",
-        "otyugh-kind",
-        "owlbear-kind",
-        "red-dragon-kind",
-        "rest",
-        "rust-monster-kind",
-        "treant-kind",
-        "twig-blight-kind",
         "white-dragon-kind",
+        "wind",
         "woolly-mammoth-kind",
         "xorn-kind",
+        "yellow",
     ],
 ];
 
@@ -157,20 +166,20 @@ mod tests {
     use super::*;
     use std::collections::BTreeSet;
 
-    /// Cohort 0 is frozen forever: it is the roster whose assignments every
-    /// later cohort is defined not to disturb, so its SIZE is the invariant,
-    /// not the number of cohorts above it. (An earlier version of this test
-    /// also pinned `EPOCH_COHORTS.len() == 1`, which was true the day The
-    /// Accession landed and wrong the moment The Actants appended a cohort —
-    /// the count is expected to grow, the baseline is not.)
+    /// Cohort 0 is frozen between epoch bumps: it is the roster whose
+    /// assignments every later cohort is defined not to disturb. It is
+    /// re-founded only by a campaign that bumps `ROOT_EPOCH`, when every root
+    /// reseeds anyway and there is no churn left to prevent (The Wearing,
+    /// 2026-07-27: 76 + the 15-concept Actants cohort = 91, before that
+    /// campaign's own additions land in Task 3).
     #[test]
     fn cohort_zero_stays_the_frozen_landing_roster() {
         assert_eq!(
             EPOCH_COHORTS[0].len(),
-            76,
-            "cohort 0 is the 76-concept roster frozen at The Accession; \
-             growing it would re-sort concepts that already have assignments — \
-             append a NEW cohort instead"
+            91,
+            "cohort 0 is the 91-concept roster re-founded at The Wearing's \
+             v4 root-epoch bump; growing it OUTSIDE such a bump would re-sort \
+             concepts that already have assignments — append a NEW cohort instead"
         );
     }
 

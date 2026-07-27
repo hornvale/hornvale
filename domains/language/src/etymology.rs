@@ -252,8 +252,12 @@ pub fn proto_root(seed: &Seed, species: &str, concept: &str, ph: &Phonology) -> 
 /// concept's in any daughter (driving core homophony to zero). Deliberate
 /// regeneration uses an epoch suffix, never a rename — the save-format
 /// contract — so `v3` reseeds every root and old saves' `v2` forms are gone by
-/// design, regenerated with the world.
-const ROOT_EPOCH: &str = "v3";
+/// design, regenerated with the world. `v4` is The Wearing's (2026-07-27)
+/// re-founding of the accession cohort baseline (`accession::EPOCH_COHORTS`,
+/// ledger #9) ahead of that campaign's own toponymic-concept additions and
+/// nucleus-shape rework — every root reseeds again, deliberately and for the
+/// last time under the old baseline.
+const ROOT_EPOCH: &str = "v4";
 
 /// Assign a distinct proto-root to every concept in `concepts` under
 /// `family`'s proto-phonology `proto_ph` — the injective, collision-resolved
