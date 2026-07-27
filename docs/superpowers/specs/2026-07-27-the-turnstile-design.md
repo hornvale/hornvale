@@ -146,14 +146,20 @@ Beside the host guard in `census_guard.rs`, and invoked the same way.
   ISO start time, and the goldens directory being written. Created with
   `OpenOptions::new().create_new(true)`, which is atomic — the winner is
   whoever creates it. Removed on completion, including on the error path.
-- **Behaviour: BLOCK until the claim is free**, so runs serialize completely
-  rather than one failing. `std` has no `flock`, but no dependency is needed:
-  poll the claim file on a few-second interval. A census is a ~6-minute
-  operation, so poll granularity is irrelevant to throughput, and polling has
-  none of `flock`'s inheritance subtleties. While waiting, print the same
-  shape of message `census-run.sh` already prints — `census-claim: waiting
-  for the claim held by pid 1573508 on lefford since 18:53:41Z …` — so a
-  waiting run is never mistaken for a hung one.
+- **Behaviour: BLOCK until the claim is free, up to a bounded timeout**, so
+  runs serialize completely rather than one failing — but a pathological hold
+  fails loudly instead of hanging forever. `std` has no `flock`, but no
+  dependency is needed: poll the claim file on a few-second interval. A
+  census is a ~6-minute operation, so poll granularity is irrelevant to
+  throughput, and polling has none of `flock`'s inheritance subtleties.
+- **Timeout: 45 minutes by default**, overridable via
+  `HV_CENSUS_WAIT_TIMEOUT` (seconds). The bound must exceed the longest
+  legitimate hold: a full `HV_CENSUS=1` regen is ~12 minutes, and a queue two
+  deep is ~24, so 45 leaves headroom without approaching "forever". On
+  timeout the run **fails** (it must never proceed anyway — proceeding is
+  exactly the contention this campaign removes) with exit code 75
+  (`EX_TEMPFAIL`), so a caller can distinguish "busy, retry later" from a
+  genuine error.
 - **Staleness:** if the claim exists but its PID is not live (`/proc/<pid>`
   absent), it is stale — from a crashed or killed run — and is taken over
   with a loud note. This matters more under blocking than it would under
@@ -178,6 +184,57 @@ Beside the host guard in `census_guard.rs`, and invoked the same way.
 - **Scope:** census studies only, reusing the existing `is_census_study`
   predicate, for parity with the host guard. (See §5.)
 
+### Item 3b — what a waiting caller is told
+
+The failure this campaign exists to fix was not really the collision — it was
+that **a contended run and a normal run were indistinguishable**. A blocking
+claim makes that worse unless the waiting is legible: an unexplained silent
+pause on a 40-core box is exactly what a hang looks like. So the claim is
+also the campaign's observability surface, and its contents are a contract,
+not a debug aid.
+
+**The claim file carries the context** — plain `key=value` lines (it is
+`/tmp` scratch; no serde, greppable by eye and by script):
+
+```
+pid=1573508
+host=lefford
+user=nathan
+started=2026-07-27T18:53:41Z
+goldens=/home/nathan/Projects/hornvale-census-wt/book/src/laboratory/generated
+label=census-of-the-meeting
+ref=the-hoist@94bcc07a
+cmdline=hornvale lab run studies/census-of-the-meeting.study.json
+```
+
+Every field earns its place by answering a question a blocked caller asks:
+*who* (pid/host/user), *since when* (started), *doing what to which tree*
+(label/goldens/cmdline), *from which code* (ref) — that last one matters
+because "the census that is blocking me is running someone else's branch" is
+a materially different situation from "it is running main".
+
+**Message cadence**, shell and Rust alike, all to stderr:
+
+- On first contention, immediately — never a silent pause:
+  `census-claim: waiting — held by pid 1573508 (nathan@lefford) since
+  18:53:41Z (4m12s ago), writing …/hornvale-census-wt, running
+  census-of-the-meeting @ the-hoist. Waiting up to 45m0s.`
+- Every 60s thereafter, with both clocks, so progress is visible:
+  `census-claim: still waiting (6m30s elapsed; holder now 10m42s in).`
+- On acquiring after a wait: `census-claim: acquired after 7m03s.` — this
+  line is what tells the caller its own wall time includes a queue.
+- On stale takeover, loudly: `census-claim: taking over a STALE claim — pid
+  1573508 is not alive (started 18:53:41Z). Its run died without releasing.`
+- On timeout, actionably rather than just fatally:
+  `census-claim: TIMED OUT after 45m0s. Holder pid 1573508 has been running
+  52m. Inspect: ps -p 1573508 -o pid,etimes,args. If it is dead, remove
+  /tmp/hv-census.claim.`
+
+**A status query**, so the question "is a census running right now?" has an
+answer that is not `ps | grep`: `scripts/census-run.sh status` prints the
+claim's fields and the holder's elapsed time, or "no census running". Cheap,
+and it is the command that would have answered today's question in one step.
+
 ### Item 4 — censuses enter the timing ledger
 
 `scripts/timed.sh` already exists, already writes `docs/timings.md`, and
@@ -198,12 +255,16 @@ from `MacBookPro`, and `lefford` has never written one — because
 So item 4 is mostly wiring, not invention:
 
 1. `census-run.sh` wraps its regen in `scripts/timed.sh census -- …`.
-2. The row is annotated when the run was contended — the claim file from item
-   3 makes "was another census live during my run?" answerable, checked at
-   start and end, recorded as a `contended` column.
+2. The ledger gains a **`waited_s`** column, fed by the claim's
+   "acquired after" figure. This is the sharpest instrument the campaign
+   produces: it splits a slow run into *queued* versus *slow*, which is
+   precisely the distinction that made 2026-07-27's 6m57s look like an 18%
+   regression. A row reading `wall=1240 waited_s=620` is self-explaining;
+   the same row without the column is a mystery.
 
-A contaminated timing then announces itself in the ledger instead of waiting
-to be inferred from a lucky `ps`.
+Under complete serialization `cpu_ratio` should now stay high and stable
+across census rows — a fall in it becomes a real signal (something else on
+the box) rather than the expected noise of two censuses sharing 40 cores.
 
 ## 4. Verification
 
@@ -223,6 +284,18 @@ to be inferred from a lucky `ps`.
   together must not overlap in their COMPUTE phases either — assert by
   timestamps that the second's start follows the first's release, since
   overlapping compute is the contention this campaign exists to remove.
+- **Timeout fires and is actionable:** with `HV_CENSUS_WAIT_TIMEOUT=2` and a
+  held claim, the waiter exits **75** within a few seconds and its message
+  names the holder's pid, elapsed time, and the claim path to remove. Assert
+  on the exit code and on the message naming the pid — a timeout that fails
+  without saying who held the lock is the bug this item exists to prevent.
+- **The waiting messages actually appear:** assert the first-contention line
+  is emitted immediately (not after the first poll interval) and that it
+  carries pid, host, start time, goldens dir, and label. Silence during a
+  wait is indistinguishable from a hang, which is the failure mode being
+  designed against — so its absence is a test failure, not a cosmetic one.
+- **`census-run.sh status`** reports a live claim's fields, and reports "no
+  census running" when the claim is absent or stale.
 - **A census regen still produces a zero diff** — this campaign must not
   touch goldens.
 - **`make gate` green**, and `make help` no longer asserts AWS-only regen.
@@ -247,13 +320,15 @@ followed by its call into `regenerate-artifacts.sh`.
 - **Refuse vs queue at the Rust seam — RESOLVED at G3: queue.** Runs
   serialize completely; a second census waits rather than failing. Achieved
   by polling the claim file, which needs no dependency (§3 item 3).
-- **Should the wait be bounded?** `census-run.sh`'s `flock` blocks
-  indefinitely today, and stale-claim takeover already prevents a crashed run
-  from wedging the box, so the spec's default is an unbounded wait for
-  consistency. The alternative is a generous timeout (say 30 min) that fails
-  loudly rather than waiting forever on a pathological case. Recommend
-  unbounded; flagging because "it hung" and "it is waiting correctly" look
-  identical from outside, which is why the waiting message matters.
+- **Bounded wait — RESOLVED at G3: bounded.** 45 minutes by default,
+  `HV_CENSUS_WAIT_TIMEOUT` to override, exit 75 on expiry. `census-run.sh`'s
+  existing `flock` gains `-w` to match, so the shell and Rust layers agree
+  rather than one waiting forever behind the other's timeout.
+- **Still open — the timeout VALUE is a guess.** 45 minutes is reasoned (a
+  ~12-minute full regen, a queue two deep, headroom) but not measured, and
+  the ledger has no census rows yet to reason from. Item 4 will produce that
+  data; expect to revisit the constant once a few real rows exist. Recorded
+  here so a future reader knows it was chosen, not derived.
 - **Decision log:** this campaign should probably ratify a short decision
   ("one writer per goldens directory; the claim lives at the write seam"),
   since it establishes a rule future campaigns must not re-litigate.
@@ -268,7 +343,13 @@ followed by its call into `regenerate-artifacts.sh`.
 - `census-run.sh` still queues, and still works when triggered over SSH from
   the other machine.
 - A crashed run leaves no wedged claim: the next run takes over the stale one.
-- `docs/timings.md` gains census rows, with contention visible.
+- **A blocked caller is never left guessing:** it learns who holds the claim,
+  since when, writing which tree, from which ref — immediately, then at
+  intervals, and again on timeout with a command to investigate. `scripts/
+  census-run.sh status` answers "is a census running?" without `ps | grep`.
+- **A queued run is legible after the fact:** `docs/timings.md` gains census
+  rows carrying `waited_s`, so a long wall time is attributable to the queue
+  rather than mistaken for a regression.
 - No doc in the tree names `HV_CENSUS=1 bash scripts/regenerate-artifacts.sh`
   as the sanctioned refresh; `make help` no longer contradicts decision 0063.
 - A full census regen still produces a zero diff.
