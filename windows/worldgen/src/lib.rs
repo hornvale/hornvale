@@ -679,12 +679,19 @@ pub fn species_carrying_input(
     }
 }
 
-/// **The terrestrial-supply frame (The Tumult's land mask).** Every v1
-/// resource-supply axis is *terrestrial* supply: the resource a land-dwelling
-/// forager can reach, defined on cells above the world's sea level and **zero
-/// on submerged cells**. This is a property of the supply fields, not a rule
-/// about who may live where — the roster's habitat comes out of what it eats,
-/// so nothing needs a per-species exemption.
+/// **The terrestrial-supply frame (The Tumult's land mask).** Each of the five
+/// *terrestrial* resource-supply axes carries this frame: the resource a
+/// land-dwelling forager can reach, defined on cells above the world's sea
+/// level and **zero on submerged cells**. This is a property of those supply
+/// fields, not a rule about who may live where — the roster's habitat comes out
+/// of what it eats, so nothing needs a per-species exemption.
+///
+/// It is deliberately **not** a claim about the whole basis, and has not been
+/// one since The Vacancy: [`MARINE_FORAGE`](hornvale_kernel::MARINE_FORAGE) is
+/// a sixth `v1_basis()` member whose supply is the exact mirror of this frame —
+/// zero on land, defined at sea (see [`marine_forage_supply_field`]). That the
+/// sea arrived by *adding an axis* rather than by exempting anything from a
+/// global rule is precisely what the closing paragraph below anticipated.
 ///
 /// Three of the five axes have always carried this mask implicitly:
 /// `PHOTOSYNTHATE` rides `hornvale_demography::carrying_capacity`, which
