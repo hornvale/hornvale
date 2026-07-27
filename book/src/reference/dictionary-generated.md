@@ -142,7 +142,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `sea` | a body of salt water | Doodoadaokaa | /doodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Daoqao | /daoqao/ | Naeqae | Naeqae → no change → Daoqao |
-| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Boodao | /boodao/ | Peonae | Peonae → no change → Boodao |
 | `sleep` | to rest unconscious | Dooboo | /dooboo/ | Neepeo | Neepeo → no change → Dooboo |
 | `snow` | frozen precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'snow' |
@@ -253,7 +253,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
 | `blood` | the circulating fluid of a body | Neo | /neo/ | Neo | Neo → no change → Neo |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6 |
 | `bone` | the rigid frame of a body | Gae | /gae/ | Kae | Kae → lenition → Gae |
@@ -334,7 +334,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Rag | Rag → finalloss → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Xo | /xo/ | Xo | Xo → no change → Xo |
@@ -350,7 +350,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `earth` | the ground underfoot | Rorra | /rorra/ | Rorra | Rorra → no change → Rorra |
 | `eat` | to consume food | Rokxo | /rokxo/ | Rokxot | Rokxot → finalloss → Rokxo |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): kobold has no exposure to 'eclipse' |
-| `epipelagic` | a biome class | Ro | /ro/ | Roq | Roq → finalloss → Ro |
+| `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
 | `eye` | the organ of sight | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
 | `fire` | flame and heat | Roro | /roro/ | Rorok | Rorok → finalloss → Roro |
 | `foot` | the walking limb-end | Rogrro | /rogrro/ | Rogrrog | Rogrrog → finalloss → Rogrro |
@@ -394,7 +394,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Ra | /ra/ | Rraq | Rraq → finalloss → clustersimplify → Ra |
 | `stone` | rock | Xa | /xa/ | Xaq | Xaq → finalloss → Xa |
 | `sun` | the sun | Rogxa | /rogxa/ | Rrogxa | Rrogxa → clustersimplify → Rogxa |
-| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
+| `taiga` | a biome class | Ro | /ro/ | Rog | Rog → finalloss → Ro |
 | `temperate-forest` | a biome class | Xatxo | /xatxo/ | Xatxo | Xatxo → no change → Xatxo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | Xotro | /xotro/ | Xotrot | Xotrot → finalloss → Xotro |

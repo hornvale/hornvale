@@ -1,6 +1,6 @@
 # The Peoples of Seed 42
 
-The land holds 320 settlement(s).
+The land holds 306 settlement(s).
 The chief bugbear settlement, Qvooshtvoagootao, holds 118 souls amid tropical-seasonal-forest.
 The chief goblin settlement, Zhvekngokngaknoenoanoaboo, holds 90 souls amid temperate-forest.
 The chief hobgoblin settlement, Mjeaqkeomjaenoagoo, holds 112 souls amid tropical-rainforest.
@@ -17,12 +17,12 @@ The chief kobold settlement, Roroqrraxoxo, holds 107 souls amid tropical-seasona
                                                                         
              oo                                                         
               oo                       o                           ooo  
-             oooo                                                 ooo   
-               oo                                    oo                 
-         ooooooo                                    o@o                 
-          ooooo             oo                                          
-                        ooooo                                           
-                      o   o o                                           
+              ooo                                                 ooo   
+                                                    ooo                 
+          oooooo                                   oo@o                 
+          o ooo             o                                           
+                        oooooo                                          
+                          o                                             
                                                                         
                                                                         
                                                                         

@@ -83,7 +83,7 @@ headedness: HeadLast
 
 abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
-bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
+bathypelagic: gap (experiential): no settlement in or beside bathypelagic
 blood: root Neo /neo/
 blue: gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.6
 bone: root Gae /gae/
@@ -214,7 +214,7 @@ savanna: gap (experiential): no settlement in or beside savanna
 sea: compound many+water -> Doodoadaokaa /doodoadaokaa/
 sea-ice: gap (experiential): no settlement in or beside sea-ice
 shadow: root Daoqao /daoqao/
-shrubland: gap (experiential): no compound recipe for 'shrubland'
+shrubland: gap (experiential): no settlement in or beside shrubland
 sibling: root Boodao /boodao/
 sleep: root Dooboo /dooboo/
 snow: gap (experiential): bugbear has no exposure to 'snow'
@@ -243,7 +243,7 @@ headedness: HeadFirst
 
 abyssal: gap (experiential): no settlement in or beside abyssal
 alpine: gap (experiential): no settlement in or beside alpine
-bathypelagic: gap (experiential): no settlement in or beside bathypelagic
+bathypelagic: gap (experiential): no compound recipe for 'bathypelagic'
 blood: root Ra /ra/
 blue: gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9
 bone: root Xo /xo/
@@ -259,7 +259,7 @@ die: root Rogro /rogro/
 earth: root Rorra /rorra/
 eat: root Rokxo /rokxo/
 eclipse: gap (experiential): kobold has no exposure to 'eclipse'
-epipelagic: root Ro /ro/
+epipelagic: gap (experiential): no compound recipe for 'epipelagic'
 eye: root Rarro /rarro/
 fire: root Roro /roro/
 foot: root Rogrro /rogrro/
@@ -303,7 +303,7 @@ star: root Rogra /rogra/
 starlit: root Ra /ra/
 stone: root Xa /xa/
 sun: root Rogxa /rogxa/
-taiga: gap (experiential): no compound recipe for 'taiga'
+taiga: root Ro /ro/
 temperate-forest: root Xatxo /xatxo/
 temperate-grassland: gap (experiential): no settlement in or beside temperate-grassland
 temperate-rainforest: root Xotro /xotro/

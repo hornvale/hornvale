@@ -138,7 +138,22 @@ const STORE_DECAY: f64 = 0.95;
 /// epoch. The dominant taxes what it can SEE — the land, never the granary
 /// (spec §4.2's information asymmetry). A save-format constant: changing it
 /// re-fights every world's history.
-const ASSESS_RATE: f64 = 0.1;
+///
+/// **It is coupled to `GROWTH_RATE`, and the coupling is what decides whether
+/// the demand binds at all.** A remittance is `min(assessment, surplus)`, and
+/// the surplus is the logistic increment `GROWTH_RATE × N × (1 − N/eff)`,
+/// maximised at `N = eff/2` and therefore never exceeding `GROWTH_RATE/4 ×
+/// eff`. An `ASSESS_RATE` at or above `GROWTH_RATE/4` puts the assessment
+/// beyond the largest surplus the land can ever yield, the surplus branch is
+/// taken on every world, and the assessment — including anything §4.3's
+/// adaptive loop does to it — is decorative. Half the ceiling
+/// (`GROWTH_RATE/8`) is the value chosen: the demand then binds over the whole
+/// middle band of the capacity curve (`N/eff ∈ (0.146, 0.854)`) rather than at
+/// the single point `N = eff/2`, and there is headroom on both sides for the
+/// adaptive loop to move it. Not fitted to any measured outcome; the coupling
+/// itself is pinned by
+/// `the_assessment_can_actually_bind_against_the_logistic_ceiling`.
+const ASSESS_RATE: f64 = 0.025;
 /// The ceiling on an assessment, as a multiple of the subordinate cell's
 /// effective capacity: no patron may demand more than the land could ever
 /// produce (spec §4.5's divergence bound). It does not bind at the moment a
@@ -3022,6 +3037,91 @@ mod tests {
             "the demand must be assessed on the SUBORDINATE's land ({POOR}), not the patron's \
              ({RICH}): {}",
             t.assessment
+        );
+    }
+
+    #[test]
+    // The assertion IS on two constants, and that is the point: the claim
+    // under test is a relationship between them, which nothing else in the
+    // file states. Moving it into a `const` block would trade the diagnostic
+    // message — which names both values and what their ordering buys — for a
+    // bare compile error.
+    #[allow(clippy::assertions_on_constants)]
+    fn the_assessment_can_actually_bind_against_the_logistic_ceiling() {
+        // The largest surplus a subordinate's own land can ever yield is the
+        // logistic increment at its peak, N = eff/2 → GROWTH_RATE/4 × eff. An
+        // assessment above that is decorative: min(assessment, surplus) would
+        // always take the surplus branch, and adapting it would change
+        // nothing. The two constants are therefore COUPLED, and this pins the
+        // relationship rather than either value, so a future change to
+        // `GROWTH_RATE` reddens here instead of silently re-inerting §4.3.
+        assert!(
+            ASSESS_RATE < GROWTH_RATE / 4.0,
+            "ASSESS_RATE {ASSESS_RATE} must sit below the logistic ceiling {}, or the demand \
+             never binds",
+            GROWTH_RATE / 4.0
+        );
+    }
+
+    #[test]
+    fn the_demand_binds_on_a_subordinate_at_peak_productivity() {
+        // The relationship above, stated as behaviour rather than arithmetic:
+        // a subordinate sitting exactly where its land is most productive
+        // (N = eff/2, the maximum of the logistic increment) must hand over
+        // its patron's WHOLE demand and still keep something — i.e. the
+        // `assessment` branch of `min(assessment, surplus)` is the one taken.
+        // Under the pre-Step-0 constant this world took the surplus branch and
+        // the subordinate kept nothing, which is what made every later
+        // adjustment to the assessment unobservable.
+        let (geo, graphs, capacity, river_prox, refugia, era) = cascade_world(|_| RICH);
+        let mut bake = hand_bake(&graphs, &capacity, &river_prox, &refugia, no_disposition());
+        let far = geo.neighbors(CellId(0))[0];
+        let patron = bake.open(
+            KindId("goblin"),
+            CellId(0),
+            0.0,
+            80.0,
+            Founding::Genesis(CellId(0)),
+            None,
+            0.0,
+        );
+        // RICH / 2 — the peak of the logistic increment, where the surplus is
+        // the largest this land will ever offer.
+        let sub = bake.open(
+            KindId("kobold"),
+            far,
+            0.0,
+            RICH / 2.0,
+            Founding::Genesis(far),
+            None,
+            0.0,
+        );
+        bake.tribute.insert(
+            sub,
+            Tribute {
+                patron,
+                assessment: RICH * ASSESS_RATE,
+                since: 0.0,
+            },
+        );
+
+        bake.begin_epoch();
+        let before = bake.communities[sub].population;
+        let pressure = bake.pressure_of(sub, &era);
+        bake.grow(sub, &era, 0.0, pressure);
+        let surplus = bake.communities[sub].population - before;
+        bake.collect_tribute(0.0);
+
+        assert_eq!(
+            bake.communities[patron].stores.to_bits(),
+            (RICH * ASSESS_RATE).to_bits(),
+            "the patron must receive its whole demand ({}), not merely the surplus ({surplus})",
+            RICH * ASSESS_RATE
+        );
+        assert!(
+            bake.communities[sub].population > before,
+            "a subordinate at peak productivity must keep part of its increment: {} vs {before}",
+            bake.communities[sub].population
         );
     }
 
