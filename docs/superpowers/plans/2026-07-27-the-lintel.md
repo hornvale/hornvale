@@ -1008,6 +1008,16 @@ mod tests {
         let i = interior_with(&[AnchorKind::Ground, AnchorKind::Hearth]);
         assert_eq!(describe_chamber(&i, &brief()), describe_chamber(&i, &brief()));
     }
+
+    #[test]
+    fn the_brief_changes_the_word_for_the_place() {
+        // `brief` must be READ, not merely carried: a built place is a room,
+        // an unbuilt one is a hollow.
+        let i = interior_with(&[AnchorKind::Ground, AnchorKind::Hearth]);
+        let wild = Brief::from_parts(None, None, None, None, false, true);
+        assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
+        assert!(describe_chamber(&i, &wild).contains("hollow"));
+    }
 }
 ```
 
@@ -1042,19 +1052,25 @@ fn noun(kind: AnchorKind) -> Option<&'static str> {
 
 /// One sentence for a chamber: what stands in it, in the interior's own
 /// deterministic anchor order.
+///
+/// `brief` is read, not carried: a built place is a *room*, an unbuilt one is a
+/// *hollow*, and that single word is the difference between a dwelling and a
+/// cave mouth. (An unused parameter would be dead weight and a reviewer would
+/// be right to flag it.)
 /// type-audit: bare-ok(prose: return)
-pub fn describe_chamber(interior: &Interior, _brief: &Brief) -> String {
+pub fn describe_chamber(interior: &Interior, brief: &Brief) -> String {
+    let place = if brief.built { "room" } else { "hollow" };
     let nouns: Vec<&'static str> = interior
         .ids()
         .iter()
         .filter_map(|&id| noun(interior.anchor(id).kind))
         .collect();
     match nouns.len() {
-        0 => "A bare room, its floor swept and its corners empty.".to_string(),
-        1 => format!("A small room. {} stands here.", capitalize(nouns[0])),
+        0 => format!("A bare {place}, its floor swept and its corners empty."),
+        1 => format!("A small {place}. {} stands here.", capitalize(nouns[0])),
         _ => {
             let (last, rest) = nouns.split_last().expect("len >= 2");
-            format!("A small room, holding {} and {}.", rest.join(", "), last)
+            format!("A small {place}, holding {} and {}.", rest.join(", "), last)
         }
     }
 }
