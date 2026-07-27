@@ -5020,6 +5020,7 @@ impl Action {
             Action::Drink,
             Action::Rest,
             Action::Eat,
+            Action::MoveWithin(crate::interior::AnchorId(0)),
         ]
     }
 
@@ -5028,7 +5029,14 @@ impl Action {
     /// type-audit: bare-ok(identifier-text: return)
     pub fn concept_name(&self) -> &'static str {
         match self {
-            Action::MoveTo(_) => "move",
+            // Both movement variants answer to one concept. They differ in
+            // SCALE — between rooms, and between anchors inside a room (The
+            // Threshold) — which is a mechanism distinction, not a vocabulary
+            // one: a language has a word for going, not two words separated by
+            // how far. If a people ever needs to say `approach` distinctly from
+            // `move`, that is a new concept and a deliberate one, not a second
+            // name minted here by accident.
+            Action::MoveTo(_) | Action::MoveWithin(_) => "move",
             Action::Drink => "drink",
             Action::Rest => "rest",
             Action::Eat => "eat",
@@ -5044,6 +5052,7 @@ impl Action {
 fn action_variants_must_all_be_rostered(a: &Action) -> &'static str {
     match a {
         Action::MoveTo(_) => "move",
+        Action::MoveWithin(_) => "move",
         Action::Drink => "drink",
         Action::Rest => "rest",
         Action::Eat => "eat",
