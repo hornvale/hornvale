@@ -1151,7 +1151,7 @@ pub use chamber_prose::describe_chamber;
 - [ ] **Step 4: Run to verify pass**
 
 Run: `cargo test -p hornvale-vessel chamber_prose:: 2>&1 | tail -12`
-Expected: PASS, 4 tests.
+Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Format, audit, commit**
 
