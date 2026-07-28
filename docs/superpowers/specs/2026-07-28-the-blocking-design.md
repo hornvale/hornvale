@@ -2,7 +2,10 @@
 
 **Campaign:** The Blocking — campaign 1 of the Rose Window's **render arc**, the
 three-campaign carve agreed 2026-07-28 (this, then The Sighting, then The Panes).
-**Date:** 2026-07-28 · **Status:** spec, awaiting G3
+**Date:** 2026-07-28 · **Status:** spec approved at G3; amended 2026-07-28 by
+ledger #7–#12 (the extent derivation §3.4, per-method layout labels §3.2/§5.1, the
+measured epoch §5.2, what the stamp records §5.3, the two role-table constraints
+§4.1). Those amendments post-date G3 and lead the **G6** digest.
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md` **Amendment 2** (§1b)
 — read that first; this spec builds only on the amended program.
 **Prior rung:** The Lintel (`2026-07-27-the-lintel-design.md`), which made the
@@ -99,6 +102,16 @@ reads. Radial and branching are named here as predicted so they arrive as scope
 rather than as surprise, and the selection seam is the same shape patterns already
 use: the brief chooses.
 
+**Each method gets its own stream label**, fully qualified:
+`room/layout/v1/rectilinear` and `room/layout/v1/grown` (ledger #7). The unit of
+independent change is the *algorithm* — retuning the grower's flood order has
+nothing to do with the BSP cut band — and 0073 fixes epoch granularity at
+declaration, so the split is made before either label has ever been bumped. A
+label is declared only for a method that **exists**: the two predicted methods
+above get none until they have code, because a label is permanent once published.
+A change to something the methods *share* — the extent derivation, `Lattice`'s
+meaning — bumps both.
+
 ### 3.3 What the lattice is, and is not
 
 - Cells are **`FRAME`-tier** and never serialized (0069, unchanged). The lattice
@@ -107,6 +120,40 @@ use: the brief chooses.
   corresponding non-adjacency is a lie, and §7's checker fails on it.
 - The lattice covers **one structure**, not a region: locale-scale space stays
   topological (Amendment 2's law 2 — adjudication changes kind at the band break).
+
+### 3.4 The extent: how big a plan is
+
+The plan is **exactly as big as the rooms it must hold.** `extent_for(structure)`
+is a pure function of the **chamber count** — one named per-chamber side, a block
+arrangement for 1..=`MAX_CHAMBERS`, anchored at the origin. It reads no brief
+field and **consumes no draw**, which is what keeps §7 rule 7's DOF count equal to
+the cut positions alone: extent is a coarse constraint, not a die roll.
+
+Two axes were considered and rejected, both for the same reason (ledger #8):
+
+- **`peak_population`** already governs how *many* buildings a settlement has
+  (`structures_of` in `domains/history/src/flesh.rs`), not how big one of them is.
+  Reading it here would double-count one signal.
+- **`notability`** would make a Seat's plan grander — but `brief.notability`
+  describes only the *alive* occupation, and a building's shell outlives its
+  occupants. Deriving floor area from a living fact makes a building **shrink when
+  its people leave**. Unreachable today (nothing built stands at a ruin: `built`
+  is settlement membership), which is exactly why the rule is written down now,
+  while it is still free — the same closing window as §5.1's.
+
+Grandeur therefore lives in §4.1's `hall` role and its high seat — in what a room
+*contains*. Expressing it as floor area instead would be the catalogue reading of
+the same fact, which §4.3 forbids.
+
+**The ceiling is a test, not a taste.** A plan is read in an 80-column transcript,
+so the largest extent any chamber count can produce must fit one, asserted over
+every count rather than chosen by hand and hoped for.
+
+Deferred with a home: a **durable** extent — what the shell remembers rather than
+what the tenants are — needs the ruin signature the brief deliberately omits, and
+arrives with it. Its most interesting form is *tech as a material span cap*: a
+pre-industrial room is as wide as a roof beam can span, so `tech` would bound a
+chamber's width rather than reward it. Recorded in the idea registry, not built.
 
 ## 4. Differentiation
 
@@ -131,6 +178,24 @@ This is the pattern language one rung finer: patterns complete patterns, and a
 role is a bundle of patterns that complete each other. It is also
 `CLIENT-district-patterns`' shape one band *down* — the same composer, a
 different declared vocabulary.
+
+Two constraints on that table, both verified rather than assumed (ledger #12):
+
+- **`peak_population` is not on the brief today.** The brief carries `function`,
+  `tech`, `notability`, `people`, `built`, `cold`. The `store` role is its first
+  consumer, so the field is added where it is first read — free, since nothing
+  here is serialized (`brief.rs`'s own module doc licenses exactly this) — and the
+  hamlet ceiling is *hoisted* from `flesh.rs` rather than re-typed, so one number
+  does not come to mean two things.
+- **The headline may not depend on `cold` or on `Seat`.** The structure the
+  seed-42 walk enters has two chambers, sits in tropical seasonal forest, and is
+  not a Seat — so every `needs_cold` pattern is filtered out and no high seat ever
+  draws. A role table whose differentiation lives in the hearth patterns or in
+  `notability == Seat` leaves the flagship transcript **unchanged** and the
+  campaign's headline unobserved with every check green. The differentiation that
+  carries the headline is the distribution of the warm built patterns already in
+  the inventory. Note also that every chamber has at least one link, so a doorway
+  cannot be the threshold role's private property.
 
 ### 4.2 What that costs: new kinds and new patterns
 
@@ -157,7 +222,7 @@ the campaign's content, and at the pattern count as an incidental.
 
 ## 5. The epoch, and what it breaks
 
-### 5.1 Three labels, and only one bumps
+### 5.1 Four labels, and the bump is conditional
 
 ```
   label                  governs                  this campaign   if bumped
@@ -165,12 +230,14 @@ the campaign's content, and at the pattern count as an incidental.
   room/chambers/v1       WHICH chambers exist     DO NOT TOUCH    free today; orphans
                                                                   every in-chamber mark
                                                                   the moment one exists
-  room/furnishing/v1     WHICH patterns a place   BUMP -> v2      interiors move, so
-                         draws                                    warmth moves, so
-                                                                  committed drive history
+  room/furnishing/v1     WHICH patterns a place   BUMP -> v2 IF   interiors move, so
+                         draws                    A LIVE READ     warmth moves, so
+                                                  MOVES (§5.2)    committed drive history
                                                                   moves
-  room/layout/vN         WHERE the solver puts     DECLARE, as    nothing yet — this is
-                         them                      causal          its first use
+  room/layout/v1/        WHERE the rectilinear    DECLARE, as     nothing yet — this is
+    rectilinear          method puts them         causal          its first use
+  room/layout/v1/        WHERE the growing        DECLARE, as     nothing yet — this is
+    grown                method puts them         causal          its first use
 ```
 
 **`room/chambers/v1` must not move — and the honest reason is a window that is
@@ -188,23 +255,62 @@ blast-radius split decision 0073 declared two labels for, and this campaign is
 where the split first pays: it changes what a room *contains* without touching
 what identifies it.
 
-### 5.2 Byte-identity breaks, deliberately, for the first time
+### 5.2 Byte-identity: what actually breaks is measured, not assumed
 
-New patterns change composed interiors, which changes warmth at an anchor, which
-changes committed NPC drive history. So:
+This section previously asserted that the epoch was unavoidable. **It is a
+prediction, and the plan tests it** (ledger #10). Two verified facts changed the
+shape of this section, and both were found by grepping rather than by reasoning:
+
+1. **`ROOM_FURNISHING` has exactly one occurrence in the workspace — its own
+   declaration. Nothing draws from it.** So `room/furnishing/v1 → v2` re-mints
+   nothing on its own; by itself it is a declaration, not a cause.
+2. **The band a creature stands in is the locale, not the chamber.** NPC thermal
+   drives read `interior_of`; `chamber_interior_of` is read only by the chamber
+   renderer. And `selection` iterates the inventory in order and filters, so
+   *appending* role-gated patterns leaves every existing `(built, cold)` selection
+   byte-identical.
+
+Together those mean chamber differentiation can be built out of the **nine
+patterns that already exist** — the role decides which of them a chamber draws —
+and that new anchor kinds can be appended behind gates no locale composition
+opens. Three outcomes are therefore possible, and the vocabulary matters because
+two of them are routinely mistaken for each other:
+
+```
+  RE-PIN   transcripts move; no metric golden moves.  NOT an epoch. Re-pin.
+  EPOCH    a metric or census golden moves.           Health battery becomes the
+                                                      GATE; galleries re-pin in an
+                                                      isolated commit; census regen
+                                                      needs Nathan's authorization.
+  LATENT   nothing moves, because every new pattern
+           is gated out of every live composition.    Cheapest today, and a TRAP.
+```
+
+**If the outcome is EPOCH:**
 
 - **The health battery becomes the GATE, not a check.** The Hearth and The Lintel
-  were both designed to avoid this posture; this campaign cannot, and pretending
-  otherwise is how a calibration failure gets mistaken for expected drift.
-- The seed-42 galleries re-pin.
-- The census probably re-pins too, since `hearth_population_calibration` reads
-  interiors. **Census regeneration is an autopilot carve-out** — it needs Nathan's
-  explicit authorization, requested at the point of need, never assumed.
+  were both designed to avoid this posture; pretending a gate is a check is how a
+  calibration failure gets mistaken for expected drift.
+- The census re-pins if `hearth_population_calibration` moves. **Census
+  regeneration is an autopilot carve-out** — Nathan's explicit authorization,
+  requested at the point of need, never assumed.
 - Preregistered study pins must be **invariants** (ordering, sign, family
   membership, "stays zero"), never values, or every future epoch reopens them
   (Amendment 1 §1a.5(b)).
 
-**The mitigation, stated rather than implied:** committed facts are never
+**If the outcome is LATENT, the response is mandatory, not optional.** The
+inventory would then hold patterns no live composition admits, and the
+discontinuity is merely deferred to whichever campaign opens the gate. The gate
+condition goes in `INVENTORY`'s own doc comment — which today says flatly that
+adding a pattern *is* an epoch. That sentence becomes over-strict the moment role
+gating lands, and an over-strict warning is one that gets ignored, which is
+precisely how an **undeclared** epoch ships.
+
+Stated plainly because the polarity is easy to get backwards: an epoch is not
+only a cost. It is the one mechanism by which a world frozen by its own goldens is
+allowed to improve. Avoiding one is not automatically the win.
+
+**The mitigation, whichever outcome lands:** committed facts are never
 retro-changed. History survives an epoch; only future outcomes differ. Worlds are
 reproducible *within* an epoch, not across one.
 
@@ -223,6 +329,18 @@ been away; the rooms are not as you remember"* rather than silently rearranging
 someone's memory of a place. Small, and it turns a betrayal into a diegetic event.
 This is the one place this campaign writes a new datum into a world, and it is
 metadata about derivation rather than derived content.
+
+**What the stamp records: the versioned labels and their versions** — not an
+opaque counter (ledger #9). A reload then *diffs two label sets* and can name what
+moved — the rooms, or the furnishings — instead of issuing one generic warning
+about an unspecified rearrangement. The data already exists: every crate publishes
+`stream_labels()`, and the book renders a manifest page from it. A counter would be
+a second hand-maintained encoding of a fact the tree already knows, and would
+drift from it.
+
+Only labels carrying a `/vN` segment are recorded. An unversioned label is
+structural and must never move (0073's argument for `room/face` and `room/child`),
+so including one would add a row that can never differ.
 
 ## 6. The parity contract
 
