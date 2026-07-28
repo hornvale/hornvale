@@ -353,6 +353,38 @@ things the seam holding does *not* buy — and the one lesson that now recurs
 often enough to be a rule rather than an anecdote is that every entry on that
 ledger was found by a human looking at output, never by a test.
 
+[The Occlusion](./chronicle/the-occlusion.md) confirms that rule from outside
+the scene-document program entirely, and in the plainest register available:
+its four defects were found not in a picture but in **prose**, by building the
+CLI and reading what it said. The almanac had been opening for most of the
+project's life by naming five stars beneath a flat overcast — a sentence that
+contradicts itself inside its own span — and `possess` printed `Ways on: SE,
+N, SW.` and then answered `No verb 'se'`. Neither is visible in a diff, because
+in both cases each half is correct in isolation: the compass parser accepted
+the token and the dispatch arm that reaches it was simply absent; the weather
+was computed correctly and appended after the sky was already described. A
+codebase with zero TODOs across a hundred thousand lines, a default-deny type
+audit, and a 2,319-test gate said nothing about either. So the visual pass
+generalizes to a **legibility pass**: for a project whose deliverable is prose
+about a world, reading the output is a distinct instrument from testing it, and
+the same one that catches a leaning parallelogram catches a sky that argues
+with itself.
+
+The campaign also put a sharper edge on what "verified" buys. Its spec claimed
+the change could not reach the save format, and *checked* that claim — the sky
+report carries no serializer, confirmed by reading the derive rather than
+assuming it. The check was sound and the conclusion was false, because the
+exposure did not run through serialization but through genesis, where a
+people's gods are derived from the sky they observe. Wiring occlusion into the
+observation path cost seed 42 twenty-three of its forty-eight deities while
+every gate stayed green, since the gate pins facts against the current build
+and not against history. What caught it was the cheapest possible instrument,
+and one no schema discipline implies: build the world before and after, and
+compare the bytes. The ledger's entries were all *found by looking*; this one
+adds that a determinism claim is only as good as the route it was checked
+along, and that the total check — same seed, both binaries, `cmp` — costs
+ninety seconds and subsumes the clever ones.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
@@ -437,6 +469,24 @@ measurement can move at all belongs beside the measurement, not after it.
   Regum* prove pieces of this can work; nobody has done it against a
   fields-plus-ledger substrate at this scope, and the observe-then-commit loop
   is not yet built. Its self-scorable half is named below.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27): the bet
+  moves halfway, and only halfway.** The phrase names two mechanisms, and the
+  campaign shipped exactly one of them. *Derive-on-demand* now exists at the
+  finest band the world has: a chamber's existence, its interior and its prose
+  are a pure function of the derived brief, the address and the seed, computed
+  when a player walks in and discarded when they leave. Against ~4^9 candidate
+  addresses under a single locale, that is the statistical-prior half working at
+  its intended ratio — the overwhelming majority of the space is never
+  materialized because existence is a predicate rather than a given, and it is
+  asserted by test that it stays that way. *Commit-on-observation* does **not**
+  exist and was deliberately excluded: The Lintel commits nothing at all, which
+  is precisely what preserves byte-identity — the player's position has never
+  been a committed datum, so descent needed no schema change and no epoch.
+  Promotion-on-touch — the write half, where an observed detail is *kept* — and
+  the delta store it implies remain unbuilt, and are the harder half, since they
+  are where a lazily generated world can begin to contradict its own prior. So
+  the bet's confidence in *derivation* is materially higher than it was, and its
+  confidence in the *loop* is unchanged.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
@@ -483,6 +533,19 @@ measurement can move at all belongs beside the measurement, not after it.
   resolution — not the client's — is the next floor worth deepening. That
   producer-side deepening stays deferred; what The Massing added is the
   instrument to judge when it is owed.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27):** the
+  substrate now has a *second occupied band*. A possessed body can stand at
+  nine refinements below the walk band — one address space, a longer path — so
+  the uniform-depth restriction is lifted in the narrow case the two-band
+  vocabulary defines, and band changes are confined to visible thresholds
+  precisely to avoid the thrashing an automatic adaptive-depth walk would
+  reintroduce. This does **not** breach the ~110 km physics floor the row draws:
+  a chamber's content derives from the *committed occupation history* of its
+  walk-band ancestor, not from interpolating fields beneath cell scale. The
+  distinction is worth keeping sharp — refining geometry below the floor stays
+  cosmetic, while refining *what is recorded to be there* is fidelity the
+  ledger already holds. The runtime active-region swap and its delta store are
+  still unbuilt.
 
 ## Genuinely open — split by whether the world can grade itself
 

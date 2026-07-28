@@ -8,11 +8,17 @@ coherent noise, fields, the fact ledger, refinement, the trace protocol's
 shared vocabularies, the shared unit vocabulary (typed physical quantities
 every domain speaks — the elevation datum, the temperature pair), the
 geosphere (a spherical region graph), and — below the
-globe — the room substrate: an addressable, lazily generated finer mesh that is
-the *same* icosphere refined deeper, for local detail at zero global cost. The
-kernel is the *only* thing a domain is allowed to depend on. Built in Campaign
+globe — the place substrate: an addressable, lazily generated finer mesh that is
+the *same* icosphere refined deeper, for local detail at zero global cost. One
+address space spans two bands of scale — a **locale** at the walk band
+(~1.7 km, exhaustively tiled) and a **chamber** nine refinements below it
+(~3.3 m, sparse, existing only where something is built). A chamber is not a
+second address space; it is a longer path. The terminology is settled by
+[decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0082-locale-chamber-place.md).
+The kernel is the *only* thing a domain is allowed to depend on. Built in Campaign
 1a; gained enumeration interfaces in 1b; the geosphere arrived in Campaign 3;
-the room substrate in [The Room Mesh](../chronicle/the-room-mesh.md); the
+the place substrate in [The Room Mesh](../chronicle/the-room-mesh.md) and its
+second band in [The Lintel](../chronicle/the-lintel.md); the
 shared units in [The Datum](../chronicle/the-datum.md) and
 [Temperature](../chronicle/temperature.md); otherwise
 already stable.

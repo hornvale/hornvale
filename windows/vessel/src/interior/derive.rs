@@ -26,6 +26,23 @@ pub fn interior_of(room: &RoomAddr, terrain: &dyn Terrain) -> Interior {
     compose(&selection(built, cold))
 }
 
+/// The interior of a CHAMBER — a place below the walk band.
+///
+/// Identical to [`interior_of`] except that every terrain read is taken at the
+/// chamber's **walk-band ancestor**. That is not a convenience: `LocaleTerrain`
+/// answers `is_built` from a settlement-territory set keyed on walk-band room
+/// ids, so a raw chamber address reads as unbuilt and a dwelling would furnish
+/// itself with wilderness patterns.
+///
+/// `interior_of` is deliberately left untouched: its output for every walk-band
+/// address is a committed-history input (a creature's thermal drive reads the
+/// warmth it implies), so it must stay bit-for-bit what The Threshold shipped.
+/// type-audit: bare-ok(count: walk_depth)
+pub fn chamber_interior_of(chamber: &RoomAddr, terrain: &dyn Terrain, walk_depth: u32) -> Interior {
+    let locale = crate::band::truncate_to_walk(chamber, walk_depth);
+    interior_of(&locale, terrain)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,5 +164,95 @@ mod tests {
                 "a creature must always have somewhere to arrive"
             );
         }
+    }
+
+    /// A `Terrain` whose built-set is keyed at the WALK band, exactly as
+    /// `LocaleTerrain` is (`liveness.rs`: built iff the packed room id is in
+    /// the injected settlement-territory set).
+    struct WalkKeyedTerrain {
+        built_walk_ids: std::collections::BTreeSet<u64>,
+    }
+    impl Terrain for WalkKeyedTerrain {
+        fn elevation(&self, _r: &RoomAddr) -> f64 {
+            0.0
+        }
+        fn is_fresh_water(&self, _r: &RoomAddr) -> bool {
+            false
+        }
+        fn temperature(&self, _r: &RoomAddr, _d: WorldTime) -> f64 {
+            -20.0
+        }
+        fn is_built(&self, r: &RoomAddr) -> bool {
+            r.pack()
+                .ok()
+                .is_some_and(|id| self.built_walk_ids.contains(&id.0))
+        }
+    }
+
+    const WALK: u32 = 12;
+
+    fn walk_addr() -> RoomAddr {
+        RoomAddr {
+            face: 3,
+            path: (0..WALK).map(|i| (i % 4) as u8).collect(),
+        }
+    }
+
+    fn chamber_addr() -> RoomAddr {
+        let mut path: Vec<u8> = walk_addr().path;
+        path.extend((0..crate::band::CHAMBER_DEPTH_OFFSET).map(|i| (i % 4) as u8));
+        RoomAddr { face: 3, path }
+    }
+
+    #[test]
+    fn a_chamber_in_a_built_locale_draws_built_patterns() {
+        // THE FOOTGUN: the built-set holds the LOCALE's id, never the
+        // chamber's, so a raw read would furnish a dwelling as wilderness.
+        let terrain = WalkKeyedTerrain {
+            built_walk_ids: [walk_addr().pack().unwrap().0].into_iter().collect(),
+        };
+        assert!(
+            !terrain.is_built(&chamber_addr()),
+            "precondition: a raw chamber read is UNBUILT — this is the footgun"
+        );
+        let i = chamber_interior_of(&chamber_addr(), &terrain, WALK);
+        let kinds: Vec<AnchorKind> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
+        assert!(
+            kinds.contains(&AnchorKind::Hearth),
+            "a built-cold chamber draws a hearth, got {kinds:?}"
+        );
+    }
+
+    #[test]
+    fn a_chamber_in_an_unbuilt_locale_draws_wild_patterns() {
+        let terrain = WalkKeyedTerrain {
+            built_walk_ids: std::collections::BTreeSet::new(),
+        };
+        let i = chamber_interior_of(&chamber_addr(), &terrain, WALK);
+        let kinds: Vec<AnchorKind> = i.ids().iter().map(|&id| i.anchor(id).kind).collect();
+        assert!(
+            !kinds.contains(&AnchorKind::Bed),
+            "an unbuilt place has no bed, got {kinds:?}"
+        );
+    }
+
+    #[test]
+    fn a_chamber_composes_exactly_as_its_locale_does() {
+        // THIS TEST IS SPEC §3's ADMISSIBILITY TABLE, asserted. The table's
+        // content in v1 is "every kind is admissible at both bands", so the
+        // observable claim is exactly that the two bands compose identically.
+        // When a later campaign gives a band its own vocabulary, this test is
+        // the one that must change, deliberately and with an epoch argument.
+        //
+        // The composer is shared and FROZEN: the chamber's interior is the
+        // same graph the locale would draw, so this campaign moves no
+        // behaviour (spec §2).
+        let terrain = WalkKeyedTerrain {
+            built_walk_ids: [walk_addr().pack().unwrap().0].into_iter().collect(),
+        };
+        assert_eq!(
+            chamber_interior_of(&chamber_addr(), &terrain, WALK),
+            interior_of(&walk_addr(), &terrain),
+        );
     }
 }

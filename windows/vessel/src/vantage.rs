@@ -31,9 +31,16 @@ pub fn observable(
     let locale = ctx
         .describe(&agent.position, at)
         .map_err(VesselError::Locale)?;
-    let sky = hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate())
-        .map_err(|e| VesselError::Build(e.to_string()))?
-        .description;
+    // The walker's own cell, not the capital's: the sky over *here*, dimmed by
+    // the weather *here*. (`at` is already this function's WorldTime, so the
+    // cell gets its own name rather than shadowing it.)
+    let cell = ctx
+        .terrain()
+        .nearest_cell(locale.latitude, locale.longitude);
+    let sky =
+        hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), Some(cell))
+            .map_err(|e| VesselError::Build(e.to_string()))?
+            .description;
     Ok(Vantage {
         locale,
         day: at,

@@ -14,11 +14,11 @@ inside a possess session; a freshly built world commits none of this.)*
 
 ```text
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > look
 [room 738918402, day 0]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > npcs
 7 NPC(s) derived this session:
@@ -51,7 +51,7 @@ The bugbear of Qvooshtvoagootao settles down to rest.
 Time passes. You sense movement nearby (16 stirred).
 > look
 [room 738918402, day 7]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its first-quarter face. The small, distant moon shows its full face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a low grey rain-deck.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The sky is a low grey rain-deck.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.
@@ -65,7 +65,7 @@ hobgoblin of Feamjeafeoqoanoagoo:
 Time passes. You sense movement nearby (338 stirred).
 > look
 [room 738918402, day 97]
-You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning gibbous face. The small, distant moon shows its new face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 Ways on: SE, N, SW.
 > needs
 The bugbear of Qvooshtvoagootao grows restless.

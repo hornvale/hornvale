@@ -13,6 +13,7 @@
 
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 // The claim is scheduling infrastructure, not world state: it measures how
 // long a run waited and stamps when a hold began. It never reads `WorldTime`,
 // never touches a fact, and never reaches an artifact, so it carries the same
@@ -127,28 +128,59 @@ fn parse_claim(text: &str) -> Option<ClaimInfo> {
     })
 }
 
-/// Is `pid` a live process? Linux `/proc`; decision 0063 makes this box the
-/// single golden-authoring platform, so Linux-only is acceptable here.
-fn pid_is_alive(pid: u32) -> bool {
-    Path::new(&format!("/proc/{pid}")).exists()
+/// One `ps -o <field> -p <pid>` lookup, trimmed. `None` when the pid is gone —
+/// `ps` exits non-zero for an unknown pid on both macOS and Linux. Shelling out
+/// costs a fork, which is why `/proc` stays the fast path where it exists; this
+/// runs once per claim check, not in a loop.
+fn ps_field(pid: u32, field: &str) -> Option<String> {
+    let out = Command::new("ps")
+        .args(["-o", field, "-p", &pid.to_string()])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let text = String::from_utf8(out.stdout).ok()?;
+    let line = text.lines().map(str::trim).find(|l| !l.is_empty())?;
+    Some(line.to_string())
 }
 
-/// Walk this process's ancestor chain via `/proc/<pid>/status`'s `PPid`.
+/// Is `pid` a live process?
+///
+/// Chosen at runtime by whether `/proc` is mounted rather than by
+/// `cfg!(target_os)`, so a Linux container and a macOS host both work from one
+/// binary. **This was `/proc`-only, which returns `false` for every pid on
+/// macOS** — and its comment cited decision 0063's single-golden-authoring-box
+/// as licence for that, when the box in question is Apple silicon. The one
+/// platform the justification dismissed is the only one that matters here.
+fn pid_is_alive(pid: u32) -> bool {
+    if Path::new("/proc").is_dir() {
+        return Path::new(&format!("/proc/{pid}")).exists();
+    }
+    ps_field(pid, "pid=").is_some()
+}
+
+/// The parent of `pid`: `/proc/<pid>/status`'s `PPid` where `/proc` exists,
+/// `ps -o ppid=` otherwise.
+fn ppid_of(pid: u32) -> Option<u32> {
+    if Path::new("/proc").is_dir() {
+        let status = fs::read_to_string(format!("/proc/{pid}/status")).ok()?;
+        return status
+            .lines()
+            .find_map(|l| l.strip_prefix("PPid:"))
+            .and_then(|v| v.trim().parse::<u32>().ok());
+    }
+    ps_field(pid, "ppid=")?.parse::<u32>().ok()
+}
+
+/// Walk this process's ancestor chain upward, bounded at 64 hops.
 fn is_ancestor(candidate: u32) -> bool {
     let mut pid = std::process::id();
     for _ in 0..64 {
         if pid == candidate {
             return true;
         }
-        let status = match fs::read_to_string(format!("/proc/{pid}/status")) {
-            Ok(text) => text,
-            Err(_) => return false,
-        };
-        let ppid = status
-            .lines()
-            .find_map(|l| l.strip_prefix("PPid:"))
-            .and_then(|v| v.trim().parse::<u32>().ok());
-        match ppid {
+        match ppid_of(pid) {
             Some(0) | None => return false,
             Some(next) => pid = next,
         }

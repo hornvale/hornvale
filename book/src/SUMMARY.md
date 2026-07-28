@@ -52,6 +52,7 @@
 - [An Abandoned Clearing — Seed 42](./gallery/history-seed-42.md)
 - [The Transport Topology — Seed 42](./gallery/connections-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
+- [Strange Sites — Seed 42](./gallery/strange-sites-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview, Off a Possession — Seed 42](./gallery/surrounds-seed-42.md)
@@ -261,12 +262,14 @@
 - [The Convalescence](./chronicle/the-convalescence.md)
 - [The Action Clock](./chronicle/the-action-clock.md)
 - [The Accession](./chronicle/the-accession.md)
+- [The Lintel](./chronicle/the-lintel.md)
 - [The Shelf-Mark](./chronicle/the-shelf-mark.md)
 - [The Actants](./chronicle/the-actants.md)
 - [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)
 - [The Turnstile](./chronicle/the-turnstile.md)
 - [The Tithe](./chronicle/the-tithe.md)
+- [The Occlusion](./chronicle/the-occlusion.md)
 
 # Appendix: The Frontier
 
