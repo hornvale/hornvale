@@ -35,14 +35,34 @@ LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
 # bypasses shell entirely, so it carries its own guard in Rust
 # (windows/lab/src/census_guard.rs, invoked from publish()) reading the same
 # scripts/census-canonical-host.txt this one does (decision 0063).
+# `status` answers "is a census running right now?" without ps | grep
+# (decision 0081). Handled before the host guard and the lock: asking is not
+# authoring, so it is legal from any machine and must never block.
+if [ "${1:-}" = "status" ]; then
+    cargo run --quiet --release -p hornvale -- lab claim-status
+    exit $?
+fi
+
 # shellcheck source=scripts/census-canonical-host.sh
 . "$(dirname "$0")/census-canonical-host.sh"
 require_canonical_census_host || exit 1
 
 exec 9>"$LOCK"
-echo "census-run: waiting for the census lock ($LOCK) …" >&2
-flock 9
+timeout_s="${HV_CENSUS_WAIT_TIMEOUT:-2700}"
+echo "census-run: waiting for the census lock ($LOCK; up to ${timeout_s}s) …" >&2
+if ! flock -w "$timeout_s" 9; then
+    # Bounded, so a wedged holder fails loudly instead of hanging forever
+    # (decision 0081). Report WHO, not just that we gave up.
+    echo "census-run: TIMED OUT after ${timeout_s}s waiting for the census lock." >&2
+    echo "census-run: $(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || echo 'claim holder unknown')" >&2
+    exit 75
+fi
 echo "census-run: lock acquired at $(date -Is)" >&2
+# Announce the hold so the nested regenerate-artifacts.sh -> lab run path does
+# not block against its own ancestor. flock is per open-file-description, so a
+# child re-flocking this same path on a fresh fd would DEADLOCK against us
+# (decision 0081).
+export HV_CENSUS_LOCK_HELD=$$
 trap 'echo "census-run: finished at $(date -Is)" >&2' EXIT
 
 run_root="$repo_root"
@@ -66,7 +86,7 @@ fi
 cd "$run_root"
 if [ "$#" -eq 0 ]; then
     echo "census-run: regenerating the canonical census goldens (HV_CENSUS=1, ~7 min) …" >&2
-    HV_CENSUS=1 bash scripts/regenerate-artifacts.sh
+    HV_CENSUS=1 bash scripts/timed.sh census -- bash scripts/regenerate-artifacts.sh
     echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is the canonical one, decision 0063)." >&2
 else
     for study in "$@"; do
