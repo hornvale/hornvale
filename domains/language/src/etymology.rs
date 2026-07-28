@@ -169,6 +169,14 @@ impl CascadeRegime {
     /// byte-identical.
     pub const SETTLED: CascadeRegime = CascadeRegime { min: 2, max: 4 };
 
+    /// The wear regime: the short cascade a high-frequency toponymic
+    /// morpheme is run through at name-formation time (The Wearing,
+    /// LANG-11's opacification phase — see [`crate::naming::Namer::wear`]).
+    /// One to two rules, against [`CascadeRegime::SETTLED`]'s two to four —
+    /// wear is a grinding-down of a name element that is said constantly,
+    /// not a millennium of divergence.
+    pub const WEAR: CascadeRegime = CascadeRegime { min: 1, max: 2 };
+
     /// Construct a regime from an inclusive `(min, max)` rule-count range.
     /// type-audit: bare-ok(count: min), bare-ok(count: max)
     pub const fn new(min: u32, max: u32) -> CascadeRegime {
@@ -213,6 +221,33 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
         .derive(streams::CASCADE)
         .stream();
     let count = stream.range_u32(regime.min, regime.max);
+    let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
+    Cascade { rules }
+}
+
+/// Draw `species`' **toponymic wear** cascade — the short cascade
+/// [`crate::naming::Namer::wear`] runs a high-frequency name morpheme
+/// through — from
+/// `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::LEXICON).derive(streams::CASCADE).derive(streams::WEAR)`,
+/// at [`CascadeRegime::WEAR`] (1–2 rules).
+///
+/// The extra [`streams::WEAR`] leg is the whole point and is documented at
+/// that constant: drawn from [`streams::CASCADE`] directly, a wear cascade
+/// is a strict prefix of the language's *historical* cascade, whose own
+/// output the lexicon's modern forms already are — so every rule would be
+/// re-applied to its own fixpoint and the wear would be a provable no-op.
+/// This is one further, independent epoch of drift, applied only to the
+/// forms said often enough to suffer it.
+/// type-audit: bare-ok(identifier-text)
+pub fn draw_wear_cascade(seed: &Seed, species: &str) -> Cascade {
+    let mut stream = seed
+        .derive(streams::ROOT)
+        .derive(StreamLabel::dynamic(species))
+        .derive(streams::LEXICON)
+        .derive(streams::CASCADE)
+        .derive(streams::WEAR)
+        .stream();
+    let count = stream.range_u32(CascadeRegime::WEAR.min, CascadeRegime::WEAR.max);
     let rules = (0..count).map(|_| draw_rule(&mut stream)).collect();
     Cascade { rules }
 }

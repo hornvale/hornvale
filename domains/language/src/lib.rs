@@ -111,7 +111,9 @@ pub use morphology::{
     ClassPosition, Evidential, MorphDepth, MorphForm, NounClass, TongueMorphology, affix,
     morph_depths, morph_forms,
 };
-pub use naming::{GeneratedName, MorphOptions, NameKind, Namer, SiteConcepts, render_views};
+pub use naming::{
+    GeneratedName, MorphOptions, NameCorpus, NameKind, Namer, SiteConcepts, render_views,
+};
 pub use packs::{
     PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,
     is_core_concept, kin_pack, register_concepts, universal_stratum,

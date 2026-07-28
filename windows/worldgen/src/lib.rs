@@ -4591,12 +4591,16 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             concepts: &concepts,
         };
         let name_seed = deity_name_seed(self.deity_seed, &phenomenon.kind, rank);
+        // No name corpus: a deity's name space is one-per-belief, not a
+        // scatter of settlements, so there is no per-culture frequency
+        // for a morpheme to wear against (The Wearing is toponymic).
         let (g, gloss) = self.namer.glossed_name(
             hornvale_language::NameKind::Deity,
             name_seed,
             &self.morph,
             &site,
             self.lexicon,
+            &hornvale_language::NameCorpus::none(),
         );
         if !gloss.is_empty() {
             self.glosses.insert(salt, gloss);
@@ -4627,6 +4631,7 @@ impl hornvale_religion::DeityNamer for LanguageDeityNamer<'_, '_, '_> {
             &self.morph,
             &site,
             self.lexicon,
+            &hornvale_language::NameCorpus::none(),
         );
         (g.roman, g.ipa)
     }
@@ -5187,7 +5192,30 @@ fn build_to(
         longitude: f64,
         gloss: String,
     }
-    let mut descriptors: Vec<SettlementDescriptor> = Vec::with_capacity(placements.len());
+    // A settlement's site inputs, resolved once. Naming runs in TWO passes
+    // over these because toponymic wear (The Wearing) is keyed to a
+    // morpheme's frequency in its own culture's name corpus, and a corpus
+    // cannot be counted until every name's concepts are known. Worldgen is
+    // the only layer that sees a culture's whole scatter — `naming.rs` stays
+    // a pure function of its arguments and never learns which OTHER
+    // settlements exist, which is what keeps a name pin-isolated. The
+    // expensive half (phenomena observation) happens once, in pass 1.
+    struct SettlementSite {
+        id: EntityId,
+        species: &'static str,
+        salt: u64,
+        cell: hornvale_kernel::CellId,
+        latitude: f64,
+        longitude: f64,
+        concepts: Vec<&'static str>,
+    }
+    let mut sites: Vec<SettlementSite> = Vec::with_capacity(placements.len());
+    // species -> (concept -> how many of that species' names use it), and
+    // species -> how many names it has. `BTreeMap` throughout: no hashing
+    // anywhere in a determinism-critical path.
+    use std::collections::BTreeMap;
+    let mut used: BTreeMap<&'static str, BTreeMap<String, usize>> = BTreeMap::new();
+    let mut named: BTreeMap<&'static str, usize> = BTreeMap::new();
     for s in &placements {
         let name = species_set[s.tag];
         let coord = geo.coord(s.cell);
@@ -5195,11 +5223,6 @@ fn build_to(
         let namer = namers
             .get(name)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(
-            wc.society
-                .get(&KindId(name))
-                .expect("peopled pass over a fauna kind"),
-        );
         let lexicon = lexicons
             .get(name)
             .expect("a lexicon was built for every placed species");
@@ -5212,26 +5235,91 @@ fn build_to(
         // is unread by the observer — the coordinate does the culling — so
         // `world_entity` still stands in for it (the settlement entity now
         // exists, but observation never reads it) — see `observed_phenomena_from`.
-        let seen =
-            observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
+        let seen = observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        let site_concepts = settlement_site_concepts(s.cell, &terrain, &climate, presiding);
+        let concepts = settlement_site_concepts(s.cell, &terrain, &climate, presiding);
+        // Which concepts this name will actually be built from — exactly
+        // what its gloss will name, reported without rendering anything.
+        // `glossed_name` replays the same picks off the same stream (wear
+        // consumes nothing from it), so pass 2 names from precisely the
+        // concepts counted here.
+        let chosen = namer.glossed_concepts(
+            hornvale_language::NameKind::Settlement,
+            salt,
+            &hornvale_language::SiteConcepts {
+                concepts: &concepts,
+            },
+            lexicon,
+        );
+        *named.entry(name).or_insert(0) += 1;
+        let counts = used.entry(name).or_default();
+        for concept in chosen {
+            *counts.entry(concept.to_string()).or_insert(0) += 1;
+        }
+        sites.push(SettlementSite {
+            id: s.id,
+            species: name,
+            salt,
+            cell: s.cell,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            concepts,
+        });
+    }
+    // The corpus proper: each concept's count over that culture's own name
+    // total. A settlement whose site holds no word still counts in the
+    // denominator — it is one of the culture's names, merely an opaque one.
+    let corpora: BTreeMap<&'static str, BTreeMap<String, f64>> = named
+        .iter()
+        .map(|(species, total)| {
+            let frequencies = used
+                .get(species)
+                .map(|counts| {
+                    counts
+                        .iter()
+                        .map(|(concept, n)| (concept.clone(), *n as f64 / *total as f64))
+                        .collect()
+                })
+                .unwrap_or_default();
+            (*species, frequencies)
+        })
+        .collect();
+
+    let mut descriptors: Vec<SettlementDescriptor> = Vec::with_capacity(sites.len());
+    for s in &sites {
+        let namer = namers
+            .get(s.species)
+            .expect("a Namer was built for every placed species");
+        let morph = morph_options(
+            wc.society
+                .get(&KindId(s.species))
+                .expect("peopled pass over a fauna kind"),
+        );
+        let lexicon = lexicons
+            .get(s.species)
+            .expect("a lexicon was built for every placed species");
         let site = hornvale_language::SiteConcepts {
-            concepts: &site_concepts,
+            concepts: &s.concepts,
+        };
+        let corpus = hornvale_language::NameCorpus {
+            frequencies: corpora
+                .get(s.species)
+                .expect("a corpus was counted for every species that named a settlement"),
         };
         let (generated, gloss) = namer.glossed_name(
             hornvale_language::NameKind::Settlement,
-            salt,
+            s.salt,
             &morph,
             &site,
             lexicon,
+            &corpus,
         );
         descriptors.push(SettlementDescriptor {
             id: s.id,
             name: generated.roman,
             biome: climate.biome_at(s.cell).name().to_string(),
-            latitude: coord.latitude,
-            longitude: coord.longitude,
+            latitude: s.latitude,
+            longitude: s.longitude,
             gloss,
         });
     }

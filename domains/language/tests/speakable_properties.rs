@@ -4,10 +4,10 @@
 
 use hornvale_kernel::Seed;
 use hornvale_language::{
-    CascadeRegime, Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameKind, Namer,
-    Phonology, SiteConcepts, build_lexicon, draw_phonology, render_views,
+    CascadeRegime, Envelope, ExoticSeg, ExposureClass, LexEntry, MorphOptions, NameCorpus,
+    NameKind, Namer, Phonology, SiteConcepts, build_lexicon, draw_phonology, render_views,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 /// An envelope swept from seed bits so the 64-seed battery crosses the
 /// full phonotactic regime space — including the cluster-heavy draws that
@@ -79,10 +79,17 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
         };
         let morph = MorphOptions { honorifics: false };
 
+        // The per-salt distinctness this loop used to assert is gone with
+        // the drawn settlement stem (The Wearing, decision 0024: uniqueness
+        // is a reference-time property and no future work fixes the
+        // collision rate by adding entropy). Two settlements over the same
+        // site concepts now legitimately share a name. The property this
+        // test exists for — The Speakable's audible containment — is
+        // unaffected and still checked on every salt.
         for kind in [NameKind::Settlement, NameKind::Deity] {
-            let mut settlement_names: BTreeSet<String> = BTreeSet::new();
             for salt in 0..6u64 {
-                let (name, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex);
+                let (name, gloss) =
+                    namer.glossed_name(kind, salt, &morph, &site, &lex, &NameCorpus::none());
                 for concept in gloss.split('-').filter(|c| !c.is_empty()) {
                     let word = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
@@ -100,18 +107,6 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
                         name.roman
                     );
                 }
-                if kind == NameKind::Settlement {
-                    settlement_names.insert(name.roman.clone());
-                }
-            }
-            if kind == NameKind::Settlement {
-                assert!(
-                    settlement_names.len() >= 5,
-                    "seed {seed}: settlement names over salts 0..6 must stay distinct \
-                     (the per-salt stem keeps spreading them) — got {} distinct of 6: \
-                     {settlement_names:?}",
-                    settlement_names.len()
-                );
             }
         }
     }

@@ -3804,12 +3804,16 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
         };
         let name_seed =
             hornvale_worldgen::deity_name_seed_for(&v.world().seed, species, &phenomenon.kind, i);
+        // The empty corpus, matching what worldgen passes for epithets:
+        // toponymic wear is settlement-only, so re-deriving the plain word
+        // here must wear nothing either.
         let (plain, _) = namer.glossed_name(
             NameKind::Epithet,
             name_seed,
             &MorphOptions { honorifics: false },
             &site,
             &lexicon,
+            &hornvale_language::NameCorpus::none(),
         );
         let plain = plain.roman.to_lowercase();
         let committed = b.epithet.to_lowercase();

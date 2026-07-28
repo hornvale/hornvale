@@ -24,19 +24,26 @@
 //! pin-isolated by construction (a name depends only on its own cell, never
 //! on which other settlements — or species — a world happens to place).
 //!
-//! [`Namer::glossed_name`] (The Words, Task 9) is a second, later epoch of
-//! the same `name` (retired but never deleted — old saves still read it):
-//! rooted one leg deeper (`…derive(StreamLabel::dynamic(kind_label)).derive(streams::V2).derive(StreamLabel::dynamic(&salt))`),
+//! [`Namer::glossed_name`] (The Words, Task 9) is a later epoch of the same
+//! `name` (v1 retired but never deleted — old saves still read it): rooted
+//! one leg deeper (`…derive(StreamLabel::dynamic(kind_label)).derive(streams::V3).derive(StreamLabel::dynamic(&salt))`),
 //! it compounds 1-2 of a [`SiteConcepts`] site's actual lexicon words
 //! instead of always drawing a bare stem, so a name becomes a small true
-//! story about the entity it names, with a gloss to match. It stays exactly
-//! as pure and pin-isolated as `name` — a function of `(seed, species, kind,
-//! v2, salt, site, lexicon)`, still no re-draw, still no dependence on any
-//! other *name* — though the `lexicon` and `site` a caller supplies may
-//! themselves be composed upstream from a species' full settlement scatter
-//! (Task 7/8's own per-species, not per-settlement, design); that composition
-//! is entirely the composition root's business, never this module's.
+//! story about the entity it names, with a gloss to match. `/v2` was that
+//! epoch's first leg; The Wearing (2026-07-27) supersedes it with `/v3`,
+//! which retires the drawn settlement stem and inserts toponymic wear (see
+//! [`Namer::wear`]) — both changes to what the method consumes, so both owe
+//! an epoch suffix rather than a rename. It stays exactly as pure and
+//! pin-isolated as `name` — a function of `(seed, species, kind, v3, salt,
+//! site, lexicon, corpus)`, still no re-draw, still no dependence on any
+//! other *name* — though the `lexicon`, `site` and [`NameCorpus`] a caller
+//! supplies may themselves be composed upstream from a species' full
+//! settlement scatter; that composition is entirely the composition root's
+//! business, never this module's. The corpus in particular is a per-culture
+//! *statistic*, explicitly supplied and read-only — never a shared mutable
+//! "used" set, which is what would break pin isolation.
 
+use crate::etymology::{draw_wear_cascade, evolve};
 use crate::lexicon::{Headedness, LexEntry, Lexicon};
 use crate::phoneme::{
     Manner, Segment, espeak_word, ipa, romanize, tone_mark_ipa, tone_mark_roman, tone_of,
@@ -45,6 +52,7 @@ use crate::phonology::Phonology;
 use crate::streams;
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{Seed, Stream};
+use std::collections::BTreeMap;
 
 /// What kind of name is being drawn; selects the morphology rules and the
 /// `derive` label for the name's seed path.
@@ -101,6 +109,63 @@ pub struct SiteConcepts<'a> {
     /// The candidate concept ids, in no particular priority order.
     pub concepts: &'a [&'a str],
 }
+
+/// The share of a culture's own names each concept's morpheme appears in —
+/// the corpus statistic [`Namer::wear`] grinds against.
+///
+/// Composed upstream by the composition root, which is the only layer that
+/// can see a culture's whole settlement scatter; this crate never counts
+/// anything itself, so [`Namer::glossed_name`] stays a pure function of its
+/// arguments and settlement names stay pin-isolated by construction (a name
+/// still depends on nothing about *which other names exist* except this one
+/// explicitly supplied, per-culture statistic — never on a shared mutable
+/// "used" set).
+///
+/// A concept absent from `frequencies` reads as `0.0`: unattested in the
+/// corpus, therefore unworn. [`NameCorpus::none`] is the empty corpus every
+/// caller that has no name corpus at all (deity and epithet naming, whose
+/// name spaces are one-per-belief rather than a scatter of settlements)
+/// passes.
+/// type-audit: bare-ok(ratio: frequencies)
+#[derive(Clone, Copy, Debug)]
+pub struct NameCorpus<'a> {
+    /// Concept id → the share of this culture's names whose gloss contains
+    /// that concept, in `[0, 1]`.
+    pub frequencies: &'a BTreeMap<String, f64>,
+}
+
+/// The empty corpus [`NameCorpus::none`] hands out. A `static` rather than a
+/// per-call allocation: `BTreeMap::new` is `const`, so the empty map costs
+/// nothing and every no-corpus caller borrows the same one.
+static NO_FREQUENCIES: BTreeMap<String, f64> = BTreeMap::new();
+
+impl NameCorpus<'static> {
+    /// The empty corpus: every concept reads `0.0`, so nothing wears.
+    pub fn none() -> NameCorpus<'static> {
+        NameCorpus {
+            frequencies: &NO_FREQUENCIES,
+        }
+    }
+}
+
+impl NameCorpus<'_> {
+    /// The share of this culture's names `concept`'s morpheme appears in,
+    /// or `0.0` when the corpus has never seen it.
+    /// type-audit: bare-ok(identifier-text: concept), bare-ok(ratio: return)
+    pub fn frequency_of(&self, concept: &str) -> f64 {
+        self.frequencies.get(concept).copied().unwrap_or(0.0)
+    }
+}
+
+/// The corpus share at or above which a morpheme starts to wear.
+///
+/// Below it a form is returned untouched — a rare generic stays whole,
+/// which is `-thwaite` beside `-ham`, and is what makes the resulting
+/// transparency a DISTRIBUTION rather than a new constant. A quarter of a
+/// culture's names is the stipulated line between a word that happens to
+/// recur and one doing generic duty; it is a calibration dial, not a
+/// derived quantity, and the Lab's name-length metrics are what move it.
+const WEAR_FLOOR: f64 = 0.25;
 
 /// A generated name in its three views: `roman` is what commits as the
 /// `name` fact (the almanac's ASCII-ish spelling); `ipa` is the book's
@@ -185,30 +250,202 @@ impl<'a> Namer<'a> {
         self.build_name(kind, morph, &mut stream)
     }
 
-    /// Draw a *glossed* name of `kind` for `salt`, at the `/v2` epoch: the
-    /// derive path gains a `"v2"` leg right after `kind`'s label, so this
+    /// The stream every `/v3`-epoch glossed draw runs off: `name`'s path
+    /// with a `"v3"` leg right after `kind`'s label, so it is entirely
+    /// distinct from [`Namer::name`]'s v1 stream and from the retired
+    /// [`streams::V2`] epoch. Built here, in one place, so
+    /// [`Namer::glossed_name`] and [`Namer::glossed_concepts`] cannot drift
+    /// apart: both replay the identical draw sequence from the identical
+    /// derivation.
+    fn glossed_stream(&self, kind: NameKind, salt: u64) -> Stream {
+        self.seed
+            .derive(streams::ROOT)
+            .derive(StreamLabel::dynamic(&self.species))
+            .derive(streams::NAME)
+            .derive(StreamLabel::dynamic(kind.label()))
+            .derive(streams::V3)
+            .derive(StreamLabel::dynamic(&salt.to_string()))
+            .stream()
+    }
+
+    /// Pick which of `site`'s concepts this name is built from: those that
+    /// actually hold a word in `lexicon` (see [`SiteConcepts`]), narrowed to
+    /// 1-2 by `stream` in the order drawn. Empty when no site concept holds
+    /// a word — the fallback case, in which no draw is made at all, so the
+    /// stream is left exactly where the caller found it.
+    fn choose_concepts<'c>(
+        &self,
+        stream: &mut Stream,
+        site: &SiteConcepts<'c>,
+        lexicon: &Lexicon,
+    ) -> Vec<&'c str> {
+        let candidates: Vec<&'c str> = site
+            .concepts
+            .iter()
+            .copied()
+            .filter(|concept| holds_word(lexicon, concept))
+            .collect();
+        if candidates.is_empty() {
+            return Vec::new();
+        }
+        let take = if candidates.len() == 1 {
+            1
+        } else {
+            stream.range_u32(1, 2) as usize
+        };
+        let mut pool = candidates;
+        let mut chosen: Vec<&'c str> = Vec::with_capacity(take);
+        for _ in 0..take {
+            let idx = stream.range_u32(0, (pool.len() - 1) as u32) as usize;
+            chosen.push(pool.remove(idx));
+        }
+        chosen
+    }
+
+    /// The site concepts [`Namer::glossed_name`] will compound for this
+    /// `(kind, salt, site, lexicon)` — exactly the ones its gloss will name,
+    /// in gloss order, computed without rendering anything.
+    ///
+    /// This exists for the composition root's benefit: a culture's
+    /// [`NameCorpus`] is *the share of its names each morpheme appears in*,
+    /// which cannot be known until the names' concepts are known, and
+    /// worldgen is the only layer that sees the whole scatter. So worldgen
+    /// asks this first, counts, and then names. That two-pass composition is
+    /// self-consistent because **wear consumes nothing from the name
+    /// stream** — [`Namer::wear`] draws its cascade from the lexicon's own
+    /// derivation — so a name's chosen concepts are independent of the
+    /// corpus, and the second pass picks exactly what the first one
+    /// reported. `glossed_name` shares this method verbatim, so the two can
+    /// never disagree.
+    /// type-audit: pending(wave-3: salt), bare-ok(identifier-text: return)
+    pub fn glossed_concepts<'c>(
+        &self,
+        kind: NameKind,
+        salt: u64,
+        site: &SiteConcepts<'c>,
+        lexicon: &Lexicon,
+    ) -> Vec<&'c str> {
+        let mut stream = self.glossed_stream(kind, salt);
+        self.choose_concepts(&mut stream, site, lexicon)
+    }
+
+    /// Wear `segments` down when `frequency` — the share of this culture's
+    /// names the morpheme appears in — reaches [`WEAR_FLOOR`], by running
+    /// the culture's own [`crate::etymology::draw_wear_cascade`] cascade
+    /// over it — [`crate::etymology::CascadeRegime::WEAR`]'s 1-2 rules, drawn
+    /// off a leg of their own so they are rules the words have not already
+    /// undergone (see [`streams::WEAR`]).
+    ///
+    /// This is the mechanism behind `-ham`, `-ton` and `-by`: the generic is
+    /// the highest-frequency morpheme in the whole name corpus, so Zipf's
+    /// law of abbreviation grinds it hardest. Keying on frequency rather
+    /// than on the compound's HEAD slot is deliberate (ledger #3): it
+    /// derives the generic/specific asymmetry rather than authoring it, and
+    /// it correctly wears a *specific* that happens to be ubiquitous in one
+    /// culture.
+    ///
+    /// Below [`WEAR_FLOOR`] the form is returned untouched — a rare generic
+    /// stays whole, which is `-thwaite` beside `-ham`.
+    ///
+    /// **What the wear actually is**: the language's own drawn sound
+    /// changes, run one epoch further. Etymology's drawn rule kinds already
+    /// include [`crate::etymology::RuleKind::ClusterSimplify`] and
+    /// [`crate::etymology::RuleKind::FinalLoss`], the two changes that
+    /// perform real toponymic reduction, so wear needs no bespoke clipping
+    /// pass and comes out Neogrammarian-regular for free, with a printable
+    /// derivation like every other form. It is drawn, not stipulated,
+    /// which means it is **not guaranteed to shorten**: a culture whose
+    /// wear cascade happens to draw only length-preserving rules (lenition,
+    /// vowel shift, tonogenesis) wears its frequent morphemes in quality
+    /// without wearing them in length. That is the honest consequence of
+    /// deriving the wear from the language rather than authoring it, and it
+    /// is why toponymic reduction is a distribution across cultures rather
+    /// than a uniform shortening.
+    ///
+    /// Pure: a function of `(seed, species, ph, segments, frequency)` and
+    /// nothing else.
+    /// type-audit: bare-ok(ratio: frequency)
+    pub fn wear(&self, segments: &[Segment], frequency: f64) -> Vec<Segment> {
+        if frequency < WEAR_FLOOR {
+            return segments.to_vec();
+        }
+        let cascade = draw_wear_cascade(&self.seed, &self.species);
+        evolve(segments, &cascade, self.ph).modern
+    }
+
+    /// The segments [`Namer::glossed_name`] compounds for its 1-2 `chosen`
+    /// site concepts, each **worn to its own corpus frequency first**: a
+    /// single concept's own segments, or two concepts' segments joined as a
+    /// fresh modifier/head pair (the first-drawn concept is the modifier,
+    /// the second-drawn is the head — an arbitrary but deterministic
+    /// convention, distinct from any recipe compounding already inside
+    /// `lexicon`) in `lexicon`'s drawn [`Headedness`] order.
+    ///
+    /// Wear is applied **per morpheme, before the join**, which is what
+    /// keeps it frequency-keyed rather than slot-keyed. Wearing the
+    /// assembled compound instead would be slot-keyed by accident:
+    /// `FinalLoss` only ever touches a word's last segment, so it would
+    /// grind whichever morpheme the headedness happened to put last, no
+    /// matter how rare that morpheme was. Per-morpheme, a ubiquitous
+    /// modifier wears and a rare head beside it does not.
+    fn compound_worn_segments(
+        &self,
+        lexicon: &Lexicon,
+        chosen: &[&str],
+        corpus: &NameCorpus,
+    ) -> Vec<Segment> {
+        let mut worn = chosen
+            .iter()
+            .map(|concept| {
+                self.wear(
+                    &concept_segments(lexicon, concept),
+                    corpus.frequency_of(concept),
+                )
+            })
+            .collect::<Vec<Vec<Segment>>>();
+        if worn.len() == 1 {
+            return worn.remove(0);
+        }
+        let head_segs = worn.remove(1);
+        let modifier_segs = worn.remove(0);
+        join_by_headedness(lexicon.headedness, modifier_segs, head_segs)
+    }
+
+    /// Draw a *glossed* name of `kind` for `salt`, at the `/v3` epoch: the
+    /// derive path gains a `"v3"` leg right after `kind`'s label, so this
     /// draws from a stream entirely distinct from [`Namer::name`]'s (v1
-    /// stays retired, never reused). The stream picks 1-2 of `site`'s
-    /// concepts that actually hold a word in `lexicon` (see
-    /// [`SiteConcepts`]), compounds their modern-form segments in
-    /// `lexicon`'s drawn [`crate::lexicon::Headedness`] order, and applies
+    /// stays retired, never reused) and from the superseded `/v2` epoch. The
+    /// stream picks 1-2 of `site`'s concepts that actually hold a word in
+    /// `lexicon` (see [`SiteConcepts`]), **wears each of them against
+    /// `corpus`** (see [`Namer::wear`]), compounds their worn modern-form
+    /// segments in `lexicon`'s drawn [`Headedness`] order, and applies
     /// `kind`'s existing morphology on top — an honorific prefix for
     /// [`NameKind::Epithet`] when `morph.honorifics` is set (status-basis
     /// keying intact; reduplication is a v1-only embellishment for freshly
-    /// drawn stems and has no analog here). For [`NameKind::Settlement`]
-    /// ONLY, the compound also gains a per-salt drawn **stem** — the
-    /// toponymic unique element (descriptor + unique element, the
-    /// collision fix; see the inline comment) — filling the modifier slot
-    /// opposite the site compound's head slot. Returns the name's three
-    /// views plus the gloss — the chosen concepts joined with `"-"` (e.g.
-    /// `"ice-home"`; the settlement stem names no concept and never enters
-    /// it) — so the gloss is always truthfully a subset of
-    /// `site.concepts`.
+    /// drawn stems and has no analog here). Returns the name's three views
+    /// plus the gloss — the chosen concepts joined with `"-"` (e.g.
+    /// `"ice-home"`) — so the gloss is always truthfully a subset of
+    /// `site.concepts`. Wear changes sound, never meaning: a worn morpheme
+    /// still glosses to its concept, which is precisely the opacification
+    /// `-ham` underwent.
+    ///
+    /// The `/v3` epoch is what The Wearing (2026-07-27) owes for two changes
+    /// to what this method consumes: the wear itself, and the retirement of
+    /// the per-salt 2-3 syllable **drawn settlement stem** the `/v2` epoch
+    /// appended to every settlement name. That stem existed as a collision
+    /// fix; decision 0024 ratified that uniqueness is a reference-time
+    /// property and that no future work fixes the collision rate by adding
+    /// entropy, "which lengthens names without addressing the structural
+    /// fact that meaning collides". It was the single largest length
+    /// contributor in a settlement name and the only part of it that named
+    /// nothing. Settlement collisions consequently rise; that is expected,
+    /// and the relief 0024 names is render-time qualification, never more
+    /// drawn entropy.
     ///
     /// If *no* site concept holds a word, falls back to a bare stem drawn
     /// exactly as [`Namer::build_name`] draws v1 names, but still under
-    /// this method's own `/v2` stream: the result stays a pure
-    /// `(seed, species, kind, v2, salt)` function, distinct from `name`'s
+    /// this method's own `/v3` stream: the result stays a pure
+    /// `(seed, species, kind, v3, salt)` function, distinct from `name`'s
     /// v1 output, with an empty gloss (no true story to tell — callers
     /// should skip the `name-gloss` fact when the gloss is empty).
     /// type-audit: pending(wave-3: salt), bare-ok(identifier-text: return)
@@ -219,66 +456,21 @@ impl<'a> Namer<'a> {
         morph: &MorphOptions,
         site: &SiteConcepts,
         lexicon: &Lexicon,
+        corpus: &NameCorpus,
     ) -> (GeneratedName, String) {
-        let mut stream = self
-            .seed
-            .derive(streams::ROOT)
-            .derive(StreamLabel::dynamic(&self.species))
-            .derive(streams::NAME)
-            .derive(StreamLabel::dynamic(kind.label()))
-            .derive(streams::V2)
-            .derive(StreamLabel::dynamic(&salt.to_string()))
-            .stream();
+        let mut stream = self.glossed_stream(kind, salt);
+        let chosen = self.choose_concepts(&mut stream, site, lexicon);
 
-        let candidates: Vec<&str> = site
-            .concepts
-            .iter()
-            .copied()
-            .filter(|concept| holds_word(lexicon, concept))
-            .collect();
-
-        if candidates.is_empty() {
+        if chosen.is_empty() {
             let name = self.build_name(kind, morph, &mut stream);
             return (name, String::new());
         }
 
-        let take = if candidates.len() == 1 {
-            1
-        } else {
-            stream.range_u32(1, 2) as usize
-        };
-        let mut pool = candidates;
-        let mut chosen: Vec<&str> = Vec::with_capacity(take);
-        for _ in 0..take {
-            let idx = stream.range_u32(0, (pool.len() - 1) as u32) as usize;
-            chosen.push(pool.remove(idx));
-        }
-
-        let mut segments = compound_segments(lexicon, &chosen);
-        if kind == NameKind::Settlement {
-            // The toponymic unique element (the collision fix — Task 12's
-            // census measured an ~86% in-world collision rate for pure
-            // site-concept compounds, spec §9's low-collision criterion):
-            // settlement names compound the site-concept word(s) with a
-            // per-salt DRAWN stem (2-3 template syllables from this same
-            // v2 stream, after the site-concept picks — real-world
-            // toponymy's descriptor + unique element, "Ice-home-by-the-
-            // ford"; 2-3 matches the retired Tongues-era settlement stem's
-            // own range, since the descriptor adds almost no within-
-            // species entropy and the 1-2-syllable first cut measurably
-            // under-spread the name space). The stem fills the slot
-            // OPPOSITE the head: the site
-            // compound plays the head, the stem the modifier, joined in
-            // the lexicon's drawn headedness order. It is a proper-name
-            // element naming no concept, so it never enters the gloss —
-            // glosses stay truthful compositions of site concepts alone.
-            // Deity and Epithet names carry no stem (their name spaces
-            // are one-per-belief, not pigeonholed by settlement counts).
-            let stem_syllables = self.draw_syllables(&mut stream, 2, 3, false);
-            let stem = segments_of(&stem_syllables);
-            segments = join_by_headedness(lexicon.headedness, stem, segments);
-        }
-        // Repair AFTER compounding, BEFORE morphology (the permanent order):
+        let segments = self.compound_worn_segments(lexicon, &chosen, corpus);
+        // Repair AFTER compounding and wear, BEFORE morphology (the
+        // permanent order — wear before repair, because wear may produce a
+        // form the synchronic templates reject and repair is what adapts
+        // it):
         // evolved roots only guarantee inventory membership, not template
         // conformance, so the compound is adapted to the synchronic
         // phonotactics first (see [`repair_phonotactics`] — the spec §8
@@ -862,21 +1054,6 @@ fn concept_segments(lexicon: &Lexicon, concept: &str) -> Vec<Segment> {
     }
 }
 
-/// The segments [`Namer::glossed_name`] compounds for its 1-2 `chosen` site
-/// concepts: a single concept's own segments unchanged, or two concepts'
-/// segments joined as a fresh modifier/head pair (the first-drawn concept
-/// is the modifier, the second-drawn is the head — an arbitrary but
-/// deterministic convention, distinct from any recipe compounding already
-/// inside `lexicon`) in `lexicon`'s drawn headedness order.
-fn compound_segments(lexicon: &Lexicon, chosen: &[&str]) -> Vec<Segment> {
-    if chosen.len() == 1 {
-        return concept_segments(lexicon, chosen[0]);
-    }
-    let modifier_segs = concept_segments(lexicon, chosen[0]);
-    let head_segs = concept_segments(lexicon, chosen[1]);
-    join_by_headedness(lexicon.headedness, modifier_segs, head_segs)
-}
-
 /// Capitalize the first character of `s`, leaving the rest untouched.
 /// Empty input yields empty output.
 fn capitalize_first(s: &str) -> String {
@@ -1003,6 +1180,53 @@ mod tests {
         assert_eq!(low.espeak, neutral.espeak);
     }
 
+    /// The Wearing (LANG-11, opacification): a morpheme that recurs across
+    /// many of a culture's names wears down; a rare one survives whole. This
+    /// is Zipf's law of abbreviation and it is the mechanism behind OE
+    /// *hām* → `-ham`, ON *býr* → `-by`.
+    ///
+    /// The fixture's probe form is drawn from the phonology's OWN inventory
+    /// through the namer's own syllable machinery — never hand-constructed
+    /// `Segment` variants, which would prove the wear only against a form
+    /// the phonology could not have produced.
+    #[test]
+    fn frequent_morphemes_wear_and_rare_ones_do_not() {
+        // "kobold" at Seed(42) is chosen because its WEAR cascade actually
+        // contains length-reducing rules; the precondition below asserts
+        // that rather than assuming it, so a reseed fails loudly and
+        // diagnosably instead of silently proving nothing (the Task 2
+        // lesson: name the precondition the test rests on).
+        let ph = wordy_ph();
+        let seed = Seed(42);
+        let namer = Namer::new(&seed, "kobold", &ph);
+        let cascade = crate::etymology::draw_wear_cascade(&seed, "kobold");
+        assert!(
+            cascade.rules.iter().any(|r| matches!(
+                r.kind,
+                crate::etymology::RuleKind::ClusterSimplify | crate::etymology::RuleKind::FinalLoss
+            )),
+            "fixture precondition: this culture's wear cascade must contain a \
+             length-reducing rule, got {:?}",
+            cascade.rules
+        );
+
+        let mut stream = seed.derive(streams::ROOT).stream();
+        let stem = segments_of(&namer.draw_syllables(&mut stream, 3, 3, false));
+        assert!(!stem.is_empty(), "the probe form must have segments");
+
+        let worn = namer.wear(&stem, 0.95);
+        let whole = namer.wear(&stem, 0.02);
+
+        assert!(
+            worn.len() < stem.len(),
+            "a morpheme in 95% of this culture's names did not wear at all"
+        );
+        assert_eq!(
+            whole, stem,
+            "a morpheme in 2% of names wore down; rare forms must survive whole"
+        );
+    }
+
     #[test]
     fn glossed_name_is_pure_and_pin_isolated() {
         // Same (seed, species, kind, salt, site, lexicon) must yield the
@@ -1017,8 +1241,22 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let n1 = Namer::new(&Seed(9), "test", &ph);
         let n2 = Namer::new(&Seed(9), "test", &ph);
-        let a = n1.glossed_name(NameKind::Settlement, 3, &morph, &site, &lex);
-        let b = n2.glossed_name(NameKind::Settlement, 3, &morph, &site, &lex);
+        let a = n1.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus::none(),
+        );
+        let b = n2.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus::none(),
+        );
         assert_eq!(a, b);
     }
 
@@ -1032,7 +1270,14 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
         for salt in 0..40u64 {
-            let (_, gloss) = namer.glossed_name(NameKind::Settlement, salt, &morph, &site, &lex);
+            let (_, gloss) = namer.glossed_name(
+                NameKind::Settlement,
+                salt,
+                &morph,
+                &site,
+                &lex,
+                &NameCorpus::none(),
+            );
             assert!(
                 gloss.is_empty()
                     || gloss == "water"
@@ -1054,7 +1299,14 @@ mod tests {
         };
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
-        let (name, gloss) = namer.glossed_name(NameKind::Settlement, 3, &morph, &site, &lex);
+        let (name, gloss) = namer.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus::none(),
+        );
         assert!(
             gloss.is_empty(),
             "no true story to tell: gloss must be empty"
@@ -1075,7 +1327,14 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
         let v1 = namer.name(NameKind::Settlement, 3, &morph);
-        let (v2, _) = namer.glossed_name(NameKind::Settlement, 3, &morph, &site, &lex);
+        let (v2, _) = namer.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus::none(),
+        );
         assert_ne!(
             v1.roman, v2.roman,
             "v2 must draw from a distinct stream than v1, even on the fallback path"
@@ -1288,7 +1547,8 @@ mod tests {
         let namer = Namer::new(&Seed(9), "test", &ph);
         for salt in 0..20u64 {
             for kind in [NameKind::Settlement, NameKind::Deity] {
-                let (name, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex);
+                let (name, gloss) =
+                    namer.glossed_name(kind, salt, &morph, &site, &lex, &NameCorpus::none());
                 for concept in gloss.split('-').filter(|c| !c.is_empty()) {
                     let word = match lex.entry(concept) {
                         Some(LexEntry::Root { derivation, .. }) => {
@@ -1307,13 +1567,14 @@ mod tests {
     }
 
     #[test]
-    fn settlement_names_carry_a_per_salt_stem_beyond_the_site_words() {
-        // The collision fix (Task 12's census exposed an 86% in-world
-        // collision rate): a settlement's glossed name compounds its site
-        // word(s) with a per-salt DRAWN stem — the toponymic descriptor +
-        // unique element pattern — so the same site yields distinct names
-        // across salts. Deity names carry no stem: a single-candidate site
-        // yields exactly the repaired site word.
+    fn the_drawn_settlement_stem_has_retired() {
+        // The Wearing: a settlement name is now its site word(s) and
+        // NOTHING else — the per-salt 2-3 syllable drawn stem (the /v2
+        // epoch's collision fix) is gone, because decision 0024 ratified
+        // that uniqueness is a reference-time property and that no future
+        // work fixes collisions by adding entropy. A settlement over a
+        // single-concept site therefore renders exactly the repaired site
+        // word, just as a deity over the same site always did.
         let ph = wordy_ph();
         let lex = two_word_lexicon(9);
         let site = SiteConcepts {
@@ -1330,29 +1591,159 @@ mod tests {
         ))
         .roman;
 
-        // Deity: exactly the site word — the stem is Settlement-only.
-        let (deity, deity_gloss) = namer.glossed_name(NameKind::Deity, 3, &morph, &site, &lex);
+        let (deity, deity_gloss) =
+            namer.glossed_name(NameKind::Deity, 3, &morph, &site, &lex, &NameCorpus::none());
         assert_eq!(deity.roman, plain, "a deity name gains no stem element");
         assert_eq!(deity_gloss, "water");
 
-        // Settlement: distinct names across salts, all glossing to the same
-        // concept — the stem is a proper-name element with no concept.
+        // Every salt yields the SAME name — the drawn per-salt element is
+        // what used to spread them, and it is gone. This is the collision
+        // rise 0024 sanctions, asserted rather than hidden.
         let mut names = std::collections::BTreeSet::new();
         for salt in 0..12u64 {
-            let (name, gloss) = namer.glossed_name(NameKind::Settlement, salt, &morph, &site, &lex);
-            assert_eq!(
-                gloss, "water",
-                "salt {salt}: the stem must not enter the gloss"
+            let (name, gloss) = namer.glossed_name(
+                NameKind::Settlement,
+                salt,
+                &morph,
+                &site,
+                &lex,
+                &NameCorpus::none(),
             );
-            assert_ne!(
+            assert_eq!(gloss, "water", "salt {salt}: the gloss is the site word");
+            assert_eq!(
                 name.roman, plain,
-                "salt {salt}: a settlement name must carry a stem beyond the site word"
+                "salt {salt}: a settlement name must now be exactly its site word"
             );
             names.insert(name.roman);
         }
+        assert_eq!(
+            names.len(),
+            1,
+            "with the stem retired a one-concept site names every settlement alike, got {names:?}"
+        );
+    }
+
+    #[test]
+    fn wear_is_keyed_to_frequency_not_to_the_compound_slot() {
+        // Ledger #3's actual content, and the property that distinguishes
+        // this implementation from the one it rejects. In a two-morpheme
+        // compound, whichever morpheme is FREQUENT wears and the rare one
+        // beside it does not — regardless of which slot each occupies. A
+        // slot-keyed wear (or a wear applied to the assembled compound,
+        // where `FinalLoss` can only ever touch the word's last segment)
+        // would grind the same slot both times.
+        let ph = wordy_ph();
+        // Lexicon seed 49 over `wordy_ph`: both roots are consonant-final,
+        // so kobold@42's wear cascade has an environment to fire in for
+        // each. That is asserted below, not assumed — `ClusterSimplify`
+        // only fires on a word-initial CC and `FinalLoss` only on a
+        // word-final consonant, so a lexicon of open CV roots would make
+        // this test vacuously green.
+        let lex = two_word_lexicon(49);
+        // "kobold" at Seed(42): a wear cascade with real length-reducing
+        // rules, asserted as a precondition so a reseed fails loudly.
+        let namer = Namer::new(&Seed(42), "kobold", &ph);
+        let cascade = crate::etymology::draw_wear_cascade(&Seed(42), "kobold");
         assert!(
-            names.len() >= 10,
-            "per-salt stems must spread settlement names across salts, got {names:?}"
+            cascade.rules.iter().any(|r| matches!(
+                r.kind,
+                crate::etymology::RuleKind::ClusterSimplify | crate::etymology::RuleKind::FinalLoss
+            )),
+            "fixture precondition: the wear cascade must reduce length, got {:?}",
+            cascade.rules
+        );
+
+        let chosen = ["water", "fire"];
+        let bare = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
+
+        // Non-vacuity: the untouched compound is the two words' segments,
+        // and each word on its own really does wear when frequent — so a
+        // "nothing changed" result below could not be a no-op wear.
+        for concept in chosen {
+            let raw = concept_segments(&lex, concept);
+            assert!(
+                namer.wear(&raw, 0.95).len() < raw.len(),
+                "{concept} must be wearable at all for this test to mean anything"
+            );
+        }
+
+        let mut only_first: BTreeMap<String, f64> = BTreeMap::new();
+        only_first.insert("water".to_string(), 0.95);
+        only_first.insert("fire".to_string(), 0.02);
+        let mut only_second: BTreeMap<String, f64> = BTreeMap::new();
+        only_second.insert("water".to_string(), 0.02);
+        only_second.insert("fire".to_string(), 0.95);
+
+        let first_worn = namer.compound_worn_segments(
+            &lex,
+            &chosen,
+            &NameCorpus {
+                frequencies: &only_first,
+            },
+        );
+        let second_worn = namer.compound_worn_segments(
+            &lex,
+            &chosen,
+            &NameCorpus {
+                frequencies: &only_second,
+            },
+        );
+
+        assert!(
+            first_worn.len() < bare.len(),
+            "a ubiquitous FIRST morpheme must wear"
+        );
+        assert!(
+            second_worn.len() < bare.len(),
+            "a ubiquitous SECOND morpheme must wear"
+        );
+        assert_ne!(
+            first_worn, second_worn,
+            "wearing the frequent morpheme must depend on WHICH one is frequent — \
+             identical results here mean the wear is keyed to a slot, not to frequency"
+        );
+    }
+
+    #[test]
+    fn glossed_concepts_is_exactly_what_glossed_name_glosses_and_ignores_the_corpus() {
+        // The contract worldgen's two-pass composition rests on: the
+        // concepts reported before the corpus exists are the concepts the
+        // name is actually built from, because wear consumes nothing from
+        // the name stream.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(49);
+        let site = SiteConcepts {
+            concepts: &["water", "fire"],
+        };
+        let morph = MorphOptions { honorifics: false };
+        let namer = Namer::new(&Seed(42), "kobold", &ph);
+        let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
+        saturated.insert("water".to_string(), 1.0);
+        saturated.insert("fire".to_string(), 1.0);
+        let corpus = NameCorpus {
+            frequencies: &saturated,
+        };
+
+        let mut any_worn = false;
+        for salt in 0..40u64 {
+            for kind in [NameKind::Settlement, NameKind::Deity] {
+                let reported = namer.glossed_concepts(kind, salt, &site, &lex);
+                let (worn, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex, &corpus);
+                assert_eq!(
+                    reported.join("-"),
+                    gloss,
+                    "salt {salt} {kind:?}: glossed_concepts must report exactly what \
+                     glossed_name glosses, under any corpus"
+                );
+                let (unworn, _) =
+                    namer.glossed_name(kind, salt, &morph, &site, &lex, &NameCorpus::none());
+                any_worn |= worn.roman != unworn.roman;
+            }
+        }
+        assert!(
+            any_worn,
+            "non-vacuity: the saturated corpus must actually have changed some name, \
+             or the agreement above proves nothing about wear"
         );
     }
 
@@ -1367,13 +1758,14 @@ mod tests {
         for seed in 0..12u64 {
             let ph = wordy_ph();
             let lex = two_word_lexicon(seed);
+            let namer = Namer::new(&Seed(seed), "test", &ph);
             for chosen in [
                 vec!["water"],
                 vec!["fire"],
                 vec!["water", "fire"],
                 vec!["fire", "water"],
             ] {
-                let raw = compound_segments(&lex, &chosen);
+                let raw = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
                 assert!(!raw.is_empty(), "roots must produce segments");
                 let repaired = repair_phonotactics(raw, &ph, &[]);
                 assert!(
@@ -1399,6 +1791,7 @@ mod tests {
             &MorphOptions { honorifics: true },
             &site,
             &lex,
+            &NameCorpus::none(),
         );
         let without = namer.glossed_name(
             NameKind::Epithet,
@@ -1406,6 +1799,7 @@ mod tests {
             &MorphOptions { honorifics: false },
             &site,
             &lex,
+            &NameCorpus::none(),
         );
         assert_ne!(
             with.0.roman, without.0.roman,
@@ -1579,6 +1973,7 @@ mod tests {
                 CascadeRegime::SETTLED,
             );
             let attested = attested_forms(&lex);
+            let namer = Namer::new(&Seed(seed), "swept", &ph);
             for chosen in [
                 vec!["water"],
                 vec!["moon"],
@@ -1588,7 +1983,10 @@ mod tests {
                 if !chosen.iter().all(|c| holds_word(&lex, c)) {
                     continue; // exposure may still gap a concept; skip, don't fake
                 }
-                let raw = compound_segments(&lex, &chosen);
+                // The unworn compound: repair is the identity for a
+                // culture's own attested words, and wear is what may
+                // break that (a worn form is no longer attested).
+                let raw = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
                 assert!(
                     conforms(&raw, &ph, &attested),
                     "seed {seed}: compound {chosen:?} must conform under its own attested tier"
