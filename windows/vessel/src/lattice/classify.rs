@@ -57,6 +57,77 @@ pub fn bounds_of(lattice: &Lattice, chamber: usize) -> Option<Rect> {
     })
 }
 
+/// Where a mover STANDS on arriving in `chamber` with no cell of its own yet:
+/// the middle of the room if the middle is the room's own floor, else the first
+/// floor cell it owns. `None` only if it owns no floor at all.
+///
+/// The middle first because that is what a reader of the drawn plan expects of
+/// "you came in and stopped" — but **the fallback is the whole point, not a
+/// defensive flourish**. `bounds_of` is a bounding rect over floor cells, and a
+/// GROWN chamber's blob is not convex: the centre of its bounding box is
+/// routinely a wall, or another chamber's floor. Taking the centre on trust would
+/// put the possession inside the fabric of every organically grown building, and
+/// the mark would be drawn on a cell it cannot occupy —
+/// `the_standing_cell_is_always_the_chambers_own_floor` is what catches it, and
+/// `the_middle_of_a_grown_chamber_is_not_always_its_floor` is what proves the
+/// fallback fires rather than being dead code.
+///
+/// A `Threshold` is deliberately NOT a candidate even though it is passable and
+/// serves the chamber: the mark would be drawn over the `+` and the plan would
+/// stop showing a doorway it promises is walkable.
+///
+/// Deterministic and seed-free either way: the fallback is `BTreeMap` order, so
+/// re-entering a room lands in the same cell and the plan is byte-identical by
+/// construction (decision 0069).
+/// type-audit: bare-ok(index: chamber)
+pub fn standing_cell(lattice: &Lattice, chamber: usize) -> Option<Cell> {
+    let own_floor = |c: Cell| kind_of(lattice, c) == Some(CellKind::Floor(chamber));
+    if let Some(b) = bounds_of(lattice, chamber) {
+        let middle = Cell(b.x + b.w / 2, b.y + b.h / 2);
+        if own_floor(middle) {
+            return Some(middle);
+        }
+    }
+    lattice.cells.keys().copied().find(|c| own_floor(*c))
+}
+
+/// The cell of the doorway realizing the link between `a` and `b`, either way
+/// round, or `None` if the two are not linked.
+///
+/// Read off [`Lattice::doorways`] rather than searched for among the `Threshold`
+/// cells: the doorway list is what the embedder REPORTS carving, and §7 rule 3
+/// already checks it against the kind map in both directions, so a second,
+/// independent search here would be a second opinion where the campaign has spent
+/// three tasks removing them.
+/// type-audit: bare-ok(index: a), bare-ok(index: b)
+pub fn doorway_between(lattice: &Lattice, a: usize, b: usize) -> Option<Cell> {
+    lattice
+        .doorways
+        .iter()
+        .find(|&&(p, q, _)| (p, q) == (a, b) || (p, q) == (b, a))
+        .map(|&(_, _, cell)| cell)
+}
+
+/// The cell a mover lands on having crossed `through` INTO `chamber`: the first
+/// of the threshold's orthogonal neighbours that is `chamber`'s own floor.
+///
+/// **A step through a doorway ends beside it, not in it.** Two reasons, and the
+/// second is the load-bearing one: physically, walking through a door puts you in
+/// the room rather than in the doorframe; and a mark drawn ON the threshold hides
+/// the `+`, so a player standing in a doorway would read a plan with one fewer
+/// doorway than the building has. That makes the drawn count disagree with
+/// `Lattice::doorways` for a reason no rule would report.
+///
+/// `None` if the threshold touches no floor of `chamber` — which §7 rule 1 already
+/// reports as the dropped link it is, so the caller may treat it as a failure
+/// rather than as a case to paper over.
+/// type-audit: bare-ok(index: chamber)
+pub fn cell_beyond(lattice: &Lattice, through: Cell, chamber: usize) -> Option<Cell> {
+    neighbours(through)
+        .into_iter()
+        .find(|c| kind_of(lattice, *c) == Some(CellKind::Floor(chamber)))
+}
+
 /// Every adjacent pair of PASSABLE cells inside the extent — the complete set of
 /// steps a mover may take.
 ///
@@ -591,6 +662,82 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn the_standing_cell_is_always_the_chambers_own_floor() {
+        // Where the possession is put when it walks in. Two claims: it exists for
+        // every chamber (a chamber with nowhere to stand is a chamber `enter` must
+        // refuse), and it is that chamber's OWN floor — never fabric, never the
+        // neighbour's room, and never a threshold, which is passable and serves the
+        // chamber but would put the drawn mark over a drawn doorway.
+        for (s, l, m) in corpus() {
+            for i in 0..s.chambers.len() {
+                let c = standing_cell(&l, i)
+                    .unwrap_or_else(|| panic!("{m:?}: chamber {i} offers nowhere to stand"));
+                assert_eq!(
+                    kind_of(&l, c),
+                    Some(CellKind::Floor(i)),
+                    "{m:?}: chamber {i} would be stood in at {c:?}, which is not its floor"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_middle_of_a_grown_chamber_is_not_always_its_floor() {
+        // The negative control on `standing_cell`'s fallback, and the reason the
+        // fallback exists at all rather than being defensive habit. A grown blob is
+        // not convex, so the centre of its bounding rect is routinely fabric or the
+        // neighbour's room; taking it on trust would stand the possession inside a
+        // wall. If this ever counts zero, the fallback has become dead code and the
+        // simpler `standing_cell` would be the honest one.
+        let mut middles_that_miss = 0;
+        for (s, l, m) in corpus() {
+            for i in 0..s.chambers.len() {
+                let Some(b) = bounds_of(&l, i) else { continue };
+                let middle = Cell(b.x + b.w / 2, b.y + b.h / 2);
+                if kind_of(&l, middle) != Some(CellKind::Floor(i)) {
+                    assert!(
+                        matches!(m, Method::Grown),
+                        "a RECTILINEAR chamber's floor is a rect, so its middle is \
+                         its own floor; chamber {i} at {middle:?} is not"
+                    );
+                    middles_that_miss += 1;
+                }
+            }
+        }
+        assert!(
+            middles_that_miss > 0,
+            "no grown chamber's bounding-box centre missed its floor across the \
+             whole corpus, so `standing_cell`'s fallback is never exercised"
+        );
+    }
+
+    #[test]
+    fn a_step_through_a_doorway_lands_beside_it_in_the_chamber_entered() {
+        // The cell a threshold crossing ends on, for BOTH chambers it joins: the
+        // doorway's own neighbour floor, so the step ends in the room rather than
+        // in the doorframe — which is also what keeps the drawn `+` visible.
+        for (s, l, m) in corpus() {
+            for &(a, b, through) in &l.doorways {
+                for chamber in [a, b] {
+                    let landed = cell_beyond(&l, through, chamber).unwrap_or_else(|| {
+                        panic!(
+                            "{m:?}: the doorway at {through:?} joins ({a},{b}) and has no \
+                             floor of chamber {chamber} beside it"
+                        )
+                    });
+                    assert_eq!(
+                        kind_of(&l, landed),
+                        Some(CellKind::Floor(chamber)),
+                        "{m:?}: crossing {through:?} into chamber {chamber} lands on {landed:?}"
+                    );
+                    assert_ne!(landed, through, "a crossing must not end in the doorway");
+                }
+            }
+            assert_eq!(l.doorways.len(), s.links.len());
         }
     }
 }

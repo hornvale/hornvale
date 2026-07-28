@@ -104,7 +104,19 @@ crash.
 Chambers have no bearing relative to one another. Their addresses are identity,
 not shape, so *north* inside a house is a question the model cannot answer and
 should not pretend to. Movement between chambers is therefore through named
-apertures, and `go north` is refused indoors.
+apertures, and `go north` *was* refused indoors.
+
+> **Reversed by The Blocking (2026-07-28), and not a flip-flop.** The refusal was
+> correct for a chamber with no interior; The Blocking gave chambers an interior —
+> a cell lattice with walls, floor and doorways — so `go north` now means one
+> cell north, and the plan marks where you stand. What changed is the *inference*
+> drawn here, that a chamber address carries no bearing to walk along; the band
+> law itself (metaplan §1b.6, *lateral movement never changes band*) is
+> **unchanged**, because a cell step stays inside the chamber band. The paragraph
+> above is still exactly right about what it is about: movement **between**
+> chambers is by named aperture, because *chamber addresses* carry no bearing to
+> each other. `back` stays refused indoors, since it retraces a walk-band trail
+> whatever the interior looks like.
 
 Naming the apertures turned out to be where the campaign's one real functional
 defect lived. The first implementation named each aperture after something the

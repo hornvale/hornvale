@@ -19,9 +19,14 @@
 //! Task 4b reified the wall, and this module is where the saving is collected. One
 //! glyph per cell, read straight off [`Lattice::cells`]: `Floor` → `.`, `Wall` →
 //! `#`, `Threshold` → `+`. There is no arithmetic between a picture position and a
-//! cell, so there is no off-by-one class to get wrong — which matters most for
-//! Task 5, which was about to inherit it in order to mark where the possession
-//! stands.
+//! cell, so there is no off-by-one class to get wrong — which is what Task 5
+//! collected, marking the standing cell with a fourth glyph (`@`) at exactly its
+//! own coordinates.
+//!
+//! The mark is the only glyph that does NOT come from the kind map, which is why
+//! it is a parameter rather than a `CellKind` variant: where a mover happens to
+//! stand is not a property of the building. It draws over the cell beneath it —
+//! see [`YOU`] for what that costs and who pays it.
 //!
 //! Nothing is inferred a second time. Task 3 found two defects in exactly that
 //! shape — two passes deciding independently what a boundary was — so the picture
@@ -42,6 +47,19 @@ pub const WALL: char = '#';
 /// chambers.
 /// type-audit: bare-ok(render-internal)
 pub const DOORWAY: char = '+';
+/// The glyph for the cell the possession is standing in — "you are here".
+///
+/// The SAME glyph the locale chart marks the observer with
+/// (`windows/scene/src/surrounds_ascii.rs`), deliberately: the plan and the chart
+/// are one verb's two bands, so a player who has learned to find `@` on one must
+/// not have to learn a second mark for the other.
+///
+/// It is drawn OVER the cell beneath it, which is the one real cost of a mark on
+/// a 1:1 picture and the reason the session never leaves the possession standing
+/// in a doorway — a hidden `+` is a plan that lies about the building.
+/// `a_mark_on_a_doorway_would_hide_it` is the negative control on that.
+/// type-audit: bare-ok(render-internal)
+pub const YOU: char = '@';
 
 /// What the legend calls [`FLOOR`].
 /// type-audit: bare-ok(prose)
@@ -56,6 +74,17 @@ pub const WALL_NOUN: &str = "a wall";
 /// plan will type exactly that.
 /// type-audit: bare-ok(prose)
 pub const DOORWAY_NOUN: &str = "a doorway";
+/// What the legend calls [`YOU`].
+///
+/// The legend entry has to be `examine`-able — `every_noun_the_plan_depicts_is
+/// _examinable` walks the legend and that is §6's parity contract — and this is
+/// the one legend noun whose answer is not a static line: it resolves to the
+/// session's OWN self-description, the same words `whoami` renders. Two
+/// descriptions of the possessed agent is exactly the drift §6 exists to prevent,
+/// so `chamber_prose::glyph_detail` deliberately does NOT answer for this noun
+/// and the session answers instead (`session::examine_chamber`).
+/// type-audit: bare-ok(prose)
+pub const YOU_NOUN: &str = "you";
 
 /// A drawn plan: the picture, and what each glyph means.
 /// type-audit: bare-ok(prose: picture), bare-ok(identifier-text: legend)
@@ -67,22 +96,33 @@ pub struct Plan {
     pub legend: Vec<(char, &'static str)>,
 }
 
-/// Draw `lattice`.
+/// Draw `lattice`, marking `standing` if the possession is in it.
 ///
-/// Takes the lattice alone. The plan's signature offered `structure` and `at` for
-/// Task 6's region names, with an explicit licence to drop them rather than leave
-/// an unexplained `let _ =` — dropped, for two reasons worth recording. Nothing
-/// in v1's picture varies with the chamber stood in, because there is no CELL
-/// position to mark yet: Task 5 is what gives the possession one, and that is the
-/// task where a "you are here" mark stops being a guess. And the caption naming
-/// which chamber you stand in belongs to the session, which already owns the
-/// `[chamber id, day]` block this plan's header mirrors.
-pub fn render(lattice: &Lattice) -> Plan {
+/// Takes the lattice and one cell. Task 4's signature offered `structure` and
+/// `at` for Task 6's region names and dropped them, because nothing in v1's
+/// picture varied with the chamber stood in: there was no CELL position to mark,
+/// and marking a whole region would have claimed a precision the session did not
+/// have. **Task 5 is what gives the possession a cell**, so the mark arrives with
+/// the position that justifies it — and it is a cell rather than a region, which
+/// is why it is one glyph rather than a highlighted rectangle.
+///
+/// `standing` is an `Option` because the render is also the thing a test draws
+/// with nobody in the building. It is NOT an excuse for the session to skip the
+/// mark: `plan_here` always has a cell.
+///
+/// The caption naming which chamber you stand in still belongs to the session,
+/// which already owns the `[chamber id, day]` block this plan's header mirrors.
+pub fn render(lattice: &Lattice, standing: Option<Cell>) -> Plan {
     let e = lattice.extent;
     let mut picture = String::with_capacity(((e.w + 1) * e.h) as usize);
     for cy in e.y..(e.y + e.h) {
         for cx in e.x..(e.x + e.w) {
-            picture.push(glyph(lattice.cells.get(&Cell(cx, cy))));
+            let cell = Cell(cx, cy);
+            picture.push(if standing == Some(cell) {
+                YOU
+            } else {
+                glyph(lattice.cells.get(&cell))
+            });
         }
         picture.push('\n');
     }
@@ -91,11 +131,14 @@ pub fn render(lattice: &Lattice) -> Plan {
     // holds one entry per link, but a grown lattice whose two blobs never met
     // carves no threshold, and the legend must not promise a `+` that is not
     // there (§7 rule 1 is what reports the underlying failure; this only refuses
-    // to paper over it).
+    // to paper over it). The mark is the same discipline read the other way: a
+    // `standing` cell outside the extent is drawn nowhere, so it is named
+    // nowhere either.
     let legend = [
         (FLOOR, FLOOR_NOUN),
         (WALL, WALL_NOUN),
         (DOORWAY, DOORWAY_NOUN),
+        (YOU, YOU_NOUN),
     ]
     .into_iter()
     .filter(|&(g, _)| picture.contains(g))
@@ -176,7 +219,7 @@ mod tests {
         // the one glyph the readback had to take on trust because the render drew
         // it from the extent rather than from the lattice.
         for (_, l) in corpus() {
-            let p = render(&l);
+            let p = render(&l, None);
             let grid = rows(&p);
             let e = l.extent;
             assert_eq!(grid.len(), e.h as usize, "row count");
@@ -209,7 +252,7 @@ mod tests {
     #[test]
     fn the_legend_names_only_glyphs_the_picture_draws() {
         for (_, l) in corpus() {
-            let p = render(&l);
+            let p = render(&l, None);
             for (g, noun) in &p.legend {
                 assert!(
                     p.picture.contains(*g),
@@ -230,7 +273,7 @@ mod tests {
     #[test]
     fn a_doorway_is_drawn_once_per_declared_link() {
         for (s, l) in corpus() {
-            let p = render(&l);
+            let p = render(&l, None);
             assert_eq!(
                 p.picture.matches(DOORWAY).count(),
                 s.links.len(),
@@ -249,7 +292,7 @@ mod tests {
         // building" is a claim about the drawn thing and a reader checks the border
         // before anything else.
         for (_, l) in corpus() {
-            let p = render(&l);
+            let p = render(&l, None);
             let grid = rows(&p);
             let last = grid.len() - 1;
             for (y, row) in grid.iter().enumerate() {
@@ -274,7 +317,7 @@ mod tests {
             links: Vec::new(),
         };
         let l = embed_with(&s, &built(), extent_for(&s), Seed(3));
-        let p = render(&l);
+        let p = render(&l, None);
         assert!(!p.picture.contains(DOORWAY), "{}", p.picture);
         assert!(!p.legend.iter().any(|&(g, _)| g == DOORWAY));
         assert!(p.picture.contains(FLOOR) && p.picture.contains(WALL));
@@ -283,7 +326,7 @@ mod tests {
     #[test]
     fn the_render_is_pure() {
         for (_, l) in corpus() {
-            assert_eq!(render(&l), render(&l));
+            assert_eq!(render(&l, None), render(&l, None));
         }
     }
 
@@ -318,7 +361,7 @@ mod tests {
                 links: (1..n).map(|i| (i - 1, i)).collect(),
                 chambers,
             };
-            let p = render(&embed_with(&s, &built(), extent_for(&s), Seed(1)));
+            let p = render(&embed_with(&s, &built(), extent_for(&s), Seed(1)), None);
             let grid = rows(&p);
             let width = grid[0].len();
             assert!(
@@ -332,5 +375,72 @@ mod tests {
                 grid.len()
             );
         }
+    }
+
+    #[test]
+    fn the_mark_draws_once_at_the_standing_cell_and_the_legend_names_it() {
+        // The mark is a CELL position, so the check is positional: the glyph lands
+        // at exactly the picture position of the cell it was given — no mapping,
+        // because Task 4b made the picture 1:1 — and nowhere else.
+        for (s, l) in corpus() {
+            for i in 0..s.chambers.len() {
+                let cell = crate::lattice::standing_cell(&l, i).expect("a chamber to stand in");
+                let p = render(&l, Some(cell));
+                assert_eq!(
+                    p.picture.matches(YOU).count(),
+                    1,
+                    "one possession, one mark:\n{}",
+                    p.picture
+                );
+                let grid = rows(&p);
+                assert_eq!(
+                    grid[(cell.1 - l.extent.y) as usize][(cell.0 - l.extent.x) as usize],
+                    YOU,
+                    "the mark for {cell:?} is drawn somewhere else:\n{}",
+                    p.picture
+                );
+                assert!(
+                    p.legend.iter().any(|&(g, n)| g == YOU && n == YOU_NOUN),
+                    "the picture draws the mark and the legend does not name it: {:?}",
+                    p.legend
+                );
+            }
+            // And with nobody in the building, nothing is marked and nothing is
+            // named — the legend is read off the picture, so this is one claim.
+            let empty = render(&l, None);
+            assert!(!empty.picture.contains(YOU));
+            assert!(!empty.legend.iter().any(|&(g, _)| g == YOU));
+        }
+    }
+
+    #[test]
+    fn a_mark_on_a_doorway_would_hide_it() {
+        // The negative control on `cell_beyond`'s reason for existing. The mark is
+        // drawn OVER the cell beneath it, so standing in a doorway costs the
+        // picture its `+` — the legend then stops naming a doorway, and
+        // `a_doorway_is_drawn_once_per_declared_link` would be counting a building
+        // that has one more door than the plan shows. This is why the session lands
+        // a crossing BESIDE a threshold rather than in it; it is a demonstrated
+        // hazard, not a stylistic preference.
+        let (s, l) = corpus()
+            .into_iter()
+            .find(|(s, _)| !s.links.is_empty())
+            .expect("some structure in the corpus has a link");
+        let (_, _, doorway) = l.doorways[0];
+        let honest = render(&l, crate::lattice::standing_cell(&l, 0));
+        let hiding = render(&l, Some(doorway));
+        assert_eq!(
+            honest.picture.matches(DOORWAY).count(),
+            s.links.len(),
+            "the control case must draw every doorway:\n{}",
+            honest.picture
+        );
+        assert_eq!(
+            hiding.picture.matches(DOORWAY).count(),
+            s.links.len() - 1,
+            "standing in a doorway must be what hides it, or this control proves \
+             nothing:\n{}",
+            hiding.picture
+        );
     }
 }

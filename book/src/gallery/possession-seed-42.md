@@ -42,12 +42,27 @@ Ways on: out.
 #..........#......#
 #..........#......#
 #..........#......#
+#..........+@.....#
+#..........#......#
+#..........#......#
+#..........#......#
+###################
+  legend: . the floor, # a wall, + a doorway, @ you
+> go n
+You step north. Ways on: N, E, S.
+> map
+[plan: chamber 193703027969442, 2 of 2]
+###################
+#..........#......#
+#..........#......#
+#..........#......#
+#..........#@.....#
 #..........+......#
 #..........#......#
 #..........#......#
 #..........#......#
 ###################
-  legend: . the floor, # a wall, + a doorway
+  legend: . the floor, # a wall, + a doorway, @ you
 > examine a water jar
 A wide-mouthed jar, cool to the touch, standing half full.
 > examine a wall

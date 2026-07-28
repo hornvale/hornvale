@@ -53,7 +53,8 @@ pub mod render;
 
 pub use allocate::allocate;
 pub use classify::{
-    bounds_of, freedom_of_a_chain, kind_of, openings, reachable_from, realized_links,
+    bounds_of, cell_beyond, doorway_between, freedom_of_a_chain, kind_of, openings, reachable_from,
+    realized_links, standing_cell,
 };
 pub use grow::grow;
 pub use occupancy::{Occupancy, Refusal};
@@ -613,15 +614,26 @@ mod tests {
     use std::time::Instant;
 
     /// Wall-time ceiling for ONE `allocate` call on the widest extent
-    /// `extent_for` can derive (4 chambers, 19x19). Measured on an M-series
-    /// laptop: **27.6 us** median in RELEASE, **209 us** median in DEBUG at Task
-    /// 3's 16x16 — a 7.6x gap, so the profile has to be stated with the number or
-    /// it means nothing (this project measured a similar ~10x gap during The
-    /// Lintel).
+    /// `extent_for` can derive (4 chambers, 19x19).
+    ///
+    /// **Both profiles, on the same box, at the same extent — Task 5:**
+    /// **~9 us** median in RELEASE (8.7 and 9.7 us on two runs — run-to-run spread
+    /// at this size is a real part of the figure), **174.6 us** in DEBUG. A ~19x gap, so
+    /// the profile has to be named with the number or the number means nothing.
+    /// Task 4b reported "182.9 us at 19x19" without naming one and it was compared
+    /// against an older debug figure; re-measuring in debug here lands at 174.6 us,
+    /// which identifies 182.9 as the DEBUG number and leaves release the one that
+    /// had never actually been taken at this extent. Spec §10 risk 1 wants the
+    /// release number, and it is about 9 us — two orders of magnitude under the
+    /// ceiling below.
+    ///
+    /// (The older note here claimed 27.6 us release "at Task 3's 16x16". That is
+    /// superseded rather than contradicted: it was a different extent and, on the
+    /// evidence of the two figures above, not a figure this extent reproduces.)
     ///
     /// Re-measured in Task 3 (it moved 3.3x when `Lattice` gained per-cell
-    /// ownership) and again in Task 4b, where the extent grew from 256 to 361
-    /// cells and the pair-valued wall set went away. The measured number is
+    /// ownership), in Task 4b (the extent grew from 256 to 361 cells and the
+    /// pair-valued wall set went away) and in Task 5. The measured number is
     /// printed by the test itself rather than restated here, so a reader gets the
     /// real one rather than a stale transcription.
     ///

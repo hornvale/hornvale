@@ -1989,7 +1989,7 @@ grep -rn 'refused indoors\|no north\|not a step at all' docs/ book/src --include
 
 `back` stays refused indoors. It retraces the *walk-band* trail, so it is a walk-band operation whatever the interior looks like — and un-refusing both at once would blur which capability justified which reversal.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `windows/vessel/tests/the_blocking.rs`:
 
@@ -2076,7 +2076,7 @@ fn walking_a_chamber_commits_nothing() {
 
 `committed_fact_count()` is a new `pub fn` on `Session` returning the session ledger's fact count. If an equivalent accessor already exists, use it — grep before adding one.
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-vessel --test the_blocking 2>&1 | tail -20`
 Expected: FAIL — `go` indoors still answers `INDOOR_LATERAL_REFUSAL`, so `a_wall_refuses_with_a_physical_reason` fails on the `no north` assertion.
@@ -2088,7 +2088,7 @@ Expected: FAIL — `go` indoors still answers `INDOOR_LATERAL_REFUSAL`, so `a_wa
    - a fourth glyph (`@`) at the standing cell, and a legend entry for it;
    - **the legend entry must be `examine`-able**, because `every_noun_the_plan_depicts_is_examinable` walks the legend and it is the parity contract. Resolve it to the session's existing self-description (`whoami`'s content) rather than authoring a second one — two descriptions of the possessed agent is exactly the drift §6 exists to prevent. If you conclude the mark should stay out of the legend, that is defensible, but then the picture depicts something it refuses to name, and you must say so.
 
-- [ ] **Step 3: Give the possession a cell**
+- [x] **Step 3: Give the possession a cell**
 
 `self.inside` is `Option<(Structure, usize)>` at nine sites. **Promote it to a named struct** rather than a three-tuple — a bare `Cell` as a tuple's third element is where these call sites stop being readable:
 
@@ -2121,7 +2121,7 @@ struct Inside {
 3. if the target cell is a doorway to another chamber, **moves chamber** — that is a `COMMIT`-tier band step in the same sense `enter` is, so it renders the new chamber, not a cell move;
 4. otherwise updates `cell` and renders briefly — a cell step is not worth a full chamber description every time. Say what changed and what is now adjacent.
 
-- [ ] **Step 4: Amend the documents, in the same commit as the code**
+- [x] **Step 4: Amend the documents, in the same commit as the code**
 
 The reversal and its record land together — a code change whose documents lag is how the four-document sweep became necessary in the first place.
 
@@ -2129,7 +2129,7 @@ The reversal and its record land together — a code change whose documents lag 
 - `book/src/frontier/idea-registry.md`, `CLIENT-scale-bands` — the row says "Five band laws; 2 shipped". Update the count if this campaign ships another, and repoint **Where** at this campaign's chronicle entry. Rows are capped at **600 chars** and the cap is append-never: edit as an index entry, do not grow the row.
 - The specs the grep finds — state that §1b.6's law is **unchanged** and that what changed is the inference drawn from it.
 
-- [ ] **Step 5: Add it to the walk, run, inspect**
+- [x] **Step 5: Add it to the walk, run, inspect**
 
 Add `go n` (or whichever bearing the entry cell can walk) to `scripts/possession-walk.txt` right after the `map` line Task 4 added, so the transcript shows a step *inside* a building. Then:
 
@@ -2169,6 +2169,52 @@ keyed to the LOCALE's seed exactly as structure_at's draw is; keyed to the
 world's it would have given every building in the world one identical
 floor plan."
 ```
+
+**Task 5's findings, folded in for the tasks that follow:**
+
+1. **Do not stand the possession on a threshold.** The plan's Step 3 said `enter`
+   sets `cell` to "the doorway the possession came through". The mark is drawn OVER
+   the cell beneath it, so standing on a `+` deletes a drawn doorway — and
+   `every_destination_the_plan_depicts_is_command_reachable` and
+   `a_doorway_is_drawn_once_per_declared_link` both count those glyphs. A crossing
+   therefore lands BESIDE the doorway (`lattice::cell_beyond`), and
+   `render::tests::a_mark_on_a_doorway_would_hide_it` is the negative control.
+2. **"The region's centre" is not always floor.** Step 3's arrival rule holds for the
+   rectilinear allocator (a chamber's floor is a rect) and fails routinely for the
+   GROWER, whose blob is not convex — the centre of its bounding rect is often
+   fabric or the neighbour's room. `lattice::standing_cell` falls back to the
+   chamber's first floor cell in `BTreeMap` order, and
+   `the_middle_of_a_grown_chamber_is_not_always_its_floor` asserts the fallback is
+   exercised rather than dead.
+3. **The success sentence must not contain the word "wall".** Step 1's
+   `go_indoors_moves_one_cell_and_says_where_you_are` discriminates on
+   `!r.contains("wall")`, so an adjacency line that named walls would fail the test
+   on a step that worked. The step line lists the OPEN bearings instead (`Ways on:
+   N, E, S.`), which is better prose anyway, and the test gained a positive form
+   (`starts_with("You step")`) so the discriminator is not the only thing holding
+   it up.
+4. **`tests/the_blocking.rs::picture_rows` filters on the plan's alphabet**, so a
+   new glyph silently drops the row it stands in and every count goes quietly
+   wrong. Any glyph the render gains must be added there in the same commit.
+5. **A type-audit tag on a NON-`pub` item is dead**, the same way a tag on an
+   untracked signature is: `tools/type-audit/src/extract.rs::is_bare_pub` extracts
+   only `pub` items. Verified by putting a bogus class on one and watching `check`
+   pass. The plan's `Inside` snippet carried `bare-ok(index: at)` on a private
+   struct; that tag and four others on private fns were dropped and said in prose
+   instead. (`Session::walk_depth`'s pre-existing tag is in the same class — left
+   alone, but it is not a verdict either.) **Sixth** appearance of the
+   tag-placement trap family in this campaign.
+6. **Task 4 had already done half of Step 3's seed work.** `lattice_here` existed,
+   keyed to `locale.seed(world_seed)`, with `the_plan_is_keyed_to_the_locale_not_
+   the_world` already guarding it. Task 5 split it into `lattice_of(&structure)` (the
+   derivation, which `enter` needs before it has descended) and the carried copy on
+   `Inside`, and added `the_carried_lattice_is_the_one_the_place_derives` because a
+   carried copy is a cache.
+7. **The `allocate` budget, both profiles, same box, 19x19:** **~9 us median in
+   RELEASE** (8.7 and 9.7 us on two runs), **174.6 us in DEBUG**. Task 4b's
+   "182.9 us" was the DEBUG figure — the debug re-measurement here identifies it.
+   Spec §10 risk 1's release number is therefore about 9 us, two orders of magnitude
+   under the 1000 us ceiling.
 
 ---
 

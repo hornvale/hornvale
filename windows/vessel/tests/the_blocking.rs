@@ -51,9 +51,16 @@ fn inside(session: &mut Session) {
 /// this file ran: the legend line spells `+ a doorway`, so `reply.matches('+')`
 /// reported one more doorway than the picture draws. The picture is what the
 /// parity test is about, so the picture is what gets counted.
+///
+/// **The alphabet is a maintenance hazard, and Task 5 tripped it.** A row is
+/// recognized as a picture row by being made only of the plan's own glyphs, so
+/// adding a fourth glyph (`@`, the standing mark) silently dropped the row the
+/// mark stands in — every row count and every glyph count went quietly wrong
+/// rather than failing. Any glyph the render gains has to be added here in the
+/// same commit.
 fn picture_rows(plan: &str) -> Vec<&str> {
     plan.lines()
-        .filter(|l| l.chars().all(|c| "#.+ ".contains(c)) && l.len() > 2)
+        .filter(|l| l.chars().all(|c| "#.+@ ".contains(c)) && l.len() > 2)
         .collect()
 }
 
@@ -328,5 +335,132 @@ fn drawing_the_plan_never_moves_the_world() {
         &session.knowledge().0,
         &knowledge_before,
         "drawing a plan teaches the session nothing new"
+    );
+}
+
+#[test]
+fn go_indoors_moves_one_cell_and_says_where_you_are() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    // At least one of the four bearings must be walkable from wherever `enter`
+    // lands, or the chamber has no interior to stand in — which
+    // `no_chamber_is_degenerate` already forbids at the lattice level.
+    let replies: Vec<String> = ["n", "s", "e", "w"]
+        .iter()
+        .map(|d| out(session.handle(&format!("go {d}"))))
+        .collect();
+    assert!(
+        replies.iter().any(|r| !r.contains("wall")),
+        "every bearing from the entry cell is walled: {replies:?}"
+    );
+    // The plan's own assertion above discriminates only while the word `wall`
+    // appears in REFUSALS and nowhere else, which is a live constraint on the
+    // success sentence rather than an accident — so the positive form is
+    // asserted too. A step either says so or lands in the next chamber.
+    assert!(
+        replies
+            .iter()
+            .any(|r| r.starts_with("You step") || r.starts_with("[chamber ")),
+        "no bearing produced a step at all: {replies:?}"
+    );
+    assert!(
+        replies.iter().all(|r| !r.starts_with("[room ")),
+        "a compass step indoors must not put the possession out of doors: {replies:?}"
+    );
+}
+
+#[test]
+fn a_wall_refuses_with_a_physical_reason() {
+    // The Lintel's own standard, from its `enter` work: refuse with a reason
+    // drawn from the world, never with a grammar complaint.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    // Walk one bearing until it refuses — a bounded plan always ends in a wall.
+    let mut refusal = String::new();
+    for _ in 0..64 {
+        let reply = out(session.handle("go n"));
+        if reply.contains("wall") {
+            refusal = reply;
+            break;
+        }
+    }
+    assert!(
+        !refusal.is_empty(),
+        "walking one bearing 64 times never met a wall: the plan is unbounded"
+    );
+    assert!(
+        !refusal.contains("no north"),
+        "the refusal still claims there is no north indoors: {refusal}"
+    );
+}
+
+#[test]
+fn back_stays_refused_indoors() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let reply = out(session.handle("back"));
+    assert!(
+        reply.contains("Inside"),
+        "`back` retraces a WALK-band trail and must still refuse indoors: {reply}"
+    );
+}
+
+#[test]
+fn walking_a_chamber_commits_nothing() {
+    // Decision 0069: intra-chamber position is FRAME-tier. The ledger must not
+    // grow because someone crossed a room.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let before = session.committed_fact_count();
+    for _ in 0..8 {
+        session.handle("go e");
+    }
+    assert_eq!(
+        session.committed_fact_count(),
+        before,
+        "walking inside a chamber committed a fact: fine position is never \
+         serialized (0069)"
+    );
+}
+
+#[test]
+fn the_plan_marks_where_you_stand_and_the_mark_moves_with_you() {
+    // The mark is what makes the plan a plan of where you ARE rather than of the
+    // building in the abstract, and it is a CELL position: exactly one glyph, on
+    // a cell a mover can stand in, and it moves by one when you step.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let before = out(session.handle("map"));
+    assert_eq!(
+        drawn(&before, '@'),
+        1,
+        "the plan must mark exactly one standing cell: {before}"
+    );
+    // The mark must not be drawn OVER a doorway: a plan that hides a drawn
+    // destination while you stand in its doorway is a plan that lies about the
+    // building, and `every_destination_the_plan_depicts_is_command_reachable`
+    // counts those glyphs.
+    let doorways = drawn(&before, '+');
+    let stepped = out(session.handle("go n"));
+    assert!(
+        stepped.starts_with("You step") || stepped.starts_with("[chamber "),
+        "the entry cell must be able to step north in the seed-42 structure: {stepped}"
+    );
+    let after = out(session.handle("map"));
+    assert_ne!(
+        before, after,
+        "the possession stepped and the drawn plan did not change, so the mark \
+         is not a cell position: {after}"
+    );
+    assert_eq!(drawn(&after, '@'), 1, "still exactly one mark: {after}");
+    assert_eq!(
+        drawn(&after, '+'),
+        doorways,
+        "stepping changed how many doorways the plan draws: {after}"
     );
 }

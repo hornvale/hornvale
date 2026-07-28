@@ -6,6 +6,8 @@ whoami
 enter
 enter further in
 map
+go n
+map
 examine a water jar
 examine a wall
 out
