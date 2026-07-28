@@ -6571,9 +6571,19 @@ mod tests {
     /// the world 23 of its 48 deities — a save-format change wearing the
     /// costume of a presentation fix.
     ///
-    /// These counts are the pre-campaign values, and they are the guard: a
+    /// The three 48s are the guard, and they are the pre-Occlusion values: a
     /// culture's pantheon forms over generations and must not depend on
     /// whether day 0 happened to be cloudy.
+    ///
+    /// `name-gloss` is a corroborating count, not part of that claim — it
+    /// counts every glossed name in the world, so any campaign that adds
+    /// named things moves it while leaving the occlusion question untouched.
+    /// The Tithe did exactly that: subordination gave the deep-history bake
+    /// an accumulation term, seed 42's world went 7350 → 26309 facts under a
+    /// declared genesis epoch, and the gloss count went 207 → 367 with all
+    /// three 48s unchanged. Re-pinned here rather than dropped, because an
+    /// exact count is the stronger check; if it moves again, ask whether the
+    /// moving campaign added names or culled phenomena, and read the 48s.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
@@ -6581,7 +6591,7 @@ mod tests {
         assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
-        assert_eq!(count("name-gloss"), 207);
+        assert_eq!(count("name-gloss"), 367);
     }
 
     #[test]
