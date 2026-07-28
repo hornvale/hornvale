@@ -28,6 +28,32 @@
 //! re-checked rather than assumed: a tidally-locked world still never heads a
 //! cyclic pantheon (that panic never fired), name-gloss is still 100%
 //! row-by-row, and every generated name is still phonotactically valid.
+//!
+//! ## Census regen — The Tithe (2026-07-27, lefford, decision 0063)
+//!
+//! A declared genesis epoch: the deep-history bake now resolves a raid whose
+//! prize is *mobile* as **subordination** rather than eviction, so the loser
+//! survives as a tribute-paying vassal instead of being displaced. Far more
+//! communities survive in place — the census's mean `settlement-count` nearly
+//! doubles, 74.67 -> 147.375 (seed 42: 203 -> 329 live settlements) — and
+//! settlement placement is what most of the values below ultimately measure.
+//!
+//! | recorded value | before | after |
+//! |---|---:|---:|
+//! | coastal / inland flagship count | 552 / 214 | 556 / 211 |
+//! | moonless-solar / moonless-lunar kobold head count | 33 / 61 | 34 / 59 |
+//! | blind-attribution correct / total | 695 / 759 | 693 / 758 |
+//! | zero / nonzero collision worlds | 39 / 731 | 33 / 737 |
+//! | mean name-collision-rate | 0.1858 | 0.1383 |
+//! | goblin name-length rows / mean | 766 / 13.3971 | 767 / 13.6860 |
+//! | kobold name-length rows / mean | 762 / 13.2118 | 760 / 14.5733 |
+//!
+//! Every one is a RECORDED value; no guarded claim moved. The two guarded
+//! directions in this file were re-checked rather than assumed: blind
+//! attribution still clears its 0.75 floor (0.9142), and the mooned+spinning
+//! perfect-attribution invariant never fired. One movement runs against
+//! intuition and is recorded, not explained: the roster nearly doubles while
+//! the mean name-collision rate FALLS (see the pin comment there).
 use hornvale_culture::{BiomeClass, subsistence};
 use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
@@ -413,8 +439,14 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // bake now resolves conflict as predation (covet a richer neighbour's
     // site, win the fight, seize it), which re-seats flagships on four
     // worlds: 535 -> 531 coastal, 234 -> 238 inland.
-    assert_eq!(coastal, 552, "coastal flagship count drifted");
-    assert_eq!(inland, 214, "inland flagship count drifted");
+    //
+    // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063: the
+    // bake now resolves a raid whose prize is mobile as SUBORDINATION rather
+    // than eviction, so far more communities survive in place (seed 42: 203
+    // -> 329 live settlements) and which site flags a goblin flagship moves
+    // on seven worlds: 552 -> 556 coastal, 214 -> 211 inland.
+    assert_eq!(coastal, 556, "coastal flagship count drifted");
+    assert_eq!(inland, 211, "inland flagship count drifted");
 }
 
 #[test]
@@ -582,12 +614,18 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
     // kobold presence rises sharply (see the name-length re-pin above), and
     // with it the moonless-spinning kobold-head pool (9 -> 33 solar, 11 ->
     // 63 lunar).
+    //
+    // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+    // subordination-instead-of-eviction changes which worlds field a kobold
+    // head at all, moving the moonless-spinning pool (33 -> 34 solar,
+    // 61 -> 59 lunar). The invariant above it — a mooned kobold head is
+    // always lunar — never fired.
     assert_eq!(
-        moonless_solar, 33,
+        moonless_solar, 34,
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 61,
+        moonless_lunar, 59,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -696,8 +734,14 @@ fn blind_attribution_beats_chance_decisively() {
     // settlements, so two more attributable pairs land on the correct side
     // (700 -> 702 correct); the pool itself is unchanged at 768, so accuracy
     // rises 0.911 -> 0.914, still decisively above the 0.75 floor.
-    assert_eq!(correct, 695, "blind-attribution count drifted");
-    assert_eq!(total, 759, "attributable-pair count drifted");
+    //
+    // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+    // subordination keeps losers alive as vassals instead of evicting them,
+    // which shifts which worlds field an attributable pair (759 -> 758) and
+    // which side two of them land on (695 -> 693); accuracy 0.9157 ->
+    // 0.9142, still decisively above the 0.75 floor asserted above.
+    assert_eq!(correct, 693, "blind-attribution count drifted");
+    assert_eq!(total, 758, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -1019,8 +1063,14 @@ fn name_collision_rate_is_measured_and_pinned() {
     // WHICH settlements survive to be named, so five worlds that drew no
     // duplicate name now do (48 -> 43 zero-collision, 722 -> 727 nonzero);
     // the absent set (worlds with no measurable rate at all) is unmoved.
-    assert_eq!(zero, 39, "zero-collision world count drifted");
-    assert_eq!(nonzero, 731, "nonzero-collision world count drifted");
+    //
+    // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+    // subordination keeps far more settlements alive to be named (seed 42:
+    // 203 -> 329 live), so more worlds draw at least one duplicate name
+    // (39 -> 33 zero-collision, 731 -> 737 nonzero); the absent set is
+    // unmoved at 230.
+    assert_eq!(zero, 33, "zero-collision world count drifted");
+    assert_eq!(nonzero, 737, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1061,7 +1111,17 @@ fn name_collision_rate_is_measured_and_pinned() {
         // prunes the settlement roster (losers are seized, not merely
         // displaced), so fewer names are drawn per world and the mean rate
         // FALLS 0.183_235_100_516_883 -> 0.185804141557143.
-        (mean - 0.185804141557143).abs() < 1e-6,
+        //
+        // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+        // subordination keeps the losers of a raid alive as vassals, so the
+        // surviving roster nearly DOUBLES (mean settlement-count 74.67 ->
+        // 147.375) — yet the mean collision rate FALLS
+        // 0.185_804_141_557_143 -> 0.138_343_210_536_363_64, the opposite of
+        // the naive "more names drawn, more reuse" expectation. Recorded as
+        // measured, not explained: no claim in this file rests on the
+        // direction, and the zero/nonzero split above moves the other way
+        // (six more worlds now show SOME collision).
+        (mean - 0.138_343_210_536_363_64).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1164,7 +1224,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // worlds seat a goblin one — but the surviving flagships are richer
         // sites with longer names: mean 13.382_874_198_569_583 ->
         // 13.411_552_371_911_55.
-        ("goblin", 766u32, 13.397077864229757),
+        //
+        // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+        // subordination spares the losers of a raid, so the surviving roster
+        // nearly doubles and the flagship is drawn from a much larger pool:
+        // 766 -> 767 present, mean 13.397_077_864_229_757 ->
+        // 13.686_009_046_023_463.
+        ("goblin", 767u32, 13.686009046023463),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1190,7 +1256,13 @@ fn name_length_distributions_are_measured_and_pinned() {
         // reseats kobold flagships onto materially different sites, the same
         // movement that inverts the coastal-rate ordering (see
         // kobold_flagships_are_less_coastal_than_goblin_flagships).
-        ("kobold", 762u32, 13.211758902624661),
+        //
+        // The Tithe (tribute) re-pin; lefford regen at the merged SHA, 0063:
+        // 762 -> 760 present, mean 13.211_758_902_624_661 ->
+        // 14.573_312_491_578_953 — kobold moves far more than goblin again,
+        // and in the same direction: the bigger surviving roster seats
+        // flagships on materially different sites.
+        ("kobold", 760u32, 14.573312491578953),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);

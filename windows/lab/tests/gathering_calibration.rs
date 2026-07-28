@@ -186,9 +186,17 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // slightly equatorward (15.3811 -> 15.2813); the preregistered
     // directional claim asserted above — below the uniform-sphere baseline
     // of 32.7 — is untouched and still clears by better than 2x.
+    // The Tithe (tribute epoch; lefford regen at the merged SHA, 0063): a
+    // raid whose prize is mobile now resolves as subordination rather than
+    // eviction, so the losers survive as vassals in place and the surviving
+    // roster nearly doubles (mean settlement-count 74.67 -> 147.375),
+    // pulling population very slightly equatorward again (15.2813 ->
+    // 15.1591); the preregistered directional claim asserted above — below
+    // the uniform-sphere baseline of 32.7 — is untouched and still clears by
+    // better than 2x.
     assert!(
-        (mean - 15.2813).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.2813)"
+        (mean - 15.1591).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.1591)"
     );
 }
 

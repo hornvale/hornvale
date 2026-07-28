@@ -256,7 +256,12 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // refresh surfaced the accumulated move. The aggregate ordering holds
     // decisively (4.483 >= 3.058 >= 2.487), so this re-pins the witness,
     // not the preregistered claim.
-    assert!((mh - 2.487).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    // The Tithe (tribute epoch; lefford regen at the merged SHA, 0063):
+    // subordination spares the losers of a raid, roughly doubling the
+    // surviving settlement roster and reshaping each people's naming draws;
+    // hobgoblin 2.487 -> 2.486 (goblin and bugbear are unmoved to 1e-9).
+    // The aggregate ordering holds decisively (4.483 >= 3.058 >= 2.486).
+    assert!((mh - 2.486).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
     // regen, commit 1c954d0): re-measured (bugbear 4.482 -> 4.481).
     // Census regen (2026-07-27, inherited language drift, lefford 0063):
@@ -383,13 +388,18 @@ fn homophony_count_is_measured_and_pinned() {
     // hobgoblin 1.637 -> 1.747, bugbear 6.797 -> 7.159, kobold 1.959 -> 2.042.
     // Bugbear stays highest among the goblinoid daughters by better than 3x,
     // which is the claim this test guards.
-    assert!((mg - 1.997).abs() < 1e-9, "goblin mean drifted: {mg}");
-    // hobgoblin 1.572 -> 1.637, bugbear 6.584 -> 6.797, kobold 1.9 -> 1.959
-    // (same cause); bugbear stays highest among the goblinoid daughters, the
-    // claim this test actually guards.
-    assert!((mh - 1.747).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 7.159).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 2.042).abs() < 1e-9, "kobold mean drifted: {mk}");
+    // The Tithe (tribute epoch; lefford regen at the merged SHA, 0063): a
+    // raid whose prize is mobile now resolves as SUBORDINATION rather than
+    // eviction, so the loser survives as a vassal and the mean settlement
+    // roster nearly doubles (74.67 -> 147.375) — every daughter's periphery
+    // naming draws grow with it: goblin 1.997 -> 2.02, hobgoblin 1.747 ->
+    // 1.845, bugbear 7.159 -> 7.539, kobold 2.042 -> 2.124. Bugbear stays
+    // highest among the goblinoid daughters by better than 3x, which is the
+    // claim this test guards; these re-pin the witnesses.
+    assert!((mg - 2.02).abs() < 1e-9, "goblin mean drifted: {mg}");
+    assert!((mh - 1.845).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 7.539).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.124).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"
