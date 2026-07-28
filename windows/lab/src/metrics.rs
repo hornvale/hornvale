@@ -17,7 +17,8 @@ use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
     accounts_from, build_world_from_components, build_world_to, climate_from, commodity_name,
     flagship_of, language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from,
-    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of, vestiges_field,
+    rock_class_name, settlement_site_concepts as worldgen_settlement_site_concepts, sky_of,
+    soil_of, soil_order_name, terrain_of, vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -2339,9 +2340,12 @@ pub fn registry() -> Vec<Metric> {
             name: "name-gloss-true",
             doc: "Whether every committed settlement name-gloss fact in this world is a \
                    truthful composition of that SAME settlement's own re-derived site \
-                   concepts (biome + presiding phenomenon), independently re-derived here \
-                   rather than read back from worldgen's own composition; Absent if no \
-                   settlement in this world carries a gloss",
+                   concepts (biome, presiding phenomenon, and any of the nine toponymic \
+                   terrain concepts its own cell offers — hydrography, elevation extrema, \
+                   landmass size, wetness; Task 5 widened this vector past the original \
+                   biome + presiding pair), re-derived here by calling worldgen's own \
+                   settlement_site_concepts rather than a hand-maintained parallel \
+                   definition; Absent if no settlement in this world carries a gloss",
             summary: SummaryKind::Flag,
             extract: Extractor::Full(name_gloss_true),
         },
@@ -3829,32 +3833,39 @@ fn lex(v: &FullView, species: &str) -> Result<hornvale_language::Lexicon, BuildE
     hornvale_worldgen::lexicon_from(v.world(), species, v.terrain(), v.climate())
 }
 
-/// A settlement's own re-derived site concepts (mirrors
-/// `cli/tests/words_identity.rs`'s `settlement_site_concepts`): its
-/// committed biome fact plus the presiding phenomenon concept its species
+/// A settlement's own re-derived site concepts: calls worldgen's own
+/// [`worldgen_settlement_site_concepts`] — the SAME composition the naming
+/// pass itself used (Task 5, F2) — over this settlement's committed cell,
+/// this view's terrain/climate, and the presiding phenomenon its species
 /// observes from THIS settlement's own vantage (its committed coordinates
 /// cull the sky — SEQ-5; spec §9.3 defines gloss truthfulness against the
-/// entity's own facts), if any. `None` if the settlement is missing a
-/// biome/species fact, which `name_gloss_true` below treats as an
-/// unverifiable (failing) row rather than skipping it silently.
+/// entity's own facts). A real cross-check, not an echo: it never calls
+/// worldgen's internal name-drawing code, only its committed `CELL_ID`/
+/// `NAME_GLOSS` facts and this SAME public site-concept function every
+/// other name-truthfulness consumer (the worldgen keystone test, this
+/// metric) also calls, so all three stay in lockstep by construction
+/// rather than by three hand-kept copies. `None` if the settlement is
+/// missing a cell-id/species fact, which `name_gloss_true` below treats as
+/// an unverifiable (failing) row rather than skipping it silently.
 fn settlement_site_concepts(
     v: &FullView,
     id: EntityId,
     climate: &GeneratedClimate,
 ) -> Option<Vec<String>> {
-    let biome = v
+    let Value::Number(cell_id) = v
         .world()
         .ledger
-        .text_of(id, hornvale_settlement::BIOME)?
-        .to_string();
+        .value_of(id, hornvale_settlement::CELL_ID)?
+    else {
+        return None;
+    };
+    let cell = CellId(*cell_id as u32);
     let species = hornvale_species::species_of(v.world(), id)?;
     let phenomena =
         observed_phenomena_as_at_from(v.world(), v.components(), &species, id, climate).ok()?;
-    let mut concepts = vec![biome];
-    if let Some(concept) = phenomena.first().and_then(phenomenon_concept) {
-        concepts.push(concept.to_string());
-    }
-    Some(concepts)
+    let presiding = phenomena.first().and_then(phenomenon_concept);
+    let concepts = worldgen_settlement_site_concepts(cell, v.terrain(), climate, presiding);
+    Some(concepts.into_iter().map(str::to_string).collect())
 }
 
 /// Every gloss composition `Namer::glossed_name` could truthfully produce

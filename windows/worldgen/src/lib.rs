@@ -3523,6 +3523,161 @@ fn landmass_size_capped(
     visited.len()
 }
 
+/// The wetness floor (`drainage_at`) `marsh` sits above (see
+/// [`is_marsh_cell`]) — a module constant so `exposure_of_impl` and
+/// [`settlement_site_concepts`] read the identical threshold rather than
+/// two literals that could drift apart.
+const MARSH_MIN_DRAINAGE: f64 = 5.0;
+
+/// The small-landmass ceiling `island` sits under (see [`is_island_cell`])
+/// — a module constant for the same single-source reason as
+/// [`MARSH_MIN_DRAINAGE`].
+const ISLAND_CELL_CAP: usize = 200;
+
+/// Whether `cell` is a real river channel: `water_kind_at` is exactly
+/// `River`. The Confluence's carrying-capacity term spikes NEAR a river
+/// (within `RIVER_REACH` hops, `river_proximity`'s decay radius —
+/// "adjacent to rivers, not necessarily on it", `water.rs:96-99`) rather
+/// than only on the channel cell itself, so this gate is narrower than that
+/// siting pressure, not identical to it. Shared by `exposure_of_impl`
+/// (looping over a species' whole settled history) and
+/// [`settlement_site_concepts`] (checking one settlement's own cell) — the
+/// single definition of "is this cell a river."
+fn is_river_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+}
+
+/// Whether `cell` is `river` narrowed to the drainage band below the
+/// waterfall threshold (`carve::WATERFALL_MIN_DRAINAGE`) — "where a river
+/// runs shallow enough to cross" read literally: a river cell whose flow
+/// hasn't reached waterfall-scale drainage is, by definition, the class
+/// this slice models as fordable.
+fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    is_river_cell(terrain, cell)
+        && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a STRICT local elevation maximum over its FULL
+/// neighbor ring, with any ocean neighbor's elevation clamped up to sea
+/// level rather than excluded or read at its true depth.
+///
+/// History (Task 4 review, two rounds): the first version compared against
+/// ALL neighbors with real elevation, so every ocean neighbor (by
+/// definition lower than any land cell, `is_ocean` is `elevation_at <
+/// sea_level`) trivially satisfied `hill` — every coastal promontory passed
+/// regardless of relief. EXCLUDING ocean neighbors (round 1's fix) cured
+/// that but broke `valley` worse: it removed the very thing that had been
+/// disqualifying a shoreline cell (a lower ocean neighbor breaks "all
+/// neighbors higher"), so `valley` started firing for any coastal cell with
+/// few, higher, land neighbors — measured at seed 42, a land-degree-3 cell
+/// was 79x more likely to pass than a land-degree-6 one, and every settled
+/// `valley` hit was a partial-ring coastal cell, none a full interior
+/// basin. CLAMPING (this version) keeps the full ring — an ocean neighbor
+/// still counts, but at sea level rather than its true depth, so it still
+/// correctly disqualifies a coastal cell from `valley` (a shoreline cell's
+/// clamped-lower ocean neighbor breaks "all higher" exactly as it should)
+/// while still letting a genuinely elevated coastal cell — a real headland,
+/// higher than the sea AND every land neighbor it has — count as `hill`.
+/// Re-measured over all 11,066 seed-42 land cells: `valley` now fires ONLY
+/// at land-degree 6 (zero ocean adjacency — a true interior basin), 48
+/// cells, 0.52% — eliminating the coastal skew entirely (0% at every degree
+/// 0-5, where the land-only version peaked at 41% and 292 of 344 total hits
+/// sat). `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
+/// flat from land-degree 3 up) with a real, accepted allowance for small
+/// islets/headlands at very low land-degree. Full table in the Task 4
+/// report. Shared by `exposure_of_impl` and [`settlement_site_concepts`] —
+/// the single definition of "is this cell a hill."
+fn is_hill_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = geo.neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) < here)
+}
+
+/// The symmetric counterpart of [`is_hill_cell`]: a STRICT local elevation
+/// minimum over the full, sea-level-clamped neighbor ring. See that
+/// function's doc comment for the two-round history behind the clamp. The
+/// single definition of "is this cell a valley," shared the same way.
+fn is_valley_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    let sea_level = terrain.sea_level().get();
+    let here = terrain.elevation_at(cell).get();
+    let neighbors = geo.neighbors(cell);
+    !neighbors.is_empty()
+        && neighbors
+            .iter()
+            .all(|&n| terrain.elevation_at(n).get().max(sea_level) > here)
+}
+
+/// Whether `cell` is land meaningfully wetter than typical dry ground but
+/// hasn't channelized into a river: `water_kind_at` is `DryLand` and
+/// `drainage_at` clears [`MARSH_MIN_DRAINAGE`] — `water.rs`'s own
+/// calibration comment puts the median LAND cell at drainage ~2 and the
+/// 90th percentile at ~11 against `RIVER_MIN_DRAINAGE`'s 15, so a cell
+/// accumulating runoff above the median but below the river threshold is
+/// genuinely damper than ordinary dry land without yet being a channel.
+/// The single definition of "is this cell a marsh," shared the same way.
+fn is_marsh_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
+        && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
+}
+
+/// Whether `cell` is a karst conduit with enough drainage to surface as
+/// flow rather than sit as a dry cave or sinkhole: `hydro_at` is `Karst`
+/// and `drainage_at` clears `RIVER_MIN_DRAINAGE` — "where an aquifer meets
+/// the surface with flow" read through the reachable half of the
+/// lithology model (`Hydro::Spring` is structurally unreachable on every
+/// seed; see `.superpowers/sdd/followups.md` F5). Disclosure: `classify`
+/// (`water.rs`) routes any non-sink land cell at this drainage to `River`
+/// regardless of lithology, so a Karst cell that clears the floor is almost
+/// always ALSO a `River` cell (measured at seed 42: 137 Karst cells clear
+/// it, 132 of those are `WaterKind::River`) — `spring` is `river`
+/// partitioned by rock type, not an independent signal. The single
+/// definition of "is this cell a spring," shared the same way.
+fn is_spring_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
+        && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+}
+
+/// Whether `cell` sits on a real small landmass: a bounded flood-fill of
+/// non-ocean cells from `cell` stays under [`ISLAND_CELL_CAP`]. Tests
+/// landmass size underfoot, not proximity to open water (that's
+/// [`is_coast_cell`]) — a mainland coastal settlement is `coast` but not
+/// `island`. 200 sits in a real gap: seed 42's full landmass census (30
+/// components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 4, 4, 7, 13, 22, 32,
+/// 40, 66, 104, then jumps to 356 and up. The single definition of "is this
+/// cell an island," shared the same way.
+fn is_island_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP
+}
+
+/// Whether `cell` lies within two hops of an ocean cell — the shore as a
+/// PLACE, not the water (`sea` covers the water; toponymy wants the
+/// former, cosmology the latter). The single definition of "is this cell
+/// coastal," shared the same way.
+fn is_coast_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    within_hops(geo, cell, 2, |c| terrain.is_ocean(c))
+}
+
+/// Whether `cell` lies within two hops of a `SaltBasin` cell — this water
+/// model's only standing-water class distinct from a through-flow river
+/// (documented verbatim as "the evaporative salt lake / playa"; a
+/// freshwater through-flow lake reads as `River`, so [`is_river_cell`]
+/// already covers that case). The single definition of "is this cell near
+/// a lake," shared the same way.
+fn is_lake_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bool {
+    let geo = terrain.geosphere();
+    within_hops(geo, cell, 2, |c| {
+        terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
+    })
+}
+
 /// Classify every concept in the world's registry for `species`'s culture
 /// (spec §7): `Steeped` concepts get their own root word, `KnowsOf`
 /// concepts are named as compounds, and `Unknown` concepts get a
@@ -3749,10 +3904,9 @@ fn exposure_of_impl(
     // know the shore without living on it; `coast` is the shore as a
     // PLACE, where `sea` is the water — two concepts, deliberately, because
     // toponymy wants the former ("Seaside") and cosmology wants the latter.
+    // Gate logic: [`is_coast_cell`].
     if world.registry.concept("coast").is_some() {
-        let near_coast = settled
-            .iter()
-            .any(|&cell| within_hops(geo, cell, 2, |c| terrain.is_ocean(c)));
+        let near_coast = settled.iter().any(|&cell| is_coast_cell(terrain, cell));
         if near_coast {
             classes
                 .entry("coast".to_string())
@@ -3760,20 +3914,10 @@ fn exposure_of_impl(
         }
     }
 
-    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` cell —
-    // this slice's water model has no separate standing-freshwater class:
-    // a through-flow freshwater lake reads as `River` (see `water.rs`'s
-    // doc comment), so `river`'s Steeped gate already covers it. The one
-    // remaining standing-water body this slice distinguishes is the
-    // terminal endorheic sink — `WaterKind::SaltBasin`, documented
-    // verbatim as "the evaporative salt lake / playa" — so that is the
-    // signal `lake` rides.
+    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` cell.
+    // Gate logic: [`is_lake_cell`].
     if world.registry.concept("lake").is_some() {
-        let near_lake = settled.iter().any(|&cell| {
-            within_hops(geo, cell, 2, |c| {
-                terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
-            })
-        });
+        let near_lake = settled.iter().any(|&cell| is_lake_cell(terrain, cell));
         if near_lake {
             classes
                 .entry("lake".to_string())
@@ -3781,160 +3925,58 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: river, the terrain a people actually lives on: a settled
-    // cell whose `water_kind_at` is exactly `River`. The Confluence's
-    // carrying-capacity term spikes NEAR a river (within `RIVER_REACH`
-    // hops, `river_proximity`'s decay radius — "adjacent to rivers, not
-    // necessarily on it", `water.rs:96-99`) rather than only on the
-    // channel cell itself, so this gate is narrower than that siting
-    // pressure, not identical to it: it fires for whichever settled cells
-    // happen to land exactly on the channel, a real subset of the
-    // river-proximate settlements the siting pass favors.
+    // Steeped: river, the terrain a people actually lives on. Gate logic
+    // (and the `RIVER_REACH` disclosure): [`is_river_cell`].
     for &cell in settled {
-        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River {
+        if is_river_cell(terrain, cell) {
             classes.insert("river".to_string(), ExposureClass::Steeped);
         }
     }
 
-    // Steeped: ford, `river` narrowed to the drainage band below the
-    // waterfall threshold (`carve::WATERFALL_MIN_DRAINAGE`) — "where a
-    // river runs shallow enough to cross" read literally: a river cell
-    // whose flow hasn't reached waterfall-scale drainage is, by
-    // definition, the class this slice models as fordable.
+    // Steeped: ford, `river` narrowed to the sub-waterfall drainage band.
+    // Gate logic: [`is_ford_cell`].
     for &cell in settled {
-        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
-            && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
-        {
+        if is_ford_cell(terrain, cell) {
             classes.insert("ford".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: hill/valley, a settled cell that is a STRICT local
-    // elevation extremum over its FULL neighbor ring, with any ocean
-    // neighbor's elevation clamped up to sea level rather than excluded.
-    // A looser "some neighbor is higher/lower" gate would admit nearly
-    // every settlement on a non-flat world, which trivializes the word;
-    // requiring every neighbor to sit on one side keeps this a genuine
-    // local peak or basin.
-    //
-    // History (Task 4 review, two rounds): the first version compared
-    // against ALL neighbors with real elevation, so every ocean neighbor
-    // (by definition lower than any land cell, `is_ocean` is
-    // `elevation_at < sea_level`) trivially satisfied `hill` — every
-    // coastal promontory passed regardless of relief. EXCLUDING ocean
-    // neighbors (round 1's fix) cured that but broke `valley` worse: it
-    // removed the very thing that had been disqualifying a shoreline cell
-    // (a lower ocean neighbor breaks "all neighbors higher"), so `valley`
-    // started firing for any coastal cell with few, higher, land
-    // neighbors — measured at seed 42, a land-degree-3 cell was 79× more
-    // likely to pass than a land-degree-6 one, and every settled `valley`
-    // hit was a partial-ring coastal cell, none a full interior basin.
-    // CLAMPING (this version) keeps the full ring — an ocean neighbor
-    // still counts, but at sea level rather than its true depth, so it
-    // still correctly disqualifies a coastal cell from `valley` (a
-    // shoreline cell's clamped-lower ocean neighbor breaks "all higher"
-    // exactly as it should) while still letting a genuinely elevated
-    // coastal cell — a real headland, higher than the sea AND every land
-    // neighbor it has — count as `hill`. Re-measured over all 11,066
-    // seed-42 land cells: `valley` now fires ONLY at land-degree 6 (zero
-    // ocean adjacency — a true interior basin), 48 cells, 0.52% —
-    // eliminating the coastal skew entirely (0% at every degree 0-5, where
-    // the land-only version peaked at 41% and 292 of 344 total hits sat).
-    // `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
-    // flat from land-degree 3 up) with a real, accepted allowance for
-    // small islets/headlands at very low land-degree (a cell almost fully
-    // ringed by ocean has little land to test relief against, but being
-    // higher than the sea AND its few neighbors is still a real claim).
-    // Full table in the Task 4 report.
-    let sea_level = terrain.sea_level().get();
+    // elevation extremum over its FULL, sea-level-clamped neighbor ring.
+    // Gate logic and the two-round clamp history: [`is_hill_cell`] /
+    // [`is_valley_cell`].
     for &cell in settled {
-        let here = terrain.elevation_at(cell).get();
-        let neighbors = geo.neighbors(cell);
-        let effective = |n: hornvale_kernel::CellId| terrain.elevation_at(n).get().max(sea_level);
-        if !neighbors.is_empty() {
-            if neighbors.iter().all(|&n| effective(n) < here) {
-                classes.insert("hill".to_string(), ExposureClass::Steeped);
-            }
-            if neighbors.iter().all(|&n| effective(n) > here) {
-                classes.insert("valley".to_string(), ExposureClass::Steeped);
-            }
+        if is_hill_cell(terrain, cell) {
+            classes.insert("hill".to_string(), ExposureClass::Steeped);
+        }
+        if is_valley_cell(terrain, cell) {
+            classes.insert("valley".to_string(), ExposureClass::Steeped);
         }
     }
 
-    // Steeped: marsh, land that is meaningfully wetter than typical dry
-    // ground but hasn't channelized into a river. `Hydro::Aquitard` reads
-    // as "impermeable, perched water" in its doc comment and so looks like
-    // the literal match for "soft wet ground" — but `hydrogeology`'s first
-    // branch routes EVERY ocean cell to `Aquitard` too (`water.rs`), so on
-    // this seed's globe it is 73% ocean floor and effectively never the
-    // class of an inhabited land cell (measured: 0 of 203 seed-42
-    // settlements across all four peoples). `drainage_at` is the real,
-    // already-graded signal: `water.rs`'s own calibration comment puts the
-    // median LAND cell at drainage ~2 and the 90th percentile at ~11
-    // against `RIVER_MIN_DRAINAGE`'s 15, so a cell accumulating runoff
-    // above the median but below the river threshold is genuinely
-    // damper than ordinary dry land without yet being a channel.
-    const MARSH_MIN_DRAINAGE: f64 = 5.0;
+    // Steeped: marsh, land wetter than typical dry ground but not yet
+    // channelized. Gate logic: [`is_marsh_cell`].
     for &cell in settled {
-        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
-            && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
-        {
+        if is_marsh_cell(terrain, cell) {
             classes.insert("marsh".to_string(), ExposureClass::Steeped);
         }
     }
 
     // Steeped: spring, a karst conduit with enough drainage to surface as
-    // flow rather than sit as a dry cave or sinkhole. NOT `Hydro::Spring`
-    // (Task 4 review, Critical 1): that variant is unreachable in the
-    // whole pipeline, on every seed, not just this one — `hydrogeology`
-    // (`lithology.rs:290-307`) only reaches its `porosity > 0.5` branch
-    // when `carbonate > 0.5` (with `carbonate` at its low value of 0.05,
-    // porosity tops out at 0.5*0.05+0.3 = 0.325), and `carbonate > 0.5`
-    // together with `porosity > 0.4` (which `porosity > 0.5` already
-    // implies) is exactly the Karst branch's own guard, checked and
-    // returned FIRST. So every cell that could ever satisfy `Spring`'s
-    // porosity floor is already claimed by `Karst` two branches earlier;
-    // `Aquifer` (the other outcome of that same dead branch) is equally
-    // unreachable, by the identical argument. Recorded as a pre-existing
-    // terrain-domain bug in `.superpowers/sdd/followups.md` (F5) rather
-    // than fixed here — `hydrogeology` itself is out of this task's scope.
-    // `Hydro::Karst` IS reachable (1,364 land cells at seed 42) and is
-    // where real-world karst springs actually occur (an underground
-    // channel resurfacing through dissolved carbonate), so gating on Karst
-    // cells whose `drainage_at` clears the same channelized-flow floor
-    // `river` uses (`RIVER_MIN_DRAINAGE`) is "where an aquifer meets the
-    // surface with flow" read through the reachable half of the model.
-    // Disclosure, not just a wet karst outflow: `classify` (`water.rs`)
-    // routes ANY non-sink land cell at this drainage to `River` regardless
-    // of lithology, so a Karst cell that clears the floor is almost always
-    // ALSO a `River` cell (measured at seed 42: 137 Karst cells clear it,
-    // 132 of those are `WaterKind::River`; all 9 settled `spring` cells
-    // are). `spring` is `river` partitioned by rock type — a real,
-    // gloss-honest distinction (a karst resurgence genuinely is the head
-    // of a surface stream) but not an independent signal: three of the
-    // nine concepts (`river`, `ford`, `spring`) key off the same drainage
-    // field.
+    // flow. NOT `Hydro::Spring` (Task 4 review, Critical 1: structurally
+    // unreachable — see `.superpowers/sdd/followups.md` F5). Gate logic
+    // and the `spring ⊆ river` disclosure: [`is_spring_cell`].
     for &cell in settled {
-        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
-            && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
-        {
+        if is_spring_cell(terrain, cell) {
             classes.insert("spring".to_string(), ExposureClass::Steeped);
         }
     }
 
-    // Steeped: island, a real landmass-size test — a bounded flood-fill of
-    // non-ocean cells from the settled cell. A people whose settlement
-    // sits on a landmass that small holds the word; a mainland coastal
-    // people (already `KnowsOf` `coast` above) does not, because the two
-    // concepts test different things — proximity to open water versus the
-    // size of the ground underfoot. 200 sits in a real gap: seed 42's full
-    // landmass census (30 components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2,
-    // 2, 4, 4, 7, 13, 22, 32, 40, 66, 104, then jumps to 356 and up —
-    // nothing between 104 and 356, so any cap in that band cleanly
-    // separates the small-landmass tier from the continent tier.
-    const ISLAND_CELL_CAP: usize = 200;
+    // Steeped: island, a real landmass-size test — proximity to open water
+    // ([`is_coast_cell`]) and the size of the ground underfoot
+    // ([`is_island_cell`]) are deliberately different concepts.
     for &cell in settled {
-        if landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP {
+        if is_island_cell(terrain, cell) {
             classes.insert("island".to_string(), ExposureClass::Steeped);
             break;
         }
@@ -4247,6 +4289,84 @@ pub fn deity_site_concepts(
         concepts.push(concept);
     }
     concepts.push(sentiment_concept(sentiment));
+    concepts
+}
+
+/// The concepts a settlement's own site offers its namer, most specific
+/// first — the order is a CONTRACT: `glossed_name` picks 1-2 concepts by
+/// index from this vector, so reordering it silently renames every
+/// settlement in every world. Every entry is read off a terrain/climate
+/// fact that already exists on the settled cell; nothing here is drawn.
+/// Mirrors [`deity_site_concepts`]'s shape for the settlement side of
+/// naming. Public because the Lab's `name-gloss-true` metric re-derives a
+/// settlement's site concepts to check that its committed gloss is
+/// truthful, and must call this SAME composition rather than maintaining a
+/// parallel definition of "what does this site offer."
+///
+/// Was biome + presiding phenomenon only (~12 biomes against a handful of
+/// phenomena) — narrow enough that the same generic gloss appeared
+/// verbatim across unrelated settlements. Widened here to the nine
+/// terrain concepts Task 4 gave real exposure rules (LANG-9: "the naming
+/// engine already consumes whatever site facts the composition root
+/// offers").
+///
+/// Order, and why: the nine terrain gates split into two kinds. A
+/// `Steeped` gate (`exposure_of_impl`) is a direct claim about THIS cell
+/// (it IS a hill); a `KnowsOf` gate is a claim about its neighborhood (it
+/// is NEAR the sea). A direct claim is the more specific fact, so every
+/// direct gate precedes both proximity gates. Within the direct gates,
+/// narrower physical criteria come first, ordered by the Task 4 report's
+/// measurements over seed 42's ~11,066 land cells: `valley` (0.52% of
+/// land — the rarest of the nine, a full-ring strict elevation minimum)
+/// and `hill` (1.51% — the symmetric maximum); `spring` (a karst/drainage
+/// intersection) and `ford` (`river` narrowed to a sub-waterfall drainage
+/// band — both proper narrowings of a broader condition); `island` (a
+/// capped small-landmass flood-fill); `marsh` (a wetness band on dry
+/// land); then `river` itself, the broadest direct gate (~6.7% of land,
+/// `water.rs`'s own tuning comment). `coast` and `lake` close the terrain
+/// concepts: a two-hop proximity test is a weaker claim than any direct
+/// one, and both saturate to near-100% at population scale (Task 4's
+/// report). Biome and the presiding sky phenomenon close the whole
+/// vector — every settlement has one of each, so they are the least
+/// discriminating facts a cell carries, and `glossed_name` should reach
+/// them only when nothing sharper fired.
+/// type-audit: bare-ok(identifier-text: presiding), bare-ok(identifier-text: return)
+pub fn settlement_site_concepts(
+    cell: hornvale_kernel::CellId,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    presiding: Option<&'static str>,
+) -> Vec<&'static str> {
+    let mut concepts: Vec<&'static str> = Vec::with_capacity(4);
+    if is_valley_cell(terrain, cell) {
+        concepts.push("valley");
+    }
+    if is_hill_cell(terrain, cell) {
+        concepts.push("hill");
+    }
+    if is_spring_cell(terrain, cell) {
+        concepts.push("spring");
+    }
+    if is_ford_cell(terrain, cell) {
+        concepts.push("ford");
+    }
+    if is_island_cell(terrain, cell) {
+        concepts.push("island");
+    }
+    if is_marsh_cell(terrain, cell) {
+        concepts.push("marsh");
+    }
+    if is_river_cell(terrain, cell) {
+        concepts.push("river");
+    }
+    if is_coast_cell(terrain, cell) {
+        concepts.push("coast");
+    }
+    if is_lake_cell(terrain, cell) {
+        concepts.push("lake");
+    }
+    concepts.push(climate.biome_at(cell).concept_name());
+    concepts.extend(presiding);
     concepts
 }
 
@@ -4907,7 +5027,6 @@ fn build_to(
         let lexicon = lexicons
             .get(name)
             .expect("a lexicon was built for every placed species");
-        let biome_concept = climate.biome_at(s.cell).concept_name();
         // The presiding phenomenon is observed from THIS settlement's own
         // cell coordinate — its hemisphere culls the sky (SEQ-5), so the
         // committed gloss is truthful to the sky this settlement actually
@@ -4920,8 +5039,7 @@ fn build_to(
         let seen =
             observe_with_sources(&world, wc, name, world_entity, Some(coord), &sources)?;
         let presiding = seen.first().and_then(phenomenon_concept);
-        let mut site_concepts: Vec<&str> = vec![biome_concept];
-        site_concepts.extend(presiding);
+        let site_concepts = settlement_site_concepts(s.cell, &terrain, &climate, presiding);
         let site = hornvale_language::SiteConcepts {
             concepts: &site_concepts,
         };
@@ -9040,10 +9158,15 @@ mod tests {
     #[test]
     fn a_settlement_name_gloss_is_truthful_to_its_own_site_facts() {
         // Every settlement carrying a `name-gloss` fact must gloss to
-        // concepts drawn only from its own site: its own biome, or one of
-        // the phenomenon concepts a presiding belief can map to.
+        // concepts drawn only from its own re-derived site vector (Task 5:
+        // the nine toponymic terrain concepts, biome, or the presiding
+        // phenomenon) — re-derived here via the SAME `settlement_site_concepts`
+        // the naming pass itself calls, so this pins the composition, not a
+        // hand-maintained parallel list of "plausible" concepts.
         let world = generated(42);
-        let plausible_phenomenon_concepts = ["sun", "moon", "star", "day", "wind"];
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
         let mut checked_any = false;
         for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
             let id = f.subject;
@@ -9051,22 +9174,68 @@ mod tests {
                 continue;
             };
             checked_any = true;
-            let biome = world
-                .ledger
-                .text_of(id, hornvale_settlement::BIOME)
-                .expect("every settlement has a biome");
+            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                _ => panic!("a settlement carries a numeric cell-id"),
+            };
+            let species = hornvale_species::species_of(&world, id)
+                .expect("a settlement carries a species fact");
+            let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+                .expect("observation succeeds for a placed species");
+            let presiding = seen.first().and_then(phenomenon_concept);
+            let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
             let mut remainder = gloss.to_string();
-            remainder = remainder.replace(biome, "");
-            for concept in plausible_phenomenon_concepts {
-                remainder = remainder.replace(concept, "");
+            for concept in &site {
+                remainder = remainder.replacen(concept, "", 1);
             }
             assert!(
                 remainder.chars().all(|c| c == '-'),
-                "gloss {gloss:?} for settlement biome {biome:?} names a concept outside its \
-                 own site facts"
+                "gloss {gloss:?} for settlement {id:?} names a concept outside its own site \
+                 vector {site:?}"
             );
         }
         assert!(checked_any, "seed 42 should gloss at least one settlement");
+    }
+
+    #[test]
+    fn the_site_vector_is_wider_than_biome_and_sky() {
+        // The Wearing: a settlement's site offers more than its biome and
+        // its sky. The concrete claim: at seed 42, at least one
+        // settlement's vector contains a terrain-derived concept, and every
+        // vector is a subset of the registry.
+        let world = generated(42);
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
+        let mut vectors: Vec<Vec<&'static str>> = Vec::new();
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let id = f.subject;
+            let cell = match world.ledger.value_of(id, hornvale_settlement::CELL_ID) {
+                Some(Value::Number(n)) => hornvale_kernel::CellId(*n as u32),
+                _ => panic!("a settlement carries a numeric cell-id"),
+            };
+            let species = hornvale_species::species_of(&world, id)
+                .expect("a settlement carries a species fact");
+            let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+                .expect("observation succeeds for a placed species");
+            let presiding = seen.first().and_then(phenomenon_concept);
+            vectors.push(settlement_site_concepts(
+                cell, &terrain, &climate, presiding,
+            ));
+        }
+        assert!(!vectors.is_empty(), "seed 42 places no settlements");
+        assert!(
+            vectors.iter().any(|v| v.len() > 2),
+            "every site vector is still <= 2 concepts wide — the widening did not land"
+        );
+        for v in &vectors {
+            for concept in v {
+                assert!(
+                    world.registry.concept(concept).is_some(),
+                    "site vector names an unregistered concept: {concept}"
+                );
+            }
+        }
     }
 
     #[test]
