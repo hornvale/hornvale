@@ -74,8 +74,8 @@ structurally indistinguishable from the goblin: at chance on blind
 attribution, within the sampling bound on every distribution. It backs
 [Study 009, the Census of the Meeting](./study-009.md), the Year-2
 capstone. Both live studies are regenerated locally in ~7 minutes at the
-pre-merge close (`HV_CENSUS=1`, [decision
-0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046), then drift-checked and CI-probed on every build.
+pre-merge close (`scripts/census-run.sh`, [decision
+0063](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0063-census-regen-is-local-again.md), superseding the AWS-only 0046; serialized against other heavy runs by [decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md)), then drift-checked and CI-probed on every build.
 
 Everything else the census family has produced is frozen, not deleted.
 `branches-family` (1,000 seeds, the goblinoid-phylogeny battery —
@@ -108,7 +108,7 @@ deepened its cost grew to minutes, so it now runs in the heavy tier
 (`make gate-full`) rather than in the commit gate: a worldgen change that
 moves a census surfaces there and in CI's regenerate-and-diff, not on the
 developer's next local test run. The full census fixtures themselves are
-refreshed once per campaign — locally, in ~7 minutes (`HV_CENSUS=1`), just
+refreshed once per campaign — locally, in ~7 minutes (`scripts/census-run.sh`), just
 before the campaign merges to `main`, since [The Local Census](../chronicle/the-local-census.md)
 cut the per-world cost ~285 → ~8 CPU-s and made a local regen feasible
 (decision 0063). The everyday commit gate still skips censuses to stay under

@@ -66,3 +66,5 @@ platform, is the ratified trade.
 chronicle; decision 0046 (superseded); decision 0033 (quantize-at-emit for
 cross-platform byte-identity); `scripts/regenerate-artifacts.sh`'s
 `HV_CENSUS` guard.
+
+**Refined by [0081](0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md)** (2026-07-27): one heavy writer per box, claimed at the write seam and serialized with a bounded, legible wait. Use `scripts/census-run.sh`.

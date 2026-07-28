@@ -19,9 +19,11 @@ Expected branch: `<BRANCH>`
    the ceiling to 60 minutes; the unstated default is 20 and a cold gate
    can exceed it. Do not start watchers. NEVER regenerate censuses
    locally: `bash scripts/regenerate-artifacts.sh` skips them by default
-   (they are opt-in via HV_CENSUS=1, which only the AWS regen path sets —
-   never set it yourself; the once-per-campaign census refresh is the
-   controller's job).
+   (they are opt-in via HV_CENSUS=1 — never set it yourself; the
+   once-per-campaign census refresh is the controller's job, and runs
+   through `scripts/census-run.sh`, which serializes against any other heavy
+   run on the box per decision 0081. The AWS path is ABANDONED, not the
+   setter.)
    If a job ends up in the background anyway, your next action is a bounded
    foreground poll — never ending your turn to "wait":
 
