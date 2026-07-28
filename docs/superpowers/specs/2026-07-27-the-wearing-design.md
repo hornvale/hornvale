@@ -294,9 +294,42 @@ of them; that indivisibility is the argument for the single-campaign shape.
 
 Determinism obligations unchanged and non-negotiable: same seed plus same pins
 yields byte-identical worlds; `BTreeMap`/`BTreeSet`/`Vec` only; no wall-clock;
-quantize at emit only; names stay pure per-`(seed, species, kind, salt)`
-functions with no re-draw and no shared "used" set, so pin isolation holds by
-construction.
+quantize at emit only; names stay pure per-`(seed, species, kind, salt, site)`
+functions with no re-draw and no shared "used" set.
+
+**Amended 2026-07-28 (owner call, ledger #10): world-level pin isolation for
+*glossed settlement names* is deliberately given up.** As first drafted this
+paragraph continued "…so pin isolation holds by construction," and S3's
+frequency-keyed wear (ledger #3) makes that false: a morpheme wears in
+proportion to its share of the culture's **own name corpus**, so a settlement's
+name depends on which *other* settlements that species placed. Measured across
+seven seeds, wear changes names at four of them, so this is a live property,
+not a theoretical one.
+
+What is given up, and what is not:
+
+- **Determinism — INTACT.** Same seed plus same pins still yields byte-identical
+  worlds; verified by two fresh builds.
+- **`naming.rs`'s own purity — INTACT.** The corpus arrives as an explicit
+  read-only parameter computed by the composition root. There is no shared
+  mutable set and no re-draw, which are the failure modes the original clause
+  was written against: they cause order-dependence, and a read-only parameter
+  causes none.
+- **World-level pin isolation — GIVEN UP.** A pin that moves a species'
+  settlement scatter now moves every glossed name of that species. Deity and
+  epithet names are unaffected (their name spaces are one-per-belief, and the
+  corpus is a settlement-only input).
+
+The alternative was re-keying wear to the compound's head slot, which preserves
+the property exactly but *authors* the generic/specific asymmetry instead of
+deriving it — and stops a ubiquitous *specific* from wearing, which real
+toponymy does. Nathan took the trade on 2026-07-28.
+
+Consequence for the evidence battery: the naming equivalent of the
+`genesis_properties.rs` / `tectonic_properties.rs` pin-isolation tests, which
+§5 S3 names as the pattern to hold to, **cannot** assert scatter-invariance for
+glossed settlement names. It should instead assert the two properties that do
+survive — determinism under repeated builds, and `naming.rs`'s argument purity.
 
 **Census regen is a carve-out requiring Nathan's explicit authorization** and
 is not assumed by this spec. Under decision 0063 the regen is local and takes
