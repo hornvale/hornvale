@@ -385,6 +385,28 @@ adds that a determinism claim is only as good as the route it was checked
 along, and that the total check — same seed, both binaries, `cmp` — costs
 ninety seconds and subsumes the clever ones.
 
+[The Sextant](./chronicle/the-sextant.md) adds a seventh entry to that ledger,
+and it is the first one an instrument found rather than a human looking. A
+scene document can be faithful, grounded, drawn, legible, and correctly
+assembled with its neighbours — and still be **ruinously expensive to ask
+for**, because a versioned schema is a contract about a document's *contents*
+and says nothing about the cost of producing one. Every entry point in the
+scene window re-derives terrain and climate from the world and keeps neither,
+so each document carries about 638 ms of fixed setup; measured against the
+Orrery's real call pattern, which requests one regional document per
+level-of-detail tile, **91% of a scene call is the planet being rebuilt** and
+a single camera move spends roughly fifteen seconds generating the same world
+two dozen times. The bet is untouched — nothing crosses the seam incorrectly,
+and the interface required no change to be measured. What sharpens is the
+same scope lesson The Selvage drew about geometry, transposed to cost: a
+document describes itself and not its relationship to the *other* documents a
+consumer holds, and a consumer's calling pattern is exactly such a
+relationship. So this entry is also the ledger's counter-example to its own
+recurring rule. Six failure modes were found by a human reading output; this
+one is invisible to reading — every document is correct — and visible only to
+a fixture shaped like the consumer's session, since redundancy is a property
+of a sequence of calls and cannot appear in any one of them.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored
