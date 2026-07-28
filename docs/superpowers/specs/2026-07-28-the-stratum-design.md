@@ -298,3 +298,72 @@ Four campaigns. Each ships working software; none requires its successor.
   epoch-bearing campaign).
 - MAP-69's full surface↔underground relationship; campaign 4 supplies the
   mechanism, not the content.
+
+## 8. Decisions (the durable record)
+
+The campaign's decision ledger lives at `.superpowers/sdd/decision-ledger.md`
+in the worktree, which is **gitignored scratch** and dies with the worktree.
+The material entries are promoted here.
+
+**D1 — The taxonomy is five facets, and four already exist.** Realm (an
+`is_marine()` predicate), formation (`Biome`), variant (`variety_pool`'s
+per-formation string pools), overlay (`Regime`/`Negations`). Only stratum is
+genuinely absent, and it is absent because it was folded into `Biome`. This
+reframes the work from a rewrite to a disentangling and is the single most
+important scoping fact in this document. *Discarded:* a flat enum with more
+variants (combinatorial, and does not fix the ship-above-sea-elves problem);
+a free tag-set per room (no constrained vocabulary, so nothing can be
+enumerated, calibrated, or drift-checked).
+
+**D2 — The split needs no epoch, on three verified grounds.** Accession
+cohorts make appended concepts additive by construction; `scene` ships a
+self-describing `biome_legend`; categorical census columns do not pin their
+value domain. Each was checked against its source rather than reasoned. The
+three constraints this implies are written as **design rules** in §4, because
+a later implementer who misses one turns a free change into a churning one.
+*Discarded:* renaming the pelagic concepts to mark them as strata — churn,
+since every word derived from a displaced proto-root moves.
+
+**D3 — Strata become inhabitable via a band, not an address.** Following The
+Lintel's `inside`/`enter`/`out`. Leaves `RoomAddr` (save-format class)
+untouched and unifies the water column with the rock column, feeding MAP-69
+rather than competing with it. *Discarded:* a `RoomAddr` depth index (touches
+addressing); a describe-time `--depth-m` parameter (strata become a query
+argument, so nothing can *live* at one — which fails the original request).
+
+**D4 — Realm is `(medium, access, strata)`, never an enum** (§3.4). Reached by
+three ideonomy passes, one of which overturned an earlier assumption:
+
+- *Scale*: realms on a signed distance-from-surface axis — and **both extremes
+  are already modelled**, astronomy above the air and terrain/paleoclimate
+  below the rock. What is missing at the ends is a place representation, not
+  content. The same pass exposed the scale's limit: planes have no position on
+  it, so depth cannot be the discriminator.
+- *Lattice*: **the overturn.** Elemental planes land in a diamond — material
+  (they have a medium) yet reached like the immaterial ones — which rules out
+  materiality as the discriminator too. What discriminates is **access**:
+  continuous movement with a medium change (walk/dive/fly/dig) versus transit
+  (portal, ritual, death). The engine already holds both primitives.
+- *Map / decomposability*: "realm" is not primitive. Once decomposed,
+  Waterworld is `(water, dive, [pelagic zones])` and a Planescape plane is the
+  same mechanism at other parameter values.
+
+*Discarded:* a wider realm enum (torn out at the first plane, and no place to
+hang access rules); depth as discriminator (fails for planes); materiality as
+discriminator (fails for elemental planes).
+
+**D5 — O1 resolved yes; the epoch is accepted.** Variants participate in
+settlement name glosses, so place names carry the land's character. Campaign 2
+owns the epoch. *Discarded:* a derived, uncommitted display name — it would
+make the shown name disagree with the committed one, which is worse than
+either branch.
+
+**D6 — A measurement near-miss, recorded because it nearly shipped as fact.**
+The first pass at measuring layered occupation used the `cell-id` predicate
+(present only on *current settlements*) rather than `occ-site` (present on
+every occupation), and concluded that stacked occupation was extinct across
+all seeds — a phantom feature-wide regression. It was caught by arithmetic,
+not review: 455 occupations across 195 cells cannot have a maximum of one
+layer per cell. The truth is that 104 of 191 sites have more than one layer
+and the deepest has 13. Recorded here because the same error would be easy to
+repeat while measuring strata.
