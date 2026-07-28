@@ -24,8 +24,12 @@ browser, and something has to run it.</p></noscript>
 <p class="casement-docent">Genesis takes a few seconds — everything above
 derives from the seed, every time. The verbs: <code>look</code>,
 <code>map</code> (and <code>map out N</code> for a coarser rung — the chart
-of the rooms around you, with ground you have walked but cannot currently see
+of the locales around you, with ground you have walked but cannot currently see
 drawn from memory), <code>go n|ne|e|se|s|sw|w|nw</code>,
+<code>enter</code> (step inside what is built where you stand, then
+<code>enter further in</code> to go deeper — a chamber is the same address
+space nine refinements down, ~3.3 m rather than the walk band's ~1.7 km — The
+Lintel) and <code>out</code>,
 <code>examine</code> (anything either the prose or the chart named),
 <code>back</code>,
 <code>wait</code> (the world moves too — a derived NPC keeps its own daily

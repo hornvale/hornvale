@@ -421,6 +421,24 @@ measurement can move at all belongs beside the measurement, not after it.
   Regum* prove pieces of this can work; nobody has done it against a
   fields-plus-ledger substrate at this scope, and the observe-then-commit loop
   is not yet built. Its self-scorable half is named below.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27): the bet
+  moves halfway, and only halfway.** The phrase names two mechanisms, and the
+  campaign shipped exactly one of them. *Derive-on-demand* now exists at the
+  finest band the world has: a chamber's existence, its interior and its prose
+  are a pure function of the derived brief, the address and the seed, computed
+  when a player walks in and discarded when they leave. Against ~4^9 candidate
+  addresses under a single locale, that is the statistical-prior half working at
+  its intended ratio — the overwhelming majority of the space is never
+  materialized because existence is a predicate rather than a given, and it is
+  asserted by test that it stays that way. *Commit-on-observation* does **not**
+  exist and was deliberately excluded: The Lintel commits nothing at all, which
+  is precisely what preserves byte-identity — the player's position has never
+  been a committed datum, so descent needed no schema change and no epoch.
+  Promotion-on-touch — the write half, where an observed detail is *kept* — and
+  the delta store it implies remain unbuilt, and are the harder half, since they
+  are where a lazily generated world can begin to contradict its own prior. So
+  the bet's confidence in *derivation* is materially higher than it was, and its
+  confidence in the *loop* is unchanged.
 - **Coarse constrains fine.** The design principle — a `ConstantSun` and a
   generated star system are both valid; higher fidelity refines and never
   contradicts lower — *shipped*, and holds from astronomy through religion's
@@ -467,6 +485,19 @@ measurement can move at all belongs beside the measurement, not after it.
   resolution — not the client's — is the next floor worth deepening. That
   producer-side deepening stays deferred; what The Massing added is the
   instrument to judge when it is owed.
+  **Re-scored by [The Lintel](./chronicle/the-lintel.md) (2026-07-27):** the
+  substrate now has a *second occupied band*. A possessed body can stand at
+  nine refinements below the walk band — one address space, a longer path — so
+  the uniform-depth restriction is lifted in the narrow case the two-band
+  vocabulary defines, and band changes are confined to visible thresholds
+  precisely to avoid the thrashing an automatic adaptive-depth walk would
+  reintroduce. This does **not** breach the ~110 km physics floor the row draws:
+  a chamber's content derives from the *committed occupation history* of its
+  walk-band ancestor, not from interpolating fields beneath cell scale. The
+  distinction is worth keeping sharp — refining geometry below the floor stays
+  cosmetic, while refining *what is recorded to be there* is fidelity the
+  ledger already holds. The runtime active-region swap and its delta store are
+  still unbuilt.
 
 ## Genuinely open — split by whether the world can grade itself
 
