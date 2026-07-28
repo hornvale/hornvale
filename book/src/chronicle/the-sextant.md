@@ -30,12 +30,15 @@ with the same two lines — derive terrain from the world, then derive climate
 from the world and that terrain — and neither result is kept. Isolated, those
 two derivations cost 543.8 and 94.0 milliseconds: **638 milliseconds of fixed
 overhead on every scene call, whatever the call was for.** A flamegraph over
-a fan of twelve patches attributes 61.4% of each call to the terrain
-derivation and 9.8% to the climate derivation. **Ninety-one percent of a
-region patch is the planet being rebuilt.** Roughly sixty-four milliseconds
-is the sampling the client actually asked for; a quarter of the self-time is
-one function, the fractal-noise sample that the terrain derivation calls
-several million times per world and then discards.
+a fan of twelve patches measures shares of the whole process: 61.4% in the
+terrain derivation, 9.8% in the climate derivation, and 77.8% in the region
+calls themselves, the rest being the one-time world build. Divide the first
+two by the third to bring them inside a single call and **91.6% of a region
+patch is the planet being rebuilt** — a figure the wall clock reaches
+independently, since 638 of 702 milliseconds is 90.9%. Roughly sixty-four
+milliseconds is the sampling the client actually asked for; 24.9% of the
+self-time is one function, the fractal-noise sample that the terrain
+derivation calls several million times per world and then discards.
 
 The consumer's shape turns that from a nuisance into the dominant cost. The
 Orrery requests one region patch **per level-of-detail tile**, and a camera
@@ -52,8 +55,10 @@ The **build-depth ladder** is not the lever. Stopping the pipeline at each
 rung costs 1.1 ms (astronomy), 562.1 ms (terrain), 1763.3 ms (settlements),
 and 1800.7 ms (full). The Orrery needs climate, which first exists at the
 settlements rung, so the deepest legal saving — dropping *full* to
-*settlements* — is 37 milliseconds. That is two percent of one of the
-twenty-four rebuilds.
+*settlements* — is 37 milliseconds. Set against the 638 milliseconds of
+re-derivation a scene call already pays, that is 5.8%: the ladder shaves the
+tail off a computation whose defect is that it runs at all, two dozen times
+per camera move.
 
 The **size-first wasm optimization level** is a real but secondary lever. The
 client is compiled with `opt-level = "z"`, and the same measurement under
@@ -70,7 +75,7 @@ Budget](./the-frame-budget.md) built a profiling harness driven through a
 real headless browser, and it measures the **client** — correctly, in
 another repository, where it identified the tile-assembly function and cut
 its cost seventeenfold. Neither instrument is wrong and neither could see
-this: the 91% lives in the seam between them, which is *the producer's cost
+this: the 91.6% lives in the seam between them, which is *the producer's cost
 under the consumer's call pattern*. Measured on the producer side, one
 region patch is simply an expensive pure function. Measured on the client
 side, it is time spent behind a WebAssembly call that the harness cannot

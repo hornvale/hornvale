@@ -34,9 +34,13 @@ let climate = hornvale_worldgen::climate_from(world, &terrain)?;
 
 Isolated: `terrain_of` 543.8 ms, `climate_from` 94.0 ms — **638 ms of fixed
 overhead on every scene call.** A frame-pointer flamegraph over
-`hw_scene_tiles_region × 12` attributes each call as **61.4 % `terrain_of` +
-9.8 % `climate_from` = 91 % redundant re-derivation**, leaving ~64 ms of
-actual sampling. `Fbm::sample` alone is 24.9 % of self time.
+`hw_scene_tiles_region × 12` reports inclusive shares of *total process*
+time: `terrain_of` 61.4 %, `climate_from` 9.8 %, and the region calls
+themselves 77.8 % (the remainder is the one-time genesis). Normalized into a
+region call, that is **(61.4 + 9.8) / 77.8 = 91.6 % redundant
+re-derivation**, leaving ~64 ms of actual sampling — and it agrees with the
+wall clock independently, 638 of 702 ms/tile = 90.9 %. `Fbm::sample` alone is
+24.9 % of self time.
 
 The Orrery requests one region patch **per LOD tile** (`TILE_QUADS = 64`,
 `REGION_MIN_LEVEL = 3`, `LOD_CDLOD_MAX_LEVEL = 4`) on every camera move, so a

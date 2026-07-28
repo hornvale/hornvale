@@ -30,7 +30,7 @@ reason, not a permission slip.
 The natural design — exercise each scene function once, exactly as
 `profile_build.rs` exercises each build stage — would have missed the entire
 finding. A single call to a region patch reports about seven hundred
-milliseconds and reads as *merely expensive*. The 91% redundancy is only
+milliseconds and reads as *merely expensive*. The 91.6% redundancy is only
 visible when calls **repeat**, because redundancy is a property of a
 sequence, not of a call.
 

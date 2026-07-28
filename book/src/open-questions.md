@@ -394,7 +394,7 @@ and says nothing about the cost of producing one. Every entry point in the
 scene window re-derives terrain and climate from the world and keeps neither,
 so each document carries about 638 ms of fixed setup; measured against the
 Orrery's real call pattern, which requests one regional document per
-level-of-detail tile, **91% of a scene call is the planet being rebuilt** and
+level-of-detail tile, **91.6% of a scene call is the planet being rebuilt** and
 a single camera move spends roughly fifteen seconds generating the same world
 two dozen times. The bet is untouched — nothing crosses the seam incorrectly,
 and the interface required no change to be measured. What sharpens is the
