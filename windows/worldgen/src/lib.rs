@@ -6812,6 +6812,56 @@ pub fn rendered_beliefs(
     Ok(out)
 }
 
+/// The Land list's label for every place, in `hornvale_terrain::places`
+/// order — decision 0024's render-time qualification applied to the one
+/// almanac section that names every settlement in the world at once.
+///
+/// The almanac window cannot build these itself: `PlaceInfo` carries an
+/// `EntityId` but no `CellId`, `AlmanacContext` holds no `&World`, and a
+/// window may not reach back to this root. So the root resolves each place
+/// to its cell and hands the finished labels over.
+///
+/// The list prints `- **{name}** — {biome}`, so the biome is part of every
+/// line and [`hornvale_almanac::qualify::SiteLabels::for_lines`] groups by
+/// the pair: two entries are ambiguous only when name *and* biome coincide.
+/// At seed 42 that qualifies **120** of 169 entries where grouping by name
+/// alone would have qualified 129, and it is also why no line can come out
+/// as `- **Roa (taiga)** — taiga` (the biome rung cannot separate a group
+/// whose members already share a biome, so it is never chosen). All 120 are
+/// coordinates; the seed-42 Land list contains no biome or people rung at
+/// all.
+///
+/// A place with no committed `cell-id` — no generated world has one, since
+/// every place is a placed settlement — cannot be qualified and keeps its
+/// bare name.
+/// type-audit: bare-ok(prose: return)
+fn land_list_labels(world: &World) -> Vec<String> {
+    let places = hornvale_terrain::places(world);
+    let cells: Vec<Option<hornvale_kernel::CellId>> = places
+        .iter()
+        .map(
+            |p| match world.ledger.value_of(p.id, hornvale_settlement::CELL_ID) {
+                Some(hornvale_kernel::Value::Number(n)) => Some(hornvale_kernel::CellId(*n as u32)),
+                _ => None,
+            },
+        )
+        .collect();
+    let lines: Vec<(hornvale_kernel::CellId, String)> = places
+        .iter()
+        .zip(&cells)
+        .filter_map(|(p, cell)| Some(((*cell)?, p.biome.clone())))
+        .collect();
+    let labels = hornvale_almanac::qualify::SiteLabels::for_lines(world, &lines);
+    places
+        .iter()
+        .zip(&cells)
+        .map(|(p, cell)| match cell {
+            Some(cell) => labels.label(*cell),
+            None => p.name.clone(),
+        })
+        .collect()
+}
+
 /// Gather everything the almanac renders, reconstructing the stateless
 /// tier-0 providers.
 pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
@@ -6867,6 +6917,7 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         climate: climate_report(world),
         phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
+        place_labels: land_list_labels(world),
         land_lines: land_lines_from(&terrain),
         biome_lines: biome_lines_from(&climate),
         ground_lines: ground_lines_from(&terrain, &climate),
@@ -6949,6 +7000,77 @@ mod tests {
             &SettlementPins::default(),
         )
         .expect("seed 42 builds")
+    }
+
+    /// Decision 0024's remedy on the almanac's Land list — the section that
+    /// names every settlement in the world at once, and the one whose
+    /// committed gallery page would otherwise publish twenty-one
+    /// indistinguishable `- **Xoxa** — temperate-forest` lines.
+    ///
+    /// Three claims, each of which can fail on its own:
+    /// 1. `place_labels` is exactly as long as `places` — the parallel-vector
+    ///    invariant `AlmanacContext::place_labels` documents, and the reason
+    ///    the render can fall back silently without hiding a bug here.
+    /// 2. No two rendered lines repeat.
+    /// 3. The qualification is spent lazily: exactly the entries whose *line*
+    ///    (name and biome together) would have repeated are qualified, and no
+    ///    others — so the 9 seed-42 settlements whose name collides but whose
+    ///    biome already separates them stay bare.
+    ///
+    /// Claim 2 alone would pass on a world with no colliding names at all, so
+    /// the bare-line duplicate count is asserted non-zero first.
+    #[test]
+    fn land_list_lines_are_all_distinct_at_seed_42() {
+        let world = vigil_world();
+        let ctx = almanac_context(&world).expect("seed 42 renders");
+        assert_eq!(
+            ctx.place_labels.len(),
+            ctx.places.len(),
+            "one label per place"
+        );
+
+        let bare: Vec<(String, String)> = ctx
+            .places
+            .iter()
+            .map(|p| (p.name.clone(), p.biome.clone()))
+            .collect();
+        let distinct_bare: std::collections::BTreeSet<_> = bare.iter().collect();
+        assert!(
+            distinct_bare.len() < bare.len(),
+            "precondition: the bare Land list must actually repeat, or this \
+             test proves nothing ({} distinct of {})",
+            distinct_bare.len(),
+            bare.len()
+        );
+
+        let rendered: Vec<String> = ctx
+            .places
+            .iter()
+            .zip(&ctx.place_labels)
+            .map(|(p, label)| format!("- **{label}** — {}", p.biome))
+            .collect();
+        let distinct: std::collections::BTreeSet<&String> = rendered.iter().collect();
+        assert_eq!(
+            distinct.len(),
+            rendered.len(),
+            "every Land line is distinct; {} would have repeated bare",
+            bare.len() - distinct_bare.len()
+        );
+
+        let qualified = ctx
+            .places
+            .iter()
+            .zip(&ctx.place_labels)
+            .filter(|(p, label)| **label != p.name)
+            .count();
+        let in_a_repeating_group = bare
+            .iter()
+            .filter(|row| bare.iter().filter(|other| other == row).count() > 1)
+            .count();
+        assert_eq!(
+            qualified, in_a_repeating_group,
+            "qualified exactly the entries whose line would have repeated, no more"
+        );
     }
 
     /// The predicate sequence committed for one species entity, in ledger order.

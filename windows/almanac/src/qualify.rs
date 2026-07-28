@@ -31,6 +31,14 @@
 //! that, in most documents, is not there. That is the length win The
 //! Wearing exists for, and this module must not spend it.
 //!
+//! The same principle applies one step further out for documents that print
+//! each site on a line carrying more than the name. The almanac's Land list
+//! and the REPL's `settlements` already show the biome (and, for the REPL,
+//! the population), so two same-named entries there are ambiguous only when
+//! the whole line coincides — see [`SiteLabels::for_lines`], which those two
+//! callers use and which is why the REPL qualifies 13 of 169 lines at seed
+//! 42 rather than 129.
+//!
 //! # What a qualifier is made of
 //!
 //! Only the settlement's own committed site facts, per 0024 — its people
@@ -65,16 +73,25 @@
 //! which is what natural languages do too — "Newcastle upon Tyne" beside
 //! "Springfield, Illinois".
 //!
-//! **Measured, not assumed: [`Rung::People`] does not fire in the
-//! `connections` document at any seed sampled** (42, 1, 7, 21, 99, 404, 777
-//! — 406 ambiguous groups, every one of them single-people). That is
-//! structural rather than unlucky: a route neighbourhood is one people's
-//! regional cluster, so its same-named sites always agree on `peopled-by`.
-//! The rung is kept because it is one of the two shapes 0024 names and it
-//! separates any roster that *does* cross peoples (its tests do), but no
-//! claim is made here that it earns its keep in the document this window
-//! currently wires. The biome rung fires 17/301 at seed 42 and at every
-//! other seed sampled (2–18); the coordinate rung carries the rest.
+//! **Which rung fires depends on how wide the document's roster is, and
+//! that was measured rather than guessed.**
+//!
+//! [`Rung::People`] does **not** fire in the `connections` document at any
+//! seed sampled (42, 1, 7, 21, 99, 404, 777 — 406 ambiguous groups, every
+//! one of them single-people). That is structural rather than unlucky: a
+//! route neighbourhood is one people's regional cluster, so its same-named
+//! sites always agree on `peopled-by`. There the biome rung fires 17/301 at
+//! seed 42 (2–18 elsewhere) and the coordinate rung carries the rest.
+//!
+//! It **does** fire in the two world-wide listings ([`for_lines`]'s
+//! callers), whose roster spans every people at once: 2 of seed 7's 134
+//! qualified Land entries, and 4 of seed 7's 18 qualified `settlements`
+//! lines — plus 4 of 10 in the constant-sky seed-42 world, where two `Nee`s
+//! of the same population and biome are separated as `Nee of the goblins` /
+//! `Nee of the hobgoblins`. So the rung earns its keep; it is the *route
+//! graph*, not the ladder, that never asks for it.
+//!
+//! [`for_lines`]: SiteLabels::for_lines
 //!
 //! # Determinism
 //!
@@ -217,19 +234,61 @@ impl SiteLabels {
     /// generated world sampled (953 settlements over seven seeds, all on
     /// distinct cells), so this is defence, not a path anything walks.
     pub fn for_document(world: &World, cells: &[CellId]) -> SiteLabels {
-        let roster: BTreeSet<CellId> = cells.iter().copied().collect();
-        let facts = site_facts(world, &roster);
+        let lines: Vec<(CellId, String)> = cells.iter().map(|&c| (c, String::new())).collect();
+        SiteLabels::for_lines(world, &lines)
+    }
 
-        // Group the roster by bare name. `BTreeMap` keyed by the name string
+    /// Resolve the labels for a document that prints each site on its own
+    /// line, with `also_shown` beside the name.
+    ///
+    /// Some documents already distinguish two same-named sites without any
+    /// help: the almanac's Land list prints `- **Xoxa** — temperate-forest`,
+    /// and the REPL's `settlements` prints `Xoxa — population 8 —
+    /// temperate-forest`. Two entries there are ambiguous only when the name
+    /// *and* the rest of the line coincide, so grouping is by the pair. This
+    /// is the same principle one rung further out — spend a qualifier only
+    /// where the document is actually ambiguous.
+    ///
+    /// Measured at seed 42, not estimated: 129 of the Land list's 169
+    /// entries sit in a *name*-colliding group but only **120** sit in a
+    /// (name, biome) one, so grouping by name alone would qualify **9**
+    /// entries a reader could already tell apart from the line. The REPL's
+    /// `settlements`, whose line also carries the population, needs only
+    /// **13** of its 169 — population separates most colliding names
+    /// outright.
+    ///
+    /// A rung whose fact is already inside `also_shown` needs no special
+    /// handling and gets none: every member of such a group agrees on that
+    /// fact by construction, so the rung renders identical labels and
+    /// [`separating_rung`] rejects it. That is why the Land list can never
+    /// produce `- **Roa (taiga)** — taiga`.
+    ///
+    /// A cell appearing more than once keeps its first `also_shown`; that
+    /// would be a caller printing one place on two different lines, which
+    /// neither caller does.
+    /// type-audit: bare-ok(prose: lines)
+    pub fn for_lines(world: &World, lines: &[(CellId, String)]) -> SiteLabels {
+        let roster: BTreeSet<CellId> = lines.iter().map(|(c, _)| *c).collect();
+        let facts = site_facts(world, &roster);
+        let mut context: BTreeMap<CellId, &str> = BTreeMap::new();
+        for (cell, shown) in lines {
+            context.entry(*cell).or_insert(shown.as_str());
+        }
+
+        // Group by (name, rest of the line). `BTreeMap` keyed by that pair
         // gives a deterministic group order and a deterministic membership
         // order (the roster is already ascending by cell).
-        let mut groups: BTreeMap<&str, Vec<CellId>> = BTreeMap::new();
+        let mut groups: BTreeMap<(&str, &str), Vec<CellId>> = BTreeMap::new();
         for (cell, site) in &facts {
-            groups.entry(site.name.as_str()).or_default().push(*cell);
+            let shown = context.get(cell).copied().unwrap_or("");
+            groups
+                .entry((site.name.as_str(), shown))
+                .or_default()
+                .push(*cell);
         }
 
         let mut labels = BTreeMap::new();
-        for (name, group) in groups {
+        for ((name, _), group) in groups {
             if group.len() == 1 {
                 // Unambiguous in this document: pay nothing.
                 labels.insert(group[0], name.to_string());

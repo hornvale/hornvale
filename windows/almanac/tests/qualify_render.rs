@@ -397,6 +397,15 @@ fn qualification_is_deterministic() {
 /// qualifier opens with. Deliberately not `contains`: every qualified
 /// mention contains the bare name as a prefix, so `contains` can never tell
 /// the two apart.
+///
+/// PREFIX HAZARD, and the reason every fixture name above is distinct at
+/// every prefix: this scans `match_indices(name)`, so if a fixture ever
+/// holds a name that is a proper prefix of another -- `Ice-Home` beside
+/// `Ice-Homestead` -- then a *qualified* `Ice-Homestead (taiga)` would match
+/// `Ice-Home` followed by `stead`, report as a BARE mention, and silently
+/// weaken every `!bare_mention(...)` assertion into a tautology. Adding a
+/// name here means checking it is not a prefix of another, or tightening
+/// this to require a word boundary.
 fn bare_mention(text: &str, name: &str) -> bool {
     text.match_indices(name).any(|(at, _)| {
         let rest = &text[at + name.len()..];
