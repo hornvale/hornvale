@@ -329,24 +329,58 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
 /// concept that is structurally dead (like `Hydro::Spring` actually was)
 /// fails this on every seed, so no sweep size saves it; a concept that is
 /// merely unlucky at one seed (like `island`, `valley` at seed 42) only
-/// needs the sweep to be wide enough to find its lucky one. Seeds 0-2
-/// (measured) already cover all seven; 0-4 is kept for margin without
-/// materially raising the cost (five deep-history builds).
+/// needs the sweep to be wide enough to find its lucky one.
 ///
-/// `TOPONYMIC_CORE`'s exact membership is duplicated here rather than
-/// imported (`domains/language` is private about it, `cli/tests/
-/// accession.rs` does the same duplication for the same reason) — if a
-/// concept is ever added to or removed from that list without a matching
-/// update here, this test's list simply checks a different set than the
-/// crate enforces, which the accession/correspondence tests (checking the
-/// registered/core sets against each other) would still catch on their
-/// own terms.
+/// **There is no margin, and saying otherwise would be the third comment on
+/// this gate to claim more than it delivers.** Swept over seeds 0-7 and
+/// recorded every witness: `island` is witnessed at seed 2 ALONE, `valley`
+/// at seeds 2 and 7 only; seeds 3 and 4 contribute nothing the earlier ones
+/// did not already give. So this passes solely because seed 2 is inside the
+/// window, with zero redundancy for `island`. Since this campaign
+/// deliberately breaks byte-identity, a later terrain or settlement change
+/// can redden this test through no fault of any gate — when that happens the
+/// honest repair is to widen the window and re-record the witnesses, never
+/// to drop a concept from the requirement.
+///
+/// The set is **derived** from the language crate's own `concept_domain`
+/// rather than duplicated. An earlier version of this test hardcoded the
+/// seven and justified it by claiming the accession/correspondence tests
+/// would catch a drifted list "on their own terms." That was checked by
+/// injection and is false in the direction that matters: adding a
+/// `Steeped`-impossible concept (`mountain`) to `TOPONYMIC_CORE` left
+/// `cli/tests/accession.rs` 5/5 green and `cli/tests/correspondence.rs`
+/// 4/4 green, and this test blind — which is precisely the shape of the
+/// `spring` defect it exists to prevent. Removal was caught; addition, the
+/// dangerous direction, was not. `concept_domain` is `pub`
+/// (`domains/language/src/packs.rs`), and `cli/tests/correspondence.rs`
+/// already documents preferring exactly this derivation, so there was never
+/// a reason to duplicate.
 #[test]
 fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
-    const CORE_TOPONYMIC: &[&str] = &[
-        "hill", "river", "valley", "island", "ford", "marsh", "spring",
-    ];
-    let mut witnessed: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    // Derived, never duplicated: whatever `TOPONYMIC_CORE` holds today is
+    // what this test requires a witness for, so ADDING an unreachable
+    // concept to that list reds this test instead of slipping past it.
+    let core_toponymic: Vec<String> = {
+        let w = build_world(
+            hornvale_kernel::Seed(0),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .expect("seed 0 builds");
+        w.registry
+            .concepts()
+            .filter(|c| hornvale_language::packs::concept_domain(&c.name) == Some("toponymic"))
+            .map(|c| c.name.clone())
+            .collect()
+    };
+    assert!(
+        !core_toponymic.is_empty(),
+        "no concept reports domain \"toponymic\" — the derivation broke, and an \
+         empty requirement would make this test vacuously green"
+    );
+    let mut witnessed: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for seed in 0u64..5 {
         let w = match build_world(
             hornvale_kernel::Seed(seed),
@@ -362,20 +396,22 @@ fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
             let Ok(exposures) = exposure_of(&w, species) else {
                 continue;
             };
-            for &concept in CORE_TOPONYMIC {
-                if matches!(exposures.get(concept), Some(ExposureClass::Steeped)) {
-                    witnessed.insert(concept);
+            for concept in &core_toponymic {
+                if matches!(
+                    exposures.get(concept.as_str()),
+                    Some(ExposureClass::Steeped)
+                ) {
+                    witnessed.insert(concept.clone());
                 }
             }
         }
-        if witnessed.len() == CORE_TOPONYMIC.len() {
+        if witnessed.len() == core_toponymic.len() {
             break;
         }
     }
-    let missing: Vec<&str> = CORE_TOPONYMIC
+    let missing: Vec<&String> = core_toponymic
         .iter()
-        .copied()
-        .filter(|c| !witnessed.contains(c))
+        .filter(|c| !witnessed.contains(*c))
         .collect();
     assert!(
         missing.is_empty(),
