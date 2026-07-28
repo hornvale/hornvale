@@ -90,17 +90,33 @@ may read besides the address and the seed (§1b.4). v1 populates the subset it
 can use:
 
 ```
-  field         source                                    used by v1 for
+  field         source                                    role
   -----------   ---------------------------------------   --------------------
-  people        the cell's alive occupation (occ-people)  (reserved: materials)
-  function      OccupationRecord.function                 how many chambers
-  tech          OccupationRecord.tech                     whether a cellar
-                                                            exists at all
-  notability    OccupationRecord.notability               whether a hall exists
-  built         Terrain::is_built at the WALK band         whether a structure
-                                                            stands here at all
-  cold          Terrain::is_cold at the WALK band          furnishing, unchanged
+  people        the cell's alive occupation (occ-people)  reserved: materials
+  function      OccupationRecord.function                 reserved: how many
+                                                            chambers
+  tech          OccupationRecord.tech                     reserved: whether a
+                                                            cellar exists
+  notability    OccupationRecord.notability               reserved: whether a
+                                                            hall exists
+  built         Terrain::is_built at the WALK band        USED: whether a
+                                                            structure stands
+                                                            here at all
+  cold          Terrain::is_cold at the WALK band         USED: furnishing,
+                                                            unchanged
 ```
+
+**As shipped, the brief's only live consumer in chamber derivation is `built`.**
+`function`, `tech` and `notability` are carried but never read: `structure_at`
+draws its chamber count as `1 + draw % MAX_CHAMBERS`, blind to the brief, and
+nothing derives a cellar or a hall. The three rows above are *reserved for* those
+readings, not descriptions of v1 behaviour. This compounds v1's identical-prose
+limitation: because the count is drawn from one distribution regardless of the
+brief, a backwater hamlet and a regional seat draw their chamber counts from the
+same distribution, and neither the size nor the prose of a structure yet
+distinguishes them. Wiring these three is the first thing a follow-on campaign
+should do, and the seam is already in place — the brief is passed to
+`structure_at` today.
 
 Fields the amendment names and v1 deliberately leaves unread — `cause`,
 `ended_by`, `founded`/`ended`, `tongue`, `deity`, `peak_population`,
@@ -138,10 +154,19 @@ reads truncate the address to the walk band before consulting terrain**, which i
   enter           a built locale  the structure's         nothing
                                   threshold chamber
   enter <named>   a chamber       an adjacent chamber     nothing
-  out             a chamber       the chamber it came     nothing
-                                  from, or the locale
+  out             a chamber       the LOCALE — always,    nothing
+                                  from any depth inside
   exit            any             REFUSED (coarse-ward)   nothing
 ```
+
+**`out` leaves the structure, not one chamber.** An earlier draft of this table
+had it step back to "the chamber it came from, or the locale"; as shipped
+(`Session::leave`) it always exits to the locale, from however deep inside the
+possession had got. A backward step would need a chamber trail the way `back` has
+one for the walk band, and nothing yet asks for it. The eventual fix is a **named
+backward aperture** (`further out`, the mirror of `further in`) with its own
+trail — *not* overloading `out` to mean two different things depending on depth,
+which would leave the player with no single word for "get me outside".
 
 **Nothing commits, and that is verified rather than designed.** `Session::go`
 mutates `self.agent.position` and pushes to `self.trail` without committing a
