@@ -9530,40 +9530,105 @@ mod tests {
         // (`hornvale::lens_purity::seed_42_world_json_matches_the_committed_fixture`)
         // is in this campaign's standing failure set for its whole
         // duration (Task 1), so a reorder landing in a later task would go
-        // completely unobserved without a direct pin. Cell 30793 (the
-        // kobold settlement `hill=[(cell 30793, land_degree 6, total_degree
-        // 6)]` Task 4's review measured directly) is a real, non-synthetic
-        // seed-42 cell whose site vector holds four concepts spanning three
-        // of the order's tiers: a direct terrain gate (`hill`), a proximity
-        // gate (`coast`), and the trailing biome/presiding pair.
+        // completely unobserved without a direct pin.
+        //
+        // An earlier version of this test pinned one hardcoded cell's exact
+        // vector (`30793`, a kobold hill Task 4's review had measured). The
+        // absorb of main at `166d4ad9` un-settled that cell and the test
+        // died on its own fixture — so the pin is written against the
+        // CONTRACT instead of against one world's accident: the biome and
+        // the presiding phenomenon trail, in that order, and everything
+        // before them is a sharper site fact. That is the whole substance of
+        // "most specific first", it is what `glossed_name`'s index draw
+        // actually consumes, and it does not drift when settlements move.
+        //
+        // It stays order-sensitive: swapping the trailing biome/presiding
+        // pushes, or moving either ahead of a terrain gate, fails it. It
+        // also stays non-vacuous — the search below requires a settlement
+        // whose vector genuinely spans more than the trailing pair, which is
+        // exactly what Task 5 widened the vector to produce, and it fails
+        // loudly rather than skipping if no such settlement exists.
         let world = generated(42);
         let terrain = terrain_of(&world).expect("seed 42 builds terrain");
         let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
         let wc = WorldComponents::assemble().expect("component assembly");
-        let cell = hornvale_kernel::CellId(30793);
-        let id = world
+
+        let mut checked = 0usize;
+        for id in world
             .ledger
             .find(hornvale_settlement::IS_SETTLEMENT)
             .map(|f| f.subject)
-            .find(|&id| {
-                matches!(
-                    world.ledger.value_of(id, hornvale_settlement::CELL_ID),
-                    Some(Value::Number(n)) if *n as u32 == 30793
-                )
-            })
-            .expect("cell 30793 is settled at seed 42");
-        let species = hornvale_species::species_of(&world, id)
-            .expect("cell 30793's settlement carries a species fact");
-        let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
-            .expect("observation succeeds for a placed species");
-        let presiding = seen.first().and_then(phenomenon_concept);
-        let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
-        assert_eq!(
-            site,
-            vec!["hill", "coast", "temperate-forest", "moon"],
-            "cell 30793's site vector order changed — either the gate set or the documented \
-             order contract shifted; both rename settlements, so this must be a deliberate, \
-             reviewed change, not an accident"
+        {
+            let Some(Value::Number(n)) = world.ledger.value_of(id, hornvale_settlement::CELL_ID)
+            else {
+                continue;
+            };
+            let cell = hornvale_kernel::CellId(*n as u32);
+            let Some(species) = hornvale_species::species_of(&world, id) else {
+                continue;
+            };
+            let Ok(seen) = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+            else {
+                continue;
+            };
+            let presiding = seen.first().and_then(phenomenon_concept);
+            let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
+            let biome = climate.biome_at(cell).concept_name();
+
+            // The trailing pair, in order: presiding last when it exists,
+            // biome immediately before it (or last when it does not).
+            match presiding {
+                Some(p) => {
+                    assert_eq!(
+                        site.last().copied(),
+                        Some(p),
+                        "settlement {id:?} (cell {}): the presiding phenomenon must be LAST — \
+                         it is the least discriminating fact a cell carries. Vector: {site:?}",
+                        cell.0
+                    );
+                    assert_eq!(
+                        site.get(site.len() - 2).copied(),
+                        Some(biome),
+                        "settlement {id:?} (cell {}): the biome must sit immediately before \
+                         the presiding phenomenon. Vector: {site:?}",
+                        cell.0
+                    );
+                }
+                None => assert_eq!(
+                    site.last().copied(),
+                    Some(biome),
+                    "settlement {id:?} (cell {}): with no presiding phenomenon the biome must \
+                     be LAST. Vector: {site:?}",
+                    cell.0
+                ),
+            }
+            // Nothing ahead of the trailing pair may be the biome or the
+            // presiding concept — that would mean a duplicate push or a
+            // reordering that put a coarse fact ahead of a sharp one.
+            let trailing = if presiding.is_some() { 2 } else { 1 };
+            for (i, concept) in site.iter().enumerate().take(site.len() - trailing) {
+                assert_ne!(
+                    *concept, biome,
+                    "settlement {id:?} (cell {}): biome appears at index {i}, ahead of the \
+                     trailing pair. Vector: {site:?}",
+                    cell.0
+                );
+                assert!(
+                    presiding != Some(*concept),
+                    "settlement {id:?} (cell {}): the presiding concept appears at index {i}, \
+                     ahead of the trailing pair. Vector: {site:?}",
+                    cell.0
+                );
+            }
+            if site.len() > trailing {
+                checked += 1;
+            }
+        }
+        assert!(
+            checked > 0,
+            "no settlement at seed 42 has a site vector wider than its trailing biome/presiding \
+             pair — the order contract is then untested, and Task 5's widening has regressed to \
+             the two-concept vector it replaced"
         );
     }
 
