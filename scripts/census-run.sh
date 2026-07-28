@@ -94,6 +94,30 @@ if [ -n "${HV_CENSUS_REF:-}" ]; then
 fi
 
 cd "$run_root"
+
+# Publish the CLAIM the Rust seam reads, so both layers share ONE source of
+# truth. Without this the flock and the claim are invisible to each other: a
+# bare `cargo run -p hornvale -- lab run studies/the-census.study.json` checks
+# only the claim file, finds none during a wrapper-driven regen, and runs
+# CONCURRENTLY — the exact hole decision 0081 exists to close. It also makes
+# `census-run.sh status` truthful while the wrapper is the one holding the
+# box. Nested runs still skip acquisition via HV_CENSUS_LOCK_HELD, so this
+# cannot deadlock against itself.
+claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
+{
+    echo "pid=$$"
+    echo "host=$(hostname -s 2>/dev/null || echo '-')"
+    echo "user=${USER:-unknown}"
+    echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "goldens=$run_root/book/src/laboratory/generated"
+    echo "label=census-run"
+    echo "ref=$(git -C "$run_root" branch --show-current 2>/dev/null || echo '-')@$(git -C "$run_root" rev-parse --short HEAD 2>/dev/null || echo '-')"
+    echo "cmdline=census-run.sh $*"
+} > "$claim_path"
+# Replaces the earlier EXIT trap: release the claim on every exit path,
+# including the error ones, so a failed regen never wedges the box.
+trap 'rm -f "$claim_path"; echo "census-run: finished at $(date -Is)" >&2' EXIT
+
 if [ "$#" -eq 0 ]; then
     echo "census-run: regenerating the canonical census goldens (HV_CENSUS=1, ~7 min) …" >&2
     HV_CENSUS=1 bash scripts/timed.sh census -- bash scripts/regenerate-artifacts.sh

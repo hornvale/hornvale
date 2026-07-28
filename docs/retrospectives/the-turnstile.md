@@ -78,6 +78,33 @@ not cover the call sites of a disallowed type, and making a private function
 public moves it into the type-audit's default-deny boundary — a *visibility*
 change is a signature change.
 
+## Both halves were tested; their composition was not
+
+The campaign nearly shipped with its central hole still open. The shell layer
+serialized with `flock` on `/tmp/hv-census.lock`. The Rust layer serialized
+with a claim file at `/tmp/hv-census.claim`. Each was tested and each worked.
+**They could not see each other.** During a regen driven by the sanctioned
+wrapper — the common case, the one the docs now instruct everyone to use —
+no claim file existed, so a bare `cargo run -p hornvale -- lab run
+studies/the-census.study.json` would have run straight through, concurrently.
+Exactly the collision the campaign was written to prevent.
+
+It surfaced only by accident: while the acceptance regen was running, a
+status query answered "no census running" while a census was demonstrably
+running. Every unit test still passed, because every unit test exercised one
+layer.
+
+The design error was assuming two mechanisms compose because each is correct.
+The fix is that the wrapper now publishes the *same* claim the Rust seam
+reads, so there is one source of truth rather than two that agree by
+coincidence. **When a guard has two implementations at different layers, the
+test that matters is the one that runs them together** — and "each half
+works" is not evidence for that.
+
+This is the same lesson decision 0079 learned for the host guard, arrived at
+from the other direction: it put the check in both layers *reading one file*.
+The claim had two layers and two files.
+
 ## A harness lied three times in one session
 
 The count is worth recording because it stopped being a coincidence:
