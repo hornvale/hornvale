@@ -108,7 +108,7 @@ fn micro_habitat(micro: MicroField) -> String {
 }
 
 /// Exotic clause for placed regimes (empty for the derived tier).
-fn exotic_clause(n: Negations) -> String {
+pub(crate) fn exotic_clause(n: Negations) -> String {
     let mut parts = Vec::new();
     match n.energy {
         EnergySource::Chemosynthetic => parts.push("fed by cold seeps"),
