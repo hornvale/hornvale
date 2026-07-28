@@ -181,60 +181,25 @@ pub fn universal_stratum() -> &'static [PackEntry] {
             doc: "a person; a member of a people (the autonym root)",
             ladder_rank: 0,
         },
-        PackEntry {
-            concept: "hill",
-            kind: ConceptKind::Terrain,
-            doc: "ground that rises above what surrounds it",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "river",
-            kind: ConceptKind::Terrain,
-            doc: "fresh water running across land",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "lake",
-            kind: ConceptKind::Terrain,
-            doc: "still fresh water held in a hollow",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "valley",
-            kind: ConceptKind::Terrain,
-            doc: "low ground between heights",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "coast",
-            kind: ConceptKind::Terrain,
-            doc: "where the land meets the sea",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "island",
-            kind: ConceptKind::Terrain,
-            doc: "land the water surrounds",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "ford",
-            kind: ConceptKind::Terrain,
-            doc: "where a river runs shallow enough to cross",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "marsh",
-            kind: ConceptKind::Terrain,
-            doc: "soft wet ground",
-            ladder_rank: 0,
-        },
-        PackEntry {
-            concept: "spring",
-            kind: ConceptKind::Terrain,
-            doc: "where water rises from the ground",
-            ladder_rank: 0,
-        },
+        // The nine toponymic terrain concepts (hill, river, lake, valley,
+        // coast, island, ford, marsh, spring) are deliberately NOT listed
+        // here, even though they ARE core (see `TOPONYMIC_CORE` below,
+        // which `is_core_concept` also consults) — core-ness and
+        // unconditional exposure used to be the same lever (membership in
+        // this list), but they are different concerns for a terrain
+        // concept: it should win the short proto-root form (core), while
+        // whether a given culture holds the word at all should depend on
+        // real geography (`windows/worldgen::exposure_of`), the same
+        // gate-by-exposure `sea`/`mountain` already use. Listing them here
+        // (The Wearing's Task 3) conflated the two: `universal_stratum`
+        // grants its members `ExposureClass::Steeped` unconditionally, so
+        // every culture held every one of the nine before a single
+        // exposure rule ran (Task 4 discovered this: the terrain gates it
+        // adds were provably inert against a 100%-everyone baseline).
+        // Fixed as part of Task 4 by moving core-ness to `TOPONYMIC_CORE`
+        // and leaving exposure to the real gates — the terrain concepts
+        // stay terrain-owned (`domains/terrain::register_concepts`
+        // registers them) throughout.
         PackEntry {
             concept: "high",
             kind: ConceptKind::Quality,
@@ -445,19 +410,35 @@ pub fn kin_pack() -> &'static [PackEntry] {
     ]
 }
 
+/// The Wearing's nine toponymic terrain concepts: **core** for word-FORM
+/// purposes (short-form priority in the proto-root walk — `hill` and
+/// `river` are the highest-frequency morphemes in the name corpus, so a
+/// periphery-length form for either is backwards) without being members of
+/// [`universal_stratum`] (which would ALSO grant unconditional
+/// `ExposureClass::Steeped` — exactly the bug Task 4 found and fixed:
+/// every culture held every one of the nine regardless of geography,
+/// before a single exposure rule in `windows/worldgen::exposure_of` ever
+/// ran). Core-ness and unconditional exposure used to be the same lever
+/// (pack membership); this list is what keeps them separable now that
+/// terrain concepts need the first without the second.
+/// type-audit: bare-ok(identifier-text)
+const TOPONYMIC_CORE: &[&str] = &[
+    "hill", "river", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
+];
+
 /// Whether `concept` is **core** vocabulary — a member of the always-
 /// lexicalized Swadesh strata (the universal stratum, the body pack, the kin
-/// pack), where homophony genuinely confuses a reader. The ranked color
-/// ladder ([`color_pack`]) and the exposure-gated biome concepts are
-/// periphery, where incidental homophony is tolerable. The homophony fix
-/// assigns core concepts their proto-roots first — so they win the short,
-/// distinct forms — and holds a core root to a minimal-pair distance from
-/// every other core root. The split is pack membership, never a doc-string
-/// heuristic; the lab's `core-homophony-*` metrics measure against this same
+/// pack) or [`TOPONYMIC_CORE`], where homophony genuinely confuses a reader.
+/// The ranked color ladder ([`color_pack`]) and the exposure-gated biome
+/// concepts owned by other domains (`sea`, `mountain`) are periphery, where
+/// incidental homophony is tolerable. The homophony fix assigns core
+/// concepts their proto-roots first — so they win the short, distinct forms
+/// — and holds a core root to a minimal-pair distance from every other core
+/// root. The lab's `core-homophony-*` metrics measure against this same
 /// definition.
 /// type-audit: bare-ok(identifier-text)
 pub fn is_core_concept(concept: &str) -> bool {
-    concept_domain(concept).is_some()
+    concept_domain(concept).is_some() || TOPONYMIC_CORE.contains(&concept)
 }
 
 /// The **semantic domain** of a core concept — the authored Swadesh stratum it
@@ -491,7 +472,13 @@ pub fn concept_domain(concept: &str) -> Option<&'static str> {
 /// `sea` has no Swadesh root (it isn't in [`universal_stratum`]) but is
 /// owned by terrain as a distinct concept from `water`; a culture without a
 /// dedicated word for it names it "many water". `mountain`, likewise owned
-/// by terrain, is named "many stone".
+/// by terrain, is named "many stone". The Wearing (Task 4) adds `coast`
+/// ("earth water") and `lake` ("little water") on the same principle — both
+/// are `KnowsOf`-only in `exposure_of` (a culture can know the shore or a
+/// salt lake without living on either), so neither ever gets a root of its
+/// own; every ingredient is drawn from [`universal_stratum`] so the compound
+/// always resolves once its `KnowsOf` gate fires, exactly as `sea`'s and
+/// `mountain`'s do.
 /// type-audit: bare-ok(identifier-text)
 pub fn compound_recipe(concept: &str) -> Option<(&'static str, &'static str)> {
     RECIPES
@@ -504,7 +491,12 @@ pub fn compound_recipe(concept: &str) -> Option<(&'static str, &'static str)> {
 /// `(concept, modifier, head)`. One table drives both the lookup and the
 /// recipe-closure test, so a new recipe can never silently escape test
 /// coverage. Closed and tiny; a linear scan is deterministic and cheap.
-const RECIPES: &[(&str, &str, &str)] = &[("sea", "many", "water"), ("mountain", "many", "stone")];
+const RECIPES: &[(&str, &str, &str)] = &[
+    ("sea", "many", "water"),
+    ("mountain", "many", "stone"),
+    ("coast", "earth", "water"),
+    ("lake", "little", "water"),
+];
 
 /// Input to [`in_ladder`]: how many acquisition-ladder stages are unlocked,
 /// per ladder in [`color_pack`]. Derivation from a culture's perception

@@ -3484,6 +3484,40 @@ fn within_hops(
     false
 }
 
+/// The size (in cells) of the contiguous non-ocean landmass reachable from
+/// `start` by land, capped at `cap + 1` — a plain breadth-first walk that
+/// stops early once it has visited more than `cap` cells, so a full
+/// continent costs the same bounded work as a small island (`exposure_of`'s
+/// `island` gate). `start` is assumed land (a settled cell); the result
+/// saturates at `cap + 1` rather than continuing to the mainland's true
+/// size, which the caller only needs to compare against `cap`.
+fn landmass_size_capped(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    start: hornvale_kernel::CellId,
+    cap: usize,
+) -> usize {
+    use std::collections::BTreeSet;
+    let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
+    visited.insert(start);
+    let mut frontier = vec![start];
+    while !frontier.is_empty() && visited.len() <= cap {
+        let mut next = Vec::new();
+        for cell in &frontier {
+            for &n in geo.neighbors(*cell) {
+                if !terrain.is_ocean(n) && visited.insert(n) {
+                    if visited.len() > cap {
+                        return visited.len();
+                    }
+                    next.push(n);
+                }
+            }
+        }
+        frontier = next;
+    }
+    visited.len()
+}
+
 /// Classify every concept in the world's registry for `species`'s culture
 /// (spec §7): `Steeped` concepts get their own root word, `KnowsOf`
 /// concepts are named as compounds, and `Unknown` concepts get a
@@ -3499,18 +3533,38 @@ fn within_hops(
 ///   the species has settled anywhere, the living kind of every species
 ///   placed in this world (coexistence in one shared world is exposure —
 ///   spec §3's free endonym/exonym) plus its own domestic and religious
-///   social concepts (`home`, `hearth`, `god`, `spirit`).
+///   social concepts (`home`, `hearth`, `god`, `spirit`). The universal
+///   stratum already carries the ten relative/evaluative modifiers
+///   (`high`, `low`, `great`, `little`, `new`, `old`, `under`, `over`,
+///   `north`, `south`) unconditionally — every people that speaks has
+///   them — so no separate rule is needed for those. Seven of the nine
+///   toponymic terrain concepts (Task 4) are Steeped instead, each gated
+///   on the real terrain query that put a settlement there rather than on
+///   roster membership: `river` (`water_kind_at` is `River`), `ford`
+///   (`river` narrowed to drainage below the waterfall threshold —
+///   shallow enough to cross), `hill`/`valley` (the settled cell is a
+///   strict local elevation max/min among its immediate neighbors),
+///   `island` (a capped landmass flood-fill from the settled cell stays
+///   under the small-landmass cap), `marsh` (dry land whose drainage
+///   clears a wetness floor without reaching the river threshold), and
+///   `spring` (`hydro_at` is `Spring`, a real but rare porosity-gated
+///   landform).
 /// - **KnowsOf**: the biome of every cell adjacent to a settled cell (that
-///   isn't already `Steeped` from the species' own settlements); and
-///   `sea`, if any settled cell lies within two cells of a below-sea-level
-///   (ocean) cell.
+///   isn't already `Steeped` from the species' own settlements); `sea`, if
+///   any settled cell lies within two cells of a below-sea-level (ocean)
+///   cell; `coast`, on the same two-cell gate (the shore as a place, not
+///   the water); and `lake`, on the same two-cell gate against a
+///   `SaltBasin` cell (this slice's only standing-water class — a
+///   through-flow freshwater lake reads as `River`, so it is already
+///   covered there).
 /// - **Unknown**: every other registered concept — most visibly a
 ///   color-pack entry excluded by ladder depth (`GapReason::Perceptual`)
-///   and a biome/`sea` concept the species neither settled nor neighbors
-///   (`GapReason::Experiential`, "no settlement in or beside `<biome>`");
-///   every remaining leftover concept (an unplaced species' living-kind,
-///   or a social/geographic concept the species hasn't settled to reach)
-///   gets a generic but still recountable `GapReason::Experiential`.
+///   and a biome/`sea`/`coast`/`lake` concept the species neither settled
+///   nor neighbors (`GapReason::Experiential`, "no settlement in or beside
+///   `<biome>`"); every remaining leftover concept (an unplaced species'
+///   living-kind, or a social/geographic concept the species hasn't
+///   settled to reach) gets a generic but still recountable
+///   `GapReason::Experiential`.
 ///
 /// type-audit: bare-ok(identifier-text)
 pub fn exposure_of(
@@ -3598,7 +3652,17 @@ fn exposure_of_impl(
     let mut classes: std::collections::BTreeMap<String, ExposureClass> =
         std::collections::BTreeMap::new();
 
-    // Steeped: the universal stratum, unconditionally.
+    // Steeped: the universal stratum, unconditionally. The Wearing's ten
+    // relative/evaluative modifiers (`high`, `low`, `great`, `little`,
+    // `new`, `old`, `under`, `over`, `north`, `south`) are already members
+    // of `universal_stratum` (Task 3), so this one loop is their whole
+    // exposure rule too — no separate terrain-independent block needed:
+    // every people that speaks has them, by the same unconditional gate
+    // water and fire already use. (The nine toponymic TERRAIN concepts —
+    // `hill`, `river`, `lake`, `valley`, `coast`, `island`, `ford`,
+    // `marsh`, `spring` — were also, mistakenly, members of this stratum
+    // until Task 4's fix to `hornvale_language::packs::universal_stratum`;
+    // see that function's doc comment. They are gated below instead.)
     for entry in universal_stratum() {
         classes.insert(entry.concept.to_string(), ExposureClass::Steeped);
     }
@@ -3673,6 +3737,147 @@ fn exposure_of_impl(
             classes
                 .entry("sea".to_string())
                 .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: coast, on the same two-hop gate `sea` uses. A people can
+    // know the shore without living on it; `coast` is the shore as a
+    // PLACE, where `sea` is the water — two concepts, deliberately, because
+    // toponymy wants the former ("Seaside") and cosmology wants the latter.
+    if world.registry.concept("coast").is_some() {
+        let near_coast = settled
+            .iter()
+            .any(|&cell| within_hops(geo, cell, 2, |c| terrain.is_ocean(c)));
+        if near_coast {
+            classes
+                .entry("coast".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // KnowsOf: lake, on the same two-hop gate against a `SaltBasin` cell —
+    // this slice's water model has no separate standing-freshwater class:
+    // a through-flow freshwater lake reads as `River` (see `water.rs`'s
+    // doc comment), so `river`'s Steeped gate already covers it. The one
+    // remaining standing-water body this slice distinguishes is the
+    // terminal endorheic sink — `WaterKind::SaltBasin`, documented
+    // verbatim as "the evaporative salt lake / playa" — so that is the
+    // signal `lake` rides.
+    if world.registry.concept("lake").is_some() {
+        let near_lake = settled.iter().any(|&cell| {
+            within_hops(geo, cell, 2, |c| {
+                terrain.water_kind_at(c) == hornvale_terrain::WaterKind::SaltBasin
+            })
+        });
+        if near_lake {
+            classes
+                .entry("lake".to_string())
+                .or_insert(ExposureClass::KnowsOf);
+        }
+    }
+
+    // Steeped: river, the terrain a people actually lives on. A settled
+    // cell whose `water_kind_at` is `River` reliably holds the word — the
+    // exposure rides the same field The Confluence's siting already used
+    // to condense settlements onto the river network.
+    for &cell in settled {
+        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River {
+            classes.insert("river".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: ford, `river` narrowed to the drainage band below the
+    // waterfall threshold (`carve::WATERFALL_MIN_DRAINAGE`) — "where a
+    // river runs shallow enough to cross" read literally: a river cell
+    // whose flow hasn't reached waterfall-scale drainage is, by
+    // definition, the class this slice models as fordable.
+    for &cell in settled {
+        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River
+            && terrain.drainage_at(cell) < hornvale_terrain::carve::WATERFALL_MIN_DRAINAGE
+        {
+            classes.insert("ford".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: hill/valley, a settled cell that is a STRICT local
+    // elevation extremum among its immediate neighbors — "ground that
+    // rises above what surrounds it" / "low ground between heights" read
+    // as real local topography. A looser "some neighbor is higher/lower"
+    // gate would admit nearly every settlement on a non-flat world, which
+    // trivializes the word; requiring every neighbor to sit on one side
+    // keeps this a genuine local peak or basin.
+    for &cell in settled {
+        let here = terrain.elevation_at(cell).get();
+        let neighbors = geo.neighbors(cell);
+        if !neighbors.is_empty() {
+            if neighbors
+                .iter()
+                .all(|&n| terrain.elevation_at(n).get() < here)
+            {
+                classes.insert("hill".to_string(), ExposureClass::Steeped);
+            }
+            if neighbors
+                .iter()
+                .all(|&n| terrain.elevation_at(n).get() > here)
+            {
+                classes.insert("valley".to_string(), ExposureClass::Steeped);
+            }
+        }
+    }
+
+    // Steeped: marsh, land that is meaningfully wetter than typical dry
+    // ground but hasn't channelized into a river. `Hydro::Aquitard` reads
+    // as "impermeable, perched water" in its doc comment and so looks like
+    // the literal match for "soft wet ground" — but `hydrogeology`'s first
+    // branch routes EVERY ocean cell to `Aquitard` too (`water.rs`), so on
+    // this seed's globe it is 73% ocean floor and effectively never the
+    // class of an inhabited land cell (measured: 0 of 203 seed-42
+    // settlements across all four peoples). `drainage_at` is the real,
+    // already-graded signal: `water.rs`'s own calibration comment puts the
+    // median LAND cell at drainage ~2 and the 90th percentile at ~11
+    // against `RIVER_MIN_DRAINAGE`'s 15, so a cell accumulating runoff
+    // above the median but below the river threshold is genuinely
+    // damper than ordinary dry land without yet being a channel.
+    const MARSH_MIN_DRAINAGE: f64 = 5.0;
+    for &cell in settled {
+        if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::DryLand
+            && terrain.drainage_at(cell) >= MARSH_MIN_DRAINAGE
+        {
+            classes.insert("marsh".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: spring, `Hydro::Spring` verbatim — "where water rises from
+    // the ground" is exactly what that variant's doc comment says ("where
+    // an aquifer meets the surface with flow"). Categorical, unlike
+    // marsh's continuous drainage band: `hydrogeology` only reaches it when
+    // a cell's porosity exceeds 0.5 AND its drainage clears
+    // `SPRING_DRAINAGE_THRESHOLD`, both at once. A real, rare landform by
+    // design, not a placeholder — this world's rock-porosity field simply
+    // never crosses 0.5 on land at seed 42 (measured: 0 of 11,066 land
+    // cells), so the gate never fires here; a seed whose lithology does
+    // cross it would light this up exactly the same way `river` already
+    // does for `WaterKind::River`.
+    for &cell in settled {
+        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring {
+            classes.insert("spring".to_string(), ExposureClass::Steeped);
+        }
+    }
+
+    // Steeped: island, a real landmass-size test — a bounded flood-fill of
+    // non-ocean cells from the settled cell. A people whose settlement
+    // sits on a landmass that small holds the word; a mainland coastal
+    // people (already `KnowsOf` `coast` above) does not, because the two
+    // concepts test different things — proximity to open water versus the
+    // size of the ground underfoot. 200 sits in a real gap: seed 42's full
+    // landmass census (30 components) runs 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2,
+    // 2, 4, 4, 7, 13, 22, 32, 40, 66, 104, then jumps to 356 and up —
+    // nothing between 104 and 356, so any cap in that band cleanly
+    // separates the small-landmass tier from the continent tier.
+    const ISLAND_CELL_CAP: usize = 200;
+    for &cell in settled {
+        if landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP {
+            classes.insert("island".to_string(), ExposureClass::Steeped);
         }
     }
 

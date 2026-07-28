@@ -14,7 +14,7 @@
 //!    the declaration honest (`Void::Gap`), never to weaken this test.
 
 use hornvale_kernel::{ConceptRegistry, Correspondent, Lexicalization, Manifest};
-use hornvale_language::{body_pack, color_pack, compound_recipe, kin_pack, universal_stratum};
+use hornvale_language::{color_pack, compound_recipe, is_core_concept};
 use hornvale_worldgen::register_all;
 use std::collections::BTreeSet;
 
@@ -27,22 +27,23 @@ fn fresh_registry() -> ConceptRegistry {
     registry
 }
 
-/// The set of concept names the language lexicon can realize: the four Swadesh
-/// pack rosters (each entry is a root word) plus every concept that has a
-/// KNOWS-OF compound recipe (realized as a modifier+head compound). This is
-/// the authoritative "lexicalizable" set the `Expected` declaration promises
-/// against.
+/// The set of concept names the language lexicon can realize: every **core**
+/// concept ([`is_core_concept`] — the universal/body/kin Swadesh strata plus
+/// The Wearing's toponymic terrain concepts, which win a root the same way
+/// once `windows/worldgen::exposure_of` classifies a culture `Steeped` in
+/// them, even though they are not pack members); every [`color_pack`] entry
+/// (periphery, but still root-eligible once a culture's hue/luminance ladder
+/// reaches it — `build_lexicon`'s Steeped pass roots ANY Steeped concept,
+/// core or not); and every concept with a KNOWS-OF compound recipe (realized
+/// as a modifier+head compound regardless of core status). This is the
+/// authoritative "lexicalizable" set the `Expected` declaration promises
+/// against — deferring to [`is_core_concept`] for the core half rather than
+/// re-deriving universal/body/kin membership locally keeps this test and the
+/// library's own core/periphery split from drifting apart.
 fn lexicalizable(name: &str) -> bool {
-    thread_local! {
-        static PACK_ROOTS: BTreeSet<&'static str> = universal_stratum()
-            .iter()
-            .chain(color_pack())
-            .chain(body_pack())
-            .chain(kin_pack())
-            .map(|e| e.concept)
-            .collect();
-    }
-    PACK_ROOTS.with(|roots| roots.contains(name)) || compound_recipe(name).is_some()
+    is_core_concept(name)
+        || color_pack().iter().any(|e| e.concept == name)
+        || compound_recipe(name).is_some()
 }
 
 #[test]

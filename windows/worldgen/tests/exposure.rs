@@ -8,7 +8,7 @@ use hornvale_language::{ExposureClass, GapReason, LexEntry, PackDepths, color_pa
 use hornvale_species::{ActivityCycle, DRACONIC_NIGHT_VISION, PerceptionVector};
 use hornvale_worldgen::{
     BuildError, SettlementPins, SkyChoice, build_world, exposure_of, lexicon_of,
-    observed_phenomena_as, pack_depths,
+    observed_phenomena_as, pack_depths, placed_peoples,
 };
 
 /// The seed-42, generated-sky, default-pins (full four-people roster)
@@ -116,6 +116,155 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
         romans[1], romans[3],
         "goblin and hobgoblin words for hobgoblin-kind should differ"
     );
+}
+
+/// The Wearing (Task 4): a people settled near one of the nine toponymic
+/// terrain concepts holds the word for it, and a people that never came
+/// near it carries a Gap with a reason — the same shape `sea` already
+/// established, extended over the whole terrain vocabulary Task 3
+/// registered. This does not assert any one concept resolves to a real
+/// word for any one species (that would hardcode this seed's geography
+/// into the test); it asserts the map is always TOTAL and every gap is
+/// recountable, which is what would break if a concept fell through the
+/// closing `Unknown` sweep unclassified by any real rule.
+#[test]
+fn toponymic_terrain_concepts_resolve_to_a_word_or_a_reasoned_gap() {
+    let w = world();
+    let terrain_concepts = [
+        "river", "hill", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
+    ];
+    for (species, _) in placed_peoples(&w) {
+        let lex = lexicon_of(&w, species).expect("lexicon");
+        for concept in terrain_concepts {
+            match lex.entry(concept) {
+                Some(LexEntry::Root { .. }) | Some(LexEntry::Compound { .. }) => {}
+                Some(LexEntry::Gap { reason, .. }) => {
+                    assert!(
+                        !format!("{reason}").is_empty(),
+                        "{species}: empty gap reason for '{concept}'"
+                    );
+                }
+                None => panic!("{species}: '{concept}' is registered but absent from the lexicon"),
+            }
+        }
+    }
+}
+
+/// The river-specific instance of the property above (Task 4's brief's
+/// literal ask), kept as its own named test — but strengthened past the
+/// brief's original shape, which the brief itself warned would pass
+/// trivially (every registered concept is `Unknown`-by-default from the
+/// closing sweep, so "resolves to a word or a reasoned gap" is true even
+/// with ZERO exposure rules; measured, not assumed — see this file's
+/// history). At seed 42 `river` itself turns out to be `Steeped` for
+/// EVERY one of the four placed peoples (deep-history settlement scatter
+/// touches a river cell for all of them), so even "at least one Root"
+/// would be too weak: that was ALSO true before Task 4, back when `river`
+/// was (by a bug in `hornvale_language::packs::universal_stratum` this
+/// task found and fixed) unconditionally `Steeped` for every species
+/// regardless of geography. The one contrast that is real and robust
+/// regardless of any seed's particular geography: an UNPLACED species
+/// (one this build never settled anywhere) must be a Gap for `river`,
+/// because every terrain rule in `exposure_of_impl` only ever looks at
+/// `settled` cells. Under the pre-fix bug this assertion would have
+/// FAILED (kobold held a root for `river` — and every other toponymic
+/// terrain concept — without ever having stood on one).
+#[test]
+fn river_exposure_tracks_real_proximity() {
+    let w = build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins {
+            species: Some("goblin".to_string()),
+        },
+    )
+    .unwrap();
+
+    // kobold never settles in a goblin-only world: it cannot be exposed to
+    // river the way a real settlement would be.
+    let exposures = exposure_of(&w, "kobold").unwrap();
+    assert!(
+        matches!(exposures.get("river"), Some(ExposureClass::Unknown { .. })),
+        "an unplaced species must not hold 'river' — got {:?}",
+        exposures.get("river")
+    );
+    let lex = lexicon_of(&w, "kobold").expect("lexicon");
+    match lex.entry("river") {
+        Some(LexEntry::Gap { reason, .. }) => {
+            assert!(
+                !format!("{reason}").is_empty(),
+                "kobold: empty gap reason for 'river'"
+            );
+        }
+        other => panic!("an unplaced species' 'river' must be a Gap, got {other:?}"),
+    }
+}
+
+/// The real, positive half of the claim `river_exposure_tracks_real_
+/// proximity` cannot make at seed 42 (river saturates to universal
+/// there): at least one placed people is a real word (`Root`) for a
+/// toponymic terrain concept and at least one is a reasoned `Gap` — proof
+/// that the exposure rules discriminate by geography rather than by
+/// roster membership, for concepts this seed's four peoples' settlements
+/// actually spread across differently. `hill` (a strict local elevation
+/// extremum) splits 2/4; `marsh` (a drainage band above ordinary dry
+/// land) splits 3/4 — both measured at seed 42, see the Task 4 report.
+#[test]
+fn hill_and_marsh_exposure_differ_across_the_placed_peoples() {
+    let w = world();
+    for concept in ["hill", "marsh"] {
+        let mut any_root = false;
+        let mut any_gap = false;
+        for (species, _) in placed_peoples(&w) {
+            let lex = lexicon_of(&w, species).expect("lexicon");
+            match lex.entry(concept) {
+                Some(LexEntry::Root { .. }) => any_root = true,
+                Some(LexEntry::Gap { .. }) => any_gap = true,
+                other => panic!("{species}: unexpected '{concept}' entry {other:?}"),
+            }
+        }
+        assert!(
+            any_root,
+            "'{concept}' should be a Root for at least one placed people at seed 42"
+        );
+        assert!(
+            any_gap,
+            "'{concept}' should be a Gap for at least one placed people at seed 42"
+        );
+    }
+}
+
+/// The mirror of [`river_exposure_tracks_real_proximity`] over the whole
+/// nine-concept terrain vocabulary, not just `river`: an unplaced species
+/// gets a Gap for every one of them, because every Steeped/KnowsOf rule
+/// this task adds reads only `settled` cells, which are empty for a
+/// species this build never placed. This is the assertion that would have
+/// failed outright, for all nine at once, under the pre-fix
+/// `universal_stratum` bug.
+#[test]
+fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
+    let w = build_world(
+        hornvale_kernel::Seed(42),
+        &hornvale_astronomy::SkyPins::default(),
+        SkyChoice::Generated,
+        &hornvale_terrain::TerrainPins::default(),
+        &SettlementPins {
+            species: Some("goblin".to_string()),
+        },
+    )
+    .unwrap();
+    let exposures = exposure_of(&w, "kobold").unwrap();
+    for concept in [
+        "river", "hill", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
+    ] {
+        assert!(
+            matches!(exposures.get(concept), Some(ExposureClass::Unknown { .. })),
+            "an unplaced species must not hold '{concept}' — got {:?}",
+            exposures.get(concept)
+        );
+    }
 }
 
 #[test]
