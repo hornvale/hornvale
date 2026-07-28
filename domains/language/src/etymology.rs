@@ -1155,13 +1155,15 @@ mod tests {
         let mut base = core_concept_batch();
         base.push("aa0");
         base.push("aa1");
-        let before = assign_proto_roots(&Seed(4), "fam", &ph, &base, &[]);
+        // Seed 10, matching the two tests below so the whole insertion-
+        // stability cluster shares one fixture with one negative control.
+        let before = assign_proto_roots(&Seed(10), "fam", &ph, &base, &[]);
 
         // "zzz-late" is non-core (sorts after every core concept) and its id
         // sorts after "aa1" — so it lands strictly last.
         let mut grown = base.clone();
         grown.push("zzz-late");
-        let after = assign_proto_roots(&Seed(4), "fam", &ph, &grown, &[]);
+        let after = assign_proto_roots(&Seed(10), "fam", &ph, &grown, &[]);
 
         for concept in &base {
             assert_eq!(
@@ -1181,7 +1183,16 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+        // Seed 10, and the negative control below MUST stay on the same seed:
+        // the control is what proves this fixture can collide at all, so a
+        // pairing split across two seeds proves nothing about this one. Task 8
+        // reseeded every phonotactic draw and left this test at Seed(4), where
+        // the epoch-0 insertion displaces NOTHING -- i.e. exactly the vacuous
+        // pass the control exists to detect, with the control looking green on
+        // a different seed. Measured over the re-searched candidates:
+        // seed 0 displaces 1, seed 10 displaces 3, seed 14 displaces 1, and
+        // seed 4 displaces 0. Seed 10 is the strongest pairing available.
+        let before = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &base, &[], epoch0);
 
         // "moon" is core and sorts into the MIDDLE of the core block (between
         // "many" and "mouth") -- the position that was unsafe before this
@@ -1191,7 +1202,7 @@ mod tests {
         grown.push("moon");
         let epoch1_for_newcomer = |c: &str| u32::from(c == "moon");
         let after =
-            assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch1_for_newcomer);
+            assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &grown, &[], epoch1_for_newcomer);
 
         for concept in &base {
             assert_eq!(
@@ -1212,14 +1223,18 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        // Seed 0, re-searched after The Wearing's nucleus fix reseeded every
-        // phonotactic draw (seed 4 no longer displaces on the new forms).
-        // The non-vacuity assertion below is what catches such a drift.
-        let before = assign_proto_roots_with_epoch(&Seed(0), "fam", &ph, &base, &[], epoch0);
+        // Seed 10, re-searched after The Wearing's nucleus fix reseeded every
+        // phonotactic draw: at the old Seed(4) this insertion displaces
+        // nothing. **This seed must equal the one the two stability tests
+        // above use** -- a control on a different fixture from the test it
+        // guards is not a control, which is the defect Task 8's first pass
+        // shipped. Seed 10 displaces 3 of the base assignments, the largest
+        // of the candidates measured (0 -> 1, 10 -> 3, 14 -> 1).
+        let before = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &base, &[], epoch0);
 
         let mut grown = base.clone();
         grown.push("moon");
-        let after = assign_proto_roots_with_epoch(&Seed(0), "fam", &ph, &grown, &[], epoch0);
+        let after = assign_proto_roots_with_epoch(&Seed(10), "fam", &ph, &grown, &[], epoch0);
 
         let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
         assert!(

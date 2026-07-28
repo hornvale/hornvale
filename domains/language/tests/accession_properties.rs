@@ -113,6 +113,19 @@ fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
         // a whole syllable tier longer, which is what `PROBE_BUDGET`
         // lengthening (the axis this campaign must not spend) would look
         // like against six concepts that never collide.
+        //
+        // **This clause holds AT THIS WITNESS SEED, not universally**, and
+        // the distinction was previously left unstated. Swept over the 438
+        // seeds in 0..2000 that satisfy every fixture precondition above,
+        // the closed-coda clause holds at 438/438 -- genuinely general --
+        // but this length clause holds at only 288/438 (65.8%). The 34%
+        // that fail do so at BOTH commits either side of The Wearing
+        // (measured 20/59 before, 14/38 after on a narrower sweep), so it
+        // is a pre-existing property of the carve against a cramped
+        // universe, not a regression: with six concepts and a small form
+        // space, a reserved-region draw sometimes has to reach a tier up.
+        // Read this as a witness, and re-search rather than weaken it if a
+        // future reseed lands on one of the 34%.
         let longest_old = old.iter().map(Vec::len).max().expect("non-empty");
         assert!(
             form.len() <= longest_old + 1,

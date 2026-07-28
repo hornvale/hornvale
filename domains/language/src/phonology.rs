@@ -83,6 +83,15 @@ pub struct Phonology {
     /// diphthong). A syllable picks one per syllable, so a language that
     /// admits diphthongs *permits* them rather than *requires* them.
     ///
+    /// **Ascending order is load-bearing, and this field is `pub`.**
+    /// `repair_phonotactics` visits nucleus sizes in slice order under a
+    /// strict cost comparison, so an ascending set is what makes a tie
+    /// settle toward the SHORTER nucleus. [`draw_phonotactics`] guarantees
+    /// it and the drawn-phonology tests assert it; a hand-built
+    /// `Phonology` (test fixtures, and any future caller) is on the honour
+    /// system — an unsorted set stays correct, but silently loses the
+    /// shortening tie-break.
+    ///
     /// [`draw_phonotactics`] guarantees `1 ∈ nuclei`: the simple vowel is
     /// universal, and no natural language puts an obligatory diphthong in
     /// every syllable. This field held a single obligatory `usize` count
@@ -229,6 +238,17 @@ pub fn distinguishable_capacity(ph: &Phonology) -> u64 {
     // templates of the product over slots" shape `template_choices` uses for
     // onsets and codas. `nuclei` is duplicate-free, so no filling is counted
     // twice.
+    //
+    // Second-order consequence on decision 0035's axis, recorded rather than
+    // left silent. Compare a language against its own pre-Wearing self at the
+    // same nucleus SIZES: an obligatory-2 phonology scored `v^2`, its
+    // `[1, 2]` counterpart scores `v + v^2`; an obligatory-1 phonology and a
+    // `[1]` one both score `v`. So capacity is monotonically ≥ what the old
+    // formula gave, never lower, and `ensure_capacity_floor` therefore widens
+    // a tone-capable species' tone inventory slightly less often. That is
+    // correct — the language really can form those simple-nucleus syllables
+    // now, and the floor is a claim about syllables it can form — but it does
+    // move the tone tier's trigger rate, which is decision 0035's dial.
     let nucleus = ph
         .nuclei
         .iter()
@@ -548,9 +568,12 @@ fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
 /// epoch on the `phonotactics` leg.** The rule an epoch answers is "a
 /// *released* consumption contract whose output a saved ledger holds". A
 /// [`Phonology`] is never serialized — no world file contains one — so this
-/// leg's only ledger-visible outputs are names and lexicon forms, and every
-/// one of those is already reseeded by this same campaign under the
-/// unreleased `name/v3` epoch and Task 1's re-founded root cohort. A
+/// leg's only ledger-visible outputs are names, lexicon forms, and the two
+/// other `draw_syllables` consumers — `grammar::draw_copula_form`'s copula
+/// stem and `morphology::draw_morph_proto`'s affix protos, both of which are
+/// likewise re-derived from the seed rather than persisted. Every one of
+/// those is already reseeded by this same campaign under the unreleased
+/// `name/v3` epoch and Task 1's re-founded root cohort. A
 /// `phonotactics/v2` would guard nothing those do not already guard, and it
 /// would additionally reseed every species' **onsets**, which this change
 /// deliberately leaves alone (onset cluster density is a separate question)
