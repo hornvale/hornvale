@@ -273,6 +273,7 @@
 - [The Occlusion](./chronicle/the-occlusion.md)
 - [The Formations](./chronicle/the-formations.md)
 - [The Shoal](./chronicle/the-shoal.md)
+- [The Tare](./chronicle/the-tare.md)
 
 # Appendix: The Frontier
 
