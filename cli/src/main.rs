@@ -87,6 +87,7 @@ usage:
   hornvale lab diff <STUDY> <OLD_CSV> <NEW_CSV>  report which census metrics moved between two rows.csv snapshots
   hornvale lab backfill-schema <STUDY> <CSV>  print a backfilled schema.json for a frozen study
   hornvale lab list-metrics                list every metric in the lab's registry
+  hornvale lab claim-status                is a heavy run holding the box? (0081)
 
 sky flags (shared by new and scout):
 ";
@@ -971,9 +972,15 @@ fn cmd_lab(args: &[String]) -> Result<(), String> {
         Some("diff") => cmd_lab_diff(args),
         Some("backfill-schema") => cmd_lab_backfill_schema(args),
         Some("list-metrics") => cmd_lab_list_metrics(),
+        Some("claim-status") => {
+            // Answers "is a census running right now?" without ps | grep
+            // (decision 0081). `scripts/census-run.sh status` wraps this.
+            println!("{}", hornvale_lab::census_claim::status_line());
+            Ok(())
+        }
         Some(other) => Err(format!("lab: unknown subcommand '{other}'\n{}", usage())),
         None => Err(format!(
-            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics)\n{}",
+            "lab: requires a subcommand (run <PATH>|diff <STUDY> <OLD_CSV> <NEW_CSV>|backfill-schema <STUDY_JSON> <ROWS_CSV>|list-metrics|claim-status)\n{}",
             usage()
         )),
     }
@@ -995,16 +1002,34 @@ fn cmd_lab_run(args: &[String]) -> Result<(), String> {
         goldens_dir,
         &hornvale_lab::current_hostname(),
     )?;
+    // Serialize expensive runs on this box (decision 0081). Held across the
+    // WHOLE run, not just `publish`: the contention lives in the compute
+    // phase, so claiming only around the write would leave the real problem
+    // untouched. Released on drop, including on the error paths below.
+    let claim = hornvale_lab::census_claim::acquire(
+        &study.name,
+        goldens_dir,
+        study.projected_world_builds(),
+        hornvale_lab::census_guard::is_census_study(&study.name),
+    )?;
     let result = hornvale_lab::run(&study).map_err(|e| e.to_string())?;
     hornvale_lab::write_csv(&result, std::path::Path::new("lab-out")).map_err(|e| e.to_string())?;
     let written = hornvale_lab::publish(&result, goldens_dir).map_err(|e| e.to_string())?;
     let refusals = result.rows.iter().filter(|r| r.refusal.is_some()).count();
+    // A queued run says so, so its wall time is never mistaken for slowness.
+    let queued = claim
+        .as_ref()
+        .map(|c| c.waited_secs())
+        .filter(|s| *s > 0)
+        .map(|s| format!(" (queued {s}s)"))
+        .unwrap_or_default();
     println!(
-        "study {}: {} rows, {} refusals; summary + {} charts published.",
+        "study {}: {} rows, {} refusals; summary + {} charts published.{}",
         result.study.name,
         result.rows.len(),
         refusals,
-        written.len() - 1
+        written.len() - 1,
+        queued
     );
     Ok(())
 }

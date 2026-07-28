@@ -56,6 +56,16 @@ pub struct Study {
     pub metrics: MetricSelection,
 }
 
+impl Study {
+    /// Projected world-builds: one per seed per pin set. Known BEFORE the run,
+    /// which is what lets the census claim decide by cost rather than by study
+    /// name (decision 0081) — a name list rots, a cost threshold does not.
+    /// type-audit: bare-ok(count: return)
+    pub fn projected_world_builds(&self) -> u64 {
+        self.seeds.count * self.pin_sets.len() as u64
+    }
+}
+
 /// A loud error from study loading or validation.
 /// type-audit: bare-ok(prose: message)
 #[derive(Debug, Clone, PartialEq)]
