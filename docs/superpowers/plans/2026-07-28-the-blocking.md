@@ -2282,6 +2282,35 @@ fn a_locale_composition_is_untouched_by_the_role_layer() {
 
 - [ ] **Step 3: The role vocabulary**
 
+**A candidate role table, worked out against the real inventory — and PREDICTED, not verified.** Everything below is derived by reading `INVENTORY`, `selection` and `describe_chamber`; nothing here has been executed. **Run it and print the prose before building on it.** This campaign has now had two of my unrun claims fail at execution (the shell fraction and the two-cell gap), and a role table whose prose was reasoned rather than observed is exactly the same shape of mistake.
+
+The constraint it has to satisfy is the hard one from ledger #12: the flagship structure is **warm** and **two-chambered**, so differentiation must come from the four warm built patterns, and every chamber has a link so a doorway cannot be one role's private property.
+
+```
+  role         patterns admitted                        predicted WARM prose
+  ----------   --------------------------------------   ------------------------------
+  threshold    the-ground, the-threshold, the-screen    "A small room, holding a
+               (screen already requires Threshold)       doorway and a screen."
+  hearthroom   the-ground, the-threshold, the-alcove    "A small room, holding a
+               (+ the-fire, the-fireside-bed WHEN COLD)  doorway and an alcove."
+  store        the-ground, the-threshold,               "A small room, holding a
+               the-water-jar (+ a strongbox, populous)   doorway and a water jar."
+  hall         store's set + a high seat (Seat only)    not reached at seed 42
+  workroom     store's set + one of loom/anvil/altar    not reached at seed 42
+               by `function`
+```
+
+Assignment: chamber 0 is `threshold` (it is where `enter` lands), chamber 1 is `hearthroom`, and deeper chambers take `store` unless `notability`/`function` promote them. `peak_population` gates the **strongbox**, not the room — which is simpler than §4.1's wording and keeps the role table independent of a brief field the flagship does not exercise.
+
+**Why this is more than an arrangement of nouns**, which is the test `CLIENT-language-not-catalogue` sets: `the-fire` declares `Within(Alcove)` and `requires: Alcove`, and only the hearthroom admits an alcove — so **the fire can only ever compose in the hearthroom**, by the grammar rather than by a rule anyone wrote. And since Task 4b made an alcove a *wall cell*, a fire within an alcove is a recess in a wall with a fire in it: a **fireplace**, which the pattern language has been describing since The Hearth with no geometry to make it legible. The role table's content is that the `requires` clauses now bite differently per role, not that five roles exist.
+
+Two consequences to check rather than assume:
+
+- **A one-chamber structure has no links**, so its doorway is the one `enter` came through. `the-threshold` is still justified — but confirm the prose reads sensibly, and note that `describe_chamber`'s single-noun branch produces a different sentence shape ("A small room. A doorway stands here.").
+- **At four chambers, two `store` chambers read alike.** §9 asks that *two chambers* differ, which is satisfied, and they still *draw* differently. If you would rather differentiate further, do it by promoting on `function` — not by adding patterns, which is the failure mode §4.3 names.
+
+
+
 ```rust
 /// What a chamber is FOR. A role admits a different pattern subset — the pattern
 /// language one rung finer, where a role is a bundle of patterns that complete
