@@ -43,17 +43,34 @@ fn swept_envelope(seed: u64) -> Envelope {
 /// is exactly one nucleus, and this can be checked without sharing a line
 /// of code with what it is checking. `nucleus_floor` comes from the drawn
 /// `Phonology`'s own `nuclei` set, which is data, not machinery.
+///
+/// A near-twin lives in `cli/tests/branches_identity.rs` (same rule, floor
+/// fixed at 1 because a generated world's phonologies always admit a single
+/// vowel). The duplication is deliberate — a shared helper would have to be
+/// exported from the crate under test, and independence from the production
+/// rule is the whole point — but the two must not drift, and they are on
+/// Task 11's sweep list for that reason.
 fn admissible_reflexes(citation: &str, nucleus_floor: usize) -> Vec<String> {
     let shorten = |spare_first: bool| {
         let mut out = String::new();
         let mut kept = 0usize;
         let mut in_run = false;
         let mut spared = spare_first;
+        // Whether the most recent vowel was emitted, so a combining mark
+        // after it can follow it or be dropped with it.
+        let mut emitted_last = false;
         for c in citation.chars() {
             let vowel = "aeiou".contains(c);
             if !vowel && !c.is_ascii_alphabetic() && in_run {
-                // A combining tone mark belongs to the vowel before it.
-                if kept > 0 {
+                // A combining tone mark belongs to the vowel before it — so
+                // it is emitted only if THAT vowel was kept. Pushing it
+                // whenever anything in the run survived would move a dropped
+                // vowel's mark onto a kept one and build a reflex the rule
+                // never produces (inert here, since this sweep's envelope is
+                // atonal, and it would cost a false failure rather than a
+                // false pass — but the doc above says the mark stays with
+                // its own vowel, so the code has to).
+                if emitted_last {
                     out.push(c);
                 }
                 continue;
@@ -71,7 +88,8 @@ fn admissible_reflexes(citation: &str, nucleus_floor: usize) -> Vec<String> {
                 kept = 0;
             }
             kept += 1;
-            if spared || kept <= nucleus_floor {
+            emitted_last = spared || kept <= nucleus_floor;
+            if emitted_last {
                 out.push(c);
             }
         }
@@ -118,6 +136,22 @@ fn permissive_proto() -> Phonology {
 /// morpheme, so a worn name is allowed to contain the **worn** reflex
 /// instead of the citation form — but it must contain one of them. It may
 /// never contain neither, which is what erasure looks like.
+///
+/// **How this sweep absorbed The Wearing's positional reduction, and how
+/// that differs from its sibling.** The unworn sweep below was widened
+/// deliberately, with [`admissible_reflexes`] — a helper that derives the
+/// admissible set by string surgery on the rendered citation and shares no
+/// code with the rule it admits. This one was **not edited at all**. It
+/// widened implicitly, because its `worn_form` is
+/// `namer.wear(&derivation.modern, 1.0)` — production code, which now runs
+/// the reduction. So half of this test's acceptance set is computed by the
+/// very machinery it checks, and it would not catch a reduction that was
+/// wrong in the same way on both sides. Recorded rather than repaired: the
+/// erasure it exists to catch is a *disagreement* between the name and both
+/// reflexes, and the disarming check confirms it still fires — it reds under
+/// a reduction mutation as well as under a containment-guard stub. The
+/// independent check on the reduction itself is the unworn sweep and the
+/// unit battery in `naming.rs`, not this one.
 #[test]
 fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
     let mut worn_names = 0usize;

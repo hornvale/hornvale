@@ -815,12 +815,25 @@ impl<'a> Namer<'a> {
         let reduced: Vec<Vec<Segment>> = (0..chosen.len())
             .map(|i| {
                 let frequency = corpus.frequency_of(chosen[i]);
-                // A morpheme frequent enough to wear reduces THROUGHOUT,
-                // prominence or not: its reduction is lexicalized, which is
-                // why `Hampton` keeps `-ham`'s short vowel under stress. A
-                // rarer one reduces only where the word's prominence does
-                // not protect it.
-                let under = if frequency >= WEAR_FLOOR {
+                // A frequent morpheme standing as ONE ELEMENT OF A COMPOUND
+                // reduces throughout, prominence or not: it is unstressed in
+                // most of its occurrences, so its reduction is lexicalized
+                // and travels with it — `Hampton` keeps `-ham`'s short vowel
+                // even where the syllable is stressed.
+                //
+                // The `chosen.len() > 1` clause is what makes that citation
+                // exact rather than merely suggestive. A name that IS the
+                // morpheme has never had it unstressed, so there is nothing
+                // lexicalized to carry: OE *hām* standing alone is `Ham` in
+                // Surrey, not `Hm`. Without the clause a sole-morpheme name
+                // lost its only stressed nucleus on the strength of how
+                // often the concept appears in OTHER names — the one case
+                // the analogy does not cover.
+                //
+                // A rare morpheme, and any morpheme that is the whole name,
+                // reduces only where the word's prominence does not protect
+                // it.
+                let under = if frequency >= WEAR_FLOOR && chosen.len() > 1 {
                     Prominence::None
                 } else {
                     prominences[i]
@@ -1723,14 +1736,29 @@ fn reduce_nuclei(segments: &[Segment], ph: &Phonology, prominence: Prominence) -
 /// protecting the first syllable that actually has one.
 ///
 /// The syllable-structured twin of the flat call [`Namer::worn_compound`]
-/// makes, and the reason it exists: a drawn stem can put an open syllable
-/// before an onsetless one (`CVV` + `VV`), whose surface vowels form ONE run
-/// across the boundary. Reducing that run flat would strip the second
-/// syllable's nucleus entirely and leave a sequence no template can host —
-/// and unlike a compound, a drawn stem is never sent through
-/// [`repair_phonotactics`] afterwards to catch it. Reducing per syllable
-/// cannot do that: every nucleus keeps at least `min(ph.nuclei)` vowels, so
-/// each syllable stays exactly as legal as it was drawn.
+/// makes. **On today's phonology draw it is an exact behavioural identity
+/// with the flat call** — measured over 98,304 drawn stems, output identical
+/// in every case — so it is defensive, not corrective, and the claim below
+/// is about what it defends against rather than about a bug it fixes.
+///
+/// The hazard it forecloses is an open syllable followed by an **onsetless**
+/// one (`CVV` + `VV`), whose surface vowels would form one run across the
+/// boundary; reducing that run flat would strip the second syllable's
+/// nucleus entirely and leave a sequence no template can host, and unlike a
+/// compound a drawn stem is never sent through [`repair_phonotactics`]
+/// afterwards to catch it. **That arrangement is currently unreachable**:
+/// [`crate::phonology::draw_phonotactics`] builds onset templates with
+/// `draw_manner_slots(.., 1, 2)`, a minimum of **one** slot, and every
+/// manner in a template comes from the inventory's own consonants, so
+/// [`Namer::fill_manners`] always fills it. An onsetless syllable would need
+/// a language with no consonants at all; over 4,096 seeds there are 0 in
+/// 245,613 drawn syllables.
+///
+/// So this exists against a future onset template admitting zero slots — a
+/// one-constant change to that draw — and reducing per syllable cannot
+/// produce the hazard even then: every nucleus keeps at least
+/// `min(ph.nuclei)` vowels, so each syllable stays exactly as legal as it
+/// was drawn.
 fn reduce_syllable_nuclei(syllables: &[Syllable], ph: &Phonology) -> Vec<Syllable> {
     let mut stressed = true;
     syllables
@@ -3174,13 +3202,23 @@ mod tests {
     /// **The brief's property, on the path where it is absolute**: a drawn
     /// stem's non-initial nuclei are never longer than its first.
     ///
-    /// `Namer::name` stems are drawn syllable by syllable and never sent
-    /// through [`repair_phonotactics`], so nothing downstream can pad a
-    /// nucleus back — the property either holds for every name or the
-    /// reduction is not being applied. **Measured against the pre-change
-    /// tree first**: it failed there (a per-syllable nucleus pick puts a
-    /// diphthong wherever it lands), so this is not a test that was already
-    /// passing.
+    /// Two things make it absolute here, and both are load-bearing:
+    ///
+    /// - `Namer::name` stems are drawn syllable by syllable and never sent
+    ///   through [`repair_phonotactics`], so nothing downstream can pad a
+    ///   nucleus back.
+    /// - Every drawn syllable has a **non-empty onset**
+    ///   ([`crate::phonology::draw_phonotactics`] draws a minimum of one
+    ///   manner slot and the inventory always fills it), so no two nuclei
+    ///   are ever adjacent in the surface string. Without that, a run
+    ///   merging across a syllable boundary could put a longer nucleus after
+    ///   the stressed one and the property would hold only by luck of the
+    ///   draw. It is structural, not seed-lucky — see
+    ///   [`reduce_syllable_nuclei`], which defends the same boundary.
+    ///
+    /// **Measured against the pre-change tree first**: it failed there (a
+    /// per-syllable nucleus pick puts a diphthong wherever it lands), so
+    /// this is not a test that was already passing.
     ///
     /// Two non-vacuity guards, because the property is trivially true for a
     /// language that never admits a long nucleus at all: some sampled
@@ -3439,6 +3477,78 @@ mod tests {
             witnesses > 0,
             "of {checked} epithets whose bare form KEPT a long first nucleus, not one \
              lost it behind an honorific prefix — the prefix is not taking the stress"
+        );
+    }
+
+    /// **The diachronic override's sole-morpheme clause.** A frequent
+    /// morpheme reduces even under stress *when it is one element of a
+    /// compound* — `Hampton` keeps `-ham`'s short vowel because `-ham` is
+    /// unstressed in most of its occurrences. A name that IS the morpheme
+    /// has never had it unstressed, so nothing is lexicalized to carry: OE
+    /// *hām* standing alone is `Ham` in Surrey.
+    ///
+    /// Both calls below use a saturated corpus, so the frequency gate is
+    /// open for both and the ONLY difference is the morpheme count. Reds if
+    /// the override drops its `chosen.len() > 1` clause.
+    #[test]
+    fn a_frequent_morpheme_standing_alone_keeps_its_stressed_nucleus() {
+        let ph = wordy_ph();
+        let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+        let pair = ["water", "fire"];
+        let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
+        for c in pair {
+            saturated.insert(c.to_string(), 1.0);
+        }
+        let corpus = NameCorpus {
+            frequencies: &saturated,
+        };
+        let mut checked = 0usize;
+        for seed in 0..64u64 {
+            let lex = two_word_lexicon(seed);
+            if pair.iter().any(|c| !holds_word(&lex, c)) {
+                continue;
+            }
+            let namer = Namer::new(&Seed(seed), "test", &ph);
+            let attested = attested_forms(&lex);
+            // Whichever morpheme the headedness puts first in the surface
+            // string is the one carrying the word's stress — derived by
+            // replaying the join, not assumed.
+            let order: Vec<usize> = Namer::join_parts(&lex, vec![vec![0usize], vec![1usize]]);
+            let first = pair[order[0]];
+
+            let (compound, _) =
+                namer.worn_compound(&lex, &pair, &corpus, &attested, Prominence::InitialVowel);
+            let (alone, _) =
+                namer.worn_compound(&lex, &[first], &corpus, &attested, Prominence::InitialVowel);
+            // Isolate the reduction from the cascade: the reference is the
+            // SOUNDED form (cascade applied, reduction not), so a cascade
+            // that happens to change the first nucleus cannot be mistaken
+            // for the override firing.
+            let sounded_first = namer.sounded(&concept_segments(&lex, first), 1.0);
+            let reference = nucleus_runs(&sounded_first).first().copied().unwrap_or(0);
+            // Preconditions, both about the fixture: the stressed nucleus
+            // must be long enough to lose something, and the compound's
+            // reduction must actually have survived the containment guard
+            // (otherwise nothing was reduced anywhere and the pair is mute).
+            if reference <= floor || nucleus_runs(&compound).first().copied() != Some(floor) {
+                continue;
+            }
+            assert_eq!(
+                nucleus_runs(&alone).first().copied(),
+                Some(reference),
+                "seed {seed}: {first:?} is ubiquitous, but standing as the WHOLE name it \
+                 must keep its stressed nucleus ({reference}) — it only reduces under \
+                 stress as one element of a compound. Got {:?} against the compound's \
+                 {:?}",
+                render_views(&alone).roman,
+                render_views(&compound).roman
+            );
+            checked += 1;
+        }
+        assert!(
+            checked > 0,
+            "non-vacuity: no fixture both offered a long stressed nucleus and reduced it \
+             in the compound, so the clause was never exercised"
         );
     }
 

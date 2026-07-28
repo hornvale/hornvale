@@ -465,21 +465,34 @@ fn deities_with_distinct_glosses_carry_distinct_names_at_seed_42() {
 ///
 /// String surgery on the rendered word, sharing no code with the reduction
 /// it lets past: a romanized vowel is exactly one of `aeiou` (plus an
-/// optional combining tone mark, which stays with the vowel before it), so a
-/// maximal run of them is exactly one nucleus. The floor is `1` because
+/// optional combining tone mark, which is kept only when the vowel it
+/// belongs to is), so a maximal run of them is exactly one nucleus. The floor is `1` because
 /// `draw_phonotactics` pushes `1` into every drawn phonology's nucleus set
 /// unconditionally, so `min(nuclei)` is `1` for every language a world can
 /// contain.
+///
+/// A near-twin lives in `domains/language/tests/speakable_properties.rs`,
+/// which takes the floor as an argument because it sweeps hand-built
+/// phonologies. The duplication is deliberate (independence from the
+/// production rule is the point) but the two must not drift; both are on
+/// Task 11's sweep list.
 fn reduced_reflexes(citation: &str) -> Vec<String> {
     let shorten = |spare_first: bool| {
         let mut out = String::new();
         let mut in_run = false;
         let mut kept = 0usize;
         let mut spared = spare_first;
+        // Whether the most recent vowel was emitted, so a combining mark
+        // after it can follow it or be dropped with it.
+        let mut emitted_last = false;
         for c in citation.chars() {
             let vowel = "aeiou".contains(c);
             if !vowel && !c.is_ascii_alphabetic() && in_run {
-                if kept > 0 {
+                // Only if the vowel it belongs to was itself kept — see
+                // `emitted_last`. Pushing it whenever anything in the run
+                // survived would attach a dropped vowel's mark to a kept
+                // one, which is a reflex the rule never produces.
+                if emitted_last {
                     out.push(c);
                 }
                 continue;
@@ -497,7 +510,8 @@ fn reduced_reflexes(citation: &str) -> Vec<String> {
                 kept = 0;
             }
             kept += 1;
-            if spared || kept < 2 {
+            emitted_last = spared || kept < 2;
+            if emitted_last {
                 out.push(c);
             }
         }
