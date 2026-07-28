@@ -884,10 +884,10 @@ why it exists at two methods rather than being inlined at one."
 
 **Files:**
 - Create: `windows/vessel/src/lattice/classify.rs`, `windows/vessel/src/lattice/occupancy.rs`
-- Modify: `windows/vessel/src/lattice/mod.rs` (the `dof` field, re-exports), `windows/vessel/src/lattice/allocate.rs` and `grow.rs` (report `dof`)
+- Modify: `windows/vessel/src/lattice/mod.rs` (the `dof` and `owner` fields, re-exports), `windows/vessel/src/lattice/allocate.rs` and `grow.rs` (report `dof`, publish `owner`)
 
 **Interfaces:**
-- Produces: `realized_links(&Lattice) -> BTreeSet<(usize, usize)>`, `openings(&Lattice) -> Vec<(Cell, Cell)>`, `Occupancy`, and `Lattice.dof: u32`.
+- Produces: `realized_links(&Lattice) -> BTreeSet<(usize, usize)>`, `openings(&Lattice) -> Vec<(Cell, Cell)>`, `Occupancy`, `Lattice.dof: u32`, and `Lattice.owner: BTreeMap<Cell, usize>`.
 
 **What makes this task the spine of the campaign:** rules 1–4 turn "the embedder is faithful" from a claim in the spec into a property of a value. Rule 7 turns "it adds no information beyond the residual DOF" from an aspiration into an integer comparison. Everything after this task renders, moves through, or furnishes a lattice, and each of those is only as trustworthy as this check.
 
@@ -907,9 +907,24 @@ why it exists at two methods rather than being inlined at one."
 
 Rule 5 is the one that could have been faked. There are no creatures in cells yet — that is The Sighting — so a test over generated lattices would pass vacuously and a vacuous test is worse than a missing one, because it reads as coverage. Instead the rule becomes a **type** whose `insert` cannot hold two occupants for one cell, and the test asserts *that*. Fifteen lines, real, and it is the seam The Sighting plugs into rather than a stub it will have to undo.
 
-- [ ] **Step 1: Add the DOF report to `Lattice` and both embedders**
+- [ ] **Step 1: Add the DOF report AND per-cell ownership to `Lattice`, and both embedders**
 
-In `mod.rs`, add the field with its doc comment:
+**Why `owner` is here, added after Task 2 rather than planned into Task 1** (ledger #17): a grown lattice's `regions` are *bounding* rects and they **overlap heavily** — at seed 2, regions 0 and 1 both start at `x = 0` and span 5 and 10 columns. So "which region owns this cell" cannot be answered by scanning rects, and rules 1–4 run over a grown lattice would be measuring the rects rather than the blobs. The alternative was to run rules 1–4 on rectilinear lattices only, which would leave the grower unchecked — vacuous coverage, the thing rule 5 was deliberately written to avoid. The authoritative assignment belongs in the type.
+
+`grow` already builds exactly this map internally and throws it away; `allocate` fills it from its rects, which for rectilinear lattices is exact by construction. It is `FRAME`-tier like everything else here, so nothing is serialized and no epoch is involved.
+
+```rust
+    /// Which chamber owns each cell — the AUTHORITATIVE assignment.
+    ///
+    /// `regions` is a summary: for a grown lattice those rects are bounding boxes
+    /// and they OVERLAP, so `Rect::contains` is necessary but not sufficient and
+    /// scanning them answers a different question than the one asked. Consult this
+    /// map instead. Every cell of `extent` appears exactly once.
+    /// type-audit: bare-ok(index: owner)
+    pub owner: BTreeMap<Cell, usize>,
+```
+
+In `mod.rs`, also add the DOF field:
 
 ```rust
     /// How many independent choices the embedder made — one per stream draw it
@@ -945,14 +960,16 @@ Create `windows/vessel/src/lattice/classify.rs`:
 use super::{Cell, Lattice};
 use std::collections::BTreeSet;
 
-/// Which region owns `cell`, by scan. `None` outside every region.
+/// Which chamber owns `cell`. `None` outside the extent.
 ///
-/// A scan rather than an index because `regions` holds BOUNDING rects for a grown
-/// lattice, where `Rect::contains` is necessary but not sufficient — the first
-/// containing region wins, which matches how `grow` assigns ties.
+/// Reads `Lattice::owner`, never `regions`. Scanning `regions` would be wrong for a
+/// grown lattice, whose rects are overlapping bounding boxes — a scan answers
+/// "which bounding box does this fall in first", which is a different question and
+/// happens to agree only for rectilinear lattices. That near-agreement is exactly
+/// what would have made the bug survive review.
 /// type-audit: bare-ok(index: return)
 pub fn region_of(lattice: &Lattice, cell: Cell) -> Option<usize> {
-    lattice.regions.iter().position(|r| r.contains(cell))
+    lattice.owner.get(&cell).copied()
 }
 
 /// Every unordered pair of chambers whose regions actually touch across a cell
@@ -1285,7 +1302,7 @@ Expected: FAIL to compile — `Lattice` has no field `dof` until Step 1's field 
 - [ ] **Step 4: Make them pass, and treat a failure as a finding**
 
 Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -20`
-Expected: PASS, 20 tests (Task 2's thirteen, plus six rules in `classify` and one in `occupancy`).
+Expected: PASS, 21 tests (Task 2's fourteen, plus six rules in `classify` and one in `occupancy`). Task 1 landed **eleven** lattice tests, not the ten its own Step 4 predicted — its Step 5 added the cost check without revising the count. Trust the run, not the arithmetic.
 
 **If rule 1, 2, 3 or 4 fails, do not adjust the rule.** These are the campaign's correctness claims; a failure means Task 1 or Task 2's embedder is wrong, and the fix belongs in the embedder. Report which rule failed and what the embedder was doing, then fix the embedder.
 
@@ -1569,6 +1586,8 @@ pub fn render(lattice: &Lattice, structure: &Structure, at: usize) -> Plan {
 **On `structure` and `at` being unused in v1:** they are in the signature because Task 6's roles give each region a name to put in the legend, and changing a signature that three call sites use is churn this plan can avoid by paying one `let _ =` now. If the implementer prefers, drop both parameters and let Task 6 add them — say which you did in your report; either is fine, but do not leave an unexplained `let _ =`.
 
 - [ ] **Step 4: Wire the verb, retire the examine refusal**
+
+`lib.rs` re-exports `allocate` and `extent_for` but not `grow`/`embed_with` (Task 2's file list excluded `lib.rs`). This task is the first caller of the selector, so promote it: add `embed_with` to the `pub use lattice::{...}` list.
 
 First, the helper both this task and Task 5 need — and the one detail in it that can produce a plausible, self-consistent, uniformly wrong world:
 
