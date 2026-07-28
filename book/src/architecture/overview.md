@@ -14,7 +14,7 @@ address space spans two bands of scale — a **locale** at the walk band
 (~1.7 km, exhaustively tiled) and a **chamber** nine refinements below it
 (~3.3 m, sparse, existing only where something is built). A chamber is not a
 second address space; it is a longer path. The terminology is settled by
-[decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0081-locale-chamber-place.md).
+[decision 0081](https://github.com/hornvale/hornvale/blob/main/docs/decisions/0082-locale-chamber-place.md).
 The kernel is the *only* thing a domain is allowed to depend on. Built in Campaign
 1a; gained enumeration interfaces in 1b; the geosphere arrived in Campaign 3;
 the place substrate in [The Room Mesh](../chronicle/the-room-mesh.md) and its

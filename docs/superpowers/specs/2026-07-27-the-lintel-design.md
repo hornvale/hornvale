@@ -4,7 +4,7 @@
 Amendment 2** (§1b of the metaplan; read that first, this spec builds only on
 the amended program).
 **Date:** 2026-07-27 · **Status:** SHIPPED 2026-07-27 — seven tasks, byte-identical, `make gate` green.
-Chronicle: [the-lintel](../../../book/src/chronicle/the-lintel.md) · Retrospective: [the-lintel](../../retrospectives/the-lintel.md) · Decision minted: [0081](../../decisions/0081-locale-chamber-place.md).
+Chronicle: [the-lintel](../../../book/src/chronicle/the-lintel.md) · Retrospective: [the-lintel](../../retrospectives/the-lintel.md) · Decision minted: [0082](../../decisions/0082-locale-chamber-place.md).
 **Amended at close:** §4 (the brief's live consumer is `built` alone; the deferred fields are not carried, and why) and §6 (`out` leaves the structure entirely). Both corrections came from the whole-branch review — the spec had outrun the code.
 **Parent:** `2026-07-25-the-rose-window-metaplan-design.md` §1b.3 (the band
 notation), §1b.4 (the brief), §1b.6 (band transitions)

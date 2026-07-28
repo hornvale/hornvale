@@ -1,4 +1,4 @@
-# 0081. Locale, chamber, place — "room" unqualified is retired
+# 0082. Locale, chamber, place — "room" unqualified is retired
 
 **Status:** Accepted (2026-07-27) · **Decider:** Nathan
 

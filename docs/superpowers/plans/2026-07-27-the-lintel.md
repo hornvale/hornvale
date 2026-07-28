@@ -1635,7 +1635,7 @@ make preflight
 of the merge base. If it reports a collision, take the next free number and say
 so in your report — do not renumber someone else's record.
 
-Create `docs/decisions/0081-locale-chamber-place.md` (or the next free number)
+Create `docs/decisions/0082-locale-chamber-place.md` (or the next free number)
 recording the terminology: **locale** for a macro place (~1.7 km, walk band),
 **chamber** for a micro place (human scale), **place** for either, and "room"
 unqualified retired from new prose and doc comments. Follow the format in
