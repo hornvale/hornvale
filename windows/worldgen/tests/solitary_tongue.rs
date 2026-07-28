@@ -198,9 +198,20 @@ fn dragon_cascades_stay_within_the_frozen_regime_at_seed_42() {
 /// normalized inter-daughter word distance is strictly below the goblinoid
 /// family's, at seed 42 — with a real margin, not a hairline one, so the
 /// assertion would fail outright if the isolate diverged as much as (or
-/// more than) the settled family: measured 0.25 (draconic) vs 0.32
-/// (goblinoid), asserted with a comfortable 0.05 absolute floor under that
-/// margin.
+/// more than) the settled family: measured 0.3234 (draconic) vs 0.3665
+/// (goblinoid), asserted with an absolute floor under that margin.
+///
+/// **The margin narrowed under The Wearing** (Task 8). Before the nucleus
+/// fix the pair read 0.25 / 0.32, a gap of ~0.07; after it reads
+/// 0.3234 / 0.3665, a gap of 0.0430. Both distances rose and the gap shrank
+/// by ~40%, which is what a length-normalized edit distance does when every
+/// root gets shorter — the same absolute number of differing segments is a
+/// larger fraction of a shorter word, and the two families compress at
+/// different rates. The DIRECTION of the claim (isolate < family) is
+/// untouched and is what the first assertion tests; the floor below is
+/// re-pinned to 0.03 so it still catches a regime regression that narrows
+/// the gap further, but a reviewer should know it is now guarding a
+/// thinner margin than it was written for, on a single seed.
 #[test]
 fn chromatic_dragons_diverge_less_than_the_goblinoid_family() {
     let world = generated_world(REFERENCE_SEED);
@@ -212,11 +223,12 @@ fn chromatic_dragons_diverge_less_than_the_goblinoid_family() {
          family ({goblinoid:.4}) at seed {REFERENCE_SEED} -- if this ever fails, the isolate \
          is no longer conservative relative to a socially-drifting family"
     );
-    // A real margin, not noise: demand the gap clears an absolute floor well
-    // under the measured ~0.07 gap, so a regime regression that only
+    // A real margin, not noise: demand the gap clears an absolute floor
+    // under the measured 0.0430 gap, so a regime regression that only
     // narrows (rather than fully erases) the isolate's advantage still
-    // fails loudly.
-    const MIN_MARGIN: f64 = 0.05;
+    // fails loudly. See this test's doc comment for why the floor moved
+    // from 0.05 to 0.03 under The Wearing.
+    const MIN_MARGIN: f64 = 0.03;
     assert!(
         goblinoid - draconic > MIN_MARGIN,
         "the isolate/family divergence gap ({:.4}) must clear {MIN_MARGIN} at seed \

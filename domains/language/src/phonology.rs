@@ -78,9 +78,18 @@ pub struct Phonology {
     /// Onset templates: each is a sequence of manner slots a syllable-
     /// initial cluster may fill, in order.
     pub onsets: Vec<Vec<Manner>>,
-    /// How many nucleus slots a syllable may have (1 = simple vowel, 2 =
-    /// the species' names may show diphthongs).
-    pub nuclei: usize,
+    /// Nucleus templates: the **set** of nucleus sizes a syllable may
+    /// take, ascending and duplicate-free (1 = a simple vowel, 2 = a
+    /// diphthong). A syllable picks one per syllable, so a language that
+    /// admits diphthongs *permits* them rather than *requires* them.
+    ///
+    /// [`draw_phonotactics`] guarantees `1 ∈ nuclei`: the simple vowel is
+    /// universal, and no natural language puts an obligatory diphthong in
+    /// every syllable. This field held a single obligatory `usize` count
+    /// until The Wearing (2026-07-27), which is what made names read
+    /// `Qvooshtvoagootao`; the shape now matches `onsets` and `codas` —
+    /// a set of templates, picked from at name time.
+    pub nuclei: Vec<usize>,
     /// Coda templates: each is a sequence of manner slots a syllable-final
     /// cluster may fill, in order (an empty template is an open syllable).
     pub codas: Vec<Vec<Manner>>,
@@ -216,7 +225,16 @@ pub fn distinguishable_capacity(ph: &Phonology) -> u64 {
         .iter()
         .filter(|s| matches!(s, Segment::Vowel { .. }))
         .count() as u64;
-    let nucleus = vowels.saturating_pow(ph.nuclei as u32).max(1);
+    // One nucleus filling per admissible size, summed — the same "sum over
+    // templates of the product over slots" shape `template_choices` uses for
+    // onsets and codas. `nuclei` is duplicate-free, so no filling is counted
+    // twice.
+    let nucleus = ph
+        .nuclei
+        .iter()
+        .map(|&size| vowels.saturating_pow(size as u32))
+        .fold(0u64, u64::saturating_add)
+        .max(1);
     onset.saturating_mul(nucleus).saturating_mul(coda)
 }
 
@@ -491,12 +509,62 @@ fn draw_manner_slots(
         .collect()
 }
 
+/// The largest nucleus a drawn template set may admit: two vowel slots, a
+/// diphthong. The tier above (triphthongs, long-vowel-plus-glide) is not
+/// modelled. Part of the phonotactics consumption contract — raising it
+/// changes what [`draw_phonotactics`] draws for every species.
+const MAX_NUCLEUS: usize = 2;
+
+/// Draw the **nucleus template set**: which nucleus sizes a syllable of this
+/// language may take, as a sorted duplicate-free set.
+///
+/// Drawn in the same two-step shape as `onsets` and `codas` — a count, then
+/// that many templates — rather than as a third mechanism. The one thing it
+/// does that they do not is **push `1` unconditionally**: the simple vowel is
+/// universal. This is the whole point of the draw. `nuclei` was a single
+/// `usize` count until The Wearing, and when it landed on 2 *every* syllable
+/// in that language carried two vowels — an obligatory diphthong no natural
+/// language has, and roughly a third of every name's characters.
+///
+/// Consumes `1 + count` draws (2 or 3), where the old count consumed 1.
+/// Reachable sets are therefore exactly `[1]` and `[1, 2]`, at
+/// `P([1]) = 3/8`.
+fn draw_nuclei(stream: &mut Stream) -> Vec<usize> {
+    let count = stream.range_u32(1, 2) as usize;
+    let mut nuclei: Vec<usize> = (0..count)
+        .map(|_| stream.range_u32(1, MAX_NUCLEUS as u32) as usize)
+        .collect();
+    nuclei.push(1);
+    nuclei.sort_unstable();
+    nuclei.dedup();
+    nuclei
+}
+
 /// Draw the onset/nucleus/coda phonotactic templates from `inventory`'s
-/// available consonant manners.
+/// available consonant manners. Draw order (onsets, then nuclei, then codas)
+/// is part of the stream-consumption contract.
+///
+/// **The Wearing changed what this consumes and deliberately did NOT bump an
+/// epoch on the `phonotactics` leg.** The rule an epoch answers is "a
+/// *released* consumption contract whose output a saved ledger holds". A
+/// [`Phonology`] is never serialized — no world file contains one — so this
+/// leg's only ledger-visible outputs are names and lexicon forms, and every
+/// one of those is already reseeded by this same campaign under the
+/// unreleased `name/v3` epoch and Task 1's re-founded root cohort. A
+/// `phonotactics/v2` would guard nothing those do not already guard, and it
+/// would additionally reseed every species' **onsets**, which this change
+/// deliberately leaves alone (onset cluster density is a separate question)
+/// and which would confound the measurement of the nucleus fix. The onsets
+/// of every world main has ever generated therefore survive this change
+/// unchanged; the codas, which follow the nucleus draw, do not.
+///
+/// Where that flips: once `name/v3` is frozen on main, there is no unreleased
+/// epoch left to ride and the next consumption change here owes one of its
+/// own.
 fn draw_phonotactics(
     stream: &mut Stream,
     inventory: &[Segment],
-) -> (Vec<Vec<Manner>>, usize, Vec<Vec<Manner>>) {
+) -> (Vec<Vec<Manner>>, Vec<usize>, Vec<Vec<Manner>>) {
     let manners = consonant_manners(inventory);
 
     let onset_count = stream.range_u32(2, 3) as usize;
@@ -504,7 +572,7 @@ fn draw_phonotactics(
         .map(|_| draw_manner_slots(stream, &manners, 1, 2))
         .collect();
 
-    let nuclei = stream.range_u32(1, 2) as usize;
+    let nuclei = draw_nuclei(stream);
 
     let coda_count = stream.range_u32(1, 2) as usize;
     let codas = (0..coda_count)
@@ -783,7 +851,7 @@ mod tests {
                 vow(Height::High, Backness::Back),          // u
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -791,6 +859,47 @@ mod tests {
     #[test]
     fn distinguishable_capacity_multiplies_onset_nucleus_and_coda_fillings() {
         assert_eq!(distinguishable_capacity(&cramped_phonology()), 18);
+    }
+
+    /// The Wearing: no natural language puts an obligatory diphthong in
+    /// EVERY syllable, but `nuclei: usize` did exactly that for half of all
+    /// drawn phonologies — which is most of what read as obnoxious in
+    /// `Qvooshtvoagootao`.
+    ///
+    /// Two envelopes, because the pre-change draw was envelope-independent
+    /// (`range_u32(1, 2)` reads nothing about the species) and so is this
+    /// one; a single envelope would leave that unstated.
+    #[test]
+    fn no_language_requires_a_diphthong_in_every_syllable() {
+        let mut complex_seen = 0usize;
+        for (label, env) in [("goblin", goblin_env()), ("kobold", kobold_env())] {
+            for seed in 0..200u64 {
+                let ph = draw_phonology(&Seed(seed), label, &env);
+                assert!(
+                    ph.nuclei.contains(&1),
+                    "{label} seed {seed}: every syllable is obligatorily complex ({:?})",
+                    ph.nuclei
+                );
+                assert!(
+                    ph.nuclei.windows(2).all(|w| w[0] < w[1]),
+                    "{label} seed {seed}: nuclei must be a sorted set ({:?})",
+                    ph.nuclei
+                );
+                if ph.nuclei.iter().any(|&n| n > 1) {
+                    complex_seen += 1;
+                }
+            }
+        }
+        // Non-vacuity. `nuclei = vec![1]` for every seed would satisfy every
+        // assertion above while quietly deleting diphthongs from the world
+        // rather than making them optional — the "passes for the wrong
+        // reason" failure this campaign keeps hitting. The claim is that a
+        // diphthong is PERMITTED, not that it is gone.
+        assert!(
+            complex_seen > 40,
+            "the template set has degenerated to a constant simple nucleus: only \
+             {complex_seen}/400 draws admit a complex nucleus at all"
+        );
     }
 
     #[test]

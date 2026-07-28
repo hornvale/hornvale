@@ -898,15 +898,24 @@ impl<'a> Namer<'a> {
             .collect()
     }
 
-    /// Draw one syllable: an onset template, `ph.nuclei` vowels, and a coda
+    /// Draw one syllable: an onset template, a nucleus template, and a coda
     /// template, each filled by `pick`ing matching segments from the
     /// inventory. Draw order (onset, then nucleus, then coda) is part of
     /// the stream-consumption contract.
+    ///
+    /// The nucleus **size is picked per syllable** from `ph.nuclei`, exactly
+    /// as the onset and coda templates are picked from theirs — so a language
+    /// admitting diphthongs shows them as texture rather than putting one in
+    /// every syllable (The Wearing). `ph.nuclei` always contains `1`
+    /// ([`crate::phonology::draw_phonotactics`]), so the fallback below is
+    /// unreachable for a drawn phonology and exists only to keep a
+    /// hand-built empty set total.
     fn draw_syllable(&self, stream: &mut Stream, weighty: bool) -> Syllable {
         let onset_template = stream.pick(&self.ph.onsets).cloned().unwrap_or_default();
         let onset = self.fill_manners(stream, &onset_template);
 
-        let nucleus = (0..self.ph.nuclei)
+        let nucleus_size = stream.pick(&self.ph.nuclei).copied().unwrap_or(1);
+        let nucleus = (0..nucleus_size)
             .filter_map(|_| self.pick_vowel(stream))
             .collect();
 
@@ -1083,8 +1092,9 @@ pub(crate) fn attested_forms(lexicon: &Lexicon) -> Vec<Vec<Segment>> {
 /// Whether `segments` parses as a sequence of syllables under `ph`'s drawn
 /// phonotactic templates, or as attested lexicon words admitted verbatim:
 /// each syllable an onset matching one of `ph.onsets` exactly (by manner
-/// sequence), then exactly `ph.nuclei` vowels, then a coda matching one of
-/// `ph.codas` — OR, at any position, one whole word from `attested`
+/// sequence), then a run of vowels whose length is one of `ph.nuclei`, then
+/// a coda matching one of `ph.codas` — OR, at any position, one whole word
+/// from `attested`
 /// (The Speakable's attested tier). A backtracking parse (every onset/coda
 /// split AND every attested match is explored), so any parseable sequence
 /// is accepted; the empty sequence is not a word. This is the invariant
@@ -1107,19 +1117,21 @@ fn conforms(segments: &[Segment], ph: &Phonology, attested: &[Vec<Segment>]) -> 
             let Some(after_onset) = match_manner_seq(segments, pos, onset) else {
                 continue;
             };
-            let after_nucleus = after_onset + ph.nuclei;
-            if after_nucleus > segments.len()
-                || !segments[after_onset..after_nucleus]
-                    .iter()
-                    .all(|s| matches!(s, Segment::Vowel { .. }))
-            {
-                continue;
-            }
-            for coda in &ph.codas {
-                if let Some(after_coda) = match_manner_seq(segments, after_nucleus, coda)
-                    && from(segments, after_coda, ph, attested)
+            for &size in &ph.nuclei {
+                let after_nucleus = after_onset + size;
+                if after_nucleus > segments.len()
+                    || !segments[after_onset..after_nucleus]
+                        .iter()
+                        .all(|s| matches!(s, Segment::Vowel { .. }))
                 {
-                    return true;
+                    continue;
+                }
+                for coda in &ph.codas {
+                    if let Some(after_coda) = match_manner_seq(segments, after_nucleus, coda)
+                        && from(segments, after_coda, ph, attested)
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -1158,10 +1170,11 @@ enum RepairStep {
         onset: usize,
         /// Index into `ph.codas` of the matched coda template.
         coda: usize,
-        /// How many input vowels the nucleus consumed (≤ `ph.nuclei`).
+        /// How many input vowels the nucleus consumed (≤ the chosen size).
         vowels: usize,
-        /// How many epenthetic vowels complete the nucleus
-        /// (`ph.nuclei - vowels`).
+        /// How many epenthetic vowels complete the nucleus (the chosen
+        /// nucleus size minus `vowels`). `vowels + pads` is the size, so
+        /// the replay needs no separate record of which template was used.
         pads: usize,
     },
 }
@@ -1200,9 +1213,15 @@ enum RepairStep {
 ///    otherwise need. The minimal-cost plan is found by dynamic
 ///    programming over input positions; ties break deterministically
 ///    toward the earlier-considered option — attested words (longest
-///    first, per [`attested_forms`]'s ordering) before the earlier-listed
-///    template pair (onsets then codas, in their drawn order), with
-///    deletion considered last.
+///    first, per [`attested_forms`]'s ordering) before the template
+///    triple (onsets in their drawn order, then nucleus sizes in
+///    **ascending** order, then codas in their drawn order), with
+///    deletion considered last. The ascending nucleus order means a tie
+///    between a simple and a complex nucleus is settled toward the
+///    simple one — repair never lengthens a name it could leave short.
+///    The plan is still chosen on the cost of the whole remaining
+///    suffix, not greedily, so preferring the short nucleus never strands
+///    a vowel the longer one would have absorbed.
 /// 3. **Degenerate-input fallback**: if the minimal plan deletes
 ///    everything (an input with no vowel and no template-hostable
 ///    consonant — unreachable from real lexicon roots, which always carry
@@ -1262,27 +1281,29 @@ fn repair_phonotactics(
                 .iter()
                 .take_while(|s| matches!(s, Segment::Vowel { .. }))
                 .count();
-            let vowels = available.min(ph.nuclei);
-            let pads = ph.nuclei - vowels;
-            let after_nucleus = after_onset + vowels;
-            for (coda_idx, coda) in ph.codas.iter().enumerate() {
-                let Some(after_coda) = match_manner_seq(&segments, after_nucleus, coda) else {
-                    continue;
-                };
-                if after_coda == i {
-                    continue; // a syllable must consume at least one segment
-                }
-                let cost = pads as u32 * EPENTHESIS_COST + cost_at(&best, after_coda);
-                if chosen.as_ref().is_none_or(|(c, _)| cost < *c) {
-                    chosen = Some((
-                        cost,
-                        RepairStep::Syllable {
-                            onset: onset_idx,
-                            coda: coda_idx,
-                            vowels,
-                            pads,
-                        },
-                    ));
+            for &size in &ph.nuclei {
+                let vowels = available.min(size);
+                let pads = size - vowels;
+                let after_nucleus = after_onset + vowels;
+                for (coda_idx, coda) in ph.codas.iter().enumerate() {
+                    let Some(after_coda) = match_manner_seq(&segments, after_nucleus, coda) else {
+                        continue;
+                    };
+                    if after_coda == i {
+                        continue; // a syllable must consume at least one segment
+                    }
+                    let cost = pads as u32 * EPENTHESIS_COST + cost_at(&best, after_coda);
+                    if chosen.as_ref().is_none_or(|(c, _)| cost < *c) {
+                        chosen = Some((
+                            cost,
+                            RepairStep::Syllable {
+                                onset: onset_idx,
+                                coda: coda_idx,
+                                vowels,
+                                pads,
+                            },
+                        ));
+                    }
                 }
             }
         }
@@ -1294,7 +1315,8 @@ fn repair_phonotactics(
     }
 
     // Replay the plan front to back.
-    let mut out: Vec<Segment> = Vec::with_capacity(n + ph.nuclei);
+    let mut out: Vec<Segment> =
+        Vec::with_capacity(n + ph.nuclei.iter().copied().max().unwrap_or(1));
     let mut i = 0;
     while i < n {
         match &best[i].as_ref().expect("every position has a plan").1 {
@@ -1329,9 +1351,12 @@ fn repair_phonotactics(
 
 /// The degenerate-input fallback syllable for [`repair_phonotactics`]:
 /// the first onset template filled with the first inventory consonant of
-/// each required manner, `ph.nuclei` epenthetic vowels, and the first coda
-/// template filled the same way. Deterministic and always legal — every
-/// drawn template's manners come from the inventory's own consonants.
+/// each required manner, a **smallest**-admissible-nucleus run of
+/// epenthetic vowels, and the first coda template filled the same way.
+/// Deterministic and always legal — every drawn template's manners come
+/// from the inventory's own consonants, and the smallest admissible
+/// nucleus is a member of `ph.nuclei` (so the result parses) as well as
+/// the shortest one available.
 fn minimal_syllable(ph: &Phonology, epenthetic: Segment) -> Vec<Segment> {
     let first_of = |required: Manner| {
         ph.inventory
@@ -1343,7 +1368,8 @@ fn minimal_syllable(ph: &Phonology, epenthetic: Segment) -> Vec<Segment> {
     if let Some(onset) = ph.onsets.first() {
         out.extend(onset.iter().filter_map(|&m| first_of(m)));
     }
-    out.extend(std::iter::repeat_n(epenthetic, ph.nuclei));
+    let nucleus_size = ph.nuclei.iter().copied().min().unwrap_or(1);
+    out.extend(std::iter::repeat_n(epenthetic, nucleus_size));
     if let Some(coda) = ph.codas.first() {
         out.extend(coda.iter().filter_map(|&m| first_of(m)));
     }
@@ -1920,7 +1946,7 @@ mod tests {
         crate::phonology::Phonology {
             inventory: vec![a, t, n],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -2185,15 +2211,19 @@ mod tests {
         // where `FinalLoss` can only ever touch the word's last segment)
         // would grind the same slot both times.
         let ph = wordy_ph();
-        // Lexicon seed 19 over `wordy_ph`: both roots are consonant-final,
+        // Lexicon seed 186 over `wordy_ph`: both roots are consonant-final,
         // so kobold@42's wear cascade has an environment to fire in for
         // each, AND both worn forms survive repair (asserted below as a
         // precondition — the survival rule would otherwise silently give
         // the wear back and this test would be measuring the fallback).
         // `ClusterSimplify` only fires on a word-initial CC and `FinalLoss`
         // only on a word-final consonant, so a lexicon of open CV roots
-        // would make this test vacuously green.
-        let lex = two_word_lexicon(19);
+        // would make this test vacuously green. Re-searched from 19 after
+        // The Wearing's nucleus fix reseeded `wordy_ph`; the precondition
+        // is what caught it, and seed 186 is the ONLY pair in 0..300 that
+        // satisfies every clause — this fixture is narrow, so expect to
+        // re-search it again after the next phonotactic change.
+        let lex = two_word_lexicon(186);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
@@ -2338,7 +2368,12 @@ mod tests {
             concepts: &["water", "fire"],
         };
         let morph = morph(false);
-        let namer = Namer::new(&Seed(42), "kobold", &ph);
+        // Namer seed 27, re-searched after The Wearing's nucleus fix: at the
+        // previous seed 42 the saturated corpus stopped changing ANY of the
+        // 80 names below, so the non-vacuity guard at the end of this test
+        // went red. That guard is the point — the agreement asserted in the
+        // loop is worthless if no name ever wears.
+        let namer = Namer::new(&Seed(27), "kobold", &ph);
         let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
         saturated.insert("water".to_string(), 1.0);
         saturated.insert("fire".to_string(), 1.0);
@@ -2553,6 +2588,74 @@ mod tests {
             voice_loudness: f(3),
             tonality: 0.0,
             exotic: ExoticSeg::None,
+        }
+    }
+
+    /// **The Wearing's nucleus fix, the half that lives in the namer.**
+    /// `ph.nuclei` being a set is necessary but not sufficient: a language
+    /// that ADMITS a diphthong must not put one in every syllable, which
+    /// requires `draw_syllable` to pick a nucleus template per syllable the
+    /// same way it picks an onset and a coda. Reds if that pick is replaced
+    /// by the largest admissible size (the pre-change behaviour that made
+    /// names read `Qvooshtvoagootao`) or by the smallest (which would delete
+    /// diphthongs from the world rather than making them optional).
+    ///
+    /// Also checks the parse side: every syllable this draw produces must
+    /// satisfy [`conforms`], which had to learn that a nucleus is now a run
+    /// of *one of* several admissible lengths. A namer that drew simple
+    /// nuclei the parser then rejected would send every name through
+    /// [`repair_phonotactics`] and pad the vowel straight back in.
+    #[test]
+    fn a_diphthong_admitting_language_still_speaks_simple_syllables() {
+        // Seed-searched runtime precondition: the claim is only in play for a
+        // phonology whose nucleus set has more than one member, so the test
+        // states which one it found rather than assuming a fixture's shape.
+        let (seed, ph) = (0..64u64)
+            .map(|s| (s, draw_phonology(&Seed(s), "swept", &swept_envelope(s))))
+            .find(|(_, ph)| ph.nuclei.len() > 1)
+            .expect("some drawn phonology in 0..64 must admit a complex nucleus");
+        assert_eq!(
+            ph.nuclei,
+            vec![1, 2],
+            "seed {seed}: precondition — this test needs a language admitting both sizes"
+        );
+        assert!(
+            ph.inventory
+                .iter()
+                .any(|s| matches!(s, Segment::Vowel { .. })),
+            "seed {seed}: precondition — a nucleus needs a vowel to fill it"
+        );
+
+        let namer = Namer::new(&Seed(seed), "swept", &ph);
+        let mut stream = Seed(seed).stream();
+        let syllables = namer.draw_syllables(&mut stream, 400, 400, false);
+        let simple = syllables.iter().filter(|s| s.nucleus.len() == 1).count();
+        let complex = syllables.iter().filter(|s| s.nucleus.len() == 2).count();
+        assert_eq!(simple + complex, 400, "every nucleus must be filled");
+        assert!(
+            simple > 0 && complex > 0,
+            "seed {seed}: a language admitting {:?} must speak BOTH — measured \
+             {simple} simple / {complex} complex of 400",
+            ph.nuclei
+        );
+        // A uniform pick over a two-member set; the band is wide enough that
+        // only a near-degenerate pick trips it, and the measured value is
+        // reported either way.
+        let share = simple as f64 / 400.0;
+        assert!(
+            (0.3..0.7).contains(&share),
+            "seed {seed}: simple-nucleus share {share:.3} is not a pick from {:?} \
+             ({simple} simple / {complex} complex of 400)",
+            ph.nuclei
+        );
+
+        for syllable in &syllables {
+            let segments: Vec<Segment> = syllable.segments().copied().collect();
+            assert!(
+                conforms(&segments, &ph, &[]),
+                "seed {seed}: a drawn syllable must parse under its own phonology, \
+                 else repair pads the nucleus back out ({segments:?})"
+            );
         }
     }
 

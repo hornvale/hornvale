@@ -1012,7 +1012,7 @@ mod tests {
                 v(Height::Mid, Backness::Front, false),   // e
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -1048,7 +1048,7 @@ mod tests {
                 v(Height::Low, Backness::Central, false), // a
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![]],
         }
     }
@@ -1212,11 +1212,14 @@ mod tests {
         let ph = cramped_phonology();
         let base = core_concept_batch();
         let epoch0 = |_: &str| 0u32;
-        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+        // Seed 0, re-searched after The Wearing's nucleus fix reseeded every
+        // phonotactic draw (seed 4 no longer displaces on the new forms).
+        // The non-vacuity assertion below is what catches such a drift.
+        let before = assign_proto_roots_with_epoch(&Seed(0), "fam", &ph, &base, &[], epoch0);
 
         let mut grown = base.clone();
         grown.push("moon");
-        let after = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch0);
+        let after = assign_proto_roots_with_epoch(&Seed(0), "fam", &ph, &grown, &[], epoch0);
 
         let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
         assert!(
@@ -1426,7 +1429,7 @@ mod tests {
                 vt(Height::Low, Backness::Central, false, Tone::Low), // à
             ],
             onsets: vec![vec![Manner::Stop]],
-            nuclei: 1,
+            nuclei: vec![1],
             codas: vec![vec![Manner::Nasal], vec![Manner::Stop], vec![]],
         }
     }

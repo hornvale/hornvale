@@ -85,12 +85,22 @@ fn each_placed_species_holds_a_root_for_every_placed_species_kind() {
     // hobgoblin's exonym/endonym for "goblin-kind" happen to render
     // identically (both goblinoid-family, sharing a proto-phonology, so
     // occasional root collisions on a shared-family concept are expected)
-    // -- 1 is also the witness seed `locked_rotation_changes_the_flagship_
+    // -- 1 was also the witness seed `locked_rotation_changes_the_flagship_
     // cascade`/`the_pantheon_reorganizes_between_spinning_and_locked`
     // already use post-cutover, for the same reason (seed 42's dominant
     // coexistence attractor moved under the niche cutover).
+    //
+    // Seed 3, re-searched: The Wearing's nucleus fix shortened every root,
+    // and shorter roots collide more often between two languages that share
+    // a proto-phonology. At seed 1 goblin and hobgoblin now BOTH render
+    // "hobgoblin-kind" as `Koe`. Sweeping 0..16 post-fix, 5 of the 14 seeds
+    // that root all four words hit such a collision (1, 7, 10, 12, 13) --
+    // so this is the rate the paragraph above anticipated, measured, not a
+    // regression in the exposure rule. Seed 3 renders all four distinctly
+    // (`Zhoze`/`Sasta` against `Zhozeg`/`Shashtak`), and the pair reads as
+    // the cognates two sibling languages should have.
     let w = build_world(
-        hornvale_kernel::Seed(1),
+        hornvale_kernel::Seed(3),
         &hornvale_astronomy::SkyPins::default(),
         SkyChoice::Generated,
         &hornvale_terrain::TerrainPins::default(),

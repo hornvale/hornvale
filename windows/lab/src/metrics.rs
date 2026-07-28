@@ -4770,7 +4770,9 @@ fn attested_roman_forms(lexicon: &hornvale_language::Lexicon) -> Vec<String> {
 /// SURFACE STRING back into [`Segment`]s and re-checks phonotactic legality
 /// from scratch — every syllable's onset/coda manner-sequence must match
 /// one of `ph.onsets`/`ph.codas` (the very templates `draw_phonology`
-/// drew), its nucleus must be exactly `ph.nuclei` vowels, and every segment
+/// drew), its nucleus must be a vowel run of one of `ph.nuclei`'s admissible
+/// sizes (the syllable picks a nucleus template the same way it picks an
+/// onset and a coda — The Wearing), and every segment
 /// consumed must be a member of `ph.inventory`. Several romanizations are
 /// literal PREFIXES of others sharing the same manner (`z`/`zh`, `s`/`sh`,
 /// `n`/`ng`, `k`/`kx`), so a single greedy match per slot is unsound (a "z"
@@ -4819,11 +4821,13 @@ fn parse_syllables(chars: &[char], pos: usize, ph: &Phonology, attested_roman: &
     codas.dedup();
     for onset in &onsets {
         for after_onset in match_manner_run(chars, pos, onset, ph) {
-            for after_nucleus in match_nucleus(chars, after_onset, ph.nuclei, ph) {
-                for coda in &codas {
-                    for after_coda in match_manner_run(chars, after_nucleus, coda, ph) {
-                        if parse_syllables(chars, after_coda, ph, attested_roman) {
-                            return true;
+            for &size in &ph.nuclei {
+                for after_nucleus in match_nucleus(chars, after_onset, size, ph) {
+                    for coda in &codas {
+                        for after_coda in match_manner_run(chars, after_nucleus, coda, ph) {
+                            if parse_syllables(chars, after_coda, ph, attested_roman) {
+                                return true;
+                            }
                         }
                     }
                 }

@@ -79,8 +79,8 @@ pub fn render_phonology() -> String {
             template_list(&phonology.onsets)
         ));
         doc.push_str(&format!(
-            "- **Nuclei:** {} slot(s) per syllable\n",
-            phonology.nuclei
+            "- **Nuclei:** {}\n",
+            nucleus_list(&phonology.nuclei)
         ));
         doc.push_str(&format!(
             "- **Codas:** {}\n\n",
@@ -182,6 +182,23 @@ fn feature_description(seg: &Segment) -> String {
 /// `Debug` as its canonical name, e.g. `Labial`, `Stop`).
 fn lower<T: std::fmt::Debug>(value: &T) -> String {
     format!("{value:?}").to_lowercase()
+}
+
+/// Render the nucleus template set for the phonotactics section: each
+/// admissible size as that many `v` slots joined by `+` (`v`, `v+v`),
+/// comma-separated. Mirrors `template_list`'s shape, because since The
+/// Wearing the nucleus IS a template set rather than a single obligatory
+/// count. An empty set (never produced by `draw_phonology`, which always
+/// admits the simple vowel) reads as `*(none)*`.
+fn nucleus_list(sizes: &[usize]) -> String {
+    if sizes.is_empty() {
+        return "*(none)*".to_string();
+    }
+    sizes
+        .iter()
+        .map(|size| vec!["v"; *size].join("+"))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// Render a list of manner-slot templates for the phonotactics section:

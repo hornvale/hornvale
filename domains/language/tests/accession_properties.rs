@@ -46,8 +46,8 @@ fn ends_closed(form: &[Segment]) -> bool {
 /// A later-epoch concept's root always ends closed, and does not grow into
 /// a longer syllable tier than the epoch-0 forms drawn alongside it — but
 /// only when the underlying phonology actually distinguishes open from
-/// closed. `Seed(13)`/`"goblin"` is searched (by the same technique
-/// `test_phonology` documents) to draw `codas: [[Approximant], []]` — one
+/// closed. `Seed(23)`/`"goblin"` is searched (by the same technique
+/// `test_phonology` documents) to draw `codas: [[], [Nasal]]` — one
 /// non-empty AND one empty template — asserted below as a precondition so a
 /// future re-search that lands on a phonology where the two cases collapse
 /// (e.g. every template closed, the vacuous case the brief's original
@@ -57,7 +57,14 @@ fn ends_closed(form: &[Segment]) -> bool {
 /// passing for the wrong reason.
 #[test]
 fn later_epoch_roots_end_closed_when_the_phonology_admits_both() {
-    let seed = Seed(13);
+    // Re-searched from Seed(13) after The Wearing's nucleus fix reseeded the
+    // phonotactics draw; 13's codas collapsed to a single shape and the
+    // precondition below said so. Seed 23 is the first that satisfies EVERY
+    // clause this test asserts, the length-tier one included — seed 21
+    // passes the coda preconditions and then fails on length, which is why
+    // the search that produced this number ran the whole body, not just the
+    // preconditions.
+    let seed = Seed(23);
     let ph = draw_phonology(&seed, "goblin", &permissive_envelope());
     assert!(
         ph.codas.iter().any(|t| t.is_empty()),
