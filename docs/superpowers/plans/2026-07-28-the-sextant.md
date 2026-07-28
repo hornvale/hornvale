@@ -214,7 +214,10 @@ fn main() {
 
 - [ ] **Step 2: Verify it compiles and runs**
 
-Run: `cargo run -p hornvale-scene --example profile_scene -- 4`
+Run: `cargo run --release -p hornvale-scene --example profile_scene -- 4`
+
+`--release` is required: a debug run measures 30-90% higher and will not
+match spec §1's reference figures, which were taken on an optimized build.
 
 Expected: a table with six rows. On this box (`lefford`) the per-tile figure
 should land near **700 ms** and `hw_new` near **1800–2100 ms**; the reference
@@ -232,7 +235,7 @@ existing allow to module scope.
 
 - [ ] **Step 4: Record the measurement**
 
-Run: `cargo run -p hornvale-scene --example profile_scene -- 8 2>&1 | tee /tmp/sextant-baseline.txt`
+Run: `cargo run --release -p hornvale-scene --example profile_scene -- 8 2>&1 | tee /tmp/sextant-baseline.txt`
 
 Keep this output. Task 2 quotes it verbatim in the test's module doc, and
 the numbers become the ceilings' provenance.
@@ -266,11 +269,28 @@ this. It establishes the whole shape: measured numbers in the module doc,
 budget constants carrying their own provenance, the scoped `Instant` allow,
 and the verbatim ignore reason.
 
+**PROFILE — read this before setting any number.** `make gate-full` runs the
+heavy tier via `cargo nextest run --workspace --run-ignored only`
+(`scripts/gate-full-heavy.sh:47`) — **no `--release`**. Heavy batteries
+therefore execute in the **dev profile**, where `hornvale-kernel`,
+`-terrain`, `-climate`, `-worldgen` and `-language` carry `opt-level = 2`
+(root `Cargo.toml` `TOOL-hot-crate-opt`) but `hornvale-scene` does **not**.
+`graph_cost.rs`'s 90 s budget is a dev-profile number for the same reason.
+
+Consequence: **do not derive these ceilings from Task 1's `--release`
+figures.** A release-based ceiling is roughly 2× too tight and the battery
+will fail. Ceilings come from Step 2's own run of this test. Task 1's
+release numbers are the campaign's *reference* measurement (they are what
+spec §1 quotes) and go in the module doc clearly labelled as such — never as
+the ceiling basis.
+
 - [ ] **Step 1: Write the test**
 
-Create `cli/tests/scene_cost.rs`. Replace every `<MEASURED-*>` with the real
-figure from Task 1 Step 4 — these are the only placeholders in this plan and
-they exist because the values are not knowable until Task 1 runs.
+Create `cli/tests/scene_cost.rs`. Leave every `<MEASURED-*>` as a deliberate
+over-estimate for now (e.g. `100_000.0`) so the test compiles and runs;
+Step 2 replaces them with real values. These are the only placeholders in
+this plan and they exist because the values are the output of running the
+test itself.
 
 ```rust
 //! The scene APIs' **cost gate** (The Sextant §3.2): the client-facing
@@ -411,10 +431,26 @@ fn scene_api_cost_is_bounded_on_seed_42() {
 }
 ```
 
-- [ ] **Step 2: Run it and confirm it passes**
+- [ ] **Step 2: Measure in the test's own profile, then set the ceilings**
 
 Run: `cargo test -p hornvale --test scene_cost -- --ignored --nocapture`
-Expected: PASS, printing three measured/budget pairs.
+Expected: PASS against the placeholder ceilings, printing three
+measured/budget pairs. **These printed values are the ceiling basis.**
+
+Run it three times and take the slowest of the three — this box runs
+parallel campaign sessions, and a ceiling set from a quiet-box run will
+flake under contention (`docs/timings.md`'s `cpu_ratio` column exists
+because of exactly this).
+
+Now set each constant to ~2× the slowest measured value, rounded to
+something legible, and record in each constant's doc comment: the measured
+value, the date, the host (`lefford`), and **"dev profile, as `gate-full`
+runs it"**. Re-run once more and confirm PASS against the real ceilings.
+
+For the module doc's `## Measured` block, record BOTH, labelled:
+the dev-profile figures from this step (the ceiling basis) and Task 1's
+release-profile figures from `/tmp/sextant-baseline.txt` (the campaign's
+reference, matching spec §1).
 
 - [ ] **Step 3: Falsify it — prove the ceiling can actually fire**
 
@@ -476,7 +512,7 @@ The `--` separator is required (`scripts/timed.sh:16-17`: `scripts/timed.sh
 unrelated `--` passed through to cargo:
 
 ```bash
-bash scripts/timed.sh scene-profile -- cargo run -p hornvale-scene --example profile_scene -- 8
+bash scripts/timed.sh scene-profile -- cargo run --release -p hornvale-scene --example profile_scene -- 8
 ```
 
 Then confirm the row landed: `make timings LABEL=scene-profile`
