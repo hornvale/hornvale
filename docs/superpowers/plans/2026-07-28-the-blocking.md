@@ -1901,6 +1901,13 @@ fn walking_a_chamber_commits_nothing() {
 Run: `cargo test -p hornvale-vessel --test the_blocking 2>&1 | tail -20`
 Expected: FAIL — `go` indoors still answers `INDOOR_LATERAL_REFUSAL`, so `a_wall_refuses_with_a_physical_reason` fails on the `no north` assertion.
 
+**Two things Task 4 changed that this task must respect:**
+
+1. **The picture is `(2w+1) x (2h+1)`, not `w x h`.** Task 4 found that a 1:1 grid has nowhere to draw a wall — every cell is owned by a chamber and therefore floor, and a wall is a property of the *boundary between* two cells. So odd picture positions are cells and even ones are boundaries. Cell `(x, y)` is at picture `(2x+1, 2y+1)`. Any "you are here" mark must be placed through that mapping, not at `(x, y)`.
+2. **`render` no longer takes `structure`/`at`.** Task 4 dropped them because a "you are here" mark is a *cell* position and nothing had one yet — marking a whole region would have claimed precision the session did not have. **This task is what creates that position**, so add the mark here:
+   - a fourth glyph (`@`) at the standing cell, and a legend entry for it;
+   - **the legend entry must be `examine`-able**, because `every_noun_the_plan_depicts_is_examinable` walks the legend and it is the parity contract. Resolve it to the session's existing self-description (`whoami`'s content) rather than authoring a second one — two descriptions of the possessed agent is exactly the drift §6 exists to prevent. If you conclude the mark should stay out of the legend, that is defensible, but then the picture depicts something it refuses to name, and you must say so.
+
 - [ ] **Step 3: Give the possession a cell**
 
 `self.inside` is `Option<(Structure, usize)>` at nine sites. **Promote it to a named struct** rather than a three-tuple — a bare `Cell` as a tuple's third element is where these call sites stop being readable:
@@ -1929,7 +1936,7 @@ struct Inside {
 
 `enter` sets `cell` to the doorway the possession came through, or the region's centre for the threshold chamber. `go <dir>` then:
 
-1. translates the bearing to a cell delta (N is `-y`, matching the render's top-down rows);
+1. translates the bearing to a cell delta (N is `-y`, matching the render's top-down rows — and note the picture's rows are `2y+1`, so a bearing maps to a CELL delta, never to a picture delta);
 2. refuses if the target pair is in `lattice.walls`, or if the target leaves the extent;
 3. if the target cell is a doorway to another chamber, **moves chamber** — that is a `COMMIT`-tier band step in the same sense `enter` is, so it renders the new chamber, not a cell move;
 4. otherwise updates `cell` and renders briefly — a cell step is not worth a full chamber description every time. Say what changed and what is now adjacent.
