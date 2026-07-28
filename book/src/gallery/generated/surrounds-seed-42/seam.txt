@@ -7,4 +7,4 @@ $ hornvale scene surrounds --world world.json --room 724698318 --render ascii
   ~~~~~
   ways on: NW, SW, E
   12 cells beyond a face seam: real ground, no honest place on this chart.
-  legend: bathypelagic, unremarkable ground shaded dry in a hollow
+  legend: bathypelagic, marine snow, drifting down in slack water over a trough

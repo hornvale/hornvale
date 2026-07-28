@@ -4,7 +4,7 @@
 
 use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
-use hornvale_climate::{BiomeExpr, Formation, Stratum};
+use hornvale_climate::{BiomeExpr, Formation, Medium, Stratum};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{RoomAddr, Seed};
 
@@ -79,7 +79,14 @@ fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
 
 /// The micro-habitat clause reads the MicroField deterministically (no draw).
 fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
-    let _ = expr;
+    match expr.realm.medium {
+        Medium::AirOverRock => land_micro_habitat(micro),
+        Medium::Water => water_micro_habitat(micro, expr.stratum),
+    }
+}
+
+/// The overworld's habitat clause — the original body, unchanged.
+fn land_micro_habitat(micro: MicroField) -> String {
     let relief = if micro.relief > 0.33 {
         "on a rise"
     } else if micro.relief < -0.33 {
@@ -102,6 +109,46 @@ fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
         ""
     };
     [aspect, wet, relief]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The water column's habitat clause: the same micro-field, read as water
+/// reads it.
+///
+/// Relief becomes the floor beneath rather than the ground underfoot; aspect
+/// becomes light, and only where light arrives — below the sunlit water,
+/// nothing is sun-warmed or shaded, it is simply dark; and wetness, which
+/// means nothing in the sea, becomes the set of the current.
+fn water_micro_habitat(micro: MicroField, stratum: Stratum) -> String {
+    let relief = if micro.relief > 0.33 {
+        "over a seamount"
+    } else if micro.relief < -0.33 {
+        "over a trough"
+    } else {
+        ""
+    };
+    let light = if matches!(stratum, Stratum::Epipelagic | Stratum::Surface) {
+        if micro.aspect > 0.33 {
+            "sunlit"
+        } else if micro.aspect < -0.33 {
+            "in blue shadow"
+        } else {
+            ""
+        }
+    } else {
+        ""
+    };
+    let current = if micro.wetness > 0.33 {
+        "swept by a current"
+    } else if micro.wetness < -0.33 {
+        "in slack water"
+    } else {
+        ""
+    };
+    [light, current, relief]
         .into_iter()
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
@@ -131,7 +178,6 @@ pub(crate) fn exotic_clause(n: Negations) -> String {
 /// Base-variety pool per biome (+ substrate for deserts). Real content drawn
 /// from cycle-02 Appendix A; extend as authoring amplifies (decision 0009).
 fn variety_pool(formation: Formation, stratum: Stratum, substrate: Substrate) -> Pool {
-    let _ = stratum;
     match (formation, substrate) {
         (Formation::Desert, Substrate::Sand) => &[(3.0, "erg dunes"), (2.0, "a nabkha field")],
         (Formation::Desert, Substrate::Evaporite) => {
@@ -170,7 +216,71 @@ fn variety_pool(formation: Formation, stratum: Stratum, substrate: Substrate) ->
             (2.0, "a liana tangle"),
             (2.0, "a stream gully"),
         ],
-        _ => &[(2.0, "broken terrain"), (2.0, "unremarkable ground")],
+        (Formation::Ice, _) => &[
+            (3.0, "a snowfield"),
+            (2.0, "a crevasse field"),
+            (2.0, "wind-carved sastrugi"),
+            (1.0, "blue ice, swept bare"),
+        ],
+        (Formation::Shrubland, _) => &[
+            (3.0, "thorn scrub"),
+            (2.0, "a chaparral slope"),
+            (2.0, "matorral, low and grey"),
+            (1.0, "a burnt-over thicket"),
+        ],
+        (Formation::SeaIce, _) => &[
+            (3.0, "a pressure ridge"),
+            (2.0, "a lead of open water"),
+            (2.0, "rafted floe"),
+            (1.0, "a melt pond"),
+        ],
+        (Formation::Reef, _) => &[
+            (3.0, "a coral head"),
+            (2.0, "a spur-and-groove channel"),
+            (2.0, "a rubble apron"),
+            (2.0, "a stand of staghorn"),
+            (1.0, "a bommie standing alone"),
+        ],
+        (Formation::KelpForest, _) => &[
+            (3.0, "a kelp canopy"),
+            (2.0, "a holdfast tangle"),
+            (2.0, "a stipe forest"),
+            (1.0, "an urchin barren, grazed bare"),
+        ],
+        (Formation::Vent, _) => &[
+            (3.0, "a black smoker"),
+            (2.0, "a chimney field"),
+            (2.0, "a tubeworm thicket"),
+            (1.0, "a shimmering haze of hot water"),
+        ],
+        (Formation::Upwelling, _) => &[
+            (3.0, "a plankton bloom"),
+            (2.0, "cold water rising"),
+            (1.0, "a bait ball, turning"),
+        ],
+        // The arm the facets exist for: one formation, read by its depth.
+        // The flat enum could not say this, because depth had already spent
+        // the single slot the community needed.
+        (Formation::OpenWater, _) => match stratum {
+            Stratum::Epipelagic | Stratum::Surface => &[
+                (3.0, "open blue water"),
+                (2.0, "a drifting sargassum mat"),
+                (1.0, "a shoal turning as one"),
+            ],
+            Stratum::Mesopelagic => &[
+                (3.0, "the twilight water"),
+                (2.0, "a scattering layer, rising"),
+            ],
+            Stratum::Bathypelagic => &[
+                (3.0, "the lightless water"),
+                (2.0, "marine snow, drifting down"),
+            ],
+            Stratum::Abyssal => &[
+                (3.0, "the abyssal plain"),
+                (2.0, "a field of manganese nodules"),
+            ],
+            Stratum::Hadal => &[(3.0, "the trench wall"), (2.0, "the trench floor")],
+        },
     }
 }
 
@@ -303,5 +413,148 @@ mod tests {
             let got = render(n, micro0(), BiomeExpr::for_legacy(*biome), Seed(42), &addr);
             assert_eq!(&got, expected, "{biome:?} moved under the re-key");
         }
+    }
+
+    fn micro_high() -> MicroField {
+        MicroField {
+            relief: 0.9,
+            aspect: 0.9,
+            wetness: 0.9,
+            openness: 0.5,
+        }
+    }
+
+    fn mundane_negations() -> Negations {
+        Negations {
+            substrate: Substrate::Ordinary,
+            energy: EnergySource::Sunlit,
+            kingdom: Kingdom::PlantAnimal,
+            endemic: false,
+        }
+    }
+
+    fn addr_() -> RoomAddr {
+        RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        }
+    }
+
+    const ALL_FORMATIONS: &[Formation] = &[
+        Formation::Ice,
+        Formation::Tundra,
+        Formation::Taiga,
+        Formation::TemperateGrassland,
+        Formation::Shrubland,
+        Formation::TemperateForest,
+        Formation::TemperateRainforest,
+        Formation::Desert,
+        Formation::Savanna,
+        Formation::TropicalSeasonalForest,
+        Formation::TropicalRainforest,
+        Formation::Alpine,
+        Formation::SeaIce,
+        Formation::Reef,
+        Formation::KelpForest,
+        Formation::Vent,
+        Formation::Upwelling,
+        Formation::OpenWater,
+    ];
+
+    #[test]
+    fn no_formation_falls_through_to_the_catch_all() {
+        // The 79%: every formation must have prose of its own.
+        for f in ALL_FORMATIONS {
+            for stratum in [Stratum::Surface, Stratum::Epipelagic, Stratum::Hadal] {
+                let pool = variety_pool(*f, stratum, Substrate::Ordinary);
+                assert!(!pool.is_empty(), "{f:?} has no pool");
+                for (_, word) in pool {
+                    assert!(
+                        *word != "broken terrain" && *word != "unremarkable ground",
+                        "{f:?} still falls through to the catch-all"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn open_water_reads_differently_at_different_depths() {
+        // The structural payoff: one formation, read by its depth.
+        let at = |st| {
+            render(
+                mundane_negations(),
+                micro0(),
+                BiomeExpr {
+                    realm: hornvale_climate::Realm::WATERWORLD,
+                    formation: Formation::OpenWater,
+                    stratum: st,
+                },
+                Seed(42),
+                &addr_(),
+            )
+        };
+        let shallow = at(Stratum::Epipelagic);
+        let deep = at(Stratum::Bathypelagic);
+        let trench = at(Stratum::Hadal);
+        assert_ne!(shallow, deep);
+        assert_ne!(deep, trench);
+    }
+
+    #[test]
+    fn nothing_underwater_is_dry_or_sun_warmed() {
+        for stratum in hornvale_climate::Realm::WATERWORLD.strata() {
+            for micro in [micro_high(), micro0()] {
+                let d = render(
+                    mundane_negations(),
+                    micro,
+                    BiomeExpr {
+                        realm: hornvale_climate::Realm::WATERWORLD,
+                        formation: Formation::OpenWater,
+                        stratum: *stratum,
+                    },
+                    Seed(42),
+                    &addr_(),
+                );
+                for bad in ["dry", "damp", "sun-warmed", "on a rise", "in a hollow"] {
+                    assert!(!d.contains(bad), "{stratum:?} rendered {bad:?}: {d}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn only_the_sunlit_water_is_described_by_its_light() {
+        let at = |st| {
+            render(
+                mundane_negations(),
+                micro_high(),
+                BiomeExpr {
+                    realm: hornvale_climate::Realm::WATERWORLD,
+                    formation: Formation::OpenWater,
+                    stratum: st,
+                },
+                Seed(42),
+                &addr_(),
+            )
+        };
+        assert!(at(Stratum::Epipelagic).contains("sunlit"));
+        assert!(!at(Stratum::Bathypelagic).contains("sunlit"));
+        assert!(!at(Stratum::Abyssal).contains("sunlit"));
+    }
+
+    #[test]
+    fn land_micro_clauses_are_unchanged() {
+        // The guard on the guard: gating the water path must not disturb land.
+        let d = render(
+            mundane_negations(),
+            micro_high(),
+            BiomeExpr::for_legacy(Biome::Savanna),
+            Seed(42),
+            &addr_(),
+        );
+        assert!(d.contains("sun-warmed"), "{d}");
+        assert!(d.contains("damp"), "{d}");
+        assert!(d.contains("on a rise"), "{d}");
     }
 }
