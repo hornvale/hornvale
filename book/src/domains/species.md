@@ -320,11 +320,31 @@ Two things follow that are worth recording here rather than only in
 aversion structure with no pairwise machinery whatever — each people gates on
 its *own* authored number, so one people can decline a fight its neighbour is
 happy to pick — and on the shipped roster it means the goblin, at 0.5, never
-raids anyone while the other three may. Second, and more pointed: this is the
-**only** per-species input the bake receives. Neither the condition niche nor
-any other component enters that history, so every people-to-people asymmetry
-the deep past produces runs through this one scalar. That is a real limit of
-the current bake, not a property of the vector.
+raids anyone while the other four may. Second, and more pointed at the time:
+threat response was for one campaign the **only** per-species input the bake
+received, so every people-to-people asymmetry the deep past produced ran
+through a single scalar.
+
+**That is no longer true, and the two scalars that joined it were already
+authored and simply unread.** *The Tithe* gave the bake a standing tribute
+relation, and both sides of the negotiation over it consult a different axis of
+the same authored psychology. The vassal's **`SocietyVector.in_group_radius`**
+sets its **concealment** — how much of what it owes it can hide from an
+outsider — so the insular kobold at 0.2 withholds most and the expansive gnoll
+at 0.7 least. The patron's **`MindVector.time_horizon`** is read as a
+**discount rate** on the future stream its vassal represents: because a
+community grows logistically, maximum sustainable yield sits at half of
+capacity, so a generational patron holds its vassal near that peak while an
+immediate one strips it. On the shipped roster the patrons order gnoll (0.2),
+bugbear (0.3), hobgoblin (0.5), kobold (0.8) — the goblin's horizon is 0.5 but
+its threat response bars it from raiding at all, so it never becomes a patron —
+and extraction rate and relation lifetime are both monotone in that order. It
+is also the mechanism by which a subjugated people can be extinguished at all,
+since extermination is optimal exactly when the discount rate exceeds intrinsic
+growth, which makes extinction rare and concentrated on the short horizon.
+Three authored scalars now reach the deep history where one did. The condition
+niche still does not, which remains a real limit of the bake rather than a
+property of the vector.
 
 **The condition niche's four axes, and the frame each is said in.** The
 biosphere component's `ConditionNiche` carries one response curve per
