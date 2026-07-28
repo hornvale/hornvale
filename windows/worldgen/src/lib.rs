@@ -20,7 +20,7 @@ use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{
     ConceptRegistry, Domain, EntityId, Fact, GeoCoord, Geosphere, KindId, LedgerError,
     ObserverContext, PerceptionLens, PhenomenaSource, Phenomenon, ReferenceElevation,
-    RegistryError, Seed, Temperature, Value, World, WorldContext, WorldTime, observe,
+    RegistryError, Seed, Temperature, Value, Visibility, World, WorldContext, WorldTime, observe,
 };
 use hornvale_paleoclimate::{EraClimate, PaleoRecord, caloric_summer_index, integrate_ice};
 use hornvale_terrain::{
@@ -3013,8 +3013,9 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     // world (even one with a corrupt sky pin) returns Ok(empty) without ever
     // deriving climate/sky — the "no place, no phenomena" contract. So this
     // standalone accessor keeps its own body rather than eagerly building a
-    // climate to delegate through `observed_phenomena_from_climate` (which the
-    // almanac render, where a climate already exists, uses instead).
+    // climate to delegate through a pre-built-climate reader (which the almanac
+    // render, where a climate already exists, uses instead — see
+    // `observed_phenomena_occluded`).
     let Some(place) = hornvale_terrain::places(world).first().map(|p| p.id) else {
         return Ok(Vec::new());
     };
@@ -3032,12 +3033,19 @@ pub fn observed_phenomena(world: &World, day: f64) -> Result<Vec<Phenomenon>, Bu
     ))
 }
 
-/// [`observed_phenomena`] from a PRE-BUILT climate — builds the phenomena
-/// sources off the shared climate via [`phenomena_sources_from`] instead of
-/// re-deriving one, so the almanac render shares a single climate (The Single
-/// Sculpt). Byte-identical to `observed_phenomena` for the same world's
-/// climate.
-fn observed_phenomena_from_climate(
+/// [`observed_phenomena`] from a PRE-BUILT climate (The Single Sculpt), as an
+/// observer under that day's actual WEATHER sees it — the occluded read.
+///
+/// This is a **presentation** accessor, deliberately separate from the
+/// unoccluded primitive above. The primitive is what genesis and belief
+/// glossing re-derive from (`derived-from-phenomenon` is a committed
+/// predicate, and a goblin's identity-lensed observation is pinned bytewise to
+/// it), so occluding it would rewrite the world: under seed 42's day-0
+/// overcast it cost the pantheon 23 of its 48 deities. A culture's gods form
+/// over generations and must not turn on whether one morning was cloudy.
+///
+/// Occlusion is a property of a MOMENT'S viewing, so it lives here.
+fn observed_phenomena_occluded(
     world: &World,
     day: f64,
     climate: &GeneratedClimate,
@@ -3053,10 +3061,84 @@ fn observed_phenomena_from_climate(
         &ObserverContext {
             place,
             time: WorldTime { day },
-            lens: PerceptionLens::identity(),
+            lens: occlusion_lens_at(world, climate, position, day),
             position,
         },
     ))
+}
+
+// `observed_phenomena_from_climate` — the unoccluded PRE-BUILT-climate reader —
+// was removed when its only caller, the almanac render, moved to
+// `observed_phenomena_occluded` below. That function keeps The Single Sculpt
+// property (it takes the caller's already-built climate rather than deriving
+// one); it simply also applies the day's occlusion, which is what a presented
+// sky wants. The unoccluded reader survives as `observed_phenomena`, which
+// genesis and belief glossing still use.
+
+/// Turn a sky's weather into the occlusion it imposes: a perception lens (how
+/// much attention each venue still earns) and a [`Visibility`] (how much of
+/// the sky reaches the eye). The composition root is the ONLY place weather
+/// becomes occlusion — no domain learns that clouds exist.
+///
+/// Identity and [`Visibility::CLEAR`] under a clear, cloudless sky **by
+/// construction**, the same discipline [`perception_lens`] keeps at the goblin
+/// baseline: `observe` then performs no arithmetic at all, so an unclouded
+/// world is byte-identical to its pre-occlusion self.
+///
+/// Ambient rises above 1.0 deliberately as the sky dims — the occluder
+/// promotes itself. Under a deck you notice the closeness of the air, and the
+/// salience sort does the rest.
+pub fn occlusion(
+    state: hornvale_climate::WeatherState,
+    cloud: hornvale_climate::CloudType,
+) -> (PerceptionLens, Visibility) {
+    use hornvale_climate::{CloudType, WeatherState};
+    // The fraction of the sky that still reaches the eye.
+    let v = match (state, cloud) {
+        // High cirrus over an otherwise clear sky veils without hiding.
+        (WeatherState::Clear, CloudType::Cirrus) => 0.85,
+        (WeatherState::Clear, _) => 1.0,
+        (WeatherState::Fair, _) => 0.7,
+        (WeatherState::Overcast, _) => 0.3,
+        (WeatherState::Rain, _) => 0.1,
+        (WeatherState::Storm, _) => 0.0,
+    };
+    if v == 1.0 {
+        return (PerceptionLens::identity(), Visibility::CLEAR);
+    }
+    let lens = PerceptionLens {
+        day_sky: v,
+        night_sky: v,
+        // Bounded at 1.5, matching `perception_lens`'s ambient range.
+        ambient: 1.0 + (1.0 - v) * 0.5,
+    };
+    // `v` is a literal in [0, 1] on every arm, so `new` cannot fail; the
+    // fallback keeps the function total rather than panicking.
+    (lens, Visibility::new(v).unwrap_or(Visibility::CLEAR))
+}
+
+/// The occlusion lens over a placed observer at `day` — the single place a
+/// cell's weather becomes a lens, so the phenomena paths cannot drift apart.
+/// The identity lens for a position-blind observation: nowhere in particular
+/// has no weather.
+fn occlusion_lens_at(
+    world: &World,
+    climate: &GeneratedClimate,
+    position: Option<hornvale_kernel::GeoCoord>,
+    day: f64,
+) -> PerceptionLens {
+    let Some(coord) = position else {
+        return PerceptionLens::identity();
+    };
+    let Ok(terrain) = terrain_of(world) else {
+        return PerceptionLens::identity();
+    };
+    let cell = terrain.nearest_cell(coord.latitude, coord.longitude);
+    let (lens, _) = occlusion(
+        climate.weather_at(cell, day),
+        climate.cloud_type_at(cell, day),
+    );
+    lens
 }
 
 /// Derive a species' perception lens from its authored vector (spec §4).
@@ -3306,6 +3388,17 @@ fn observe_with_sources(
         &ObserverContext {
             place,
             time: WorldTime { day },
+            // NO occlusion here, deliberately. This is the observation GENESIS
+            // derives from — settlement name glosses and the deities a people
+            // believe in (`derived-from-phenomenon` is a committed predicate).
+            // A culture's pantheon forms over generations; it must not depend
+            // on whether day 0 happened to be overcast. Occluding here cost
+            // seed 42 twenty-three of its forty-eight deities and moved the
+            // world's bytes — see the campaign's determinism note.
+            //
+            // Occlusion is a property of a MOMENT'S observation, so it lives
+            // on the reading paths (`observed_phenomena*`, `sky_report_from`),
+            // not on the path that authors the world.
             lens: perception_lens(perception),
             position,
         },
@@ -6256,7 +6349,9 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
         seed: world.seed.0,
         sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
         climate: climate_report(world),
-        phenomena: observed_phenomena_from_climate(world, 0.0, &climate)?,
+        // The almanac PRESENTS the sky, so it reads the occluded observation:
+        // night-stars must not stay salient under a rain deck.
+        phenomena: observed_phenomena_occluded(world, 0.0, &climate)?,
         places: hornvale_terrain::places(world),
         land_lines: land_lines_from(&terrain),
         biome_lines: biome_lines_from(&climate),
@@ -6340,6 +6435,104 @@ mod tests {
             &SettlementPins::default(),
         )
         .expect("seed 42 builds")
+    }
+
+    #[test]
+    fn a_clear_sky_occludes_nothing_by_construction() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (lens, vis) = occlusion(WeatherState::Clear, CloudType::None);
+        assert!(
+            lens.is_identity(),
+            "a clear sky must yield the identity lens, or `observe` stops \
+             being a byte-level no-op on the legacy path"
+        );
+        assert_eq!(vis, Visibility::CLEAR);
+    }
+
+    #[test]
+    fn thicker_cloud_occludes_monotonically() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let states = [
+            (WeatherState::Clear, CloudType::None),
+            (WeatherState::Fair, CloudType::Cumulus),
+            (WeatherState::Overcast, CloudType::Stratus),
+            (WeatherState::Rain, CloudType::Nimbostratus),
+            (WeatherState::Storm, CloudType::Cumulonimbus),
+        ];
+        let mut last = f64::INFINITY;
+        for (s, c) in states {
+            let (lens, vis) = occlusion(s, c);
+            assert!(
+                vis.get() <= last,
+                "visibility must not rise as cloud thickens: {s:?}"
+            );
+            last = vis.get();
+            assert!(lens.night_sky <= 1.0, "the sky never brightens: {s:?}");
+            assert!(
+                lens.ambient >= 1.0,
+                "the occluder promotes itself: {s:?} gave ambient {}",
+                lens.ambient
+            );
+        }
+    }
+
+    #[test]
+    fn a_storm_hides_the_sky_entirely() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (_, vis) = occlusion(WeatherState::Storm, CloudType::Cumulonimbus);
+        assert_eq!(vis.get(), 0.0);
+    }
+
+    #[test]
+    fn high_cirrus_over_a_clear_sky_dims_only_slightly() {
+        use hornvale_climate::{CloudType, WeatherState};
+        let (_, vis) = occlusion(WeatherState::Clear, CloudType::Cirrus);
+        assert!(vis.get() > 0.75, "cirrus must not cull the stars");
+        assert!(vis.get() < 1.0, "but it is not nothing");
+    }
+
+    #[test]
+    fn occlusion_composes_with_species_perception() {
+        // `perception_lens` is already non-identity for non-goblin species, so
+        // occlusion must MULTIPLY with it, not replace it.
+        let nocturnal = hornvale_species::PerceptionVector {
+            activity: hornvale_species::ActivityCycle::Nocturnal,
+            sky_attention: 0.5,
+            night_vision: 0.5,
+        };
+        let species = perception_lens(&nocturnal);
+        assert!(!species.is_identity(), "fixture must be non-identity");
+        let (occ, _) = occlusion(
+            hornvale_climate::WeatherState::Overcast,
+            hornvale_climate::CloudType::Stratus,
+        );
+        let composed = occ.compose(&species);
+        assert_eq!(composed.night_sky, occ.night_sky * species.night_sky);
+        assert_eq!(composed.ambient, occ.ambient * species.ambient);
+        assert_eq!(composed.day_sky, occ.day_sky * species.day_sky);
+    }
+
+    /// Genesis must observe an UNOCCLUDED sky.
+    ///
+    /// Phenomena are not purely a read: `derived-from-phenomenon` is a
+    /// committed predicate, so the sky a people observes at genesis decides
+    /// which deities they believe in and how their settlements are named.
+    /// Wiring occlusion into that path (rather than into the reading paths)
+    /// culled the faint night-stars under seed 42's day-0 overcast and cost
+    /// the world 23 of its 48 deities — a save-format change wearing the
+    /// costume of a presentation fix.
+    ///
+    /// These counts are the pre-campaign values, and they are the guard: a
+    /// culture's pantheon forms over generations and must not depend on
+    /// whether day 0 happened to be cloudy.
+    #[test]
+    fn genesis_observes_an_unoccluded_sky() {
+        let world = vigil_world();
+        let count = |p: &str| world.ledger.iter().filter(|f| f.predicate == p).count();
+        assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
+        assert_eq!(count("derived-from-phenomenon"), 48);
+        assert_eq!(count("deity-name"), 48);
+        assert_eq!(count("name-gloss"), 207);
     }
 
     /// The predicate sequence committed for one species entity, in ledger order.
