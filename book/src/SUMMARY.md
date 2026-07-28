@@ -264,6 +264,7 @@
 - [The Shelf-Mark](./chronicle/the-shelf-mark.md)
 - [The Actants](./chronicle/the-actants.md)
 - [The Vacancy](./chronicle/the-vacancy.md)
+- [The Hoist](./chronicle/the-hoist.md)
 
 # Appendix: The Frontier
 

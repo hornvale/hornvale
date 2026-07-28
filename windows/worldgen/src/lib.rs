@@ -194,6 +194,25 @@ pub enum BuildDepth {
     Full,
 }
 
+/// What a build produced beyond the ledger: the values a consumer would
+/// otherwise re-derive with [`terrain_of`] / [`climate_from`]. Each field is
+/// `Some` exactly when the requested [`BuildDepth`] built it — `None` means
+/// "this rung never produced that artifact", NOT "rebuild it".
+///
+/// The world remains the durable representation; these are the build's
+/// byproducts, handed back so a caller that JUST built the world need not
+/// re-derive them (The Single Sculpt, extended across the API boundary).
+/// Re-derivation is unaffected and remains the supported path for a caller
+/// holding a *loaded* world.
+pub struct BuildArtifacts {
+    /// The built world — exactly what [`build_world_to`] returns.
+    pub world: World,
+    /// The sculpted terrain, `Some` iff depth >= [`BuildDepth::Terrain`].
+    pub terrain: Option<GeneratedTerrain>,
+    /// The derived climate, `Some` iff depth >= [`BuildDepth::Settlements`].
+    pub climate: Option<GeneratedClimate>,
+}
+
 /// The live astronomy provider a world uses, reconstructed from its ledger.
 pub enum Sky {
     /// Tier-0 constant sun.
@@ -4252,6 +4271,7 @@ pub fn build_world_from_components(
         wc,
         BuildDepth::Full,
     )
+    .map(|built| built.world)
 }
 
 /// Build a world only as deep as `depth` (spec §4 / MAP-25). At any depth the
@@ -4267,6 +4287,23 @@ pub fn build_world_to(
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
+    build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth).map(|built| built.world)
+}
+
+/// Build a world to `depth` and hand back the artifacts the build already
+/// constructed (see [`BuildArtifacts`]). Prefer this over [`build_world_to`]
+/// followed by [`terrain_of`]/[`climate_from`] when you are the one building
+/// the world: the terrain this returns is the same value `terrain_of(&world)`
+/// would re-sculpt, built once instead of twice.
+pub fn build_world_to_with_artifacts(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+    depth: BuildDepth,
+) -> Result<BuildArtifacts, BuildError> {
     build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
@@ -4375,7 +4412,7 @@ pub fn history_for(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
 ) -> Result<History, BuildError> {
-    let world = build_to(
+    let built = build_to(
         seed,
         pins,
         sky,
@@ -4384,9 +4421,17 @@ pub fn history_for(
         wc,
         BuildDepth::Terrain,
     )?;
-    let terrain = terrain_of(&world)?;
-    let climate = climate_from(&world, &terrain)?;
-    bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)
+    // A Terrain-depth build sculpts terrain and hands it back, so this reuses
+    // it rather than re-sculpting with `terrain_of` (the same double sculpt
+    // this campaign removes from the lab view chain, here inside worldgen).
+    // Climate is `None` at this depth — the rung never builds one — so it is
+    // derived, exactly as before.
+    let terrain = match built.terrain {
+        Some(terrain) => terrain,
+        None => terrain_of(&built.world)?,
+    };
+    let climate = climate_from(&built.world, &terrain)?;
+    bake_history_from(seed, &built.world, &terrain, &climate, settlement_pins, wc)
 }
 
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
@@ -4403,7 +4448,7 @@ fn build_to(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
-) -> Result<World, BuildError> {
+) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
     // ecs-c6 T3, spec §7 as a load-time gate: every functional predicate the
@@ -4445,7 +4490,11 @@ fn build_to(
     })?;
 
     if depth == BuildDepth::Astronomy {
-        return Ok(world);
+        return Ok(BuildArtifacts {
+            world,
+            terrain: None,
+            climate: None,
+        });
     }
 
     // Sculpt the terrain ONCE here and KEEP it: the same `GeneratedTerrain`
@@ -4474,7 +4523,13 @@ fn build_to(
     })?;
 
     if depth <= BuildDepth::Terrain {
-        return Ok(world);
+        // The line that used to drop the sculpt on the floor, forcing every
+        // view-chain consumer to re-derive it with `terrain_of`.
+        return Ok(BuildArtifacts {
+            world,
+            terrain: Some(terrain),
+            climate: None,
+        });
     }
 
     // Settlement pins are never reconstructed (settlements persist as their
@@ -4864,7 +4919,11 @@ fn build_to(
     })?;
 
     if depth <= BuildDepth::Settlements {
-        return Ok(world);
+        return Ok(BuildArtifacts {
+            world,
+            terrain: Some(terrain),
+            climate: Some(climate),
+        });
     }
 
     // `geo` borrows `terrain`, and `namers` borrows `phonologies` (see
@@ -5149,7 +5208,11 @@ fn build_to(
         Ok(())
     })?;
 
-    Ok(world)
+    Ok(BuildArtifacts {
+        world,
+        terrain: Some(terrain),
+        climate: Some(climate),
+    })
 }
 
 /// The entity carrying the world's planet classification (`is-a`,
