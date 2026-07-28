@@ -73,16 +73,22 @@ enum value:
 ```
 realm      : formation   : stratum      : variant      : overlay
 -----------------------------------------------------------------
-marine     : reef        : epipelagic   : fringing     : —
-marine     : vent        : abyssal      : black-smoker : [endemic]
-marine     : open-water  : bathypelagic : —            : —
-terrestrial: savanna     : —            : cerrado      : —
-terrestrial: savanna     : —            : grass        : [fungal]
+waterworld : reef        : epipelagic   : fringing     : —
+waterworld : vent        : abyssal      : black-smoker : [endemic]
+waterworld : open-water  : bathypelagic : —            : —
+overworld  : savanna     : surface      : cerrado      : —
+overworld  : savanna     : surface      : grass        : [fungal]
+underworld : cavern      : (deep layer) : flowstone    : [chemosynthetic]
+skyworld   : (later)     : high         : —            : —
 ```
+
+Realm names above are illustrative; realm is a *triple*, not an enum — see
+§3.4. The last two rows are not built by any campaign proposed here; they are
+present to show the taxonomy expresses them without change.
 
 | facet | what it answers | status today |
 |---|---|---|
-| **realm** | land or sea | implicit (`is_marine()` predicate) |
+| **realm** | which world — `(medium, access, strata)`, see §3.4 | implicit (`is_marine()` predicate) |
 | **formation** | which community | `Biome`, conflated with stratum |
 | **stratum** | which layer of the column | conflated into `Biome` |
 | **variant** | which expression of the formation | `variety_pool` strings, unnamed |
@@ -133,6 +139,58 @@ with a clear recommendation:
 Note (b) makes the water column and the rock column the same mechanism, which
 is the outcome MAP-69 wants anyway. That is the strongest argument for it.
 
+### 3.4 Realm is a triple, not an enum
+
+**Amended after G3 (owner: design for sky realms and, eventually, planes).**
+
+The obvious `realm = {Terrestrial, Marine}` enum is wrong, and would have to be
+torn out the first time a sky realm arrived. Three ideonomy passes converged
+on a decomposition instead:
+
+```
+realm = (medium, access, strata)
+
+Overworld      = (air-over-rock, default, [surface])
+Waterworld     = (water,         dive,    [epipelagic .. hadal])
+Underworld     = (rock,          descend, [The Deep's geological layers])
+Skyworld       = (air,           fly,     [low .. high])
+Plane of Fire  = (fire,          portal,  [...])
+Astral         = (aether,        ritual,  [])
+```
+
+Three consequences, in ascending order of importance:
+
+1. **`stratum` becomes realm-relative.** It is simply *position within this
+   realm's column*. The pelagic zones and The Deep's geological layers stop
+   being two constructs and become one — which is the same unification §3.3(b)
+   argues for on the traversal side.
+2. **Realms are never enumerated.** A new realm is a new *value*, not a new
+   axis, so sky realms and eventually planes cost no taxonomy change.
+3. **The discriminating property is `access`, not materiality.** Lattice-
+   finding put the elemental planes in a diamond — material (they have a
+   medium) yet reached like the immaterial ones — which rules materiality out
+   as the discriminator. Column realms are reached by *continuous movement
+   with a medium change* (walk / dive / fly / dig); planes by *transit*
+   (portal, ritual, death). The engine already has both primitives: compass
+   movement is continuous, and The Lintel's `enter`/`out` is a discontinuous
+   band transition.
+
+**The vertical scale is signed, and its extremes are already modelled.**
+Placing realms on distance-from-surface gives `sky (+) / surface (0) /
+sea (-) / rock (--)`, and the unnamed extremes turn out to be occupied
+already: astronomy models what is above the air, and terrain/paleoclimate
+model what is below the rock. What is missing at both ends is not content but
+a *place representation* for it.
+
+**The scale's limit is itself a design constraint.** Planes have no position on
+it — the Astral is not at a depth. Forcing planes onto the depth axis would be
+the error this section exists to prevent, which is why `access` and not
+`position` is the primary discriminator.
+
+**Nothing here is built in this campaign.** The requirement is only that the
+taxonomy shipped by campaign 1 expresses realm as a triple, so that later
+realms are values rather than migrations.
+
 ## 4. Determinism and epoch analysis
 
 The load-bearing section. Each exposure was checked against the code, and the
@@ -177,13 +235,12 @@ change and would mint `v3`.
 is committed. Adding a variant concept to the composed list **would change
 committed names** — a genuine save-format event.
 
-> **Open question O1 (flagged for G3).** Should variants participate in name
-> glosses? Doing so is the richest version of request (3) and the one that
-> makes place names carry the land's character. It also rewrites every
-> settlement name in every world, which is an epoch. The alternative — variants
-> enrich *prose* but not *names* — is free and much less interesting. This is
-> the campaign's one genuine fidelity-vs-cost tradeoff and is not
-> auto-resolvable.
+> **O1 — RESOLVED at G3 (owner: yes, and the epoch is accepted).** Variants
+> **do** participate in name glosses. This is the richest version of request
+> (3): place names come to carry the land's own character. It rewrites every
+> settlement name in every world, which is an epoch — accepted deliberately,
+> not absorbed quietly. Campaign 2 owns the epoch and must state the new
+> label suffix in its own spec; no campaign before it may change a gloss.
 
 **What is free about request (3):** `SiteConcepts { concepts: &'a [&'a str] }`
 (`domains/language/src/naming.rs:100`) is already **variadic**. If O1 resolves
@@ -197,11 +254,17 @@ Four campaigns. Each ships working software; none requires its successor.
 1. **The formations** — split `Biome` into `formation` + `stratum` behind the
    existing public surface; `classify_marine` returns a pair and loses its
    precedence chain. Additive concepts, no epoch. Census-neutral by the rules
-   in §4. *This is the enabler; nothing else is cheap without it.*
+   in §4. **Must express realm as the §3.4 triple even though only the
+   overworld and waterworld have values** — that is the whole cost of making
+   sky realms and planes later cost nothing. *This is the enabler; nothing
+   else is cheap without it.*
 2. **The variants** — promote `variety_pool` strings to named variants;
    author marine formations (10) plus `Ice` and `Shrubland`; add the
    submersion guard so `micro_habitat` stops applying land clauses underwater.
-   Fixes the 79% and the category errors. Resolves O1 one way or the other.
+   Fixes the 79% and the category errors. **Owns O1's epoch:** variants enter
+   name glosses here, so every settlement name in every world is rewritten.
+   That epoch is this campaign's headline risk and its spec must name the
+   label suffix explicitly.
 3. **The commensurable exotics** — rescale the overlay candidate scores onto a
    common footing. Small, and the placed tier stops being one repeated
    descriptor. Independent of 1 and 2; could go first if a quick win is wanted.
