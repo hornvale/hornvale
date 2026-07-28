@@ -11,12 +11,14 @@
 //! consequence and no epoch. Seven unread `Option`s would be dead weight that
 //! reads as evidence of intent.
 //!
-//! Three fields are read as of The Blocking: `built`, in `structure_at`'s
+//! FOUR fields are read as of The Blocking: `built`, in `structure_at`'s
 //! existence predicate and in `describe_chamber`'s room/hollow word;
 //! `notability` and `function`, in `pattern::role_for`'s promotion of a deep
 //! chamber; and `peak_population`, added here when the `store` role's strongbox
 //! became its first reader — exactly the "one field, no epoch" this doc licenses.
-//! `tech` and `people` are still carried and unread.
+//! `cold` is carried but read only by a debug assertion (`chamber_interior_of`
+//! cross-checks it against the terrain), and `tech` and `people` are carried and
+//! not read at all.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, World};

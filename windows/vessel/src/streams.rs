@@ -42,8 +42,10 @@ hornvale_kernel::stream_labels! {
     /// - **Appending with `at_locale: false`: LATENT.** No live read reaches it.
     ///   The Blocking appended five such patterns (the chamber roles' vocabulary)
     ///   and moved no metric golden. The gate opens on the first mark committed
-    ///   *inside a chamber* — followup: `docs/followups.md`, TOOL/idea-registry
-    ///   row — and on that day the deferred epoch becomes a real one.
+    ///   *inside a chamber* — recorded as `CLIENT-latent-patterns` in
+    ///   `book/src/frontier/idea-registry.md`, which is the tracked half of the
+    ///   record and names what the gate will cost — and on that day the deferred
+    ///   epoch becomes a real one.
     ROOM_FURNISHING = "room/furnishing/v1" => "which patterns a room draws";
     /// Stream label for which chambers a structure has (The Lintel).
     ///
