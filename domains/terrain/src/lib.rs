@@ -137,7 +137,16 @@ pub fn register_concepts(registry: &mut ConceptRegistry) -> Result<(), RegistryE
         (
             "lake",
             ConceptKind::Terrain,
-            "still fresh water held in a hollow",
+            // Deliberately not "fresh": this slice's water model has no
+            // standing-freshwater class (a through-flow lake reads as
+            // `River`), so the only standing body it distinguishes is the
+            // terminal endorheic sink, and that is what `lake` is exposed
+            // from. Earth agrees — the Great Salt Lake, the Dead Sea and
+            // Lake Eyre are all endorheic and all lakes — so the honest
+            // gloss is one that does not promise fresh water. Corrected in
+            // The Wearing after review found the gloss and the exposure
+            // gate contradicting each other.
+            "still water held in a hollow that has no outlet to the sea",
         ),
         ("valley", ConceptKind::Terrain, "low ground between heights"),
         (
