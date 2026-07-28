@@ -31,7 +31,7 @@ pub fn observable(
     let locale = ctx
         .describe(&agent.position, at)
         .map_err(VesselError::Locale)?;
-    let sky = hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate())
+    let sky = hornvale_worldgen::sky_report_from(world, at, ctx.terrain(), ctx.climate(), None)
         .map_err(|e| VesselError::Build(e.to_string()))?
         .description;
     Ok(Vantage {

@@ -224,9 +224,16 @@ pub enum Sky {
 impl Sky {
     /// The sky at a moment, rendered, from whichever provider this is.
     pub fn sky_at(&self, time: WorldTime) -> SkyReport {
+        self.sky_at_visibility(time, Visibility::CLEAR)
+    }
+
+    /// The sky at a moment through a view of the given [`Visibility`], from
+    /// whichever provider this is. Each provider decides for itself what
+    /// survives a dimmed sky; neither learns what dimmed it.
+    pub fn sky_at_visibility(&self, time: WorldTime, vis: Visibility) -> SkyReport {
         match self {
-            Sky::Constant(sun) => sun.sky_at(time),
-            Sky::Generated(sky) => sky.sky_at(time),
+            Sky::Constant(sun) => sun.sky_at_visibility(time, vis),
+            Sky::Generated(sky) => sky.sky_at_visibility(time, vis),
         }
     }
 
@@ -5757,19 +5764,15 @@ pub fn culture_lines(world: &World, flagship: &hornvale_settlement::VillageInfo)
 pub fn sky_report(world: &World, time: WorldTime) -> Result<SkyReport, BuildError> {
     let terrain = terrain_of(world)?;
     let climate = climate_from(world, &terrain)?;
-    sky_report_from(world, time, &terrain, &climate)
+    let at = flagship_cell(world, &terrain);
+    sky_report_from(world, time, &terrain, &climate, at)
 }
 
-/// The sky report given already-derived terrain and climate — the reuse seam
-/// so callers holding the providers don't re-derive them (The Retainer).
-pub fn sky_report_from(
-    world: &World,
-    time: WorldTime,
-    terrain: &GeneratedTerrain,
-    climate: &GeneratedClimate,
-) -> Result<SkyReport, BuildError> {
-    let mut report = sky_of(world)?.sky_at(time);
-    let cell = hornvale_terrain::places(world)
+/// The canonical-grid cell of the world's flagship settlement, if it has one.
+/// `None` for a settlement-less world — seed 123 generates one, and its sky is
+/// honestly placeless rather than cell 0's by accident.
+fn flagship_cell(world: &World, terrain: &GeneratedTerrain) -> Option<hornvale_kernel::CellId> {
+    hornvale_terrain::places(world)
         .into_iter()
         .find(|p| {
             world
@@ -5779,9 +5782,31 @@ pub fn sky_report_from(
         })
         .and_then(|p| place_coord(world, p.id))
         .map(|c| terrain.nearest_cell(c.latitude, c.longitude))
-        .unwrap_or(hornvale_kernel::CellId(0));
+}
+
+/// The sky report given already-derived terrain and climate — the reuse seam
+/// so callers holding the providers don't re-derive them (The Retainer).
+///
+/// `at` is the OBSERVER's cell: whose weather this sky describes, and whose
+/// occlusion dims it. It used to be resolved here from the flagship
+/// settlement, so a walker a thousand miles away still got the capital's
+/// weather — and a settlement-less world silently borrowed cell 0's. `None`
+/// means nowhere in particular, which has no weather at all: the sky comes
+/// back unobstructed and unannotated.
+pub fn sky_report_from(
+    world: &World,
+    time: WorldTime,
+    _terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    at: Option<hornvale_kernel::CellId>,
+) -> Result<SkyReport, BuildError> {
+    let Some(cell) = at else {
+        return Ok(sky_of(world)?.sky_at_visibility(time, Visibility::CLEAR));
+    };
     let state = climate.weather_at(cell, time.day);
     let cloud = climate.cloud_type_at(cell, time.day);
+    let (_, vis) = occlusion(state, cloud);
+    let mut report = sky_of(world)?.sky_at_visibility(time, vis);
     report.description = format!(
         "{} The sky is {}.",
         report.description,
@@ -6347,7 +6372,13 @@ pub fn almanac_context(world: &World) -> Result<AlmanacContext, BuildError> {
     }
     Ok(AlmanacContext {
         seed: world.seed.0,
-        sky: sky_report_from(world, WorldTime { day: 0.0 }, &terrain, &climate)?,
+        sky: sky_report_from(
+            world,
+            WorldTime { day: 0.0 },
+            &terrain,
+            &climate,
+            flagship_cell(world, &terrain),
+        )?,
         climate: climate_report(world),
         // The almanac PRESENTS the sky, so it reads the occluded observation:
         // night-stars must not stay salient under a rain deck.
@@ -6533,6 +6564,38 @@ mod tests {
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
         assert_eq!(count("name-gloss"), 207);
+    }
+
+    #[test]
+    fn two_places_can_have_different_skies_on_the_same_day() {
+        // The assertion that could not hold while weather was resolved from
+        // the flagship settlement: every cell reported the capital's sky.
+        let world = vigil_world();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        let day = WorldTime { day: 0.0 };
+        let mut seen = std::collections::BTreeSet::new();
+        for cell in terrain.geosphere().cells().take(400) {
+            let r = sky_report_from(&world, day, &terrain, &climate, Some(cell)).unwrap();
+            seen.insert(r.description);
+        }
+        assert!(
+            seen.len() > 1,
+            "every cell reported an identical sky — weather is still pinned to one place"
+        );
+    }
+
+    #[test]
+    fn nowhere_in_particular_has_no_weather() {
+        let world = vigil_world();
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_from(&world, &terrain).unwrap();
+        let r = sky_report_from(&world, WorldTime { day: 0.0 }, &terrain, &climate, None).unwrap();
+        assert!(
+            !r.description.contains("The sky is"),
+            "a placeless observation must not borrow a cell's weather: {}",
+            r.description
+        );
     }
 
     /// The predicate sequence committed for one species entity, in ledger order.
