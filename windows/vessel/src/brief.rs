@@ -111,7 +111,7 @@ mod tests {
     use hornvale_history::record::{Function, Notability, TechHorizon};
 
     #[test]
-    fn the_alive_occupation_supplies_the_briefs_axes() {
+    fn from_parts_assigns_every_axis() {
         let b = Brief::from_parts(
             Some(Function::Trade),
             Some(TechHorizon::Classical),
@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn an_unbuilt_place_has_an_empty_brief_but_still_reports_climate() {
+    fn from_parts_with_no_occupation_axes_still_carries_climate() {
         let b = Brief::from_parts(None, None, None, None, false, true);
         assert!(!b.built);
         assert!(
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[test]
-    fn the_brief_is_a_coordinate_not_a_label() {
+    fn two_briefs_differing_only_in_tech_are_not_equal() {
         // §1b.4: patterns index the CROSS-PRODUCT of axes. Two briefs sharing
         // a function but differing in tech must not compare equal, or the
         // vocabulary would collapse into a catalogue of place types.

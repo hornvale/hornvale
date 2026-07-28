@@ -101,6 +101,10 @@ fn entering_where_nothing_is_built_gives_a_physical_reason() {
             refusal = Some(reply);
             break;
         }
+        // That `enter` SUCCEEDED, so the possession is now inside a structure —
+        // and lateral movement is refused indoors (§1b.6). Step back out of
+        // doors before walking, or the loop would stand still for a dozen turns.
+        let _ = session.handle("out");
         let _ = session.handle("go n");
     }
     let refusal = refusal.expect("wilderness lies within a dozen steps of a village");

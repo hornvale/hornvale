@@ -4,8 +4,15 @@
 //!
 //! An address below the walk band is IDENTITY, NOT SHAPE (§1b.3 law 3): its
 //! triangle geometry means nothing, and connectivity comes from the structure's
-//! own graph. What the depth *is* used for is deciding which band's rules apply,
-//! and truncating back to the walk band when a walk-band-keyed datum is read.
+//! own graph.
+//!
+//! What this module holds is therefore only ARITHMETIC on depths: where chambers
+//! sit ([`chamber_depth`]) and how to get back up to the walk band
+//! ([`truncate_to_walk`]) before reading any walk-band-keyed datum. It
+//! deliberately holds no `Band` enum and no `band_of(addr)` classifier: the
+//! question the session actually asks is "am I inside a structure?", which is
+//! session state (`Session::inside`), not a property an address can answer. An
+//! address at chamber depth is a chamber only because a structure put one there.
 
 use hornvale_kernel::RoomAddr;
 
@@ -16,32 +23,10 @@ use hornvale_kernel::RoomAddr;
 /// type-audit: bare-ok(count)
 pub const CHAMBER_DEPTH_OFFSET: u32 = 9;
 
-/// Which band an address belongs to. Deliberately only two variants: the
-/// STRUCTURE band of metaplan §1b.3 has no code yet (The Precincts), and
-/// inventing a variant nothing constructs would be a lie in the type.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Band {
-    /// The ~1.7 km locale a body commits to — the walk band.
-    Walk,
-    /// A human-scale place inside a structure, ≈3.3 m.
-    Chamber,
-}
-
 /// The address depth chambers live at, given the world's walk depth.
 /// type-audit: bare-ok(count: walk_depth), bare-ok(count: return)
 pub fn chamber_depth(walk_depth: u32) -> u32 {
     walk_depth + CHAMBER_DEPTH_OFFSET
-}
-
-/// Which band `addr` is in. Anything deeper than the walk band is a chamber;
-/// anything at or above it is walk-band (this campaign ships no coarser band).
-/// type-audit: bare-ok(count: walk_depth)
-pub fn band_of(addr: &RoomAddr, walk_depth: u32) -> Band {
-    if addr.depth() > walk_depth {
-        Band::Chamber
-    } else {
-        Band::Walk
-    }
 }
 
 /// The walk-band ancestor of `addr` — 0077's path truncation, used DOWNWARD.
@@ -74,16 +59,6 @@ mod tests {
             // a fixed, arbitrary child sequence: 0,1,2,3,0,1,2,3,...
             path: (0..depth).map(|i| (i % 4) as u8).collect(),
         }
-    }
-
-    #[test]
-    fn a_walk_depth_address_is_the_walk_band() {
-        assert_eq!(band_of(&addr(WALK), WALK), Band::Walk);
-    }
-
-    #[test]
-    fn a_deeper_address_is_the_chamber_band() {
-        assert_eq!(band_of(&addr(chamber_depth(WALK)), WALK), Band::Chamber);
     }
 
     #[test]

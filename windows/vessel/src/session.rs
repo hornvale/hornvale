@@ -50,6 +50,15 @@ const FURTHER_IN_WORDS: [&str; 3] = ["further in", "in", "on"];
 const INDOOR_EXAMINE_REFUSAL: &str =
     "Indoors you have only the room's own shape to go by; nothing here rewards a closer look yet.";
 
+/// What lateral movement says INDOORS. Metaplan §1b.6: lateral movement never
+/// changes band, so a compass step from a chamber is not a step at all — a
+/// structure belongs to ONE locale, and a chamber address carries no bearing to
+/// walk along. Both `go` and `back` are walk-band operations (`back` retraces a
+/// walk-band trail), so both are refused here rather than silently teleporting
+/// the possession out of doors.
+const INDOOR_LATERAL_REFUSAL: &str =
+    "Inside, there is no north; say 'further in' to go deeper, or 'out' to leave.";
+
 /// The player-authored disposition-shift predicate (The First Mark): the
 /// first fact the possessing player, not a world system, ever commits.
 /// type-audit: bare-ok(identifier-text)
@@ -602,6 +611,11 @@ impl<'w> Session<'w> {
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" => self.out(self.describe_here()),
             "map" => self.map(rest),
+            // Lateral movement is walk-band only (§1b.6). Guarded exactly as
+            // `look` and `examine` are: without this, `go n` from a chamber
+            // rendered the NEIGHBOURING LOCALE with no sentence acknowledging
+            // the building had been left.
+            "go" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
             "go" => self.go(rest),
             // Band-aware, for the same reason `look` is: indoors, the nouns
             // `look` named have no authored detail behind them, and the outdoor
@@ -614,6 +628,9 @@ impl<'w> Session<'w> {
                 Turn::Out(INDOOR_EXAMINE_REFUSAL.to_string())
             }
             "examine" => self.examine(rest),
+            // `back` retraces the WALK-band trail, so it is the same refusal
+            // for the same reason as `go`.
+            "back" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
             "back" => self.back(),
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
@@ -677,6 +694,12 @@ impl<'w> Session<'w> {
         ))
     }
 
+    /// A lateral step at the walk band. Reached only out of doors: `handle`
+    /// refuses `go` while `inside` is set ([`INDOOR_LATERAL_REFUSAL`]), which is
+    /// why nothing here clears `inside` — a structure belongs to ONE locale, so
+    /// a step that carried `inside` across would leave the session holding
+    /// chambers descending from the locale behind it, and the guard is what
+    /// makes that unrepresentable rather than merely tidied up afterwards.
     fn go(&mut self, dir: &str) -> Turn {
         let Some(wanted) = parse_compass(dir) else {
             return Turn::Out(format!("Go where? '{dir}' is no direction I know."));
@@ -706,26 +729,20 @@ impl<'w> Session<'w> {
         };
         let from = std::mem::replace(&mut self.agent.position, dest);
         self.trail.push(from);
-        // Walking laterally is walking out of doors: a structure belongs to ONE
-        // locale, so carrying `inside` across a step would leave the session
-        // holding chambers that descend from the locale behind it. Clearing it
-        // is what keeps `look` honest after a `go`; it changes no output, since
-        // `go` renders the locale either way.
-        self.inside = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
         self.out(self.describe_here())
     }
 
+    /// Retrace one step of the walk-band trail. Like [`Self::go`], reached only
+    /// out of doors: the trail holds walk-band addresses, so retracing it is a
+    /// walk-band operation and `handle` refuses it indoors.
     fn back(&mut self) -> Turn {
         let Some(prev) = self.trail.pop() else {
             return Turn::Out("You have not walked anywhere yet.".to_string());
         };
         self.agent.position = prev;
-        // Same reason as `go`: the trail is a walk-band trail, so retracing it
-        // is retracing out of doors.
-        self.inside = None;
         if let Err(e) = self.absorb_here() {
             return Turn::Out(format!("error: {e}"));
         }
@@ -754,19 +771,19 @@ impl<'w> Session<'w> {
                 // be as false here as "no way to anywhere" was.
                 let neighbours = Self::neighbours(&structure, at);
                 if neighbours.len() > 1 {
-                    // `structure_at` builds a path graph, so a chamber has at
-                    // most two apertures and this sentence may count them. A
-                    // richer topology (The Precincts) must recount it.
-                    debug_assert_eq!(
-                        neighbours.len(),
-                        2,
-                        "a path-graph chamber has at most two apertures, and this refusal counts them"
-                    );
-                    return Turn::Out(
-                        "There are two ways from here; say 'further in' to go deeper, \
+                    // Count-aware rather than hard-coded: `structure_at` builds
+                    // a path graph, so today every such chamber has exactly two
+                    // apertures — but a richer topology (The Precincts) would
+                    // make a fixed "two" a lie told to a real player, and a
+                    // debug-only assertion would not catch it in release.
+                    let how_many = match neighbours.len() {
+                        2 => "two ways".to_string(),
+                        n => format!("{n} ways"),
+                    };
+                    return Turn::Out(format!(
+                        "There are {how_many} from here; say 'further in' to go deeper, \
                          or 'out' to leave."
-                            .to_string(),
-                    );
+                    ));
                 }
                 return Turn::Out(format!(
                     "There is no way to {} from here.",
@@ -2146,6 +2163,78 @@ mod tests {
         assert!(
             outdoors.starts_with("You see no"),
             "the outdoor examine path is unchanged: {outdoors:?}"
+        );
+    }
+
+    #[test]
+    fn lateral_movement_indoors_is_refused_and_leaves_the_possession_inside() {
+        // §1b.6: lateral movement never changes band. Unguarded, `go n` from a
+        // chamber rendered the NEIGHBOURING LOCALE and cleared `inside` on the
+        // way, so the player left the building with no sentence saying so.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let shown = match session.handle("enter") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("enter must not release"),
+        };
+        assert!(
+            !shown.starts_with("Nothing here is built"),
+            "the flagship's own locale is built: {shown:?}"
+        );
+        let was = session
+            .inside
+            .clone()
+            .expect("a successful enter is inside");
+        // Give `back` somewhere to retrace to (walking there first would have
+        // left the built locale), so its refusal below cannot be the vacuous
+        // "You have not walked anywhere yet.": the guard must refuse it even
+        // when there IS a trail.
+        let elsewhere = session
+            .agent
+            .position
+            .neighbors()
+            .into_iter()
+            .next()
+            .expect("a locale has neighbours");
+        session.trail.push(elsewhere.clone());
+        let here = session.agent.position.clone();
+        for line in ["go n", "go north", "back"] {
+            let reply = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("{line:?} must not release"),
+            };
+            assert_eq!(
+                reply, INDOOR_LATERAL_REFUSAL,
+                "{line:?} must be refused indoors"
+            );
+            assert_eq!(
+                session.inside.as_ref(),
+                Some(&was),
+                "{line:?} must leave the possession in the chamber it was in"
+            );
+            assert_eq!(
+                session.agent.position, here,
+                "{line:?} must not move the walk-band position either"
+            );
+            assert_eq!(
+                session.trail,
+                vec![elsewhere.clone()],
+                "{line:?} must not consume the walk-band trail"
+            );
+        }
+        // Out of doors `back` works exactly as before.
+        session.handle("out");
+        let retraced = match session.handle("back") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("back must not release"),
+        };
+        assert!(
+            retraced.starts_with("[room "),
+            "the outdoor `back` path is unchanged: {retraced:?}"
+        );
+        assert_eq!(
+            session.agent.position, elsewhere,
+            "and it still retraces the trail"
         );
     }
 }

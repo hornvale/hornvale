@@ -28,6 +28,18 @@ const _: () = assert!(MAX_CHAMBERS <= 4);
 
 /// The sparse set of chambers standing at one built locale.
 /// type-audit: bare-ok(index: links)
+///
+/// The fields are public and this type has no validating constructor, so the
+/// two invariants [`structure_at`] establishes are stated here — code in other
+/// files depends on them, and a reader of that code cannot see them from there:
+///
+/// 1. **`threshold == chambers[0]`**, always. `structure_at` takes the first
+///    drawn chamber as the threshold, so the entry point is index 0.
+/// 2. **`links` is a path graph in DEPTH ORDER** — exactly the pairs
+///    `(i - 1, i)` — so a HIGHER INDEX IS DEEPER. `Session::further_in`
+///    (`session.rs`) relies on precisely this: it picks the lowest-numbered
+///    neighbour above the current index and calls that "deeper". A richer
+///    topology (The Precincts) breaks that reading and must revisit it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Structure {
     /// The chamber `enter` arrives in from the locale.
@@ -165,9 +177,13 @@ mod tests {
 
     #[test]
     fn derivation_is_pure() {
-        let a = structure_at(&locale(), &built_brief(), Seed(42), WALK);
-        let b = structure_at(&locale(), &built_brief(), Seed(42), WALK);
-        assert_eq!(a, b);
+        // Spec §8 asks for purity over a SWEEP, not one case: a single seed
+        // could be pure by accident of which draws it happens to take.
+        for s in 0..8u64 {
+            let a = structure_at(&locale(), &built_brief(), Seed(s), WALK);
+            let b = structure_at(&locale(), &built_brief(), Seed(s), WALK);
+            assert_eq!(a, b, "seed {s} derived two different structures");
+        }
     }
 
     #[test]

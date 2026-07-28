@@ -24,10 +24,17 @@ pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
 }
 
 /// Every noun a chamber's prose will name, in the interior's own deterministic
-/// anchor order. The ONE catalogue: `describe_chamber` renders from it and the
-/// session's `enter <named>` resolves against it, so a player can only ever be
-/// asked to name a thing the prose actually said (the same discipline The
+/// anchor order. The ONE catalogue `describe_chamber` renders from, so the
+/// nouns a chamber says are exactly the nouns it holds (the same discipline The
 /// Purview's chart follows in sharing the prose's nouns).
+///
+/// The session also consults it as a LENIENT fallback in `enter <named>`: a
+/// prose noun is accepted only where the chamber has exactly one aperture,
+/// because every chamber of a structure derives the identical interior and so
+/// noun lists cannot tell two apertures apart. Apertures themselves are named by
+/// DIRECTION (`further in`), which is not a prose noun at all — so this
+/// catalogue does not bound what the player may be asked to type, only what a
+/// chamber's prose may say.
 pub(crate) fn chamber_nouns(interior: &Interior) -> Vec<&'static str> {
     interior
         .ids()
