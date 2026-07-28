@@ -84,6 +84,22 @@ Gathering](./chronicle/the-gathering.md)). This is a genuine promotion, not
 a full resolution — see "The standing horizon," below, for the half that
 is still ahead.
 
+*Re-scored by [The Vacancy](./chronicle/the-vacancy.md).* The self-checking
+half got sharper and the modelling half got narrower, and both belong in the
+score. Sharper: a committed readout of where each kind actually lives, plus a
+rule that no kind may have zero capacity everywhere, caught four species — the
+three chromatic dragons and the owlbear — that had zero carrying capacity on
+every cell of every world and had been in the registry, absent from creation,
+for four campaigns. A prior that can catch that about itself is doing the work
+this section credits it for. Narrower: capacity is a supply term spanning orders
+of magnitude multiplied by a condition product bounded in the unit interval, so
+an authored ecological niche can only modulate the primary-production signal,
+never select against it. A species authored for a particular climate can be
+genuinely present there and still rank below species with no affinity for it —
+measured, on a people authored for desert that has no desert at all. The
+gradient claim and the conservation guarantee are untouched; what is now known
+to be beyond the prior is *placing a species where its traits say it belongs*.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held
@@ -385,6 +401,34 @@ by convicting the instrument instead of the world. See
 [Crust](./chronicle/crust.md), [Sculpting](./chronicle/sculpting.md),
 [Rift-and-Fit](./chronicle/rift-and-fit.md), and [The Census of Coasts
 IV](./laboratory/census-of-coasts-iv.md).
+
+[The Threshold](./chronicle/the-threshold.md) exercised this discipline on a
+bet of its own and got the answer the discipline exists to make possible: **no**.
+It froze, before a line of code, the claim that a cold creature with a fire in
+its house would suffer the cold measurably less than one without — and then
+failed to find it, four times over. What makes that worth recording is not the
+failure but its shape. Each null was designed to kill one candidate explanation
+and did: the fire was too faint (so it was recalculated from an energy balance —
+envelope, infiltration, hearth power, the radiant crowding that is why people
+sit close — the argument written down and committed *before* anything was
+measured again); then the creature never reached the fire (so it was taught to
+cross the room, and did); then the instrument could not see where the creature
+stood (so it was taught to look). Warmth, walk, and witness each eliminated in
+turn, the remaining explanation is not about the machinery at all: **the
+creatures who live where it is cold are either already within their own
+tolerance, or forty to eighty degrees beyond anything a domestic fire could
+offer.** There is nobody in between for a hearth to save.
+
+Two things follow for this chapter. The first is that a preregistered
+prediction is only as good as the *sequence* of measurements behind it — a null
+that eliminates nothing is a wasted run, and four that each eliminate something
+are a result. The second is subtler and concerns the anchor: this bet's own
+warning is that a drift check pins output against change and has no opinion
+about whether the output was ever right. Here the analogue bit at the level of
+the *instrument* — an acceptance protocol verified byte-identity with a command
+that could not, by construction, reflect the layer being changed, and four
+stages of evidence were vacuous before anyone noticed. The check that a
+measurement can move at all belongs beside the measurement, not after it.
 
 ## Precedented but nontrivial (moderate confidence)
 

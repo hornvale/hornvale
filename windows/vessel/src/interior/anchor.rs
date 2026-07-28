@@ -88,13 +88,49 @@ impl Interior {
         &self.anchors[id.0 as usize]
     }
 
-    /// The anchors directly touching `a`, ascending.
+    /// The anchors directly touching `a` (`Ec`), ascending. Adjacency ONLY —
+    /// containment (`Ntpp`) is a SEPARATE relation (see [`Anchor::within`]),
+    /// which is why a creature crossing from an alcove into the hearth it
+    /// contains is not a "neighbour" step in THIS sense even though it is a
+    /// genuine single-hop walk ([`Self::walkable_neighbors`] is the union
+    /// callers that actually MOVE a creature need).
     pub fn neighbors(&self, a: AnchorId) -> Vec<AnchorId> {
         self.adjacency
             .iter()
             .filter(|(x, _)| *x == a)
             .map(|(_, y)| *y)
             .collect()
+    }
+
+    /// Every anchor a creature standing at `a` may step to in ONE hop:
+    /// adjacency (`Ec`, [`Self::neighbors`]) AND containment (`Ntpp`) in
+    /// EITHER direction — the anchor `a` lies strictly within (its
+    /// container, if any) and every anchor that lies strictly within `a`
+    /// (its contents). Deterministic (ascending, duplicate-free).
+    ///
+    /// This is the SINGLE definition of "one walkable hop" the interior
+    /// layer has: [`crate::interior::route_within`]'s A* successors,
+    /// [`crate::liveness::Occupancy::walk`]'s adjacency check, and
+    /// [`Interior::is_connected`]'s reachability walk all call this rather
+    /// than each re-deriving their own notion of "adjacent enough to walk
+    /// to" — a route planner, the thing that actually executes one step of
+    /// its plan, and the validator that certifies a room's reachability
+    /// must all agree on what a step IS, or a planned step silently fails
+    /// to execute, or the validator certifies a room a creature cannot
+    /// cross.
+    pub fn walkable_neighbors(&self, a: AnchorId) -> Vec<AnchorId> {
+        let mut out = self.neighbors(a);
+        if let Some(parent) = self.anchor(a).within {
+            out.push(parent);
+        }
+        for id in self.ids() {
+            if self.anchor(id).within == Some(a) {
+                out.push(id);
+            }
+        }
+        out.sort();
+        out.dedup();
+        out
     }
 
     /// Whether `a` lies strictly within `b`, following the containment chain
@@ -152,16 +188,7 @@ impl Interior {
         let mut seen: std::collections::BTreeSet<AnchorId> = [AnchorId(0)].into_iter().collect();
         let mut frontier = vec![AnchorId(0)];
         while let Some(cur) = frontier.pop() {
-            let mut linked = self.neighbors(cur);
-            if let Some(p) = self.anchor(cur).within {
-                linked.push(p);
-            }
-            for id in self.ids() {
-                if self.anchor(id).within == Some(cur) {
-                    linked.push(id);
-                }
-            }
-            for n in linked {
+            for n in self.walkable_neighbors(cur) {
                 if seen.insert(n) {
                     frontier.push(n);
                 }

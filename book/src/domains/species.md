@@ -35,15 +35,17 @@ six-dimension psychology vector is, since *The Cloister* (Campaign 4 of the
 Dragons program), two closed vectors cleaved along who carries them. The
 **mind vector** — three scalars bounded in `[0, 1]` (threat response,
 deliberation latency, time horizon) — is carried by every minded kind: the
-four settling peoples and, since *The Eremite*, the three solitary dragons
+five settling peoples and, since *The Eremite*, the three solitary dragons
 too. The **society vector** — one scalar (in-group radius, `[0, 1]`) and two
 enumerations (sociality mode: hierarchic or communal; status basis: rank,
 knowledge, or generosity) — is carried by a minded kind that lives
 *socially* (a `Gregarious` or `Settled` kind), and by no other; a `Solitary`
 creature (a dragon) carries none. The gate is sociality, not settlement — a
 nomadic band would carry a society without ever settling — though today that
-set is exactly the four settling peoples, since no `Gregarious` kind is yet
-minded (decision 0068 refines 0067). Goblin is the baseline for both: every
+set is exactly the five settling peoples, since no `Gregarious` kind is yet
+minded (decision 0068 refines 0067) — a vacancy *The Vacancy* deliberately
+left open and recorded rather than filled, because a settlement-free people
+is unaudited everywhere downstream of a settlement. Goblin is the baseline for both: every
 scalar sits at exactly 0.5, every enum at its goblin variant, and every
 downstream formula that reads either vector is built so the baseline value
 reproduces today's behavior — not tuned to match, but constructed to match,
@@ -187,13 +189,14 @@ program's third campaign) there is no `SpeciesDef` struct at all. A kind is a
 authored and owned by the one domain that presents it, composed only at
 worldgen. `domains/species` authors the universal **biosphere** component
 (`BiosphereTraits` — mass, metabolic class, resource niche, condition niche,
-potency — the row every kind carries and the packer and habitat model read)
+potency, social organization — the row every kind carries and the packer
+and habitat model read)
 and, since *The Cloister*, two psychology components where there used to be
 one: the **mind** vector (3 — threat response, deliberation latency, time
 horizon), carried by every minded kind, dragons included. Since *The Vigil*,
 the **perception** (3) component is carried by every kind that *speaks* — a
 chain, not a settlement gate: speech presupposes perception presupposes a
-mind — so the three chromatic dragons carry it alongside the four settling
+mind — so the three chromatic dragons carry it alongside the five settling
 peoples, though nothing settles a dragon does. The **society** vector (3 —
 sociality, status basis, in-group radius) stays gated differently, on
 *sociality* rather than speech: only a minded kind that lives socially (a
@@ -206,6 +209,12 @@ articulation (and lexicon) — and is absent only from Society. The rest of
 the menagerie's biosphere-only fauna (treant, xorn, …) still have no rows in
 any of the peopled registries, and none of this table; their absence there
 is expressed rather than declared, unlike a dragon's now-partial presence.
+They are nonetheless *nameable*: since *The Actants* every kind the world
+simulates carries a concept, so a treant is a thing the vocabulary knows of
+even though nothing about a treant thinks, speaks, or lives socially. The two
+are genuinely independent — being nameable is a fact about the world's
+vocabulary, being minded is a fact about the creature — and conflating them
+is precisely how twelve creatures went four campaigns with no name at all.
 The one biosphere dimension the fauna carry
 distinctly is **potency** — a creature's magical might — assayed, like `mass`,
 from the D&D 5E corpus: it is the kind's adult Challenge Rating over thirty
@@ -225,6 +234,7 @@ mind-perception-speech chain a kind climbs; the three chromatic dragons climb
 it all the way — each carries a mind, perceives, and speaks — and are absent
 only from Society. A consumer that needs a society reading for a solitary
 kind resolves `SocietyVector::baseline()`, the goblin-equal values.
+
 What the old `Option<PeopledTraits>`
 once guaranteed by the shape of a type — the peopled traits together or none —
 worldgen now enforces as this load-time nested-capacity check across the
@@ -379,10 +389,45 @@ the roster simply has nothing that can feed there — checked kind by kind, it i
 entirely terrestrial, and even the two wettest niches, the otyugh's and the
 black dragon's, are swamps, which is wet *land*. All three submerged shares
 return to 0 %, with every kind's land carrying capacity byte-unchanged. An
-aquatic kind, when one is authored, arrives by weighting a marine supply axis
-with a field defined on water — an addition to the supply vocabulary rather
-than an exemption from a rule — which leaves it in the same unfinished company
-as the animal-prey axis.
+aquatic kind arrives by weighting a marine supply axis with a field defined on
+water — an addition to the supply vocabulary rather than an exemption from a
+rule.
+
+*The Vacancy* took both of those unfinished halves. The marine axis is real,
+its supply derived from what climate already computes (the marine biome class,
+sea-surface temperature, depth through the euphotic zone), and nine of the ten
+marine biomes now carry occupants. The animal-prey axis is real too, a
+trophic-transfer fraction of forage — which mattered more than it sounds,
+because a hard-coded zero there had meant the three chromatic dragons and the
+owlbear, all obligate predators, had zero carrying capacity on every cell of
+every world. They were in the registry and absent from creation, and had been
+for four campaigns.
+
+**The coverage table and the non-void rule.** That discovery is why the roster
+now ships with two instruments beside it. A committed table names every declared
+state of this model — each `MetabolicClass`, `SocialForm`, `ActivityCycle`, and
+`StatusBasis` variant, plus the trait *combinations* that matter — and records
+which kinds witness it, so a state cannot silently lose its witness or gain an
+unintended one. It deliberately does not demand that every variant be witnessed:
+an empty cell is a legitimate creature-design prediction, and a rule forbidding
+them would only force junk into the roster. What it demands is that the record
+match reality.
+
+The second is a refusal rather than a record. **No kind may be void** — every
+kind must achieve carrying capacity above the viability floor on at least one
+cell of at least one world. A species can otherwise be authored, load, satisfy
+every referential-integrity check here, and simply not exist anywhere, which is
+what happened to the kobold's unoccupiable highland stronghold and to the four
+obligate predators. That test costs almost nothing, runs in the commit gate, and
+converts the whole failure class from something found by hand months later into
+something that fails on arrival.
+
+A companion measurement makes authored optima checkable at all: a committed
+readout of where each kind actually lives, over thirty worlds. Condition optima
+are measured-from-this-world values — they mean nothing except relative to the
+land a world actually produces — so they perish whenever terrain or climate
+moves beneath them, and the readout is what lets the next such move be
+re-checked instead of merely hoped about.
 
 **The peoples ahead:** deliberation latency's still-unspent half — the
 salience or negotiation rule that would read a people's decisiveness
@@ -396,5 +441,13 @@ religion across more than a pair, once a third people exists to make
 variation, both per-species and eventually per-individual, in place of one
 authored point per people; a physiology this vector does not yet have, so
 habitat affinity and temperance stay shared rather than species-derived;
-inter-species politics, trade, and conflict; and, past two, however many
+inter-species politics, trade, and conflict; and, past five, however many
 further peoples the registry is asked to hold.
+
+One limit is now measured rather than suspected. Carrying capacity is a supply
+term spanning orders of magnitude multiplied by a condition product bounded in
+the unit interval, so an authored niche can only modulate the primary-production
+signal, never select against it: a kind authored for a particular climate can be
+genuinely present there and still rank behind kinds with no affinity for it at
+all. The gnoll, authored for hot-arid desert, has none. Until that is addressed,
+"centred on a biome" is not a thing this model can express.

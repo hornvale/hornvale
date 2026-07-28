@@ -2,7 +2,7 @@
 //! attention. If these fail, they are two pipelines wearing one name.
 
 use hornvale_astronomy::SkyPins;
-use hornvale_kernel::{Seed, World};
+use hornvale_kernel::{Seed, World, WorldTime};
 use hornvale_terrain::TerrainPins;
 use hornvale_vessel::{PossessOpts, Session, Turn};
 use hornvale_worldgen::{SettlementPins, SkyChoice, build_world};
@@ -136,6 +136,43 @@ fn a_noun_at_both_grains_resolves_to_one_datum() {
     // The biome is named by both the prose and the chart's legend, so this is
     // not a vacuous pass.
     assert!(shared > 0, "the two grains must actually overlap");
+
+    // `shared > 0` alone would still pass via the regime descriptor (both
+    // grains draw it from the same `Locale::regime.descriptor`) even if the
+    // biome were never a shared noun — which is exactly the bug The Margin
+    // fixed: the chart's legend used to surface the biome's kebab-case slug
+    // (`tropical-seasonal-forest`) while the prose surfaced its spaced name
+    // (`tropical seasonal forest`), so the campaign's sharpest thesis clause
+    // never fired on the most obvious thing on the map. Pin the biome
+    // specifically, using the ground-truth `Locale` (day-independent for
+    // biome in v1) rather than assuming anything about noun ordering.
+    let here_locale = session
+        .context()
+        .describe(&session.agent().position, WorldTime { day: 0.0 })
+        .expect("the observer's own room describes");
+    let biome_noun = here_locale.biome;
+    let biome_chart_entry = chart
+        .legend
+        .iter()
+        .find(|e| e.noun.eq_ignore_ascii_case(&biome_noun))
+        .unwrap_or_else(|| {
+            panic!("the biome noun '{biome_noun}' must be a shared noun in the chart's legend")
+        });
+    let biome_prose_datum = prose
+        .nouns
+        .iter()
+        .find(|(n, _)| n.eq_ignore_ascii_case(&biome_noun))
+        .map(|(_, datum)| datum.clone())
+        .unwrap_or_else(|| panic!("the biome noun '{biome_noun}' must be a prose noun"));
+    let biome_reply = out(session.handle(&format!("examine {biome_noun}")));
+    assert_eq!(
+        biome_reply, biome_prose_datum,
+        "the biome noun must resolve to the prose grain's datum (prose is primary)"
+    );
+    assert_ne!(
+        biome_reply, biome_chart_entry.datum,
+        "the biome noun must not resolve to the chart's datum"
+    );
 }
 
 #[test]
@@ -257,5 +294,66 @@ fn map_out_seven_is_just_past_the_real_bound_and_refuses_cleanly() {
     assert!(
         !past_bound.to_lowercase().contains("canonical grid"),
         "the refusal must not leak the locale layer's internal wording: {past_bound}"
+    );
+}
+
+/// `map out 4294967296` (one past `u32::MAX`) IS a number — the request must
+/// say so, distinctly from a genuinely non-numeric argument, rather than the
+/// misleading "is not a number" a bare `parse::<u32>()` error swallows both
+/// cases into. It must also never state a false bound: an earlier version of
+/// this refusal quoted `u32::MAX` (4294967295) as "the chart tops out at"
+/// that many rungs, which was not true — the real ceiling is `depth -
+/// globe_level` (six on seed 42), enforced separately below. The honest fix
+/// saturates the overflowed value and lets that real bound check answer, so
+/// this reply must be byte-identical to what `map out 7` (one past the real
+/// bound) already produces.
+#[test]
+fn map_out_past_u32_names_the_real_problem_not_a_parse_failure() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let too_large = out(session.handle("map out 4294967296"));
+    assert!(
+        !too_large.contains("is not a number"),
+        "4294967296 is a number; the refusal must not claim otherwise: {too_large}"
+    );
+    assert!(
+        !too_large.contains("4294967295") && !too_large.to_lowercase().contains("u32"),
+        "the refusal must not state ANY numeric bound — the real bound is 6, not u32::MAX: {too_large}"
+    );
+    let past_real_bound = out(session.handle("map out 7"));
+    assert_eq!(
+        too_large, past_real_bound,
+        "an overflowed zoom must be refused by the SAME real bound check as an \
+         ordinary over-large one, not a bespoke overflow message: {too_large:?} vs {past_real_bound:?}"
+    );
+    let non_numeric = out(session.handle("map out banana"));
+    assert!(
+        non_numeric.contains("is not a number"),
+        "a genuinely non-numeric argument must still say so: {non_numeric}"
+    );
+}
+
+/// `map out -1` IS a number too (a negative one) — `u32::from_str` reports a
+/// leading `-` as `InvalidDigit`, the same error kind a genuinely non-numeric
+/// argument produces, so a naive fix would fold "-1" into the same "is not a
+/// number" message. That is false: -1 parses fine as an integer, it merely
+/// has no meaning as a rung count. This must be its own honest message,
+/// distinct from both the non-numeric case and the real-bound refusal.
+#[test]
+fn map_out_negative_names_the_real_problem_not_a_parse_failure() {
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    let negative = out(session.handle("map out -1"));
+    assert!(
+        !negative.contains("is not a number"),
+        "-1 is a number; the refusal must not claim otherwise: {negative}"
+    );
+    assert!(
+        negative.contains("negative"),
+        "the refusal must name the actual problem — a negative zoom: {negative}"
+    );
+    assert!(
+        !negative.contains("no coarser rung") && !negative.contains("coarsest"),
+        "a negative zoom must not be confused with the real (positive) bound refusal: {negative}"
     );
 }

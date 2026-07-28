@@ -160,23 +160,27 @@ fn depth_landscape_measured() {
         );
     }
 
-    // Pinned exact (measured seeds 1..=3, the shipped four-people roster).
+    // Pinned exact (measured seeds 1..=3, the shipped five-people roster).
     // Re-pinned under The Living Community epoch (history is the sole
     // settlement placer, this merge): the deep-history bake's genesis seeds
-    // ALL FOUR peoples on every world, so bugbear and kobold now place at
-    // every seed 1..=3 (previously bugbear never placed and kobold only at
-    // seed 2). The landscape is now the full 12-row (4 peoples x 3 seeds)
-    // grid — re-measured and re-pinned exactly below.
+    // ALL FOUR (then-)peoples on every world, so bugbear and kobold now place
+    // at every seed 1..=3 (previously bugbear never placed and kobold only at
+    // seed 2). The Vacancy T9 adds a fifth people (the gnoll), which also
+    // places at every seed 1..=3; the landscape is now the full 15-row (5
+    // peoples x 3 seeds) grid — re-measured and re-pinned exactly below.
     let expect: Vec<(u64, &str, MorphDepth, MorphDepth)> = vec![
         (1, "bugbear", MorphDepth::Affix, MorphDepth::None),
+        (1, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (1, "goblin", MorphDepth::None, MorphDepth::Affix),
         (1, "hobgoblin", MorphDepth::Particle, MorphDepth::Particle),
         (1, "kobold", MorphDepth::None, MorphDepth::None),
         (2, "bugbear", MorphDepth::Affix, MorphDepth::Particle),
+        (2, "gnoll", MorphDepth::None, MorphDepth::Particle),
         (2, "goblin", MorphDepth::None, MorphDepth::None),
         (2, "hobgoblin", MorphDepth::Particle, MorphDepth::Affix),
         (2, "kobold", MorphDepth::None, MorphDepth::None),
         (3, "bugbear", MorphDepth::None, MorphDepth::Affix),
+        (3, "gnoll", MorphDepth::None, MorphDepth::Affix),
         (3, "goblin", MorphDepth::Particle, MorphDepth::None),
         (3, "hobgoblin", MorphDepth::None, MorphDepth::Affix),
         (3, "kobold", MorphDepth::None, MorphDepth::Affix),

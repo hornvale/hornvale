@@ -305,3 +305,46 @@ process tooling. Verification is a scripted integration check:
 Full reasoning (including the ideonomy pass and the two exclusion
 findings, §3.2) is recorded in this campaign's worktree at
 `.superpowers/sdd/decision-ledger.md` (entries #1-#5).
+
+## Addendum A — Tier A's append-only premise, and the one case that breaks it
+*(2026-07-27, The Shelf-Mark)*
+
+Tier A's safety argument is that `merge=union` keeps both sides' lines, and
+for a genuinely append-only list that is exactly right: two campaigns each
+add a chronicle entry or a registry row, union takes both, and the only cost
+is a cosmetic ordering difference.
+
+**The premise is about the file's edit pattern, not its identity.** A file is
+Tier A because campaigns *append* to it — not because appending is the only
+thing that can ever happen to it. When a campaign instead **rewrites existing
+lines**, union stops being safe and starts being actively wrong: it keeps
+both the old line and the new one, producing a duplicated entry rather than a
+resolved edit.
+
+The Shelf-Mark hit this on merge. It compacted 43 existing rows of
+`book/src/frontier/idea-registry.md`; a parallel campaign (The Actants) had
+edited `MAP-27`, whose immediate neighbour `MAP-28` was one of the compacted
+rows. Both edits landed in one conflicting hunk, so union would have emitted
+four rows — two of them duplicate IDs — where two belonged.
+
+**The rule for a campaign that rewrites Tier A lines:** override the union
+driver for that path and take a real 3-way merge, then resolve by hand.
+`.git/info/attributes` outranks the repo's `.gitattributes`, so this is local
+and temporary:
+
+```bash
+echo 'book/src/frontier/idea-registry.md merge' > .git/info/attributes
+git merge origin/main          # real 3-way merge, conflicts surfaced
+# ...resolve, then:
+rm .git/info/attributes
+```
+
+`registry_ids_are_unique` in `cli/tests/docs_consistency.rs` catches the
+duplicate-ID symptom if union does run, so the failure mode is loud rather
+than silent — but repairing a bad merge is strictly worse than not making
+one. `SUMMARY.md` was left on union through the same merge and behaved
+correctly, which is the distinction: that campaign only appended to it.
+
+This does not change Tier A's membership or the driver assignment. It records
+that the assignment carries a premise, and what to do in the campaign that
+violates it.

@@ -3,7 +3,8 @@
 
 use crate::liveness::{
     AGENT_AT, Affect, AffectLabel, DRANK, DriveKind, DriveMovements, EATEN, LocaleTerrain, Npc,
-    RESTED, SUSTENANCE, affect_of, agent_position, derive_npcs, derive_wild_npcs,
+    Occupancy, PrimaryAfraidMemo, RESTED, SUSTENANCE, affect_of_memo_occupied, agent_position,
+    built_rooms, derive_npcs, derive_wild_npcs,
 };
 use crate::snapshot::{
     KnownChannel, KnownEntry, Narration, NounEntry, PresentEntry, SESSION_SCHEMA, SelfChannel,
@@ -14,7 +15,7 @@ use crate::{
     TemplateFocalizer, Turn, VesselError, absorb_common, mint_flagship, observable, reader_set,
 };
 use hornvale_kernel::{
-    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, Seed, Value, World, WorldTime, tick,
+    ConceptRegistry, EntityId, Fact, Ledger, RoomAddr, RoomId, Seed, Value, World, WorldTime, tick,
 };
 use hornvale_locale::{Compass, Direction, ExitKind, LocaleContext};
 
@@ -135,6 +136,22 @@ pub struct Session<'w> {
     /// a carnivore's hunger senses prey territory; `None` if the demography fit
     /// fails.
     prey: Option<hornvale_kernel::CellMap<f64>>,
+    /// The world's settlement-territory set (The Threshold, task 5b —
+    /// `built_rooms`), computed once at `start`, so a room a settlement
+    /// actually occupies reads as built and can draw a real hearth.
+    /// `Session::start` requires `mint_flagship` to resolve a settlement
+    /// first, so in practice this always carries at least the possessed
+    /// agent's own home room by the time a session exists.
+    built: std::collections::BTreeSet<RoomId>,
+    /// Each NPC's within-room anchor as of the most recent `wait` tick's own
+    /// walk (The Threshold whole-branch review, Important 4) — recovered via
+    /// [`DriveMovements::step_with_occupancy`] the same way the lab's health
+    /// battery (task 6b) does, so a narration read of a co-located NPC's felt
+    /// state (`Session::needs`, the snapshot's present-entry read) samples
+    /// warmth where the NPC actually walked to rather than unconditionally
+    /// falling back to the room's landing anchor. Empty before the first
+    /// `wait` (turn 0's affect reads fall back exactly as they always did).
+    occupancy: Occupancy,
     /// Commits since the possession began; 0 is the opening. Advanced by
     /// `handle` for every non-empty verb line, so the snapshot can label
     /// which turn it describes.
@@ -226,6 +243,12 @@ impl<'w> Session<'w> {
         // The prey-pressure field (The Teeth), so a carnivore's hunger senses
         // prey territory — the dual of the predator field, same one-shot fit.
         let prey = hornvale_worldgen::prey_pressure(world).ok();
+        // The settlement-territory set (The Threshold, task 5b), so a room a
+        // settlement actually occupies reads as built and can draw a real
+        // hearth — the real answer Task 5's arming had nothing to read before
+        // this. Built once here, the same one-shot-at-start discipline as
+        // `calendar`/`predator`/`prey`.
+        let built = built_rooms(world, &ctx);
         let mut session = Session {
             world,
             ctx,
@@ -241,6 +264,8 @@ impl<'w> Session<'w> {
             calendar,
             predator,
             prey,
+            built,
+            occupancy: Occupancy::default(),
             turn: 0,
             last_text: String::new(),
         };
@@ -280,12 +305,22 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
+        let mut afraid_memo = PrimaryAfraidMemo::new();
         let present = self
             .colocated_npcs()
             .iter()
             .map(|npc| {
-                let affect = affect_of(&self.ledger, npc, &self.npcs, self.day, &terrain);
+                let affect = affect_of_memo_occupied(
+                    &self.ledger,
+                    npc,
+                    &self.npcs,
+                    self.day,
+                    &terrain,
+                    &mut afraid_memo,
+                    Some(&self.occupancy),
+                );
                 PresentEntry {
                     entity: npc.entity.0.get(),
                     label: npc.label.clone(),
@@ -666,18 +701,38 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
         let sys = DriveMovements {
             npcs: self.npcs.clone(),
             from,
             to: self.day,
             params: SUSTENANCE,
+            // The planet's rotation period, so the action clock's tick divides
+            // the local day exactly (The Action Clock, spec §4.1). `None` on a
+            // tidally-locked world, which the rotation pin admits.
+            day_length_std: self
+                .calendar
+                .as_ref()
+                .and_then(|c| c.day_length())
+                .map(|d| d.get()),
             terrain: &terrain,
         };
+        // Recover this tick's within-room `Occupancy` alongside the facts
+        // `tick()` (below) commits — the same walk, read twice, exactly the
+        // pattern the lab's health battery uses (task 6b): a second, PURE
+        // re-evaluation of the identical frozen `self.ledger` and `sys`,
+        // not a second simulation with different consequences. Without
+        // this, `needs()` and the snapshot's present-entry read sampled a
+        // colder felt state than the NPC actually experienced — warmth at
+        // the room's landing anchor, never wherever its own walk carried it
+        // (Important 4, The Threshold whole-branch review).
+        let (_facts, occupancy) = sys.step_with_occupancy(&self.ledger);
         match tick(&self.ledger, &[&sys], &["drive-movements"], &self.registry) {
             Ok(next) => {
                 let moved = next.len() - self.ledger.len();
                 self.ledger = next;
+                self.occupancy = occupancy;
                 // The First Mark, one-hop forward integration: after the NPC
                 // drive tick settles, any co-located-or-not NPC whose
                 // grievance has crossed the hostility threshold commits its
@@ -782,6 +837,31 @@ impl<'w> Session<'w> {
             ["out"] => 1,
             ["out", n] => match n.parse::<u32>() {
                 Ok(v) => v,
+                // `u32::from_str` overflows past 4294967295, but this arm
+                // never sees a real value to check — the parse itself
+                // failed — so quoting `u32::MAX` back at the player states a
+                // bound that is false: the real ceiling is `depth -
+                // globe_level` (six rungs on seed 42), enforced below. Rather
+                // than inventing a second, wrong number here, saturate to
+                // `u32::MAX` — certainly past any real chart's ceiling — and
+                // let the ordinary bound check just below produce the one
+                // honest refusal.
+                Err(e) if matches!(e.kind(), std::num::IntErrorKind::PosOverflow) => u32::MAX,
+                // `u32::from_str` reports a leading '-' as `InvalidDigit`,
+                // not `NegOverflow` (there is no negative u32 to overflow
+                // toward), so folding it into "'-1' is not a number" would
+                // be false — it is a number, just a negative one, and there
+                // is no such thing as zooming out a negative number of
+                // rungs.
+                Err(_)
+                    if n.starts_with('-')
+                        && n.len() > 1
+                        && n[1..].bytes().all(|b| b.is_ascii_digit()) =>
+                {
+                    return Turn::Out(format!(
+                        "Zoom out by how much? '{n}' is negative; there is no such rung."
+                    ));
+                }
                 Err(_) => {
                     return Turn::Out(format!("Zoom out by how much? '{n}' is not a number."));
                 }
@@ -850,17 +930,36 @@ impl<'w> Session<'w> {
         Ok(out)
     }
 
+    /// The common case is a prose noun, and the chart (~1.5 ms to build) is
+    /// never needed to answer one: check the prose catalog first and only
+    /// fall through to the chart on a miss, rather than routing through
+    /// `lens_nouns` (which always builds both grains for its own contract —
+    /// the full union other callers and the thesis test depend on). A noun
+    /// named by both grains still resolves to the prose datum, because the
+    /// prose catalog is checked, and answered from, first.
     fn examine(&self, noun: &str) -> Turn {
         if noun.is_empty() {
             return Turn::Out("Examine what?".to_string());
         }
         let wanted = noun.to_lowercase();
-        match self.lens_nouns() {
-            Ok(nouns) => match nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
-                Some((_, detail)) => Turn::Out(detail.clone()),
-                None => Turn::Out(format!("You see no {noun} here.")),
-            },
-            Err(e) => Turn::Out(format!("error: {e}")),
+        let prose = match self.focalized() {
+            Ok(f) => f,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
+        if let Some((_, detail)) = prose.nouns.iter().find(|(n, _)| n.to_lowercase() == wanted) {
+            return Turn::Out(detail.clone());
+        }
+        let scene = match self.purview(0) {
+            Ok(s) => s,
+            Err(e) => return Turn::Out(format!("error: {e}")),
+        };
+        match scene
+            .legend
+            .iter()
+            .find(|e| e.noun.to_lowercase() == wanted)
+        {
+            Some(e) => Turn::Out(e.datum.clone()),
+            None => Turn::Out(format!("You see no {noun} here.")),
         }
     }
 
@@ -1033,10 +1132,20 @@ impl<'w> Session<'w> {
             self.calendar.as_ref(),
             self.predator.as_ref(),
             self.prey.as_ref(),
+            Some(&self.built),
         );
+        let mut afraid_memo = PrimaryAfraidMemo::new();
         here.iter()
             .map(|npc| {
-                let affect = affect_of(&self.ledger, npc, &self.npcs, self.day, &terrain);
+                let affect = affect_of_memo_occupied(
+                    &self.ledger,
+                    npc,
+                    &self.npcs,
+                    self.day,
+                    &terrain,
+                    &mut afraid_memo,
+                    Some(&self.occupancy),
+                );
                 format!("The {} {}.", npc.label, felt_phrase(&affect))
             })
             .collect::<Vec<_>>()
@@ -1324,6 +1433,41 @@ mod tests {
         assert_eq!(session.snapshot().unwrap().turn, 1);
         session.handle("whoami");
         assert_eq!(session.snapshot().unwrap().turn, 2);
+    }
+
+    #[test]
+    fn wait_populates_occupancy_for_every_derived_npc() {
+        // The Threshold whole-branch review, Important 4: `wait` used to run
+        // `tick()` alone and discard `DriveMovements::step_with_occupancy`'s
+        // own within-room `Occupancy` — so `needs()` and the snapshot's
+        // present-entry read always fell back to a co-located NPC's room-
+        // landing anchor, regardless of where its own walk that tick
+        // actually carried it. This pins the wiring directly, at the level
+        // where the bug lived: before any `wait`, `self.occupancy` is
+        // still its post-`start` empty default (nothing has ever run the
+        // walk); after one `wait`, every derived npc must have a tracked
+        // within-room anchor, because `wait` now captures
+        // `step_with_occupancy`'s second element instead of throwing it
+        // away. Without the fix this assertion is never reached — the
+        // `before` check alone would still pass, since `self.occupancy`
+        // would stay empty forever.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        assert!(
+            session
+                .npcs
+                .iter()
+                .all(|n| session.occupancy.at(n.entity).is_none()),
+            "before any `wait`, occupancy has never been populated"
+        );
+        session.wait("1");
+        for npc in &session.npcs {
+            assert!(
+                session.occupancy.at(npc.entity).is_some(),
+                "after `wait`, every derived npc must have a tracked within-room anchor: {}",
+                npc.label
+            );
+        }
     }
 
     #[test]

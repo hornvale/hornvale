@@ -3720,20 +3720,22 @@ mod tests {
         );
     }
 
-    /// C6 T3: on seed 1, all four placed peoples reach the organized rung and
+    /// C6 T3: on seed 1, all placed peoples reach the organized rung and
     /// each gains a doctrine section. This is precedented genesis drift: the
     /// the-living-community merge (The Demesne per-axis supply + history-driven
-    /// re-placement, crossed with The Slumber's diurnal climate) now seats four
+    /// re-placement, crossed with The Slumber's diurnal climate) seated four
     /// peoples (bugbear/Babako, goblin/Vavako, hobgoblin/Ddenke,
     /// kobold/Ngngoashzhoo) at seed 1, all above the organized rung — matching
-    /// the regenerated `book/src/gallery/the-book.md`. Goblin's exact measured
-    /// surface is verified against the merged world: heading names the
-    /// priesthood; the emic carries the `RevealedClaim` exoteric formula for
-    /// the moons (folk capability loses `moon-count`, doctrine's boosted
-    /// capability clears the threshold and keeps it) and a day explanation whose
-    /// bound agent is the doctrine's own measured deity, Wowako (folk's own day
-    /// explanation is agentless `PathJourney`, so this is genuinely a
-    /// doctrine-only causal story, not an echo of folk's).
+    /// the regenerated `book/src/gallery/the-book.md`. The Vacancy T9 adds a
+    /// fifth people (gnoll/Kaabjaab), which also organizes at that same
+    /// seed. Goblin's exact measured surface is verified against the
+    /// merged world: heading names the priesthood; the emic carries the
+    /// `RevealedClaim` exoteric formula for the moons (folk capability loses
+    /// `moon-count`, doctrine's boosted capability clears the threshold and
+    /// keeps it) and a day explanation whose bound agent is the doctrine's
+    /// own measured deity, Wowako (folk's own day explanation is agentless
+    /// `PathJourney`, so this is genuinely a doctrine-only causal story, not
+    /// an echo of folk's).
     #[test]
     fn seed_1_doctrine_sections_render() {
         let world = generated(1);
@@ -3747,13 +3749,13 @@ mod tests {
             .collect();
         assert_eq!(
             organized,
-            vec!["bugbear", "goblin", "hobgoblin", "kobold"],
-            "seed-1: all four placed peoples are organized after the merge re-placement"
+            vec!["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"],
+            "seed-1: all five placed peoples are organized after the merge re-placement"
         );
         assert_eq!(
             peoples.len(),
-            4,
-            "seed-1: four peoples are placed, all organized"
+            5,
+            "seed-1: five peoples are placed, all organized"
         );
 
         let goblin = vol
@@ -4091,7 +4093,9 @@ mod tests {
     /// kobold/Ngngoashzhoo) and renames the planet Xobo, so the folk emic now
     /// carries four peoples-lines; the C6 null-effect property (doctrine adds
     /// nothing to these two registers) is unchanged — only the merged ground
-    /// truth moved.
+    /// truth moved. The Vacancy T9 adds a FIFTH people (gnoll/Kaabjaab),
+    /// re-pinned again — the null-effect property still holds, only the
+    /// ground truth grew by one more peoples-line.
     #[test]
     fn folk_sections_are_byte_unchanged() {
         let vol = render_volume(&generated(1));
@@ -4104,6 +4108,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
+                "The Kaabjaab are gnolls — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
                 "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
@@ -4129,6 +4134,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Babako are bugbears — rivals.".to_string(),
+                "The Kaabjaab are gnolls — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
                 "The Ddenke are hobgoblins — ourselves.".to_string(),
                 "The Ngngoashzhoo are kobolds — rivals.".to_string(),
@@ -4503,11 +4509,13 @@ mod tests {
     /// (T1's `observations_at_day_zero_are_empty`: every culture is
     /// `Unknown` at day 0). Epoch 2's lines are pinned exact against the
     /// live measurement. Re-pinned at the-living-community merge: the
-    /// history-driven re-placement now seats FOUR peoples at each of seeds
-    /// 1..=3, ALL organized (`Predictive`), so each renders four priesthood
+    /// history-driven re-placement seated FOUR peoples at each of seeds
+    /// 1..=3, ALL organized (`Predictive`), so each rendered four priesthood
     /// arms (folk line, cardinal, prediction, taught-wrongly) plus a per-
-    /// culture crisis margin and the world shortfall line. The values below
-    /// are the merged live measurement (they match `book/src/gallery/the-book.md`
+    /// culture crisis margin and the world shortfall line. The Vacancy T9
+    /// adds a fifth people (gnoll/Kaabjaab), also organized at every seed
+    /// 1..=3, rendering a fifth priesthood arm. The values below are the
+    /// merged live measurement (they match `book/src/gallery/the-book.md`
     /// and `windows/worldgen/tests/diachronic.rs::LADDER_TABLE`'s day-numbers).
     #[test]
     fn the_reckoning_renders_the_epoch_pair() {
@@ -4544,6 +4552,12 @@ mod tests {
                 "The Babako's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
+                "Among the Kaabjaab, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Kaabjaab numbers the darkenings: 6472.".to_string(),
+                "The next darkening, it teaches, comes on day 36531.".to_string(),
+                "The Kaabjaab's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
                 "Among the Vavako, the sky has darkened, now and again.".to_string(),
                 "The priesthood of the Vavako numbers the darkenings: 4010.".to_string(),
                 "The next darkening, it teaches, comes on day 36531.".to_string(),
@@ -4563,13 +4577,16 @@ mod tests {
                  any who kept their own count."
                     .to_string(),
             ],
-            "seed 1: four organized priesthoods; the lunar-witnessing pair numbers 6472, the \
-             solar-only pair 4010"
+            "seed 1: five organized priesthoods; the lunar-witnessing group (bugbear, gnoll, \
+             kobold) numbers 6472, the solar-only pair (goblin, hobgoblin) 4010"
         );
         assert_eq!(
             seed1.reckoning[1].margin,
             vec![
                 "In truth, the Babako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Kaabjaab's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Vavako's priesthood taught the darkening would come on day \
@@ -4587,9 +4604,10 @@ mod tests {
              count (6472) exceeds the solar-only cultures' held count"
         );
 
-        // Seed 2: four organized peoples (Baodboa, Maetmea, Waedwea,
-        // Ngkoshngta); the lunar-witnessing pair numbers 81, the solar-only
-        // pair 49.
+        // Seed 2: five organized peoples (Baodboa, Klokjo, Maetmea, Waedwea,
+        // Ngkoshngta); the lunar-witnessing group (bugbear/Baodboa,
+        // gnoll/Klokjo, kobold/Ngkoshngta) numbers 81, the solar-only pair
+        // (goblin/Maetmea, hobgoblin/Waedwea) 49.
         let seed2 = render_volume(&generated(2));
         assert_eq!(
             seed2.reckoning[1].lines,
@@ -4598,6 +4616,12 @@ mod tests {
                 "The priesthood of the Baodboa numbers the darkenings: 81.".to_string(),
                 "The next darkening, it teaches, comes on day 36337.".to_string(),
                 "The Baodboa's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
+                "Among the Klokjo, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Klokjo numbers the darkenings: 81.".to_string(),
+                "The next darkening, it teaches, comes on day 36337.".to_string(),
+                "The Klokjo's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Maetmea, the sky has darkened, now and again.".to_string(),
@@ -4626,6 +4650,9 @@ mod tests {
                 "In truth, the Baodboa's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
+                "In truth, the Klokjo's priesthood taught the darkening would come on day \
+                 35328; it came on day 35609 instead."
+                    .to_string(),
                 "In truth, the Maetmea's priesthood taught the darkening would come on day \
                  35328; it came on day 35609 instead."
                     .to_string(),
@@ -4639,9 +4666,10 @@ mod tests {
             ]
         );
 
-        // Seed 3: four organized peoples (Doozqao, Sdeozqae, Shteozqae,
-        // Jjajjjo); the lunar-witnessing pair numbers 53, the solar-only
-        // pair 32.
+        // Seed 3: five organized peoples (Doozqao, Naojpaa, Sdeozqae,
+        // Shteozqae, Jjajjjo); the lunar-witnessing group (bugbear/Doozqao,
+        // gnoll/Naojpaa, kobold/Jjajjjo) numbers 53, the solar-only pair
+        // (goblin/Sdeozqae, hobgoblin/Shteozqae) 32.
         let seed3 = render_volume(&generated(3));
         assert_eq!(
             seed3.reckoning[1].lines,
@@ -4650,6 +4678,12 @@ mod tests {
                 "The priesthood of the Doozqao numbers the darkenings: 53.".to_string(),
                 "The next darkening, it teaches, comes on day 36125.".to_string(),
                 "The Doozqao's own priesthood taught wrongly, and could be shown wrong by any \
+                 who kept their own count."
+                    .to_string(),
+                "Among the Naojpaa, the sky has darkened, now and again.".to_string(),
+                "The priesthood of the Naojpaa numbers the darkenings: 53.".to_string(),
+                "The next darkening, it teaches, comes on day 36125.".to_string(),
+                "The Naojpaa's own priesthood taught wrongly, and could be shown wrong by any \
                  who kept their own count."
                     .to_string(),
                 "Among the Sdeozqae, the sky has darkened, now and again.".to_string(),
@@ -4671,13 +4705,16 @@ mod tests {
                  who kept their own count."
                     .to_string(),
             ],
-            "seed 3: four organized priesthoods; the lunar-witnessing pair numbers 53, the \
+            "seed 3: five organized priesthoods; the lunar-witnessing group numbers 53, the \
              solar-only pair 32"
         );
         assert_eq!(
             seed3.reckoning[1].margin,
             vec![
                 "In truth, the Doozqao's priesthood taught the darkening would come on day \
+                 35583; it came on day 35030 instead."
+                    .to_string(),
+                "In truth, the Naojpaa's priesthood taught the darkening would come on day \
                  35583; it came on day 35030 instead."
                     .to_string(),
                 "In truth, the Sdeozqae's priesthood taught the darkening would come on day \
@@ -4744,9 +4781,12 @@ mod tests {
                 // epoch phrase at all (unlike the shortfall line below), so
                 // they are byte-identical to the fixed pair's own margin
                 // lines pinned in `the_reckoning_renders_the_epoch_pair`.
-                // Merge re-placement: four organized priesthoods now, each
-                // with its own live crisis.
+                // Merge re-placement, then The Vacancy T9: five organized
+                // priesthoods now, each with its own live crisis.
                 "In truth, the Babako's priesthood taught the darkening would come on day \
+                 36528; it came on day 36522 instead."
+                    .to_string(),
+                "In truth, the Kaabjaab's priesthood taught the darkening would come on day \
                  36528; it came on day 36522 instead."
                     .to_string(),
                 "In truth, the Vavako's priesthood taught the darkening would come on day \
@@ -4793,6 +4833,7 @@ mod tests {
                  lasts about 1.5 standard days."
                     .to_string(),
                 "The Babako are bugbears.".to_string(),
+                "The Kaabjaab are gnolls.".to_string(),
                 "The Vavako are goblins.".to_string(),
                 "The Ddenke are hobgoblins.".to_string(),
                 "The Ngngoashzhoo are kobolds.".to_string(),
@@ -4804,6 +4845,9 @@ mod tests {
                 "Nxaabo Babako Boxa. (in the bugbear tongue: \"The Babako are bugbears.\")"
                     .to_string(),
                 "Nxaabo Xobo Xobo. (in the bugbear tongue: \"Xobo is the earth.\")".to_string(),
+                "Kaabjaab Poap Joakjaokjoog. (in the gnoll tongue: \"The Kaabjaab are gnolls.\")"
+                    .to_string(),
+                "Xobo Poap Poakkoak. (in the gnoll tongue: \"Xobo is the earth.\")".to_string(),
                 "Saa Wowe Vavako. (in the goblin tongue: \"The Vavako are goblins.\")".to_string(),
                 "Saa Wovewe Xobo. (in the goblin tongue: \"Xobo is the earth.\")".to_string(),
                 "Ddenke Babo Be Bo. (in the hobgoblin tongue: \"The Ddenke are hobgoblins.\")"
@@ -4820,6 +4864,7 @@ mod tests {
             vol.tongue_gaps,
             vec![
                 "bugbear: gap — planet (no entry in this lexicon)".to_string(),
+                "gnoll: gap — planet (no entry in this lexicon)".to_string(),
                 "goblin: gap — planet (no entry in this lexicon)".to_string(),
                 "hobgoblin: gap — planet (no entry in this lexicon)".to_string(),
                 "kobold: gap — planet (no entry in this lexicon)".to_string(),
@@ -4835,6 +4880,7 @@ mod tests {
             goblin.emic,
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
+                "The Kaabjaab are gnolls — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
                 "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
@@ -4863,6 +4909,7 @@ mod tests {
             goblin_doctrine.emic,
             vec![
                 "The Babako are bugbears — neighbors.".to_string(),
+                "The Kaabjaab are gnolls — neighbors.".to_string(),
                 "The Vavako are goblins — ourselves.".to_string(),
                 "The Ddenke are hobgoblins — neighbors.".to_string(),
                 "The Ngngoashzhoo are kobolds — neighbors.".to_string(),
@@ -4891,6 +4938,7 @@ mod tests {
             hobgoblin.emic,
             vec![
                 "The Babako are bugbears — rivals.".to_string(),
+                "The Kaabjaab are gnolls — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
                 "The Ddenke are hobgoblins — ourselves.".to_string(),
                 "The Ngngoashzhoo are kobolds — rivals.".to_string(),
@@ -4907,9 +4955,10 @@ mod tests {
             ]
         );
         // Merge re-placement: seed-1 hobgoblin (Ddenke) is now organized too
-        // (all four peoples clear the rung), matching the regenerated
-        // `book/src/gallery/the-book.md`. Its doctrine carries the same
-        // RevealedClaim moon formula the additivity law witnesses.
+        // (all four then-peoples clear the rung), matching the regenerated
+        // `book/src/gallery/the-book.md`. The Vacancy T9's gnoll also
+        // organizes at seed 1. Its doctrine carries the same RevealedClaim
+        // moon formula the additivity law witnesses.
         let hobgoblin_doctrine = hobgoblin.doctrine.as_ref().expect("hobgoblin is organized");
         assert_eq!(
             hobgoblin_doctrine.heading,
@@ -4919,6 +4968,7 @@ mod tests {
             hobgoblin_doctrine.emic,
             vec![
                 "The Babako are bugbears — rivals.".to_string(),
+                "The Kaabjaab are gnolls — rivals.".to_string(),
                 "The Vavako are goblins — rivals.".to_string(),
                 "The Ddenke are hobgoblins — ourselves.".to_string(),
                 "The Ngngoashzhoo are kobolds — rivals.".to_string(),

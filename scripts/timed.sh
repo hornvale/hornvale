@@ -65,8 +65,9 @@ cmd_run() {
 
     ratio="$(awk -v u="$user" -v s="$sys" -v r="$real" 'BEGIN{ if(r+0>0) printf "%.2f",(u+s)/r; else print "?" }')"
     [ -f "$LEDGER" ] || init_ledger
-    printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+    printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$label" "$real" "$user" "$sys" "$ratio" \
+        "${HV_CENSUS_WAITED_S:-0}" \
         "$(git rev-parse --short HEAD 2>/dev/null || echo '-')" \
         "$(git branch --show-current 2>/dev/null || echo '-')" \
         "$(hostname -s 2>/dev/null || echo '-')" "$(cores)" \
@@ -87,12 +88,17 @@ deliberate milestone run, written by [`scripts/timed.sh`](../scripts/timed.sh)
 (`make timings` to view). Times are machine- and load-specific — read
 `host`/`cores`/`cpu_ratio`, not the raw seconds, across different machines.
 `cpu_ratio = (user+sys)/wall` ≈ parallelism achieved: it separates *more work*
-(user climbs) from *more contention* (wall climbs, ratio falls). This file is
+(user climbs) from *more contention* (wall climbs, ratio falls). `waited_s` is
+time spent QUEUED behind another heavy run (decision 0081), not work — it
+separates a *queued* run from a *slow* one. A row reading `wall=1240
+waited_s=620` explains itself; the same row without the column is a mystery.
+Rows written before the column exists simply lack it; this file is not
+drift-checked, so history is left as it was rather than backfilled. This file is
 NOT drift-checked and never gates the build; it is a record you read. The
 build-failing tolerance-band version is a later step (`TOOL-suite-timing-ledger`).
 
-| when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | commit | branch | host | cores |
-|---|---|---|---|---|---|---|---|---|---|
+| when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
+|---|---|---|---|---|---|---|---|---|---|---|
 MD
 }
 

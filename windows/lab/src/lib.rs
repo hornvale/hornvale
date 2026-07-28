@@ -2,6 +2,8 @@
 #![warn(missing_docs)]
 
 pub mod blackbox;
+pub mod census_claim;
+pub mod census_guard;
 pub mod chart;
 pub mod diff;
 pub mod health;
@@ -15,6 +17,7 @@ pub mod summary;
 pub mod synthetic;
 
 pub use blackbox::record_failure;
+pub use census_guard::{CENSUS_GOLDENS_DIR, current_hostname, require_canonical_host_for};
 pub use chart::{bar_chart_svg, charts_for};
 pub use diff::{render_diff, render_diff_results};
 pub use metrics::{

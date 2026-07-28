@@ -28,10 +28,51 @@ LOCK="${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
 
 # Serialize: open the lock fd, then block until it is ours. Closing the fd on
 # exit (any exit) releases it, so the next queued invocation proceeds.
+# Refuse outright on any box but the canonical one: this script's whole premise
+# is that goldens come from one machine. This shell guard covers every SHELL
+# entry point (this script, and the HV_CENSUS=1 branch of
+# regenerate-artifacts.sh); `cargo run -p hornvale -- lab run <census study>`
+# bypasses shell entirely, so it carries its own guard in Rust
+# (windows/lab/src/census_guard.rs, invoked from publish()) reading the same
+# scripts/census-canonical-host.txt this one does (decision 0063).
+# `status` answers "is a census running right now?" without ps | grep
+# (decision 0081). Handled before the host guard and the lock: asking is not
+# authoring, so it is legal from any machine and must never block.
+if [ "${1:-}" = "status" ]; then
+    cargo run --quiet --release -p hornvale -- lab claim-status
+    exit $?
+fi
+
+# shellcheck source=scripts/census-canonical-host.sh
+. "$(dirname "$0")/census-canonical-host.sh"
+require_canonical_census_host || exit 1
+
 exec 9>"$LOCK"
-echo "census-run: waiting for the census lock ($LOCK) …" >&2
-flock 9
-echo "census-run: lock acquired at $(date -Is)" >&2
+timeout_s="${HV_CENSUS_WAIT_TIMEOUT:-2700}"
+echo "census-run: waiting for the census lock ($LOCK; up to ${timeout_s}s) …" >&2
+# Measure the queue wait here: this is where it actually happens, before
+# timed.sh starts, so `wall_s` stays the work and `waited_s` the queue
+# (decision 0081).
+wait_began=$SECONDS
+if ! flock -w "$timeout_s" 9; then
+    # Bounded, so a wedged holder fails loudly instead of hanging forever
+    # (decision 0081). Report WHO, not just that we gave up.
+    echo "census-run: TIMED OUT after ${timeout_s}s waiting for the census lock." >&2
+    echo "census-run: $(cargo run --quiet --release -p hornvale -- lab claim-status 2>/dev/null || echo 'claim holder unknown')" >&2
+    exit 75
+fi
+HV_CENSUS_WAITED_S=$((SECONDS - wait_began))
+export HV_CENSUS_WAITED_S
+if [ "$HV_CENSUS_WAITED_S" -gt 0 ]; then
+    echo "census-run: lock acquired at $(date -Is) after ${HV_CENSUS_WAITED_S}s queued" >&2
+else
+    echo "census-run: lock acquired at $(date -Is)" >&2
+fi
+# Announce the hold so the nested regenerate-artifacts.sh -> lab run path does
+# not block against its own ancestor. flock is per open-file-description, so a
+# child re-flocking this same path on a fresh fd would DEADLOCK against us
+# (decision 0081).
+export HV_CENSUS_LOCK_HELD=$$
 trap 'echo "census-run: finished at $(date -Is)" >&2' EXIT
 
 run_root="$repo_root"
@@ -53,10 +94,34 @@ if [ -n "${HV_CENSUS_REF:-}" ]; then
 fi
 
 cd "$run_root"
+
+# Publish the CLAIM the Rust seam reads, so both layers share ONE source of
+# truth. Without this the flock and the claim are invisible to each other: a
+# bare `cargo run -p hornvale -- lab run studies/the-census.study.json` checks
+# only the claim file, finds none during a wrapper-driven regen, and runs
+# CONCURRENTLY — the exact hole decision 0081 exists to close. It also makes
+# `census-run.sh status` truthful while the wrapper is the one holding the
+# box. Nested runs still skip acquisition via HV_CENSUS_LOCK_HELD, so this
+# cannot deadlock against itself.
+claim_path="${HV_CENSUS_CLAIM_PATH:-/tmp/hv-census.claim}"
+{
+    echo "pid=$$"
+    echo "host=$(hostname -s 2>/dev/null || echo '-')"
+    echo "user=${USER:-unknown}"
+    echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "goldens=$run_root/book/src/laboratory/generated"
+    echo "label=census-run"
+    echo "ref=$(git -C "$run_root" branch --show-current 2>/dev/null || echo '-')@$(git -C "$run_root" rev-parse --short HEAD 2>/dev/null || echo '-')"
+    echo "cmdline=census-run.sh $*"
+} > "$claim_path"
+# Replaces the earlier EXIT trap: release the claim on every exit path,
+# including the error ones, so a failed regen never wedges the box.
+trap 'rm -f "$claim_path"; echo "census-run: finished at $(date -Is)" >&2' EXIT
+
 if [ "$#" -eq 0 ]; then
     echo "census-run: regenerating the canonical census goldens (HV_CENSUS=1, ~7 min) …" >&2
-    HV_CENSUS=1 bash scripts/regenerate-artifacts.sh
-    echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is canonical, decision 0063)." >&2
+    HV_CENSUS=1 bash scripts/timed.sh census -- bash scripts/regenerate-artifacts.sh
+    echo "census-run: goldens regenerated — review 'git diff book/src/laboratory/generated' and commit (this box is the canonical one, decision 0063)." >&2
 else
     for study in "$@"; do
         echo "census-run: lab run $study …" >&2

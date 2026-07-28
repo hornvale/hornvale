@@ -288,14 +288,50 @@ pub fn assign_proto_roots(
     concepts: &[&str],
     daughters: &[Daughter],
 ) -> std::collections::BTreeMap<String, Vec<Segment>> {
-    // Core-first, then concept-id. Core concepts (the Swadesh strata) are
-    // assigned before periphery so they win the short forms (length ∝
-    // rarity), and the id tiebreak keeps the order stable — a concept added
-    // to the universe later slots in without reshuffling the words already
-    // assigned ahead of it.
+    assign_proto_roots_with_epoch(
+        seed,
+        family,
+        proto_ph,
+        concepts,
+        daughters,
+        crate::accession::concept_epoch,
+    )
+}
+
+/// [`assign_proto_roots`] with the accession-epoch lookup injected, so the
+/// insertion-stability property can be exercised over a synthetic universe
+/// (the real table is a `const`, and a test cannot append a cohort to it).
+/// The public entry point delegates here with
+/// [`crate::accession::concept_epoch`].
+pub(crate) fn assign_proto_roots_with_epoch(
+    seed: &Seed,
+    family: &str,
+    proto_ph: &Phonology,
+    concepts: &[&str],
+    daughters: &[Daughter],
+    epoch_of: impl Fn(&str) -> u32,
+) -> std::collections::BTreeMap<String, Vec<Segment>> {
+    // Accession epoch first, then core-first, then concept-id.
+    //
+    // An assignment depends only on the concepts sorted at or before it, so
+    // sorting by epoch first makes a later-epoch concept land STRICTLY LAST
+    // — the one position that provably displaces nothing. That is what makes
+    // registry growth additive by construction rather than by luck (The
+    // Accession §3; before it, `otyugh-kind` alone moved 65 facts).
+    //
+    // Within an epoch, core concepts (the Swadesh strata) are assigned before
+    // periphery so they win the short forms (length ∝ rarity), and the id
+    // tiebreak keeps the order deterministic. Epoch outranks `core_rank`
+    // deliberately: a future core word forfeits short-form priority to
+    // arrival order, the accepted cost of guaranteed additivity (§3.3).
     let core_rank = |concept: &&str| u8::from(!crate::packs::is_core_concept(concept));
     let mut ordered: Vec<&str> = concepts.to_vec();
-    ordered.sort_by(|a, b| core_rank(a).cmp(&core_rank(b)).then_with(|| a.cmp(b)));
+    ordered.sort_by(|a, b| {
+        epoch_of(a)
+            .cmp(&epoch_of(b))
+            .then_with(|| core_rank(a).cmp(&core_rank(b)))
+            .then_with(|| a.cmp(b))
+    });
 
     let mut used: std::collections::BTreeSet<Vec<Segment>> = std::collections::BTreeSet::new();
     // Placed core roots, kept for the minimal-pair guard: a core candidate is
@@ -1063,6 +1099,62 @@ mod tests {
                 "{concept} must keep its form when a later-sorting concept is added"
             );
         }
+    }
+
+    /// The property the last-position test proves, now held for ANY position.
+    /// Before The Accession this failed: a mid-sorting concept could take a
+    /// form a later concept would have drawn, forcing it to probe. Marking
+    /// the newcomer epoch 1 sorts it strictly last, so nothing moves —
+    /// additivity by construction rather than by luck.
+    #[test]
+    fn a_later_epoch_concept_is_insertion_stable_from_any_alphabetical_position() {
+        let ph = cramped_phonology();
+        let base = core_concept_batch();
+        let epoch0 = |_: &str| 0u32;
+        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+
+        // "moon" is core and sorts into the MIDDLE of the core block (between
+        // "many" and "mouth") -- the position that was unsafe before this
+        // campaign, and the one the minimal-pair guard makes most collision-
+        // prone. At epoch 1 it sorts strictly last instead.
+        let mut grown = base.clone();
+        grown.push("moon");
+        let epoch1_for_newcomer = |c: &str| u32::from(c == "moon");
+        let after =
+            assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch1_for_newcomer);
+
+        for concept in &base {
+            assert_eq!(
+                before[*concept], after[*concept],
+                "{concept} must keep its form when a mid-sorting later-epoch \
+                 concept is added"
+            );
+        }
+        assert!(after.contains_key("moon"), "the newcomer is still assigned");
+    }
+
+    /// The negative control: the SAME insertion at epoch 0 is what the old
+    /// ordering did. If this ever stops perturbing, the test above has gone
+    /// vacuous -- it would be passing because the universe is too roomy to
+    /// collide, not because the epoch sort is doing anything.
+    #[test]
+    fn the_same_mid_sorting_insertion_at_epoch_zero_still_displaces() {
+        let ph = cramped_phonology();
+        let base = core_concept_batch();
+        let epoch0 = |_: &str| 0u32;
+        let before = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &base, &[], epoch0);
+
+        let mut grown = base.clone();
+        grown.push("moon");
+        let after = assign_proto_roots_with_epoch(&Seed(4), "fam", &ph, &grown, &[], epoch0);
+
+        let moved = base.iter().filter(|c| before[**c] != after[**c]).count();
+        assert!(
+            moved > 0,
+            "a mid-sorting epoch-0 insertion should displace at least one \
+             assignment in a cramped phonology -- if it does not, the \
+             insertion-stability test above proves nothing"
+        );
     }
 
     #[test]

@@ -54,6 +54,7 @@
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
+- [The Purview, Off a Possession — Seed 42](./gallery/surrounds-seed-42.md)
 
 # The Laboratory
 
@@ -250,9 +251,21 @@
 - [The Snapshot](./chronicle/the-snapshot.md)
 - [The Shudder](./chronicle/the-shudder.md)
 - [The Hearth](./chronicle/the-hearth.md)
+- [The Threshold](./chronicle/the-threshold.md)
 - [The Vigil](./chronicle/the-vigil.md)
 - [The Tumult](./chronicle/the-tumult.md)
+- [The Waterline](./chronicle/the-waterline.md)
 - [The Purview](./chronicle/the-purview.md)
+- [The Margin](./chronicle/the-margin.md)
+- [The Reagent](./chronicle/the-reagent.md)
+- [The Convalescence](./chronicle/the-convalescence.md)
+- [The Action Clock](./chronicle/the-action-clock.md)
+- [The Accession](./chronicle/the-accession.md)
+- [The Shelf-Mark](./chronicle/the-shelf-mark.md)
+- [The Actants](./chronicle/the-actants.md)
+- [The Vacancy](./chronicle/the-vacancy.md)
+- [The Hoist](./chronicle/the-hoist.md)
+- [The Turnstile](./chronicle/the-turnstile.md)
 
 # Appendix: The Frontier
 

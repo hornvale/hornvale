@@ -1,0 +1,8 @@
+[lens: terrain · depth 12 · radius 4 · lattice-aligned, not north-up]
+  _____
+ _______
+~~__@____
+ ~~~~___
+  ~ ~ ~
+  ways on: SW, SE, N
+  legend: a windthrow gap sun-warmed damp on a rise, epipelagic, temperate forest

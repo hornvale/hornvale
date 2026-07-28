@@ -33,8 +33,8 @@ pub use astar::{SearchSpace, astar};
 pub use component::{Component, ComponentStore};
 pub use domain::{Domain, WorldContext};
 pub use ecology::{
-    ANIMAL_PREY, ConditionResponse, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE, ResourceAxis,
-    ResourceKind, ResourceVector, sovereignty_floor, v1_basis,
+    ANIMAL_PREY, ConditionResponse, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+    ResourceAxis, ResourceKind, ResourceVector, sovereignty_floor, v1_basis,
 };
 pub use field::{ConstantField, Field, NoiseField, Position, WorldTime};
 pub use geosphere::{CellId, CellMap, GeoCoord, Geosphere, NearestCellIndex};

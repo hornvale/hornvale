@@ -40,6 +40,12 @@ pub enum ConceptKind {
     Kin,
     /// An abstract property or attribute.
     Quality,
+    /// An act a creature performs — the verb side of the vocabulary. Distinct
+    /// from [`ConceptKind::Quality`], which held the world's verbs by default
+    /// before The Actants gave them their own kind: `eat` is something a
+    /// creature *does*, not a property it *has*, and the GOAP action roster
+    /// reconciles against exactly this class.
+    Act,
 }
 
 /// Definition of a named concept: the word-level vocabulary entry
