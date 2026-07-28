@@ -12,10 +12,14 @@
 //! construction rather than by policy.
 
 pub mod allocate;
+pub mod grow;
 
 pub use allocate::allocate;
+pub use grow::grow;
 
+use crate::brief::Brief;
 use crate::structure::Structure;
+use hornvale_kernel::Seed;
 use std::collections::BTreeSet;
 
 // `extent_for`'s block arrangement is exhaustive only while four chambers fit a
@@ -116,6 +120,23 @@ pub struct Lattice {
     pub doorways: Vec<(usize, usize, Cell)>,
 }
 
+/// Embed `structure`, choosing the method the brief calls for.
+///
+/// The selector is the point: rectilinear allocation for places somebody built,
+/// region growing for places nobody did. Radial (temples) and branching (mines)
+/// are predicted by the spec's §3.2 grid and plug in here — this function is the
+/// seam, which is why it exists at two methods rather than being inlined.
+///
+/// Each method derives its own stream (ledger #7), so the two draw independently:
+/// adding a third method cannot move where an existing one puts things.
+pub fn embed_with(structure: &Structure, brief: &Brief, extent: Rect, seed: Seed) -> Lattice {
+    if brief.built {
+        allocate(structure, extent, seed)
+    } else {
+        grow(structure, extent, seed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,9 +157,13 @@ mod tests {
         Brief::from_parts(None, None, None, None, true, true)
     }
 
+    fn wild() -> Brief {
+        Brief::from_parts(None, None, None, None, false, true)
+    }
+
     fn embed(seed: u64) -> (crate::structure::Structure, Lattice) {
         let s = structure_at(&locale(), &built(), Seed(seed), WALK).expect("built");
-        let l = allocate(&s, extent_for(&s), Seed(seed));
+        let l = embed_with(&s, &built(), extent_for(&s), Seed(seed));
         (s, l)
     }
 
@@ -238,6 +263,50 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn a_wild_place_grows_instead_of_splitting() {
+        // The selector is the deliverable: same structure, different method,
+        // chosen on `built` alone.
+        let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
+        let rect = embed_with(&s, &built(), extent_for(&s), Seed(42));
+        let organic = embed_with(&s, &wild(), extent_for(&s), Seed(42));
+        assert_ne!(
+            rect, organic,
+            "a built place and a wild one must not embed identically"
+        );
+    }
+
+    #[test]
+    fn a_grown_lattice_still_covers_its_chambers_and_links() {
+        let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
+        let l = embed_with(&s, &wild(), extent_for(&s), Seed(42));
+        assert_eq!(l.regions.len(), s.chambers.len());
+        assert_eq!(l.doorways.len(), s.links.len());
+    }
+
+    #[test]
+    fn growing_is_pure_and_reads_the_seed() {
+        // The structure must have MORE THAN ONE chamber for the second half to
+        // mean anything: one blob floods the whole extent whatever cell it starts
+        // from, so a single-chamber structure forces eight identical plans and
+        // "the seed is ignored" would be a false accusation rather than a finding.
+        // Asserted rather than assumed, because the count is `structure_at`'s
+        // business and could move under this test.
+        let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
+        assert!(
+            s.chambers.len() > 1,
+            "this test needs a structure with residual freedom to fill; {} chambers has none",
+            s.chambers.len()
+        );
+        let a = embed_with(&s, &wild(), extent_for(&s), Seed(7));
+        let b = embed_with(&s, &wild(), extent_for(&s), Seed(7));
+        assert_eq!(a, b);
+        let plans: Vec<Lattice> = (0..8u64)
+            .map(|sd| embed_with(&s, &wild(), extent_for(&s), Seed(sd)))
+            .collect();
+        assert!(plans.iter().any(|p| *p != plans[0]), "the seed is ignored");
     }
 
     /// A structure of `n` chambers, built by hand: `extent_for` reads only the
