@@ -615,6 +615,10 @@ impl<'w> Session<'w> {
             seed,
             registry: self.registry,
             ledger: self.ledger,
+            // Carried forward, never invented: the vessel cannot see the
+            // composition root's label roster, so it preserves whatever the
+            // possessed world recorded and leaves stamping to `cli`.
+            derived_under: self.world.derived_under.clone(),
         }
     }
 
@@ -1790,6 +1794,10 @@ impl<'w> Session<'w> {
             seed: self.world.seed,
             registry: self.registry.clone(),
             ledger: self.ledger.clone(),
+            // Never serialized and never read by historiography; an empty
+            // stamp is the accurate claim for a world that exists for the
+            // duration of one provenance read.
+            derived_under: std::collections::BTreeMap::new(),
         };
         hornvale_historiography::recount(&evolved, entity)
     }
