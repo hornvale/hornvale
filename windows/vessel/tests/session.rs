@@ -392,3 +392,65 @@ fn run_drives_a_script_deterministically() {
     assert!(text.contains("> look"), "echo mode echoes commands");
     assert!(text.contains("You stand in"));
 }
+
+/// The room prints "Ways on: SE, N, SW." — every one of those tokens must be
+/// a command you can actually type. This is the exact bug: the parser already
+/// accepted them, but the verb dispatch never reached it.
+#[test]
+fn every_printed_way_out_is_a_command_you_can_type() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let ways = match s.handle("look") {
+        Turn::Out(t) => t,
+        _ => panic!("look must not release"),
+    };
+    let line = ways
+        .lines()
+        .find(|l| l.starts_with("Ways on:"))
+        .expect("a room lists its ways out")
+        .to_string();
+    let tokens: Vec<String> = line
+        .trim_start_matches("Ways on:")
+        .trim_end_matches('.')
+        .split(',')
+        .map(|t| t.trim().to_lowercase())
+        .filter(|t| !t.is_empty())
+        .collect();
+    assert!(!tokens.is_empty(), "no exits to test: {line}");
+    for t in tokens {
+        let out = match s.handle(&t) {
+            Turn::Out(o) => o,
+            _ => panic!("a direction must not release"),
+        };
+        assert!(
+            !out.contains("No verb"),
+            "the room printed '{t}' as a way out but the parser rejects it: {out}"
+        );
+        s.handle("back");
+    }
+}
+
+/// Long-form names work as bare commands too.
+#[test]
+fn long_direction_names_work_as_bare_commands() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let out = match s.handle("northeast") {
+        Turn::Out(o) => o,
+        _ => panic!("must not release"),
+    };
+    assert!(!out.contains("No verb"), "{out}");
+}
+
+/// A genuine non-verb still reports itself honestly — the fallthrough must not
+/// swallow the error path.
+#[test]
+fn a_genuine_non_verb_still_reports_itself() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let out = match s.handle("xyzzy") {
+        Turn::Out(o) => o,
+        _ => panic!("must not release"),
+    };
+    assert!(out.contains("No verb 'xyzzy'"), "{out}");
+}

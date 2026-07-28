@@ -87,7 +87,8 @@ const HELP: &str = "\
 verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser)
-  go <dir>         walk a compass exit (n ne e se s sw w nw)
+  go <dir>         walk a compass exit (n ne e se s sw w nw); the bare
+                   direction works on its own too
   examine <thing>  anything look mentions
   back             retrace your last step
   wait [N]         let N days pass overhead (default 1); the world moves too
@@ -583,6 +584,11 @@ impl<'w> Session<'w> {
             ),
             "help" => Turn::Out(HELP.to_string()),
             "release" | "quit" => Turn::Released("You let go.".to_string()),
+            // A bare compass token IS a movement command. The room prints
+            // "Ways on: SE, N, SW." and every one of those tokens must be
+            // typeable; `parse_compass` already accepted them, and only this
+            // dispatch arm was missing.
+            other if parse_compass(other).is_some() => self.go(other),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
         if !verb.is_empty() {
