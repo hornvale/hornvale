@@ -639,22 +639,39 @@ impl<'a> Namer<'a> {
     /// Two deliberate coarsenesses, both erring toward keeping the name
     /// honest rather than toward keeping the wear:
     ///
-    /// - **Contiguity is stricter than "recognizable".** An epenthetic vowel
-    ///   inserted *inside* a worn morpheme leaves it perfectly audible but
-    ///   fails [`contains_run`], and the wear is forfeited. A looser
-    ///   subsequence test would keep more wear at the cost of a check that
-    ///   can no longer tell reduction from scattering, so the strict form
-    ///   stands.
+    /// - **Contiguity is stricter than "recognizable" — and the difference
+    ///   is measured, not assumed.** An epenthetic vowel inserted *inside*
+    ///   a worn morpheme leaves it perfectly audible but fails
+    ///   [`contains_run`], so the wear is forfeited. The exact alternative
+    ///   is available and was built and run: [`repair_phonotactics`] knows
+    ///   which segments it inserted, so checking the run against the
+    ///   *retained input* rather than the output admits epenthesis and
+    ///   nothing else — no distance metric, no dial. Against four
+    ///   production worlds (seeds 42, 1, 99, 777; 650 settlement names, 690
+    ///   containment decisions) **the two rules agree on every one**: the
+    ///   same 650 acceptances and the same 40 surrenders. Not one
+    ///   production surrender is even a *subsequence* of the repaired form
+    ///   — every one is a genuine deletion that costs the morpheme a
+    ///   quarter to a third of its segments (longest retained run 12 of 16,
+    ///   4 of 6, 2 of 3). Over a 2560-cell synthetic grid the repair-aware
+    ///   rule rescues 11 of 520 surrenders (2.1 %). So the strict form
+    ///   stands on evidence, and **the scarcity of surviving wear is not
+    ///   this check's doing**: of 940 production morphemes, 611 clear
+    ///   [`WEAR_FLOOR`], the drawn cascade alters only 53 of those 611, and
+    ///   this rule then rejects 40. The dominant filter by an order of
+    ///   magnitude is the cascade being a no-op — the documented
+    ///   consequence of *deriving* the wear from the language (see
+    ///   [`Namer::wear`]) rather than authoring a clipping rule.
     /// - **The check covers unworn parts too.** A surrender is only ever
     ///   *applied* to a genuinely worn morpheme (the give-up order is built
     ///   from the worn ones), but it can be *triggered* by an unworn part's
     ///   annihilation — a pre-existing possibility with nothing to do with
     ///   wear — in which case a sibling loses perfectly good wear and the
-    ///   count over-reports. Not observed: all **39** surrenders measured
-    ///   on the shipped seed-42 pipeline had at least one genuinely worn
-    ///   part among the annihilated ones. (Was 30 before the drawn
-    ///   [`NameShape`] gave some compounds a third morpheme; re-measured
-    ///   with the same instrumentation, not carried forward.)
+    ///   count over-reports. Not observed: across all four production
+    ///   seeds, **all 59** annihilated parts behind the 40 surrenders were
+    ///   themselves genuinely worn. (Seed 42 alone accounts for 39 of the
+    ///   40; it was 30 before the drawn [`NameShape`] gave some compounds a
+    ///   third morpheme.)
     ///
     /// The alternative remedy — admitting worn forms into the attested tier
     /// so repair leaves them alone — was rejected: the Lab's own
