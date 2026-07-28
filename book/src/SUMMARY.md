@@ -53,6 +53,7 @@
 - [The Transport Topology — Seed 42](./gallery/connections-seed-42.md)
 - [A Possession — Seed 42](./gallery/possession-seed-42.md)
 - [Strange Sites — Seed 42](./gallery/strange-sites-seed-42.md)
+- [The Look of the World — Seed 42](./gallery/room-sample-seed-42.md)
 - [A Possession, Over Time](./gallery/possession-over-time-seed-42.md)
 - [A Possession, Live](./gallery/possession-live.md)
 - [The Purview, Off a Possession — Seed 42](./gallery/surrounds-seed-42.md)
@@ -272,6 +273,9 @@
 - [The Occlusion](./chronicle/the-occlusion.md)
 - [The Formations](./chronicle/the-formations.md)
 - [The Sextant](./chronicle/the-sextant.md)
+- [The Shoal](./chronicle/the-shoal.md)
+- [The Tare](./chronicle/the-tare.md)
+- [The Column](./chronicle/the-column.md)
 
 # Appendix: The Frontier
 

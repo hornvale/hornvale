@@ -56,6 +56,10 @@ const INDOOR_EXAMINE_REFUSAL: &str =
 /// walk along. Both `go` and `back` are walk-band operations (`back` retraces a
 /// walk-band trail), so both are refused here rather than silently teleporting
 /// the possession out of doors.
+/// Swimming between coordinates is a later campaign; for now the water column
+/// is entered and left at one place. Diegetic, not a parse error.
+const SUBMERGED_LATERAL_REFUSAL: &str = "Not while you are under. Surface first, then swim.";
+
 const INDOOR_LATERAL_REFUSAL: &str =
     "Inside, there is no north; say 'further in' to go deeper, or 'out' to leave.";
 
@@ -117,6 +121,8 @@ verbs:
   map [out N]      the chart of what lies around you (N rungs coarser)
   go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw);
                    the bare direction works on its own too
+  dive             descend a layer of the water column; 'surface' comes back
+  surface          rise a layer, and at the top return to the open air
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
@@ -207,6 +213,11 @@ pub struct Session<'w> {
     /// `whoami`, `purview`, the snapshot, the NPC layer) is untouched by being
     /// indoors.
     inside: Option<(crate::structure::Structure, usize)>,
+    /// The stratum the possession has descended to within the water column,
+    /// if any. `None` is the surface — standing on land, or afloat on the sea.
+    /// The depth band, mirroring `inside`: a second way of being somewhere
+    /// other than out of doors at ground level.
+    submerged: Option<hornvale_climate::Stratum>,
 }
 
 impl<'w> Session<'w> {
@@ -311,6 +322,7 @@ impl<'w> Session<'w> {
             turn: 0,
             last_text: String::new(),
             inside: None,
+            submerged: None,
         };
         session.absorb_here()?;
         let opening = session.describe_here()?;
@@ -610,6 +622,7 @@ impl<'w> Session<'w> {
             // locale. Everything else reads `self.agent.position`, which never
             // leaves the walk band, so nothing else changes.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
+            "look" if self.submerged.is_some() => self.out(self.describe_here()),
             "look" => self.out(self.describe_here()),
             "map" => self.map(rest),
             // Lateral movement is walk-band only (§1b.6). Guarded exactly as
@@ -617,6 +630,7 @@ impl<'w> Session<'w> {
             // rendered the NEIGHBOURING LOCALE with no sentence acknowledging
             // the building had been left.
             "go" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
+            "go" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
             "go" => self.go(rest),
             // Band-aware, for the same reason `look` is: indoors, the nouns
             // `look` named have no authored detail behind them, and the outdoor
@@ -632,6 +646,7 @@ impl<'w> Session<'w> {
             // `back` retraces the WALK-band trail, so it is the same refusal
             // for the same reason as `go`.
             "back" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
+            "back" if self.submerged.is_some() => Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string()),
             "back" => self.back(),
             "wait" => self.wait(rest),
             "whoami" => Turn::Out(self.whoami()),
@@ -643,6 +658,8 @@ impl<'w> Session<'w> {
             "soothe" => self.act_on_disposition(rest, -1),
             "write" => Turn::Out(self.write(rest)),
             "consult" => Turn::Out(self.consult()),
+            "dive" => self.dive(),
+            "surface" => self.surface(),
             "enter" => self.enter(rest),
             "out" => self.leave(),
             // Coarse-ward is still refused: possessing a settlement, a culture
@@ -667,6 +684,9 @@ impl<'w> Session<'w> {
             other if self.inside.is_some() && parse_compass(other).is_some() => {
                 Turn::Out(INDOOR_LATERAL_REFUSAL.to_string())
             }
+            other if self.submerged.is_some() && parse_compass(other).is_some() => {
+                Turn::Out(SUBMERGED_LATERAL_REFUSAL.to_string())
+            }
             other if parse_compass(other).is_some() => self.go(other),
             other => Turn::Out(format!("No verb '{other}' ('help' lists them).")),
         };
@@ -676,6 +696,73 @@ impl<'w> Session<'w> {
             };
         }
         turn
+    }
+
+    /// The water column at the room the possession stands on, shallowest
+    /// first; empty on land.
+    fn column_here(&self) -> Vec<hornvale_climate::Stratum> {
+        let Ok(v) =
+            crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, None)
+        else {
+            return Vec::new();
+        };
+        let Some(cw) = v.locale.corners.iter().max_by_key(|c| c.weight) else {
+            return Vec::new();
+        };
+        self.ctx.water_column_at(hornvale_kernel::CellId(cw.cell))
+    }
+
+    /// Descend one layer of the water column.
+    ///
+    /// The column's depth is the sea floor's: fifty metres over a reef holds
+    /// only the sunlit water, three thousand holds three layers. Diving past
+    /// the floor is refused by naming the floor, because "you cannot" without
+    /// saying what stopped you reads as a parse failure rather than the bottom
+    /// of the sea.
+    fn dive(&mut self) -> Turn {
+        if self.inside.is_some() {
+            return Turn::Out("There is no water in here.".to_string());
+        }
+        let column = self.column_here();
+        if column.is_empty() {
+            return Turn::Out("There is no water here to go down into.".to_string());
+        }
+        let next = match self.submerged {
+            None => Some(column[0]),
+            Some(at) => column
+                .iter()
+                .position(|s| *s == at)
+                .and_then(|i| column.get(i + 1).copied()),
+        };
+        match next {
+            Some(st) => {
+                self.submerged = Some(st);
+                self.out(self.describe_here())
+            }
+            None => Turn::Out(format!(
+                "You are already as deep as this water goes; the floor is {}.",
+                stratum_word(*column.last().expect("a non-empty column has a last"))
+            )),
+        }
+    }
+
+    /// Rise one layer; at the top of the column, break the surface.
+    fn surface(&mut self) -> Turn {
+        let Some(at) = self.submerged else {
+            return Turn::Out("You are already at the surface.".to_string());
+        };
+        let column = self.column_here();
+        let above = column
+            .iter()
+            .position(|s| *s == at)
+            .filter(|i| *i > 0)
+            .and_then(|i| column.get(i - 1).copied());
+        self.submerged = above;
+        let breaking = above.is_none();
+        match self.describe_here() {
+            Ok(d) if breaking => Turn::Out(format!("You break the surface.\n{d}")),
+            other => self.out(other),
+        }
     }
 
     /// Absorb the current room's projection into knowledge.
@@ -688,7 +775,18 @@ impl<'w> Session<'w> {
 
     /// The full room rendering: room id, prose, ways on.
     fn describe_here(&self) -> Result<String, VesselError> {
-        let v = observable(self.world, &self.ctx, &self.agent, self.day)?;
+        // Unsubmerged over water, the possession is AFLOAT — on the surface,
+        // not down among whatever lives on the floor. Rendering the cell's own
+        // expression there would put a walker "in" a coral reef while they are
+        // still a thousand metres above it, which is the distinction the depth
+        // band exists to draw.
+        let vantage = match self.submerged {
+            Some(st) => Some(st),
+            None if !self.column_here().is_empty() => Some(hornvale_climate::Stratum::Surface),
+            None => None,
+        };
+        let v =
+            crate::vantage::observable_at(self.world, &self.ctx, &self.agent, self.day, vantage)?;
         let f = self.focalizer.render(&v);
         let ways: Vec<String> = v
             .locale
@@ -1627,6 +1725,20 @@ fn felt_phrase(affect: &Affect) -> String {
             "has given up on ever getting home",
             "has given up",
         ),
+    }
+}
+
+/// The reader-facing word for a stratum.
+/// type-audit: bare-ok(prose: return)
+fn stratum_word(s: hornvale_climate::Stratum) -> &'static str {
+    use hornvale_climate::Stratum;
+    match s {
+        Stratum::Surface => "the surface",
+        Stratum::Epipelagic => "sunlit water",
+        Stratum::Mesopelagic => "the twilight water",
+        Stratum::Bathypelagic => "the lightless water",
+        Stratum::Abyssal => "the abyss",
+        Stratum::Hadal => "a trench",
     }
 }
 

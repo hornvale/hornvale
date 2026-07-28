@@ -43,8 +43,24 @@ struct Candidate {
     score: fn(&GeneratedTerrain, CellId) -> f64,
 }
 
+/// Flow-accumulation at which the damp term reaches half its ceiling. Chosen
+/// so an ordinary watercourse counts as damp while a single upstream cell does
+/// not; the transform saturates, so no per-world maximum is needed and no cell
+/// can dominate by draining a continent.
+/// type-audit: bare-ok(count)
+const DRAINAGE_SCALE: f64 = 8.0;
+
+/// A saturating map from an unbounded non-negative count into `[0, 1)`.
+/// type-audit: bare-ok(count: v), bare-ok(count: half), bare-ok(ratio: return)
+fn saturate(v: f64, half: f64) -> f64 {
+    if v <= 0.0 {
+        return 0.0;
+    }
+    v / (v + half)
+}
+
 /// The fixed candidate table (natural-tier exotics only).
-fn candidates() -> [Candidate; 3] {
+fn candidates() -> [Candidate; 4] {
     [
         // Chemo/geothermal vents: warranted by tectonic unrest.
         Candidate {
@@ -57,7 +73,42 @@ fn candidates() -> [Candidate; 3] {
             kingdom: Kingdom::Microbial,
             score: |t, c| quantize(*t.globe().unrest.get(c) * 0.8),
         },
+        // Mineral "flora": warranted by evaporite ground — a closed basin,
+        // where salts concentrate because the water has nowhere to leave, on
+        // hard indurated rock.
+        //
+        // `Kingdom::Crystalline` was defined and had its prose authored ("grown
+        // with mineral crystal") but appeared in no candidate, so it could not
+        // occur in any world: a whole kingdom of exotic that no walker could
+        // ever meet. Endorheic basins are rare, so this scores high in few
+        // places and zero almost everywhere — which is what a warrant is
+        // supposed to look like.
+        Candidate {
+            energy: EnergySource::Sunlit,
+            kingdom: Kingdom::Crystalline,
+            score: |t, c| {
+                let g = t.globe();
+                let relief = quantize(*g.elevation.get(c) - g.sea_level);
+                if relief > 0.0 && *g.endorheic.get(c) {
+                    quantize(*g.induration.get(c))
+                } else {
+                    0.0
+                }
+            },
+        },
         // Fungal kingdoms: warranted by damp, low-relief, non-volcanic ground.
+        //
+        // The damp clause was documented from the beginning and never
+        // implemented: the score read `1.0 - unrest`, which is >= 0.6 on any
+        // quiet land cell, so this candidate was not a warrant at all but a
+        // near-constant default. Against the vent candidates — which score raw
+        // `unrest`, high only near plate boundaries — it won the weighted draw
+        // almost everywhere, and 92-98% of every world's placed exotics came
+        // out fungal. The three scores were never on a common footing.
+        //
+        // `drainage` is flow accumulation, zero on dry land, so it is exactly
+        // the "damp" this comment always claimed; saturating it keeps the term
+        // in [0, 1) without needing a per-world maximum.
         Candidate {
             energy: EnergySource::Sunlit,
             kingdom: Kingdom::Fungal,
@@ -65,7 +116,8 @@ fn candidates() -> [Candidate; 3] {
                 let g = t.globe();
                 let relief = quantize(*g.elevation.get(c) - g.sea_level);
                 if relief > 0.0 && quantize(*g.unrest.get(c)) < 0.4 {
-                    quantize(1.0 - *g.unrest.get(c))
+                    let damp = saturate(*g.drainage.get(c), DRAINAGE_SCALE);
+                    quantize((1.0 - *g.unrest.get(c)) * damp)
                 } else {
                     0.0
                 }
@@ -236,6 +288,42 @@ mod tests {
         let (b, climate, _terrain) = budget_for(42);
         let land = climate.geosphere().cells().count(); // upper bound
         assert!(b.sites().len() * 20 < land, "strange sites must stay rare");
+    }
+
+    #[test]
+    fn every_kingdom_is_reachable() {
+        // Kingdom::Crystalline was defined and had its prose authored, yet
+        // appeared in no candidate, so no world could contain one. A kingdom
+        // that cannot occur is a kingdom that does not exist.
+        let cands = candidates();
+        for k in [
+            Kingdom::PlantAnimal,
+            Kingdom::Fungal,
+            Kingdom::Crystalline,
+            Kingdom::Microbial,
+        ] {
+            assert!(
+                cands.iter().any(|c| c.kingdom == k),
+                "{k:?} is unreachable from the candidate table"
+            );
+        }
+    }
+
+    #[test]
+    fn the_damp_term_saturates_and_is_zero_on_dry_ground() {
+        // `drainage` is an unbounded upstream count, so the term must be
+        // bounded without a per-world maximum, and dry land must score zero.
+        assert_eq!(saturate(0.0, DRAINAGE_SCALE), 0.0);
+        assert_eq!(saturate(-1.0, DRAINAGE_SCALE), 0.0);
+        assert!(saturate(DRAINAGE_SCALE, DRAINAGE_SCALE) - 0.5 < 1e-12);
+        assert!(saturate(1e9, DRAINAGE_SCALE) < 1.0);
+        // Monotone: more water is never less damp.
+        let mut prev = 0.0;
+        for v in [1.0, 4.0, 8.0, 64.0, 1024.0] {
+            let d = saturate(v, DRAINAGE_SCALE);
+            assert!(d > prev, "saturate is not monotone at {v}");
+            prev = d;
+        }
     }
 
     #[test]

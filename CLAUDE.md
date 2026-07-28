@@ -17,33 +17,47 @@ editing:
 
 - `kernel/` — the determinism substrate: save-format contracts, quantize-at-
   emit-only, `math.rs` (libm transcendentals; floor/sqrt stay intrinsic), the
-  `Fbm` derive-once pattern.
+  `Fbm` derive-once pattern, dense-index storage is `Vec` not a map.
 - `domains/` — depend only on the kernel, never a sibling; trace-protocol-
   only; stream consumption order is a contract. `domains/terrain/` adds the
   byte-identity discipline for the sculpting pipeline.
-- `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
-- `windows/lab/` — studies are data, metrics are code; nextest is process-per-
-  test; censuses regen locally in ~7 min (`HV_CENSUS=1`) since The Local Census.
+- `windows/` — what a window may and may not do; how to add one.
+  `windows/worldgen/` — the composition root and the `BuildDepth` ladder.
+  `windows/lab/` — studies are data, metrics are code; nextest is process-per-
+  test; censuses regen locally in ~7 min since The Local Census.
+- `cli/` — the thin command surface, but also the home of the **workspace-wide
+  enforcement tests** (layering, dep allowlist, doc drift, the heavy tier).
+- `clients/` — the browser clients and the wasm ABIs. Outside the cargo
+  workspace, own toolchains, own gates.
 - `tools/type-audit/` — the tag format and the stale-tag-on-signature-change
   footgun.
-- `scripts/` — the gate ladder, `regenerate-artifacts.sh`, the (retired,
-  optional-fallback) AWS remote gate.
+- `scripts/` — the gate ladder, `regenerate-artifacts.sh`, `census-run.sh`,
+  the (abandoned) AWS remote gate.
 - `docs/` and `book/src/frontier/` — the knowledge-architecture discipline.
+
+`make doctor` prints the live self-map — layering, gate targets, artifact
+commands, decision count, and which worktrees exist. It is the cheapest
+orientation for a fresh session.
 
 ## Commands
 
 ```bash
+make doctor        # the repo self-map — run this first in a fresh session
+
 # The gate ladder (`make help` lists all targets). The commit gate is
 # `make gate`; it runs `cargo nextest run` (test binaries in PARALLEL) plus
 # doctests. The heavy live-worldgen batteries (censuses, the full pin
 # product, byte-identity rebuilds) are #[ignore]d out of it and run in
-# `make gate-full` (and the cloud, once that path is wired). The #[ignore]
-# tier AND nextest's parallelism together put the commit gate near ~4 min;
-# neither lever alone gets there. The batteries this tiering deferred carry
-# a `heavy:` ignore-reason token (see cli/tests/heavy_tier.rs):
-#   make gate        # COMMIT GATE: fmt + clippy + nextest + doctests (heavy tier skipped, ~4 min)
+# `make gate-full`. The #[ignore] tier AND nextest's parallelism together
+# put the commit gate near ~4 min; neither lever alone gets there. The
+# batteries this tiering deferred carry a `heavy:` ignore-reason token
+# (see cli/tests/heavy_tier.rs):
+#   make quick       # cheap half only: fmt-check + clippy + type-audit
+#   make gate        # COMMIT GATE: fmt + clippy + type-audit + nextest + doctests (~4 min)
 #   make gate-fast   # ITERATION ONLY: the above, scoped to changed crates
 #   make gate-full   # full evidence: the commit gate + the cost-tagged heavy tier (scripts/gate-full-heavy.sh)
+#   make preflight   # GO/NO-GO before integrating a campaign branch (run FROM the branch)
+#   make prewarm     # warm a fresh worktree's target/ (start right after `git worktree add`)
 # nextest is a dev tool, not a workspace dependency (decision 0040); install
 # with `cargo install cargo-nextest` or `brew install cargo-nextest`.
 # The raw checks `make gate` runs (every commit must pass all):
@@ -51,6 +65,7 @@ cargo nextest run --workspace       # unit + integration, parallel (skips the he
 cargo test --workspace --doc        # doctests (nextest does not run these)
 cargo fmt --check
 cargo clippy --workspace --all-targets -- -D warnings
+cargo run --manifest-path tools/type-audit/Cargo.toml -- check   # a LINT, not an artifact
 
 # Iterate cost-ordered — the full gate is the FINAL step, not every check:
 #   1. fmt + clippy first (cheapest, and the most common review finding).
@@ -60,24 +75,24 @@ cargo clippy --workspace --all-targets -- -D warnings
 #      Trust the exit code (non-zero = failure); `--no-fail-fast` for the whole
 #      failure list in one pass:
 cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file freely
-#   The census/calibration LIVE batteries (the calibration sweep, the
-#   1000-world canonical census) are their own #[ignore]d tests with
-#   non-`heavy:` reasons, so `make gate-full` does NOT run them. Censuses are
-#   opt-in via HV_CENSUS=1; a plain local regenerate-artifacts.sh / `make
-#   rebaseline` still skips them so the everyday gate stays fast. But since
-#   The Local Census campaign the census is CHEAP: the all-metric per-world
-#   cost fell ~285 → ~8 CPU-s (the metric path stopped re-sculpting terrain),
-#   so the full ~2000-world census regenerates LOCALLY in ~7 min. The
-#   sanctioned refresh is therefore local now — `scripts/census-run.sh`, run
-#   once per campaign at the pre-merge close. Use THAT, not `HV_CENSUS=1 bash
-#   scripts/regenerate-artifacts.sh`: only census-run.sh serializes against
-#   another heavy run on the box and records the run in docs/timings.md
-#   (decision 0081). Both are guarded; only one queues — and the census goldens (book/src/laboratory/generated/*/rows.csv)
-#   are kept current with main, not left to lag. The AWS remote gate
-#   (`make regen-remote`; scripts/aws-gate/) is ABANDONED (owner decision
-#   2026-07-19; this machine is the single canonical platform — AWS differs on
-#   ~0.1% of discrete-count metrics, so it can't be a parallel reference). The
-#   scripts remain but are unused; goldens come from this box only.
+
+# Censuses (the measurement instrument's goldens; details in windows/lab/ and
+# scripts/). The LIVE census batteries are #[ignore]d with non-`heavy:`
+# reasons, so even `make gate-full` skips them; the everyday gate never pays
+# for them. Since The Local Census the full ~2000-world census is a ~7-min
+# LOCAL run, so the sanctioned refresh is local — once per campaign at the
+# pre-merge close, keeping book/src/laboratory/generated/*/rows.csv current
+# with main rather than lagging it:
+bash scripts/census-run.sh              # THE sanctioned refresh (decision 0081)
+bash scripts/census-run.sh status       # is a heavy run already holding the box?
+make lab-diff STUDY=the-census          # which metrics moved vs HEAD (review surface)
+make census-check                       # analysis-harness gate (needs duckdb + python3)
+# Use census-run.sh, NOT `HV_CENSUS=1 bash scripts/regenerate-artifacts.sh`:
+# all entry points serialize (one heavy writer per box) but only the wrapper
+# ledgers the run in docs/timings.md. `make regen-remote` / scripts/aws-gate/
+# are ABANDONED (decision 0063): this box is the single canonical platform —
+# AWS differs on ~0.1% of discrete-count metrics, so it cannot be a parallel
+# reference. Goldens are authored on one enforced host (decision 0079).
 
 # Single test / single crate / the property batteries:
 cargo test -p hornvale-kernel text_of
@@ -100,21 +115,27 @@ cargo run -p hornvale -- lab run studies/the-census.study.json
 cargo run -p hornvale -- lab list-metrics
 
 # The type audit — a standalone tool OUTSIDE the workspace (decisions
-# 0027 / 0028);
-# check is default-deny (any untagged pub-boundary primitive fails), report
-# regenerates the committed audit report:
-cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+# 0027 / 0028). `check` (above, in the gate) is default-deny: any untagged
+# pub-boundary primitive fails. `report` regenerates the COMMITTED report,
+# which is a separate thing — an artifact, drift-checked like every other:
 cargo run --manifest-path tools/type-audit/Cargo.toml -- report > docs/audits/type-audit-report.md
 
-# Generated-artifact freshness: CI regenerates every committed artifact
-# (three seed-42 almanacs, the elevation map, registry/manifest dumps, lab
-# studies) and fails on drift. The authoritative command list is the
-# "Artifacts are current" step in .github/workflows/ci.yml; the shape:
-cargo run -p hornvale-kernel --example first_light
-cargo run -p hornvale -- new --seed 42 --out /tmp/hv.json
-cargo run -p hornvale -- almanac --world /tmp/hv.json > book/src/gallery/almanac-seed-42-sky.md
-cargo run -p hornvale -- lab run studies/the-census.study.json
-git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
+# Generated-artifact freshness. The single source of truth is
+# scripts/regenerate-artifacts.sh (three seed-42 almanacs, the elevation map,
+# registry/manifest dumps, lab studies, the type-audit report); `make
+# rebaseline` and CI both call it, so they cannot silently diverge:
+make rebaseline                        # regenerate everything EXCEPT censuses
+make rebaseline-goldens                # accept drifted byte-golden fixtures (REBASELINE=1)
+git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/ docs/audits/
+# docs/audits/ is in that list — the type-audit report drifts on any
+# pub-boundary change, and omitting it is a common miss.
+# **CI is manual-only** (decision 0042: workflow_dispatch, Actions tab → Run
+# workflow). Nothing runs on push. The LOCAL gate is the gate; a red main is
+# invisible until someone runs it.
+
+# The browser clients (outside the cargo workspace; see clients/CLAUDE.md):
+make vessel-check       # the Casement: deno checks + wasm fmt/clippy + byte-identity smoke
+make world-check        # the world catalog: lint + golden byte-identity smoke + size gate
 
 # The project book:
 mdbook build book          # or `mdbook serve book` to preview
@@ -133,6 +154,23 @@ domains meet, and the only place providers (astronomy/climate/terrain
 implementations) are constructed. The CLI and every window build worlds
 through it (`cli/` re-exports it). Adding a domain must never require
 editing an existing one.
+
+A **domain** models a slice of the world; a **window** presents one. Domains
+draw world-state and own seed labels; windows read the committed ledger and
+render. `windows/explain` is the clearest statement of the contract — it
+narrates a world by reading only committed facts, never the in-memory
+system, which is how it validates that the ledger is sufficient.
+
+**Clients are outside the workspace and outside determinism.** `clients/`
+holds browser clients with their own toolchains (Deno, `wasm32-unknown-
+unknown`), excluded from the cargo workspace by `Cargo.toml`. The repo
+boundary **is** the determinism boundary (decision 0055): Hornvale
+guarantees byte-identical seeded output up to and including the wasm ABI;
+what a client does with that output is unconstrained (decisions 0022/0023).
+The external Orrery client (a sibling repo) consumes `clients/world-wasm`'s
+released catalog — so **scene schemas (`scene/system/v1`, `scene/tiles/v1`,
+…) are cross-repo contracts: additive-or-versioned only**, the same
+discipline seed labels carry.
 
 **A world is a seed plus a ledger.** `World { seed, registry, ledger }`
 serializes to JSON; everything else is re-derived deterministically.
@@ -188,10 +226,13 @@ contradicts, lower ("coarse constrains fine").
 
 ## Constraints and conventions
 
-- Dependencies: `serde` + `serde_json` only, workspace-wide (allowlist
-  enforced by `cli/tests/architecture.rs`). No new crates (no rand, chrono,
-  clap, thiserror — randomness comes from the kernel's `Seed`/`Stream`, CLI
-  parsing is std-only).
+- Dependencies: `serde`, `serde_json`, and `libm` only, workspace-wide
+  (the allowlist is the `ALLOWED_EXTERNAL` const in
+  `cli/tests/architecture.rs`; decision 0004, amended by 0041 to admit libm
+  for portable transcendentals). No new crates (no rand, chrono, clap,
+  thiserror — randomness comes from the kernel's `Seed`/`Stream`, CLI
+  parsing is std-only). Clients are outside the workspace and carry their
+  own toolchains; this allowlist does not bind them.
 - **Models author, dice roll** (Constitution ratified constraint): no ML
   model ever runs in the sim core. Runtime generation is deterministic and
   seeded; models are offline authoring tools whose output is committed and
@@ -255,4 +296,19 @@ absorb mid-measurement (a preregistered study's baseline and readout must
 see the same physics — finish the readout first), and never while main's
 checkout shows another session mid-landing (the preflight peeks and warns).
 Parallel sessions are the norm; small absorptions keep semantic drift next
-to its cause instead of surfacing it at a 105-commit merge.
+to its cause instead of surfacing it at a 105-commit merge. Campaigns run in
+git worktrees under `.claude/worktrees/<campaign>/` (untracked); `make
+prewarm` warms a fresh one's `target/` — start it in the background right
+after `git worktree add`, before the first gate.
+
+**Measurement is preregistered.** A study freezes its hypothesis and its
+success criteria *before* the code that would move them (decision 0016), and
+`preregistration_guard` enforces that a study can't be quietly edited to
+match a result. A falsified prediction is a finding, not a failure — several
+campaigns ship the null as the headline. Don't retune a constant to rescue a
+prediction after unblinding without saying so in the chronicle.
+
+**The tooling/process backlog is `WORKFLOW_IMPROVEMENTS_PLAN.md`** (TOOL-*
+and PROC-* registry rows, staged). Per-campaign process lessons land in
+`docs/retrospectives/`; settled choices land in `docs/decisions/` (82
+records, append-only — grep before relitigating).

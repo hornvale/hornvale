@@ -1,8 +1,9 @@
 # CLAUDE.md — working in `scripts/`
 
 These scripts are the connective tissue of the gate ladder, artifact
-regeneration, and the AWS remote gate. Read the root `CLAUDE.md` "Commands"
-section for the `make` targets that call them.
+regeneration, and census runs (plus `aws-gate/`, kept only as history). Read
+the root `CLAUDE.md` "Commands" section for the `make` targets that call
+them.
 
 ## The single source of truth for artifacts
 
