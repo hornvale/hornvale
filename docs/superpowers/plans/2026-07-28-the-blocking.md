@@ -51,6 +51,9 @@
 - **`room/chambers/v1` must never be bumped by this campaign.** Free today (nothing commits at chamber granularity; facts carry `place: None`), and it stops being free at the first in-chamber mark.
 - **`#![warn(missing_docs)]`** — every public item, field and variant gets a one-line doc comment.
 - **Type audit is default-deny**, tags exactly one line, on the **struct's** doc attrs for field tags (`bare-ok(class: field)`) — a field-level tag is silently ignored (`tools/type-audit/src/extract.rs:150`).
+- **A tag on a signature with no tracked primitive is DEAD, and worse than absent.** `extract.rs` only pushes an item when the signature has a tracked position, so a tag on a function returning `Rect`, `Lattice` or any opaque type is never enforced — it reads as a verdict the tool never gave, and it can be flatly wrong (`count: return` describing a `Lattice`) with nothing to catch it. Tag `-> bool` / `-> i32` / `-> u32` / index and count parameters; do not tag opaque returns. Found in Task 1, where the plan's own snippets carried three such tags.
+- **`regenerate-artifacts.sh` also rewrites `docs/audits/type-audit-report.md`**, which moves whenever tags change. It is tracked and normally committed (precedent: `c3f3af95`). Include it in the commit, or the next task opens on a dirty tree and reads it as spurious drift.
+- **Run the lattice filter with `--lib`.** `cargo test -p hornvale-vessel lattice::` runs the integration binaries after the lib, so `tail` shows eight `0 passed; … filtered out` blocks and the real result scrolls off — a green suite looks like one that ran nothing.
 - **`cargo fmt` as the final step before every commit.**
 - Registry rows are capped at **600 chars** and the cap is append-never; if this campaign adds rows, write them as index entries.
 
@@ -182,7 +185,6 @@ pub const CHAMBER_SIDE: i32 = 8;
 ///
 /// Origin-anchored, always: cells are lattice-LOCAL, so a plan has no place in any
 /// wider coordinate system to be offset into.
-/// type-audit: bare-ok(count: return)
 pub fn extent_for(structure: &Structure) -> Rect {
     // Blocks, not area: an exhaustive arrangement over 1..=MAX_CHAMBERS avoids an
     // integer square root and states the coupling to MAX_CHAMBERS out loud. The
@@ -409,7 +411,7 @@ pub use lattice::{Cell, Lattice, Rect, allocate, extent_for};
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -20`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -20`
 Expected: FAIL to compile — `cannot find function allocate` (the `pub mod allocate;` line refers to a file that does not exist yet).
 
 - [ ] **Step 3: Implement the allocator**
@@ -443,7 +445,6 @@ pub const MIN_CHAMBER_SPAN: i32 = 2;
 /// Splits along the longer axis at each step, at a position the seed chooses
 /// within the band that leaves both sides at least `MIN_CHAMBER_SPAN` — that
 /// band IS the residual degree of freedom, and the seed fills exactly it.
-/// type-audit: bare-ok(count: return)
 pub fn allocate(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
     let n = structure.chambers.len().max(1);
     let mut stream = seed.derive(crate::streams::ROOM_LAYOUT_RECTILINEAR).stream();
@@ -587,7 +588,7 @@ No label is declared for the spec's *predicted* methods (radial, branching). A p
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -12`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14`
 Expected: PASS, 10 tests.
 
 If `no_region_is_degenerate` fails at a high chamber count, `CHAMBER_SIDE` is too small for `MAX_CHAMBERS` chambers at `MIN_CHAMBER_SPAN` — **raise `CHAMBER_SIDE`, never lower `MIN_CHAMBER_SPAN`**, then re-run `the_largest_plan_fits_a_terminal`, which is the opposing bound. If the two cannot both be satisfied, stop: that is a real finding about the block arrangement (a chain of splits packing four chambers into a square), not a number to fudge. Report the value you landed on — Task 4's render depends on it.
@@ -704,7 +705,7 @@ Rename the helper the earlier tests use so both methods share one entry point: r
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -12`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14`
 Expected: FAIL — `cannot find function embed_with`.
 
 - [ ] **Step 3: Implement growing and the selector**
@@ -730,7 +731,6 @@ use hornvale_kernel::Seed;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Grow `structure`'s chambers into `extent` as contiguous blobs.
-/// type-audit: bare-ok(count: return)
 pub fn grow(structure: &Structure, extent: Rect, seed: Seed) -> Lattice {
     let n = structure.chambers.len().max(1);
     let mut stream = seed.derive(crate::streams::ROOM_LAYOUT_GROWN).stream();
@@ -844,7 +844,6 @@ pub use grow::grow;
 /// region growing for places nobody did. Radial (temples) and branching (mines)
 /// are predicted by the spec's §3.2 grid and plug in here — this function is the
 /// seam, which is why it exists at two methods rather than being inlined.
-/// type-audit: bare-ok(count: return)
 pub fn embed_with(
     structure: &Structure,
     brief: &crate::brief::Brief,
@@ -861,7 +860,7 @@ pub fn embed_with(
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -12`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14`
 Expected: PASS, 13 tests (Task 1's ten plus these three).
 
 - [ ] **Step 5: Format, audit, drift, commit**
@@ -869,7 +868,7 @@ Expected: PASS, 13 tests (Task 1's ten plus these three).
 Same command block as Task 1 Step 6. The drift check must be clean — still nothing calls this.
 
 ```bash
-git add windows/vessel/src/lattice/
+git add windows/vessel/src/lattice/ docs/audits/type-audit-report.md
 git commit -m "feat(vessel): region growing, and the method the brief chooses
 
 A cave is not a partition of a rectangle, so a wild place grows blobs
@@ -1280,12 +1279,12 @@ pub use occupancy::Occupancy;
 
 - [ ] **Step 3: Run to verify failure**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -20`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -20`
 Expected: FAIL to compile — `Lattice` has no field `dof` until Step 1's field is threaded through both embedders. If it compiles, Step 1 was skipped.
 
 - [ ] **Step 4: Make them pass, and treat a failure as a finding**
 
-Run: `cargo test -p hornvale-vessel lattice:: 2>&1 | tail -20`
+Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -20`
 Expected: PASS, 20 tests (Task 2's thirteen, plus six rules in `classify` and one in `occupancy`).
 
 **If rule 1, 2, 3 or 4 fails, do not adjust the rule.** These are the campaign's correctness claims; a failure means Task 1 or Task 2's embedder is wrong, and the fix belongs in the embedder. Report which rule failed and what the embedder was doing, then fix the embedder.
@@ -1313,7 +1312,7 @@ git diff --exit-code book/src/gallery/ book/src/reference/ book/src/laboratory/
 The drift check **must be clean** — nothing calls the embedder yet, and this task adds no label.
 
 ```bash
-git add windows/vessel/src/lattice/
+git add windows/vessel/src/lattice/ docs/audits/type-audit-report.md
 git commit -m "feat(vessel): the seven rules, against a real lattice
 
 Reads adjacency back OFF the solved geometry rather than trusting the code
