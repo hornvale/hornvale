@@ -44,7 +44,7 @@
 - **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec`, plus `VecDeque` where a FIFO is the point (ratified in Task 3; precedent and the determinism reasoning are in `windows/scene/src/surrounds.rs:189-191`, whose iteration order is positional and therefore byte-identical). **No wall-clock time** except in a sanctioned benchmark with `#[allow(clippy::disallowed_types)]` and a comment, as `cli/tests/graph_cost.rs` does.
 - **Drift, by task** — corrected per ledger #11; the earlier "Tasks 1–5 byte-identical" contradicted §9's own artifact criterion. Verify with `regenerate-artifacts.sh` then `git diff --exit-code` over `book/src/gallery/ book/src/reference/ book/src/laboratory/`.
   - **Tasks 1–3: clean**, except the generated stream-manifest page in Task 1 (a new label is a new row). Nothing calls the embedder yet.
-  - **Tasks 4–5: transcripts move, metric goldens do NOT.** These tasks add verbs to `scripts/possession-walk.txt`, so `book/src/gallery/possession-seed-42.md` moves by construction. Inspect that diff for its **content** — §9 wants a floor plan *in* it — never merely for its absence. Anything under `book/src/laboratory/` moving in these tasks is a defect, not a re-pin.
+  - **Tasks 4, 4b and 5: transcripts move, metric goldens do NOT.** These tasks add verbs to `scripts/possession-walk.txt`, so `book/src/gallery/possession-seed-42.md` moves by construction. Inspect that diff for its **content** — §9 wants a floor plan *in* it — never merely for its absence. Anything under `book/src/laboratory/` moving in these tasks is a defect, not a re-pin.
   - **Task 6: the only task that may move a metric golden**, and only after its Step 1 measurement says which of the three outcomes landed (RE-PIN / EPOCH / LATENT — spec §5.2).
   - `make gate-full` always dirties `book/src/laboratory/generated/the-sounding/` with wall-clock timings — **revert, never re-pin** (followup 14: last pinned 748 commits ago, and no campaign since has re-pinned them despite many gate-full runs).
 - **`INVENTORY` and `selection` are frozen until Task 6.** Tasks 1–5 must not touch `windows/vessel/src/interior/pattern.rs`. In Task 6, patterns are **appended, never inserted or reordered**: `selection` iterates `INVENTORY` in order and filters, so an append leaves every existing `(built, cold)` selection byte-identical, while an insertion before an existing pattern silently re-composes every room in the world.
@@ -1795,6 +1795,185 @@ the plan. The laboratory goldens do not."
 
 ---
 
+### Task 4b: The reification — a wall is a cell
+
+**Files:**
+- Modify: `windows/vessel/src/lattice/mod.rs` (`CellKind`, `cells`, `extent_for`, delete `regions`), `allocate.rs`, `grow.rs`, `classify.rs`, `render.rs`, `occupancy.rs`, `windows/vessel/src/session.rs`, `windows/vessel/tests/the_blocking.rs`
+- Re-pin: `book/src/gallery/possession-seed-42.md` (the drawn plan changes shape)
+
+**Interfaces:**
+- Produces: `CellKind`, `Lattice.cells: BTreeMap<Cell, CellKind>`, `kind_of`, `bounds_of`.
+- Removes: `Lattice.regions`, `Lattice.owner`, `Lattice.walls` as a set of *pairs*.
+
+**Why this task exists, and why it is not a rewrite of Tasks 1–4.** Nathan's call, 2026-07-28: a wall should be a **cell that is occupied**, not a property of the boundary between two cells. The chronicle must record that the model changed and what it bought, rather than pretending it was always this way — which is why this is its own task rather than an amendment to Task 1.
+
+What it buys, in the order the arguments actually landed:
+
+1. **The picture is 1:1 again.** Task 4 had to double the render to `(2w+1) x (2h+1)` because a 1:1 grid has nowhere to draw a boundary. Walls-as-cells deletes the doubling, the coordinate mapping, and its whole off-by-one class — which Task 5 was about to inherit.
+2. **It is the model every roguelike and every tilemap engine already speaks**, so The Panes inherits the standard rather than a translation layer, and The Sighting's shadowcast gets blocking *cells*, which is what its measured timings assumed.
+3. **Wall thickness is more accurate, not less.** A cell is roughly a metre here, and this world models neolithic through classical: turf, cob and rubble-stone walls genuinely run 0.5–2 m. A zero-thickness wall was the less faithful choice.
+4. **Two anchor kinds that already ship gain a place.** `Screen` ("affords nothing, shapes sightlines") is a partition; `Alcove` ("a recess off the main space") is *literally a passable wall cell*. Under the boundary model neither had a location. And `the-fire` attaching `Within(Alcove)` has been describing **a fireplace** since The Hearth with no geometry to make it legible.
+5. **A threshold becomes a place**, so it can later hold a door, be barred, or be blocked by rubble.
+6. **Rule 3 stops being tautological — today, not eventually.** See Step 3.
+
+**No label bump.** `room/layout/v1/rectilinear` and `/grown` were declared *in this campaign* and nothing on `main` draws from them, so v1 is still being authored rather than re-versioned (ledger #23). The gallery re-pins, which Tasks 4–5 already expect.
+
+- [ ] **Step 1: The type, and the invariant it re-founds**
+
+```rust
+/// What occupies one cell of the lattice.
+///
+/// **Closed at three variants on purpose.** The moment this enum becomes the place
+/// where richness lives, the lattice is a tile catalogue and
+/// `CLIENT-language-not-catalogue` has been violated one band down. A window is an
+/// ANCHOR at a wall cell, never `CellKind::Window`. The only variants that should
+/// ever join these three are states a cell can *transition into over time*
+/// (`Rubble`, `Barred`), and neither is this campaign's business.
+/// type-audit: bare-ok(index: Floor), bare-ok(index: Threshold)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CellKind {
+    /// Standing room, owned by exactly one chamber.
+    Floor(usize),
+    /// The building's fabric. Impassable, and a place in its own right — an
+    /// alcove, a screen or a fireplace is an anchor AT one of these.
+    Wall,
+    /// A designed opening between two chambers. Distinct from a future breach,
+    /// which is damage: a threshold derives from a link in the anchor graph, and
+    /// a breach never will.
+    Threshold(usize, usize),
+}
+
+impl CellKind {
+    /// May a mover pass through this cell?
+    ///
+    /// **Every rule in `classify` asks this, never `== CellKind::Wall`.** A rule
+    /// written against the variant breaks the day `Rubble` arrives; a rule written
+    /// against the predicate survives it.
+    /// type-audit: bare-ok(flag: return)
+    pub fn passable(&self) -> bool { !matches!(self, CellKind::Wall) }
+
+    /// Does this cell serve `chamber` — as its floor, or as one side of its door?
+    /// type-audit: bare-ok(index: chamber), bare-ok(flag: return)
+    pub fn serves(&self, chamber: usize) -> bool { /* ... */ }
+}
+```
+
+On `Lattice`, `cells` **replaces** `owner`, `regions` and the pair-valued `walls`:
+
+```rust
+    /// Every cell of `extent`, with its kind. TOTAL: every cell appears exactly
+    /// once, so `kind_of` returning `None` means "outside the extent" and NOTHING
+    /// else.
+    ///
+    /// That totality is the point. A partial map with walls simply absent would
+    /// make `None` mean "outside the extent OR is a wall" — two distinct facts in
+    /// one value, which is the exact shape of the rect-scan defect Task 2 found
+    /// (ledger #17). Wall-ness is a positive fact here, so every rule that
+    /// compares two cells must say out loud what it means about walls.
+    /// type-audit: bare-ok(index: cells)
+    pub cells: BTreeMap<Cell, CellKind>,
+```
+
+**Delete `regions`.** It has been a trap twice — grown rects overlap, and a rect-scanning `region_of` agreed with the truth for exactly one method — and under this model it is ambiguous besides (does a region's rect include its wall ring?). Replace with `bounds_of(&Lattice, chamber) -> Option<Rect>`, derived from `cells` in one pass, which is what Task 6's legend actually needs.
+
+**The extent grows to hold the fabric:** `cols * CHAMBER_SIDE + (cols + 1)` per axis — the wall lines are one more than the interiors they separate. That gives 10x10 at one chamber, 19x10 at two, 19x19 at four, and the drawn picture is now the same size, so every chamber count fits an 80x24 terminal and **ledger #22's height relaxation becomes moot**. Amend `CHAMBER_SIDE`'s doc comment accordingly: the ceiling is no longer half the terminal.
+
+Update spec §3.4's wording too — the plan is now as big as "the rooms it must hold **plus the fabric between them**", and roughly 20% of the extent is the exterior shell. That is a deliberate cost: it is what makes the picture read as a building rather than a floating partition diagram.
+
+- [ ] **Step 2: Restate the rules, and add the one this model needs**
+
+The seven survive, three of them in better form:
+
+```
+  2  wall law    WAS: every wall pair is a non-adjacency.
+                 NOW: two Floor cells of DIFFERENT chambers are never adjacent.
+                 A cleaner claim, and a property of the kind map rather than of a
+                 separately-derived pair set.
+  1  soundness   a link (a,b) is realized iff some Threshold(a,b) cell is adjacent
+                 to both a Floor(a) and a Floor(b). Converse: every Threshold(a,b)
+                 must appear in `links`, or the embedder invented a relation.
+  3  closure     NO LONGER TAUTOLOGICAL. Two independent assertions:
+                 (i) the extent's outer ring is entirely Wall -- the plan is
+                     ENCLOSED, which the embedder could fail to do and which the
+                     boundary model had nothing to say about;
+                 (ii) every passable cell is Floor or Threshold, and every
+                      Threshold is in `doorways`.
+  5  occupancy   gains a companion that was previously meaningless: a creature
+                 cannot be placed in an impassable cell.
+  7  DOF         unchanged. One cut per split, so rectilinear still spends n-1.
+```
+
+**And a new rule, because this model introduces a new failure mode:**
+
+```
+  8  reachability  every Floor cell is reachable from the threshold chamber,
+                   through passable cells only.
+```
+
+Under the boundary model connectivity was guaranteed by construction — regions tiled and doorways linked. **Walls-as-cells can seal a pocket of floor**, and the grower is where it will happen: carving a wall between two blobs can split a concave blob, stranding its far half. This is the mirror of the unclaimed-cell defect Task 2 found, and it is not optional. Name it rule 8 in the code and note in the spec that Amendment 2 §1b.8 listed seven; this is the eighth, earned by the model change.
+
+- [ ] **Step 3: Rework the two embedders**
+
+**`allocate`** — chain-split the *interior* (the extent shrunk by one on every side), where each split consumes one cell for its wall line: splitting a span `L` into `a` and `b` now means `a + 1 + b == L`. Then every cell on a split line and every cell of the outer ring is `Wall`, and one cell per split line becomes `Threshold(i, j)`. `MIN_CHAMBER_SPAN` still governs *interiors*. DOF is unchanged at one cut per split, so rule 7 must still pass at `{0,1,2,3}` — if it does not, the rework changed how many draws are spent and that needs saying, not absorbing.
+
+**`grow` — claim with a separation rule, and never take a cell back.** A cell is claimable only if it has no neighbour owned by a *different* chamber; leftover unclaimed interior cells become `Wall`. This is deliberately not "grow then carve": nothing is ever removed from a blob, so **blobs are connected by construction** and rule 8 holds by the same argument rather than by luck. Task 3's tunnelling fix must be adjusted to match — seed chamber `i+1` **two** cells from chamber `i` rather than adjacent, so exactly one wall cell sits between them and is available to carve into a threshold. Keep the FIFO frontier; a depth-first tendril was a real defect.
+
+- [ ] **Step 4: Simplify the render**
+
+1:1. Delete the `(2w+1)` machinery and the coordinate mapping. `Floor` → `.`, `Wall` → `#`, `Threshold` → `+`. Task 4's picture-readback test gets *simpler*, and it should still read every glyph back and assert it against `cells`. Keep the legend and keep every legend noun `examine`-able — the parity contract does not change.
+
+Confirm the width assertion now reads `extent.w <= 80` rather than `2w + 1 <= 80`, in both places Task 4 put it.
+
+- [ ] **Step 5: Run everything, then read the transcript**
+
+```bash
+cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14
+cargo test -p hornvale-vessel --test the_blocking 2>&1 | tail -14
+cargo fmt
+cargo clippy -p hornvale-vessel --all-targets -- -D warnings
+cargo run --manifest-path tools/type-audit/Cargo.toml -- check
+cargo test -p hornvale-vessel 2>&1 | tail -6
+cargo test -p hornvale 2>&1 | tail -6
+bash scripts/regenerate-artifacts.sh
+git diff book/src/gallery/possession-seed-42.md
+git diff --exit-code book/src/laboratory/ book/src/reference/
+```
+
+**The gallery re-pins and the plan changes shape** — it should now be a 19x10 picture with a visible exterior wall and one doorway in the dividing wall. **Paste it.** `book/src/laboratory/` and `book/src/reference/` must be clean.
+
+```bash
+git add windows/vessel/ book/src/gallery/ docs/audits/type-audit-report.md docs/superpowers/specs/
+git commit -m "refactor(vessel): a wall is a cell, not a boundary
+
+Nathan's call. A wall occupies a cell rather than sitting on the boundary
+between two, which is the model every roguelike and every tilemap engine
+already speaks -- so the picture is 1:1 again, the (2w+1) coordinate mapping
+and its off-by-one class are gone, and The Sighting gets blocking CELLS,
+which is what its measured shadowcast timings assumed.
+
+The thickness this concedes is more accurate, not less: a cell is about a
+metre and this world models turf, cob and rubble-stone building, where walls
+genuinely run half a metre to two.
+
+Two anchor kinds that already shipped gain a place. A screen is a partition;
+an alcove is literally a passable wall cell. And the-fire attaching
+Within(Alcove) has been describing a FIREPLACE since The Hearth with no
+geometry to make it legible.
+
+CellKind is closed at three variants deliberately -- a window is an anchor
+at a wall cell, never CellKind::Window, or the lattice becomes the tile
+catalogue the pattern language forbids one band up. Rules ask passable(),
+never == Wall, so they survive Rubble.
+
+Rule 3 stops being tautological: the outer ring must be entirely Wall, which
+the embedder could fail to do and the boundary model had nothing to say
+about. And rule 8 is new, because this model can seal a pocket of floor --
+so the grower claims with a separation rule and never takes a cell back,
+making reachability true by construction rather than by luck."
+```
+
+---
+
 ### Task 5: Intra-chamber `go`, and the sentences that said it was impossible
 
 **Files:**
@@ -1903,7 +2082,7 @@ Expected: FAIL — `go` indoors still answers `INDOOR_LATERAL_REFUSAL`, so `a_wa
 
 **Two things Task 4 changed that this task must respect:**
 
-1. **The picture is `(2w+1) x (2h+1)`, not `w x h`.** Task 4 found that a 1:1 grid has nowhere to draw a wall — every cell is owned by a chamber and therefore floor, and a wall is a property of the *boundary between* two cells. So odd picture positions are cells and even ones are boundaries. Cell `(x, y)` is at picture `(2x+1, 2y+1)`. Any "you are here" mark must be placed through that mapping, not at `(x, y)`.
+1. **The picture is 1:1** — Task 4b reverted Task 4's `(2w+1)` doubling by making a wall a cell. Cell `(x, y)` is at picture `(x, y)`. A "you are here" mark goes straight at the cell, with no coordinate mapping to get wrong.
 2. **`render` no longer takes `structure`/`at`.** Task 4 dropped them because a "you are here" mark is a *cell* position and nothing had one yet — marking a whole region would have claimed precision the session did not have. **This task is what creates that position**, so add the mark here:
    - a fourth glyph (`@`) at the standing cell, and a legend entry for it;
    - **the legend entry must be `examine`-able**, because `every_noun_the_plan_depicts_is_examinable` walks the legend and it is the parity contract. Resolve it to the session's existing self-description (`whoami`'s content) rather than authoring a second one — two descriptions of the possessed agent is exactly the drift §6 exists to prevent. If you conclude the mark should stay out of the legend, that is defensible, but then the picture depicts something it refuses to name, and you must say so.
@@ -1936,8 +2115,8 @@ struct Inside {
 
 `enter` sets `cell` to the doorway the possession came through, or the region's centre for the threshold chamber. `go <dir>` then:
 
-1. translates the bearing to a cell delta (N is `-y`, matching the render's top-down rows — and note the picture's rows are `2y+1`, so a bearing maps to a CELL delta, never to a picture delta);
-2. refuses if the target pair is in `lattice.walls`, or if the target leaves the extent;
+1. translates the bearing to a cell delta (N is `-y`, matching the render's top-down rows);
+2. refuses if the target cell is **not `passable()`**, or if it leaves the extent — never by matching `== CellKind::Wall`, so the refusal survives `Rubble`;
 3. if the target cell is a doorway to another chamber, **moves chamber** — that is a `COMMIT`-tier band step in the same sense `enter` is, so it renders the new chamber, not a cell move;
 4. otherwise updates `cell` and renders briefly — a cell step is not worth a full chamber description every time. Say what changed and what is now adjacent.
 
