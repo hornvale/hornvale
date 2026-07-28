@@ -3501,7 +3501,12 @@ fn landmass_size_capped(
     let mut visited: BTreeSet<hornvale_kernel::CellId> = BTreeSet::new();
     visited.insert(start);
     let mut frontier = vec![start];
-    while !frontier.is_empty() && visited.len() <= cap {
+    // The cap check lives entirely in the inner early return — once
+    // `visited.len()` clears `cap` this returns immediately, so an outer
+    // loop condition re-testing the same bound would never be reached
+    // false; the frontier emptying (a landmass smaller than `cap`) is the
+    // only other exit.
+    while !frontier.is_empty() {
         let mut next = Vec::new();
         for cell in &frontier {
             for &n in geo.neighbors(*cell) {
@@ -3776,10 +3781,15 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: river, the terrain a people actually lives on. A settled
-    // cell whose `water_kind_at` is `River` reliably holds the word — the
-    // exposure rides the same field The Confluence's siting already used
-    // to condense settlements onto the river network.
+    // Steeped: river, the terrain a people actually lives on: a settled
+    // cell whose `water_kind_at` is exactly `River`. The Confluence's
+    // carrying-capacity term spikes NEAR a river (within `RIVER_REACH`
+    // hops, `river_proximity`'s decay radius — "adjacent to rivers, not
+    // necessarily on it", `water.rs:96-99`) rather than only on the
+    // channel cell itself, so this gate is narrower than that siting
+    // pressure, not identical to it: it fires for whichever settled cells
+    // happen to land exactly on the channel, a real subset of the
+    // river-proximate settlements the siting pass favors.
     for &cell in settled {
         if terrain.water_kind_at(cell) == hornvale_terrain::WaterKind::River {
             classes.insert("river".to_string(), ExposureClass::Steeped);
@@ -3800,23 +3810,36 @@ fn exposure_of_impl(
     }
 
     // Steeped: hill/valley, a settled cell that is a STRICT local
-    // elevation extremum among its immediate neighbors — "ground that
+    // elevation extremum among its immediate LAND neighbors — "ground that
     // rises above what surrounds it" / "low ground between heights" read
     // as real local topography. A looser "some neighbor is higher/lower"
     // gate would admit nearly every settlement on a non-flat world, which
     // trivializes the word; requiring every neighbor to sit on one side
-    // keeps this a genuine local peak or basin.
+    // keeps this a genuine local peak or basin. Land-only is load-bearing,
+    // not cosmetic: `is_ocean` is `elevation_at < sea_level`, so an ocean
+    // neighbor is BY DEFINITION lower than any land cell — comparing
+    // against all neighbors made every coastal promontory or islet a
+    // trivial "hill" (re-measuring `coast`'s own 4/4-everyone saturation
+    // rather than relief), a review finding confirmed at seed 42 (see the
+    // Task 4 report). Filtering to non-ocean neighbors, symmetrically for
+    // both `hill` and `valley`, requires the extremum to hold against
+    // actual neighboring ground.
     for &cell in settled {
         let here = terrain.elevation_at(cell).get();
-        let neighbors = geo.neighbors(cell);
-        if !neighbors.is_empty() {
-            if neighbors
+        let land_neighbors: Vec<hornvale_kernel::CellId> = geo
+            .neighbors(cell)
+            .iter()
+            .copied()
+            .filter(|&n| !terrain.is_ocean(n))
+            .collect();
+        if !land_neighbors.is_empty() {
+            if land_neighbors
                 .iter()
                 .all(|&n| terrain.elevation_at(n).get() < here)
             {
                 classes.insert("hill".to_string(), ExposureClass::Steeped);
             }
-            if neighbors
+            if land_neighbors
                 .iter()
                 .all(|&n| terrain.elevation_at(n).get() > here)
             {
@@ -3847,19 +3870,32 @@ fn exposure_of_impl(
         }
     }
 
-    // Steeped: spring, `Hydro::Spring` verbatim — "where water rises from
-    // the ground" is exactly what that variant's doc comment says ("where
-    // an aquifer meets the surface with flow"). Categorical, unlike
-    // marsh's continuous drainage band: `hydrogeology` only reaches it when
-    // a cell's porosity exceeds 0.5 AND its drainage clears
-    // `SPRING_DRAINAGE_THRESHOLD`, both at once. A real, rare landform by
-    // design, not a placeholder — this world's rock-porosity field simply
-    // never crosses 0.5 on land at seed 42 (measured: 0 of 11,066 land
-    // cells), so the gate never fires here; a seed whose lithology does
-    // cross it would light this up exactly the same way `river` already
-    // does for `WaterKind::River`.
+    // Steeped: spring, a karst conduit with enough drainage to surface as
+    // flow rather than sit as a dry cave or sinkhole. NOT `Hydro::Spring`
+    // (Task 4 review, Critical 1): that variant is unreachable in the
+    // whole pipeline, on every seed, not just this one — `hydrogeology`
+    // (`lithology.rs:290-307`) only reaches its `porosity > 0.5` branch
+    // when `carbonate > 0.5` (with `carbonate` at its low value of 0.05,
+    // porosity tops out at 0.5*0.05+0.3 = 0.325), and `carbonate > 0.5`
+    // together with `porosity > 0.4` (which `porosity > 0.5` already
+    // implies) is exactly the Karst branch's own guard, checked and
+    // returned FIRST. So every cell that could ever satisfy `Spring`'s
+    // porosity floor is already claimed by `Karst` two branches earlier;
+    // `Aquifer` (the other outcome of that same dead branch) is equally
+    // unreachable, by the identical argument. Recorded as a pre-existing
+    // terrain-domain bug in `.superpowers/sdd/followups.md` (F5) rather
+    // than fixed here — `hydrogeology` itself is out of this task's scope.
+    // `Hydro::Karst` IS reachable (1,364 land cells at seed 42) and is
+    // where real-world karst springs actually occur (an underground
+    // channel resurfacing through dissolved carbonate), so gating on Karst
+    // cells whose `drainage_at` clears the same channelized-flow floor
+    // `river` uses (`RIVER_MIN_DRAINAGE`) is "where an aquifer meets the
+    // surface with flow" read through the reachable half of the model: a
+    // wet karst outflow, not a merely damp cave mouth.
     for &cell in settled {
-        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Spring {
+        if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
+            && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE
+        {
             classes.insert("spring".to_string(), ExposureClass::Steeped);
         }
     }
@@ -3878,6 +3914,7 @@ fn exposure_of_impl(
     for &cell in settled {
         if landmass_size_capped(geo, terrain, cell, ISLAND_CELL_CAP) <= ISLAND_CELL_CAP {
             classes.insert("island".to_string(), ExposureClass::Steeped);
+            break;
         }
     }
 

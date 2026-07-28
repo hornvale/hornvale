@@ -183,14 +183,17 @@ pub fn universal_stratum() -> &'static [PackEntry] {
         },
         // The nine toponymic terrain concepts (hill, river, lake, valley,
         // coast, island, ford, marsh, spring) are deliberately NOT listed
-        // here, even though they ARE core (see `TOPONYMIC_CORE` below,
-        // which `is_core_concept` also consults) — core-ness and
+        // here. Seven of them (all but `coast`/`lake`, which are
+        // `KnowsOf`-only and so never win a root — see `TOPONYMIC_CORE`'s
+        // doc comment below) ARE core, via `TOPONYMIC_CORE`, which
+        // `concept_domain`/`is_core_concept` also consult — core-ness and
         // unconditional exposure used to be the same lever (membership in
         // this list), but they are different concerns for a terrain
-        // concept: it should win the short proto-root form (core), while
-        // whether a given culture holds the word at all should depend on
-        // real geography (`windows/worldgen::exposure_of`), the same
-        // gate-by-exposure `sea`/`mountain` already use. Listing them here
+        // concept: a rootable one should win the short proto-root form
+        // (core), while whether a given culture holds the word at all
+        // should depend on real geography
+        // (`windows/worldgen::exposure_of`), the same gate-by-exposure
+        // `sea`/`mountain` already use. Listing them here
         // (The Wearing's Task 3) conflated the two: `universal_stratum`
         // grants its members `ExposureClass::Steeped` unconditionally, so
         // every culture held every one of the nine before a single
@@ -410,45 +413,66 @@ pub fn kin_pack() -> &'static [PackEntry] {
     ]
 }
 
-/// The Wearing's nine toponymic terrain concepts: **core** for word-FORM
-/// purposes (short-form priority in the proto-root walk — `hill` and
-/// `river` are the highest-frequency morphemes in the name corpus, so a
-/// periphery-length form for either is backwards) without being members of
-/// [`universal_stratum`] (which would ALSO grant unconditional
-/// `ExposureClass::Steeped` — exactly the bug Task 4 found and fixed:
-/// every culture held every one of the nine regardless of geography,
-/// before a single exposure rule in `windows/worldgen::exposure_of` ever
-/// ran). Core-ness and unconditional exposure used to be the same lever
-/// (pack membership); this list is what keeps them separable now that
-/// terrain concepts need the first without the second.
+/// Seven of The Wearing's nine toponymic terrain concepts: **core** for
+/// word-FORM purposes (short-form priority in the proto-root walk — `hill`
+/// and `river` are the highest-frequency morphemes in the name corpus, so
+/// a periphery-length form for either is backwards) without being members
+/// of [`universal_stratum`] (which would ALSO grant unconditional
+/// `ExposureClass::Steeped` — the bug Task 4 found and fixed: every
+/// culture held every one of the nine regardless of geography, before a
+/// single exposure rule in `windows/worldgen::exposure_of` ever ran).
+/// Core-ness and unconditional exposure used to be the same lever (pack
+/// membership); this list is what keeps them separable now that terrain
+/// concepts need the first without the second.
+///
+/// **Deliberately excludes `coast` and `lake`** (Task 4 review, Important
+/// 5): both are `KnowsOf`-only in `exposure_of` by construction (a culture
+/// can know a shore or a salt basin without living on either), so neither
+/// ever wins the `Steeped` pass that hands out roots — every occurrence
+/// renders as a `Compound` (`compound_recipe`) or a `Gap`, never a `Root`.
+/// "Core" buys short-form priority in exactly one place,
+/// `assign_proto_roots`'s proto-root walk, and only for concepts that walk
+/// EVER assigns a form to reach for at all: `windows/worldgen`'s
+/// `build_lexicon` only calls it for concepts a `Steeped` culture roots.
+/// A concept that can never be `Steeped` has no root to prioritize, so
+/// short-form priority for `coast`/`lake` would tighten the minimal-pair
+/// and merger-aware constraints on every other core root (`etymology.rs`'s
+/// `core_forms`/`placed_modern`) for a form that is never spoken —
+/// `hill`/`river`'s stated rationale (highest-frequency morphemes in the
+/// name corpus) does not apply to either. They join `sea`/`mountain` as
+/// periphery — `KnowsOf`-only terrain concepts named by compound, never by
+/// their own root.
 /// type-audit: bare-ok(identifier-text)
 const TOPONYMIC_CORE: &[&str] = &[
-    "hill", "river", "lake", "valley", "coast", "island", "ford", "marsh", "spring",
+    "hill", "river", "valley", "island", "ford", "marsh", "spring",
 ];
 
-/// Whether `concept` is **core** vocabulary — a member of the always-
-/// lexicalized Swadesh strata (the universal stratum, the body pack, the kin
-/// pack) or [`TOPONYMIC_CORE`], where homophony genuinely confuses a reader.
-/// The ranked color ladder ([`color_pack`]) and the exposure-gated biome
-/// concepts owned by other domains (`sea`, `mountain`) are periphery, where
-/// incidental homophony is tolerable. The homophony fix assigns core
-/// concepts their proto-roots first — so they win the short, distinct forms
-/// — and holds a core root to a minimal-pair distance from every other core
-/// root. The lab's `core-homophony-*` metrics measure against this same
-/// definition.
+/// Whether `concept` is **core** vocabulary — [`concept_domain`] returns
+/// `Some`.
 /// type-audit: bare-ok(identifier-text)
 pub fn is_core_concept(concept: &str) -> bool {
-    concept_domain(concept).is_some() || TOPONYMIC_CORE.contains(&concept)
+    concept_domain(concept).is_some()
 }
 
-/// The **semantic domain** of a core concept — the authored Swadesh stratum it
-/// belongs to (`"universal"` / `"body"` / `"kin"`), or `None` for periphery.
-/// Two core concepts are *confusable* when their domains match (they compete in
-/// one context; a listener cannot separate them by topic) and *free* when they
-/// differ — the split the merger-aware proto assignment drives to zero for the
-/// confusable case (the codon-degeneracy argument leaves cross-domain
-/// collisions alone). The lab's `confusable-homophony-*` metric measures against
-/// this same definition.
+/// The **semantic domain** of a core concept: the authored Swadesh stratum
+/// it belongs to (`"universal"` / `"body"` / `"kin"`), `"toponymic"` for a
+/// [`TOPONYMIC_CORE`] member, or `None` for periphery (the ranked color
+/// ladder, [`color_pack`], and the exposure-gated concepts owned by other
+/// domains that never win a root — `sea`, `mountain`, and `coast`/`lake`
+/// alongside them — where incidental homophony is tolerable). Two core
+/// concepts are *confusable* when their domains match (they compete in one
+/// context; a listener cannot separate them by topic) and *free* when they
+/// differ — the split the merger-aware proto assignment drives to zero for
+/// the confusable case (the codon-degeneracy argument leaves cross-domain
+/// collisions alone); `"toponymic"` is its own domain rather than folded
+/// into `"universal"` so a `hill`/`river` collision is scored as
+/// same-topic-confusable while a `hill`/`water` collision is not. The
+/// homophony fix assigns core concepts their proto-roots first — so they
+/// win the short, distinct forms — and holds a core root to a minimal-pair
+/// distance from every other core root. The lab's `core-homophony-*` and
+/// `confusable-homophony-*` metrics (`windows/lab/src/metrics.rs`) call
+/// this function directly, so they measure against this same definition by
+/// construction, not by a second, independently-maintained copy.
 /// type-audit: bare-ok(identifier-text)
 pub fn concept_domain(concept: &str) -> Option<&'static str> {
     if universal_stratum().iter().any(|e| e.concept == concept) {
@@ -457,6 +481,8 @@ pub fn concept_domain(concept: &str) -> Option<&'static str> {
         Some("body")
     } else if kin_pack().iter().any(|e| e.concept == concept) {
         Some("kin")
+    } else if TOPONYMIC_CORE.contains(&concept) {
+        Some("toponymic")
     } else {
         None
     }

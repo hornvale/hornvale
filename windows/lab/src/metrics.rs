@@ -6,7 +6,7 @@ use hornvale_astronomy::{
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
-    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment,
+    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, concept_domain,
     distinctiveness, distortion, domain_distortion, recoverability, romanize,
 };
 use hornvale_religion::beliefs_of;
@@ -4375,42 +4375,6 @@ fn homophony_count(v: &FullView, species: &str) -> MetricValue {
     }
     let pairs: usize = by_form.values().map(|&n| n * n.saturating_sub(1) / 2).sum();
     MetricValue::Number(pairs as f64)
-}
-
-/// Whether `concept` is **core** vocabulary — high functional load, where
-/// homophony genuinely confuses (Nathan's "near-zero for core" target). Core
-/// is the authored, always-lexicalized Swadesh strata: the universal
-/// stratum, the body pack, and the kin pack. Everything else — the
-/// exposure-gated color ladder (`color_pack`, ranked) and the biome-class
-/// Terrain concepts a culture only names where it settles — is periphery,
-/// where incidental homophony is tolerable. The split is entirely
-/// data-driven (pack membership), never a doc-string heuristic.
-/// The **semantic domain** of a core concept — the authored Swadesh stratum it
-/// belongs to (universal / body / kin), or `None` for periphery (a concept in
-/// no core pack). `domain.is_some()` is therefore core-hood — the
-/// functional-load split the fix targets. Two core concepts are *confusable*
-/// when their domains match (they compete in the same context; a listener
-/// cannot separate them by topic) and *free* when they differ. Data-driven from
-/// pack membership (decision 0011: studies are data).
-fn concept_domain(concept: &str) -> Option<&'static str> {
-    if hornvale_language::universal_stratum()
-        .iter()
-        .any(|e| e.concept == concept)
-    {
-        Some("universal")
-    } else if hornvale_language::body_pack()
-        .iter()
-        .any(|e| e.concept == concept)
-    {
-        Some("body")
-    } else if hornvale_language::kin_pack()
-        .iter()
-        .any(|e| e.concept == concept)
-    {
-        Some("kin")
-    } else {
-        None
-    }
 }
 
 /// The homophony breakdown [`classify_homophony`] returns over a set of

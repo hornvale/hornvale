@@ -208,13 +208,19 @@ fn river_exposure_tracks_real_proximity() {
 /// toponymic terrain concept and at least one is a reasoned `Gap` — proof
 /// that the exposure rules discriminate by geography rather than by
 /// roster membership, for concepts this seed's four peoples' settlements
-/// actually spread across differently. `hill` (a strict local elevation
-/// extremum) splits 2/4; `marsh` (a drainage band above ordinary dry
-/// land) splits 3/4 — both measured at seed 42, see the Task 4 report.
+/// actually spread across differently. Measured at seed 42 (Task 4
+/// review round): `hill` (a strict local elevation maximum among LAND
+/// neighbors only — an ocean neighbor is lower than any land cell by
+/// definition, so including it made every coastal promontory trivially a
+/// "hill") splits 2/4; `valley` (the land-only local-minimum mirror)
+/// splits 3/4; `marsh` (a drainage band above ordinary dry land) splits
+/// 3/4; `spring` (a karst conduit at channelized-flow drainage — see the
+/// report for why `Hydro::Spring` itself is dead code) splits 2/4. See
+/// the Task 4 report for the full nine-concept spread table.
 #[test]
-fn hill_and_marsh_exposure_differ_across_the_placed_peoples() {
+fn hill_valley_marsh_spring_exposure_differ_across_the_placed_peoples() {
     let w = world();
-    for concept in ["hill", "marsh"] {
+    for concept in ["hill", "valley", "marsh", "spring"] {
         let mut any_root = false;
         let mut any_gap = false;
         for (species, _) in placed_peoples(&w) {
