@@ -102,7 +102,8 @@ pub use graph_derive::{
     land_route_attempt_count,
 };
 pub use history_bake::{
-    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, bake, cascade_sizes, census,
+    BakeCensus, BakeConfig, CASCADE_DEPTH_CAP, History, TributeRelation, bake, cascade_sizes,
+    census,
 };
 pub use history_emit::{
     GOBLINOIDS, Landmass, Stratigraphy, TERRITORY_DILATION_RINGS, collapse_events, emit_history,
@@ -4481,6 +4482,23 @@ fn bake_history_from(
         .iter()
         .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.threat_response)))
         .collect();
+    // The Tithe §4.2's concealment term, resolved on the same channel and with
+    // the same fallback: `in_group_radius` rides `SocietyVector`, which only
+    // `Settled` kinds carry (decision 0068) — a people without one is absent
+    // from the map and conceals nothing.
+    cfg.in_group_radius = peoples
+        .iter()
+        .filter_map(|&k| wc.society.get(&k).map(|s| (k, s.in_group_radius)))
+        .collect();
+    // The Tithe §4.3a's extraction strategy, resolved on the same channel:
+    // `time_horizon` rides `MindVector` beside the disposition above, so a
+    // people whose psyche is missing is simply absent from the map and is read
+    // at the neutral middle of the axis (never at zero, which would make an
+    // unauthored patron the cruellest one there is).
+    cfg.time_horizon = peoples
+        .iter()
+        .filter_map(|&k| wc.psyche.get(&k).map(|p| (k, p.time_horizon)))
+        .collect();
     let current = hornvale_kernel::CellMap::from_fn(geo, |c| climate.current_at(c));
     let elevation = &terrain.globe().elevation;
     let graphs: Vec<hornvale_topology::ConnectionGraph> = eras
@@ -6568,9 +6586,19 @@ mod tests {
     /// the world 23 of its 48 deities — a save-format change wearing the
     /// costume of a presentation fix.
     ///
-    /// These counts are the pre-campaign values, and they are the guard: a
+    /// The three 48s are the guard, and they are the pre-Occlusion values: a
     /// culture's pantheon forms over generations and must not depend on
     /// whether day 0 happened to be cloudy.
+    ///
+    /// `name-gloss` is a corroborating count, not part of that claim — it
+    /// counts every glossed name in the world, so any campaign that adds
+    /// named things moves it while leaving the occlusion question untouched.
+    /// The Tithe did exactly that: subordination gave the deep-history bake
+    /// an accumulation term, seed 42's world went 7350 → 26309 facts under a
+    /// declared genesis epoch, and the gloss count went 207 → 367 with all
+    /// three 48s unchanged. Re-pinned here rather than dropped, because an
+    /// exact count is the stronger check; if it moves again, ask whether the
+    /// moving campaign added names or culled phenomena, and read the 48s.
     #[test]
     fn genesis_observes_an_unoccluded_sky() {
         let world = vigil_world();
@@ -6578,7 +6606,7 @@ mod tests {
         assert_eq!(count("is-belief"), 48, "the pantheon must not shrink");
         assert_eq!(count("derived-from-phenomenon"), 48);
         assert_eq!(count("deity-name"), 48);
-        assert_eq!(count("name-gloss"), 207);
+        assert_eq!(count("name-gloss"), 367);
     }
 
     #[test]

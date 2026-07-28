@@ -917,4 +917,45 @@ fn the_history_page_prose_names_the_cell_it_renders() {
          Repoint `history_site` in scripts/regenerate-artifacts.sh at a cell with \
          a real column and rewrite the framing paragraph to match it."
     );
+
+    // Matching cell ids is necessary but nowhere near sufficient, and this
+    // test learned that the hard way one commit after it was written. The
+    // Tithe's accumulation term re-baselined the deep-history bake while this
+    // page's paragraph was being authored against the pre-Tithe bake; cell
+    // 28414 kept its id and its twelve layers, so both checks above passed,
+    // while the prose went on naming hobgoblins and kobolds at a cell now
+    // held by bugbears, over centuries it no longer spans.
+    //
+    // So also check the two classes of claim that are mechanically
+    // checkable: every people the prose names, and every year it cites, must
+    // actually appear in the rendered block. Narrative claims (how many
+    // souls, what ended them) still are not covered — but those are the ones
+    // an author re-reads, and these are the ones that rot silently.
+    let (prose, block) = page
+        .split_once("```text")
+        .expect("the page has a fenced render block");
+
+    for people in ["bugbear", "hobgoblin", "kobold", "goblin", "gnoll"] {
+        if prose.to_lowercase().contains(people) {
+            assert!(
+                block.to_lowercase().contains(people),
+                "history-seed-42.md prose names {people}s, but no {people} appears \
+                 in the rendered column — the hand-authored half has gone stale \
+                 against the generated half"
+            );
+        }
+    }
+
+    for year in prose.split("the year ").skip(1).map(|rest| {
+        rest.chars()
+            .take_while(char::is_ascii_digit)
+            .collect::<String>()
+    }) {
+        assert!(
+            !year.is_empty() && block.contains(&format!("year {year}")),
+            "history-seed-42.md prose cites the year {year}, which the rendered \
+             column never reports — the hand-authored half has gone stale against \
+             the generated half"
+        );
+    }
 }

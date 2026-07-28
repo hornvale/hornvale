@@ -268,6 +268,7 @@
 - [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)
 - [The Turnstile](./chronicle/the-turnstile.md)
+- [The Tithe](./chronicle/the-tithe.md)
 - [The Occlusion](./chronicle/the-occlusion.md)
 - [The Formations](./chronicle/the-formations.md)
 

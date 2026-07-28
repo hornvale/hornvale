@@ -219,6 +219,13 @@ fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
     let mut raided = 0u64;
     let mut resettled = 0u64;
     let mut collapsed = 0u64;
+    // Spec §4.3d's two vassal answers, pooled beside the histogram they were
+    // added to move: revolt is the campaign's first mechanism by which an
+    // accumulated relation can FAIL, so how often it fires is the reading that
+    // makes a still-geometric shape interpretable rather than merely
+    // disappointing.
+    let mut flights = 0u64;
+    let mut revolts = 0u64;
     for s in SHAPE_SAMPLE {
         let wc = WorldComponents::assemble().expect("registries");
         let h = history_for(
@@ -233,12 +240,15 @@ fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
         let c = census(&h);
         let hi = cascade_sizes(&h);
         eprintln!(
-            "SUNDER-TUMULT seed {s}: raided {} resettled {} collapsed {} alive {} hist {hi:?}",
-            c.raided, c.resettled, c.collapsed, c.alive_at_now
+            "SUNDER-TUMULT seed {s}: raided {} resettled {} collapsed {} alive {} \
+             flights {} revolts {} hist {hi:?}",
+            c.raided, c.resettled, c.collapsed, c.alive_at_now, c.vassal_flights, c.vassal_revolts
         );
         raided += c.raided;
         resettled += c.resettled;
         collapsed += c.collapsed;
+        flights += c.vassal_flights;
+        revolts += c.vassal_revolts;
         for (a, b) in agg.iter_mut().zip(hi.iter()) {
             *a += b;
         }
@@ -246,7 +256,7 @@ fn cascade_sizes_are_measured_and_the_shape_adjudicated() {
     let total: u64 = agg.iter().sum();
     eprintln!(
         "SUNDER-TUMULT pooled: hist {agg:?} cascades {total} raided {raided} resettled \
-         {resettled} collapsed {collapsed}"
+         {resettled} collapsed {collapsed} flights {flights} revolts {revolts}"
     );
     assert!(
         total >= MIN_POOLED_CASCADES,

@@ -742,3 +742,73 @@ question; the alternative — shipping the mechanism and narrating it as
 criticality — would have cost nothing and taught nothing, and the drift-check
 would have re-ratified the narration every time it ran. A bet is only worth
 placing at this altitude if losing it is allowed to be published as a loss.
+
+**The successor question has now been asked, and it lost too.** The residual
+bet stated just above — *does accumulation-plus-dissipation self-organize, on
+this world, at this resolution?* — was the whole mandate of *The Tithe*, which
+built the missing term: a raid whose prize is *mobile* subordinates rather than
+evicts, a patron collects tribute from a vassal it cannot fully see, and what
+it collects banks in a store of wealth that feeds strength without ever
+entering the pressure that kills. That is a literal accumulator rather than a
+metaphorical one, and it works — the structure forms at volume, patrons survive
+collecting, and a dominant grows without moving. **The shape of the violence
+did not change.**
+
+Two things moved and they must not be conflated. **σ roughly doubled**, from
+≈ 0.051 to **0.109–0.115** pooled over thirty seeds and 7183 conquests, and to
+0.103–0.109 over a hundred seeds and 22 255 — the same factor on both samples,
+which makes it a real effect of accumulation rather than sample noise. That is
+a genuine result and this chapter should say so. But **σ ≈ 0.1 is not σ ≈ 1**,
+and every reading of *shape* is unmoved: the support still spans **0.48
+decades** against the preregistered ≈ 1.5, the per-octave decay is still
+**17.6-fold** where a heavy tail falls two- to fourfold, and **not one cascade
+exceeds three displacements in roughly twenty-two thousand conquests**. Still
+geometric with a hard cutoff, still deep in the sub-critical regime. No
+constant was tuned toward the hypothesis at any point, and the last mechanism
+the campaign added had its predictions **written into the spec before its code
+existed** — including, explicitly, that revolts firing while the distribution
+stayed geometric would be a *stronger* falsification than the standing null.
+Revolts fired. The distribution stayed geometric. **That is the branch the
+preregistration named as the harder one to explain away, and it is the branch
+that happened.**
+
+The honest rescore is therefore: **the criticality bet moves from falsified for
+the mechanism as built to falsified a second time, against a mechanism built
+specifically to answer the first falsification's diagnosis.** Not "progress
+toward"; not "trending". The right way to hold it is that the *diagnosis* has
+narrowed, not that the *bet* has improved. Two builds bracketed the answer as
+drive-without-dissipation and dissipation-without-accumulation; a third
+supplied accumulation and moved the number without moving the family, which
+eliminates "nothing is stored" as the explanation. What is left is
+**conduction**. A revolt frees exactly one vassal — collapse-release, where a
+fallen patron's entire network is freed at once, was a stated non-goal — and
+the relation graph is a set of one-level stars, because a vassal may not itself
+take a vassal, and depth was the other stated non-goal. A patron's failure has
+nowhere to propagate. An avalanche needs a medium, and this world does not yet
+have one.
+
+So the residual bet narrows again and is now nearly bare: not "does conflict
+self-organize", not "does accumulation self-organize", but **"does a
+*connected* accumulating structure self-organize?"** — with two named,
+already-specified levers as its remaining content and two measured nulls behind
+it. What that costs the gradient is worth stating. A bet that loses twice in a
+row, each time to an instrument, each time with the mechanism built rather than
+argued about, is more expensive to keep than to drop; the case for asking a
+third time rests entirely on each null having eliminated a *different*
+candidate, so that the third question is materially different from the first
+two rather than a rephrasing of them. **If the connected version also comes
+back geometric, the right conclusion is that this world does not sit at a
+critical point, and this chapter should record that as settled rather than
+open.**
+
+One further note the campaign earns a place for, because it bears on how much
+any of the above should be trusted. *The Tithe* amended its own specification
+**five times, four of them following a disappointing measurement** — and that
+count is disclosed in the spec, in the adjudicating test's own documentation,
+and in the chronicle, because a reader who meets only the final histogram has
+been misled about how it was arrived at. The protection taken was
+preregistration of the last amendment. The lesson for this chapter is that a
+confidence score is only as good as the disclosure attached to the measurement
+under it: the number here is a falsification, which is the direction that
+*cannot* be manufactured by adding mechanisms, and that asymmetry is the reason
+the rescore is trustworthy despite the amendment count.
