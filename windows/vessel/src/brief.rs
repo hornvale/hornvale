@@ -2,9 +2,17 @@
 //! address and the seed (Rose Window metaplan §1b.4). Macro answers *who holds
 //! this land*; micro answers *what is standing here*; the brief is the seam.
 //!
-//! It is derived, never stored. Fields this campaign does not read yet — the
-//! ruin signature (`cause`, `ended_by`, ages) and the district vocabulary — are
-//! carried from the start so that adding a consumer never changes the seam.
+//! It is derived, never stored — which is why it does NOT carry the fields no
+//! consumer reads yet. The ruin signature (`cause`, `ended_by`, ages) and the
+//! district vocabulary are absent on purpose: the metaplan argued for carrying
+//! them from the start "so that adding a consumer never changes the seam", but
+//! that argument only bites for types that PERSIST. Nothing here is serialized,
+//! so the campaign that first needs `cause` adds one field, with no save-format
+//! consequence and no epoch. Seven unread `Option`s would be dead weight that
+//! reads as evidence of intent.
+//!
+//! As shipped, the only field any code reads is `built` — in `structure_at`'s
+//! existence predicate and in `describe_chamber`'s room/hollow word.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, World};
@@ -111,7 +119,7 @@ mod tests {
     use hornvale_history::record::{Function, Notability, TechHorizon};
 
     #[test]
-    fn from_parts_assigns_every_axis() {
+    fn from_parts_assigns_the_occupation_axes_and_flags() {
         let b = Brief::from_parts(
             Some(Function::Trade),
             Some(TechHorizon::Classical),

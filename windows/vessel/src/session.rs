@@ -115,12 +115,12 @@ const HELP: &str = "\
 verbs:
   look             where you stand, focalized
   map [out N]      the chart of what lies around you (N rungs coarser)
-  go <dir>         walk a compass exit (n ne e se s sw w nw)
+  go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw)
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
   examine <thing>  anything look mentions, out of doors
-  back             retrace your last step
+  back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
   knows            everything they have seen

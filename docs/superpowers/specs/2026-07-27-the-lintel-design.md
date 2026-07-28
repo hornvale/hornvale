@@ -102,8 +102,9 @@ can use:
   built         Terrain::is_built at the WALK band        USED: whether a
                                                             structure stands
                                                             here at all
-  cold          Terrain::is_cold at the WALK band         USED: furnishing,
-                                                            unchanged
+  cold          Terrain::is_cold at the WALK band         reserved: furnishing
+                                                            reads terrain
+                                                            directly, not this
 ```
 
 **As shipped, the brief's only live consumer in chamber derivation is `built`.**
