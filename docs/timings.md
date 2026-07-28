@@ -7,7 +7,10 @@ deliberate milestone run, written by [`scripts/timed.sh`](../scripts/timed.sh)
 (`make timings` to view). Times are machine- and load-specific — read
 `host`/`cores`/`cpu_ratio`, not the raw seconds, across different machines.
 `cpu_ratio = (user+sys)/wall` ≈ parallelism achieved: it separates *more work*
-(user climbs) from *more contention* (wall climbs, ratio falls). This file is
+(user climbs) from *more contention* (wall climbs, ratio falls). `waited_s` is
+time spent QUEUED behind another heavy run (decision 0081), not work — it
+separates a *queued* run from a *slow* one. Rows predating the column simply
+lack it; this file is not drift-checked, so history is left as it was. This file is
 NOT drift-checked and never gates the build; it is a record you read. The
 build-failing tolerance-band version is a later step (`TOOL-suite-timing-ledger`).
 
@@ -16,8 +19,8 @@ The first row is backfilled by hand from the fast-gate-tiers investigation
 ~8 parallel sessions — the 43.5-min worst case that motivated the tiering.
 Its low `cpu_ratio` (3.6 on a 10-core box) is the contention signature.
 
-| when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | commit | branch | host | cores |
-|---|---|---|---|---|---|---|---|---|---|
+| when (UTC) | label | wall_s | user_s | sys_s | cpu_ratio | waited_s | commit | branch | host | cores |
+|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-07-13T00:00:00Z | suite-full (pre-tiering, backfilled) | 2610.89 | 9246.93 | 36.88 | 3.56 | a2d39fa | main | m1max | 10 |
 | 2026-07-13T22:49Z | regen-remote: census-as-data (the-census 1000 + meeting; box) | 1803 | ? | ? | ? | 9643ef5 | census-as-data | aws-c7a.16xlarge-spot | 64 |
 | 2026-07-14T22:14:35Z | rebaseline | 202.305 | 146.973 | 1.384 | 0.73 | 90b7f96 | sculpting | MacBookPro | 10 |
