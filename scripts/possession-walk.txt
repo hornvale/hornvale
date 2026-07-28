@@ -5,6 +5,9 @@ examine sky
 whoami
 enter
 enter further in
+map
+examine a water jar
+examine a wall
 out
 go n
 map out 2

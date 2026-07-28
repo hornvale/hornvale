@@ -180,11 +180,25 @@ mod tests {
         }
     }
 
+    /// Closure: every way between two REGIONS must be a declared doorway. An
+    /// undeclared gap is a hole in the plan the render would draw as floor and
+    /// the mover would walk through without a door.
+    ///
+    /// **Tautological over a DERIVED lattice, and stated rather than hidden.**
+    /// `walls_around` walls every cross-owner pair except the declared
+    /// thresholds, so "unwalled and cross-region implies a door cell" is the
+    /// contrapositive of its own exemption condition read back off the same
+    /// ownership map. Over today's two methods this checks the wall
+    /// derivation's SELF-CONSISTENCY, not closure independently.
+    ///
+    /// What would make it load-bearing is a `walls` set written by anything
+    /// other than `walls_around`: the spec §3.2 radial and branching methods,
+    /// or a hand-authored fixture. Until one exists, the rule is a real check
+    /// waiting for a second writer — which is a different thing from a check
+    /// that passed, and [`rule_3_actually_fails_on_an_unclosed_lattice`] is
+    /// what keeps the difference honest by proving the condition CAN fail.
     #[test]
     fn rule_3_no_opening_is_unaccounted_for() {
-        // Closure: every way between two REGIONS must be a declared doorway. An
-        // undeclared gap is a hole in the plan the render would draw as floor and
-        // the mover would walk through without a door.
         for (_, l, m) in corpus() {
             let doors: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
             for (a, b) in openings(&l) {
@@ -199,6 +213,42 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn rule_3_actually_fails_on_an_unclosed_lattice() {
+        // The NEGATIVE CONTROL for the rule above. Rule 3 passes on every
+        // derived lattice by construction, so a green rule 3 is no evidence the
+        // condition can discriminate at all — and this task is the first to
+        // build a PICTURE on the wall set, so the wall set's closure check had
+        // better be able to fail. Take a real lattice, delete one wall, and
+        // assert the closure condition catches it. Same posture as deleting a
+        // type-audit tag to prove the tool reads the file.
+        let (s, mut l, _) = corpus()
+            .into_iter()
+            .find(|(s, _, _)| s.chambers.len() > 1)
+            .expect("the corpus reaches MAX_CHAMBERS, so a multi-region plan is in it");
+        assert!(
+            !l.walls.is_empty(),
+            "a {}-chamber plan must have walls for this control to remove one",
+            s.chambers.len()
+        );
+        let victim = *l
+            .walls
+            .iter()
+            .next()
+            .expect("a multi-region plan has walls");
+        l.walls.remove(&victim);
+        let doors: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
+        let leak = openings(&l).into_iter().find(|&(a, b)| {
+            region_of(&l, a) != region_of(&l, b) && !doors.contains(&a) && !doors.contains(&b)
+        });
+        assert!(
+            leak.is_some(),
+            "removing the wall between {victim:?} did not produce an unaccounted \
+             opening, so rule 3 cannot detect one either — the rule is not merely \
+             tautological over derived lattices, it is inert"
+        );
     }
 
     #[test]

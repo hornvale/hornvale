@@ -15,11 +15,13 @@ pub mod allocate;
 pub mod classify;
 pub mod grow;
 pub mod occupancy;
+pub mod render;
 
 pub use allocate::allocate;
 pub use classify::{freedom_of_a_chain, openings, realized_links, region_of};
 pub use grow::grow;
 pub use occupancy::Occupancy;
+pub use render::{Plan, render};
 
 use crate::brief::Brief;
 use crate::structure::Structure;
@@ -70,8 +72,11 @@ pub struct Cell(pub i32, pub i32);
 /// The side of one chamber's nominal block, in cells. Chosen against two bounds,
 /// both checked rather than trusted: at the bottom, `MIN_CHAMBER_SPAN` must still
 /// fit after a chain of splits; at the top, the widest plan any chamber count can
-/// produce must fit an 80-column transcript, which
-/// `the_largest_plan_fits_a_terminal` asserts.
+/// produce must fit an 80-column transcript — and since a wall lives BETWEEN
+/// cells the render draws `2w + 1` columns, not `w`, so the real ceiling is half
+/// what Task 1 assumed. Asserted twice on purpose:
+/// `the_largest_extent_leaves_the_render_room_to_draw` here, from the extent, and
+/// `render::tests::the_widest_plan_fits_a_terminal` from the drawn picture.
 /// type-audit: bare-ok(count)
 pub const CHAMBER_SIDE: i32 = 8;
 
@@ -473,18 +478,32 @@ mod tests {
     }
 
     #[test]
-    fn the_largest_plan_fits_a_terminal() {
-        // A floor plan is read in a transcript, so the ceiling on CHAMBER_SIDE is
-        // a rendering fact and belongs in a test rather than in a hope. The render
-        // adds a border and a legend, hence the margin.
+    fn the_largest_extent_leaves_the_render_room_to_draw() {
+        // Task 1 wrote this as `the_largest_plan_fits_a_terminal`, asserting
+        // `w <= 72 && h <= 22` on the EXTENT as a proxy for the render — guessing
+        // the render would be 1:1 plus a border. It is not: a wall lives BETWEEN
+        // cells, so the picture is `(2w+1) x (2h+1)` (see `render`'s module doc).
+        // The terminal claim therefore belongs to the render and is asserted
+        // there, on the picture itself, by
+        // `render::tests::the_widest_plan_fits_a_terminal`.
+        //
+        // What is left here is the bound that is genuinely `extent_for`'s: an
+        // extent narrow enough that the doubled picture still fits 80 columns.
+        // Stated as the arithmetic the render actually does, so raising
+        // CHAMBER_SIDE fails here as well as there rather than only there.
         for n in 1..=crate::structure::MAX_CHAMBERS {
             let e = extent_for(&structure_of(n));
+            // Named rather than inlined: `render` draws one column per cell plus
+            // one per boundary between them plus the two rim columns, and the
+            // arithmetic is worth reading as that rather than as an off-by-one.
+            let drawn_columns = 2 * e.w + 1;
             assert!(
-                e.w <= 72 && e.h <= 22,
-                "{n} chambers derive a {}x{} plan, which does not fit an 80x24 \
-                 transcript once the render's border and legend are added",
+                drawn_columns <= 80,
+                "{n} chambers derive a {}x{} extent, which the render draws \
+                 {drawn_columns} columns wide — past 80 a transcript wraps and a \
+                 plan stops being legible",
                 e.w,
-                e.h
+                e.h,
             );
         }
     }

@@ -35,6 +35,30 @@ Ways on: out, further in.
 [chamber 193703027969442, day 0]
 A small room, holding a doorway, an alcove, a water jar and a screen.
 Ways on: out.
+> map
+[plan: chamber 193703027969442, 2 of 2]
+#################################
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................+...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#...................#...........#
+#################################
+  legend: . the floor, # a wall, + a doorway
+> examine a water jar
+A wide-mouthed jar, cool to the touch, standing half full.
+> examine a wall
+Set close and plumb, with no gap in it wide enough to pass.
 > out
 [room 738918402, day 0]
 You stand in tropical seasonal forest — buttressed canopy — in the lands of Qvooshtvoagootao. The sky above: Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.

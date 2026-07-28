@@ -23,6 +23,72 @@ pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
     }
 }
 
+/// One authored line per kind: what a closer look at this thing gives you.
+///
+/// Exhaustive on purpose, with no catch-all arm. A new `AnchorKind` fails to
+/// compile here until someone writes what it looks like, which is the guard that
+/// stopped `look` and `examine` disagreeing in The Lintel — and Task 6 will make
+/// it fire again on the kinds the chamber roles need.
+///
+/// `Ground` has no NOUN (it is the chamber's own floor, not a thing standing in
+/// it) but it does have a detail: the render's legend names `the floor`, and §6
+/// requires every noun the plan depicts to answer. So this match is total over
+/// kinds where [`noun`] is not.
+///
+/// Kept short, concrete and free of terrain words —
+/// `a_chamber_never_speaks_of_terrain` is already a test about prose, and
+/// `no_detail_speaks_of_terrain` is its counterpart here, because a detail line
+/// is read in the same room by the same player.
+///
+/// (No `type-audit:` tag: the extractor only reads bare-`pub` items
+/// (`tools/type-audit/src/extract.rs`), so a tag here would be a verdict the tool
+/// never gave — the same reason `noun` and `chamber_nouns` above carry none.)
+pub(crate) fn detail(kind: AnchorKind) -> &'static str {
+    match kind {
+        AnchorKind::Ground => "Trodden floor, swept toward the walls.",
+        AnchorKind::Hearth => "Stones set in a ring, and the ash inside them still warm.",
+        AnchorKind::Threshold => "A gap left in the wall, worn smooth at the jamb.",
+        AnchorKind::Bed => "A low frame, strung across and piled with what was to hand.",
+        AnchorKind::Vessel => "A wide-mouthed jar, cool to the touch, standing half full.",
+        AnchorKind::Screen => "A standing panel, set to break the line of sight.",
+        AnchorKind::Alcove => "A recess cut back from the main space, deep enough to sit in.",
+        AnchorKind::Pool => "Still water, holding the light that reaches it.",
+        AnchorKind::Log => "A fallen trunk, its bark sloughing where the damp got in.",
+    }
+}
+
+/// What a closer look at a drawn WALL gives you.
+///
+/// A wall is not an anchor — nothing in the interior graph is one — but the plan
+/// depicts it and names it, so §6 obliges it to answer. The line says what a wall
+/// MEANS in this world as well as what it looks like: a wall is definitionally a
+/// non-adjacency (§7 rule 2), so "no gap wide enough to pass" is the wall law
+/// spoken in the world's own voice rather than a decorative sentence.
+const WALL_DETAIL: &str = "Set close and plumb, with no gap in it wide enough to pass.";
+
+/// The detail behind a noun the RENDER's legend names, if it is one.
+///
+/// The plan depicts three things and only one of them is an anchor. `the floor`
+/// and `a wall` are real features of a room, and a player who reads a floor plan
+/// and types `examine wall` is owed an answer — so they answer here rather than
+/// being excluded from the legend, which would leave the plan's picture depicting
+/// two things it refuses to discuss.
+///
+/// Matched against the render's OWN constants, so the legend and this lookup
+/// cannot drift into two vocabularies for one picture.
+pub(crate) fn glyph_detail(noun: &str) -> Option<&'static str> {
+    use crate::lattice::render::{DOORWAY_NOUN, FLOOR_NOUN, WALL_NOUN};
+    if noun == FLOOR_NOUN {
+        Some(detail(AnchorKind::Ground))
+    } else if noun == WALL_NOUN {
+        Some(WALL_DETAIL)
+    } else if noun == DOORWAY_NOUN {
+        Some(detail(AnchorKind::Threshold))
+    } else {
+        None
+    }
+}
+
 /// Every noun a chamber's prose will name, in the interior's own deterministic
 /// anchor order. The ONE catalogue `describe_chamber` renders from, so the
 /// nouns a chamber says are exactly the nouns it holds (the same discipline The
@@ -98,6 +164,86 @@ mod tests {
             prev = Some(id);
         }
         i
+    }
+
+    /// Every kind, listed once. Written out rather than derived, and kept in
+    /// step by [`detail`]'s exhaustive match: a new kind fails to compile there,
+    /// and `every_kind_has_a_detail` below is what notices it missing here.
+    const EVERY_KIND: [AnchorKind; 9] = [
+        AnchorKind::Ground,
+        AnchorKind::Hearth,
+        AnchorKind::Threshold,
+        AnchorKind::Bed,
+        AnchorKind::Vessel,
+        AnchorKind::Screen,
+        AnchorKind::Alcove,
+        AnchorKind::Pool,
+        AnchorKind::Log,
+    ];
+
+    #[test]
+    fn every_kind_has_a_detail() {
+        // The list above cannot go stale silently: `detail` is exhaustive, so a
+        // tenth kind compiles only once it is written there, and this asserts the
+        // list here covers as many distinct kinds as `noun` distinguishes.
+        let mut seen = std::collections::BTreeSet::new();
+        for kind in EVERY_KIND {
+            assert!(seen.insert(kind), "{kind:?} listed twice");
+            let d = detail(kind);
+            assert!(d.ends_with('.'), "{kind:?}: a detail is a sentence: {d:?}");
+            assert!(!d.trim().is_empty(), "{kind:?}: an empty detail");
+        }
+        // Ground has no noun and every other kind does, so nine kinds must yield
+        // eight nouns — the arithmetic that catches a kind dropped from the list.
+        assert_eq!(
+            EVERY_KIND.iter().filter(|&&k| noun(k).is_some()).count(),
+            8,
+            "the kind list has drifted from `noun`'s own match"
+        );
+    }
+
+    #[test]
+    fn no_detail_speaks_of_terrain() {
+        // `a_chamber_never_speaks_of_terrain`'s counterpart. A detail line is read
+        // in the same room by the same player, so the locale describer's
+        // vocabulary is as wrong here as it is in the prose.
+        for kind in EVERY_KIND {
+            for banned in [
+                "biome",
+                "elevation",
+                "moisture",
+                "regime",
+                "sun-warmed",
+                "shaded",
+                "unremarkable ground",
+                " dry",
+            ] {
+                assert!(
+                    !detail(kind).contains(banned),
+                    "{kind:?}'s detail leaked a terrain word {banned:?}: {:?}",
+                    detail(kind)
+                );
+            }
+        }
+        assert!(!WALL_DETAIL.contains(" dry") && !WALL_DETAIL.contains("shaded"));
+    }
+
+    #[test]
+    fn every_noun_the_plans_legend_names_has_a_detail() {
+        // §6's contract at its narrowest: the render names three things, and all
+        // three must answer. A legend entry with no detail is the plan depicting
+        // something it refuses to discuss.
+        for noun in [
+            crate::lattice::render::FLOOR_NOUN,
+            crate::lattice::render::WALL_NOUN,
+            crate::lattice::render::DOORWAY_NOUN,
+        ] {
+            assert!(
+                glyph_detail(noun).is_some(),
+                "the plan's legend names {noun:?} and nothing answers for it"
+            );
+        }
+        assert!(glyph_detail("a noun no plan draws").is_none());
     }
 
     #[test]

@@ -42,13 +42,18 @@ const FURTHER_IN: &str = "further in";
 /// either half of it.
 const FURTHER_IN_WORDS: [&str; 3] = ["further in", "in", "on"];
 
-/// What `examine` says INDOORS. A chamber's prose names what it holds, but
-/// nothing yet authors a detail for those nouns, so falling through to
-/// `examine`'s ordinary "You see no <noun> here." would deny a thing `look`
-/// had just named, two turns apart. This states the limit in the world's own
-/// voice instead. Authoring real chamber detail is a later campaign's work.
-const INDOOR_EXAMINE_REFUSAL: &str =
-    "Indoors you have only the room's own shape to go by; nothing here rewards a closer look yet.";
+/// What `map out [N]` says INDOORS. A plan is ONE building, so there is no
+/// coarser rung of it to draw: zooming out of a chart is path truncation up the
+/// address space, and truncating a structure's plan does not reach a bigger
+/// building — it reaches the LAND the building stands on, which is a different
+/// question with a different answer, and it is asked out of doors. Names the verb
+/// that gets there rather than refusing blankly.
+///
+/// (`INDOOR_EXAMINE_REFUSAL` used to stand here. Its own doc comment deferred
+/// authored chamber detail to a later campaign; this is that campaign, so it is
+/// retired rather than reworded — see `chamber_prose::detail`.)
+const INDOOR_CHART_REFUSAL: &str =
+    "Inside, the chart is the floor you stand on; step 'out' to read the land.";
 
 /// What lateral movement says INDOORS. Metaplan §1b.6: lateral movement never
 /// changes band, so a compass step from a chamber is not a step at all — a
@@ -114,12 +119,13 @@ pub(crate) fn grievance(ledger: &Ledger, npc: EntityId) -> f64 {
 const HELP: &str = "\
 verbs:
   look             where you stand, focalized
-  map [out N]      the chart of what lies around you (N rungs coarser)
+  map [out N]      the chart of what lies around you (N rungs coarser);
+                   indoors, the floor plan of the building you are in
   go <dir>         walk a compass exit, out of doors (n ne e se s sw w nw)
   enter [way]      step inside what is built here; once inside, 'enter further
                    in' goes deeper and 'out' leaves
   out              step back out of doors
-  examine <thing>  anything look mentions, out of doors
+  examine <thing>  anything look or the floor plan names
   back             retrace your last step, out of doors
   wait [N]         let N days pass overhead (default 1); the world moves too
   whoami           the one you possess
@@ -610,6 +616,16 @@ impl<'w> Session<'w> {
             // leaves the walk band, so nothing else changes.
             "look" if self.inside.is_some() => self.out(self.describe_chamber_here()),
             "look" => self.out(self.describe_here()),
+            // `map` is band-aware for exactly the reason `look` is, and it is the
+            // SAME verb rather than a new one: §6's contract is that any pane
+            // capability must first BE a verb, so the fewer verbs meaning one
+            // thing each, the better. Indoors the chart would draw the LOCALE the
+            // structure sits in, which is not where the possession is standing. A
+            // plan has no coarser rung, so an argument indoors is refused rather
+            // than silently ignored — an ignored argument is how a player comes
+            // to believe they asked for something and got it.
+            "map" if self.inside.is_some() && rest.is_empty() => self.out(self.plan_here()),
+            "map" if self.inside.is_some() => Turn::Out(INDOOR_CHART_REFUSAL.to_string()),
             "map" => self.map(rest),
             // Lateral movement is walk-band only (§1b.6). Guarded exactly as
             // `look` and `examine` are: without this, `go n` from a chamber
@@ -617,15 +633,18 @@ impl<'w> Session<'w> {
             // the building had been left.
             "go" if self.inside.is_some() => Turn::Out(INDOOR_LATERAL_REFUSAL.to_string()),
             "go" => self.go(rest),
-            // Band-aware, for the same reason `look` is: indoors, the nouns
-            // `look` named have no authored detail behind them, and the outdoor
-            // path would answer "You see no <noun> here." about a thing the
-            // chamber's own prose had just listed. A BARE `examine` is a
-            // different question — the player named nothing — so it still falls
-            // through to `examine`'s own "Examine what?" hint, which is as true
-            // indoors as out.
+            // Band-aware, for the same reason `look` is: the outdoor path resolves
+            // against the LOCALE's two grains, which know nothing of what stands
+            // in a chamber, so it would answer "You see no <noun> here." about a
+            // thing the chamber's own prose had just listed. Indoors it resolves
+            // against the chamber's anchors and the floor plan's own legend
+            // instead — the reversal of `INDOOR_EXAMINE_REFUSAL`, which stated
+            // that limit honestly while nothing authored a detail. A BARE
+            // `examine` is a different question — the player named nothing — so
+            // it still falls through to `examine`'s own "Examine what?" hint,
+            // which is as true indoors as out.
             "examine" if self.inside.is_some() && !rest.is_empty() => {
-                Turn::Out(INDOOR_EXAMINE_REFUSAL.to_string())
+                Turn::Out(self.examine_chamber(rest))
             }
             "examine" => self.examine(rest),
             // `back` retraces the WALK-band trail, so it is the same refusal
@@ -969,12 +988,7 @@ impl<'w> Session<'w> {
         let terrain = self.terrain_here();
         let brief = self.brief_here();
         let interior = crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth());
-        let id = chamber
-            .pack()
-            // `RoomAddrError` implements `Debug` but not `Display`, the same
-            // constraint `snapshot` documents at its own `pack` call.
-            .map_err(|e| VesselError::Build(format!("{e:?}")))?
-            .0;
+        let id = chamber_id(chamber)?;
         let mut ways = vec!["out"];
         if Self::further_in(structure, *at).is_some() {
             ways.push(FURTHER_IN);
@@ -986,6 +1000,158 @@ impl<'w> Session<'w> {
             crate::chamber_prose::describe_chamber(&interior, &brief),
             ways.join(", ")
         ))
+    }
+
+    /// The floor plan of the structure being stood in, or `None` out of doors.
+    ///
+    /// Derived on demand and kept by nobody: the lattice is `FRAME`-tier
+    /// (decision 0069), so re-deriving it costs microseconds (~209 us in debug,
+    /// ~27.6 us in release, measured in Task 3) and holding it across a descent
+    /// boundary would be how derived state stops being derived. Derived ONCE per
+    /// call, never per cell — the render walks the finished lattice.
+    ///
+    /// **Keyed to the LOCALE's own seed, never the world's.** `structure_at` keys
+    /// its draw with `locale.seed(seed)` (`structure.rs`) precisely so no other
+    /// locale's draw can perturb it, and the plan of that structure has to be
+    /// keyed the same way. Keyed to `self.world.seed` instead, every building in
+    /// the world gets ONE identical floor plan: a world that is self-consistent,
+    /// satisfies all seven of `lattice::classify`'s rules, and is uniformly
+    /// wrong. `the_plan_is_keyed_to_the_locale_not_the_world` is what catches it.
+    ///
+    /// The locale is taken from the THRESHOLD rather than from the chamber stood
+    /// in. Every chamber of a structure truncates to the same walk-band locale,
+    /// so the two agree — but reading it off the threshold says out loud that the
+    /// plan is a property of the STRUCTURE, and so does not change as the
+    /// possession walks deeper into it.
+    fn lattice_here(&self) -> Option<crate::lattice::Lattice> {
+        let (structure, _) = self.inside.as_ref()?;
+        let locale = crate::band::truncate_to_walk(&structure.threshold, self.walk_depth());
+        let brief = self.brief_here();
+        Some(crate::lattice::embed_with(
+            structure,
+            &brief,
+            crate::lattice::extent_for(structure),
+            locale.seed(self.world.seed),
+        ))
+    }
+
+    /// The drawn floor plan, in the chamber block's own shape: a bracketed
+    /// header, the picture, an indented legend — the same three-part shape the
+    /// locale chart uses, because they are one verb's two bands.
+    ///
+    /// The header is where the chamber stood in is named. The picture does not
+    /// mark it, and that is deliberate rather than an omission: a "you are here"
+    /// mark is a CELL position, and the possession has none until Task 5 gives it
+    /// one. Marking a whole region instead would claim a precision the session
+    /// does not have.
+    fn plan_here(&self) -> Result<String, VesselError> {
+        let Some((structure, at)) = self.inside.as_ref() else {
+            // Unreachable through `handle` (the arm checks first), the same guard
+            // and the same reason as `describe_chamber_here`: fabricating a plan
+            // while out of doors would be worse than a loud error.
+            return Err(VesselError::Build(
+                "no plan to draw: the possession is out of doors".to_string(),
+            ));
+        };
+        let lattice = self
+            .lattice_here()
+            .expect("inside a structure, so a lattice derives");
+        let plan = crate::lattice::render(&lattice);
+        let id = chamber_id(&structure.chambers[*at])?;
+        let legend: Vec<String> = plan
+            .legend
+            .iter()
+            .map(|(glyph, noun)| format!("{glyph} {noun}"))
+            .collect();
+        Ok(format!(
+            "[plan: chamber {}, {} of {}]\n{}  legend: {}",
+            id,
+            at + 1,
+            structure.chambers.len(),
+            plan.picture,
+            legend.join(", ")
+        ))
+    }
+
+    /// What the floor plan here depicts: each glyph paired with the noun the
+    /// legend gives it. Empty out of doors.
+    ///
+    /// Public because the parity test walks it. It reads the same structure the
+    /// render does rather than re-parsing the picture — the same discipline
+    /// `the_purview.rs` follows in reading `purview(0).legend` instead of the
+    /// drawn chart.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn plan_legend(&self) -> Vec<(char, String)> {
+        match self.lattice_here() {
+            None => Vec::new(),
+            Some(l) => crate::lattice::render(&l)
+                .legend
+                .into_iter()
+                .map(|(glyph, noun)| (glyph, noun.to_string()))
+                .collect(),
+        }
+    }
+
+    /// The nouns the floor plan here names. Empty out of doors.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn plan_legend_nouns(&self) -> Vec<String> {
+        self.plan_legend().into_iter().map(|(_, n)| n).collect()
+    }
+
+    /// The nouns the chamber here speaks of — the catalogue its own prose renders
+    /// from. Empty out of doors.
+    ///
+    /// The plan's legend and this list are the two grains one band down, exactly
+    /// as the chart's legend and the locale prose are one band up, and `examine`
+    /// indoors answers for the union of them.
+    /// type-audit: bare-ok(identifier-text: return)
+    pub fn chamber_nouns_here(&self) -> Vec<String> {
+        match self.chamber_interior_here() {
+            None => Vec::new(),
+            Some(interior) => crate::chamber_prose::chamber_nouns(&interior)
+                .into_iter()
+                .map(str::to_string)
+                .collect(),
+        }
+    }
+
+    /// The interior of the chamber stood in, or `None` out of doors.
+    fn chamber_interior_here(&self) -> Option<crate::interior::Interior> {
+        let (structure, at) = self.inside.as_ref()?;
+        let terrain = self.terrain_here();
+        Some(crate::interior::chamber_interior_of(
+            &structure.chambers[*at],
+            &terrain,
+            self.walk_depth(),
+        ))
+    }
+
+    /// `examine <noun>` INDOORS: the chamber's own anchors first, then the floor
+    /// plan's own legend.
+    ///
+    /// Anchors first because prose is the constitutionally primary surface (§3.5)
+    /// — the same precedence the outdoor path keeps between prose and chart, and
+    /// for the same reason. The plan's nouns are consulted second because two of
+    /// the three (`the floor`, `a wall`) are things no anchor names but the
+    /// picture depicts, and §6 obliges every depicted noun to answer.
+    ///
+    /// The refusal is BYTE-IDENTICAL to the outdoor path's. Two wordings for one
+    /// question — "what is this thing I cannot see?" — is precisely the drift §6
+    /// exists to prevent, and the parity test asserts on the prefix.
+    fn examine_chamber(&self, noun: &str) -> String {
+        let wanted = noun.trim().to_lowercase();
+        if let Some(interior) = self.chamber_interior_here() {
+            for id in interior.ids() {
+                let kind = interior.anchor(id).kind;
+                if crate::chamber_prose::noun(kind).is_some_and(|n| n.to_lowercase() == wanted) {
+                    return crate::chamber_prose::detail(kind).to_string();
+                }
+            }
+        }
+        if let Some(detail) = crate::chamber_prose::glyph_detail(&wanted) {
+            return detail.to_string();
+        }
+        format!("You see no {noun} here.")
     }
 
     fn wait(&mut self, arg: &str) -> Turn {
@@ -1615,6 +1781,19 @@ fn felt_phrase(affect: &Affect) -> String {
     }
 }
 
+/// A chamber's packed room id, for the blocks that print one.
+///
+/// One place rather than two: `RoomAddrError` implements `Debug` but not
+/// `Display` (the constraint `snapshot` documents at its own `pack` call), so the
+/// mapping has a shape worth stating once — and the chamber block and the plan
+/// block must print the same id for the same chamber.
+fn chamber_id(chamber: &RoomAddr) -> Result<u64, VesselError> {
+    Ok(chamber
+        .pack()
+        .map_err(|e| VesselError::Build(format!("{e:?}")))?
+        .0)
+}
+
 /// Parse a compass token (case-insensitive, long names allowed).
 fn parse_compass(s: &str) -> Option<Compass> {
     match s.to_lowercase().as_str() {
@@ -2108,7 +2287,14 @@ mod tests {
     }
 
     #[test]
-    fn examine_indoors_states_the_limit_instead_of_denying_the_noun() {
+    fn examine_indoors_answers_what_the_chamber_names_and_refuses_the_rest_in_one_voice() {
+        // The Lintel's version of this test asserted the reply was
+        // `INDOOR_EXAMINE_REFUSAL` — an honest statement of a real limit while
+        // nothing authored a detail for a chamber's nouns. This campaign authors
+        // them, so the test is REWRITTEN rather than deleted: the noun `look` just
+        // named must be ACCEPTED, and an unknown noun must be refused in the
+        // OUTDOOR wording, byte for byte. Two wordings for one question is the
+        // drift §6 exists to prevent.
         let world = seam_world();
         let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
         let shown = match session.handle("enter") {
@@ -2142,7 +2328,29 @@ mod tests {
             !reply.starts_with("You see no"),
             "look must not name what examine denies, two turns apart: {reply:?}"
         );
-        assert_eq!(reply, INDOOR_EXAMINE_REFUSAL);
+        assert_eq!(
+            reply,
+            crate::chamber_prose::detail(
+                interior
+                    .ids()
+                    .iter()
+                    .map(|&id| interior.anchor(id).kind)
+                    .find(|&k| crate::chamber_prose::noun(k) == Some(noun))
+                    .expect("the noun came from this interior")
+            ),
+            "the reply must be the AUTHORED detail for the anchor the noun names, \
+             not a generic acknowledgement"
+        );
+        // A noun the chamber does not hold is refused, and refused in the SAME
+        // words the outdoor path uses — asserted by equality against that path
+        // rather than by a shared prefix, which two drifting wordings would still
+        // satisfy.
+        let unknown = "a-noun-no-grain-surfaced";
+        let refused_indoors = match session.handle(&format!("examine {unknown}")) {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("examine must not release"),
+        };
+        assert_eq!(refused_indoors, format!("You see no {unknown} here."));
         // A BARE `examine` names nothing, so the band guard must not swallow it:
         // "Examine what?" is as true indoors as out, and the refusal above is an
         // answer to a question the player did not ask.
@@ -2164,6 +2372,110 @@ mod tests {
             outdoors.starts_with("You see no"),
             "the outdoor examine path is unchanged: {outdoors:?}"
         );
+        // And the same equality out of doors, so the two paths are pinned to one
+        // sentence rather than to one prefix.
+        assert_eq!(outdoors, refused_indoors);
+    }
+
+    #[test]
+    fn the_plan_is_keyed_to_the_locale_not_the_world() {
+        // THE trap this helper exists to avoid. `allocate` reads only the chamber
+        // count, the links and the seed, so two structures of the same shape
+        // produce the same lattice unless the SEED differs. Keyed to
+        // `self.world.seed`, every building in the world would get one identical
+        // floor plan — self-consistent, all seven rules green, and uniformly
+        // wrong. That makes this a real falsifier rather than the near-tautology
+        // `structure.rs` flags at `a_different_locale_gives_a_different_structure`,
+        // where the locale's path is inherited into the answer by construction.
+        //
+        // Eight locales rather than two, and the weaker claim rather than a
+        // pairwise one: the legal cut band is only about seven positions wide at
+        // this extent, so two locales agreeing is a coin flip and asserting they
+        // differ would be flaky. Assert the property that actually matters — the
+        // locale is read at all.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let here = session.agent.position.clone();
+        let mut plans = Vec::new();
+        let mut locales = std::collections::BTreeSet::new();
+        for i in 0..8u8 {
+            let mut path = here.path.clone();
+            path[0] = (path[0] + i % 4) % 4;
+            path[1] = (path[1] + i / 4) % 4;
+            let locale = RoomAddr {
+                face: here.face,
+                path,
+            };
+            assert!(locales.insert(locale.path.clone()), "locale {i} repeats");
+            session.inside = Some((path_structure(&locale, 2), 0));
+            let plan = session.lattice_here().expect("inside, so a plan derives");
+            // Purity, at each locale, before the difference below means anything:
+            // a plan that varied between two calls would make "eight differ" true
+            // for the wrong reason.
+            assert_eq!(
+                plan,
+                session.lattice_here().unwrap(),
+                "the plan at locale {i} is not a pure function of the place"
+            );
+            plans.push(plan);
+        }
+        assert!(
+            plans.iter().any(|p| *p != plans[0]),
+            "eight different built locales derived the SAME floor plan, so the \
+             lattice is keyed to the world's seed and every building in the world \
+             looks alike"
+        );
+    }
+
+    #[test]
+    fn the_plan_does_not_change_as_the_possession_walks_deeper() {
+        // The plan is a property of the STRUCTURE, so `lattice_here` keys it to the
+        // threshold's locale rather than to the chamber stood in. Keyed to the
+        // chamber instead, the building would redraw itself every time the player
+        // stepped through a door.
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        let s = path_structure(&session.agent.position, 3);
+        session.inside = Some((s.clone(), 0));
+        let from_threshold = session.lattice_here().unwrap();
+        for at in 1..3 {
+            session.inside = Some((s.clone(), at));
+            assert_eq!(
+                session.lattice_here().unwrap(),
+                from_threshold,
+                "the plan redrew itself on stepping into chamber {at}"
+            );
+        }
+    }
+
+    #[test]
+    fn map_indoors_draws_the_plan_and_map_out_indoors_refuses() {
+        let world = seam_world();
+        let (mut session, _) = Session::start(&world, &PossessOpts::default()).unwrap();
+        session.inside = Some((path_structure(&session.agent.position, 2), 0));
+        let plan = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(plan.starts_with("[plan: chamber "), "{plan}");
+        assert!(plan.contains("legend: "), "{plan}");
+        for line in ["map out", "map out 2"] {
+            let refused = match session.handle(line) {
+                Turn::Out(t) => t,
+                Turn::Released(_) => panic!("map must not release"),
+            };
+            assert_eq!(
+                refused, INDOOR_CHART_REFUSAL,
+                "{line:?} indoors must refuse rather than ignore the argument"
+            );
+        }
+        // Out of doors both paths are untouched.
+        session.handle("out");
+        let chart = match session.handle("map") {
+            Turn::Out(t) => t,
+            Turn::Released(_) => panic!("map must not release"),
+        };
+        assert!(chart.contains("[lens: terrain"), "{chart}");
     }
 
     #[test]

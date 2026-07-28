@@ -97,7 +97,7 @@
 
 **The embedder's discipline:** `allocate` receives the chamber *count and link structure* and must produce one region per chamber, adjacent regions sharing an edge wherever `links` says so. It may choose *where* to split (the residual DOF) and nothing else.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `windows/vessel/src/lattice/mod.rs`:
 
@@ -703,7 +703,7 @@ Append to `windows/vessel/src/lattice/mod.rs`'s test module:
 
 Rename the helper the earlier tests use so both methods share one entry point: replace `embed`'s body to call `embed_with(&s, &built(), extent_for(&s), Seed(seed))`, and add `use super::embed_with;` if needed.
 
-- [ ] **Step 2: Run to verify failure**
+- [x] **Step 2: Run to verify failure**
 
 Run: `cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14`
 Expected: FAIL — `cannot find function embed_with`.
@@ -1352,6 +1352,41 @@ refuses a second placement instead of displacing the first."
 
 ### Task 4: The ASCII render, the verb it hangs on, and the parity test
 
+> **DONE.** Four corrections found in execution, recorded here because Tasks 5–8
+> read this section:
+>
+> 1. **The plan's render draws no `#`, ever.** Its rule — a cell is wall when
+>    every way out of it is walled — cannot fire: `MIN_CHAMBER_SPAN` is 2, so
+>    every region is at least 2x2 and every cell has a same-region neighbour no
+>    wall separates. A wall is a property of the BOUNDARY between two cells and a
+>    1:1 grid has nowhere to draw it, so the render is doubled:
+>    `(2w+1) x (2h+1)`, odd positions cells, even positions boundaries. Seed 42's
+>    two-chamber plan is 33x17.
+> 2. **`the_largest_plan_fits_a_terminal` (Task 1) was a proxy for a render that
+>    did not exist**, and its 1:1-plus-a-border assumption is wrong by a factor
+>    of two. Re-founded: `mod.rs`'s copy now asserts `2w + 1 <= 80` and
+>    `render::tests::the_widest_plan_fits_a_terminal` asserts it on the drawn
+>    picture. WIDTH is the hard bound (past 80 a transcript wraps); height is not
+>    (a tall plan scrolls), so the 4-chamber worst case is 33x33 and that is
+>    accepted rather than forcing `CHAMBER_SIDE` down.
+> 3. **`every_destination_the_plan_depicts_is_command_reachable` compared the
+>    wrong two numbers.** The plan draws every doorway of the WHOLE structure but
+>    the footer names at most two ways out of ONE chamber, so at four chambers it
+>    is `3 <= 2` — false. It passes at two chambers by luck. Rewritten to WALK the
+>    structure and assert one drawn `+` per aperture actually stepped through,
+>    which is what §6 asks for.
+> 4. **`plan.matches('+')` counts the legend line.** The legend spells
+>    `+ a doorway`, so glyph counts must be taken over the picture rows only. This
+>    fired on the first run.
+>
+> `examine` indoors resolves against the chamber's anchors AND the plan's legend
+> nouns: `the floor` and `a wall` answer (`chamber_prose::glyph_detail`), because
+> a legend that names them while `examine` denies them is The Lintel's defect
+> wearing a floor plan. `render` takes the lattice ALONE — `structure`/`at` were
+> dropped under the plan's own licence, since a "you are here" mark is a CELL
+> position and Task 5 is what creates one; the session's `[plan: chamber N, i of
+> n]` header names where you stand instead.
+
 **Files:**
 - Create: `windows/vessel/src/lattice/render.rs`, `windows/vessel/tests/the_blocking.rs`
 - Modify: `windows/vessel/src/lattice/mod.rs` (re-export), `windows/vessel/src/session.rs` (`map` becomes band-aware; the indoor `examine` refusal is retired), `windows/vessel/src/chamber_prose.rs` (a detail per noun), `scripts/possession-walk.txt`
@@ -1368,7 +1403,7 @@ refuses a second placement instead of displacing the first."
 1. `INDOOR_EXAMINE_REFUSAL` (`session.rs:50`) — "nothing here rewards a closer look yet." The parity test *requires* every depicted noun to be `examine`-able, so this refusal must go, which means authoring a detail line per `AnchorKind`. Its own doc comment says "Authoring real chamber detail is a later campaign's work"; this is that campaign. Its assertion at `session.rs:2145` moves with it.
 2. Nothing else. `INDOOR_LATERAL_REFUSAL` is **Task 5's** business — do not touch it here, so that each reversal lands with the capability that justifies it.
 
-- [ ] **Step 0: Make rule 3 non-vacuous, before building on it**
+- [x] **Step 0: Make rule 3 non-vacuous, before building on it**
 
 Task 3 established that rule 3 is **tautological as written**: it asserts that every unwalled cross-region pair touches a door cell, which is the contrapositive of `walls_around`'s own exemption condition evaluated over the same ownership map. It therefore checks the wall derivation's *self-consistency*, not closure independently, and it passed without ever being able to fail.
 
@@ -1544,7 +1579,7 @@ fn every_destination_the_plan_depicts_is_command_reachable() {
 Run: `cargo test -p hornvale-vessel --test the_blocking 2>&1 | tail -20`
 Expected: FAIL to compile — no `plan_legend_nouns`, no `render`.
 
-- [ ] **Step 3: Implement the render**
+- [x] **Step 3: Implement the render**
 
 Create `windows/vessel/src/lattice/render.rs`. The alphabet is deliberately tiny — `#` wall, `.` floor, `+` doorway, and the standing chamber marked in the legend rather than by a fourth glyph:
 
@@ -1622,7 +1657,7 @@ pub fn render(lattice: &Lattice, structure: &Structure, at: usize) -> Plan {
 
 **On `structure` and `at` being unused in v1:** they are in the signature because Task 6's roles give each region a name to put in the legend, and changing a signature that three call sites use is churn this plan can avoid by paying one `let _ =` now. If the implementer prefers, drop both parameters and let Task 6 add them — say which you did in your report; either is fine, but do not leave an unexplained `let _ =`.
 
-- [ ] **Step 4: Wire the verb, retire the examine refusal**
+- [x] **Step 4: Wire the verb, retire the examine refusal**
 
 `lib.rs` re-exports `allocate` and `extent_for` but not `grow`/`embed_with` (Task 2's file list excluded `lib.rs`). This task is the first caller of the selector, so promote it: add `embed_with` to the `pub use lattice::{...}` list.
 
@@ -1705,7 +1740,7 @@ map
 examine a water jar
 ```
 
-- [ ] **Step 5: Run to verify pass**
+- [x] **Step 5: Run to verify pass**
 
 ```bash
 cargo test -p hornvale-vessel --test the_blocking 2>&1 | tail -20
@@ -1715,7 +1750,7 @@ Expected: PASS, 4 new integration tests. The old `INDOOR_EXAMINE_REFUSAL` assert
 
 If `examine a water jar` refuses in the transcript, the noun the walk asks for is not one this chamber holds — read the committed transcript's own prose line and ask for a noun that appears in it. Do not weaken the test; fix the script.
 
-- [ ] **Step 6: Format, audit, inspect the drift, commit**
+- [x] **Step 6: Format, audit, inspect the drift, commit**
 
 ```bash
 cargo fmt
