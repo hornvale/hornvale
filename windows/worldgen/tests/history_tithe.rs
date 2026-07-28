@@ -247,6 +247,36 @@ const MIN_STANDING_RELATIONS: usize = 40;
 /// measure of that, and the mutation arm confirms it: a patron that strips its
 /// vassal to `FARM_FLOOR` every epoch takes seed 42 from 1405 records to 228.
 ///
+/// **How far this floor actually reaches, measured rather than argued (T6's
+/// mutation ladder).** The arm above is severe — it deletes the assessment and
+/// the concealment term together and takes every unit above the floor — and it
+/// is the only one of five tried that reddens this test. The milder arms all
+/// stay green, and the reason is worth knowing before anyone reads this floor
+/// as a general guard on over-extraction:
+///
+/// | mutation | `alive_at_now` | `records_total` |
+/// |---|---|---|
+/// | (none — HEAD) | 344 | 1405 |
+/// | `Bake::target_stock` returns `0.0` (no setpoint, no floor) | 136 | 1407 |
+/// | the setpoint pinned to `FARM_FLOOR` for every patron | 150 | 1450 |
+/// | the assessment cap removed (take everything above the setpoint) | 247 | **2024** |
+/// | `bleed` measured on `population` (reaches through the floor) | 346 | 1276 |
+/// | strip to `FARM_FLOOR` unconditionally, no cap, no concealment | **48** | **228** |
+///
+/// Two readings follow, and both are mechanism findings rather than test
+/// bookkeeping. First, **the assessment cap — not `FARM_FLOOR` — is the
+/// first-order bound on how fast a vassal can be drained**: with the cap intact
+/// the setpoint floor can be deleted outright and the world still ends with 136
+/// standing. Second, and sharper: **`records_total` moves the WRONG WAY under
+/// moderate over-extraction** — 1405 → 2024 when the cap is removed. A daughter
+/// needs `pressure < DAUGHTER_MAX_PRESSURE` and nothing else, so a bled vassal
+/// is the *least* crowded community in the world and founds *more* daughters,
+/// not fewer. That is the same trap the rejected famine-share instrument fell
+/// into, one level up, and it means this floor catches farming-to-death only in
+/// the regime where extraction is severe enough to stop the world generating
+/// settlement at all. It is not a monotone dial on cruelty and must not be read
+/// as one.
+///
 /// **The instrument this replaced does NOT work, and the negative result is
 /// recorded here so nobody reaches for it again.** The obvious gate is "the
 /// share of occupations ending in `CauseOfEnd::Famine`" — but `Famine` fires
