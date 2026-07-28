@@ -36,7 +36,7 @@ habitat-medium row), BIO-25/26/27, BIO-39, BIO-41 · **Ledger:**
 5. **One new Settled people** — hot-arid, `StatusBasis::Generosity`, the fifth
    people and the first witness of that status basis.
 6. **The `Autotroph` doc correction**, with the model fix captured as its own
-   registry row (BIO-42).
+   registry row (BIO-autotroph-physics).
 
 The exit condition is preregistered in §9 and stated in terms of rung
 promotions, not creature count.
@@ -173,7 +173,7 @@ Menagerie witnessed the class.
 **This campaign corrects the doc and does not touch the allometry.** Changing a
 scaling exponent and expanding the roster in one campaign destroys attribution
 for both — The Menagerie's one-variable-per-stage discipline. The model fix is
-BIO-42 and gets its own campaign, which can measure against a roster this one
+BIO-autotroph-physics and gets its own campaign, which can measure against a roster this one
 leaves frozen. This is a fidelity-relevant deferral and is flagged for G3
 review rather than settled here.
 
@@ -477,7 +477,7 @@ Recorded so each vacancy is a decision rather than an oversight; each becomes a
 - **A second `Ametabolic` witness.** Constructs are manufactured, not born —
   BIO-13's question, not a biosphere roster's.
 - **Chemotrophy**, and with it the vent and hadal biomes (§5.2).
-- **`Autotroph`'s real physics** — BIO-42 (§3.3).
+- **`Autotroph`'s real physics** — BIO-autotroph-physics (§3.3).
 
 ## 7. Determinism and blast radius
 

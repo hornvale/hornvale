@@ -812,7 +812,7 @@ pub fn detritus_supply_field(
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
 /// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
-/// class the enum does not have (BIO-45), so making it productive here would
+/// class the enum does not have (BIO-chemotrophy), so making it productive here would
 /// feed vent biomass to photosynthesis-based consumers.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
@@ -833,7 +833,7 @@ pub fn marine_forage_supply_field(
             hornvale_climate::Biome::Mesopelagic => 0.15,
             hornvale_climate::Biome::Bathypelagic => 0.05,
             hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
-            // Chemotrophic in reality; not modellable as forage yet (BIO-45).
+            // Chemotrophic in reality; not modellable as forage yet (BIO-chemotrophy).
             hornvale_climate::Biome::HydrothermalVent => 0.02,
             hornvale_climate::Biome::SeaIce => 0.05,
             // Every land class: unreachable under the `is_ocean` guard above,

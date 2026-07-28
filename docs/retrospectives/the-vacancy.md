@@ -95,14 +95,14 @@ thirteen fauna, and a fifth people.
 
 ## Carried forward
 
-- **BIO-46** — supply magnitude drowns the condition niche; the named prerequisite
+- **BIO-supply-drowns-niche** — supply magnitude drowns the condition niche; the named prerequisite
   for this campaign's one unmet criterion, and the reason "centred on a biome" is
   not currently expressible.
-- **BIO-47** — insolation is latitude, not light.
-- **BIO-42** — `Autotroph` is witnessed but computed as an endotherm; deliberately
+- **BIO-insolation-is-latitude** — insolation is latitude, not light.
+- **BIO-autotroph-physics** — `Autotroph` is witnessed but computed as an endotherm; deliberately
   not bundled here, so its fix gets clean attribution against a frozen roster.
-- **BIO-48** — the walk layer's drive vector assumes every creature is a land
+- **BIO-land-animal-drives** — the walk layer's drive vector assumes every creature is a land
   animal; a prerequisite for an aquatic people rather than merely aquatic fauna.
-- **BIO-43 / BIO-44 / BIO-45** — a kind is authored in six registries and validated
+- **BIO-kind-authoring-seam / BIO-marine-trophic-split / BIO-chemotrophy** — a kind is authored in six registries and validated
   in a seventh; trophic structure within the sea; chemotrophy as a fifth
   metabolic class.

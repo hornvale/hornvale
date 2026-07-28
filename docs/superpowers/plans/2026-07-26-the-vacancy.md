@@ -142,7 +142,7 @@ fn metabolic_class_coverage_matches_the_table() {
         ]),
         (MetabolicClass::Ectotherm, Rung::Witnessed, &["kobold", "rust-monster"]),
         // WITNESSED but NOT exercised: allometry computes Autotroph exactly as
-        // Endotherm despite the class doc's surface-limited claim. See BIO-42
+        // Endotherm despite the class doc's surface-limited claim. See BIO-autotroph-physics
         // and `autotroph_is_computed_as_an_endotherm_today` in this file.
         (MetabolicClass::Autotroph, Rung::Witnessed, &["treant", "twig-blight"]),
         // The sole carrier of the `None` life-history branch.
@@ -263,12 +263,12 @@ fn the_dark_trait_combinations_are_named() {
 
 #[test]
 fn autotroph_is_computed_as_an_endotherm_today() {
-    // A KNOWN DIVERGENCE, pinned deliberately so BIO-42's fix is a visible
+    // A KNOWN DIVERGENCE, pinned deliberately so BIO-autotroph-physics's fix is a visible
     // diff rather than a silent change. `MetabolicClass::Autotroph`'s doc says
     // a phototroph's basal rate is surface/area-limited so Kleiber's 3/4 mass
     // exponent does not apply; `allometry.rs` nonetheless gives it
     // `B0_ENDOTHERM` and a pace multiplier of 1.0. This test asserts the
-    // SHIPPED behaviour, not the correct one. When BIO-42 lands, this test is
+    // SHIPPED behaviour, not the correct one. When BIO-autotroph-physics lands, this test is
     // expected to fail, and its failure is the point.
     use hornvale_kernel::Mass;
     use hornvale_species::allometry;
@@ -277,12 +277,12 @@ fn autotroph_is_computed_as_an_endotherm_today() {
     assert_eq!(
         allometry::basal_metabolic_rate_w(mass, MetabolicClass::Autotroph),
         allometry::basal_metabolic_rate_w(mass, MetabolicClass::Endotherm),
-        "Autotroph BMR is identical to Endotherm today (BIO-42)"
+        "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
         allometry::lifespan(mass, MetabolicClass::Autotroph),
         allometry::lifespan(mass, MetabolicClass::Endotherm),
-        "Autotroph lifespan is identical to Endotherm today (BIO-42)"
+        "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }
 ```
@@ -343,7 +343,7 @@ Two claims in it are false as of The Menagerie: the class **is** used (treant, t
     /// Making it real needs an area-scaling exponent and an autotroph `B0`
     /// calibrated against a photosynthetic-productivity anchor — a genuine
     /// modelling call that moves both kinds' life-history and every golden
-    /// they touch, tracked as BIO-42 and deliberately NOT bundled with the
+    /// they touch, tracked as BIO-autotroph-physics and deliberately NOT bundled with the
     /// roster expansion that would destroy its attribution. The current
     /// divergence is pinned by
     /// `autotroph_is_computed_as_an_endotherm_today` in
@@ -610,7 +610,7 @@ Expected: gate PASS, and `git status` shows **no modified generated artifact**.
 /// and worth knowing: a reef grazer and a pelagic apex predator are
 /// differentiated only by their condition-response curves, not by what they
 /// eat, so marine food-chain *length* is not yet an emergent property. Splitting
-/// it is BIO-44, and costs only new ids — never a reinterpretation of this one.
+/// it is BIO-marine-trophic-split, and costs only new ids — never a reinterpretation of this one.
 ///
 /// `Stock` rather than `Field`: what a consumer eats here is standing biomass,
 /// even though its supply is derived from production.
@@ -749,7 +749,7 @@ const MARINE_SUPPLY_SCALE: f64 = 1.0;
 /// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
 /// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
 /// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
-/// class the enum does not have (BIO-45), so making it productive here would
+/// class the enum does not have (BIO-chemotrophy), so making it productive here would
 /// feed vent biomass to photosynthesis-based consumers.
 /// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
 pub fn marine_forage_supply_field(
@@ -770,7 +770,7 @@ pub fn marine_forage_supply_field(
             hornvale_climate::Biome::Mesopelagic => 0.15,
             hornvale_climate::Biome::Bathypelagic => 0.05,
             hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
-            // Chemotrophic in reality; not modellable as forage yet (BIO-45).
+            // Chemotrophic in reality; not modellable as forage yet (BIO-chemotrophy).
             hornvale_climate::Biome::HydrothermalVent => 0.02,
             hornvale_climate::Biome::SeaIce => 0.05,
             // Every land class: unreachable under the `is_ocean` guard above,
@@ -1317,7 +1317,7 @@ Also carry: the `Crepuscular` cell that spec §5.1 listed without checking The V
 
 - [ ] **Step 6: Flip the registry rows**
 
-`BIO-37`'s roster-generation half → `shipped`. `MAP-11` gains the water-fauna half as shipped with the people half still open. `BIO-42`/`BIO-43`/`BIO-44`/`BIO-45` stay `raw`; repoint their **Where** at the chronicle. Promote the followup register into the retrospective's follow-up section.
+`BIO-37`'s roster-generation half → `shipped`. `MAP-11` gains the water-fauna half as shipped with the people half still open. `BIO-autotroph-physics`/`BIO-kind-authoring-seam`/`BIO-marine-trophic-split`/`BIO-chemotrophy` stay `raw`; repoint their **Where** at the chronicle. Promote the followup register into the retrospective's follow-up section.
 
 - [ ] **Step 7: The final whole-branch review**
 

@@ -91,7 +91,7 @@ pub const MINERAL: ResourceAxis = ResourceAxis {
 /// and worth knowing: a reef grazer and a pelagic apex predator are
 /// differentiated only by their condition-response curves, not by what they
 /// eat, so marine food-chain *length* is not yet an emergent property. Splitting
-/// it is BIO-44, and costs only new ids — never a reinterpretation of this one.
+/// it is BIO-marine-trophic-split, and costs only new ids — never a reinterpretation of this one.
 ///
 /// `Stock` rather than `Field`: what a consumer eats here is standing biomass,
 /// even though its supply is derived from production.

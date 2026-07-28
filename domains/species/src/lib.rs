@@ -1139,7 +1139,7 @@ fn shrieker_condition_niche() -> ConditionNiche {
 // upwelling 1.0) rather than to a continuous NPP field the way the land's
 // `PHOTOSYNTHATE`/`PLANT_FORAGE` supply is — so, unlike The Vacancy T7's
 // land kinds (whose `mean_k` ranking was dominated by NPP magnitude,
-// independent of the kind's own target biome — BIO-46), a marine kind's own
+// independent of the kind's own target biome — BIO-supply-drowns-niche), a marine kind's own
 // elevation+temperature optimum is what SELECTS its supply tier, because it
 // selects which biome class the cell classifies as in the first place.
 // Measured per-kind below; `upwelling`'s productivity (1.0) is the one
@@ -1380,7 +1380,7 @@ fn giant_crocodile_condition_niche() -> ConditionNiche {
 // give the competitive landscape this niche is authored into: giant-scorpion
 // mean_k 0.0176 (desert's current best occupant), otyugh 0.0138,
 // rust-monster 0.0042, shrieker 0.0031, xorn 0.0012 (all `desert`,
-// `cells_occupied` 8020, the 30-seed sweep). **BIO-46 applies unmodified**:
+// `cells_occupied` 8020, the 30-seed sweep). **BIO-supply-drowns-niche applies unmodified**:
 // `mean_k` is dominated by the NPP-linked `ANIMAL_PREY`/`PLANT_FORAGE`
 // supply term, which collapses in desert exactly as it does for every other
 // omnivore/predator in the roster (the block comment above
@@ -1410,7 +1410,7 @@ fn gnoll_condition_niche() -> ConditionNiche {
         // hunter that forages at the cooler margins of the day and shelters
         // through the peak heat, the same real-world strategy spotted
         // hyenas use. Insolation is a pure function of latitude
-        // (BIO-47) — this is theming, not a claim the model enforces
+        // (BIO-insolation-is-latitude) — this is theming, not a claim the model enforces
         // canopy/shade, the same caveat every "shaded" niche in this file
         // already carries (rust-monster's cave stake, black-dragon's swamp
         // ambush).
@@ -1454,7 +1454,7 @@ pub enum MetabolicClass {
     /// Making it real needs an area-scaling exponent and an autotroph `B0`
     /// calibrated against a photosynthetic-productivity anchor — a genuine
     /// modelling call that moves both kinds' life-history and every golden
-    /// they touch, tracked as BIO-42 and deliberately NOT bundled with the
+    /// they touch, tracked as BIO-autotroph-physics and deliberately NOT bundled with the
     /// roster expansion that would destroy its attribution. The current
     /// divergence is pinned by `autotroph_is_computed_as_an_endotherm_today`
     /// in `tests/coverage.rs`, so the fix will present as a visible diff.

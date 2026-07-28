@@ -114,7 +114,7 @@ fn metabolic_class_coverage_matches_the_table() {
             ],
         ),
         // WITNESSED but NOT exercised: allometry computes Autotroph exactly as
-        // Endotherm despite the class doc's surface-limited claim. See BIO-42
+        // Endotherm despite the class doc's surface-limited claim. See BIO-autotroph-physics
         // and `autotroph_is_computed_as_an_endotherm_today` in this file.
         (
             MetabolicClass::Autotroph,
@@ -323,12 +323,12 @@ fn the_dark_trait_combinations_are_named() {
 
 #[test]
 fn autotroph_is_computed_as_an_endotherm_today() {
-    // A KNOWN DIVERGENCE, pinned deliberately so BIO-42's fix is a visible
+    // A KNOWN DIVERGENCE, pinned deliberately so BIO-autotroph-physics's fix is a visible
     // diff rather than a silent change. `MetabolicClass::Autotroph`'s doc says
     // a phototroph's basal rate is surface/area-limited so Kleiber's 3/4 mass
     // exponent does not apply; `allometry.rs` nonetheless gives it
     // `B0_ENDOTHERM` and a pace multiplier of 1.0. This test asserts the
-    // SHIPPED behaviour, not the correct one. When BIO-42 lands, this test is
+    // SHIPPED behaviour, not the correct one. When BIO-autotroph-physics lands, this test is
     // expected to fail, and its failure is the point.
     use hornvale_kernel::Mass;
     use hornvale_species::{basal_metabolic_rate_w, lifespan};
@@ -337,11 +337,11 @@ fn autotroph_is_computed_as_an_endotherm_today() {
     assert_eq!(
         basal_metabolic_rate_w(mass, MetabolicClass::Autotroph),
         basal_metabolic_rate_w(mass, MetabolicClass::Endotherm),
-        "Autotroph BMR is identical to Endotherm today (BIO-42)"
+        "Autotroph BMR is identical to Endotherm today (BIO-autotroph-physics)"
     );
     assert_eq!(
         lifespan(mass, MetabolicClass::Autotroph),
         lifespan(mass, MetabolicClass::Endotherm),
-        "Autotroph lifespan is identical to Endotherm today (BIO-42)"
+        "Autotroph lifespan is identical to Endotherm today (BIO-autotroph-physics)"
     );
 }

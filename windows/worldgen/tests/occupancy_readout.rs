@@ -219,7 +219,7 @@ fn regenerate_occupancy_readout() {
 /// condition product bounded in `[0, 1]`, so the condition niche can only ever
 /// modulate the NPP signal, never select against it. A photosynthate kind rides
 /// that signal everywhere it is green; a predator authored for a specific
-/// climate cannot outrank it there. That is BIO-46, and it is the named
+/// climate cannot outrank it there. That is BIO-supply-drowns-niche, and it is the named
 /// prerequisite for this test.
 ///
 /// The gnoll is the sharpest case: a people authored explicitly for hot-arid
@@ -228,9 +228,9 @@ fn regenerate_occupancy_readout() {
 /// world to a preregistered criterion is the one move that would invalidate
 /// the result.
 ///
-/// This test is expected to fail until BIO-46 lands. Its failure is the record.
+/// This test is expected to fail until BIO-supply-drowns-niche lands. Its failure is the record.
 #[test]
-#[ignore = "PREREGISTERED, not met: awaits BIO-46 (supply magnitude drowns the condition niche)"]
+#[ignore = "PREREGISTERED, not met: awaits BIO-supply-drowns-niche (supply magnitude drowns the condition niche)"]
 fn each_target_region_gains_a_top_ranked_occupant() {
     let rendered = render_occupancy_readout(1..=30);
     let mut top: std::collections::BTreeMap<String, (String, f64)> =
@@ -260,7 +260,7 @@ fn each_target_region_gains_a_top_ranked_occupant() {
         assert!(
             newly_authored.contains(&kind.as_str()),
             "{region}'s top occupant is {kind} ({k}), not a kind this campaign \
-             authored for it - see BIO-46"
+             authored for it - see BIO-supply-drowns-niche"
         );
     }
 }
