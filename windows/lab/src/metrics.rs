@@ -5610,16 +5610,24 @@ mod tests {
         // flagship lands back on non-coastal, temperate-forest — matching
         // neither parent's solo-tree finding on its own, since both
         // campaigns' world-byte changes compose (see `almanac`'s seed-42
-        // output and `cli/tests/branches_identity.rs`).
+        // output and `cli/tests/branches_identity.rs`). The Vacancy T9 adds
+        // a fifth competing Settled people (the gnoll), which shifts the
+        // world-wide competitive landscape settlement genesis resolves
+        // again: re-derived empirically post-merge, goblin's flagship at
+        // seed 42 now lands on COASTAL tropical-rainforest (still farming,
+        // still the 3-caste structure — the biome and coastal reading both
+        // moved together, since a new competitor claiming the interior cell
+        // the old flagship held pushed goblin's own flagship to a different
+        // cell entirely).
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
+            MetricValue::Text("tropical-rainforest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

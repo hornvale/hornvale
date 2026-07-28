@@ -4,6 +4,8 @@
 //! ranking — so a regression in the convention reddens rather than passing
 //! silently (measure, don't narrate the mechanism).
 
+use std::collections::BTreeSet;
+
 use hornvale_kernel::KindId;
 use hornvale_species::biosphere_registry;
 
@@ -17,22 +19,24 @@ const SUPERNATURAL_CR: &[(&str, f64)] = &[
     ("xorn", 5.0),
 ];
 
-/// Every roster kind that is NOT in the supernatural set: the four peoples and
-/// the mundane fauna. All carry `potency == 0.0` regardless of their own CR,
+/// Every roster kind that is NOT in the supernatural set: the peoples and the
+/// mundane fauna. All carry `potency == 0.0` regardless of their own CR,
 /// because their formidability is physical (carried by `mass`).
-const MUNDANE: &[&str] = &[
-    "goblin",
-    "kobold",
-    "hobgoblin",
-    "bugbear",
-    "twig-blight",
-    "giant-elk",
-    "woolly-mammoth",
-    "giant-goat",
-    "otyugh",
-    "rust-monster",
-    "owlbear",
-];
+///
+/// **Derived from the registry, not hand-listed.** This was a hardcoded list
+/// until The Vacancy, and seven kinds authored in one task silently escaped it
+/// — a hand-maintained complement of the roster rots the moment the roster
+/// grows, and rots *silently*, because the test still passes over the kinds it
+/// happens to name. Deriving it means every future kind is covered on arrival
+/// and a mundane kind authored with a stray nonzero potency fails here.
+fn mundane_kinds() -> Vec<&'static str> {
+    let supernatural: BTreeSet<&str> = SUPERNATURAL_CR.iter().map(|(name, _)| *name).collect();
+    biosphere_registry()
+        .iter()
+        .map(|(k, _)| k.0)
+        .filter(|name| !supernatural.contains(name))
+        .collect()
+}
 
 fn potency_of(name: &'static str) -> f64 {
     biosphere_registry()
@@ -54,7 +58,12 @@ fn potency_is_challenge_rating_over_thirty() {
 
 #[test]
 fn mundane_kinds_carry_no_potency() {
-    for name in MUNDANE {
+    let mundane = mundane_kinds();
+    assert!(
+        mundane.len() + SUPERNATURAL_CR.len() == biosphere_registry().iter().count(),
+        "every roster kind must be either supernatural or mundane - no kind escapes this test"
+    );
+    for name in &mundane {
         assert_eq!(
             potency_of(name),
             0.0,

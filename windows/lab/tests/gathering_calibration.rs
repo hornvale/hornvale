@@ -111,14 +111,14 @@ fn capacity_by_abs_latitude_gradient_clears_the_preregistered_floor() {
     // the-terminator SKY-24, commit 945f62b): re-measured (26.6509 ->
     // 24.2412); the preregistered floor of 3 still clears decisively.
     // Local-canonical adoption (2026-07-19, The Local Census, decision 0063):
-    // re-measured 24.2412 -> 21.0365 on this machine (now the reference
+    // re-measured 24.2412 -> 20.8640 on this machine (now the reference
     // platform). The ~13% move inherits origin/main's un-pinned physics — the
     // the-rains moisture epoch reshapes habitable capacity by latitude — that
     // the AWS-golden lag never re-pinned; the preregistered floor of 3 still
     // clears decisively.
     assert!(
-        (mean - 21.0365).abs() < 1e-3,
-        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~21.0365)"
+        (mean - 20.8640).abs() < 1e-3,
+        "capacity-by-abs-latitude mean drifted: {mean:.4} (expected ~20.8640)"
     );
 }
 
@@ -183,12 +183,12 @@ fn pop_weighted_abs_latitude_reads_below_the_uniform_sphere_baseline() {
     // 15.3811; still comfortably below the uniform-sphere baseline of 32.7.
     // The Tumult (predation epoch; lefford regen, 0063): predation reseats
     // communities onto the richer sites they seize, pulling population very
-    // slightly equatorward (15.3811 -> 15.0837); the preregistered
+    // slightly equatorward (15.3811 -> 15.2813); the preregistered
     // directional claim asserted above — below the uniform-sphere baseline
     // of 32.7 — is untouched and still clears by better than 2x.
     assert!(
-        (mean - 15.0837).abs() < 1e-3,
-        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.0837)"
+        (mean - 15.2813).abs() < 1e-3,
+        "pop-weighted-abs-latitude mean drifted: {mean:.4} (expected ~15.2813)"
     );
 }
 

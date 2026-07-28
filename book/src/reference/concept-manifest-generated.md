@@ -7,18 +7,18 @@ Every registered concept is carried across three correspondence ledgers — **le
 ## Backlog (the negative space)
 
 ```text
-Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, black-dragon-kind, bugbear-kind, cold, coral-reef, desert, eclipse, epipelagic, giant-elk-kind, giant-goat-kind, goblin-kind, god, hadal-trench, hearth, heat, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, mesopelagic, otyugh-kind, owlbear-kind, rain, red-dragon-kind, rust-monster-kind, savanna, sea-ice, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tide, treant-kind, tropical-rainforest, tropical-seasonal-forest, tundra, twig-blight-kind, upwelling, white-dragon-kind, woolly-mammoth-kind, xorn-kind
-Unperceived (percept gap): abyssal, alpine, bathypelagic, black-dragon-kind, blood, blue, bone, brown, bugbear-kind, child, coral-reef, dark, day, desert, die, drink, earth, eat, epipelagic, eye, fire, foot, giant-elk-kind, giant-goat-kind, gloom, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, kobold-kind, light, many, mesopelagic, mountain, mouth, move, name, night, one, otyugh-kind, owlbear-kind, parent, person, red, red-dragon-kind, rest, rust-monster-kind, savanna, sea, sea-ice, shadow, shrubland, sibling, sleep, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, treant-kind, tree, tropical-rainforest, tropical-seasonal-forest, tundra, twig-blight-kind, two, upwelling, water, white-dragon-kind, woolly-mammoth-kind, xorn-kind, yellow
+Unnamed (lexeme gap):      abyssal, alpine, bathypelagic, black-dragon-kind, bugbear-kind, carrion-crawler-kind, cold, coral-reef, desert, dire-wolf-kind, eclipse, epipelagic, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gnoll-kind, goblin-kind, god, hadal-trench, hearth, heat, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, killer-whale-kind, kobold-kind, mesopelagic, otyugh-kind, owlbear-kind, rain, red-dragon-kind, reef-shark-kind, rhinoceros-kind, rust-monster-kind, savanna, sea-ice, shrieker-kind, shrubland, snow, spirit, taiga, temperate-forest, temperate-grassland, temperate-rainforest, tide, treant-kind, tropical-rainforest, tropical-seasonal-forest, tundra, twig-blight-kind, upwelling, white-dragon-kind, woolly-mammoth-kind, xorn-kind
+Unperceived (percept gap): abyssal, alpine, bathypelagic, black-dragon-kind, blood, blue, bone, brown, bugbear-kind, carrion-crawler-kind, child, coral-reef, dark, day, desert, die, dire-wolf-kind, drink, earth, eat, epipelagic, eye, fire, foot, giant-constrictor-snake-kind, giant-crocodile-kind, giant-elk-kind, giant-goat-kind, giant-hyena-kind, giant-octopus-kind, giant-scorpion-kind, giant-squid-kind, gloom, gnoll-kind, goblin-kind, god, green, hadal-trench, hand, hearth, hobgoblin-kind, home, hydrothermal-vent, ice, kelp-forest, killer-whale-kind, kobold-kind, light, many, mesopelagic, mountain, mouth, move, name, night, one, otyugh-kind, owlbear-kind, parent, person, red, red-dragon-kind, reef-shark-kind, rest, rhinoceros-kind, rust-monster-kind, savanna, sea, sea-ice, shadow, shrieker-kind, shrubland, sibling, sleep, spirit, starlit, stone, taiga, temperate-forest, temperate-grassland, temperate-rainforest, treant-kind, tree, tropical-rainforest, tropical-seasonal-forest, tundra, twig-blight-kind, two, upwelling, water, white-dragon-kind, woolly-mammoth-kind, xorn-kind, yellow
 Orphan phenomena (emitted, no concept names): heliacal-rising, heliacal-setting, seasonal-cycle, wandering-star
 Orphan species (simulated, no concept names): none
 Orphan acts (performed, no concept names): none
 Prose vocabulary (player-facing words, no concept names): UNAUDITED — the locale relief descriptors, the sky and hydrology prose, and the affect labels are authored English with no concept behind them. Auditing them needs a design line between a nameable thing and mere texture, which no campaign has drawn yet.
-Uncognized (cognition, all pending): 89 concepts [wave-cognition]
+Uncognized (cognition, all pending): 102 concepts [wave-cognition]
 
-Trial balance (per ledger: covered + voids = 91 concepts):
-  lexeme:    covered 43  gap 48
-  percept:   covered 10  gap 81
-  cognition: covered 2  uncognized 89
+Trial balance (per ledger: covered + voids = 104 concepts):
+  lexeme:    covered 43  gap 61
+  percept:   covered 10  gap 94
+  cognition: covered 2  uncognized 102
 ```
 
 ## Matrix
@@ -34,6 +34,7 @@ Trial balance (per ledger: covered + voids = 91 concepts):
 | `bone` | Expected | Gap | pending(wave-cognition) |
 | `brown` | Expected | Gap | pending(wave-cognition) |
 | `bugbear-kind` | Gap | Gap | pending(wave-cognition) |
+| `carrion-crawler-kind` | Gap | Gap | pending(wave-cognition) |
 | `child` | Expected | Gap | pending(wave-cognition) |
 | `cold` | Gap | `cold` | handle |
 | `coral-reef` | Gap | Gap | pending(wave-cognition) |
@@ -41,6 +42,7 @@ Trial balance (per ledger: covered + voids = 91 concepts):
 | `day` | Expected | Gap | pending(wave-cognition) |
 | `desert` | Gap | Gap | pending(wave-cognition) |
 | `die` | Expected | Gap | pending(wave-cognition) |
+| `dire-wolf-kind` | Gap | Gap | pending(wave-cognition) |
 | `drink` | Expected | Gap | pending(wave-cognition) |
 | `earth` | Expected | Gap | pending(wave-cognition) |
 | `eat` | Expected | Gap | pending(wave-cognition) |
@@ -49,9 +51,16 @@ Trial balance (per ledger: covered + voids = 91 concepts):
 | `eye` | Expected | Gap | pending(wave-cognition) |
 | `fire` | Expected | Gap | pending(wave-cognition) |
 | `foot` | Expected | Gap | pending(wave-cognition) |
+| `giant-constrictor-snake-kind` | Gap | Gap | pending(wave-cognition) |
+| `giant-crocodile-kind` | Gap | Gap | pending(wave-cognition) |
 | `giant-elk-kind` | Gap | Gap | pending(wave-cognition) |
 | `giant-goat-kind` | Gap | Gap | pending(wave-cognition) |
+| `giant-hyena-kind` | Gap | Gap | pending(wave-cognition) |
+| `giant-octopus-kind` | Gap | Gap | pending(wave-cognition) |
+| `giant-scorpion-kind` | Gap | Gap | pending(wave-cognition) |
+| `giant-squid-kind` | Gap | Gap | pending(wave-cognition) |
 | `gloom` | Expected | Gap | pending(wave-cognition) |
+| `gnoll-kind` | Gap | Gap | pending(wave-cognition) |
 | `goblin-kind` | Gap | Gap | pending(wave-cognition) |
 | `god` | Gap | Gap | pending(wave-cognition) |
 | `green` | Expected | Gap | pending(wave-cognition) |
@@ -64,6 +73,7 @@ Trial balance (per ledger: covered + voids = 91 concepts):
 | `hydrothermal-vent` | Gap | Gap | pending(wave-cognition) |
 | `ice` | Gap | Gap | pending(wave-cognition) |
 | `kelp-forest` | Gap | Gap | pending(wave-cognition) |
+| `killer-whale-kind` | Gap | Gap | pending(wave-cognition) |
 | `kobold-kind` | Gap | Gap | pending(wave-cognition) |
 | `light` | Expected | Gap | pending(wave-cognition) |
 | `many` | Expected | Gap | pending(wave-cognition) |
@@ -82,12 +92,15 @@ Trial balance (per ledger: covered + voids = 91 concepts):
 | `rain` | Gap | `rain` | pending(wave-cognition) |
 | `red` | Expected | Gap | pending(wave-cognition) |
 | `red-dragon-kind` | Gap | Gap | pending(wave-cognition) |
+| `reef-shark-kind` | Gap | Gap | pending(wave-cognition) |
 | `rest` | Expected | Gap | pending(wave-cognition) |
+| `rhinoceros-kind` | Gap | Gap | pending(wave-cognition) |
 | `rust-monster-kind` | Gap | Gap | pending(wave-cognition) |
 | `savanna` | Gap | Gap | pending(wave-cognition) |
 | `sea` | Expected | Gap | pending(wave-cognition) |
 | `sea-ice` | Gap | Gap | pending(wave-cognition) |
 | `shadow` | Expected | Gap | pending(wave-cognition) |
+| `shrieker-kind` | Gap | Gap | pending(wave-cognition) |
 | `shrubland` | Gap | Gap | pending(wave-cognition) |
 | `sibling` | Expected | Gap | pending(wave-cognition) |
 | `sleep` | Expected | Gap | pending(wave-cognition) |

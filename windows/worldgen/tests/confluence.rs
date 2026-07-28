@@ -365,6 +365,34 @@ fn settlement_count_stays_in_the_sane_band_after_the_freshwater_repoint() {
     // fix is Stage 2's `ANIMAL_PREY` field wiring, which restores the axis
     // peopled species actually depend on most (bugbear's niche is 85%
     // `ANIMAL_PREY`) — re-pin/re-band here once that lands.
+    //
+    // UPDATE (The Vacancy, task 6b): `ANIMAL_PREY` supply is real now
+    // (`prey_supply_field`, a `PREY_FRACTION = 0.1` trophic-transfer scale of
+    // `forage_supply_field`, replacing the placeholder zero). The count here
+    // reads **203**.
+    //
+    // **It did not move, and the "81" above is stale.** Measured three ways
+    // while landing 6b — at the campaign base, with the prey field reverted,
+    // and with it applied — the count is 203 in all three. So 203 was already
+    // the reading on main before this campaign began; the 81 recorded above
+    // is a Demesne-era number that main drifted past undetected, because the
+    // band is `[75, 400]` and nothing pins the exact value.
+    //
+    // **Prey supply cannot move this count, and the paragraph above is wrong
+    // about why it would.** That paragraph predates The Living Community: the
+    // deep-history bake, not demography stack-condensation, has been the
+    // settlement provider since that epoch, and the bake reads plain
+    // `carrying_capacity`, not `niche_per_species_k`'s per-axis dot product
+    // (`windows/worldgen/src/lib.rs` — "the retired `coexist::pack`/
+    // `condense_stack` placer is gone from genesis"). The peopled roster's
+    // `ANIMAL_PREY` weights are therefore not an input to settlement
+    // placement at all; the per-axis supply fields feed `demography_report`
+    // and the Lab's coexistence readout instead. A future author should not
+    // expect a supply-axis change to show up here.
+    //
+    // Band left un-narrowed: it was deliberately widened rather than narrowed
+    // at T3, and a wide band that still holds needs no tuning. Narrowing it
+    // around 203 would also pin a value this test has no causal control over.
     assert!(
         (75..=400).contains(&count),
         "seed 42 settlement count {count} left the sane [75, 400] band after the-demesne's \

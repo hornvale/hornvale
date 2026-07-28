@@ -182,16 +182,20 @@ fn the_dial_separates_the_poles() {
             // (`is-a` Substituted, `star-class` Lost, and `day-length-std`
             // Lost UNDER an `Explained` wrapper) — its `moon-count` entry is
             // ALSO `Explained`, but wraps `Kept`, so it must NOT count as
-            // lost. Re-pinned under The Living Community epoch (this merge):
-            // the bake re-placed seed 2's kobold, so its account now carries
-            // 8 entries (was 7), moving loss_fraction 3/7 -> 3/8; the
-            // load-bearing invariant is that the count of LOST entries stays
-            // 3 (read-through), NOT the naive `!= Kept` value of 4/8 = 0.5
+            // lost. Re-pinned under The Living Community epoch: the bake
+            // re-placed seed 2's kobold, so its account carried 8 entries
+            // (was 7), moving loss_fraction 3/7 -> 3/8. The Vacancy T9 adds a
+            // fifth people (the gnoll) as a new placed neighbor: kobold's
+            // account gains one more `instance-of` entry ("gnoll"), Kept
+            // (dumped and confirmed live, not assumed), so the entry count
+            // grows 8 -> 9, moving loss_fraction 3/8 -> 3/9; the
+            // load-bearing invariant is still that the count of LOST entries
+            // stays 3 (read-through), NOT the naive `!= Kept` value of 4/9
             // that would miscount the Kept-underlying moon-count as lost.
             if seed == 2 && voice.kind == "kobold" {
                 assert_eq!(
                     loss_shipped,
-                    3.0 / 8.0,
+                    3.0 / 9.0,
                     "seed 2 kobold's loss_fraction must read THROUGH its Explained \
                      moon-count entry (underlying: Kept) rather than counting it lost"
                 );

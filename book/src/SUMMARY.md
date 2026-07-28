@@ -263,6 +263,7 @@
 - [The Accession](./chronicle/the-accession.md)
 - [The Shelf-Mark](./chronicle/the-shelf-mark.md)
 - [The Actants](./chronicle/the-actants.md)
+- [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)
 - [The Turnstile](./chronicle/the-turnstile.md)
 

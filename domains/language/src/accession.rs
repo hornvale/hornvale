@@ -132,6 +132,33 @@ pub const EPOCH_COHORTS: &[&[&str]] = &[
         "woolly-mammoth-kind",
         "xorn-kind",
     ],
+    // Epoch 2 — The Vacancy (2026-07-27): the fifth people and the twelve
+    // fauna that filled the model's uninhabited declared states — three
+    // unoccupied land climate regions, nine of the ten marine biomes, and the
+    // dark trait combinations. Appended for the same reason epoch 1 was: every
+    // word already spoken keeps its form.
+    //
+    // The two campaigns met here by accident and agreed. The Actants ruled
+    // that every kind the biosphere registry holds owes a name, not only the
+    // speaking peoples; The Vacancy was concurrently adding thirteen kinds to
+    // that registry. This cohort is what that rule costs when the roster
+    // grows, and the tripwire above is what made the cost visible on contact
+    // instead of at a silent default to epoch 0.
+    &[
+        "carrion-crawler-kind",
+        "dire-wolf-kind",
+        "giant-constrictor-snake-kind",
+        "giant-crocodile-kind",
+        "giant-hyena-kind",
+        "giant-octopus-kind",
+        "giant-scorpion-kind",
+        "giant-squid-kind",
+        "gnoll-kind",
+        "killer-whale-kind",
+        "reef-shark-kind",
+        "rhinoceros-kind",
+        "shrieker-kind",
+    ],
 ];
 
 /// The accession epoch of `concept`: the index of the cohort listing it, or

@@ -259,7 +259,16 @@ fn render_lexicon_snapshot(lex: &Lexicon) -> String {
 
 /// The four settling peoples, in the order the golden snapshot renders
 /// them.
-const PEOPLES: [&str; 4] = ["goblin", "hobgoblin", "bugbear", "kobold"];
+/// The settled peoples whose lexicons claim (c) pins.
+///
+/// **Derived would be better than listed, and this list rotted once.** The
+/// Vacancy added a fifth people (gnoll) and this array did not notice, so the
+/// byte-identity guard silently stopped covering the newest tongue — the same
+/// failure the potency assay's hand-maintained roster complement had. Extended
+/// rather than derived because the golden's row order is part of the pinned
+/// bytes; a derived ordering would be `KindId`-ascending and re-sort the file
+/// for no gain. If a sixth people arrives, it goes here.
+const PEOPLES: [&str; 5] = ["goblin", "hobgoblin", "bugbear", "kobold", "gnoll"];
 
 /// Claim (c), BYTE-IDENTITY: every settled people's full lexicon at seed 42
 /// (a real derived, settled world) equals the golden captured in this
