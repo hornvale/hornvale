@@ -454,3 +454,66 @@ fn a_genuine_non_verb_still_reports_itself() {
     };
     assert!(out.contains("No verb 'xyzzy'"), "{out}");
 }
+
+/// The sky follows the walker. While weather was resolved from the flagship
+/// settlement, a possession saw the capital's sky no matter how far it walked.
+#[test]
+fn the_sky_follows_the_walker() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let mut skies = std::collections::BTreeSet::new();
+    for _ in 0..40 {
+        let out = match s.handle("look") {
+            Turn::Out(t) => t,
+            _ => panic!("look must not release"),
+        };
+        if let Some(l) = out.lines().find(|l| l.contains("The sky is")) {
+            skies.insert(l.to_string());
+        }
+        // Follow whatever exit this room actually offers.
+        let dir = out
+            .lines()
+            .find(|l| l.starts_with("Ways on:"))
+            .and_then(|l| l.trim_start_matches("Ways on:").split(',').next())
+            .map(|d| d.trim().trim_end_matches('.').to_lowercase());
+        if let Some(d) = dir {
+            s.handle(&d);
+        }
+        s.handle("wait 3");
+    }
+    assert!(
+        skies.len() > 1,
+        "the sky never changed across a long walk: {skies:?}"
+    );
+}
+
+/// Occlusion hides a percept; it must never erase knowledge already held. The
+/// walker's `knows` ledger may only grow as the sky clouds over and clears.
+#[test]
+fn clouding_over_does_not_unlearn_what_was_seen() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let count = |t: &str| -> usize {
+        t.split_whitespace()
+            .next()
+            .and_then(|n| n.parse().ok())
+            .expect("knows reports a leading count")
+    };
+    s.handle("look");
+    let before = match s.handle("knows") {
+        Turn::Out(t) => count(&t),
+        _ => panic!("knows must not release"),
+    };
+    for _ in 0..30 {
+        s.handle("wait 9");
+        s.handle("look");
+    }
+    let after = match s.handle("knows") {
+        Turn::Out(t) => count(&t),
+        _ => panic!("knows must not release"),
+    };
+    assert!(
+        after >= before,
+        "knowledge shrank from {before} to {after} as the sky changed"
+    );
+}

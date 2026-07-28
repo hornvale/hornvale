@@ -2,32 +2,26 @@
 
 ## The Sky
 
-Night. The vast moon shows its waning crescent face. The small, distant moon shows its first-quarter face. Above, the stars keep their stations: one smoldering red, one warm yellow, one deep orange, one dim red, one pale white. The sky is a flat overcast.
+Night. The vast moon is a smear of light. The small, distant moon is a smear of light. The sky is a flat overcast.
 
 Visible bodies: the sun, moon 1, moon 2.
 
 Salient phenomena, most attention-demanding first:
 
-- [1.00] *celestial-body* — the sun, a yellow dwarf (G)
-- [0.90] *eclipse* — an eclipse: the vast moon devours the sun whole
-- [0.80] *eclipse* — an eclipse of the moon: the full small, distant moon darkens to a bloodred coal
-- [0.80] *eclipse* — an eclipse of the moon: the full vast moon darkens to a bloodred coal
-- [0.75] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
-- [0.65] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
-- [0.64] *celestial-body* — a vast moon
-- [0.50] *tide* — the tide, rising and falling under the vast moon
-- [0.47] *celestial-body* — a small, distant moon
-- [0.29] *tide* — the tide, rising and falling under the small, distant moon
-- [0.19] *tide* — spring and neap: the tides swell and slacken as the moons align and part
-- [0.15] *ambient* — warm, still, unchanging air
-- [0.15] *heat* — oppressive heat
-- [0.11] *night-star* — a smoldering red star that does not wander
-- [0.11] *night-star* — a warm yellow star that does not wander
-- [0.10] *night-star* — a deep orange star that does not wander
-- [0.10] *night-star* — a dim red star that does not wander
-- [0.10] *night-star* — a pale white star that does not wander
-- [0.10] *rain* — falling rain
-- [0.01] *seasonal-cycle* — the slow swelling and shrinking of daylight
+- [0.68] *tide* — the tide, rising and falling under the vast moon
+- [0.39] *tide* — the tide, rising and falling under the small, distant moon
+- [0.30] *celestial-body* — the sun, a yellow dwarf (G)
+- [0.27] *eclipse* — an eclipse: the vast moon devours the sun whole
+- [0.26] *tide* — spring and neap: the tides swell and slacken as the moons align and part
+- [0.24] *eclipse* — an eclipse of the moon: the full small, distant moon darkens to a bloodred coal
+- [0.24] *eclipse* — an eclipse of the moon: the full vast moon darkens to a bloodred coal
+- [0.22] *eclipse* — an eclipse: the small, distant moon leaves a burning ring of the sun
+- [0.20] *ambient* — warm, still, unchanging air
+- [0.20] *heat* — oppressive heat
+- [0.20] *wandering-star* — A rock-pale wanderer: a bright star that will not keep its station.
+- [0.19] *celestial-body* — a vast moon
+- [0.14] *celestial-body* — a small, distant moon
+- [0.14] *rain* — falling rain
 
 By night: a smoldering red star that does not wander; a warm yellow star that does not wander; a deep orange star that does not wander; a dim red star that does not wander; a pale white star that does not wander.
 
