@@ -398,9 +398,18 @@ impl<'a> Namer<'a> {
     ///   and revive a shape the culture meant to have none of.
     ///
     /// Consumes exactly one `next_f64` from `stream` (inside
-    /// [`Stream::weighted_index`]) whenever it is called at all — the
-    /// caller returns before reaching it when the site offers no candidate
-    /// concept.
+    /// [`Stream::weighted_index`]) **whenever any sharpened weight is
+    /// positive**, which is every profile the composition root derives.
+    /// Two paths consume nothing at all, and both matter to the
+    /// stream-consumption contract:
+    ///
+    /// - the caller returns before reaching this method when the site
+    ///   offers no candidate concept;
+    /// - a fully degenerate profile consumes nothing *here*, because
+    ///   [`Stream::weighted_index`] tests its total and returns `None`
+    ///   **before** it draws. The fallback below is therefore not just a
+    ///   different answer, it is a different amount of stream — exercised
+    ///   by `a_degenerate_shape_profile_falls_back_to_the_unclampable_shape`.
     ///
     /// Falls back to [`NameShape::Simplex`] when every weight is
     /// non-positive, which is the only shape realizable from *any*
@@ -569,12 +578,16 @@ impl<'a> Namer<'a> {
     /// at three and the caller clamps to the candidate pool, so three is
     /// the most it is ever handed.
     fn join_parts(lexicon: &Lexicon, parts: Vec<Vec<Segment>>) -> Vec<Segment> {
-        debug_assert!(
-            !parts.is_empty(),
-            "the caller filters the empty case (the bare-stem fallback) before compounding"
-        );
         let mut parts = parts.into_iter();
-        let mut whole = parts.next().unwrap_or_default();
+        // Fail fast, in release as well as debug. An empty part list would
+        // otherwise fold to an empty segment vector and surface as a
+        // settlement with an EMPTY NAME — a silent, world-committed
+        // falsehood rather than a crash. The caller filters the empty case
+        // (it is the bare-stem fallback) before compounding, so reaching
+        // here means that filter broke.
+        let mut whole = parts.next().expect(
+            "the caller filters the empty case (the bare-stem fallback) before compounding",
+        );
         if let Some(head) = parts.next() {
             whole = join_by_headedness(lexicon.headedness, whole, head);
         }
@@ -1533,13 +1546,47 @@ mod tests {
         // workhorse weights are strictly positive over the whole
         // `in_group_radius` domain), but a hand-built one can be, and the
         // answer must be a shape that no candidate pool can clamp.
-        let morph = MorphOptions {
+        //
+        // It must also be honest about the STREAM, which is the half of
+        // this that touches the save-format contract:
+        // `Stream::weighted_index` tests its total and returns `None`
+        // BEFORE it draws, so the degenerate path consumes nothing while
+        // the ordinary path consumes exactly one `next_f64`. Measured by
+        // reading the next value off each stream and comparing it against
+        // a fresh stream's first value.
+        let degenerate = MorphOptions {
             honorifics: false,
             shape_weights: [0.0, -1.0, 0.0],
             shape_beta: 2.0,
         };
+        let control = MorphOptions {
+            shape_weights: [3.0, 2.0, 1.0],
+            ..degenerate
+        };
+        let first = Seed(7).stream().next_f64();
+
         let mut stream = Seed(7).stream();
-        assert_eq!(Namer::draw_shape(&mut stream, &morph), NameShape::Simplex);
+        assert_eq!(
+            Namer::draw_shape(&mut stream, &degenerate),
+            NameShape::Simplex,
+            "a profile with no positive weight must fall back to the one shape no candidate \
+             pool can clamp"
+        );
+        assert_eq!(
+            stream.next_f64(),
+            first,
+            "the degenerate path must consume NOTHING — weighted_index rejects the total \
+             before drawing"
+        );
+
+        let mut stream = Seed(7).stream();
+        let _ = Namer::draw_shape(&mut stream, &control);
+        assert_ne!(
+            stream.next_f64(),
+            first,
+            "the ordinary path must consume exactly one next_f64, so the stream must have \
+             moved off its first value"
+        );
     }
 
     fn kobold_ph() -> crate::phonology::Phonology {

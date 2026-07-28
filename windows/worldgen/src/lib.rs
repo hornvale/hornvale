@@ -4464,6 +4464,16 @@ pub fn shape_weights(society: &hornvale_species::SocietyVector) -> [f64; 3] {
 /// `in_group_radius` too, one trait would have to encode both *which* shape
 /// a people prefers and *how hard* it prefers it, and β would collapse into
 /// a redeployment of the weights.
+///
+/// **Scope, wider than "toponymy".** The profile these two functions build
+/// is carried on [`hornvale_language::MorphOptions`], which every glossed
+/// name reads — deity and epithet names as well as settlement ones. Place
+/// names are where it is *visible*, because only a settlement site offers
+/// enough concepts for the shape to vary: [`deity_site_concepts`] returns
+/// at most two, so a belief's name realizes `Simplex` or
+/// `SpecificGeneric` and `Qualified` always clamps. The story above is
+/// told about toponymy because that is where it does work, not because
+/// the field is scoped to it.
 /// type-audit: bare-ok(ratio: return)
 pub fn shape_beta(mind: &hornvale_species::MindVector) -> f64 {
     0.5 + 2.0 * mind.time_horizon
@@ -4511,9 +4521,10 @@ pub fn deity_site_concepts(
 }
 
 /// The concepts a settlement's own site offers its namer, most specific
-/// first — the order is a CONTRACT: `glossed_name` picks 1-2 concepts by
-/// index from this vector, so reordering it silently renames every
-/// settlement in every world. Every entry is read off a terrain/climate
+/// first — the order is a CONTRACT: `glossed_name` picks 1-3 concepts by
+/// index from this vector (however many its drawn
+/// [`hornvale_language::NameShape`] asks for), so reordering it silently
+/// renames every settlement in every world. Every entry is read off a terrain/climate
 /// fact that already exists on the settled cell; nothing here is drawn.
 /// Mirrors [`deity_site_concepts`]'s shape for the settlement side of
 /// naming. Public because the Lab's `name-gloss-true` metric re-derives a
@@ -10773,6 +10784,103 @@ mod tests {
     const SHAPE_SAMPLE_FLOOR: usize = 20;
 
     #[test]
+    fn the_shape_profile_reads_the_vector_dimensions_its_doc_comments_claim() {
+        // `shape_weights`' and `shape_beta`'s doc comments tell a causal
+        // story — an insular people names for insiders so the bare specific
+        // suffices; a people that plans in generations entrenches its
+        // conventions. Without this test that story is unfalsifiable: the
+        // world-level tests below rank peoples by whatever `morph_options`
+        // returns, so a `shape_weights` that ignored `in_group_radius` and
+        // returned a fixed SKEWED profile would leave every one of them
+        // green (β alone still separates the cultures). This is the test
+        // that fails when the mapping stops being a mapping.
+        //
+        // Pure functions over authored vectors, so it costs nothing and
+        // builds no world.
+        let society_at = |radius: f64| hornvale_species::SocietyVector {
+            in_group_radius: radius,
+            ..hornvale_species::SocietyVector::baseline()
+        };
+        let mind_at = |horizon: f64| hornvale_species::MindVector {
+            time_horizon: horizon,
+            ..*hornvale_species::psyche_registry()
+                .get(&KindId("goblin"))
+                .expect("the goblin baseline mind")
+        };
+
+        // Sampled across the whole authored domain, not at a convenient
+        // point or two.
+        let samples: Vec<f64> = (0..=100).map(|i| f64::from(i) / 100.0).collect();
+        for pair in samples.windows(2) {
+            let (lo, hi) = (
+                shape_weights(&society_at(pair[0])),
+                shape_weights(&society_at(pair[1])),
+            );
+            assert!(
+                hi[0] < lo[0],
+                "simplex weight must fall strictly as in_group_radius rises \
+                 (radius {} -> {}: {:.4} -> {:.4})",
+                pair[0],
+                pair[1],
+                lo[0],
+                hi[0]
+            );
+            assert!(
+                hi[1] > lo[1],
+                "specific+generic weight must rise strictly as in_group_radius rises \
+                 (radius {} -> {}: {:.4} -> {:.4})",
+                pair[0],
+                pair[1],
+                lo[1],
+                hi[1]
+            );
+            assert!(
+                shape_beta(&mind_at(pair[1])) > shape_beta(&mind_at(pair[0])),
+                "beta must rise strictly with time_horizon ({} -> {})",
+                pair[0],
+                pair[1]
+            );
+        }
+
+        // Both workhorse weights strictly positive everywhere, and the
+        // qualified weight strictly the smallest — the two properties the
+        // draw depends on (nothing silently zeroed out of the draw; the
+        // qualified shape is the rarest in EVERY profile, which is what the
+        // brief asks for).
+        for radius in &samples {
+            let w = shape_weights(&society_at(*radius));
+            assert!(
+                w[0] > 0.0 && w[1] > 0.0,
+                "radius {radius}: a workhorse weight fell to {w:?}, which drops a shape out \
+                 of the draw entirely"
+            );
+            assert!(
+                w[2] < w[0] && w[2] < w[1],
+                "radius {radius}: qualified must be the smallest weight, got {w:?}"
+            );
+        }
+
+        // The crossover the doc comment names, checked as a crossover and
+        // not merely as a value: which shape a people prefers must actually
+        // flip there.
+        let below = shape_weights(&society_at(0.59));
+        let at = shape_weights(&society_at(0.6));
+        let above = shape_weights(&society_at(0.61));
+        assert!(
+            below[0] > below[1],
+            "below the 0.6 crossover an insular people must prefer the simplex: {below:?}"
+        );
+        assert!(
+            (at[0] - at[1]).abs() < 1e-9,
+            "the crossover must sit at in_group_radius 0.6: {at:?}"
+        );
+        assert!(
+            above[1] > above[0],
+            "above the 0.6 crossover an expansive people must prefer the compound: {above:?}"
+        );
+    }
+
+    #[test]
     fn a_culture_has_a_dominant_shape_and_a_tail() {
         // The Wearing (Task 7): a people's toponymy is recognizable as
         // THEIRS — one shape dominates — but it has a tail. Pure
@@ -10817,16 +10925,6 @@ mod tests {
                 dominant < 0.95,
                 "{species}: shape is effectively constant ({dominant:.2}) — the tail real \
                  systems have is gone"
-            );
-            let distinct = counts
-                .iter()
-                .collect::<std::collections::BTreeSet<_>>()
-                .len();
-            assert!(
-                distinct >= 2,
-                "{species}: every name has the same shape — a dominant share below 0.95 \
-                 cannot be reached without a second shape, so this is unreachable, but it \
-                 states the property the bound above is standing in for"
             );
         }
         assert!(
