@@ -457,6 +457,55 @@ fn deities_with_distinct_glosses_carry_distinct_names_at_seed_42() {
     );
 }
 
+/// Every reflex a lexicon word may legitimately surface as inside a
+/// committed name: the citation form itself, and the two images the
+/// positional reduction (The Wearing, Task 9) can leave — the word-initial
+/// one, whose stressed first nucleus is spared, and the unstressed one,
+/// where every nucleus falls to a single vowel.
+///
+/// String surgery on the rendered word, sharing no code with the reduction
+/// it lets past: a romanized vowel is exactly one of `aeiou` (plus an
+/// optional combining tone mark, which stays with the vowel before it), so a
+/// maximal run of them is exactly one nucleus. The floor is `1` because
+/// `draw_phonotactics` pushes `1` into every drawn phonology's nucleus set
+/// unconditionally, so `min(nuclei)` is `1` for every language a world can
+/// contain.
+fn reduced_reflexes(citation: &str) -> Vec<String> {
+    let shorten = |spare_first: bool| {
+        let mut out = String::new();
+        let mut in_run = false;
+        let mut kept = 0usize;
+        let mut spared = spare_first;
+        for c in citation.chars() {
+            let vowel = "aeiou".contains(c);
+            if !vowel && !c.is_ascii_alphabetic() && in_run {
+                if kept > 0 {
+                    out.push(c);
+                }
+                continue;
+            }
+            if !vowel {
+                if in_run {
+                    spared = false;
+                }
+                in_run = false;
+                out.push(c);
+                continue;
+            }
+            if !in_run {
+                in_run = true;
+                kept = 0;
+            }
+            kept += 1;
+            if spared || kept < 2 {
+                out.push(c);
+            }
+        }
+        out
+    };
+    vec![citation.to_string(), shorten(true), shorten(false)]
+}
+
 /// The Bvaash fix, pinned by mechanism not by string, reframed post-cutover.
 /// The original probe checked bugbear's flagship specifically: bugbear's
 /// own lexicon roots "shadow" (its perception is sharp enough to name it),
@@ -507,13 +556,22 @@ fn the_gloom_gods_name_is_audibly_the_gloom_word_at_seed_42() {
         if gloom_gods.is_empty() {
             continue;
         }
+        // The gloom word or one of its reduced reflexes: The Wearing's
+        // positional reduction cuts an unstressed nucleus back, so a deity
+        // named `Xorro` still audibly says `xorroa`. What the Bvaash fix
+        // guarantees — the word's identity is never discarded down to a
+        // fallback syllable — is unchanged, and a fallback syllable is not
+        // a reflex of anything.
+        let reflexes = reduced_reflexes(&gloom_word);
         assert!(
-            gloom_gods
-                .iter()
-                .any(|name| name.to_lowercase().contains(&gloom_word)),
+            gloom_gods.iter().any(|name| {
+                let lower = name.to_lowercase();
+                reflexes.iter().any(|r| lower.contains(r))
+            }),
             "a {species} deity glossing exactly \"gloom\" must carry the \
-             {species} gloom word {gloom_word:?} audibly in its committed \
-             name; got {gloom_gods:?}"
+             {species} gloom word {gloom_word:?} (or one of its reduced \
+             reflexes {reflexes:?}) audibly in its committed name; got \
+             {gloom_gods:?}"
         );
         checked += 1;
     }

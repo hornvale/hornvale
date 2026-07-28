@@ -31,6 +31,55 @@ fn swept_envelope(seed: u64) -> Envelope {
     }
 }
 
+/// Every reflex a glossed morpheme may legitimately surface as: its
+/// citation form, and the two images the positional reduction (The
+/// Wearing, Task 9) can leave — the word-initial one, whose stressed first
+/// nucleus is spared, and the unstressed one, where every nucleus falls to
+/// the shortest length `nucleus_floor` the language admits.
+///
+/// Written as **string surgery on the rendered citation form**, not by
+/// calling the reduction: a romanized vowel is exactly one of `aeiou` plus
+/// an optional combining tone mark, so a maximal run of them in the string
+/// is exactly one nucleus, and this can be checked without sharing a line
+/// of code with what it is checking. `nucleus_floor` comes from the drawn
+/// `Phonology`'s own `nuclei` set, which is data, not machinery.
+fn admissible_reflexes(citation: &str, nucleus_floor: usize) -> Vec<String> {
+    let shorten = |spare_first: bool| {
+        let mut out = String::new();
+        let mut kept = 0usize;
+        let mut in_run = false;
+        let mut spared = spare_first;
+        for c in citation.chars() {
+            let vowel = "aeiou".contains(c);
+            if !vowel && !c.is_ascii_alphabetic() && in_run {
+                // A combining tone mark belongs to the vowel before it.
+                if kept > 0 {
+                    out.push(c);
+                }
+                continue;
+            }
+            if !vowel {
+                if in_run {
+                    spared = false;
+                }
+                in_run = false;
+                out.push(c);
+                continue;
+            }
+            if !in_run {
+                in_run = true;
+                kept = 0;
+            }
+            kept += 1;
+            if spared || kept <= nucleus_floor {
+                out.push(c);
+            }
+        }
+        out
+    };
+    vec![citation.to_string(), shorten(true), shorten(false)]
+}
+
 /// A fixed, maximally permissive proto phonology — the family-level draw
 /// source every swept daughter phonology below diverges from, so the
 /// lexicon always descends from a DIFFERENT proto phonology than the
@@ -220,10 +269,20 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
                              must be a root, got {other:?}"
                         ),
                     };
+                    // The citation form, or one of the two images the
+                    // positional reduction leaves. Widened by Task 9: the
+                    // property is still "the name says the morpheme", but a
+                    // reduced nucleus is a reflex, not a loss — the same
+                    // widening Task 6 made for the worn reflex.
+                    let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+                    let reflexes = admissible_reflexes(&word, floor);
                     assert!(
-                        name.roman.to_lowercase().contains(&word),
+                        reflexes
+                            .iter()
+                            .any(|r| name.roman.to_lowercase().contains(r)),
                         "seed {seed} salt {salt} {kind:?}: name {:?} must audibly \
-                         contain {concept} = {word:?}",
+                         contain {concept} = {word:?} or one of its reduced reflexes \
+                         {reflexes:?}",
                         name.roman
                     );
                 }

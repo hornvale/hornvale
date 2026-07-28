@@ -544,10 +544,64 @@ impl<'a> Namer<'a> {
     /// is why toponymic reduction is a distribution across cultures rather
     /// than a uniform shortening.
     ///
+    /// **The wear has two limbs, and the second is [`reduce_nuclei`]**
+    /// (ledger #5). The drawn cascade above changes sound; the reduction
+    /// under [`Prominence::None`] cuts every nucleus of the frequent
+    /// morpheme back to the shortest the language admits. They are the same
+    /// phenomenon at two time-scales, so they are one function called twice,
+    /// never two reductions written side by side — see [`reduce_nuclei`]'s
+    /// own docs for the argument.
+    ///
+    /// The reduction limb is what makes wear reliably *shorten* a frequent
+    /// morpheme that has a diphthong to lose, which the cascade limb alone
+    /// does not (it is drawn, and on this campaign's own measurement it is a
+    /// no-op on 558 of 611 eligible production morphemes). It does not make
+    /// wear unconditional: a morpheme whose every nucleus is already minimal
+    /// still comes back unchanged, and nothing below [`WEAR_FLOOR`] is
+    /// touched at all. **The floor and the frequency keying are the
+    /// reduction's gate too** — that is the whole reason wear calls the rule
+    /// rather than restating it.
+    ///
     /// Pure: a function of `(seed, species, ph, segments, frequency)` and
     /// nothing else.
     /// type-audit: bare-ok(ratio: frequency)
     pub fn wear(&self, segments: &[Segment], frequency: f64) -> Vec<Segment> {
+        if frequency < WEAR_FLOOR {
+            return segments.to_vec();
+        }
+        self.wear_under(segments, frequency, Prominence::None)
+    }
+
+    /// [`Namer::wear`]'s two limbs with the reduction's [`Prominence`] left
+    /// to the caller — the single composition site, so the citation-form
+    /// reading ([`Namer::wear`], nothing prominent) and the in-a-word
+    /// reading ([`Namer::worn_compound`], prominence by surface position)
+    /// cannot drift apart.
+    ///
+    /// Below [`WEAR_FLOOR`] the cascade limb is the identity and only the
+    /// reduction applies. That is the difference between this and
+    /// [`Namer::wear`], and it is the whole point: **wear is
+    /// frequency-keyed, the positional reduction is not.** A rare morpheme
+    /// standing after the word's stress still reduces; it just does not
+    /// undergo the sound change.
+    fn wear_under(
+        &self,
+        segments: &[Segment],
+        frequency: f64,
+        prominence: Prominence,
+    ) -> Vec<Segment> {
+        reduce_nuclei(&self.sounded(segments, frequency), self.ph, prominence)
+    }
+
+    /// The cascade limb of [`Namer::wear`] alone — the sound change without
+    /// the reduction.
+    ///
+    /// [`Namer::worn_compound`]'s survival ladder needs this: reduction is
+    /// surrendered **before** any wear is, so every rung below the reduction
+    /// ladder is exactly the ladder this campaign's Task 6 shipped and
+    /// measured, and a name that cannot host the reduction falls back to
+    /// that behaviour rather than to a new one.
+    fn sounded(&self, segments: &[Segment], frequency: f64) -> Vec<Segment> {
         if frequency < WEAR_FLOOR {
             return segments.to_vec();
         }
@@ -577,7 +631,13 @@ impl<'a> Namer<'a> {
     /// The fold is written for any part count, but [`NameShape`] tops out
     /// at three and the caller clamps to the candidate pool, so three is
     /// the most it is ever handed.
-    fn join_parts(lexicon: &Lexicon, parts: Vec<Vec<Segment>>) -> Vec<Segment> {
+    ///
+    /// Generic over the element ([`join_by_headedness`] is): handed
+    /// `[[0], [1], [2]]` it returns the part indices in **surface order**,
+    /// which is how [`Namer::worn_compound`] learns which morpheme the
+    /// headedness put first and therefore which one carries the word's
+    /// [`Prominence`].
+    fn join_parts<T>(lexicon: &Lexicon, parts: Vec<Vec<T>>) -> Vec<T> {
         let mut parts = parts.into_iter();
         // Fail fast, in release as well as debug. An empty part list would
         // otherwise fold to an empty segment vector and surface as a
@@ -681,32 +741,106 @@ impl<'a> Namer<'a> {
     /// repair's guarantee exactly as it was: every name still conforms
     /// under `(phonology, attested-from-lexicon)`.
     ///
+    /// # Where the positional reduction sits in the ladder (Task 9)
+    ///
+    /// The synchronic reduction ([`reduce_nuclei`] under the word's own
+    /// [`Prominence`]) is applied on the **top rung only**, and is
+    /// surrendered wholesale before any wear is. The ladder is therefore:
+    ///
+    /// 0. every morpheme reduced — a morpheme above [`WEAR_FLOOR`] worn in
+    ///    sound and quantity both ([`Namer::wear`]), a rarer one reduced
+    ///    only where the word's prominence does not protect it;
+    /// 1. cascade wear only, no reduction anywhere — **exactly** the top rung
+    ///    Task 6 shipped;
+    /// 2. … Task 6's own surrender ladder, unchanged, down to the fully
+    ///    unworn compound, which is attested and repairs to the identity.
+    ///
+    /// Two things follow, and both are the reason for this order rather than
+    /// the reverse:
+    ///
+    /// - **Wear cannot regress.** Any name that fails rung 0 lands on rung 1,
+    ///   which is what it did before this task; any name that passes rung 0
+    ///   keeps its wear. So the set of names carrying surviving wear can only
+    ///   grow. That is a claim about this code's shape, not a measurement,
+    ///   and it is checked against production in the task report.
+    /// - **Reduction is the coarser surrender**, given up for the whole name
+    ///   at once rather than per morpheme. That coarseness was not assumed
+    ///   to be free: the graduated form — un-reduce one morpheme per rung,
+    ///   least frequent first, on the same ascending-frequency order the
+    ///   wear ladder uses — was built and measured over four production
+    ///   worlds. It buys **0.04 characters** at the mean (8.21/10.01/12.04/
+    ///   11.00 → 8.21/9.99/11.92/10.97 at seeds 42/1/99/777) and costs five
+    ///   more names at seed 99 whose partial reduction still leaves a
+    ///   non-initial nucleus longer than the stressed one. The coarse rung
+    ///   ships because it is simpler and holds the cleaner property, not
+    ///   because the alternative was untried.
+    ///
+    /// Containment is checked against the **reduced** image of each part,
+    /// because that is what the surface string actually holds. The reduction
+    /// is applied per part rather than flat across the joined word so that
+    /// image is exactly `reduce_nuclei(part)` — a vowel run spanning a
+    /// morpheme boundary is left alone, which is a real coarseness (the
+    /// boundary run can reach `2 × min(ph.nuclei)`) accepted to keep every
+    /// morpheme's reflex computable without tracking segment provenance
+    /// through repair.
+    ///
     /// Returns the repaired segments and **how many morphemes surrendered
     /// their wear** — the fallback count, which nothing in a committed world
-    /// depends on but which is what the fallback rate is measured from.
+    /// depends on but which is what the fallback rate is measured from. A
+    /// surrendered *reduction* is not counted there; it is not a wear.
     ///
     /// Consumes no stream draws — wear draws its cascade off the lexicon
-    /// derivation and repair is pure — so none of this touches the naming
-    /// epoch's stream-consumption contract.
+    /// derivation, the reduction is pure, and repair is pure — so none of
+    /// this touches the naming epoch's stream-consumption contract.
     fn worn_compound(
         &self,
         lexicon: &Lexicon,
         chosen: &[&str],
         corpus: &NameCorpus,
         attested: &[Vec<Segment>],
+        prominence: Prominence,
     ) -> (Vec<Segment>, usize) {
         let raw: Vec<Vec<Segment>> = chosen
             .iter()
             .map(|concept| concept_segments(lexicon, concept))
             .collect();
-        // Which morphemes wear at all, and how strongly — the give-up order
-        // below is ascending frequency, so the morpheme said least often is
-        // the first to keep its whole form.
+
+        // Which morpheme carries the word's prominence, computed once over
+        // the SURFACE order (see [`Namer::part_prominence`]).
+        let prominences = self.part_prominence(lexicon, &raw, prominence);
+
+        // Rung 0: the full treatment — every morpheme reduced, eligible ones
+        // diachronically (the whole form, see [`Namer::wear`]) and the rest
+        // positionally.
+        let reduced: Vec<Vec<Segment>> = (0..chosen.len())
+            .map(|i| {
+                let frequency = corpus.frequency_of(chosen[i]);
+                // A morpheme frequent enough to wear reduces THROUGHOUT,
+                // prominence or not: its reduction is lexicalized, which is
+                // why `Hampton` keeps `-ham`'s short vowel under stress. A
+                // rarer one reduces only where the word's prominence does
+                // not protect it.
+                let under = if frequency >= WEAR_FLOOR {
+                    Prominence::None
+                } else {
+                    prominences[i]
+                };
+                self.wear_under(&raw[i], frequency, under)
+            })
+            .collect();
+        if let Some(repaired) = Self::assemble(lexicon, &reduced, self.ph, attested) {
+            return (repaired, 0);
+        }
+
+        // Rungs 1..: Task 6's ladder verbatim — cascade wear only, nothing
+        // reduced anywhere. Which morphemes wear at all, and how strongly;
+        // the give-up order below is ascending frequency, so the morpheme
+        // said least often is the first to keep its whole form.
         let mut worn: Vec<Option<Vec<Segment>>> = chosen
             .iter()
             .zip(raw.iter())
             .map(|(concept, form)| {
-                let out = self.wear(form, corpus.frequency_of(concept));
+                let out = self.sounded(form, corpus.frequency_of(concept));
                 if out == *form { None } else { Some(out) }
             })
             .collect();
@@ -731,9 +865,7 @@ impl<'a> Namer<'a> {
                 .enumerate()
                 .map(|(i, form)| worn[i].clone().unwrap_or_else(|| form.clone()))
                 .collect();
-            let repaired =
-                repair_phonotactics(Self::join_parts(lexicon, parts.clone()), self.ph, attested);
-            if parts.iter().all(|part| contains_run(&repaired, part)) {
+            if let Some(repaired) = Self::assemble(lexicon, &parts, self.ph, attested) {
                 return (repaired, surrendered);
             }
             // Annihilated: give up the least-frequent surviving wear and
@@ -757,6 +889,58 @@ impl<'a> Namer<'a> {
             repair_phonotactics(Self::join_parts(lexicon, raw), self.ph, attested),
             surrendered,
         )
+    }
+
+    /// Which [`Prominence`] each of `parts` sits under, by **surface
+    /// position**: the first part to contribute a vowel to the surface
+    /// string carries `prominence`, every part after it carries
+    /// [`Prominence::None`].
+    ///
+    /// Surface position, not draw position: [`Namer::join_parts`] reorders
+    /// under the culture's [`Headedness`], so the modifier is word-initial
+    /// under `HeadLast` and word-final under `HeadFirst`. The order is
+    /// obtained by replaying that same fold over part indices rather than by
+    /// re-deriving the bracketing here. Returned in **draw** order, so the
+    /// caller's `chosen`/`raw` indexing still lines up.
+    ///
+    /// Computed from the **raw** forms, so it is a fact about the compound
+    /// rather than about which rung of the survival ladder is being tried:
+    /// wear and reduction never remove a morpheme's last vowel (the floor is
+    /// at least one), so which part is first to carry one cannot change.
+    fn part_prominence(
+        &self,
+        lexicon: &Lexicon,
+        raw: &[Vec<Segment>],
+        prominence: Prominence,
+    ) -> Vec<Prominence> {
+        let order: Vec<usize> =
+            Self::join_parts(lexicon, (0..raw.len()).map(|i| vec![i]).collect());
+        let mut out = vec![Prominence::None; raw.len()];
+        let mut carries = prominence;
+        for &i in &order {
+            out[i] = carries;
+            if raw[i].iter().any(|s| matches!(s, Segment::Vowel { .. })) {
+                carries = Prominence::None;
+            }
+        }
+        out
+    }
+
+    /// Join `parts`, repair the compound, and return it **only if every part
+    /// still leaves a contiguous reflex** in the repaired form — one rung of
+    /// [`Namer::worn_compound`]'s survival ladder, `None` when the rung
+    /// fails. See that method's docs for why the check is not optional.
+    fn assemble(
+        lexicon: &Lexicon,
+        parts: &[Vec<Segment>],
+        ph: &Phonology,
+        attested: &[Vec<Segment>],
+    ) -> Option<Vec<Segment>> {
+        let repaired = repair_phonotactics(Self::join_parts(lexicon, parts.to_vec()), ph, attested);
+        parts
+            .iter()
+            .all(|part| contains_run(&repaired, part))
+            .then_some(repaired)
     }
 
     /// Draw a *glossed* name of `kind` for `salt`, at the `/v3` epoch: the
@@ -844,7 +1028,20 @@ impl<'a> Namer<'a> {
         // repair changes MEANING: the gloss is computed from `chosen`
         // alone.
         let attested = attested_forms(lexicon);
-        let (mut segments, _surrendered) = self.worn_compound(lexicon, &chosen, corpus, &attested);
+        // Where the word's stress falls, and therefore which nucleus the
+        // reduction spares (see [`reduce_nuclei`]). An honorific prefix is
+        // prepended below, so in that one case the compound holds no
+        // word-initial vowel and reduces throughout — the prefix syllable
+        // takes the prominence instead. Reading `kind`/`morph` here rather
+        // than reordering the draws keeps this method's stream consumption
+        // byte-for-byte what it was.
+        let prominence = if kind == NameKind::Epithet && morph.honorifics {
+            Prominence::None
+        } else {
+            Prominence::InitialVowel
+        };
+        let (mut segments, _surrendered) =
+            self.worn_compound(lexicon, &chosen, corpus, &attested, prominence);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -857,7 +1054,14 @@ impl<'a> Namer<'a> {
     }
 
     /// Build one candidate name from a single stream draw, applying the
-    /// kind's morphology.
+    /// kind's morphology and then the positional reduction
+    /// ([`reduce_syllable_nuclei`]) — a drawn stem is a word like any other,
+    /// so its non-initial nuclei reduce just as a compound's do.
+    ///
+    /// The reduction runs **after** reduplication and after the honorific
+    /// prefix is inserted, so the syllable holding the word's prominence is
+    /// the one that actually ends up first. It draws nothing, so the whole
+    /// method's stream consumption is unchanged.
     fn build_name(
         &self,
         kind: NameKind,
@@ -880,7 +1084,7 @@ impl<'a> Namer<'a> {
                 syllables
             }
         };
-        views_of(&syllables).1
+        views_of(&reduce_syllable_nuclei(&syllables, self.ph)).1
     }
 
     /// Double a randomly chosen syllable of `syllables` in place, with
@@ -1419,15 +1623,134 @@ fn holds_word(lexicon: &Lexicon, concept: &str) -> bool {
 
 /// Join `modifier`'s and `head`'s segments in `headedness` order — the same
 /// order [`crate::lexicon::build_lexicon`]'s own compound assembly uses.
-fn join_by_headedness(
-    headedness: Headedness,
-    modifier: Vec<Segment>,
-    head: Vec<Segment>,
-) -> Vec<Segment> {
+///
+/// Generic over the element so [`Namer::worn_compound`] can run the identical
+/// fold over **part indices** and learn which morpheme the headedness put
+/// first in the surface string — the position [`Prominence`] is keyed to.
+/// Deriving that order by replaying this fold rather than re-deriving it is
+/// deliberate: a second copy of the bracketing rule could drift from this
+/// one, and the word's prominence would then be assigned to the wrong
+/// morpheme.
+fn join_by_headedness<T>(headedness: Headedness, modifier: Vec<T>, head: Vec<T>) -> Vec<T> {
     match headedness {
         Headedness::HeadFirst => head.into_iter().chain(modifier).collect(),
         Headedness::HeadLast => modifier.into_iter().chain(head).collect(),
     }
+}
+
+/// Whether a word's own prominence protects its first nucleus from
+/// [`reduce_nuclei`].
+///
+/// LANG-18 records that stress placement is **fixed on the first vowel**
+/// today — `espeak_word` writes the `'` marker there, so this is the
+/// prominence the audio actually voices, not one invented for this rule.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Prominence {
+    /// The first vowel run in these segments carries the word's stress and
+    /// keeps its full length; every later nucleus reduces.
+    InitialVowel,
+    /// Nothing here is stressed — every nucleus reduces, the first included.
+    /// Two callers: a non-initial morpheme of a compound (the word's stress
+    /// already fell earlier), and [`Namer::wear`], whose reduction is
+    /// diachronic rather than positional.
+    None,
+}
+
+/// **The reduction rule** (The Wearing, Task 9), the single implementation
+/// both consumers run: cut every unstressed nucleus back to the shortest
+/// length `ph` admits, keeping the run's first vowels.
+///
+/// A "nucleus" here is a maximal run of vowels in `segments`. The floor is
+/// `min(ph.nuclei)`, not a hardcoded `1`, so the result is still a member of
+/// the language's own admissible nucleus set and therefore still parses
+/// ([`conforms`]); [`crate::phonology::draw_phonotactics`] guarantees
+/// `1 ∈ nuclei`, so the floor is `1` for every drawn phonology and the
+/// `min` matters only for a hand-built one.
+///
+/// # Why one rule serves two time-scales
+///
+/// Ledger #5: **unstressed-vowel reduction *is* erosion, seen at a shorter
+/// time-scale.** The two consumers differ only in the argument they pass:
+///
+/// - [`Namer::worn_compound`] and [`Namer::build_name`] pass
+///   [`Prominence::InitialVowel`] for the material carrying the word's
+///   stress and [`Prominence::None`] for everything after it. That is the
+///   **synchronic** reading: full nuclei under prominence, reduced
+///   elsewhere, which is the rhythm a pronounceable polysyllabic name has.
+/// - [`Namer::wear`] passes [`Prominence::None`] for a morpheme whose corpus
+///   frequency clears [`WEAR_FLOOR`]. That is the **diachronic** reading: a
+///   morpheme said in a quarter of a culture's names was unstressed in most
+///   of those names, so its reduction is lexicalized and travels with it
+///   into stressed position too. `Hampton` keeps `-ham`'s reduced vowel even
+///   where the syllable is stressed.
+///
+/// Wear therefore inherits [`WEAR_FLOOR`] and the frequency keying for free
+/// rather than restating them, and there is exactly one place where "reduce
+/// a nucleus" is written.
+///
+/// Pure, draw-free, and length-monotone: the output is a subsequence of the
+/// input, never longer.
+fn reduce_nuclei(segments: &[Segment], ph: &Phonology, prominence: Prominence) -> Vec<Segment> {
+    let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+    let is_vowel = |s: &Segment| matches!(s, Segment::Vowel { .. });
+    let mut out: Vec<Segment> = Vec::with_capacity(segments.len());
+    let mut stressed = prominence == Prominence::InitialVowel;
+    let mut i = 0;
+    while i < segments.len() {
+        if !is_vowel(&segments[i]) {
+            out.push(segments[i]);
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < segments.len() && is_vowel(&segments[i]) {
+            i += 1;
+        }
+        let keep = if stressed {
+            i - start
+        } else {
+            floor.min(i - start)
+        };
+        out.extend_from_slice(&segments[start..start + keep]);
+        // Only the FIRST run is protected: prominence is a property of the
+        // word, not of every nucleus in it.
+        stressed = false;
+    }
+    out
+}
+
+/// Apply [`reduce_nuclei`] to each drawn syllable's nucleus in turn,
+/// protecting the first syllable that actually has one.
+///
+/// The syllable-structured twin of the flat call [`Namer::worn_compound`]
+/// makes, and the reason it exists: a drawn stem can put an open syllable
+/// before an onsetless one (`CVV` + `VV`), whose surface vowels form ONE run
+/// across the boundary. Reducing that run flat would strip the second
+/// syllable's nucleus entirely and leave a sequence no template can host —
+/// and unlike a compound, a drawn stem is never sent through
+/// [`repair_phonotactics`] afterwards to catch it. Reducing per syllable
+/// cannot do that: every nucleus keeps at least `min(ph.nuclei)` vowels, so
+/// each syllable stays exactly as legal as it was drawn.
+fn reduce_syllable_nuclei(syllables: &[Syllable], ph: &Phonology) -> Vec<Syllable> {
+    let mut stressed = true;
+    syllables
+        .iter()
+        .map(|syllable| {
+            let prominence = if stressed {
+                Prominence::InitialVowel
+            } else {
+                Prominence::None
+            };
+            if !syllable.nucleus.is_empty() {
+                stressed = false;
+            }
+            Syllable {
+                onset: syllable.onset.clone(),
+                nucleus: reduce_nuclei(&syllable.nucleus, ph, prominence),
+                coda: syllable.coda.clone(),
+            }
+        })
+        .collect()
 }
 
 /// The full modern-form segments `concept` resolves to in `lexicon`: a
@@ -2256,8 +2579,13 @@ mod tests {
 
         let chosen = ["water", "fire"];
         let attested = attested_forms(&lex);
-        let (bare, bare_gave_up) =
-            namer.worn_compound(&lex, &chosen, &NameCorpus::none(), &attested);
+        let (bare, bare_gave_up) = namer.worn_compound(
+            &lex,
+            &chosen,
+            &NameCorpus::none(),
+            &attested,
+            Prominence::InitialVowel,
+        );
         assert_eq!(bare_gave_up, 0, "an unworn compound surrenders nothing");
 
         // Non-vacuity: the untouched compound is the two words' segments,
@@ -2285,6 +2613,7 @@ mod tests {
                 frequencies: &only_first,
             },
             &attested,
+            Prominence::InitialVowel,
         );
         let (second_worn, second_gave_up) = namer.worn_compound(
             &lex,
@@ -2293,6 +2622,7 @@ mod tests {
                 frequencies: &only_second,
             },
             &attested,
+            Prominence::InitialVowel,
         );
         assert_eq!(
             (first_gave_up, second_gave_up),
@@ -2355,6 +2685,7 @@ mod tests {
                 frequencies: &saturated,
             },
             &attested,
+            Prominence::InitialVowel,
         );
 
         assert!(
@@ -2736,5 +3067,416 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The nucleus runs of `segments`, in order — the surface-level reading
+    /// of "how long is each nucleus", used by the reduction tests below so
+    /// they measure the SEGMENTS a name is made of rather than re-reading
+    /// `ph.nuclei`.
+    fn nucleus_runs(segments: &[Segment]) -> Vec<usize> {
+        let mut runs = Vec::new();
+        let mut run = 0usize;
+        for seg in segments {
+            if matches!(seg, Segment::Vowel { .. }) {
+                run += 1;
+            } else {
+                if run > 0 {
+                    runs.push(run);
+                }
+                run = 0;
+            }
+        }
+        if run > 0 {
+            runs.push(run);
+        }
+        runs
+    }
+
+    /// The vowel runs of a romanized name — the surface twin of
+    /// [`nucleus_runs`], for the tests that want to measure the string a
+    /// world actually commits rather than the segments behind it.
+    fn roman_vowel_runs(roman: &str) -> Vec<usize> {
+        let mut runs = Vec::new();
+        let mut run = 0usize;
+        for c in roman.chars() {
+            if "aeiou".contains(c) {
+                run += 1;
+            } else {
+                if run > 0 {
+                    runs.push(run);
+                }
+                run = 0;
+            }
+        }
+        if run > 0 {
+            runs.push(run);
+        }
+        runs
+    }
+
+    /// **The reduction rule itself** (The Wearing, Task 9): under the word's
+    /// prominence the first nucleus keeps its full length and every later
+    /// one falls to the floor; with nothing prominent, the first falls too.
+    ///
+    /// Reds if [`reduce_nuclei`] ignores its [`Prominence`] argument in
+    /// either direction — protecting nothing (the stressed nucleus is lost)
+    /// or protecting everything (nothing reduces at all).
+    #[test]
+    fn a_words_first_nucleus_is_spared_and_the_rest_reduce() {
+        let ph = wordy_ph();
+        let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+        let vowel = *ph
+            .inventory
+            .iter()
+            .find(|s| matches!(s, Segment::Vowel { .. }))
+            .expect("a drawn phonology always has a vowel");
+        let consonant = *ph
+            .inventory
+            .iter()
+            .find(|s| matches!(s, Segment::Consonant { .. }))
+            .expect("a drawn phonology always has a consonant");
+        // C VVV C VVV C VV — three nuclei, all longer than the floor, so
+        // the test is not measuring a form that was already minimal.
+        let word = vec![
+            consonant, vowel, vowel, vowel, consonant, vowel, vowel, vowel, consonant, vowel, vowel,
+        ];
+        assert_eq!(
+            nucleus_runs(&word),
+            vec![3, 3, 2],
+            "fixture precondition: every nucleus must start longer than the floor ({floor})"
+        );
+
+        let stressed = reduce_nuclei(&word, &ph, Prominence::InitialVowel);
+        assert_eq!(
+            nucleus_runs(&stressed),
+            vec![3, floor, floor],
+            "under prominence the first nucleus keeps its length and the rest fall to the floor"
+        );
+        let unstressed = reduce_nuclei(&word, &ph, Prominence::None);
+        assert_eq!(
+            nucleus_runs(&unstressed),
+            vec![floor, floor, floor],
+            "with nothing prominent every nucleus falls to the floor"
+        );
+        // Never longer, and only vowels ever leave: the consonant skeleton
+        // is untouched, which is what keeps a reduced morpheme recognizable.
+        let skeleton = |segs: &[Segment]| -> Vec<Segment> {
+            segs.iter()
+                .filter(|s| matches!(s, Segment::Consonant { .. }))
+                .copied()
+                .collect()
+        };
+        assert_eq!(skeleton(&stressed), skeleton(&word));
+        assert_eq!(skeleton(&unstressed), skeleton(&word));
+        assert!(stressed.len() <= word.len() && unstressed.len() <= stressed.len());
+    }
+
+    /// **The brief's property, on the path where it is absolute**: a drawn
+    /// stem's non-initial nuclei are never longer than its first.
+    ///
+    /// `Namer::name` stems are drawn syllable by syllable and never sent
+    /// through [`repair_phonotactics`], so nothing downstream can pad a
+    /// nucleus back — the property either holds for every name or the
+    /// reduction is not being applied. **Measured against the pre-change
+    /// tree first**: it failed there (a per-syllable nucleus pick puts a
+    /// diphthong wherever it lands), so this is not a test that was already
+    /// passing.
+    ///
+    /// Two non-vacuity guards, because the property is trivially true for a
+    /// language that never admits a long nucleus at all: some sampled
+    /// language must admit one, and some sampled name must actually carry a
+    /// long FIRST nucleus — i.e. the sparing clause has to be in play, not
+    /// just the reducing one.
+    #[test]
+    fn a_drawn_stems_non_initial_nuclei_are_no_longer_than_its_first() {
+        let morph = MorphOptions {
+            honorifics: true,
+            shape_weights: [1.0, 1.0, 1.0],
+            shape_beta: 1.0,
+        };
+        let mut admitting = 0usize;
+        let mut long_first = 0usize;
+        let mut polysyllabic = 0usize;
+        for seed in 0..64u64 {
+            let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+            if ph.nuclei.iter().any(|&n| n > 1) {
+                admitting += 1;
+            }
+            let namer = Namer::new(&Seed(seed), "swept", &ph);
+            for kind in [NameKind::Settlement, NameKind::Deity, NameKind::Epithet] {
+                for salt in 0..8u64 {
+                    // Measured from the SHIPPED romanization, not from the
+                    // syllables the namer held: a romanized vowel is exactly
+                    // one of `aeiou` (the sweep's envelope is atonal, so no
+                    // combining marks), so a run of them is exactly one
+                    // nucleus, and this route shares no code with the
+                    // reduction it is checking.
+                    let roman = namer.name(kind, salt, &morph).roman.to_lowercase();
+                    let runs = roman_vowel_runs(&roman);
+                    if runs.len() > 1 {
+                        polysyllabic += 1;
+                    }
+                    if runs.first().is_some_and(|&first| first > 1) {
+                        long_first += 1;
+                    }
+                    assert!(
+                        runs.iter().skip(1).all(|&later| later <= runs[0]),
+                        "seed {seed} {kind:?} salt {salt}: name {roman:?} has nuclei \
+                         {runs:?}, putting a longer nucleus after the stressed one"
+                    );
+                }
+            }
+        }
+        assert!(
+            admitting > 0,
+            "non-vacuity: no sampled language admits a nucleus longer than one, so the \
+             property is trivially true"
+        );
+        assert!(
+            polysyllabic > 0 && long_first > 0,
+            "non-vacuity: {polysyllabic} names with more than one nucleus and {long_first} \
+             with a long FIRST nucleus — both clauses must be exercised"
+        );
+    }
+
+    /// The same conditioning inside a **compound**, where prominence is a
+    /// property of the assembled word rather than of the morpheme: the part
+    /// the headedness put first keeps its nucleus, and the compound built
+    /// under [`Prominence::None`] (which is what an honorific prefix
+    /// produces, the prefix taking the stress) reduces that nucleus too.
+    ///
+    /// The claim is the DIFFERENCE between the two calls — same lexicon,
+    /// same morphemes, same repair, only the prominence changed — so it
+    /// cannot be satisfied by a compound that happened to be short. Reds if
+    /// `worn_compound` ignores the prominence it is handed.
+    ///
+    /// Seed-searched: the claim is empty unless the word-initial morpheme
+    /// actually carries a nucleus longer than the floor, so the test finds a
+    /// lexicon where it does and names the seed it found.
+    #[test]
+    fn a_compounds_stressed_morpheme_keeps_its_nucleus() {
+        let ph = wordy_ph();
+        let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+        let chosen = ["water", "fire"];
+        // Swept over BOTH headedness values, because the surface-first
+        // morpheme is the head under `HeadFirst` and the modifier under
+        // `HeadLast` — a prominence assigned in DRAW order instead of
+        // surface order would be right for one and wrong for the other, and
+        // a fixture that only ever saw one could not tell.
+        let mut seen: Vec<Headedness> = Vec::new();
+        let mut found = None;
+        for seed in 0..64u64 {
+            let lex = two_word_lexicon(seed);
+            if chosen.iter().any(|c| !holds_word(&lex, c)) {
+                continue;
+            }
+            let namer = Namer::new(&Seed(seed), "test", &ph);
+            let attested = attested_forms(&lex);
+            let (stressed, _) = namer.worn_compound(
+                &lex,
+                &chosen,
+                &NameCorpus::none(),
+                &attested,
+                Prominence::InitialVowel,
+            );
+            let (unstressed, _) = namer.worn_compound(
+                &lex,
+                &chosen,
+                &NameCorpus::none(),
+                &attested,
+                Prominence::None,
+            );
+            // Two preconditions, both about the FIXTURE rather than about
+            // the property: the raw compound must start with a nucleus
+            // longer than the floor (or prominence has nothing to spare),
+            // and the reduction must actually have been applied (the
+            // survival ladder can refuse it, in which case both calls
+            // return the same unreduced form and the comparison is empty).
+            let raw = Namer::join_parts(
+                &lex,
+                chosen.iter().map(|c| concept_segments(&lex, c)).collect(),
+            );
+            let raw_first = nucleus_runs(&raw).first().copied().unwrap_or(0);
+            if raw_first > floor && unstressed != raw {
+                if !seen.contains(&lex.headedness) {
+                    seen.push(lex.headedness);
+                }
+                // Every qualifying fixture is checked, not just the first —
+                // the assertions below run inside this loop via `found`,
+                // which keeps the LAST one for the failure message.
+                let stressed_runs = nucleus_runs(&stressed);
+                let unstressed_runs = nucleus_runs(&unstressed);
+                assert_eq!(
+                    unstressed_runs.first().copied(),
+                    Some(floor),
+                    "seed {seed} ({:?}): with no prominence the first nucleus must fall \
+                     to the floor ({floor}) — {unstressed_runs:?} for {:?}",
+                    lex.headedness,
+                    render_views(&unstressed).roman
+                );
+                assert_eq!(
+                    stressed_runs.first().copied(),
+                    Some(raw_first),
+                    "seed {seed} ({:?}): prominence must spare the SURFACE-first \
+                     nucleus whole (raw {raw_first}) — {stressed_runs:?} vs \
+                     {unstressed_runs:?}",
+                    lex.headedness
+                );
+                assert_eq!(
+                    stressed_runs[1..],
+                    unstressed_runs[1..],
+                    "seed {seed} ({:?}): prominence must change NOTHING but the first \
+                     nucleus — {:?} vs {:?}",
+                    lex.headedness,
+                    render_views(&stressed).roman,
+                    render_views(&unstressed).roman
+                );
+                found = Some(seed);
+            }
+        }
+        assert!(
+            found.is_some(),
+            "fixture: no swept lexicon both starts its compound with a nucleus longer \
+             than the floor and survives the reduction, so this property was never \
+             exercised"
+        );
+        assert_eq!(
+            seen.len(),
+            2,
+            "non-vacuity: the sweep must cover both headedness values so the \
+             surface-order claim can fail — saw {seen:?}"
+        );
+    }
+
+    /// An honorific prefix takes the word's stress, so the compound behind
+    /// it reduces **throughout** — the one case where a glossed name's own
+    /// first morpheme carries no prominence.
+    ///
+    /// Reds if `glossed_name` hands `worn_compound` the same prominence
+    /// whether or not it is about to prepend a syllable. The two names below
+    /// share their chosen concepts (the affix is drawn after the concepts
+    /// are picked), so the only difference is the prefix and the prominence
+    /// that goes with it.
+    #[test]
+    fn an_honorific_prefix_takes_the_stress_from_the_compound() {
+        let ph = wordy_ph();
+        let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+        let site = SiteConcepts {
+            concepts: &["water", "fire"],
+        };
+        let plain = MorphOptions {
+            honorifics: false,
+            shape_weights: [1.0, 1.0, 1.0],
+            shape_beta: 1.0,
+        };
+        let honorific = MorphOptions {
+            honorifics: true,
+            ..plain
+        };
+        let mut checked = 0usize;
+        let mut witnesses = 0usize;
+        for seed in 0..64u64 {
+            let lex = two_word_lexicon(seed);
+            let namer = Namer::new(&Seed(seed), "test", &ph);
+            for salt in 0..4u64 {
+                let (bare, gloss) = namer.glossed_name(
+                    NameKind::Epithet,
+                    salt,
+                    &plain,
+                    &site,
+                    &lex,
+                    &NameCorpus::none(),
+                );
+                let (prefixed, prefixed_gloss) = namer.glossed_name(
+                    NameKind::Epithet,
+                    salt,
+                    &honorific,
+                    &site,
+                    &lex,
+                    &NameCorpus::none(),
+                );
+                assert_eq!(
+                    gloss, prefixed_gloss,
+                    "precondition: the honorific flag must not change which concepts \
+                     are picked, or these two names are not comparable"
+                );
+                let bare_runs = roman_vowel_runs(&bare.roman.to_lowercase());
+                // The claim only bites where the bare compound's first
+                // nucleus was actually spared something AND the reduction
+                // survived the containment ladder at all — a name whose
+                // reduction was refused is unreduced in both variants and
+                // says nothing about prominence.
+                let reduction_survived = bare_runs.iter().skip(1).all(|&r| r <= floor);
+                if gloss.is_empty()
+                    || !reduction_survived
+                    || bare_runs.first().copied().unwrap_or(0) <= floor
+                {
+                    continue;
+                }
+                let prefixed_runs = roman_vowel_runs(&prefixed.roman.to_lowercase());
+                // An EXISTENTIAL claim, deliberately. The survival ladder
+                // can refuse the prefixed variant's reduction (reducing
+                // more can break containment where reducing less did not),
+                // so "every honorific epithet reduces its first nucleus" is
+                // not true and a test asserting it would be wrong rather
+                // than strict. What must be true is that the prefix takes
+                // the stress *at all* — under a `glossed_name` that ignored
+                // the prefix, `prefixed_runs[1]` would equal the spared
+                // `bare_runs[0]` every single time and this counter would
+                // stay at zero.
+                if prefixed_runs.get(1).copied() == Some(floor) {
+                    witnesses += 1;
+                }
+                checked += 1;
+            }
+        }
+        assert!(
+            checked > 0,
+            "non-vacuity: no sampled epithet had a sparable first nucleus whose \
+             reduction survived, so nothing was checked"
+        );
+        assert!(
+            witnesses > 0,
+            "of {checked} epithets whose bare form KEPT a long first nucleus, not one \
+             lost it behind an honorific prefix — the prefix is not taking the stress"
+        );
+    }
+
+    /// **Ledger #5's unification, checked on the shipped code**: the wear
+    /// runs the reduction rule, it is not a second reduction written beside
+    /// it, and it stays gated on [`WEAR_FLOOR`].
+    ///
+    /// Reds if [`Namer::wear`] drops its reduction limb (a frequent
+    /// morpheme keeps its long nuclei) or if it applies the reduction below
+    /// the floor (a rare morpheme loses them).
+    #[test]
+    fn wear_reduces_a_frequent_morpheme_and_leaves_a_rare_one_whole() {
+        let ph = wordy_ph();
+        let floor = ph.nuclei.iter().copied().min().unwrap_or(1);
+        let namer = Namer::new(&Seed(42), "test", &ph);
+        let mut stream = Seed(42).derive(streams::ROOT).stream();
+        // Drawn through the namer's own machinery, never hand-built, then
+        // searched for a stem that actually carries a long nucleus — the
+        // claim is empty for a form that is already minimal.
+        let probe = (0..64)
+            .map(|_| segments_of(&namer.draw_syllables(&mut stream, 3, 4, false)))
+            .find(|segs| nucleus_runs(segs).iter().any(|&r| r > floor))
+            .expect("fixture: some drawn stem must carry a nucleus longer than the floor");
+        let long_nuclei = nucleus_runs(&probe).iter().filter(|&&r| r > floor).count();
+        assert!(long_nuclei > 0);
+
+        let frequent = namer.wear(&probe, 0.95);
+        assert!(
+            nucleus_runs(&frequent).iter().all(|&r| r <= floor),
+            "a morpheme in 95% of this culture's names must have every nucleus reduced: \
+             {:?} -> {:?}",
+            nucleus_runs(&probe),
+            nucleus_runs(&frequent)
+        );
+        let rare = namer.wear(&probe, WEAR_FLOOR - 0.01);
+        assert_eq!(
+            rare, probe,
+            "below WEAR_FLOOR nothing is worn and nothing is reduced"
+        );
     }
 }
