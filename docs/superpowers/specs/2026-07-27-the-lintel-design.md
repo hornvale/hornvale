@@ -118,11 +118,19 @@ distinguishes them. Wiring these three is the first thing a follow-on campaign
 should do, and the seam is already in place — the brief is passed to
 `structure_at` today.
 
-Fields the amendment names and v1 deliberately leaves unread — `cause`,
+Fields the amendment names but v1 does **not** carry at all — `cause`,
 `ended_by`, `founded`/`ended`, `tongue`, `deity`, `peak_population`,
 `stratigraphy` — are the ruin signature and the district vocabulary, and they
-belong to later campaigns. The type carries them from the start so that adding a
-consumer never changes the seam.
+belong to later campaigns.
+
+**Correcting the metaplan on one point.** §1b.4 argued the type should carry
+those fields *from the start*, "so that adding a consumer never changes the
+seam." As shipped, `Brief` has six fields and carries none of them, and that is
+the better call: `Brief` is **derived and never serialized**, so adding a field
+later is a local change with no save-format consequence and no epoch — the seam
+argument the metaplan made only bites for types that persist. Shipping seven
+unread `Option`s would have been dead weight defended by a rationale that does
+not apply. The campaign that first needs `cause` adds `cause`.
 
 ## 5. Addressing a chamber
 
