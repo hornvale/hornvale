@@ -2472,7 +2472,7 @@ room/furnishing/v1 -> v2. <what moved, which read moved it>."
 
 `World` already derives `Serialize, Deserialize` (`kernel/src/world.rs:54`) and `world.json` is a serde dump of it, so the stamp is a **field on `World`**, written by the **composition root** — `cli` is the only place that can see every crate's labels, which is precisely why `render_streams` lives there. No entity id moves, no fact is added, and it is still literally in the world.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```rust
 #[test]
@@ -2517,7 +2517,7 @@ fn a_changed_label_is_named_not_merely_noticed() {
 
 Shape the second test's JSON against what `serde_json::to_string(&World::new(Seed(42)))` actually emits — **run it and paste the real shape** rather than writing a plausible one. A hand-written fixture that does not match the real serialization tests nothing.
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 ```rust
     /// Which versioned seed-derivation labels this world was derived under, as
@@ -2544,7 +2544,7 @@ On load, `hornvale possess --world <PATH>` compares and, if anything differs, em
 
 Keep the message in the world's voice and derive the parenthetical from the diff. The comparison lives in `cli`, not in the vessel: the vessel must not learn about the composition root, and the session's prose stays a function of the world it was handed.
 
-- [ ] **Step 3: Run, verify, check the drift**
+- [x] **Step 3: Run, verify, check the drift**
 
 ```bash
 cargo fmt
