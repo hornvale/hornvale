@@ -1,0 +1,360 @@
+//! The LATTICE: a structure's chambers embedded as regions of one grid.
+//!
+//! This is floor-plan synthesis, not dungeon generation. The anchor graph
+//! already exists, so the job is **contents → map**: given chambers and their
+//! adjacencies, produce a subdivision that realizes exactly those adjacencies.
+//! An embedder is judged by FIDELITY, where a generator is judged by variety —
+//! so this code may add no information beyond the residual degrees of freedom
+//! (Rose Window Amendment 1 §1a.7).
+//!
+//! NOTHING HERE IS SERIALIZED (decision 0069). Cells are `FRAME`-tier: derived
+//! on entry, discarded on exit, so re-walking a place is byte-identical by
+//! construction rather than by policy.
+
+pub mod allocate;
+
+pub use allocate::allocate;
+
+use crate::structure::Structure;
+use std::collections::BTreeSet;
+
+// `extent_for`'s block arrangement is exhaustive only while four chambers fit a
+// 2x2 of blocks. Raising MAX_CHAMBERS past 4 without widening the arrangement
+// would silently pack six chambers into four blocks and produce slivers, so the
+// coupling is asserted at compile time rather than left as a coincidence of two
+// independent 4s — the same guard `structure.rs` puts on its own collision scan.
+const _: () = assert!(crate::structure::MAX_CHAMBERS <= 4);
+
+/// An integer axis-aligned rectangle: origin plus extent, half-open on the far
+/// edges, so `w` and `h` are counts of cells rather than coordinates.
+/// type-audit: bare-ok(count: x), bare-ok(count: y), bare-ok(count: w), bare-ok(count: h)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Rect {
+    /// Left edge, in cells.
+    pub x: i32,
+    /// Top edge, in cells.
+    pub y: i32,
+    /// Width in cells; always `>= 1` for a region the embedder emits.
+    pub w: i32,
+    /// Height in cells; always `>= 1` for a region the embedder emits.
+    pub h: i32,
+}
+
+impl Rect {
+    /// Does this rectangle contain `cell`?
+    /// type-audit: bare-ok(flag: return)
+    pub fn contains(&self, cell: Cell) -> bool {
+        cell.0 >= self.x && cell.0 < self.x + self.w && cell.1 >= self.y && cell.1 < self.y + self.h
+    }
+    /// Cell count.
+    /// type-audit: bare-ok(count: return)
+    pub fn area(&self) -> i32 {
+        self.w * self.h
+    }
+}
+
+/// One cell of the lattice, in lattice-local coordinates. `FRAME`-tier: never
+/// serialized, never a fact's object (decision 0069).
+/// type-audit: bare-ok(index)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Cell(pub i32, pub i32);
+
+/// The side of one chamber's nominal block, in cells. Chosen against two bounds,
+/// both checked rather than trusted: at the bottom, `MIN_CHAMBER_SPAN` must still
+/// fit after a chain of splits; at the top, the widest plan any chamber count can
+/// produce must fit an 80-column transcript, which
+/// `the_largest_plan_fits_a_terminal` asserts.
+/// type-audit: bare-ok(count)
+pub const CHAMBER_SIDE: i32 = 8;
+
+/// How big `structure`'s plan is: **exactly as big as the rooms it must hold.**
+///
+/// A pure function of the chamber COUNT — no brief field, no seed, no draw
+/// (decision-ledger #8). Two richer formulas were rejected: `peak_population`
+/// already governs how MANY buildings a settlement has rather than how big one is,
+/// and `notability` describes only the ALIVE occupation, so deriving floor area
+/// from it would make a building SHRINK when its people leave. Grandeur belongs in
+/// what a room CONTAINS (the `hall` role's high seat), not in its floor area —
+/// `CLIENT-language-not-catalogue`.
+///
+/// Because this consumes no draw, §7 rule 7's residual DOF stays exactly the cut
+/// positions: the coarse constraint on a fine derivation is not itself a die roll.
+///
+/// Origin-anchored, always: cells are lattice-LOCAL, so a plan has no place in any
+/// wider coordinate system to be offset into.
+pub fn extent_for(structure: &Structure) -> Rect {
+    // Blocks, not area: an exhaustive arrangement over 1..=MAX_CHAMBERS avoids an
+    // integer square root and states the coupling to MAX_CHAMBERS out loud. The
+    // regions still PARTITION the extent, so at three chambers one of them simply
+    // gets the larger share — which reads as a bigger room, not as waste.
+    let (cols, rows) = match structure.chambers.len() {
+        0 | 1 => (1, 1),
+        2 => (2, 1),
+        _ => (2, 2),
+    };
+    Rect {
+        x: 0,
+        y: 0,
+        w: cols * CHAMBER_SIDE,
+        h: rows * CHAMBER_SIDE,
+    }
+}
+
+/// A structure embedded as one grid.
+/// type-audit: bare-ok(index: doorways)
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Lattice {
+    /// The whole plan's bounds.
+    pub extent: Rect,
+    /// One region per chamber, indexed as `Structure::chambers` is.
+    pub regions: Vec<Rect>,
+    /// Unordered cell pairs a mover may NOT cross. A wall is definitionally a
+    /// non-adjacency: a drawn wall with no entry here is a lie (§7 rule 2).
+    pub walls: BTreeSet<(Cell, Cell)>,
+    /// `(chamber a, chamber b, the cell you pass through)`, one per link in
+    /// `Structure::links`.
+    pub doorways: Vec<(usize, usize, Cell)>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::brief::Brief;
+    use crate::structure::structure_at;
+    use hornvale_kernel::{RoomAddr, Seed};
+
+    const WALK: u32 = 12;
+
+    fn locale() -> RoomAddr {
+        RoomAddr {
+            face: 3,
+            path: (0..WALK).map(|i| (i % 4) as u8).collect(),
+        }
+    }
+
+    fn built() -> Brief {
+        Brief::from_parts(None, None, None, None, true, true)
+    }
+
+    fn embed(seed: u64) -> (crate::structure::Structure, Lattice) {
+        let s = structure_at(&locale(), &built(), Seed(seed), WALK).expect("built");
+        let l = allocate(&s, extent_for(&s), Seed(seed));
+        (s, l)
+    }
+
+    #[test]
+    fn one_region_per_chamber() {
+        let (s, l) = embed(42);
+        assert_eq!(l.regions.len(), s.chambers.len());
+    }
+
+    #[test]
+    fn regions_tile_the_extent_without_overlapping() {
+        let (_, l) = embed(42);
+        let total: i32 = l.regions.iter().map(Rect::area).sum();
+        assert_eq!(
+            total,
+            l.extent.area(),
+            "regions must exactly partition the extent — a gap is unreachable \
+             space and an overlap is two chambers claiming one cell"
+        );
+        for a in 0..l.regions.len() {
+            for b in (a + 1)..l.regions.len() {
+                for cx in l.regions[b].x..(l.regions[b].x + l.regions[b].w) {
+                    for cy in l.regions[b].y..(l.regions[b].y + l.regions[b].h) {
+                        assert!(
+                            !l.regions[a].contains(Cell(cx, cy)),
+                            "regions {a} and {b} overlap at ({cx},{cy})"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn every_link_gets_exactly_one_doorway() {
+        let (s, l) = embed(42);
+        assert_eq!(l.doorways.len(), s.links.len());
+        for &(a, b) in &s.links {
+            assert!(
+                l.doorways
+                    .iter()
+                    .any(|&(da, db, _)| (da, db) == (a, b) || (da, db) == (b, a)),
+                "link ({a},{b}) has no doorway"
+            );
+        }
+    }
+
+    #[test]
+    fn a_doorway_cell_lies_on_the_shared_edge_of_both_regions() {
+        let (_, l) = embed(42);
+        for &(a, b, cell) in &l.doorways {
+            let (ra, rb) = (l.regions[a], l.regions[b]);
+            assert!(
+                ra.contains(cell) || rb.contains(cell),
+                "doorway cell {cell:?} is in neither region {a} nor {b}"
+            );
+            // The two regions must actually touch: their spans overlap on one
+            // axis and abut on the other.
+            let touches_x = ra.x + ra.w == rb.x || rb.x + rb.w == ra.x;
+            let touches_y = ra.y + ra.h == rb.y || rb.y + rb.h == ra.y;
+            assert!(
+                touches_x || touches_y,
+                "regions {a} and {b} are linked but do not abut"
+            );
+        }
+    }
+
+    #[test]
+    fn the_embedding_is_pure() {
+        for seed in 0..8u64 {
+            let a = embed(seed);
+            let b = embed(seed);
+            assert_eq!(a.1, b.1, "seed {seed}: embedding is not a pure function");
+        }
+    }
+
+    #[test]
+    fn the_seed_is_read_at_all() {
+        // Where a chamber count leaves freedom, the split position is the
+        // residual DOF and the seed fills it. Eight seeds must not all agree.
+        let plans: Vec<Lattice> = (0..8u64).map(|s| embed(s).1).collect();
+        assert!(
+            plans.iter().any(|p| *p != plans[0]),
+            "eight seeds produced identical plans — the seed is ignored"
+        );
+    }
+
+    #[test]
+    fn no_region_is_degenerate() {
+        for seed in 0..8u64 {
+            let (_, l) = embed(seed);
+            for (i, r) in l.regions.iter().enumerate() {
+                assert!(
+                    r.w >= 2 && r.h >= 2,
+                    "seed {seed}: region {i} is {r:?} — a chamber narrower than 2 \
+                     cells has no interior to stand in"
+                );
+            }
+        }
+    }
+
+    /// A structure of `n` chambers, built by hand: `extent_for` reads only the
+    /// count, so the addresses need not be real places.
+    fn structure_of(n: usize) -> crate::structure::Structure {
+        let chambers: Vec<RoomAddr> = (0..n)
+            .map(|i| RoomAddr {
+                face: 3,
+                path: (0..WALK).map(|_| (i % 4) as u8).collect(),
+            })
+            .collect();
+        crate::structure::Structure {
+            threshold: chambers[0].clone(),
+            chambers,
+            links: (1..n).map(|i| (i - 1, i)).collect(),
+        }
+    }
+
+    #[test]
+    fn the_plan_grows_with_the_rooms_it_must_hold() {
+        let areas: Vec<i32> = (1..=crate::structure::MAX_CHAMBERS)
+            .map(|n| extent_for(&structure_of(n)).area())
+            .collect();
+        assert!(
+            areas.windows(2).all(|w| w[1] >= w[0]),
+            "a structure with more chambers must not get a smaller plan: {areas:?}"
+        );
+        assert!(
+            areas[crate::structure::MAX_CHAMBERS - 1] > areas[0],
+            "the plan does not grow at all: {areas:?}"
+        );
+    }
+
+    #[test]
+    fn the_extent_reads_only_the_count() {
+        // The overturned candidate answer keyed on `brief.notability`, which would
+        // have made a building shrink when its people left (ledger #8). The
+        // signature admits no brief at all, so this test guards the DERIVATION:
+        // two structures of equal size get equal plans however different the
+        // places are.
+        assert_eq!(extent_for(&structure_of(2)), extent_for(&structure_of(2)));
+    }
+
+    // The measurement harness times ONE `allocate` call for a diagnostic (never
+    // sim logic, never a fact, never seeded from wall-clock) -- exempt from the
+    // wall-clock ban (clippy.toml / decision 0001), same pattern as
+    // `cli/tests/graph_cost.rs`'s graph-derivation timing.
+    #[allow(clippy::disallowed_types)]
+    // benchmark harness: measuring the embedding, not sim logic
+    use std::time::Instant;
+
+    /// Wall-time ceiling for ONE `allocate` call on the widest extent
+    /// `extent_for` can derive (4 chambers, 16x16). Measured on an M-series
+    /// laptop: **6.79 us** median in RELEASE, **62.5 us** median in DEBUG — a
+    /// 9.2x gap, so the profile has to be stated with the number or it means
+    /// nothing (this project measured the same ~10x gap during The Lintel).
+    ///
+    /// Budgeted at ~16x the DEBUG median rather than a tight multiple of the
+    /// release one, because this test runs in the debug commit gate and debug's
+    /// p99 alone is 186 us. It is a falsification ceiling for a real regression
+    /// — an accidental quadratic in `walls_between`, say, whose cost is
+    /// currently `extent.area()` times a linear `region_of` scan — not a target
+    /// to approach.
+    /// type-audit: bare-ok(count)
+    const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
+
+    #[test]
+    fn the_embedding_is_cheap_enough_to_re_derive() {
+        // Spec §10 risk 1: no budget claim without a measurement. A lattice is
+        // FRAME-tier and re-derived on every entry, so the cost that matters is
+        // one call at the worst extent `extent_for` can produce.
+        let s = structure_of(crate::structure::MAX_CHAMBERS);
+        let extent = extent_for(&s);
+        assert_eq!(extent.w, 2 * CHAMBER_SIDE, "the worst-case extent moved");
+
+        const SAMPLES: usize = 1001;
+        let mut nanos: Vec<u128> = Vec::with_capacity(SAMPLES);
+        for i in 0..SAMPLES {
+            #[allow(clippy::disallowed_types)] // benchmark harness
+            let start = Instant::now();
+            let l = allocate(&s, extent, Seed(i as u64));
+            #[allow(clippy::disallowed_types)] // benchmark harness
+            let elapsed = start.elapsed();
+            std::hint::black_box(&l);
+            nanos.push(elapsed.as_nanos());
+        }
+        nanos.sort_unstable();
+        let median = nanos[SAMPLES / 2];
+        eprintln!(
+            "the_embedding_is_cheap_enough_to_re_derive: median {median} ns per \
+             allocate at {}x{} ({} chambers), min {} ns, p99 {} ns",
+            extent.w,
+            extent.h,
+            s.chambers.len(),
+            nanos[0],
+            nanos[SAMPLES * 99 / 100],
+        );
+        assert!(
+            median / 1_000 < ALLOCATE_BUDGET_MICROS,
+            "one allocate call took {median} ns, over the {ALLOCATE_BUDGET_MICROS} us ceiling"
+        );
+    }
+
+    #[test]
+    fn the_largest_plan_fits_a_terminal() {
+        // A floor plan is read in a transcript, so the ceiling on CHAMBER_SIDE is
+        // a rendering fact and belongs in a test rather than in a hope. The render
+        // adds a border and a legend, hence the margin.
+        for n in 1..=crate::structure::MAX_CHAMBERS {
+            let e = extent_for(&structure_of(n));
+            assert!(
+                e.w <= 72 && e.h <= 22,
+                "{n} chambers derive a {}x{} plan, which does not fit an 80x24 \
+                 transcript once the render's border and legend are added",
+                e.w,
+                e.h
+            );
+        }
+    }
+}

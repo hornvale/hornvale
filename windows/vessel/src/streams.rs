@@ -35,4 +35,30 @@ hornvale_kernel::stream_labels! {
     /// This is the first furnishing-family stream anything actually DRAWS from —
     /// `selection` takes no seed.
     ROOM_CHAMBERS = "room/chambers/v1" => "which chambers a structure has";
+    /// Stream label for WHERE the RECTILINEAR method puts things (The Blocking).
+    ///
+    /// Split from `room/furnishing` on purpose (decision 0073): furnishing
+    /// governs WHAT a place has and has a large blast radius; layout governs
+    /// WHERE and is expected to churn as legibility is tuned. **This label is
+    /// CAUSAL** — Amendment 2 §1b.7 supersedes 0075's promise that a layout
+    /// solve is free to retune, because promoted incidental relations gate
+    /// outcomes. Bumping it is an epoch whose blast radius is future outcomes
+    /// only; committed history survives.
+    ///
+    /// **One label PER METHOD**, because the unit of independent change is the
+    /// algorithm: retuning the grower's flood order has nothing to do with the
+    /// cut band here, and a shared label would make a grower tweak relocate
+    /// every built place's floor plan too. 0073 fixes epoch granularity at
+    /// declaration, so the split is made before either label has been bumped.
+    ///
+    /// **A change to something the two methods SHARE — `extent_for`, or what a
+    /// `Lattice` means — bumps BOTH literals.** That obligation is the price of
+    /// the flat form; there is no shared root segment to bump once.
+    ROOM_LAYOUT_RECTILINEAR = "room/layout/v1/rectilinear"
+        => "where the rectilinear method places chambers";
+    /// Stream label for WHERE the REGION-GROWING method puts things.
+    /// See [`ROOM_LAYOUT_RECTILINEAR`] for why this is a second label rather
+    /// than a shared one, and for what bumps both.
+    ROOM_LAYOUT_GROWN = "room/layout/v1/grown"
+        => "where the growing method places chambers";
 }
