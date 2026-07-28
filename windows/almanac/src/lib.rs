@@ -1,9 +1,17 @@
 //! The almanac window: render a world as a one-page document. Windows may
 //! depend on domains (they present them); domains never depend on windows.
+//!
+//! Settlement names may collide — decision 0024 holds that uniqueness is a
+//! property of a *reference*, not of a name — so any document here that can
+//! name two settlements at once resolves its labels through [`qualify`],
+//! which spends a qualifier only where an ambiguity actually appears in that
+//! document. It is a view over committed site facts: nothing in this window
+//! writes a fact or touches a save-format contract.
 #![warn(missing_docs)]
 
 pub mod connections;
 pub mod history;
+pub mod qualify;
 
 /// Re-exported so that test code assembling the `OccupationRecord` fixtures
 /// [`history::render_site`] reads can reach the history domain's types
