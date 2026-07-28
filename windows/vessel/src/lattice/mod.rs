@@ -1,4 +1,4 @@
-//! The LATTICE: a structure's chambers embedded as regions of one grid.
+//! The LATTICE: a structure's chambers embedded as cells of one grid.
 //!
 //! This is floor-plan synthesis, not dungeon generation. The anchor graph
 //! already exists, so the job is **contents → map**: given chambers and their
@@ -10,6 +10,40 @@
 //! NOTHING HERE IS SERIALIZED (decision 0069). Cells are `FRAME`-tier: derived
 //! on entry, discarded on exit, so re-walking a place is byte-identical by
 //! construction rather than by policy.
+//!
+//! # A wall is a CELL, not a boundary
+//!
+//! Nathan's call, 2026-07-28. Tasks 1–4 modelled a wall as a NON-ADJACENCY: a
+//! property of the boundary between two cells, held in a set of cell pairs. Every
+//! cell of the lattice was floor. That model works, and it cost more than it
+//! bought:
+//!
+//! 1. **A 1:1 grid has nowhere to draw a boundary**, so the render had to double
+//!    to `(2w+1) x (2h+1)` and carry a coordinate mapping between picture
+//!    positions and cells. That mapping and its whole off-by-one class are gone.
+//! 2. **It is the model every roguelike and every tilemap engine already
+//!    speaks**, so The Panes inherits the standard rather than a translation
+//!    layer, and The Sighting's shadowcast gets blocking CELLS, which is what its
+//!    measured timings assumed.
+//! 3. **The thickness this concedes is more accurate, not less.** A cell is about
+//!    a metre and this world models neolithic through classical building — turf,
+//!    cob and rubble-stone walls genuinely run half a metre to two. A
+//!    zero-thickness wall was the less faithful choice.
+//! 4. **Two anchor kinds that already ship gain a place.** `Screen` ("affords
+//!    nothing, shapes sightlines") is a partition; `Alcove` ("a recess off the
+//!    main space") is literally a passable wall cell. And `the-fire` attaching
+//!    `Within(Alcove)` has been describing a FIREPLACE since The Hearth with no
+//!    geometry to make it legible.
+//! 5. **A threshold becomes a place**, so it can later hold a door, be barred, or
+//!    be blocked by rubble.
+//! 6. **§7 rule 3 stops being tautological** — the outer ring must be entirely
+//!    `Wall`, which the embedder could fail to do and which the boundary model had
+//!    nothing to say about.
+//!
+//! It also introduces a failure mode the boundary model could not have: walls as
+//! cells can **seal a pocket of floor**. That is why there is a rule 8
+//! (reachability) where Amendment 2 §1b.8 listed seven, and why `grow` claims with
+//! a separation rule and never takes a cell back.
 
 pub mod allocate;
 pub mod classify;
@@ -18,15 +52,17 @@ pub mod occupancy;
 pub mod render;
 
 pub use allocate::allocate;
-pub use classify::{freedom_of_a_chain, openings, realized_links, region_of};
+pub use classify::{
+    bounds_of, freedom_of_a_chain, kind_of, openings, reachable_from, realized_links,
+};
 pub use grow::grow;
-pub use occupancy::Occupancy;
+pub use occupancy::{Occupancy, Refusal};
 pub use render::{Plan, render};
 
 use crate::brief::Brief;
 use crate::structure::Structure;
 use hornvale_kernel::Seed;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 // `extent_for`'s block arrangement is exhaustive only while four chambers fit a
 // 2x2 of blocks. Raising MAX_CHAMBERS past 4 without widening the arrangement
@@ -61,6 +97,22 @@ impl Rect {
     pub fn area(&self) -> i32 {
         self.w * self.h
     }
+    /// This rectangle shrunk by `by` cells on every side.
+    ///
+    /// How both embedders get the space they may claim: `extent.inset(1)` is the
+    /// extent minus its exterior shell. Stated as one named operation rather than
+    /// four open-coded arithmetic edits, because getting one of the four wrong is
+    /// how a plan comes to have a gap in its outer wall — and §7 rule 3(i) is a
+    /// check on exactly that.
+    /// type-audit: bare-ok(count: by)
+    pub fn inset(&self, by: i32) -> Rect {
+        Rect {
+            x: self.x + by,
+            y: self.y + by,
+            w: self.w - 2 * by,
+            h: self.h - 2 * by,
+        }
+    }
 }
 
 /// One cell of the lattice, in lattice-local coordinates. `FRAME`-tier: never
@@ -69,18 +121,95 @@ impl Rect {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Cell(pub i32, pub i32);
 
-/// The side of one chamber's nominal block, in cells. Chosen against two bounds,
-/// both checked rather than trusted: at the bottom, `MIN_CHAMBER_SPAN` must still
-/// fit after a chain of splits; at the top, the widest plan any chamber count can
-/// produce must fit an 80-column transcript — and since a wall lives BETWEEN
-/// cells the render draws `2w + 1` columns, not `w`, so the real ceiling is half
-/// what Task 1 assumed. Asserted twice on purpose:
+/// What occupies one cell of the lattice.
+///
+/// **Closed at three variants on purpose.** The moment this enum becomes the place
+/// where richness lives, the lattice is a tile catalogue and
+/// `CLIENT-language-not-catalogue` has been violated one band down. A window is an
+/// ANCHOR at a wall cell, never `CellKind::Window`. The only variants that should
+/// ever join these three are states a cell can *transition into over time*
+/// (`Rubble`, `Barred`), and neither is this campaign's business.
+///
+/// The positions are `Floor.0`, `Threshold.0` and `Threshold.1` — the audit names
+/// an enum payload `Variant.index` (`tools/type-audit/src/extract.rs`), so a
+/// qualifier of `Floor` would be a stale tag, not a verdict. Tagged blanket
+/// instead: all three are chamber indices into `Structure::chambers`.
+/// type-audit: bare-ok(index)
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CellKind {
+    /// Standing room, owned by exactly one chamber.
+    Floor(usize),
+    /// The building's fabric. Impassable, and a place in its own right — an
+    /// alcove, a screen or a fireplace is an anchor AT one of these.
+    Wall,
+    /// A designed opening between two chambers. Distinct from a future breach,
+    /// which is damage: a threshold derives from a link in the anchor graph, and
+    /// a breach never will.
+    Threshold(usize, usize),
+}
+
+impl CellKind {
+    /// May a mover pass through this cell?
+    ///
+    /// **Every rule in `classify` asks this, never `== CellKind::Wall`.** A rule
+    /// written against the variant breaks the day `Rubble` arrives; a rule written
+    /// against the predicate survives it. That is the plan's constraint, not a
+    /// style preference.
+    /// type-audit: bare-ok(flag: return)
+    pub fn passable(&self) -> bool {
+        !matches!(self, CellKind::Wall)
+    }
+
+    /// Does this cell serve `chamber` — as its floor, or as one side of its door?
+    ///
+    /// A threshold serves BOTH of its chambers, which is why this is a predicate
+    /// rather than an `Option<usize>` owner: asking "whose is this cell" of a
+    /// doorway has two right answers, and the old `owner` map could only hold one.
+    /// type-audit: bare-ok(index: chamber), bare-ok(flag: return)
+    pub fn serves(&self, chamber: usize) -> bool {
+        match self {
+            CellKind::Floor(i) => *i == chamber,
+            CellKind::Wall => false,
+            CellKind::Threshold(a, b) => *a == chamber || *b == chamber,
+        }
+    }
+}
+
+/// The four steps a mover — or a growing blob, or a flood — may take between
+/// cells. Orthogonal only: a diagonal step through the corner where two walls
+/// meet is not a way through a building.
+///
+/// A heading is a CELL DELTA, which is the same quantity `Rect`'s `w` and `h` are
+/// and tagged the same way. Not `index`: a `Cell` is a position and these are the
+/// differences between positions, so a newtype over them would be a different one
+/// from `Cell`'s and neither is earned at four constants.
+/// type-audit: bare-ok(count)
+pub const HEADINGS: [(i32, i32); 4] = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+
+/// `cell`'s four orthogonal neighbours, in [`HEADINGS`] order.
+pub fn neighbours(cell: Cell) -> [Cell; 4] {
+    HEADINGS.map(|(dx, dy)| Cell(cell.0 + dx, cell.1 + dy))
+}
+
+/// The side of one chamber's nominal INTERIOR, in cells — the standing room,
+/// not counting the fabric around it.
+///
+/// Chosen against two bounds, both checked rather than trusted: at the bottom,
+/// `MIN_CHAMBER_SPAN` must still fit after a chain of splits; at the top, the
+/// widest plan any chamber count can produce must fit an 80-column transcript.
+///
+/// **Task 4b halved the pressure at the top.** Task 4 had to note that a wall
+/// living BETWEEN cells made the render draw `2w + 1` columns, so the real ceiling
+/// was half what Task 1 assumed. A wall is a cell now, the picture is 1:1, and the
+/// ceiling is the extent's own width again — which is what makes an exterior shell
+/// affordable at all. Asserted twice on purpose:
 /// `the_largest_extent_leaves_the_render_room_to_draw` here, from the extent, and
 /// `render::tests::the_widest_plan_fits_a_terminal` from the drawn picture.
 /// type-audit: bare-ok(count)
 pub const CHAMBER_SIDE: i32 = 8;
 
-/// How big `structure`'s plan is: **exactly as big as the rooms it must hold.**
+/// How big `structure`'s plan is: **as big as the rooms it must hold, plus the
+/// fabric between them.**
 ///
 /// A pure function of the chamber COUNT — no brief field, no seed, no draw
 /// (decision-ledger #8). Two richer formulas were rejected: `peak_population`
@@ -93,13 +222,21 @@ pub const CHAMBER_SIDE: i32 = 8;
 /// Because this consumes no draw, §7 rule 7's residual DOF stays exactly the cut
 /// positions: the coarse constraint on a fine derivation is not itself a die roll.
 ///
+/// **The `+ (cols + 1)` is the fabric**, and it is not overhead. Wall lines are one
+/// more than the interiors they separate — a wall on each outside plus one between
+/// each pair — so the extent is `cols * CHAMBER_SIDE + (cols + 1)` per axis: 10x10
+/// at one chamber, 19x10 at two, 19x19 at three or four. Roughly a fifth of the
+/// extent is exterior shell, spent deliberately: it is what makes the drawn plan
+/// read as a BUILDING rather than as a floating partition diagram.
+///
 /// Origin-anchored, always: cells are lattice-LOCAL, so a plan has no place in any
 /// wider coordinate system to be offset into.
 pub fn extent_for(structure: &Structure) -> Rect {
     // Blocks, not area: an exhaustive arrangement over 1..=MAX_CHAMBERS avoids an
     // integer square root and states the coupling to MAX_CHAMBERS out loud. The
-    // regions still PARTITION the extent, so at three chambers one of them simply
-    // gets the larger share — which reads as a bigger room, not as waste.
+    // chamber interiors no longer tile the extent — the fabric between them is
+    // part of it now — so at three chambers one chamber simply gets the larger
+    // share, which reads as a bigger room rather than as waste.
     let (cols, rows) = match structure.chambers.len() {
         0 | 1 => (1, 1),
         2 => (2, 1),
@@ -108,32 +245,39 @@ pub fn extent_for(structure: &Structure) -> Rect {
     Rect {
         x: 0,
         y: 0,
-        w: cols * CHAMBER_SIDE,
-        h: rows * CHAMBER_SIDE,
+        w: cols * CHAMBER_SIDE + (cols + 1),
+        h: rows * CHAMBER_SIDE + (rows + 1),
     }
 }
 
 /// A structure embedded as one grid.
-/// type-audit: bare-ok(index: doorways), bare-ok(index: owner), bare-ok(count: dof)
+/// type-audit: bare-ok(index: doorways), bare-ok(count: dof)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Lattice {
     /// The whole plan's bounds.
     pub extent: Rect,
-    /// One region per chamber, indexed as `Structure::chambers` is.
-    pub regions: Vec<Rect>,
-    /// Unordered cell pairs a mover may NOT cross. A wall is definitionally a
-    /// non-adjacency: a drawn wall with no entry here is a lie (§7 rule 2).
-    pub walls: BTreeSet<(Cell, Cell)>,
-    /// `(chamber a, chamber b, the cell you pass through)`, one per link in
-    /// `Structure::links`.
-    pub doorways: Vec<(usize, usize, Cell)>,
-    /// Which chamber owns each cell — the AUTHORITATIVE assignment.
+    /// Every cell of `extent`, with its kind. TOTAL: every cell appears exactly
+    /// once, so [`kind_of`] returning `None` means "outside the extent" and
+    /// NOTHING else.
     ///
-    /// `regions` is a summary: for a grown lattice those rects are bounding boxes
-    /// and they OVERLAP, so `Rect::contains` is necessary but not sufficient and
-    /// scanning them answers a different question than the one asked. Consult this
-    /// map instead. Every cell of `extent` appears exactly once.
-    pub owner: BTreeMap<Cell, usize>,
+    /// That totality is the point. A partial map with walls simply absent would
+    /// make `None` mean "outside the extent OR is a wall" — two distinct facts in
+    /// one value, which is the exact shape of the rect-scan defect Task 2 found
+    /// (ledger #17). Wall-ness is a POSITIVE fact here, so every rule that
+    /// compares two cells must say out loud what it means about walls. §7 rule 3
+    /// checks the totality rather than trusting this sentence.
+    ///
+    /// This replaces Tasks 1–4's `owner`, `regions` and pair-valued `walls`.
+    /// `regions` was a trap twice over — grown blobs' bounding rects overlap, and
+    /// a rect-scanning `region_of` agreed with the truth for exactly one of the
+    /// two methods — and under this model it is ambiguous besides: does a
+    /// region's rect include its wall ring? [`bounds_of`] answers the question
+    /// Task 6 actually asks, derived from these cells in one pass.
+    pub cells: BTreeMap<Cell, CellKind>,
+    /// `(chamber a, chamber b, the cell you pass through)`, one per link in
+    /// `Structure::links`. The cell is a `Threshold(a, b)` in [`Lattice::cells`],
+    /// and §7 rule 3 checks the correspondence in both directions.
+    pub doorways: Vec<(usize, usize, Cell)>,
     /// How many independent choices the embedder made — one per stream draw it
     /// consumed. **Reported, not recomputed**, because §7 rule 7 asks for a
     /// number and a number derived by a second, independent traversal of the
@@ -143,43 +287,6 @@ pub struct Lattice {
     /// exceeds that, the embedder is INVENTING, which is the one thing an
     /// embedder may not do (Amendment 1 §1a.7).
     pub dof: u32,
-}
-
-/// Every adjacent cell pair inside the lattice that separates two differently-owned
-/// cells, minus the THRESHOLDS the doorways open.
-///
-/// One derivation, shared by both methods, over the authoritative ownership map,
-/// and it takes the thresholds as an **input**. Both embedders used to decide
-/// independently what a boundary was — walls from the geometry in one pass,
-/// doorways from a second pass over the same geometry — and two passes over one
-/// geometry is exactly how a doorway comes to open a way no link specified:
-/// exempting every pair that *touches* a door cell unwalls all four of its sides,
-/// so a door at a cell where three chambers meet lets a mover into the third.
-/// That is §7 rule 1's second direction failing, and the fix is to make the
-/// doorway an input here rather than a parallel computation.
-///
-/// A threshold is an unordered pair, normalized `(min, max)` as `walls` is.
-fn walls_around(
-    owner: &BTreeMap<Cell, usize>,
-    thresholds: &BTreeSet<(Cell, Cell)>,
-) -> BTreeSet<(Cell, Cell)> {
-    let mut walls = BTreeSet::new();
-    // `(1, 0)` and `(0, 1)` only: each unordered pair is then visited exactly
-    // once, from its lower cell.
-    for (here, &mine) in owner {
-        for (dx, dy) in [(1, 0), (0, 1)] {
-            let there = Cell(here.0 + dx, here.1 + dy);
-            if let Some(&theirs) = owner.get(&there)
-                && theirs != mine
-            {
-                let pair = (*here.min(&there), *here.max(&there));
-                if !thresholds.contains(&pair) {
-                    walls.insert(pair);
-                }
-            }
-        }
-    }
-    walls
 }
 
 /// Embed `structure`, choosing the method the brief calls for.
@@ -230,33 +337,56 @@ mod tests {
     }
 
     #[test]
-    fn one_region_per_chamber() {
+    fn every_chamber_has_bounds_and_they_lie_inside_the_shell() {
+        // What `one_region_per_chamber` used to assert, restated over the map that
+        // is now authoritative: every chamber holds floor somewhere, and none of
+        // it is in the exterior wall.
         let (s, l) = embed(42);
-        assert_eq!(l.regions.len(), s.chambers.len());
+        let interior = l.extent.inset(1);
+        for i in 0..s.chambers.len() {
+            let b =
+                bounds_of(&l, i).unwrap_or_else(|| panic!("chamber {i} owns no floor cell at all"));
+            assert!(
+                b.w >= 1 && b.h >= 1,
+                "chamber {i} has degenerate bounds {b:?}"
+            );
+            assert!(
+                interior.contains(Cell(b.x, b.y))
+                    && interior.contains(Cell(b.x + b.w - 1, b.y + b.h - 1)),
+                "chamber {i}'s floor at {b:?} escapes the interior {interior:?}"
+            );
+        }
     }
 
     #[test]
-    fn regions_tile_the_extent_without_overlapping() {
-        let (_, l) = embed(42);
-        let total: i32 = l.regions.iter().map(Rect::area).sum();
+    fn the_chamber_floors_are_disjoint_and_leave_room_for_fabric() {
+        // The old `regions_tile_the_extent_without_overlapping`. Floors no longer
+        // TILE the extent — the fabric is part of it now — so the two claims that
+        // survive are disjointness (two chambers must not claim one cell, which
+        // `cells` makes structurally impossible and this states anyway) and that
+        // the fabric is really there rather than the shell being the only wall.
+        let (s, l) = embed(42);
+        let floor: i32 = l
+            .cells
+            .values()
+            .filter(|k| matches!(k, CellKind::Floor(_)))
+            .count() as i32;
+        let per_chamber: i32 = (0..s.chambers.len())
+            .map(|i| {
+                l.cells
+                    .values()
+                    .filter(|k| **k == CellKind::Floor(i))
+                    .count() as i32
+            })
+            .sum();
         assert_eq!(
-            total,
-            l.extent.area(),
-            "regions must exactly partition the extent — a gap is unreachable \
-             space and an overlap is two chambers claiming one cell"
+            floor, per_chamber,
+            "a floor cell belongs to exactly one chamber"
         );
-        for a in 0..l.regions.len() {
-            for b in (a + 1)..l.regions.len() {
-                for cx in l.regions[b].x..(l.regions[b].x + l.regions[b].w) {
-                    for cy in l.regions[b].y..(l.regions[b].y + l.regions[b].h) {
-                        assert!(
-                            !l.regions[a].contains(Cell(cx, cy)),
-                            "regions {a} and {b} overlap at ({cx},{cy})"
-                        );
-                    }
-                }
-            }
-        }
+        assert!(
+            floor < l.extent.area(),
+            "every cell is floor, so the plan has no fabric at all"
+        );
     }
 
     #[test]
@@ -274,22 +404,27 @@ mod tests {
     }
 
     #[test]
-    fn a_doorway_cell_lies_on_the_shared_edge_of_both_regions() {
+    fn a_doorway_cell_is_a_threshold_between_the_two_chambers_it_names() {
+        // The old `a_doorway_cell_lies_on_the_shared_edge_of_both_regions`, and it
+        // gets STRONGER rather than merely restated: a doorway used to be checked
+        // against two bounding rects, which for a grown lattice is a scan of
+        // overlapping boxes. Now it is checked against the cell itself.
         let (_, l) = embed(42);
         for &(a, b, cell) in &l.doorways {
-            let (ra, rb) = (l.regions[a], l.regions[b]);
-            assert!(
-                ra.contains(cell) || rb.contains(cell),
-                "doorway cell {cell:?} is in neither region {a} nor {b}"
+            assert_eq!(
+                kind_of(&l, cell),
+                Some(CellKind::Threshold(a, b)),
+                "doorway cell {cell:?} for ({a},{b}) is not a threshold between them"
             );
-            // The two regions must actually touch: their spans overlap on one
-            // axis and abut on the other.
-            let touches_x = ra.x + ra.w == rb.x || rb.x + rb.w == ra.x;
-            let touches_y = ra.y + ra.h == rb.y || rb.y + rb.h == ra.y;
-            assert!(
-                touches_x || touches_y,
-                "regions {a} and {b} are linked but do not abut"
-            );
+            for (chamber, other) in [(a, b), (b, a)] {
+                assert!(
+                    neighbours(cell)
+                        .iter()
+                        .any(|n| kind_of(&l, *n) == Some(CellKind::Floor(chamber))),
+                    "the doorway at {cell:?} has no {chamber} floor beside it, so \
+                     chamber {other} cannot reach chamber {chamber} through it"
+                );
+            }
         }
     }
 
@@ -314,14 +449,15 @@ mod tests {
     }
 
     #[test]
-    fn no_region_is_degenerate() {
+    fn no_chamber_is_degenerate() {
         for seed in 0..8u64 {
-            let (_, l) = embed(seed);
-            for (i, r) in l.regions.iter().enumerate() {
+            let (s, l) = embed(seed);
+            for i in 0..s.chambers.len() {
+                let b = bounds_of(&l, i).expect("every chamber holds floor");
                 assert!(
-                    r.w >= 2 && r.h >= 2,
-                    "seed {seed}: region {i} is {r:?} — a chamber narrower than 2 \
-                     cells has no interior to stand in"
+                    b.w >= 2 && b.h >= 2,
+                    "seed {seed}: chamber {i} spans {b:?} — a chamber narrower than \
+                     2 cells has no interior to stand in"
                 );
             }
         }
@@ -344,7 +480,12 @@ mod tests {
     fn a_grown_lattice_still_covers_its_chambers_and_links() {
         let s = structure_at(&locale(), &built(), Seed(42), WALK).expect("built");
         let l = embed_with(&s, &wild(), extent_for(&s), Seed(42));
-        assert_eq!(l.regions.len(), s.chambers.len());
+        for i in 0..s.chambers.len() {
+            assert!(
+                bounds_of(&l, i).is_some(),
+                "grown chamber {i} owns no floor"
+            );
+        }
         assert_eq!(l.doorways.len(), s.links.len());
     }
 
@@ -403,6 +544,57 @@ mod tests {
     }
 
     #[test]
+    fn the_extent_holds_the_fabric_as_well_as_the_rooms() {
+        // The `+ (cols + 1)` stated as an arithmetic identity rather than as three
+        // pinned numbers, so raising CHAMBER_SIDE fails the ceiling test above and
+        // not this one. The fabric is one wall line per side plus one between each
+        // pair of interiors — a formula an off-by-one would break here first.
+        for (n, cols, rows) in [(1, 1, 1), (2, 2, 1), (3, 2, 2), (4, 2, 2)] {
+            let e = extent_for(&structure_of(n));
+            assert_eq!(e.w, cols * CHAMBER_SIDE + (cols + 1), "{n} chambers: width");
+            assert_eq!(
+                e.h,
+                rows * CHAMBER_SIDE + (rows + 1),
+                "{n} chambers: height"
+            );
+        }
+        assert_eq!(
+            (
+                extent_for(&structure_of(2)).w,
+                extent_for(&structure_of(2)).h
+            ),
+            (19, 10),
+            "the two-chamber extent moved"
+        );
+    }
+
+    #[test]
+    fn the_exterior_shell_costs_a_fifth_to_two_fifths_of_the_plan() {
+        // The shell is a deliberate cost and therefore a MEASURED one. The plan
+        // text (Task 4b step 1) says "roughly 20% of the extent is the exterior
+        // shell": that is the THREE-and-four-chamber figure (19%), and the
+        // smallest plan pays nearly twice it (36%), because a ring's cost is a
+        // perimeter against an area. Measured: 36%, 28%, 19%, 19% for one through
+        // four chambers. Recorded as a range rather than as the one flattering
+        // number.
+        let mut measured = Vec::new();
+        for n in 1..=crate::structure::MAX_CHAMBERS {
+            let e = extent_for(&structure_of(n));
+            let ring = 2 * (e.w + e.h) - 4;
+            measured.push((n, ring, e.area(), 100 * ring / e.area()));
+        }
+        eprintln!("exterior shell, (chambers, ring cells, extent cells, %): {measured:?}");
+        for &(n, ring, area, pct) in &measured {
+            assert!(
+                (18..=40).contains(&pct),
+                "{n} chambers spend {ring} of {area} cells ({pct}%) on the shell — \
+                 outside the 18-40% band this task measured, so either the \
+                 arrangement or the claim has moved"
+            );
+        }
+    }
+
+    #[test]
     fn the_extent_reads_only_the_count() {
         // The overturned candidate answer keyed on `brief.notability`, which would
         // have made a building shrink when its people left (ledger #8). The
@@ -421,22 +613,21 @@ mod tests {
     use std::time::Instant;
 
     /// Wall-time ceiling for ONE `allocate` call on the widest extent
-    /// `extent_for` can derive (4 chambers, 16x16). Measured on an M-series
-    /// laptop: **27.6 us** median in RELEASE, **209 us** median in DEBUG — a
-    /// 7.6x gap, so the profile has to be stated with the number or it means
-    /// nothing (this project measured a similar ~10x gap during The Lintel).
+    /// `extent_for` can derive (4 chambers, 19x19). Measured on an M-series
+    /// laptop: **27.6 us** median in RELEASE, **209 us** median in DEBUG at Task
+    /// 3's 16x16 — a 7.6x gap, so the profile has to be stated with the number or
+    /// it means nothing (this project measured a similar ~10x gap during The
+    /// Lintel).
     ///
-    /// **Re-measured in Task 3, and it moved by 3.3x** (from 6.79 us release /
-    /// 62.5 us debug), because `Lattice` now carries per-cell ownership: 256
-    /// `BTreeMap` inserts plus `walls_around`'s probes cost more than the rect
-    /// scans they replaced. That is the price of §7 rules 1–4 being checkable
-    /// over a GROWN lattice at all, whose bounding rects overlap — so it is paid
-    /// deliberately, and recorded rather than absorbed.
+    /// Re-measured in Task 3 (it moved 3.3x when `Lattice` gained per-cell
+    /// ownership) and again in Task 4b, where the extent grew from 256 to 361
+    /// cells and the pair-valued wall set went away. The measured number is
+    /// printed by the test itself rather than restated here, so a reader gets the
+    /// real one rather than a stale transcription.
     ///
-    /// The ceiling stays where Task 1 set it, at ~5x the new debug median. It is
-    /// a falsification ceiling for a real regression — an accidental quadratic in
-    /// `walls_around`, say, whose cost is currently `extent.area()` `BTreeMap`
-    /// probes — not a target to approach.
+    /// The ceiling stays where Task 1 set it. It is a falsification ceiling for a
+    /// real regression — an accidental quadratic in a threshold search, say — not
+    /// a target to approach.
     /// type-audit: bare-ok(count)
     const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
 
@@ -447,7 +638,11 @@ mod tests {
         // one call at the worst extent `extent_for` can produce.
         let s = structure_of(crate::structure::MAX_CHAMBERS);
         let extent = extent_for(&s);
-        assert_eq!(extent.w, 2 * CHAMBER_SIDE, "the worst-case extent moved");
+        assert_eq!(
+            extent.w,
+            2 * CHAMBER_SIDE + 3,
+            "the worst-case extent moved"
+        );
 
         const SAMPLES: usize = 1001;
         let mut nanos: Vec<u128> = Vec::with_capacity(SAMPLES);
@@ -480,23 +675,18 @@ mod tests {
     #[test]
     fn the_largest_extent_leaves_the_render_room_to_draw() {
         // Task 1 wrote this as `the_largest_plan_fits_a_terminal`, asserting
-        // `w <= 72 && h <= 22` on the EXTENT as a proxy for the render — guessing
-        // the render would be 1:1 plus a border. It is not: a wall lives BETWEEN
-        // cells, so the picture is `(2w+1) x (2h+1)` (see `render`'s module doc).
-        // The terminal claim therefore belongs to the render and is asserted
-        // there, on the picture itself, by
-        // `render::tests::the_widest_plan_fits_a_terminal`.
+        // `w <= 72 && h <= 22` on the EXTENT as a proxy for the render, guessing
+        // the render would be 1:1 plus a border. Task 4 found it was not — a wall
+        // between cells forced a `(2w+1)` picture — and Task 4b makes the guess
+        // right after all: a wall is a cell, so the picture is 1:1 AND the border
+        // is part of the extent.
         //
-        // What is left here is the bound that is genuinely `extent_for`'s: an
-        // extent narrow enough that the doubled picture still fits 80 columns.
-        // Stated as the arithmetic the render actually does, so raising
-        // CHAMBER_SIDE fails here as well as there rather than only there.
+        // What is left here is the bound that is genuinely `extent_for`'s, stated
+        // as the arithmetic the render actually does so raising CHAMBER_SIDE fails
+        // here as well as there rather than only there.
         for n in 1..=crate::structure::MAX_CHAMBERS {
             let e = extent_for(&structure_of(n));
-            // Named rather than inlined: `render` draws one column per cell plus
-            // one per boundary between them plus the two rim columns, and the
-            // arithmetic is worth reading as that rather than as an off-by-one.
-            let drawn_columns = 2 * e.w + 1;
+            let drawn_columns = e.w;
             assert!(
                 drawn_columns <= 80,
                 "{n} chambers derive a {}x{} extent, which the render draws \

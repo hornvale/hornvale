@@ -99,6 +99,44 @@ fn map_indoors_draws_a_floor_plan() {
 }
 
 #[test]
+fn the_plan_is_one_glyph_per_cell_and_walled_all_round() {
+    // Task 4b's reification, checked where a PLAYER meets it. Two claims, and
+    // neither could be made before a wall was a cell:
+    //
+    // - the picture is 1:1 with the lattice, so a 19x10 extent draws 19x10 rather
+    //   than Task 4's doubled 39x21. Pinned as numbers here on purpose: the
+    //   `(2w+1)` machinery coming back would still satisfy every proportional
+    //   assertion in this file, and would only fail against a stated size.
+    // - the plan is ENCLOSED. A drawn border of unbroken `#` is what makes the
+    //   picture read as a BUILDING rather than as a floating partition diagram,
+    //   and it is what roughly a fifth to two fifths of the extent is spent on.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let plan = out(session.handle("map"));
+    let lines = picture_rows(&plan);
+    assert_eq!(
+        (lines.len(), lines[0].chars().count()),
+        (10, 19),
+        "the seed-42 structure has two chambers, whose extent is 19x10, and the \
+         render is 1:1: {plan}"
+    );
+    let last = lines.len() - 1;
+    for (y, row) in lines.iter().enumerate() {
+        let glyphs: Vec<char> = row.chars().collect();
+        let wide = glyphs.len() - 1;
+        for (x, g) in glyphs.iter().enumerate() {
+            if y == 0 || y == last || x == 0 || x == wide {
+                assert_eq!(
+                    *g, '#',
+                    "the plan's exterior wall is broken at ({x},{y}): {plan}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn map_outdoors_still_draws_the_chart() {
     // The band-awareness must not have eaten the locale chart.
     let w = world();

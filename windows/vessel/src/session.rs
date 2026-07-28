@@ -1005,17 +1005,19 @@ impl<'w> Session<'w> {
     /// The floor plan of the structure being stood in, or `None` out of doors.
     ///
     /// Derived on demand and kept by nobody: the lattice is `FRAME`-tier
-    /// (decision 0069), so re-deriving it costs microseconds (~209 us in debug,
-    /// ~27.6 us in release, measured in Task 3) and holding it across a descent
-    /// boundary would be how derived state stops being derived. Derived ONCE per
-    /// call, never per cell — the render walks the finished lattice.
+    /// (decision 0069), so re-deriving it costs microseconds (~183 us in debug at
+    /// the worst 19x19 extent, re-measured in Task 4b; ~209 us at Task 3's smaller
+    /// 16x16, so the reification is not a regression despite 40% more cells) and
+    /// holding it across a descent boundary would be how derived state stops being
+    /// derived. Derived ONCE per call, never per cell — the render walks the
+    /// finished lattice.
     ///
     /// **Keyed to the LOCALE's own seed, never the world's.** `structure_at` keys
     /// its draw with `locale.seed(seed)` (`structure.rs`) precisely so no other
     /// locale's draw can perturb it, and the plan of that structure has to be
     /// keyed the same way. Keyed to `self.world.seed` instead, every building in
     /// the world gets ONE identical floor plan: a world that is self-consistent,
-    /// satisfies all seven of `lattice::classify`'s rules, and is uniformly
+    /// satisfies all eight of `lattice::classify`'s rules, and is uniformly
     /// wrong. `the_plan_is_keyed_to_the_locale_not_the_world` is what catches it.
     ///
     /// The locale is taken from the THRESHOLD rather than from the chamber stood
@@ -2383,7 +2385,7 @@ mod tests {
         // count, the links and the seed, so two structures of the same shape
         // produce the same lattice unless the SEED differs. Keyed to
         // `self.world.seed`, every building in the world would get one identical
-        // floor plan — self-consistent, all seven rules green, and uniformly
+        // floor plan — self-consistent, all eight rules green, and uniformly
         // wrong. That makes this a real falsifier rather than the near-tautology
         // `structure.rs` flags at `a_different_locale_gives_a_different_structure`,
         // where the locale's path is inherited into the answer by construction.

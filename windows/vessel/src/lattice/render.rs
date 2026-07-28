@@ -8,53 +8,38 @@
 //! guarded here rather than trusted: the legend is read back off the finished
 //! picture, so it cannot name a glyph the picture never draws.
 //!
-//! Walls are drawn from `Lattice::walls`, never inferred from region boundaries a
-//! second time. A wall drawn by independent arithmetic is exactly how a picture
-//! comes to disagree with the world it depicts (§7 rule 2) — and Task 3 found
-//! exactly that defect twice, in two passes deciding independently what a boundary
-//! was, so this is not a hypothetical.
+//! # 1:1, because a wall is a cell
 //!
-//! Which chamber a cell belongs to comes from `Lattice::owner`, NEVER from
-//! `regions`: a grown lattice's rects are overlapping bounding boxes, so a rect
-//! scan answers a different question and happens to agree only for rectilinear
-//! plans (ledger #17).
+//! Task 4 had to draw this picture at `(2w+1) x (2h+1)`. A wall was a
+//! NON-ADJACENCY then — a property of the boundary between two cells, and a 1:1
+//! grid has nowhere to put one — so odd positions were cells, even positions were
+//! the boundaries between them, and every glyph had a coordinate mapping standing
+//! between it and the lattice.
 //!
-//! # A wall lives BETWEEN cells, so the picture is doubled
+//! Task 4b reified the wall, and this module is where the saving is collected. One
+//! glyph per cell, read straight off [`Lattice::cells`]: `Floor` → `.`, `Wall` →
+//! `#`, `Threshold` → `+`. There is no arithmetic between a picture position and a
+//! cell, so there is no off-by-one class to get wrong — which matters most for
+//! Task 5, which was about to inherit it in order to mark where the possession
+//! stands.
 //!
-//! The plan's sketched render drew one glyph per cell and called a cell a wall
-//! when every way out of it was walled. **That glyph never fires.**
-//! `MIN_CHAMBER_SPAN` is 2, so every region is at least 2x2 and every cell of it
-//! has a same-region orthogonal neighbour that no wall separates — so no cell is
-//! ever walled in on all four sides, and a 1:1 picture of this lattice contains
-//! no `#` at all. Measured, not reasoned: the plan's own
-//! `map_indoors_draws_a_floor_plan` fails on `plan.contains('#')`.
-//!
-//! The cause is structural rather than a slip. Every cell of this lattice is
-//! FLOOR — `owner` assigns all of them to a chamber — and a wall is a
-//! NON-ADJACENCY between two cells, which is a property of the boundary and not
-//! of either cell. A 1:1 grid has nowhere to draw it. So the picture is
-//! `(2w+1) x (2h+1)`: odd positions are cells, even positions are the boundaries
-//! between them, and every `#` stands exactly where a non-adjacency does.
-//!
-//! What the picture depicts is PASSABILITY, taken off the wall set: `.` where a
-//! mover may pass or stand, `#` where it may not, `+` where the passage it may
-//! take crosses from one chamber into another. The extent's rim is drawn `#` from
-//! the extent rather than from `walls` — the lattice is the whole structure, so
-//! there is no cell outside it and `walls_around` records no pair for a
-//! neighbour that has no owner. That is the one `#` in this picture not read off
-//! the wall set, and it is called out here because a reader is entitled to know
-//! which is which.
+//! Nothing is inferred a second time. Task 3 found two defects in exactly that
+//! shape — two passes deciding independently what a boundary was — so the picture
+//! asks the kind map and nothing else. Notably the exterior wall is no longer a
+//! special case drawn from the extent: it is `Wall` cells like any other, which is
+//! also what makes §7 rule 3(i) a check the render cannot quietly satisfy on its
+//! own.
 
-use super::{Cell, Lattice};
+use super::{Cell, CellKind, Lattice};
 
-/// The glyph for a cell a mover may stand in, or a boundary it may cross.
+/// The glyph for a cell a mover may stand in.
 /// type-audit: bare-ok(render-internal)
 pub const FLOOR: char = '.';
-/// The glyph for a non-adjacency: the boundary a mover may not cross.
+/// The glyph for the building's fabric: a cell a mover may not enter.
 /// type-audit: bare-ok(render-internal)
 pub const WALL: char = '#';
-/// The glyph for a threshold: the one boundary between two chambers that a
-/// declared doorway opens.
+/// The glyph for a threshold: the cell a declared doorway opens between two
+/// chambers.
 /// type-audit: bare-ok(render-internal)
 pub const DOORWAY: char = '+';
 
@@ -76,7 +61,7 @@ pub const DOORWAY_NOUN: &str = "a doorway";
 /// type-audit: bare-ok(prose: picture), bare-ok(identifier-text: legend)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Plan {
-    /// The picture, one line per doubled-grid row, each row newline-terminated.
+    /// The picture, one line per grid row, each row newline-terminated.
     pub picture: String,
     /// Glyph and its meaning, in drawing order. What the parity test walks.
     pub legend: Vec<(char, &'static str)>,
@@ -94,18 +79,17 @@ pub struct Plan {
 /// `[chamber id, day]` block this plan's header mirrors.
 pub fn render(lattice: &Lattice) -> Plan {
     let e = lattice.extent;
-    let (last_x, last_y) = (2 * e.w, 2 * e.h);
-    let mut picture = String::with_capacity(((last_x + 2) * (last_y + 1)) as usize);
-    for py in 0..=last_y {
-        for px in 0..=last_x {
-            picture.push(glyph(lattice, px, py));
+    let mut picture = String::with_capacity(((e.w + 1) * e.h) as usize);
+    for cy in e.y..(e.y + e.h) {
+        for cx in e.x..(e.x + e.w) {
+            picture.push(glyph(lattice.cells.get(&Cell(cx, cy))));
         }
         picture.push('\n');
     }
     // Read back off the finished picture, so the legend cannot name a glyph the
     // render never drew. A doorway is the case that matters: `doorways` always
     // holds one entry per link, but a grown lattice whose two blobs never met
-    // exempts no threshold, and the legend must not promise a `+` that is not
+    // carves no threshold, and the legend must not promise a `+` that is not
     // there (§7 rule 1 is what reports the underlying failure; this only refuses
     // to paper over it).
     let legend = [
@@ -119,69 +103,19 @@ pub fn render(lattice: &Lattice) -> Plan {
     Plan { picture, legend }
 }
 
-/// The glyph at one doubled-grid position.
+/// The glyph for one cell's kind.
 ///
-/// `px` odd is a cell column and `px` even is the boundary between two of them;
-/// likewise `py`. So an odd/odd position is a cell, an even/odd or odd/even
-/// position is one wall segment, and an even/even position is the junction where
-/// up to four segments meet.
-fn glyph(lattice: &Lattice, px: i32, py: i32) -> char {
-    let e = lattice.extent;
-    if px == 0 || py == 0 || px == 2 * e.w || py == 2 * e.h {
-        return WALL;
-    }
-    match (px % 2, py % 2) {
-        // A cell. Every cell of a lattice belongs to a chamber, so every cell is
-        // floor; what a mover may do is decided at the boundaries.
-        (1, 1) => FLOOR,
-        // A vertical segment, between the cells left and right of it.
-        (0, 1) => {
-            let cy = e.y + (py - 1) / 2;
-            between(lattice, Cell(e.x + px / 2 - 1, cy), Cell(e.x + px / 2, cy))
-        }
-        // A horizontal segment, between the cells above and below it.
-        (1, 0) => {
-            let cx = e.x + (px - 1) / 2;
-            between(lattice, Cell(cx, e.y + py / 2 - 1), Cell(cx, e.y + py / 2))
-        }
-        // A junction: wall exactly when one of the segments meeting here is, so
-        // a wall's line stays unbroken and an open junction stays open. Read off
-        // the segments themselves rather than off the geometry a second time —
-        // one derivation, which is the rule the whole module follows. Terminates
-        // at depth one: a junction's four neighbours are never junctions.
-        _ => {
-            if [(1, 0), (-1, 0), (0, 1), (0, -1)]
-                .iter()
-                .any(|&(dx, dy)| glyph(lattice, px + dx, py + dy) == WALL)
-            {
-                WALL
-            } else {
-                FLOOR
-            }
-        }
-    }
-}
-
-/// The glyph for the boundary between two adjacent cells.
-///
-/// The wall set is the authority on passability, in both directions: walled means
-/// no passage, and unwalled means the mover may cross — which is exactly what
-/// `classify::openings` reads. A crossing between two DIFFERENT chambers is a
-/// threshold, and by §7 rule 3 the only unwalled cross-chamber boundaries are the
-/// declared doorways, so `+` marks a doorway without this function needing to
-/// consult `doorways` and risk a second opinion about where one is.
-fn between(lattice: &Lattice, a: Cell, b: Cell) -> char {
-    if lattice.walls.contains(&(a.min(b), a.max(b))) {
-        return WALL;
-    }
-    match (lattice.owner.get(&a), lattice.owner.get(&b)) {
-        (Some(x), Some(y)) if x != y => DOORWAY,
-        // Same chamber, or a cell no chamber owns. An unowned cell inside the
-        // extent is a hole `grow` claims cannot happen and §7 rules 1-3 are what
-        // would report — but nothing walls it, so a mover could cross, and
-        // drawing floor is what is true about the crossing rather than what is
-        // comfortable about the derivation.
-        _ => FLOOR,
+/// `None` is unreachable — [`Lattice::cells`] is total over the extent and §7 rule
+/// 3 checks it — and drawn as fabric rather than as a distinct glyph, because a
+/// cell the map does not hold is not a cell a mover may stand in. Matched on the
+/// variant here rather than through `passable()` on purpose: this is the one place
+/// whose whole job is to distinguish the kinds, so a `Rubble` arriving must appear
+/// as an unhandled arm and force a decision about how it draws.
+fn glyph(kind: Option<&CellKind>) -> char {
+    match kind {
+        Some(CellKind::Floor(_)) => FLOOR,
+        Some(CellKind::Threshold(_, _)) => DOORWAY,
+        Some(CellKind::Wall) | None => WALL,
     }
 }
 
@@ -194,7 +128,7 @@ mod tests {
     use hornvale_kernel::{RoomAddr, Seed};
 
     const WALK: u32 = 12;
-    const SEEDS: std::ops::Range<u64> = 0..16;
+    const SEEDS: std::ops::Range<u64> = 0..48;
 
     fn locale(n: u64) -> RoomAddr {
         RoomAddr {
@@ -235,65 +169,37 @@ mod tests {
     }
 
     #[test]
-    fn the_picture_encodes_the_wall_set_exactly() {
-        // Rule 2 for the PICTURE, read back off the drawn characters rather than
-        // taken from the code that drew them: every `#` between two cells of the
-        // extent is a wall the lattice holds, every `+` is an unwalled crossing
-        // between two chambers, and nothing else is drawn where a wall stands.
+    fn the_picture_encodes_the_kind_map_exactly() {
+        // Read back off the drawn characters rather than taken from the code that
+        // drew them, and it is the whole picture now rather than the odd/even
+        // subset Task 4 could check — the exterior wall included, which used to be
+        // the one glyph the readback had to take on trust because the render drew
+        // it from the extent rather than from the lattice.
         for (_, l) in corpus() {
             let p = render(&l);
             let grid = rows(&p);
-            let (last_x, last_y) = (2 * l.extent.w, 2 * l.extent.h);
-            assert_eq!(grid.len(), (last_y + 1) as usize, "row count");
+            let e = l.extent;
+            assert_eq!(grid.len(), e.h as usize, "row count");
             for r in &grid {
-                assert_eq!(r.len(), (last_x + 1) as usize, "row width");
+                assert_eq!(r.len(), e.w as usize, "row width");
             }
-            for py in 0..=last_y {
-                for px in 0..=last_x {
-                    let g = grid[py as usize][px as usize];
-                    if px == 0 || py == 0 || px == last_x || py == last_y {
-                        assert_eq!(g, WALL, "the extent's rim is a wall at ({px},{py})");
-                        continue;
-                    }
-                    let pair = match (px % 2, py % 2) {
-                        (1, 1) => {
-                            assert_eq!(g, FLOOR, "a cell is floor at ({px},{py})");
-                            continue;
-                        }
-                        (0, 1) => {
-                            let cy = l.extent.y + (py - 1) / 2;
-                            Some((
-                                Cell(l.extent.x + px / 2 - 1, cy),
-                                Cell(l.extent.x + px / 2, cy),
-                            ))
-                        }
-                        (1, 0) => {
-                            let cx = l.extent.x + (px - 1) / 2;
-                            Some((
-                                Cell(cx, l.extent.y + py / 2 - 1),
-                                Cell(cx, l.extent.y + py / 2),
-                            ))
-                        }
-                        // A junction carries no boundary of its own.
-                        _ => None,
-                    };
-                    let Some((a, b)) = pair else { continue };
-                    let walled = l.walls.contains(&(a.min(b), a.max(b)));
-                    let crosses = matches!(
-                        (l.owner.get(&a), l.owner.get(&b)),
-                        (Some(x), Some(y)) if x != y
-                    );
-                    let want = if walled {
-                        WALL
-                    } else if crosses {
-                        DOORWAY
-                    } else {
-                        FLOOR
+            for cy in e.y..(e.y + e.h) {
+                for cx in e.x..(e.x + e.w) {
+                    let g = grid[(cy - e.y) as usize][(cx - e.x) as usize];
+                    let k = l
+                        .cells
+                        .get(&Cell(cx, cy))
+                        .copied()
+                        .unwrap_or_else(|| panic!("no kind at ({cx},{cy})"));
+                    let want = match k {
+                        CellKind::Floor(_) => FLOOR,
+                        CellKind::Wall => WALL,
+                        CellKind::Threshold(_, _) => DOORWAY,
                     };
                     assert_eq!(
                         g, want,
-                        "({px},{py}) draws {g:?} for the boundary {a:?}-{b:?}, which \
-                         the lattice says is {want:?}"
+                        "({cx},{cy}) draws {g:?} for a cell the lattice says is \
+                         {k:?}, which draws {want:?}"
                     );
                 }
             }
@@ -337,6 +243,27 @@ mod tests {
     }
 
     #[test]
+    fn the_picture_has_an_unbroken_border_of_wall() {
+        // §7 rule 3(i) as a reader sees it. The rule is asserted on the lattice in
+        // `classify`; this asserts it on the PICTURE, because "the plan reads as a
+        // building" is a claim about the drawn thing and a reader checks the border
+        // before anything else.
+        for (_, l) in corpus() {
+            let p = render(&l);
+            let grid = rows(&p);
+            let last = grid.len() - 1;
+            for (y, row) in grid.iter().enumerate() {
+                let edge = y == 0 || y == last;
+                for (x, g) in row.iter().enumerate() {
+                    if edge || x == 0 || x == row.len() - 1 {
+                        assert_eq!(*g, WALL, "the border is {g:?} at ({x},{y}):\n{}", p.picture);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn a_single_chamber_plan_is_one_room_with_no_doorway() {
         // The degenerate count, which the corpus reaches but never isolates: one
         // chamber has no links, so a `+` drawn here would be pure invention and
@@ -375,8 +302,10 @@ mod tests {
     fn the_widest_plan_fits_a_terminal() {
         // A floor plan is read in a transcript, so the ceiling on CHAMBER_SIDE is
         // a rendering fact. Task 1 asserted it on the EXTENT as a proxy, guessing
-        // the render would be 1:1 plus a border; the render is doubled, so the
-        // claim is re-founded on the picture the render actually draws.
+        // the render would be 1:1 plus a border; Task 4 found the render was
+        // doubled and re-founded the claim on the picture. Task 4b makes the
+        // original guess true — 1:1, border included — and the claim stays here,
+        // on the drawn thing, because that is where it belongs whatever the model.
         //
         // WIDTH is the hard bound: past 80 columns a transcript wraps and a plan
         // stops being legible at all. Height is a different kind of constraint —

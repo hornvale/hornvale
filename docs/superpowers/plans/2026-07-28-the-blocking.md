@@ -1818,7 +1818,7 @@ What it buys, in the order the arguments actually landed:
 
 **No label bump.** `room/layout/v1/rectilinear` and `/grown` were declared *in this campaign* and nothing on `main` draws from them, so v1 is still being authored rather than re-versioned (ledger #23). The gallery re-pins, which Tasks 4–5 already expect.
 
-- [ ] **Step 1: The type, and the invariant it re-founds**
+- [x] **Step 1: The type, and the invariant it re-founds**
 
 ```rust
 /// What occupies one cell of the lattice.
@@ -1880,7 +1880,7 @@ On `Lattice`, `cells` **replaces** `owner`, `regions` and the pair-valued `walls
 
 Update spec §3.4's wording too — the plan is now as big as "the rooms it must hold **plus the fabric between them**", and roughly 20% of the extent is the exterior shell. That is a deliberate cost: it is what makes the picture read as a building rather than a floating partition diagram.
 
-- [ ] **Step 2: Restate the rules, and add the one this model needs**
+- [x] **Step 2: Restate the rules, and add the one this model needs**
 
 The seven survive, three of them in better form:
 
@@ -1912,19 +1912,19 @@ The seven survive, three of them in better form:
 
 Under the boundary model connectivity was guaranteed by construction — regions tiled and doorways linked. **Walls-as-cells can seal a pocket of floor**, and the grower is where it will happen: carving a wall between two blobs can split a concave blob, stranding its far half. This is the mirror of the unclaimed-cell defect Task 2 found, and it is not optional. Name it rule 8 in the code and note in the spec that Amendment 2 §1b.8 listed seven; this is the eighth, earned by the model change.
 
-- [ ] **Step 3: Rework the two embedders**
+- [x] **Step 3: Rework the two embedders**
 
 **`allocate`** — chain-split the *interior* (the extent shrunk by one on every side), where each split consumes one cell for its wall line: splitting a span `L` into `a` and `b` now means `a + 1 + b == L`. Then every cell on a split line and every cell of the outer ring is `Wall`, and one cell per split line becomes `Threshold(i, j)`. `MIN_CHAMBER_SPAN` still governs *interiors*. DOF is unchanged at one cut per split, so rule 7 must still pass at `{0,1,2,3}` — if it does not, the rework changed how many draws are spent and that needs saying, not absorbing.
 
 **`grow` — claim with a separation rule, and never take a cell back.** A cell is claimable only if it has no neighbour owned by a *different* chamber; leftover unclaimed interior cells become `Wall`. This is deliberately not "grow then carve": nothing is ever removed from a blob, so **blobs are connected by construction** and rule 8 holds by the same argument rather than by luck. Task 3's tunnelling fix must be adjusted to match — seed chamber `i+1` **two** cells from chamber `i` rather than adjacent, so exactly one wall cell sits between them and is available to carve into a threshold. Keep the FIFO frontier; a depth-first tendril was a real defect.
 
-- [ ] **Step 4: Simplify the render**
+- [x] **Step 4: Simplify the render**
 
 1:1. Delete the `(2w+1)` machinery and the coordinate mapping. `Floor` → `.`, `Wall` → `#`, `Threshold` → `+`. Task 4's picture-readback test gets *simpler*, and it should still read every glyph back and assert it against `cells`. Keep the legend and keep every legend noun `examine`-able — the parity contract does not change.
 
 Confirm the width assertion now reads `extent.w <= 80` rather than `2w + 1 <= 80`, in both places Task 4 put it.
 
-- [ ] **Step 5: Run everything, then read the transcript**
+- [x] **Step 5: Run everything, then read the transcript**
 
 ```bash
 cargo test -p hornvale-vessel --lib lattice:: 2>&1 | tail -14

@@ -25,7 +25,7 @@ pub use brief::{Brief, brief_of};
 pub use chamber_prose::describe_chamber;
 pub use focalize::*;
 pub use knowledge::*;
-pub use lattice::{Cell, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
+pub use lattice::{Cell, CellKind, Lattice, Plan, Rect, allocate, embed_with, extent_for, render};
 pub use purview::*;
 pub use session::Session;
 pub use snapshot::{

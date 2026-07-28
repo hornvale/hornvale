@@ -61,9 +61,15 @@ pub(crate) fn detail(kind: AnchorKind) -> &'static str {
 ///
 /// A wall is not an anchor — nothing in the interior graph is one — but the plan
 /// depicts it and names it, so §6 obliges it to answer. The line says what a wall
-/// MEANS in this world as well as what it looks like: a wall is definitionally a
-/// non-adjacency (§7 rule 2), so "no gap wide enough to pass" is the wall law
-/// spoken in the world's own voice rather than a decorative sentence.
+/// MEANS in this world as well as what it looks like: a wall is a CELL of the
+/// building's fabric, impassable by §7 rule 2, so "no gap wide enough to pass" is
+/// the wall law spoken in the world's own voice rather than a decorative sentence.
+///
+/// It also reads correctly of a thing with THICKNESS, which Task 4b's reification
+/// gave it — "set close and plumb" is masonry, not a zero-width boundary — so the
+/// sentence needed no change when the model did. Recorded because the reverse
+/// would have been a §6 drift, and a sentence that survives a model change by
+/// luck is worth noticing before the next one.
 const WALL_DETAIL: &str = "Set close and plumb, with no gap in it wide enough to pass.";
 
 /// The detail behind a noun the RENDER's legend names, if it is one.

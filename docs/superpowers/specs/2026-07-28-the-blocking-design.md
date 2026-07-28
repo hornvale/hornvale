@@ -116,18 +116,35 @@ meaning — bumps both.
 
 - Cells are **`FRAME`-tier** and never serialized (0069, unchanged). The lattice
   is derived from `(brief, address, seed)` and re-derived on entry.
-- A **wall is a non-adjacency**, definitionally. A drawn wall with no
-  corresponding non-adjacency is a lie, and §7's checker fails on it.
+- A **wall is a CELL that is occupied**, not a property of the boundary between
+  two cells. *Amended in Task 4b at Nathan's direction; this section originally
+  read "a wall is a non-adjacency, definitionally".* A wall cell is impassable,
+  and a drawn wall with no impassable cell under it is a lie that §7's checker
+  fails on. The amendment buys a 1:1 render, the model every tilemap engine
+  already speaks, a threshold that is a *place*, and a location for the `Screen`
+  and `Alcove` anchor kinds that already ship. It concedes thickness, which is
+  *more* faithful for turf, cob and rubble-stone building, not less.
 - The lattice covers **one structure**, not a region: locale-scale space stays
   topological (Amendment 2's law 2 — adjudication changes kind at the band break).
 
 ### 3.4 The extent: how big a plan is
 
-The plan is **exactly as big as the rooms it must hold.** `extent_for(structure)`
-is a pure function of the **chamber count** — one named per-chamber side, a block
-arrangement for 1..=`MAX_CHAMBERS`, anchored at the origin. It reads no brief
-field and **consumes no draw**, which is what keeps §7 rule 7's DOF count equal to
-the cut positions alone: extent is a coarse constraint, not a die roll.
+The plan is **as big as the rooms it must hold, plus the fabric between them.**
+`extent_for(structure)` is a pure function of the **chamber count** — one named
+per-chamber interior side, a block arrangement for 1..=`MAX_CHAMBERS`, anchored at
+the origin. It reads no brief field and **consumes no draw**, which is what keeps
+§7 rule 7's DOF count equal to the cut positions alone: extent is a coarse
+constraint, not a die roll.
+
+*Amended in Task 4b*, where a wall became a cell and therefore started costing
+one. Wall lines are one more than the interiors they separate, so the extent is
+`cols * CHAMBER_SIDE + (cols + 1)` per axis: 10×10 at one chamber, 19×10 at two,
+19×19 at three or four. **Roughly a fifth to two fifths of the extent is exterior
+shell** — measured at 19% for three and four chambers, 28% at two and 36% at one,
+because a ring's cost is a perimeter against an area and the smallest plan pays
+the most. That is a deliberate cost rather than overhead: the drawn border is what
+makes the picture read as a **building** rather than as a floating partition
+diagram.
 
 Two axes were considered and rejected, both for the same reason (ledger #8):
 
@@ -395,10 +412,34 @@ Amendment 2 §1b.8's seven rules, now realizable because the lattice exists:
   6  determinism  same (brief, address, seed) -> identical lattice, solved
                   from scratch, no carried state
   7  DOF          residual degrees of freedom reported as a number
+  8  reachability every Floor cell is reachable from the threshold chamber,
+                  through passable cells only
 ```
 
 Rule 7 is what makes §2's embedder discipline checkable rather than aspirational:
 if the solver's residual DOF exceeds what the graph leaves free, it is inventing.
+
+**Amendment 2 §1b.8 listed seven rules; this model earns an eighth.** Rule 8 is
+not a bonus check, it is the price of §3.3's amendment paid out loud. Under the
+boundary model connectivity was guaranteed by construction — regions tiled the
+extent and doorways linked them, so there was nowhere for a mover to be stranded.
+Walls as *cells* can **seal a pocket of floor**, and a sealed pocket is a room a
+player can see on the plan and never enter. So the grower claims with a separation
+rule and never takes a cell back, which makes rule 8 hold by argument rather than
+by luck, and rule 8 is what makes the argument falsifiable.
+
+Two of the seven also change form, and both get *stronger*:
+
+- **Rule 2** was "every drawn wall IS a non-adjacency", a claim about a
+  separately-derived set of cell pairs. It is now "two `Floor` cells of different
+  chambers are never adjacent" — a claim about the world rather than about the
+  derivation.
+- **Rule 3 stops being tautological.** Under the boundary model it was the
+  contrapositive of the wall derivation's own exemption condition read back off
+  the same ownership map. It now asserts that the kind map is total, that the
+  extent's **outer ring is entirely `Wall`** — the plan is enclosed, which an
+  embedder could fail to do and which the boundary model had nothing to say about
+  — and that thresholds and doorways name each other in both directions.
 
 ## 8. Scope
 
