@@ -41,7 +41,7 @@
 
 - **Spec:** `docs/superpowers/specs/2026-07-28-the-blocking-design.md`. Parent: `2026-07-25-the-rose-window-metaplan-design.md` §1b.
 - **No float in the layout path.** Cross-platform byte-identity depends on it. `clippy.toml` bans `f64` transcendentals outside `hornvale_kernel::math`; this code should contain no `f64` at all.
-- **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec` only. **No wall-clock time** except in a sanctioned benchmark with `#[allow(clippy::disallowed_types)]` and a comment, as `cli/tests/graph_cost.rs` does.
+- **No `HashMap`/`HashSet`** — `BTreeMap`/`BTreeSet`/`Vec`, plus `VecDeque` where a FIFO is the point (ratified in Task 3; precedent and the determinism reasoning are in `windows/scene/src/surrounds.rs:189-191`, whose iteration order is positional and therefore byte-identical). **No wall-clock time** except in a sanctioned benchmark with `#[allow(clippy::disallowed_types)]` and a comment, as `cli/tests/graph_cost.rs` does.
 - **Drift, by task** — corrected per ledger #11; the earlier "Tasks 1–5 byte-identical" contradicted §9's own artifact criterion. Verify with `regenerate-artifacts.sh` then `git diff --exit-code` over `book/src/gallery/ book/src/reference/ book/src/laboratory/`.
   - **Tasks 1–3: clean**, except the generated stream-manifest page in Task 1 (a new label is a new row). Nothing calls the embedder yet.
   - **Tasks 4–5: transcripts move, metric goldens do NOT.** These tasks add verbs to `scripts/possession-walk.txt`, so `book/src/gallery/possession-seed-42.md` moves by construction. Inspect that diff for its **content** — §9 wants a floor plan *in* it — never merely for its absence. Anything under `book/src/laboratory/` moving in these tasks is a defect, not a re-pin.
@@ -1359,12 +1359,42 @@ refuses a second placement instead of displacing the first."
 **Interfaces:**
 - Produces: `render(&Lattice, &Structure, at: usize) -> Plan`, where `Plan { picture: String, legend: Vec<(char, &'static str)> }`. The legend is not decoration — it is what the parity test walks.
 
+**Budget note carried forward from Task 3:** one `allocate` now costs ~27.6 µs release / ~209 µs debug, up 3.3× from Task 1's 6.79 µs because `owner` adds 256 `BTreeMap` inserts. Still inside the 1000 µs ceiling but with ~5× headroom rather than ~16×, so a render that re-derives the lattice per cell, or anything that raises `CHAMBER_SIDE`, needs measuring rather than assuming. `lattice_here()` derives **once per call**, not per cell.
+
 **The verb is `map`, and it already exists.** `session.rs:613` dispatches `"map" => self.map(rest)`, which draws the locale chart. Indoors it draws the floor plan instead. That is the same band-awareness `look` already has (`"look" if self.inside.is_some()`), and it is why no new verb is invented: §6's contract is that every pane capability must first be a verb, so the fewer verbs that mean one thing each, the better. `map out [N]` indoors refuses — a plan has no coarser rung, and the refusal names the verb that fixes it (`out`).
 
 **Two things this task must reverse, both byte-pinned:**
 
 1. `INDOOR_EXAMINE_REFUSAL` (`session.rs:50`) — "nothing here rewards a closer look yet." The parity test *requires* every depicted noun to be `examine`-able, so this refusal must go, which means authoring a detail line per `AnchorKind`. Its own doc comment says "Authoring real chamber detail is a later campaign's work"; this is that campaign. Its assertion at `session.rs:2145` moves with it.
 2. Nothing else. `INDOOR_LATERAL_REFUSAL` is **Task 5's** business — do not touch it here, so that each reversal lands with the capability that justifies it.
+
+- [ ] **Step 0: Make rule 3 non-vacuous, before building on it**
+
+Task 3 established that rule 3 is **tautological as written**: it asserts that every unwalled cross-region pair touches a door cell, which is the contrapositive of `walls_around`'s own exemption condition evaluated over the same ownership map. It therefore checks the wall derivation's *self-consistency*, not closure independently, and it passed without ever being able to fail.
+
+That is honest but thin, and this task is the first one to build a *picture* on top of the wall set. Add a **negative control**: a hand-authored `Lattice` whose `walls` omits one boundary pair that its `owner` map says is a boundary, asserted to **fail** rule 3's condition. Same posture as Task 1's implementer deleting a type-audit tag to prove the tool reads the file.
+
+```rust
+    #[test]
+    fn rule_3_actually_fails_on_an_unclosed_lattice() {
+        // Rule 3 passes on every derived lattice by construction. A rule that
+        // cannot fail is not checking anything, so prove it can: take a real
+        // lattice, delete one wall, and assert the closure check catches it.
+        let (_, mut l) = /* any two-region lattice from the corpus */;
+        let victim = *l.walls.iter().next().expect("a two-region plan has walls");
+        l.walls.remove(&victim);
+        let doors: BTreeSet<Cell> = l.doorways.iter().map(|&(_, _, c)| c).collect();
+        let leak = openings(&l).into_iter().find(|&(a, b)| {
+            region_of(&l, a) != region_of(&l, b) && !doors.contains(&a) && !doors.contains(&b)
+        });
+        assert!(
+            leak.is_some(),
+            "removing a wall did not produce an unaccounted opening, so rule 3              cannot detect one either"
+        );
+    }
+```
+
+Record in rule 3's own doc comment what would make it load-bearing rather than self-consistent: a `walls` set written by anything other than `walls_around` — the spec's predicted radial and branching methods, or a hand-authored fixture. Then it is a real check waiting for a second writer, which is a different thing from a check that passed.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1529,7 +1559,14 @@ Create `windows/vessel/src/lattice/render.rs`. The alphabet is deliberately tiny
 //!
 //! Walls are drawn from `Lattice::walls`, never inferred from region boundaries a
 //! second time. A wall drawn by independent arithmetic is exactly how a picture
-//! comes to disagree with the world it depicts (§7 rule 2).
+//! comes to disagree with the world it depicts (§7 rule 2) — and Task 3 found
+//! exactly that defect twice, in two passes deciding independently what a boundary
+//! was, so this is not a hypothetical.
+//!
+//! Which chamber a cell belongs to comes from `Lattice::owner`, NEVER from
+//! `regions`: a grown lattice's rects are overlapping bounding boxes, so a rect
+//! scan answers a different question and happens to agree only for rectilinear
+//! plans (ledger #17).
 
 use super::{Cell, Lattice};
 use crate::structure::Structure;
