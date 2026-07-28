@@ -122,14 +122,47 @@ close inside the mechanism**, and a second bound sat on top of it: once the asse
 vassal's increment the vassal is milked exactly flat, and a flat vassal emits signal `0.0`, so the
 demand stops easing and the pair parks.
 
-Milk-don't-kill and the secular cycle want opposite things. The owner chose the cycle:
+Milk-don't-kill and the secular cycle want opposite things. The owner chose the cycle.
+
+**The expression this section originally published is superseded twice over, and the shipped rule
+is below it.** As written the amendment said:
 
 ```
-bleed      =  max(0, population − FARM_FLOOR)          // what a patron may take from the STOCK
+bleed      =  max(0, population − FARM_FLOOR)          // SUPERSEDED — see below
 remittance =  min(assessment, (surplus + bleed) × (1 − concealment))
 ```
 
-A patron demanding more than the surplus now genuinely **shrinks** its vassal, the health signal
+That is not what ships, for two separate reasons, both of them measurements rather than choices.
+
+*First, it breached its own floor.* At collection time `population` **already carries this epoch's
+increment**, so `population − FARM_FLOOR` double-counts the increment and reaches *through* the
+floor by up to that amount — measured at task 5b: a vassal that began an epoch at 3.157 was farmed
+to 1.746 under a floor of 2.0. `bleed` is therefore measured against the stock the epoch **found**,
+`stock = population − surplus`, which is what §4.2b's own "a floor, not an exemption" requires.
+
+*Second, amendment 4 (§4.3a) replaced the line the reach stops at.* It is no longer the bare
+`FARM_FLOOR` but the patron's own **setpoint**, discounted by its horizon and by how many other
+vassals it holds — the same rule, with the patron's character supplying the target. A vassal
+standing *below* that setpoint is left to recover rather than merely taxed less: only the growth
+that carries it past the line is harvested, without which a below-target vassal hands over its whole
+increment every epoch and is held flat forever (the floor-pinned attractor the investigation
+measured at 79.2% of relations).
+
+**What ships:**
+
+```
+stock      =  population − surplus                      // what the epoch FOUND, increment excluded
+target     =  target_stock(patron_people, other_vassals_held, eff_capacity(vassal_cell))
+              =  max(FARM_FLOOR, FARM_FLOOR + horizon × (eff/2 − FARM_FLOOR))    // §4.3a, §4.3c
+bleed      =  max(0, stock − target)                    // taken from the STOCK, down to the setpoint
+harvest    =  max(0, surplus − max(0, target − stock))  // the increment, above the setpoint only
+remittance =  min(assessment, (harvest + bleed) × (1 − concealment))
+```
+
+`FARM_FLOOR` survives as the floor under `target`, never as the target itself; the two coincide
+only for a maximally short-horizon patron, which is exactly the Clark's-case patron §4.3a intends.
+
+A patron demanding more than the surplus still genuinely **shrinks** its vassal, the health signal
 goes negative from tribute alone, the demand eases, the vassal recovers — and the loop closes
 inside the mechanism, which is what §1 sells and what neither prior formulation could deliver.
 
@@ -339,6 +372,27 @@ and the readout confirms or falsifies a *prediction* rather than reporting a num
 - **Dissolution is a coherence floor, not a feature.** A relation ends when either party's
   community closes. This is required for the model to be coherent and is *not* the deferred
   collapse-release; what is deferred is the freed subordinates *cascading*, not the cleanup.
+
+  **Amendment 5 (§4.3e) qualified this rule and it was never restated here; it is restated now.**
+  A close is no longer always a death. A community that closes and reopens elsewhere *as one
+  movement* — driven off by a raider, taking somebody else's cell by force, evicted by a hostile
+  era, or fleeing a patron — has **relocated**, and relocation is **role-asymmetric**:
+
+  - the relations it holds **as patron** survive the move, re-keyed onto the seat it reopens at;
+  - the relation it owes **as subordinate** does not — it is dissolved by the close exactly as a
+    death would dissolve it, and the mover arrives free.
+
+  Dissolution-on-close is still the single unconditional cleanup point; preserving is something a
+  caller does deliberately, immediately before the close, and everything it does not lift is
+  dissolved. A relation that survives a move is **re-established**, not merely carried: the patron
+  on the far side is a new community with a new `EntityId`, so the relation's start day is
+  re-stamped to the reseat year and no emitted fact ever predates either entity it names.
+
+  Two things follow that a reader of the unqualified rule would get wrong. A relation may **outlive
+  the community that formed it** while still naming two living communities, which is why §8.0's
+  fate list has more exits than "either party died". And the deferred collapse-release is
+  *narrower* than it looks: a beaten patron does not free its vassals, it arrives holding them and
+  weakened — which is the state §4.3d's revolt needs in order ever to fire.
 - A community has **at most one** patron, and a subordinate may not itself take one. Slice 2's
   relation graph is therefore a set of **one-level stars**, not a tree — depth is the deferred
   chaining lever (§9), so cycles are structurally impossible rather than merely prevented.
@@ -445,8 +499,32 @@ re-deriving that the `Fact` shape itself does not change.
    behaviour across patrons must be **multi-modal, not a single attractor** — the pre-amendment
    state had `assessment / eff_capacity` at exactly one value across all 2258 relations, which is
    the failure this criterion exists to detect. Report the spread of extraction rate and of relation
-   lifetime *by patron people*, and the share of relations ending in each fate: persisted to `now`,
-   vassal fled, vassal revolted, vassal extinguished, patron fell. **Extinction must be the
+   lifetime *by patron people*, and the share of relations ending in each fate. **Amendment 5
+   (§4.3e) added three exits to this list and they were left unnamed until the campaign's final
+   review; the list is complete here.** A relation ends in exactly one of:
+
+   1. **persisted to `now`** — it never ended;
+   2. **the vassal fled** (§4.3d) — it walked off its cell rather than go on paying;
+   3. **the vassal revolted** (§4.3d) — it came to out-muscle its patron by `RAID_MARGIN`;
+   4. **the vassal was extinguished** — famine, annihilation, or lost on the road;
+   5. **the patron fell** — its community died, and dissolution is two-sided;
+   6. **the vassal was conquered** — driven off its cell by a third party. It survives, but being
+      driven off is a *relocation*, and a relocating community drops its obligation (§4.3e), so it
+      buys its freedom with the eviction;
+   7. **the vassal conquered somebody** — it took another community's cell by force and moved onto
+      it. The same asymmetry, reached from the other side: a vassal that wins a war buys its freedom
+      with the move;
+   8. **the vassal was moved by climate** — its cell turned uninhabitable and it migrated to a
+      refuge. Again a relocation, again the obligation is left behind.
+
+   A **patronage transfer** is deliberately not on this list: it replaces one patron with another
+   rather than ending the relation (§4.4's hysteresis note), and pooling it in would read churn
+   between rival patrons as relation mortality. Exits 6–8 are all the same rule seen three ways —
+   *a living vassal that moves, for any reason, arrives free* — and none of them is a death, so a
+   fate readout that offered only "persisted / fled / revolted / died / patron died" would have to
+   misfile them.
+
+   **Extinction must be the
    exception and must concentrate among short-horizon patrons** — if the bloodiest outcome is
    common, or is spread evenly across horizons, the discount model is not doing what §4.3a claims.
 1. **Subordination fires.** Seed-42 forms tribute relations at volume, on targets the shipped

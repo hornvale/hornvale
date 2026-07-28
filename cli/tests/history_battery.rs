@@ -29,8 +29,17 @@
 //! concealment term (task 4) re-measured them a third time**, because it lets
 //! a subordinate keep part of its surplus and so changes who survives where:
 //! the sweep migration minimum rose again to 42 (seed 1) and the median
-//! correlation moved back out to -0.3527. Every gate still passes; no floor
-//! has moved since the re-sync below.
+//! correlation moved back out to -0.3527.
+//!
+//! **The log above stops at task 4; the committed report does not.** Tasks 5b
+//! (the bleed), 5c–5f (the strategy family) and 5g (relation continuity across
+//! relocation) each re-measured every row again, and 5g is where the committed
+//! `book/src/laboratory/generated/the-history/` artifact was last regenerated.
+//! Read the current numbers off that artifact, not off the paragraph above:
+//! the sweep migration minimum is **22** (seed 13, not seed 1's 42), the
+//! median depth/capacity correlation is **-0.2815** (seed 3), and seed 42's
+//! own Full-depth correlation is **-0.1092**. Every gate still passes; **no
+//! floor has moved** since the re-sync below, here or anywhere in this file.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{Seed, World};
@@ -106,6 +115,15 @@ const MIN_RESTACKED_SITES: u64 = 1;
 // floor 2, down from 49). Both still clear their floors by a wide margin, and
 // neither floor moves; the restacking minimum is the one to watch, since it is
 // the first of these numbers to fall since the epoch.
+//
+// Final review, Minor 4: the log above stops at task 4 while the committed
+// report was last regenerated at task 5g, so both figures in the paragraph
+// above are superseded. Off the current artifact the migration minimum is
+// **22** (seed 13, floor 5) and the restacking minimum **43** (seed 100, floor
+// 2). Migration's minimum has therefore fallen back roughly to where The
+// Tithe's task 3 found it, and it — not restacking — is now the one to watch.
+// **Neither floor is moved**: they are inertness floors, and both are still
+// cleared several times over.
 const SWEEP_MIGRATION_FLOOR: u64 = 5;
 const SWEEP_MIN_RESTACKED: u64 = 2;
 
@@ -245,6 +263,24 @@ fn history_gates_full_world_and_cross_seed() {
     // rather than `Settlements`), so it did not show up in the "band emptied
     // to a single occupant" reading above — but it moved in the same
     // direction and is worth watching alongside seed 2.
+    //
+    // **Final review, Minor 4: every number above this line is dated at task
+    // 4, and the committed report was last regenerated at task 5g.** Tasks
+    // 5b–5g re-measured the sweep three more times; the current readings, off
+    // `book/src/laboratory/generated/the-history/rows.csv`, are:
+    //
+    //   seed:  1       2       3       7       13      42      100     256     777
+    //   corr: -0.2809 -0.1602 -0.2815 -0.1708 -0.3560 -0.1092 -0.7254 -0.5918 -0.5517
+    //
+    // All nine are still negative, so the finding holds and the gate below is
+    // not moved. The **median is -0.2815** (seed 3), not the -0.3527 recorded
+    // above; seed 42's own Full-depth reading is **-0.1092**, not -0.2181, and
+    // it is now the weakest of the ten measured worlds outright rather than
+    // the second-weakest. The shallow band the T5b note watched has two sweep
+    // occupants again (seed 2 at -0.1602 and seed 7 at -0.1708), and seed 42
+    // sits below both. The advice stands and is now more pressing: the next
+    // campaign to touch this number should expect to have to re-argue the
+    // finding rather than re-pin it.
     let mut corrs: Vec<f64> = rows
         .iter()
         .map(|r| r.strat.depth_capacity_correlation)

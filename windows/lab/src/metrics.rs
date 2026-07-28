@@ -5575,7 +5575,7 @@ mod tests {
         // never carried.
         //
         // **The Tithe's vassal agency (task 5f, spec §4.3d) moves it to a
-        // coastal tropical-rainforest cell.** Six vassals on seed 42 now walk
+        // coastal tropical-rainforest cell.** Eight vassals on seed 42 walk
         // away from patrons whose demand they could not regrow, and a
         // departure both frees a cell and re-seats a people elsewhere — so the
         // `DAUGHTER_PROB` draw sequence downstream of the first flight shifts
