@@ -272,6 +272,7 @@
 - [The Tithe](./chronicle/the-tithe.md)
 - [The Occlusion](./chronicle/the-occlusion.md)
 - [The Formations](./chronicle/the-formations.md)
+- [The Shoal](./chronicle/the-shoal.md)
 
 # Appendix: The Frontier
 
