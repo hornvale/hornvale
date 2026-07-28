@@ -306,7 +306,13 @@ impl LocaleContext {
 
         let substrate = crate::substrate::substrate_at(&self.climate, &self.terrain, best.0);
         let micro = crate::micro::micro_field(addr.seed(self.seed));
-        let mut regime = crate::grammar::derived_regime(self.seed, addr, biome, substrate, micro);
+        let mut regime = crate::grammar::derived_regime(
+            self.seed,
+            addr,
+            self.climate.biome_expr_at(best.0),
+            substrate,
+            micro,
+        );
         if let Some(placed) = self.budget.regime_at(best.0) {
             let negations = Negations {
                 substrate: regime.negations.substrate,
@@ -314,7 +320,13 @@ impl LocaleContext {
                 kingdom: placed.kingdom,
                 endemic: placed.endemic,
             };
-            let descriptor = crate::grammar::render(negations, micro, biome, self.seed, addr);
+            let descriptor = crate::grammar::render(
+                negations,
+                micro,
+                self.climate.biome_expr_at(best.0),
+                self.seed,
+                addr,
+            );
             regime = Regime {
                 negations,
                 micro,

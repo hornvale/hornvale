@@ -4,7 +4,7 @@
 
 use crate::regime::{EnergySource, Kingdom, MicroField, Negations, Regime, Substrate};
 use crate::streams::{LOCALE_SUBSTRATE_DETAIL, LOCALE_VARIETY};
-use hornvale_climate::Biome;
+use hornvale_climate::{BiomeExpr, Formation, Stratum};
 use hornvale_kernel::seed::StreamLabel;
 use hornvale_kernel::{RoomAddr, Seed};
 
@@ -15,7 +15,7 @@ type Pool = &'static [(f64, &'static str)];
 pub(crate) fn derived_regime(
     seed: Seed,
     addr: &RoomAddr,
-    biome: Biome,
+    expr: BiomeExpr,
     substrate: Substrate,
     micro: MicroField,
 ) -> Regime {
@@ -25,7 +25,7 @@ pub(crate) fn derived_regime(
         kingdom: Kingdom::PlantAnimal,
         endemic: false,
     };
-    let descriptor = render(negations, micro, biome, seed, addr);
+    let descriptor = render(negations, micro, expr, seed, addr);
     Regime {
         negations,
         micro,
@@ -38,7 +38,7 @@ pub(crate) fn derived_regime(
 pub(crate) fn render(
     negations: Negations,
     micro: MicroField,
-    biome: Biome,
+    expr: BiomeExpr,
     seed: Seed,
     addr: &RoomAddr,
 ) -> String {
@@ -46,14 +46,14 @@ pub(crate) fn render(
     let variety = draw(
         room,
         LOCALE_VARIETY,
-        variety_pool(biome, negations.substrate),
+        variety_pool(expr.formation, expr.stratum, negations.substrate),
     );
     let substrate_detail = draw(
         room,
         LOCALE_SUBSTRATE_DETAIL,
         substrate_pool(negations.substrate),
     );
-    let habitat = micro_habitat(micro);
+    let habitat = micro_habitat(micro, expr);
     let exotic = exotic_clause(negations);
     // Assemble, dropping empty clauses.
     [variety, substrate_detail, habitat, exotic]
@@ -78,7 +78,8 @@ fn draw(room: Seed, label: StreamLabel<'_>, pool: Pool) -> String {
 }
 
 /// The micro-habitat clause reads the MicroField deterministically (no draw).
-fn micro_habitat(micro: MicroField) -> String {
+fn micro_habitat(micro: MicroField, expr: BiomeExpr) -> String {
+    let _ = expr;
     let relief = if micro.relief > 0.33 {
         "on a rise"
     } else if micro.relief < -0.33 {
@@ -129,16 +130,19 @@ pub(crate) fn exotic_clause(n: Negations) -> String {
 
 /// Base-variety pool per biome (+ substrate for deserts). Real content drawn
 /// from cycle-02 Appendix A; extend as authoring amplifies (decision 0009).
-fn variety_pool(biome: Biome, substrate: Substrate) -> Pool {
-    match (biome, substrate) {
-        (Biome::Desert, Substrate::Sand) => &[(3.0, "erg dunes"), (2.0, "a nabkha field")],
-        (Biome::Desert, Substrate::Evaporite) => &[(3.0, "a cracked playa"), (2.0, "a salt pan")],
-        (Biome::Desert, Substrate::Basaltic) => &[(3.0, "a hamada of bare rock")],
-        (Biome::Desert, _) => &[
+fn variety_pool(formation: Formation, stratum: Stratum, substrate: Substrate) -> Pool {
+    let _ = stratum;
+    match (formation, substrate) {
+        (Formation::Desert, Substrate::Sand) => &[(3.0, "erg dunes"), (2.0, "a nabkha field")],
+        (Formation::Desert, Substrate::Evaporite) => {
+            &[(3.0, "a cracked playa"), (2.0, "a salt pan")]
+        }
+        (Formation::Desert, Substrate::Basaltic) => &[(3.0, "a hamada of bare rock")],
+        (Formation::Desert, _) => &[
             (3.0, "a reg of wind-swept gravel"),
             (2.0, "a yardang field"),
         ],
-        (Biome::TemperateForest | Biome::TemperateRainforest, _) => &[
+        (Formation::TemperateForest | Formation::TemperateRainforest, _) => &[
             (3.0, "old-growth timber"),
             (3.0, "dense understory"),
             (2.0, "a mossy hollow"),
@@ -148,20 +152,20 @@ fn variety_pool(biome: Biome, substrate: Substrate) -> Pool {
             (1.0, "a deadfall tangle"),
             (1.0, "a shaft of clear light"),
         ],
-        (Biome::Taiga, _) => &[
+        (Formation::Taiga, _) => &[
             (3.0, "a boreal stand"),
             (2.0, "a peat hollow"),
             (1.0, "a burnt snag"),
         ],
-        (Biome::Tundra | Biome::Alpine, _) => &[
+        (Formation::Tundra | Formation::Alpine, _) => &[
             (3.0, "frost-heaved ground"),
             (2.0, "a boulder field"),
             (2.0, "wind scour"),
         ],
-        (Biome::Savanna | Biome::TemperateGrassland, _) => {
+        (Formation::Savanna | Formation::TemperateGrassland, _) => {
             &[(3.0, "open sward"), (2.0, "a scattered copse")]
         }
-        (Biome::TropicalRainforest | Biome::TropicalSeasonalForest, _) => &[
+        (Formation::TropicalRainforest | Formation::TropicalSeasonalForest, _) => &[
             (3.0, "buttressed canopy"),
             (2.0, "a liana tangle"),
             (2.0, "a stream gully"),
@@ -185,6 +189,7 @@ fn substrate_pool(substrate: Substrate) -> Pool {
 mod tests {
     use super::*;
     use hornvale_climate::Biome;
+    use hornvale_climate::BiomeExpr;
     use hornvale_kernel::{RoomAddr, Seed};
 
     fn micro0() -> MicroField {
@@ -202,8 +207,20 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let a = derived_regime(Seed(42), &addr, Biome::Desert, Substrate::Sand, micro0());
-        let b = derived_regime(Seed(42), &addr, Biome::Desert, Substrate::Sand, micro0());
+        let a = derived_regime(
+            Seed(42),
+            &addr,
+            BiomeExpr::for_legacy(Biome::Desert),
+            Substrate::Sand,
+            micro0(),
+        );
+        let b = derived_regime(
+            Seed(42),
+            &addr,
+            BiomeExpr::for_legacy(Biome::Desert),
+            Substrate::Sand,
+            micro0(),
+        );
         assert_eq!(a, b);
     }
 
@@ -214,7 +231,13 @@ mod tests {
             face: 3,
             path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
         };
-        let r = derived_regime(Seed(42), &addr, Biome::Desert, Substrate::Sand, micro0());
+        let r = derived_regime(
+            Seed(42),
+            &addr,
+            BiomeExpr::for_legacy(Biome::Desert),
+            Substrate::Sand,
+            micro0(),
+        );
         assert_eq!(r.negations.energy, EnergySource::Sunlit);
         assert_eq!(r.negations.kingdom, Kingdom::PlantAnimal);
         assert!(r.strangeness <= 15.0);
@@ -233,12 +256,52 @@ mod tests {
                 path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, last],
             };
             let micro = crate::micro::micro_field(addr.seed(Seed(42)));
-            let r = derived_regime(Seed(42), &addr, biome, Substrate::Ordinary, micro);
+            let r = derived_regime(
+                Seed(42),
+                &addr,
+                BiomeExpr::for_legacy(biome),
+                Substrate::Ordinary,
+                micro,
+            );
             seen.insert(r.descriptor);
         }
         assert!(
             seen.len() >= 3,
             "adjacent forest rooms should mostly differ, got {seen:?}"
         );
+    }
+
+    /// The pre-campaign land descriptors, captured from the code as it stood
+    /// before the re-key. The re-key must be invisible: matching on
+    /// `Formation` instead of `Biome` may not change a single land draw.
+    const LEGACY_LAND: &[(Biome, &str)] = &[
+        (Biome::Tundra, "frost-heaved ground"),
+        (Biome::Taiga, "a boreal stand"),
+        (Biome::TemperateGrassland, "open sward"),
+        (Biome::TemperateForest, "dense understory"),
+        (Biome::TemperateRainforest, "dense understory"),
+        (Biome::Desert, "a reg of wind-swept gravel"),
+        (Biome::Savanna, "open sward"),
+        (Biome::TropicalSeasonalForest, "buttressed canopy"),
+        (Biome::TropicalRainforest, "buttressed canopy"),
+        (Biome::Alpine, "frost-heaved ground"),
+    ];
+
+    #[test]
+    fn re_keying_the_pool_leaves_every_land_descriptor_untouched() {
+        let addr = RoomAddr {
+            face: 3,
+            path: vec![0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+        };
+        let n = Negations {
+            substrate: Substrate::Ordinary,
+            energy: EnergySource::Sunlit,
+            kingdom: Kingdom::PlantAnimal,
+            endemic: false,
+        };
+        for (biome, expected) in LEGACY_LAND {
+            let got = render(n, micro0(), BiomeExpr::for_legacy(*biome), Seed(42), &addr);
+            assert_eq!(&got, expected, "{biome:?} moved under the re-key");
+        }
     }
 }
