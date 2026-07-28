@@ -1,6 +1,18 @@
 # The Tithe — Living-Community C3, Slice 2: Tribute
 
-**Status:** G3 CLEARED (Nathan, 2026-07-26). Two calls are **provisional and refinable** rather
+**Status:** **Shipped 2026-07-28** (campaign *The Tithe*). Amended five times, four of them
+following a disappointing measurement — §4.2b (the bleed), §4.3 (the corrected oscillator), §4.3a–d
+(extraction as a discount-rate family) and §4.3e (the wounded patron, whose predictions were
+preregistered *before* its code existed). §8.0's variety criterion is **met**; §5's headline is a
+**second documented falsification** — accumulation roughly doubled the branching ratio to σ
+0.109–0.115 and left the distribution geometric with a hard cutoff. The secondary secular-cycle axis
+is a **null**: §4.3a's setpoint turned §4.3's two-signed feedback into a converging regulator. Two
+provisional calls survive as shipped and refinable, and one spec surface arrived by omission (a
+raider that is itself a vassal escapes its lord by conquering a cell). Chronicle:
+[The Tithe](https://github.com/hornvale/hornvale/blob/main/book/src/chronicle/the-tithe.md).
+Retrospective: [the-tithe](https://github.com/hornvale/hornvale/blob/main/docs/retrospectives/the-tithe.md).
+
+*Original status —* G3 CLEARED (Nathan, 2026-07-26). Two calls are **provisional and refinable** rather
 than deeply justified, and are flagged here so a later reader does not mistake them for settled:
 (a) the productivity test for the subordinate branch is `pressure < 1` — a reasonable reading of
 "has surplus to take", not a derived threshold; (b) a second bid on an already-subordinated
