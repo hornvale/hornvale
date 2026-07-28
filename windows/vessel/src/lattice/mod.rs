@@ -417,15 +417,21 @@ mod tests {
 
     /// Wall-time ceiling for ONE `allocate` call on the widest extent
     /// `extent_for` can derive (4 chambers, 16x16). Measured on an M-series
-    /// laptop: **6.79 us** median in RELEASE, **62.5 us** median in DEBUG — a
-    /// 9.2x gap, so the profile has to be stated with the number or it means
-    /// nothing (this project measured the same ~10x gap during The Lintel).
+    /// laptop: **27.6 us** median in RELEASE, **209 us** median in DEBUG — a
+    /// 7.6x gap, so the profile has to be stated with the number or it means
+    /// nothing (this project measured a similar ~10x gap during The Lintel).
     ///
-    /// Budgeted at ~16x the DEBUG median rather than a tight multiple of the
-    /// release one, because this test runs in the debug commit gate and debug's
-    /// p99 alone is 186 us. It is a falsification ceiling for a real regression
-    /// — an accidental quadratic in `walls_around`, say, whose cost is currently
-    /// `extent.area()` `BTreeMap` probes — not a target to approach.
+    /// **Re-measured in Task 3, and it moved by 3.3x** (from 6.79 us release /
+    /// 62.5 us debug), because `Lattice` now carries per-cell ownership: 256
+    /// `BTreeMap` inserts plus `walls_around`'s probes cost more than the rect
+    /// scans they replaced. That is the price of §7 rules 1–4 being checkable
+    /// over a GROWN lattice at all, whose bounding rects overlap — so it is paid
+    /// deliberately, and recorded rather than absorbed.
+    ///
+    /// The ceiling stays where Task 1 set it, at ~5x the new debug median. It is
+    /// a falsification ceiling for a real regression — an accidental quadratic in
+    /// `walls_around`, say, whose cost is currently `extent.area()` `BTreeMap`
+    /// probes — not a target to approach.
     /// type-audit: bare-ok(count)
     const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
 
