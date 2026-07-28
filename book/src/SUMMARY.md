@@ -261,6 +261,7 @@
 - [The Convalescence](./chronicle/the-convalescence.md)
 - [The Action Clock](./chronicle/the-action-clock.md)
 - [The Accession](./chronicle/the-accession.md)
+- [The Shelf-Mark](./chronicle/the-shelf-mark.md)
 - [The Actants](./chronicle/the-actants.md)
 - [The Hoist](./chronicle/the-hoist.md)
 

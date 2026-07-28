@@ -36,12 +36,30 @@ resolve; do not add new content under `docs/vision/`.
 ## The drift-check enforces the above
 
 `cli/tests/docs_consistency.rs` runs inside the normal commit gate (`make
-gate`, via `cargo nextest run --workspace`) and asserts three invariants:
+gate`, via `cargo nextest run --workspace`). It asserts two families of
+invariant — that references *resolve*, and that registry rows are *shaped
+like rows*.
+
+Reference integrity:
 
 1. every `## ` section in the frontier is listed in the Contents ToC;
 2. registry IDs are unique;
 3. every cross-link in the frontier, the registry, and `README.md` resolves —
    both the file and, for `#fragment` links, the target heading.
+
+Row form (added by The Shelf-Mark, which found three rows whose unescaped
+`|` had been silently dropping their **Where** pointer from the published
+page — a defect the reference checks above cannot see):
+
+4. every row has exactly five columns, counting `\|` as an escape and not a
+   separator;
+5. the Idea cell is ≤ 600 characters, unless the row is grandfathered in
+   `cli/tests/fixtures/registry-length-waivers.txt` — an append-never list;
+6. Status is one of the six documented values (the category prefixes stay
+   derived from the file; the status vocabulary is closed);
+7. no *new* numbered ID appears, per decision `0026-slugs-not-numbers` —
+   the existing 403 are frozen in `cli/tests/fixtures/registry-numbered-ids.txt`;
+8. no row has an empty **Where** cell.
 
 Run it directly while editing docs:
 
