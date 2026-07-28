@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** in progress.
+**Status:** COMPLETE — merged. See [the chronicle](../../../book/src/chronicle/the-formations.md).
 
 **Goal:** Disentangle `climate::Biome`'s two conflated taxonomies — community
 types and depth strata — into the faceted expression The Stratum specifies,
