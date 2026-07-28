@@ -11,18 +11,39 @@ hornvale_kernel::stream_labels! {
     /// its first commit (decision 0073): this layer is expected to churn, so
     /// bumping it must not disturb `room/child` or `room/face`.
     ///
+    /// **STILL AT v1 AFTER The Blocking, and NOTHING DRAWS FROM IT.** Verified by
+    /// grep: this literal has exactly one occurrence in the workspace — this
+    /// declaration. `selection` and `selection_for` take no seed, so the label
+    /// versions a derivation rather than a stream, and bumping it on its own
+    /// re-mints nothing. A bump with no moved derivation is an *empty* epoch: it
+    /// declares a discontinuity that did not occur and costs a permanent manifest
+    /// row. The Blocking measured before deciding and did not bump.
+    ///
     /// **LIVE as of The Threshold — read this before adding a pattern.** Under
     /// The Hearth this label versioned nothing that could move a world: no room
     /// derived an interior and every warmth read was `None`, so the inventory
     /// was free to grow. That is no longer true. A creature now stands at an
-    /// anchor and its thermal drive reads the warmth there, so a larger
-    /// inventory means a different composed interior, which means different
-    /// warmth, which means different committed drive history. **Adding or
-    /// reordering a pattern is an EPOCH, not a tweak** — worlds are reproducible
-    /// within one and not across it (decision 0072). Note also that `selection`
-    /// admits a pattern requiring another only once that other is present, so
-    /// the inventory's ORDER is load-bearing even though the draw keys by name:
-    /// inserting a pattern before its requirement silently drops it.
+    /// anchor and its thermal drive reads the warmth there, so a *locale's*
+    /// composed interior implies a warmth a committed drive reads.
+    ///
+    /// **The exact condition, corrected by The Blocking.** This comment used to
+    /// say flatly that adding or reordering a pattern is an epoch. That became
+    /// over-strict the moment role gating landed, and an over-strict warning is
+    /// one that gets ignored — which is precisely how an *undeclared* epoch
+    /// ships. The condition now has three cases, stated in full on
+    /// [`crate::interior::INVENTORY`] and in summary here:
+    ///
+    /// - **Reordering or inserting: always an epoch.** The inventory's ORDER is
+    ///   the grammar's dependency order, because a pattern requiring another is
+    ///   admitted only once that other is present.
+    /// - **Appending with `at_locale: true`: an epoch.** It changes what a locale
+    ///   composes, so it changes warmth, so it changes committed drive history.
+    ///   Worlds are reproducible within an epoch and not across one (0072).
+    /// - **Appending with `at_locale: false`: LATENT.** No live read reaches it.
+    ///   The Blocking appended five such patterns (the chamber roles' vocabulary)
+    ///   and moved no metric golden. The gate opens on the first mark committed
+    ///   *inside a chamber* — followup: `docs/followups.md`, TOOL/idea-registry
+    ///   row — and on that day the deferred epoch becomes a real one.
     ROOM_FURNISHING = "room/furnishing/v1" => "which patterns a room draws";
     /// Stream label for which chambers a structure has (The Lintel).
     ///

@@ -181,11 +181,11 @@ mod tests {
     }
 
     fn built() -> Brief {
-        Brief::from_parts(None, None, None, None, true, true)
+        Brief::from_parts(None, None, None, None, 0, true, true)
     }
 
     fn wild() -> Brief {
-        Brief::from_parts(None, None, None, None, false, true)
+        Brief::from_parts(None, None, None, None, 0, false, true)
     }
 
     /// Every (structure, lattice) pair the render is checked over: both methods,

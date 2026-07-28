@@ -20,6 +20,11 @@ pub(crate) fn noun(kind: AnchorKind) -> Option<&'static str> {
         AnchorKind::Alcove => Some("an alcove"),
         AnchorKind::Pool => Some("a still pool"),
         AnchorKind::Log => Some("a fallen log"),
+        AnchorKind::Strongbox => Some("a strongbox"),
+        AnchorKind::HighSeat => Some("a high seat"),
+        AnchorKind::Loom => Some("a loom"),
+        AnchorKind::Anvil => Some("an anvil"),
+        AnchorKind::Altar => Some("an altar"),
     }
 }
 
@@ -54,6 +59,17 @@ pub(crate) fn detail(kind: AnchorKind) -> &'static str {
         AnchorKind::Alcove => "A recess cut back from the main space, deep enough to sit in.",
         AnchorKind::Pool => "Still water, holding the light that reaches it.",
         AnchorKind::Log => "A fallen trunk, its bark sloughing where the damp got in.",
+        AnchorKind::Strongbox => {
+            "A banded chest, low and heavier than it looks, its lid seated flush."
+        }
+        AnchorKind::HighSeat => {
+            "A carved chair, set so that whoever sits in it sees the door first."
+        }
+        AnchorKind::Loom => {
+            "An upright frame, its warp weighted, a hand's width of cloth grown up it."
+        }
+        AnchorKind::Anvil => "A block of iron on a sunk stump, bright where the work lands.",
+        AnchorKind::Altar => "A low stone table, worn hollow at the centre and darkly stained.",
     }
 }
 
@@ -101,9 +117,10 @@ pub(crate) fn glyph_detail(noun: &str) -> Option<&'static str> {
 /// Purview's chart follows in sharing the prose's nouns).
 ///
 /// The session also consults it as a LENIENT fallback in `enter <named>`: a
-/// prose noun is accepted only where the chamber has exactly one aperture,
-/// because every chamber of a structure derives the identical interior and so
-/// noun lists cannot tell two apertures apart. Apertures themselves are named by
+/// prose noun is accepted only where the chamber has exactly one aperture.
+/// Chambers of one structure differ as of The Blocking, but every chamber role's
+/// prose names a doorway, so noun lists still cannot reliably tell two apertures
+/// apart. Apertures themselves are named by
 /// DIRECTION (`further in`), which is not a prose noun at all — so this
 /// catalogue does not bound what the player may be asked to type, only what a
 /// chamber's prose may say.
@@ -156,7 +173,7 @@ mod tests {
     use crate::interior::{AnchorKind, Interior};
 
     fn brief() -> Brief {
-        Brief::from_parts(None, None, None, None, true, true)
+        Brief::from_parts(None, None, None, None, 0, true, true)
     }
 
     fn interior_with(kinds: &[AnchorKind]) -> Interior {
@@ -175,7 +192,7 @@ mod tests {
     /// Every kind, listed once. Written out rather than derived, and kept in
     /// step by [`detail`]'s exhaustive match: a new kind fails to compile there,
     /// and `every_kind_has_a_detail` below is what notices it missing here.
-    const EVERY_KIND: [AnchorKind; 9] = [
+    const EVERY_KIND: [AnchorKind; 14] = [
         AnchorKind::Ground,
         AnchorKind::Hearth,
         AnchorKind::Threshold,
@@ -185,6 +202,11 @@ mod tests {
         AnchorKind::Alcove,
         AnchorKind::Pool,
         AnchorKind::Log,
+        AnchorKind::Strongbox,
+        AnchorKind::HighSeat,
+        AnchorKind::Loom,
+        AnchorKind::Anvil,
+        AnchorKind::Altar,
     ];
 
     #[test]
@@ -199,11 +221,12 @@ mod tests {
             assert!(d.ends_with('.'), "{kind:?}: a detail is a sentence: {d:?}");
             assert!(!d.trim().is_empty(), "{kind:?}: an empty detail");
         }
-        // Ground has no noun and every other kind does, so nine kinds must yield
-        // eight nouns — the arithmetic that catches a kind dropped from the list.
+        // Ground has no noun and every other kind does, so fourteen kinds must
+        // yield thirteen nouns — the arithmetic that catches a kind dropped from
+        // the list.
         assert_eq!(
             EVERY_KIND.iter().filter(|&&k| noun(k).is_some()).count(),
-            8,
+            13,
             "the kind list has drifted from `noun`'s own match"
         );
     }
@@ -337,7 +360,7 @@ mod tests {
         // `brief` must be READ, not merely carried: a built place is a room,
         // an unbuilt one is a hollow.
         let i = interior_with(&[AnchorKind::Ground, AnchorKind::Hearth]);
-        let wild = Brief::from_parts(None, None, None, None, false, true);
+        let wild = Brief::from_parts(None, None, None, None, 0, false, true);
         assert_ne!(describe_chamber(&i, &brief()), describe_chamber(&i, &wild));
         assert!(describe_chamber(&i, &wild).contains("hollow"));
     }

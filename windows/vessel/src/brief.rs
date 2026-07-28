@@ -11,8 +11,12 @@
 //! consequence and no epoch. Seven unread `Option`s would be dead weight that
 //! reads as evidence of intent.
 //!
-//! As shipped, the only field any code reads is `built` — in `structure_at`'s
-//! existence predicate and in `describe_chamber`'s room/hollow word.
+//! Three fields are read as of The Blocking: `built`, in `structure_at`'s
+//! existence predicate and in `describe_chamber`'s room/hollow word;
+//! `notability` and `function`, in `pattern::role_for`'s promotion of a deep
+//! chamber; and `peak_population`, added here when the `store` role's strongbox
+//! became its first reader — exactly the "one field, no epoch" this doc licenses.
+//! `tech` and `people` are still carried and unread.
 
 use hornvale_history::record::{Function, Notability, TechHorizon};
 use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, World};
@@ -20,7 +24,7 @@ use hornvale_kernel::{CellId, Geosphere, KindId, NearestCellIndex, RoomAddr, Wor
 /// What macro history says about a place, reduced to the axes micro generation
 /// indexes. A COORDINATE in a small orthogonal space — never a label drawn from
 /// a catalogue of place types (§1b.4).
-/// type-audit: bare-ok(flag: built), bare-ok(flag: cold)
+/// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Brief {
     /// What the alive occupation here was for, if any occupation is alive.
@@ -31,6 +35,11 @@ pub struct Brief {
     pub notability: Option<Notability>,
     /// The people occupying this place, if any.
     pub people: Option<KindId>,
+    /// The highest population the alive occupation ever reached, `0` where none
+    /// is alive. Not an `Option`: "nobody lives here" and "nobody ever did" are
+    /// the same answer to the one question anything asks of this field, which is
+    /// [`Self::is_populous`].
+    pub peak_population: u32,
     /// Whether a structure stands here — `Terrain::is_built` at the WALK band.
     pub built: bool,
     /// Whether warmth matters here — `Terrain::is_cold` at the WALK band.
@@ -40,12 +49,13 @@ pub struct Brief {
 impl Brief {
     /// Assemble a brief from already-resolved parts. Exists so the type can be
     /// unit-tested without a world; `brief_of` is the production path.
-    /// type-audit: bare-ok(flag: built), bare-ok(flag: cold)
+    /// type-audit: bare-ok(flag: built), bare-ok(flag: cold), bare-ok(count: peak_population)
     pub fn from_parts(
         function: Option<Function>,
         tech: Option<TechHorizon>,
         notability: Option<Notability>,
         people: Option<KindId>,
+        peak_population: u32,
         built: bool,
         cold: bool,
     ) -> Self {
@@ -54,9 +64,22 @@ impl Brief {
             tech,
             notability,
             people,
+            peak_population,
             built,
             cold,
         }
+    }
+
+    /// Whether this place ever held more people than a hamlet.
+    ///
+    /// Reads `hornvale_history::flesh::HAMLET_POPULATION_CEILING` rather than a
+    /// literal, and it is the SAME threshold the ruin model reads for whether a
+    /// place leaves a child's doll behind — a hamlet is a family place in both
+    /// readings. The vessel's use is [`crate::interior::pattern::Pattern::
+    /// needs_populous`]: the strongbox.
+    /// type-audit: bare-ok(flag: return)
+    pub fn is_populous(&self) -> bool {
+        self.peak_population > hornvale_history::flesh::HAMLET_POPULATION_CEILING
     }
 }
 
@@ -106,10 +129,11 @@ pub fn brief_of(
             Some(o.tech),
             Some(o.notability),
             Some(o.people),
+            o.peak_population,
             built,
             cold,
         ),
-        None => Brief::from_parts(None, None, None, None, built, cold),
+        None => Brief::from_parts(None, None, None, None, 0, built, cold),
     }
 }
 
@@ -125,6 +149,7 @@ mod tests {
             Some(TechHorizon::Classical),
             Some(Notability::Seat),
             None,
+            900,
             true,
             true,
         );
@@ -137,7 +162,7 @@ mod tests {
 
     #[test]
     fn from_parts_with_no_occupation_axes_still_carries_climate() {
-        let b = Brief::from_parts(None, None, None, None, false, true);
+        let b = Brief::from_parts(None, None, None, None, 0, false, true);
         assert!(!b.built);
         assert!(
             b.cold,
@@ -156,6 +181,7 @@ mod tests {
             Some(TechHorizon::Neolithic),
             None,
             None,
+            0,
             true,
             false,
         );
@@ -164,6 +190,7 @@ mod tests {
             Some(TechHorizon::Classical),
             None,
             None,
+            0,
             true,
             false,
         );

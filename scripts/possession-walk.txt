@@ -8,7 +8,7 @@ enter further in
 map
 go n
 map
-examine a water jar
+examine an alcove
 examine a wall
 out
 go n

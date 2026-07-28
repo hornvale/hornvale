@@ -29,11 +29,11 @@ Night. The vast moon shows its waning crescent face. The small, distant moon sho
 A bugbear of Qvooshtvoagootao (agent 7225590595188407000), day 0, room 738918402.
 > enter
 [chamber 193703028372802, day 0]
-A small room, holding a doorway, an alcove, a water jar and a screen.
+A small room, holding a doorway and a screen.
 Ways on: out, further in.
 > enter further in
 [chamber 193703027969442, day 0]
-A small room, holding a doorway, an alcove, a water jar and a screen.
+A small room, holding a doorway and an alcove.
 Ways on: out.
 > map
 [plan: chamber 193703027969442, 2 of 2]
@@ -63,8 +63,8 @@ You step north. Ways on: N, E, S.
 #..........#......#
 ###################
   legend: . the floor, # a wall, + a doorway, @ you
-> examine a water jar
-A wide-mouthed jar, cool to the touch, standing half full.
+> examine an alcove
+A recess cut back from the main space, deep enough to sit in.
 > examine a wall
 Set close and plumb, with no gap in it wide enough to pass.
 > out

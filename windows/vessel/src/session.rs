@@ -1172,11 +1172,13 @@ impl<'w> Session<'w> {
     ///    end, so no chamber is stranded.
     /// 2. A case-insensitive substring of the destination's own PROSE nouns
     ///    (`chamber_nouns`, the same catalogue `describe_chamber` renders from),
-    ///    accepted ONLY where the chamber has exactly one aperture. Every
-    ///    chamber of a structure derives the identical interior — the terrain
-    ///    reads are taken at their shared walk-band ancestor — so noun lists
-    ///    cannot tell two apertures apart, and matching one with a choice still
-    ///    open would silently pick a direction the player never named.
+    ///    accepted ONLY where the chamber has exactly one aperture. Task 6 made
+    ///    chambers differ, so noun lists now *sometimes* tell two apertures apart
+    ///    — but not reliably: every role's prose names a doorway, so `enter
+    ///    doorway` with two apertures open is still ambiguous. The restriction is
+    ///    kept rather than relaxed, because matching with a choice still open
+    ///    would silently pick a direction the player never named on exactly the
+    ///    nouns the roles happen to share.
     ///
     /// An empty `target` takes the sole neighbour, if there is exactly one; with
     /// a choice to make, silence is not an answer.
@@ -1201,10 +1203,13 @@ impl<'w> Session<'w> {
             return None;
         };
         let terrain = self.terrain_here();
+        let brief = self.brief_here();
         crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &structure.chambers[*only],
             &terrain,
             self.walk_depth(),
+            &brief,
+            *only,
         ))
         .iter()
         .any(|noun| noun.to_lowercase().contains(&target))
@@ -1217,10 +1222,13 @@ impl<'w> Session<'w> {
     ///
     /// The ways are `out`, plus `further in` where a deeper chamber exists.
     /// Naming apertures by DIRECTION rather than by what lies through them is
-    /// what makes the list navigable: every chamber of a structure derives the
-    /// identical interior, so noun-named apertures all read the same word and a
-    /// deduplicated list would advertise one way where two exist — which is how
-    /// the deeper chambers became unreachable.
+    /// what makes the list navigable, and Task 6 did NOT change that: chambers
+    /// now differ, but the two apertures of a middle chamber lead to a chamber
+    /// nearer the door and one further in, and *both* of those are rooms whose
+    /// prose names a doorway. So a noun-named aperture list would still advertise
+    /// one way where two exist — which is how the deeper chambers became
+    /// unreachable under The Lintel, where the reason was starker (every chamber
+    /// derived the identical interior).
     fn describe_chamber_here(&self) -> Result<String, VesselError> {
         let Some(inside) = self.inside.as_ref() else {
             // Unreachable through `handle` (every caller checks first), but a
@@ -1234,7 +1242,8 @@ impl<'w> Session<'w> {
         let chamber = &structure.chambers[at];
         let terrain = self.terrain_here();
         let brief = self.brief_here();
-        let interior = crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth());
+        let interior =
+            crate::interior::chamber_interior_of(chamber, &terrain, self.walk_depth(), &brief, at);
         let id = chamber_id(chamber)?;
         let mut ways = vec!["out"];
         if Self::further_in(structure, at).is_some() {
@@ -1374,10 +1383,13 @@ impl<'w> Session<'w> {
     fn chamber_interior_here(&self) -> Option<crate::interior::Interior> {
         let inside = self.inside.as_ref()?;
         let terrain = self.terrain_here();
+        let brief = self.brief_here();
         Some(crate::interior::chamber_interior_of(
             &inside.structure.chambers[inside.at],
             &terrain,
             self.walk_depth(),
+            &brief,
+            inside.at,
         ))
     }
 
@@ -2475,10 +2487,13 @@ mod tests {
         // Precondition: the noun really IS in the neighbouring chamber's prose,
         // so the refusal below is about ambiguity, not about an absent word.
         let terrain = session.terrain_here();
+        let brief = session.brief_here();
         let nouns = crate::chamber_prose::chamber_nouns(&crate::interior::chamber_interior_of(
             &s.chambers[2],
             &terrain,
             session.walk_depth(),
+            &brief,
+            2,
         ));
         let noun = *nouns
             .first()
@@ -2626,11 +2641,14 @@ mod tests {
         );
         // Take a noun the chamber's prose has just named to the player.
         let terrain = session.terrain_here();
+        let brief = session.brief_here();
         let interior = crate::interior::chamber_interior_of(
             &session.inside.as_ref().unwrap().structure.chambers
                 [session.inside.as_ref().unwrap().at],
             &terrain,
             session.walk_depth(),
+            &brief,
+            session.inside.as_ref().unwrap().at,
         );
         let nouns = crate::chamber_prose::chamber_nouns(&interior);
         let noun = *nouns

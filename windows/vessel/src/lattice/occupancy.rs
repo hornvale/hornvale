@@ -92,7 +92,7 @@ mod tests {
             face: 3,
             path: (0..WALK).map(|i| (i % 4) as u8).collect(),
         };
-        let brief = Brief::from_parts(None, None, None, None, true, true);
+        let brief = Brief::from_parts(None, None, None, None, 0, true, true);
         let s = structure_at(&addr, &brief, Seed(42), WALK).expect("built");
         embed_with(&s, &brief, extent_for(&s), Seed(42))
     }

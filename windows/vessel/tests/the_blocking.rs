@@ -464,3 +464,114 @@ fn the_plan_marks_where_you_stand_and_the_mark_moves_with_you() {
         "stepping changed how many doorways the plan draws: {after}"
     );
 }
+
+// --- Task 6: differentiation ------------------------------------------------
+//
+// `CLIENT-language-not-catalogue` binds here (spec §4.3): the substance is which
+// roles a brief admits and which patterns complete which. The pattern COUNT
+// appears in none of the assertions below, on purpose.
+
+#[test]
+fn two_chambers_of_one_structure_do_not_read_alike() {
+    // The Lintel's headline was literally true and experientially thin: four
+    // doors onto one room (followup 11). This is the assertion that it stopped
+    // being thin, made against the SAME structure the gallery walks — which is
+    // warm, two-chambered and not a Seat, so differentiation that lived in the
+    // hearth patterns or in `notability` would leave this green and unobserved.
+    let w = world();
+    let (mut session, _) = Session::start(&w, &PossessOpts::default()).unwrap();
+    inside(&mut session);
+    let first = out(session.handle("look"));
+    let stepped = out(session.handle("enter further in"));
+    assert!(
+        stepped.starts_with("[chamber "),
+        "this structure has only one chamber, so the headline cannot be observed \
+         here at all: {stepped}"
+    );
+    let second = out(session.handle("look"));
+    let prose = |s: &str| s.lines().nth(1).unwrap_or_default().to_string();
+    assert_ne!(
+        prose(&first),
+        prose(&second),
+        "two chambers of one structure still read identically"
+    );
+}
+
+#[test]
+fn a_role_admits_a_different_composition_not_a_bigger_one() {
+    // The substance is WHICH patterns complete which, not how many exist. A role
+    // whose composition is a superset of another's is a tier list, not a
+    // vocabulary — so at least one pair of roles must each hold something the
+    // other does not.
+    use hornvale_vessel::interior::pattern::{Role, selection_for};
+    // The fourth argument is `populous`, which the plan's snippet did not have:
+    // the strongbox is population-gated, so the draw needs the flag. Held false
+    // here so the pair compared is the ordinary case.
+    let a: Vec<&str> = selection_for(Role::Threshold, true, false, false)
+        .iter()
+        .map(|p| p.name)
+        .collect();
+    let b: Vec<&str> = selection_for(Role::Store, true, false, false)
+        .iter()
+        .map(|p| p.name)
+        .collect();
+    assert!(
+        a.iter().any(|n| !b.contains(n)) && b.iter().any(|n| !a.contains(n)),
+        "one role's composition is a subset of the other's: {a:?} vs {b:?}"
+    );
+}
+
+#[test]
+fn a_locale_composition_is_untouched_by_the_role_layer() {
+    // The load-bearing invariant of this task's DESIGN (ledger #10): whatever the
+    // roles do to chambers, the band a creature stands in must be unaffected
+    // unless we mean it to be. If this fails, the epoch is real -- which is a
+    // finding, not a failure, but it must be a DELIBERATE one.
+    use hornvale_vessel::interior::pattern::selection;
+    let before = [
+        "the-ground",
+        "the-threshold",
+        "the-alcove",
+        "the-water-jar",
+        "the-screen",
+    ];
+    let now: Vec<&str> = selection(true, false).iter().map(|p| p.name).collect();
+    assert_eq!(
+        now, before,
+        "a locale's warm built composition changed, so warmth changed, so \
+         committed NPC drive history changed: this IS an epoch"
+    );
+}
+
+#[test]
+fn the_role_table_reads_a_different_room_for_every_role() {
+    // THE ROLE TABLE, OBSERVED. The plan shipped a PREDICTED table and said to
+    // run it and print the prose before building on it, so the prose is built
+    // here and asserted distinct rather than asserted equal to a remembered
+    // string. Run with `--nocapture` to read the table.
+    use hornvale_vessel::interior::pattern::{EVERY_ROLE, selection_for};
+    use hornvale_vessel::interior::{Role, compose};
+    use hornvale_vessel::{Brief, describe_chamber};
+    let brief = |cold: bool| Brief::from_parts(None, None, None, None, 0, true, cold);
+    let mut seen: std::collections::BTreeMap<String, Role> = std::collections::BTreeMap::new();
+    for &role in EVERY_ROLE {
+        for (cold, populous) in [(false, false), (true, false), (false, true)] {
+            let text = describe_chamber(
+                &compose(&selection_for(role, true, cold, populous)),
+                &brief(cold),
+            );
+            let tag = if cold { "cold" } else { "warm" };
+            let scale = if populous { ", populous" } else { "" };
+            let label = format!("{role:?}");
+            println!("  {label:<11} {tag}{scale:<10}  {text}");
+            if !populous && !cold {
+                assert!(
+                    seen.insert(text.clone(), role).is_none(),
+                    "{role:?} reads exactly as {:?} does, so the role table has a \
+                     duplicate row and one of them is decoration: {text}",
+                    seen[&text]
+                );
+            }
+        }
+    }
+}
