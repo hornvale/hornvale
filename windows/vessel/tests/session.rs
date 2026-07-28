@@ -602,3 +602,78 @@ fn a_bare_direction_indoors_is_refused_exactly_as_go_is() {
         "the bare direction must refuse indoors exactly as `go <dir>` does"
     );
 }
+
+/// Walk to the sea, then descend and rise through the water column. This is
+/// the campaign's whole claim: a coordinate at sea is more than one place.
+#[test]
+fn the_water_column_is_a_place_you_can_be() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    // A fixed compass cycle cannot make progress on a 3-exit triangular mesh;
+    // biasing the attempts westward drifts the walker to the coast, and the
+    // failed attempts are harmless no-ops.
+    let mut afloat = String::new();
+    for _ in 0..600 {
+        for d in ["w", "nw", "sw"] {
+            s.handle(d);
+        }
+        if let Turn::Out(t) = s.handle("look")
+            && t.contains("You float on")
+        {
+            afloat = t;
+            break;
+        }
+    }
+    assert!(
+        !afloat.is_empty(),
+        "the walker never reached water; the column cannot be tested"
+    );
+
+    // On the surface: afloat on open water, not standing in the floor's biome.
+    assert!(afloat.contains("You float on open water"), "{afloat}");
+
+    // Down: a different place at the same coordinate.
+    let under = match s.handle("dive") {
+        Turn::Out(t) => t,
+        _ => panic!("dive must not release"),
+    };
+    assert!(under.contains("You hang in"), "{under}");
+    assert_ne!(
+        afloat, under,
+        "the surface and the water below it rendered identically"
+    );
+
+    // Lateral movement is refused while under, and says so diegetically.
+    let lateral = match s.handle("n") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(!lateral.contains("No verb"), "{lateral}");
+    assert!(lateral.contains("Surface first"), "{lateral}");
+
+    // And back up.
+    let up = match s.handle("surface") {
+        Turn::Out(t) => t,
+        _ => panic!("surface must not release"),
+    };
+    assert!(up.contains("You break the surface"), "{up}");
+    assert!(up.contains("You float on"), "{up}");
+}
+
+/// On land there is no column, and the refusal says why rather than reading
+/// as a parse failure.
+#[test]
+fn there_is_nothing_to_dive_into_on_dry_land() {
+    let world = seam_world();
+    let (mut s, _) = Session::start(&world, &opts()).unwrap();
+    let out = match s.handle("dive") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(out.contains("no water here"), "{out}");
+    let up = match s.handle("surface") {
+        Turn::Out(t) => t,
+        _ => panic!("must not release"),
+    };
+    assert!(up.contains("already at the surface"), "{up}");
+}

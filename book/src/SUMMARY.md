@@ -274,6 +274,7 @@
 - [The Formations](./chronicle/the-formations.md)
 - [The Shoal](./chronicle/the-shoal.md)
 - [The Tare](./chronicle/the-tare.md)
+- [The Column](./chronicle/the-column.md)
 
 # Appendix: The Frontier
 

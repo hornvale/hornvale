@@ -7,7 +7,7 @@ use hornvale_locale::{Locale, LocaleContext};
 use hornvale_settlement::VillageInfo;
 
 /// Everything observable from the agent's position at `at`.
-/// type-audit: bare-ok(prose: sky)
+/// type-audit: bare-ok(prose: sky), bare-ok(flag: submerged)
 #[derive(Debug, Clone, PartialEq)]
 pub struct Vantage {
     /// The room, as the locale window describes it (ground truth).
@@ -18,6 +18,9 @@ pub struct Vantage {
     pub village: VillageInfo,
     /// The sky over this day, from the world's sky provider.
     pub sky: String,
+    /// Whether the vantage is DOWN in the water column rather than on its
+    /// surface. Land vantages are never submerged.
+    pub submerged: bool,
 }
 
 /// Bundle the locale room, the mint settlement, and the day's sky into a
@@ -28,8 +31,20 @@ pub fn observable(
     agent: &Agent,
     at: WorldTime,
 ) -> Result<Vantage, VesselError> {
+    observable_at(world, ctx, agent, at, None)
+}
+
+/// [`observable`], optionally from a stratum within the water column rather
+/// than from the surface — the depth band's vantage.
+pub fn observable_at(
+    world: &World,
+    ctx: &LocaleContext,
+    agent: &Agent,
+    at: WorldTime,
+    stratum: Option<hornvale_climate::Stratum>,
+) -> Result<Vantage, VesselError> {
     let locale = ctx
-        .describe(&agent.position, at)
+        .describe_at(&agent.position, at, stratum)
         .map_err(VesselError::Locale)?;
     // The walker's own cell, not the capital's: the sky over *here*, dimmed by
     // the weather *here*. (`at` is already this function's WorldTime, so the
@@ -42,6 +57,7 @@ pub fn observable(
             .map_err(|e| VesselError::Build(e.to_string()))?
             .description;
     Ok(Vantage {
+        submerged: matches!(stratum, Some(st) if st != hornvale_climate::Stratum::Surface),
         locale,
         day: at,
         village: agent.village.clone(),

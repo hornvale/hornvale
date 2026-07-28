@@ -30,8 +30,19 @@ impl Focalizer for TemplateFocalizer {
         let descriptor = v.locale.regime.descriptor.clone();
         let village = v.village.name.clone();
         let sky_noun = "sky".to_string();
+        // A walker does not STAND in the sea. The verb follows the medium, and
+        // the water column distinguishes floating on the surface from hanging
+        // in the water below it — the same category error The Shoal fixed for
+        // the descriptors, one clause up.
+        let (stance, biome) = match (v.locale.biome_kind.is_marine(), v.submerged) {
+            (false, _) => ("You stand in", biome),
+            // On the surface the depth zone beneath is not where you are; the
+            // sea's own name for the place is simply the open water.
+            (true, false) => ("You float on", "open water".to_string()),
+            (true, true) => ("You hang in", biome),
+        };
         let prose = format!(
-            "You stand in {biome} — {descriptor} — in the lands of {village}. \
+            "{stance} {biome} — {descriptor} — in the lands of {village}. \
              The {sky_noun} above: {}",
             v.sky
         );
