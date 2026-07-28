@@ -3580,7 +3580,7 @@ fn is_ford_cell(terrain: &GeneratedTerrain, cell: hornvale_kernel::CellId) -> bo
 /// higher than the sea AND every land neighbor it has — count as `hill`.
 /// Re-measured over all 11,066 seed-42 land cells: `valley` now fires ONLY
 /// at land-degree 6 (zero ocean adjacency — a true interior basin), 48
-/// cells, 0.52% — eliminating the coastal skew entirely (0% at every degree
+/// cells, 0.43% — eliminating the coastal skew entirely (0% at every degree
 /// 0-5, where the land-only version peaked at 41% and 292 of 344 total hits
 /// sat). `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
 /// flat from land-degree 3 up) with a real, accepted allowance for small
@@ -4315,10 +4315,12 @@ pub fn deity_site_concepts(
 /// (it IS a hill); a `KnowsOf` gate is a claim about its neighborhood (it
 /// is NEAR the sea). A direct claim is the more specific fact, so every
 /// direct gate precedes both proximity gates. Within the direct gates,
-/// narrower physical criteria come first, ordered by the Task 4 report's
-/// measurements over seed 42's ~11,066 land cells: `valley` (0.52% of
-/// land — the rarest of the nine, a full-ring strict elevation minimum)
-/// and `hill` (1.51% — the symmetric maximum); `spring` (a karst/drainage
+/// narrower physical criteria come first, ordered by the shipped gates'
+/// own measurements over seed 42's ~11,066 land cells (see
+/// [`is_hill_cell`]'s doc comment for the round-3 clamp fix these numbers
+/// come from): `valley` (48 cells, 0.43% of land — the rarest of the nine,
+/// a full-ring strict elevation minimum) and `hill` (173 cells, ~1.56% —
+/// the symmetric maximum); `spring` (a karst/drainage
 /// intersection) and `ford` (`river` narrowed to a sub-waterfall drainage
 /// band — both proper narrowings of a broader condition); `island` (a
 /// capped small-landmass flood-fill); `marsh` (a wetness band on dry
@@ -4337,7 +4339,8 @@ pub fn settlement_site_concepts(
     climate: &GeneratedClimate,
     presiding: Option<&'static str>,
 ) -> Vec<&'static str> {
-    let mut concepts: Vec<&'static str> = Vec::with_capacity(4);
+    // Up to 11: the nine terrain concepts plus biome plus presiding.
+    let mut concepts: Vec<&'static str> = Vec::with_capacity(11);
     if is_valley_cell(terrain, cell) {
         concepts.push("valley");
     }
@@ -9158,11 +9161,27 @@ mod tests {
     #[test]
     fn a_settlement_name_gloss_is_truthful_to_its_own_site_facts() {
         // Every settlement carrying a `name-gloss` fact must gloss to
-        // concepts drawn only from its own re-derived site vector (Task 5:
-        // the nine toponymic terrain concepts, biome, or the presiding
-        // phenomenon) — re-derived here via the SAME `settlement_site_concepts`
-        // the naming pass itself calls, so this pins the composition, not a
-        // hand-maintained parallel list of "plausible" concepts.
+        // concepts drawn only from its own site vector (Task 5: the nine
+        // toponymic terrain concepts, biome, or the presiding phenomenon),
+        // and if that gloss names its biome concept, that concept must
+        // match the settlement's own committed `BIOME` fact.
+        //
+        // Re-deriving the site vector via the SAME `settlement_site_concepts`
+        // the naming pass itself calls does NOT pin the composition against
+        // a future change to that function: `terrain_of`/`climate_from`
+        // reconstruct the identical terrain and climate the build used, and
+        // `CELL_ID` is the same cell, so the recomputed vector is
+        // bit-identical to what the naming pass saw BY CONSTRUCTION — a bug
+        // inside `settlement_site_concepts` itself would be silently
+        // absorbed by both sides of this check (review round 1, Important
+        // 2). What this test actually pins: that `glossed_name` draws ONLY
+        // from the vector it is handed (no concept the gloss names is
+        // absent from the recomputed site vector), that the gloss was
+        // committed against the settlement whose own `CELL_ID` it carries,
+        // and — the anchor the widening had silently dropped, restored
+        // below — that a biome token in the gloss agrees with the
+        // settlement's own committed `BIOME` fact rather than some other
+        // cell's.
         let world = generated(42);
         let terrain = terrain_of(&world).expect("seed 42 builds terrain");
         let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
@@ -9193,6 +9212,26 @@ mod tests {
                 "gloss {gloss:?} for settlement {id:?} names a concept outside its own site \
                  vector {site:?}"
             );
+            // The restored BIOME anchor: if the gloss names the settlement's
+            // biome concept at all, that concept must match the settlement's
+            // own committed `BIOME` fact — catching a gloss committed
+            // against the wrong cell, which the remainder check above
+            // cannot (it only checks the gloss against a FRESHLY
+            // re-derived vector at the SAME `cell`, so a `CELL_ID`/`BIOME`
+            // mismatch introduced upstream would sail through it silently).
+            let biome_concept = climate.biome_at(cell).concept_name();
+            if gloss.contains(biome_concept) {
+                let committed_biome = world
+                    .ledger
+                    .text_of(id, hornvale_settlement::BIOME)
+                    .expect("every settlement carries a biome fact");
+                assert_eq!(
+                    biome_concept, committed_biome,
+                    "settlement {id:?} glosses to its biome concept {biome_concept:?}, but its \
+                     committed BIOME fact is {committed_biome:?} — the gloss and the \
+                     settlement's own biome fact disagree"
+                );
+            }
         }
         assert!(checked_any, "seed 42 should gloss at least one settlement");
     }
@@ -9236,6 +9275,51 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn settlement_site_concepts_orders_a_real_multi_concept_vector_most_specific_first() {
+        // The ordering is a documented CONTRACT (`settlement_site_concepts`'s
+        // doc comment) but nothing else in the tree asserts it, and the
+        // seed-42 fixture that would normally catch an accidental reorder
+        // (`hornvale::lens_purity::seed_42_world_json_matches_the_committed_fixture`)
+        // is in this campaign's standing failure set for its whole
+        // duration (Task 1), so a reorder landing in a later task would go
+        // completely unobserved without a direct pin. Cell 30793 (the
+        // kobold settlement `hill=[(cell 30793, land_degree 6, total_degree
+        // 6)]` Task 4's review measured directly) is a real, non-synthetic
+        // seed-42 cell whose site vector holds four concepts spanning three
+        // of the order's tiers: a direct terrain gate (`hill`), a proximity
+        // gate (`coast`), and the trailing biome/presiding pair.
+        let world = generated(42);
+        let terrain = terrain_of(&world).expect("seed 42 builds terrain");
+        let climate = climate_from(&world, &terrain).expect("seed 42 builds climate");
+        let wc = WorldComponents::assemble().expect("component assembly");
+        let cell = hornvale_kernel::CellId(30793);
+        let id = world
+            .ledger
+            .find(hornvale_settlement::IS_SETTLEMENT)
+            .map(|f| f.subject)
+            .find(|&id| {
+                matches!(
+                    world.ledger.value_of(id, hornvale_settlement::CELL_ID),
+                    Some(Value::Number(n)) if *n as u32 == 30793
+                )
+            })
+            .expect("cell 30793 is settled at seed 42");
+        let species = hornvale_species::species_of(&world, id)
+            .expect("cell 30793's settlement carries a species fact");
+        let seen = observed_phenomena_as_at_from(&world, &wc, &species, id, &climate)
+            .expect("observation succeeds for a placed species");
+        let presiding = seen.first().and_then(phenomenon_concept);
+        let site = settlement_site_concepts(cell, &terrain, &climate, presiding);
+        assert_eq!(
+            site,
+            vec!["hill", "coast", "temperate-forest", "moon"],
+            "cell 30793's site vector order changed — either the gate set or the documented \
+             order contract shifted; both rename settlements, so this must be a deliberate, \
+             reviewed change, not an accident"
+        );
     }
 
     #[test]

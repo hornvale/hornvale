@@ -3869,9 +3869,13 @@ fn settlement_site_concepts(
 }
 
 /// Every gloss composition `Namer::glossed_name` could truthfully produce
-/// from `concepts` (mirrors `cli/tests/words_identity.rs`'s
-/// `candidate_glosses`): each concept alone, plus every ordered pair joined
-/// with `"-"`.
+/// from `concepts`: each concept alone, plus every ordered pair joined with
+/// `"-"` — `concepts.len() + concepts.len() * (concepts.len() - 1)`
+/// candidates. Task 5 widened a settlement's site vector from 2 concepts (4
+/// candidates) to up to 11 (11 singles + 110 ordered pairs = 121
+/// candidates), so a gloss now has roughly 30x more ways to coincidentally
+/// match a candidate string than before that widening — see
+/// `name_gloss_true`'s doc comment for what that costs the check below.
 fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> {
     let mut set = std::collections::BTreeSet::new();
     for c in concepts {
@@ -3889,13 +3893,28 @@ fn candidate_glosses(concepts: &[String]) -> std::collections::BTreeSet<String> 
 
 /// Whether every committed settlement `name-gloss` fact in this world is a
 /// truthful composition of that SAME settlement's own re-derived site
-/// concepts (spec §9.3) — the per-world aggregate of
-/// `cli/tests/words_identity.rs`'s `names_wellformed_and_glosses_true`
-/// settlement half, re-implemented independently here (never calling
-/// worldgen's internal name-drawing code, only its committed `NAME_GLOSS`
-/// fact and this module's own re-derivation of the site concepts that fact
-/// should be true to). `Absent` if no settlement in this world carries a
-/// gloss.
+/// concepts (spec §9.3). Still a real cross-check, not a tautology: it
+/// never calls worldgen's internal name-drawing code (`glossed_name` or
+/// anything downstream of it), only the committed `CELL_ID`/`NAME_GLOSS`
+/// facts plus this view's own re-derived terrain/climate, so it still
+/// catches a gloss committed against the wrong cell or a `NAME_GLOSS`
+/// written by a broken pipeline.
+///
+/// Since Task 5 this is NOT independent of worldgen's own composition,
+/// though — `settlement_site_concepts` above calls
+/// `hornvale_worldgen::settlement_site_concepts` directly (F2), which two
+/// things genuinely weakens rather than only appearing to:
+/// - it no longer reads the committed `BIOME` fact, so nothing in this
+///   metric cross-checks `BIOME` against the settlement's own re-derived
+///   `biome_at(CELL_ID)` any more (that check now lives only in worldgen's
+///   own keystone test,
+///   `a_settlement_name_gloss_is_truthful_to_its_own_site_facts`, which
+///   restored it after the same widening dropped it there too).
+/// - `candidate_glosses`'s accept set grew roughly 30x (see its own doc
+///   comment) as the site vector widened, so a wrong gloss is far more
+///   likely to slip through by coincidence than it was before Task 5.
+///
+/// `Absent` if no settlement in this world carries a gloss.
 fn name_gloss_true(v: &FullView) -> MetricValue {
     let mut checked = false;
     let mut all_true = true;
