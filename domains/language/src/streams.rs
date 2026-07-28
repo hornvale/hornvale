@@ -77,9 +77,13 @@ pub const CASCADE: StreamLabel<'static> = StreamLabel::from_static("cascade");
 /// has already removed the word-initial cluster it looks for, `FinalLoss`
 /// the word-final consonant, and the codomain constraint blocks a second
 /// `Lenition`/`Fortition`/`VowelShift` whose target is no longer in the
-/// inventory. Measured on seed 42 before this leg existed: 154 of 154 wear
-/// applications changed nothing at all. The wear must therefore draw rules
-/// the words have *not* already undergone.
+/// inventory. The result is not *provably* inert — a CCC onset lets
+/// `ClusterSimplify` fire a second time, and a 200-seed × 5-species sweep
+/// found 44 such counterexamples in 3600 forms — but it is degenerate to
+/// the point of uselessness: on seed 42 it changed **154 of 154** wear
+/// applications not at all, and the whole world came out byte-identical to
+/// one with wear switched off. Off this leg the same sweep changes 906 of
+/// 3600. The wear must draw rules the words have *not* already undergone.
 /// type-audit: bare-ok(identifier-text: return)
 pub const WEAR: StreamLabel<'static> = StreamLabel::from_static("wear");
 /// The proto-root draw leg, under lexicon (named `PROTO_ROOT`, not

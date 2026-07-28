@@ -5085,9 +5085,14 @@ fn build_to(
     // name below — settlement, then deity/epithet — is a single
     // deterministic draw salted by the entity's own id (the settlement cell,
     // the belief). No shared "used" set threads through them: names are pure
-    // functions of seed+species+kind+salt, so settlement names are
-    // pin-isolated by construction (spec §8) and cross-world uniqueness is
-    // de-facto (measured as a calibration, spec §9), not enforced.
+    // functions of seed+species+kind+salt+(site, lexicon, corpus). Since The
+    // Wearing that last argument means a settlement name is NO LONGER
+    // pin-isolated at the world level: its morphemes are worn against a
+    // per-culture name corpus counted over the species' whole scatter, so a
+    // pin that moves that scatter moves every name of that species. Deity
+    // and epithet names, which pass no corpus, are unaffected. Uniqueness
+    // is de-facto (measured as a calibration, spec §9), not enforced — and
+    // since the drawn stem retired it is common, by design (decision 0024).
     let phonologies: std::collections::BTreeMap<&str, hornvale_language::Phonology> = species_set
         .iter()
         .map(|&name| (name, language_of_wc(&world, wc, name)))
@@ -5176,8 +5181,10 @@ fn build_to(
     // `cell-id`, and the occupation facts); the naming pass adds the
     // descriptors onto the SAME entities so history stays the sole placer (the
     // retired `settlement::genesis` used to mint these together with
-    // placement). Names are pure functions of seed+species+kind+cell-salt
-    // (pin-isolated), so a shifted settlement set perturbs no other draw.
+    // placement). Names are pure functions of their arguments, so a shifted
+    // settlement set perturbs no other DRAW — but it does change the name
+    // corpus below, and therefore the names of that species' other
+    // settlements (The Wearing; see `naming.rs`'s module docs).
     // Build the phenomena sources ONCE for the whole pass, reusing this
     // stage's climate (no per-settlement climate rebuild — the Stage-2 perf
     // guard). Observations are gathered under one immutable ledger borrow,

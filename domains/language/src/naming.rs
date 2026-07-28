@@ -17,12 +17,24 @@
 //! `seed.derive(streams::ROOT).derive(StreamLabel::dynamic(species)).derive(streams::NAME).derive(StreamLabel::dynamic(kind_label)).derive(StreamLabel::dynamic(&salt.to_string())).stream()`
 //! so a name is a pure, single deterministic function of `(seed, species,
 //! kind, salt)` — no re-draw, no dependence on any other name. Uniqueness is
-//! not guaranteed here: the phonology name space is vast enough that
-//! collisions are rare in practice (measured as a calibration, spec §9), and
-//! the composition root deliberately does NOT thread a shared "used" set
-//! through naming. That purity is load-bearing: it makes settlement names
-//! pin-isolated by construction (a name depends only on its own cell, never
-//! on which other settlements — or species — a world happens to place).
+//! not guaranteed here, and since The Wearing retired the drawn settlement
+//! stem it is not even rare: two settlements over the same site concepts
+//! legitimately share a name (decision 0024 — uniqueness is a property of a
+//! *reference*, and no work fixes the collision rate by adding entropy).
+//!
+//! The composition root deliberately does NOT thread a shared, mutable
+//! "used" set through naming, and that purity is load-bearing. But note
+//! what it does and does not buy since The Wearing. **`Namer::name`'s v1
+//! names remain pin-isolated in the strong sense** — a name depends only on
+//! its own cell. **A glossed settlement name no longer is.** Its morphemes
+//! are worn against a [`NameCorpus`], a per-culture statistic the
+//! composition root counts over that species' whole settlement scatter, so
+//! **a pin that moves a species' scatter moves every name of that species**
+//! — even for settlements whose own cell did not move. Measured: holding
+//! the seed-42 scatter fixed and varying only the corpus changes 22 gnoll
+//! names. This module stays pure (the corpus is an explicit, read-only
+//! argument), but the world-level isolation property is gone by design, and
+//! a pin-isolation test must not assume it.
 //!
 //! [`Namer::glossed_name`] (The Words, Task 9) is a later epoch of the same
 //! `name` (v1 retired but never deleted — old saves still read it): rooted
@@ -373,13 +385,29 @@ impl<'a> Namer<'a> {
         evolve(segments, &cascade, self.ph).modern
     }
 
-    /// The segments [`Namer::glossed_name`] compounds for its 1-2 `chosen`
-    /// site concepts, each **worn to its own corpus frequency first**: a
-    /// single concept's own segments, or two concepts' segments joined as a
-    /// fresh modifier/head pair (the first-drawn concept is the modifier,
-    /// the second-drawn is the head — an arbitrary but deterministic
+    /// Join the 1-2 already-resolved `parts` (one per chosen site concept)
+    /// into a compound: a single part unchanged, or two joined as a fresh
+    /// modifier/head pair (the first-drawn concept is the modifier, the
+    /// second-drawn is the head — an arbitrary but deterministic
     /// convention, distinct from any recipe compounding already inside
     /// `lexicon`) in `lexicon`'s drawn [`Headedness`] order.
+    fn join_parts(lexicon: &Lexicon, mut parts: Vec<Vec<Segment>>) -> Vec<Segment> {
+        debug_assert!(
+            !parts.is_empty(),
+            "the caller filters the empty case (the bare-stem fallback) before compounding"
+        );
+        if parts.len() == 1 {
+            return parts.remove(0);
+        }
+        let head_segs = parts.remove(1);
+        let modifier_segs = parts.remove(0);
+        join_by_headedness(lexicon.headedness, modifier_segs, head_segs)
+    }
+
+    /// The repaired segments [`Namer::glossed_name`] surfaces for its 1-2
+    /// `chosen` site concepts, each **worn to its own corpus frequency
+    /// first** — wearing as many of them as can survive repair, and
+    /// reporting how many had to give their wear up.
     ///
     /// Wear is applied **per morpheme, before the join**, which is what
     /// keeps it frequency-keyed rather than slot-keyed. Wearing the
@@ -388,27 +416,112 @@ impl<'a> Namer<'a> {
     /// grind whichever morpheme the headedness happened to put last, no
     /// matter how rare that morpheme was. Per-morpheme, a ubiquitous
     /// modifier wears and a rare head beside it does not.
-    fn compound_worn_segments(
+    ///
+    /// # The survival rule, and why it is not optional
+    ///
+    /// Wear and repair interact destructively if left alone, and the first
+    /// implementation of this method shipped that bug. Repair is the
+    /// identity for a culture's **attested** words (The Speakable: the
+    /// lexicon's own forms are admitted verbatim at zero cost) — but a worn
+    /// form is by construction *no longer* one of them, so it falls through
+    /// to the syllabifier, and when no template can host it the cheapest
+    /// remaining plan is [`RepairStep::Delete`]. Measured on seed 42: nine
+    /// settlements committed a `name-gloss` fact naming a morpheme their
+    /// name did not contain — `marsh` worn to `Soov` and then deleted
+    /// outright, so `marsh-tropical-rainforest` and `tropical-rainforest`
+    /// rendered byte-identically. That is a falsehood in the ledger.
+    ///
+    /// It is also the wrong *linguistics*. `-ham` is a reduced **survival**;
+    /// erasure is not opacification, and a campaign whose thesis is that a
+    /// worn morpheme stays recognizable cannot ship a wear that deletes one.
+    ///
+    /// So the rule: **a worn morpheme must leave a contiguous reflex in the
+    /// repaired surface form.** This method wears every eligible morpheme,
+    /// repairs, and checks; if any part was annihilated it gives up the wear
+    /// on the **least frequent** still-worn morpheme and tries again, down
+    /// to no wear at all (which is the pre-wear behavior and repairs to the
+    /// identity). Giving up in ascending frequency order keeps even the
+    /// fallback frequency-keyed rather than slot-keyed.
+    ///
+    /// The alternative remedy — admitting worn forms into the attested tier
+    /// so repair leaves them alone — was rejected: the Lab's own
+    /// romanization validator reconstructs that tier from the lexicon alone
+    /// (`attested_roman_forms`, `windows/lab`), so a name containing a form
+    /// the lexicon does not hold would stop validating. Falling back keeps
+    /// repair's guarantee exactly as it was: every name still conforms
+    /// under `(phonology, attested-from-lexicon)`.
+    ///
+    /// Returns the repaired segments and **how many morphemes surrendered
+    /// their wear** — the fallback count, which nothing in a committed world
+    /// depends on but which is what the fallback rate is measured from.
+    ///
+    /// Consumes no stream draws — wear draws its cascade off the lexicon
+    /// derivation and repair is pure — so none of this touches the naming
+    /// epoch's stream-consumption contract.
+    fn worn_compound(
         &self,
         lexicon: &Lexicon,
         chosen: &[&str],
         corpus: &NameCorpus,
-    ) -> Vec<Segment> {
-        let mut worn = chosen
+        attested: &[Vec<Segment>],
+    ) -> (Vec<Segment>, usize) {
+        let raw: Vec<Vec<Segment>> = chosen
             .iter()
-            .map(|concept| {
-                self.wear(
-                    &concept_segments(lexicon, concept),
-                    corpus.frequency_of(concept),
-                )
+            .map(|concept| concept_segments(lexicon, concept))
+            .collect();
+        // Which morphemes wear at all, and how strongly — the give-up order
+        // below is ascending frequency, so the morpheme said least often is
+        // the first to keep its whole form.
+        let mut worn: Vec<Option<Vec<Segment>>> = chosen
+            .iter()
+            .zip(raw.iter())
+            .map(|(concept, form)| {
+                let out = self.wear(form, corpus.frequency_of(concept));
+                if out == *form { None } else { Some(out) }
             })
-            .collect::<Vec<Vec<Segment>>>();
-        if worn.len() == 1 {
-            return worn.remove(0);
+            .collect();
+        let mut give_up_order: Vec<usize> =
+            (0..chosen.len()).filter(|i| worn[*i].is_some()).collect();
+        // Ascending frequency; ties by concept id, then index — a total,
+        // float-free order (the frequencies are compared with `total_cmp`,
+        // never `<`).
+        give_up_order.sort_by(|a, b| {
+            corpus
+                .frequency_of(chosen[*a])
+                .total_cmp(&corpus.frequency_of(chosen[*b]))
+                .then_with(|| chosen[*a].cmp(chosen[*b]))
+                .then_with(|| a.cmp(b))
+        });
+
+        let mut surrendered = 0usize;
+        let attempts = give_up_order.len() + 1;
+        for attempt in 0..attempts {
+            let parts: Vec<Vec<Segment>> = raw
+                .iter()
+                .enumerate()
+                .map(|(i, form)| worn[i].clone().unwrap_or_else(|| form.clone()))
+                .collect();
+            let repaired =
+                repair_phonotactics(Self::join_parts(lexicon, parts.clone()), self.ph, attested);
+            if parts.iter().all(|part| contains_run(&repaired, part)) {
+                return (repaired, surrendered);
+            }
+            // Annihilated: give up the least-frequent surviving wear and
+            // retry. The final attempt wears nothing, which is exactly the
+            // pre-wear compound and repairs to itself.
+            if attempt < give_up_order.len() {
+                worn[give_up_order[attempt]] = None;
+                surrendered += 1;
+            }
         }
-        let head_segs = worn.remove(1);
-        let modifier_segs = worn.remove(0);
-        join_by_headedness(lexicon.headedness, modifier_segs, head_segs)
+        // Every attempt including the unworn one failed containment — the
+        // unworn compound is not repair-stable for this culture. Nothing to
+        // do with wear; surface the unworn form, exactly as this code did
+        // before wear existed.
+        (
+            repair_phonotactics(Self::join_parts(lexicon, raw), self.ph, attested),
+            surrendered,
+        )
     }
 
     /// Draw a *glossed* name of `kind` for `salt`, at the `/v3` epoch: the
@@ -466,7 +579,6 @@ impl<'a> Namer<'a> {
             return (name, String::new());
         }
 
-        let segments = self.compound_worn_segments(lexicon, &chosen, corpus);
         // Repair AFTER compounding and wear, BEFORE morphology (the
         // permanent order — wear before repair, because wear may produce a
         // form the synchronic templates reject and repair is what adapts
@@ -479,13 +591,18 @@ impl<'a> Namer<'a> {
         // material that is itself one of the language's own words — no
         // template edit needed, just verbatim admission: repair runs over
         // the canon templates plus the lexicon's attested tier, so it is
-        // the identity for native compounds by construction. The honorific
-        // prefix below is a freshly drawn template syllable — conformant by
-        // construction — so prefixing it onto a repaired word keeps the
-        // whole name conformant. Repair changes sound, never meaning: the
-        // gloss is computed from `chosen` alone.
+        // the identity for native compounds by construction. A WORN
+        // morpheme is not attested, though, so `worn_compound` owns the
+        // compound-and-repair pair together: it wears, repairs, and gives
+        // wear back up on any morpheme repair would have annihilated (see
+        // its docs — the alternative was a name that lies about its own
+        // gloss). The honorific prefix below is a freshly drawn template
+        // syllable — conformant by construction — so prefixing it onto a
+        // repaired word keeps the whole name conformant. Neither wear nor
+        // repair changes MEANING: the gloss is computed from `chosen`
+        // alone.
         let attested = attested_forms(lexicon);
-        let mut segments = repair_phonotactics(segments, self.ph, &attested);
+        let (mut segments, _surrendered) = self.worn_compound(lexicon, &chosen, corpus, &attested);
         if kind == NameKind::Epithet && morph.honorifics {
             let affix = self.draw_syllable(&mut stream, false);
             let mut prefixed: Vec<Segment> = affix.segments().copied().collect();
@@ -1008,6 +1125,19 @@ fn minimal_syllable(ph: &Phonology, epenthetic: Segment) -> Vec<Segment> {
     out
 }
 
+/// Whether `haystack` contains `needle` as a **contiguous** run of
+/// segments. The precise reading of "a worn morpheme must leave a
+/// recognizable reflex": the surface form still says the morpheme, in one
+/// piece, in order. An empty needle is trivially contained (a concept with
+/// no segments cannot be annihilated); this stays total rather than
+/// panicking on a lexicon invariant this module does not enforce.
+fn contains_run(haystack: &[Segment], needle: &[Segment]) -> bool {
+    if needle.is_empty() {
+        return true;
+    }
+    haystack.len() >= needle.len() && haystack.windows(needle.len()).any(|w| w == needle)
+}
+
 /// Whether `lexicon` holds an actual word — a [`LexEntry::Root`] or
 /// [`LexEntry::Compound`], never a [`LexEntry::Gap`] or an absent entry —
 /// for `concept`. The filter [`Namer::glossed_name`] applies to a site's
@@ -1229,10 +1359,12 @@ mod tests {
 
     #[test]
     fn glossed_name_is_pure_and_pin_isolated() {
-        // Same (seed, species, kind, salt, site, lexicon) must yield the
-        // identical name and gloss, independent of any other entity — two
-        // freshly built Namers/lexicons over the same inputs, no shared
-        // state between them.
+        // Same (seed, species, kind, salt, site, lexicon, corpus) must yield
+        // the identical name and gloss — two freshly built Namers/lexicons
+        // over the same inputs, no shared state between them. This is
+        // MODULE purity, which is intact; it is no longer world-level pin
+        // isolation, because the corpus argument is itself a function of a
+        // species' whole scatter (see the module docs).
         let ph = wordy_ph();
         let lex = two_word_lexicon(9);
         let site = SiteConcepts {
@@ -1316,7 +1448,7 @@ mod tests {
 
     #[test]
     fn glossed_name_moved_the_epoch_off_v1() {
-        // The fallback path draws a bare stem too, but under the /v2 leg —
+        // The fallback path draws a bare stem too, but under the /v3 leg —
         // a different stream from v1's `name()`, so the two must diverge
         // even for the same seed/species/kind/salt.
         let ph = wordy_ph();
@@ -1327,7 +1459,7 @@ mod tests {
         let morph = MorphOptions { honorifics: false };
         let namer = Namer::new(&Seed(9), "test", &ph);
         let v1 = namer.name(NameKind::Settlement, 3, &morph);
-        let (v2, _) = namer.glossed_name(
+        let (v3, _) = namer.glossed_name(
             NameKind::Settlement,
             3,
             &morph,
@@ -1336,8 +1468,8 @@ mod tests {
             &NameCorpus::none(),
         );
         assert_ne!(
-            v1.roman, v2.roman,
-            "v2 must draw from a distinct stream than v1, even on the fallback path"
+            v1.roman, v3.roman,
+            "v3 must draw from a distinct stream than v1, even on the fallback path"
         );
     }
 
@@ -1633,13 +1765,15 @@ mod tests {
         // where `FinalLoss` can only ever touch the word's last segment)
         // would grind the same slot both times.
         let ph = wordy_ph();
-        // Lexicon seed 49 over `wordy_ph`: both roots are consonant-final,
+        // Lexicon seed 19 over `wordy_ph`: both roots are consonant-final,
         // so kobold@42's wear cascade has an environment to fire in for
-        // each. That is asserted below, not assumed — `ClusterSimplify`
-        // only fires on a word-initial CC and `FinalLoss` only on a
-        // word-final consonant, so a lexicon of open CV roots would make
-        // this test vacuously green.
-        let lex = two_word_lexicon(49);
+        // each, AND both worn forms survive repair (asserted below as a
+        // precondition — the survival rule would otherwise silently give
+        // the wear back and this test would be measuring the fallback).
+        // `ClusterSimplify` only fires on a word-initial CC and `FinalLoss`
+        // only on a word-final consonant, so a lexicon of open CV roots
+        // would make this test vacuously green.
+        let lex = two_word_lexicon(19);
         // "kobold" at Seed(42): a wear cascade with real length-reducing
         // rules, asserted as a precondition so a reseed fails loudly.
         let namer = Namer::new(&Seed(42), "kobold", &ph);
@@ -1654,7 +1788,10 @@ mod tests {
         );
 
         let chosen = ["water", "fire"];
-        let bare = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
+        let attested = attested_forms(&lex);
+        let (bare, bare_gave_up) =
+            namer.worn_compound(&lex, &chosen, &NameCorpus::none(), &attested);
+        assert_eq!(bare_gave_up, 0, "an unworn compound surrenders nothing");
 
         // Non-vacuity: the untouched compound is the two words' segments,
         // and each word on its own really does wear when frequent — so a
@@ -1674,19 +1811,27 @@ mod tests {
         only_second.insert("water".to_string(), 0.02);
         only_second.insert("fire".to_string(), 0.95);
 
-        let first_worn = namer.compound_worn_segments(
+        let (first_worn, first_gave_up) = namer.worn_compound(
             &lex,
             &chosen,
             &NameCorpus {
                 frequencies: &only_first,
             },
+            &attested,
         );
-        let second_worn = namer.compound_worn_segments(
+        let (second_worn, second_gave_up) = namer.worn_compound(
             &lex,
             &chosen,
             &NameCorpus {
                 frequencies: &only_second,
             },
+            &attested,
+        );
+        assert_eq!(
+            (first_gave_up, second_gave_up),
+            (0, 0),
+            "fixture precondition: both worn forms must SURVIVE repair here, or the \
+             asymmetry below would be measuring the fallback rather than the wear"
         );
 
         assert!(
@@ -1705,13 +1850,70 @@ mod tests {
     }
 
     #[test]
+    fn wear_that_repair_would_annihilate_is_given_up() {
+        // Critical: wear breaks attestedness, and `repair_phonotactics` is
+        // the identity only for a culture's ATTESTED words — a worn form
+        // falls through to the syllabifier and, when no template can host
+        // it, to `RepairStep::Delete`. On seed 42 that erased whole
+        // morphemes and left nine settlements committing a `name-gloss`
+        // naming a word their name did not contain.
+        //
+        // Lexicon seed 49 is exactly that case: kobold@42's wear cascade
+        // fires on both roots, and neither worn form survives repair. The
+        // survival rule must therefore give the wear back rather than let
+        // the morpheme vanish.
+        let ph = wordy_ph();
+        let lex = two_word_lexicon(49);
+        let namer = Namer::new(&Seed(42), "kobold", &ph);
+        let attested = attested_forms(&lex);
+        let chosen = ["water", "fire"];
+
+        // Precondition: this fixture really does wear, or the test proves
+        // nothing about the fallback.
+        for concept in chosen {
+            let raw = concept_segments(&lex, concept);
+            assert!(
+                namer.wear(&raw, 0.95).len() < raw.len(),
+                "fixture precondition: {concept} must wear at all"
+            );
+        }
+
+        let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
+        saturated.insert("water".to_string(), 0.95);
+        saturated.insert("fire".to_string(), 0.95);
+        let (segments, surrendered) = namer.worn_compound(
+            &lex,
+            &chosen,
+            &NameCorpus {
+                frequencies: &saturated,
+            },
+            &attested,
+        );
+
+        assert!(
+            surrendered > 0,
+            "fixture precondition: repair must annihilate a worn form here, \
+             or the fallback is never exercised"
+        );
+        // The invariant the fallback exists for: every glossed morpheme
+        // still says itself, in one contiguous piece, in the surface form.
+        for concept in chosen {
+            assert!(
+                contains_run(&segments, &concept_segments(&lex, concept)),
+                "{concept} was annihilated: {:?} does not contain it",
+                render_views(&segments).roman
+            );
+        }
+    }
+
+    #[test]
     fn glossed_concepts_is_exactly_what_glossed_name_glosses_and_ignores_the_corpus() {
         // The contract worldgen's two-pass composition rests on: the
         // concepts reported before the corpus exists are the concepts the
         // name is actually built from, because wear consumes nothing from
         // the name stream.
         let ph = wordy_ph();
-        let lex = two_word_lexicon(49);
+        let lex = two_word_lexicon(19);
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
@@ -1758,14 +1960,19 @@ mod tests {
         for seed in 0..12u64 {
             let ph = wordy_ph();
             let lex = two_word_lexicon(seed);
-            let namer = Namer::new(&Seed(seed), "test", &ph);
             for chosen in [
                 vec!["water"],
                 vec!["fire"],
                 vec!["water", "fire"],
                 vec!["fire", "water"],
             ] {
-                let raw = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
+                // The UNREPAIRED join — this test supplies its own
+                // (empty) attested tier below, so it must not go through
+                // `worn_compound`, which repairs against the real one.
+                let raw = Namer::join_parts(
+                    &lex,
+                    chosen.iter().map(|c| concept_segments(&lex, c)).collect(),
+                );
                 assert!(!raw.is_empty(), "roots must produce segments");
                 let repaired = repair_phonotactics(raw, &ph, &[]);
                 assert!(
@@ -1973,7 +2180,6 @@ mod tests {
                 CascadeRegime::SETTLED,
             );
             let attested = attested_forms(&lex);
-            let namer = Namer::new(&Seed(seed), "swept", &ph);
             for chosen in [
                 vec!["water"],
                 vec!["moon"],
@@ -1986,7 +2192,13 @@ mod tests {
                 // The unworn compound: repair is the identity for a
                 // culture's own attested words, and wear is what may
                 // break that (a worn form is no longer attested).
-                let raw = namer.compound_worn_segments(&lex, &chosen, &NameCorpus::none());
+                // The UNREPAIRED join — this test supplies its own
+                // (empty) attested tier below, so it must not go through
+                // `worn_compound`, which repairs against the real one.
+                let raw = Namer::join_parts(
+                    &lex,
+                    chosen.iter().map(|c| concept_segments(&lex, c)).collect(),
+                );
                 assert!(
                     conforms(&raw, &ph, &attested),
                     "seed {seed}: compound {chosen:?} must conform under its own attested tier"

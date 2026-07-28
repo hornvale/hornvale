@@ -51,6 +51,110 @@ fn permissive_proto() -> Phonology {
     )
 }
 
+/// The Speakable's §6 audible-containment property, **armed with a real
+/// name corpus** — i.e. exercised under toponymic wear, the feature that
+/// can break it.
+///
+/// The unworn sweep below is not enough on its own, and shipping only that
+/// was a real defect: wear breaks attestedness, `repair_phonotactics` is
+/// the identity only for attested words, and a worn form that no template
+/// can host is DELETED. Nine seed-42 settlements committed a `name-gloss`
+/// naming a morpheme their name did not contain before the survival rule
+/// existed. This is the test that pins the fix — with every concept driven
+/// to a corpus share of 1.0, so wear is attempted on every morpheme of
+/// every name, across the same 64-seed sweep.
+///
+/// The property asserted is deliberately the ORIGINAL one: the name must
+/// audibly contain each glossed concept's own word. Wear may reduce a
+/// morpheme, so a worn name is allowed to contain the **worn** reflex
+/// instead of the citation form — but it must contain one of them. It may
+/// never contain neither, which is what erasure looks like.
+#[test]
+fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
+    let mut worn_names = 0usize;
+    let mut checked = 0usize;
+    for seed in 0..64u64 {
+        let proto = permissive_proto();
+        let ph = draw_phonology(&Seed(seed), "swept", &swept_envelope(seed));
+        let mut exposures = BTreeMap::new();
+        for c in ["water", "fire", "moon", "shadow"] {
+            exposures.insert(c.to_string(), ExposureClass::Steeped);
+        }
+        let lex = build_lexicon(
+            &Seed(seed),
+            "fam",
+            "swept",
+            &ph,
+            &proto,
+            &exposures,
+            &[],
+            CascadeRegime::SETTLED,
+        );
+        let namer = Namer::new(&Seed(seed), "swept", &ph);
+        let site = SiteConcepts {
+            concepts: &["water", "fire", "moon", "shadow"],
+        };
+        let morph = MorphOptions { honorifics: false };
+        // Every concept in every name of this culture: the maximum wear
+        // pressure the mechanism can ever be under.
+        let frequencies: BTreeMap<String, f64> = ["water", "fire", "moon", "shadow"]
+            .iter()
+            .map(|c| (c.to_string(), 1.0))
+            .collect();
+        let corpus = NameCorpus {
+            frequencies: &frequencies,
+        };
+
+        for kind in [NameKind::Settlement, NameKind::Deity] {
+            for salt in 0..6u64 {
+                let (name, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex, &corpus);
+                let (plain, _) =
+                    namer.glossed_name(kind, salt, &morph, &site, &lex, &NameCorpus::none());
+                if name.roman != plain.roman {
+                    worn_names += 1;
+                }
+                for concept in gloss.split('-').filter(|c| !c.is_empty()) {
+                    let citation = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            render_views(&derivation.modern).roman.to_lowercase()
+                        }
+                        other => panic!(
+                            "seed {seed} salt {salt} {kind:?}: gloss concept {concept} \
+                             must be a root, got {other:?}"
+                        ),
+                    };
+                    let worn_form = match lex.entry(concept) {
+                        Some(LexEntry::Root { derivation, .. }) => {
+                            render_views(&namer.wear(&derivation.modern, 1.0))
+                                .roman
+                                .to_lowercase()
+                        }
+                        _ => unreachable!("checked above"),
+                    };
+                    let surface = name.roman.to_lowercase();
+                    checked += 1;
+                    assert!(
+                        surface.contains(&citation) || surface.contains(&worn_form),
+                        "seed {seed} salt {salt} {kind:?}: name {:?} contains NEITHER \
+                         {concept}'s citation form {citation:?} nor its worn reflex \
+                         {worn_form:?} — the gloss names a morpheme the name does not say",
+                        name.roman
+                    );
+                }
+            }
+        }
+    }
+    assert!(
+        checked > 0,
+        "non-vacuity: the sweep must have checked some glossed morpheme"
+    );
+    assert!(
+        worn_names > 0,
+        "non-vacuity: a saturated corpus must have actually worn some name, \
+         or this sweep is the unworn one again under a different name"
+    );
+}
+
 #[test]
 fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
     for seed in 0..64u64 {

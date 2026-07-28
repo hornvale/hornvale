@@ -235,7 +235,9 @@ pub fn draw_cascade_with_regime(seed: &Seed, species: &str, regime: CascadeRegim
 /// that constant: drawn from [`streams::CASCADE`] directly, a wear cascade
 /// is a strict prefix of the language's *historical* cascade, whose own
 /// output the lexicon's modern forms already are — so every rule would be
-/// re-applied to its own fixpoint and the wear would be a provable no-op.
+/// re-applied to its own fixpoint and the wear would be degenerate (154 of
+/// 154 applications changed nothing on seed 42; a handful of CCC-onset
+/// counterexamples exist, so it is near-inert rather than provably inert).
 /// This is one further, independent epoch of drift, applied only to the
 /// forms said often enough to suffer it.
 /// type-audit: bare-ok(identifier-text)
