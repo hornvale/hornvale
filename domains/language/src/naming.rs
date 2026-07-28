@@ -1396,13 +1396,24 @@ mod tests {
     }
 
     #[test]
-    fn glossed_name_is_pure_and_pin_isolated() {
+    fn glossed_name_is_a_pure_function_of_its_arguments() {
+        // ARGUMENT PURITY — one of the two properties the spec's amended
+        // pin-isolation clause (ledger #10, 2026-07-28) says this battery
+        // must assert, now that world-level scatter-invariance is
+        // deliberately given up. The other, determinism under repeated
+        // builds, is `hornvale-worldgen`'s
+        // `glossed_names_are_stable_across_two_builds`.
+        //
+        // This test previously called itself `..._is_pure_and_pin_isolated`,
+        // which over-claimed in its own name: it never exercised scatter
+        // invariance, and since the wear that property is false anyway.
+        //
         // Same (seed, species, kind, salt, site, lexicon, corpus) must yield
         // the identical name and gloss — two freshly built Namers/lexicons
-        // over the same inputs, no shared state between them. This is
-        // MODULE purity, which is intact; it is no longer world-level pin
-        // isolation, because the corpus argument is itself a function of a
-        // species' whole scatter (see the module docs).
+        // over the same inputs, no shared state between them, and two
+        // SEPARATELY CONSTRUCTED corpora of equal value, so the name is
+        // proved to depend on the corpus's contents rather than on its
+        // identity or on any state it might carry.
         let ph = wordy_ph();
         let lex = two_word_lexicon(9);
         let site = SiteConcepts {
@@ -1428,6 +1439,29 @@ mod tests {
             &NameCorpus::none(),
         );
         assert_eq!(a, b);
+
+        // The corpus argument obeys the same rule: equal VALUE, equal name.
+        let mut f1: BTreeMap<String, f64> = BTreeMap::new();
+        f1.insert("water".to_string(), 0.8);
+        f1.insert("fire".to_string(), 0.1);
+        let f2 = f1.clone();
+        let c = n1.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus { frequencies: &f1 },
+        );
+        let d = n2.glossed_name(
+            NameKind::Settlement,
+            3,
+            &morph,
+            &site,
+            &lex,
+            &NameCorpus { frequencies: &f2 },
+        );
+        assert_eq!(c, d, "the name must depend on the corpus's VALUE alone");
     }
 
     #[test]
