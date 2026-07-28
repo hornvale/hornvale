@@ -267,6 +267,7 @@
 - [The Vacancy](./chronicle/the-vacancy.md)
 - [The Hoist](./chronicle/the-hoist.md)
 - [The Turnstile](./chronicle/the-turnstile.md)
+- [The Occlusion](./chronicle/the-occlusion.md)
 
 # Appendix: The Frontier
 

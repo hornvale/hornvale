@@ -353,6 +353,38 @@ things the seam holding does *not* buy — and the one lesson that now recurs
 often enough to be a rule rather than an anecdote is that every entry on that
 ledger was found by a human looking at output, never by a test.
 
+[The Occlusion](./chronicle/the-occlusion.md) confirms that rule from outside
+the scene-document program entirely, and in the plainest register available:
+its four defects were found not in a picture but in **prose**, by building the
+CLI and reading what it said. The almanac had been opening for most of the
+project's life by naming five stars beneath a flat overcast — a sentence that
+contradicts itself inside its own span — and `possess` printed `Ways on: SE,
+N, SW.` and then answered `No verb 'se'`. Neither is visible in a diff, because
+in both cases each half is correct in isolation: the compass parser accepted
+the token and the dispatch arm that reaches it was simply absent; the weather
+was computed correctly and appended after the sky was already described. A
+codebase with zero TODOs across a hundred thousand lines, a default-deny type
+audit, and a 2,319-test gate said nothing about either. So the visual pass
+generalizes to a **legibility pass**: for a project whose deliverable is prose
+about a world, reading the output is a distinct instrument from testing it, and
+the same one that catches a leaning parallelogram catches a sky that argues
+with itself.
+
+The campaign also put a sharper edge on what "verified" buys. Its spec claimed
+the change could not reach the save format, and *checked* that claim — the sky
+report carries no serializer, confirmed by reading the derive rather than
+assuming it. The check was sound and the conclusion was false, because the
+exposure did not run through serialization but through genesis, where a
+people's gods are derived from the sky they observe. Wiring occlusion into the
+observation path cost seed 42 twenty-three of its forty-eight deities while
+every gate stayed green, since the gate pins facts against the current build
+and not against history. What caught it was the cheapest possible instrument,
+and one no schema discipline implies: build the world before and after, and
+compare the bytes. The ledger's entries were all *found by looking*; this one
+adds that a determinism claim is only as good as the route it was checked
+along, and that the total check — same seed, both binaries, `cmp` — costs
+ninety seconds and subsumes the clever ones.
+
 **Terrain shape has Earth-anchored, self-checking acceptance bands, and the
 one that stayed open resolved by superseding its own instrument rather than
 closing under it.** The Measured Coast preregistered six Earth-anchored

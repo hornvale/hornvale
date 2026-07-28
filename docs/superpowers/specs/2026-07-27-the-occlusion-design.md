@@ -150,10 +150,31 @@ god's-eye list would destroy the thing it exposes:
 
 ## 3. Determinism analysis
 
-**No epoch suffix is required.** Phenomena are a *read*, not committed facts:
+> **Corrected during execution — read this first.** The claim below that
+> "phenomena are a *read*, not committed facts" is **false for the genesis
+> path**, and was corrected in Task 3. `derived-from-phenomenon` is a
+> *committed predicate*: genesis observes phenomena to derive which deities a
+> people believes in and how its settlements are named. Wiring occlusion into
+> the observation path took seed 42 from 7,350 facts to 7,126 and its pantheon
+> from **48 deities to 25**.
+>
+> The no-epoch conclusion survives, but only because occlusion is now confined
+> to *presentation* accessors and kept off the genesis path entirely — not for
+> the reason this section originally gave. See ledger entry #8 and the
+> chronicle.
+>
+> The methodological lesson: verifying one route (`SkyReport` carries no
+> `Serialize` — true, and checked) is not verifying the claim. The check that
+> actually caught it is the total one: build a seed-42 world with both
+> binaries and `cmp`.
+
+**No epoch suffix is required.** ~~Phenomena are a *read*, not committed facts:
 no ledger content, no save-format field, no stream-label change, no change to
-stream consumption order. World bytes are unaffected; only rendered artifacts
-move.
+stream consumption order.~~ *(Superseded — see the correction above.)* The
+conclusion holds because occlusion touches only presentation accessors: no
+ledger content, no save-format field, no stream-label change, and no change to
+stream consumption order. World bytes are unaffected — verified by `cmp`, not
+inferred — and only rendered artifacts move.
 
 **Byte-identity for clear-sky worlds is by construction** (identity lens ⇒
 `observe` performs no arithmetic at all) and must be **tested, not asserted** —
