@@ -40,11 +40,21 @@
 //! # distribution is still geometric. Self-organized criticality is FALSIFIED
 //! # a second time.
 //!
-//! Pooled over `SHAPE_SAMPLE` (seeds 1..=30) at HEAD: `hist [346, 21, 0×10]`
-//! — 346 cascades of size 1, 21 of size 2–3, and **nothing at all above size
-//! 3**, out of 4462 conquests. Replicated over seeds 1..=100:
-//! `hist [1182, 72, 0×10]` out of 14 962 conquests — the same shape at 3.4×
+//! Pooled over `SHAPE_SAMPLE` (seeds 1..=30) at HEAD: `hist [634, 36, 0×10]`
+//! — 634 cascades of size 1, 36 of size 2–3, and **nothing at all above size
+//! 3**, out of 7183 conquests. Replicated over seeds 1..=100:
+//! `hist [1889, 98, 0×10]` out of 22 255 conquests — the same shape at 3.0×
 //! the sample.
+//!
+//! **These counts are post-absorption.** They were first measured on the
+//! campaign's own tree, where the same run gave `hist [346, 21]` / σ
+//! 0.095–0.101 (1..=30). Absorbing main brought The Vacancy's *fifth Settled
+//! people*, the gnoll — which, at `time_horizon` 0.2, is the shortest-sighted
+//! patron in the strategy family and so the most extractive one. More peoples
+//! means more communities, more conquests and far more flight (83 pooled
+//! flights became 998), and every count in this file roughly doubled with the
+//! map's occupancy. **The verdict below is unchanged in every particular**;
+//! only the magnitudes moved, and they moved together.
 //!
 //! The **branching ratio** — secondary displacements per top-level conquest,
 //! the σ whose critical value is 1 — is computed exactly as The Tumult
@@ -63,12 +73,12 @@
 //! |---|---|---|---|---|---|---|
 //! | The Tumult | 1..=30 | `[38, 2]` | 886 | 42–44 | 842–844 | **0.050–0.052** |
 //! | The Tumult | 1..=100 | `[138, 3]` | 2974 | 144–147 | 2827–2830 | **0.051–0.052** |
-//! | **The Tithe** | 1..=30 | `[346, 21]` | 4462 | 388–409 | 4053–4074 | **0.095–0.101** |
-//! | **The Tithe** | 1..=100 | `[1182, 72]` | 14962 | 1326–1398 | 13564–13636 | **0.097–0.103** |
+//! | **The Tithe** | 1..=30 | `[634, 36]` | 7183 | 706–742 | 6441–6477 | **0.109–0.115** |
+//! | **The Tithe** | 1..=100 | `[1889, 98]` | 22255 | 2085–2183 | 20072–20170 | **0.103–0.109** |
 //!
 //! **So the preregistered question has a two-part answer, and both parts
 //! ship.** Accumulation *did* move the branching ratio off σ ≈ 0.051: it
-//! roughly doubled, to σ ≈ 0.097, and it moved by the same factor on both
+//! roughly doubled, to σ ≈ 0.106, and it moved by the same factor on both
 //! samples. But σ ≈ 0.1 is not σ ≈ 1. The distribution's *shape* did not
 //! change at all:
 //!
@@ -76,20 +86,20 @@
 //!   worlds is 3 displacements — **0.48 decades** of support, against the
 //!   ≥ ~1.5 decades spec §5 requires to call a power law.
 //! - **The per-octave drop did not soften into a tail.** Bin 0 → bin 1 falls
-//!   **16.5×** at 1..=30 and **16.4×** at 1..=100, where a heavy tail would
+//!   **17.6×** at 1..=30 and **19.3×** at 1..=100, where a heavy tail would
 //!   fall by `2^(1−τ)` ≈ 2–4×. (The Tumult's drop was 19× and 46×; the
 //!   softening is the same factor-of-two the σ shows, not a change of
 //!   family.)
 //! - **Bin 2 and above are empty on every one of the 100 worlds**, i.e. not
-//!   one cascade past 3 displacements in ~15 000 conquests. A geometric law
+//!   one cascade past 3 displacements in ~22 000 conquests. A geometric law
 //!   with σ ≈ 0.1 predicts exactly that; a power law does not.
 //!
 //! This is therefore **spec §5's documented falsification, for the second
 //! time and at a doubled branching ratio** — a geometric distribution with a
 //! hard cutoff, deep in the sub-critical regime. It ships as the campaign's
 //! answer, exactly as §4.3e prediction 2 said in advance that it would if the
-//! shape held while revolts fired (they do fire: 16 pooled revolts and 83
-//! flights at 1..=30, 51 and 234 at 1..=100, where the pre-continuity build
+//! shape held while revolts fired (they do fire: 29 pooled revolts and 998
+//! flights at 1..=30, 72 and 3054 at 1..=100, where the pre-continuity build
 //! measured **0** revolts on the same thirty worlds).
 //!
 //! **The diagnosis this leaves is structural, and both remaining levers were
@@ -109,7 +119,9 @@
 //! population's shape rather than the demand's (spec §5 says so, and the
 //! campaign learned it the hard way).
 //!
-//! Over 754 relations holding ≥ 20 contiguous collections (pooled 1..=30),
+//! (Also measured pre-absorption, and on the same reverted probe as §8.0's
+//! table; the shape claim below is what ships, not the counts.) Over 754
+//! relations holding ≥ 20 contiguous collections (pooled 1..=30),
 //! the dominant Fourier component of the detrended per-relation remittance
 //! series sits at harmonic index **k = 1 in 91.6% of relations** (86.2% for
 //! the extraction-rate series, 93–95% at k ≤ 2). k = 1 *is* the series' own
@@ -139,6 +151,14 @@
 //!
 //! # §8.0 — the variety criterion. MET, and it is what this campaign can
 //! # claim unambiguously.
+//!
+//! **Measured PRE-ABSORPTION, on the campaign's own tree.** This section's
+//! numbers came from a temporary probe that was reverted before commit, so
+//! they cannot be cheaply re-measured after absorbing main; they are left as
+//! the dated record they are. The absorption roughly doubled every population
+//! count in this file (see the primary verdict above), so read the ratios and
+//! the monotonicity — which is what §8.0 actually claims — rather than the
+//! absolute `n`s. The gate below, which *is* re-measured, still passes.
 //!
 //! Measured over 5401 relations pooled across seeds 1..=30 (a temporary
 //! env-gated probe, inert — seed 42's census with the probe is identical to
@@ -171,13 +191,22 @@
 //! such; the fate and extraction-rate columns above are probe measurements,
 //! reported rather than gated.
 //!
-//! *Seed-42 readings, dated 2026-07-27 rather than standing claims (only the
-//! `const` floors below are asserted):* `grew 9375, founded 378, migrated
-//! 175, raided 455, fled 455, collapsed 49, resettled 390, records_total
-//! 1405, alive_at_now 344, cascade_hist [30, 8, 0×10], subordinations_formed
-//! 495, patronage_transfers 30, tribute_relations_at_now 164,
-//! max_subordinates 5, tribute_collected 8002.397, tribute_collection_events
-//! 4555, max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
+//! *Seed-42 readings, dated 2026-07-28 (post-absorption) rather than standing
+//! claims (only the `const` floors below are asserted):* `grew 9583, founded
+//! 395, migrated 308, raided 591, fled 591, collapsed 83, resettled 533,
+//! records_total 1776, alive_at_now 329, cascade_hist [62, 2, 0×10],
+//! subordinations_formed 635, patronage_transfers 46,
+//! tribute_relations_at_now 159, max_subordinates 5, tribute_collected
+//! 7349.093, tribute_collection_events 4487, max_stores_at_now 181.996,
+//! vassal_flights 68, vassal_revolts 1`.
+//!
+//! *The same readings on the campaign's own tree, dated 2026-07-27, for the
+//! record:* `grew 9375, founded 378, migrated 175, raided 455, fled 455,
+//! collapsed 49, resettled 390, records_total 1405, alive_at_now 344,
+//! cascade_hist [30, 8, 0×10], subordinations_formed 495,
+//! patronage_transfers 30, tribute_relations_at_now 164, max_subordinates 5,
+//! tribute_collected 8002.397, tribute_collection_events 4555,
+//! max_stores_at_now 249.052, vassal_flights 8, vassal_revolts 5`.
 
 use hornvale_astronomy::SkyPins;
 use hornvale_kernel::{EntityId, KindId, Seed, Value, World};
@@ -254,9 +283,15 @@ const MIN_STANDING_RELATIONS: usize = 40;
 /// stay green, and the reason is worth knowing before anyone reads this floor
 /// as a general guard on over-extraction:
 ///
+/// **This ladder was measured PRE-ABSORPTION** (its HEAD row is seed 42's
+/// then-current 344/1405; the merged tree reads 329/1776). Re-running five
+/// mutation arms is campaign-scale work, so it is left as the dated record it
+/// is — the finding it carries is the *ordering* of the arms, which no
+/// population shift disturbs.
+///
 /// | mutation | `alive_at_now` | `records_total` |
 /// |---|---|---|
-/// | (none — HEAD) | 344 | 1405 |
+/// | (none — HEAD, pre-absorption) | 344 | 1405 |
 /// | `Bake::target_stock` returns `0.0` (no setpoint, no floor) | 136 | 1407 |
 /// | the setpoint pinned to `FARM_FLOOR` for every patron | 150 | 1450 |
 /// | the assessment cap removed (take everything above the setpoint) | 247 | **2024** |
@@ -288,13 +323,13 @@ const MIN_STANDING_RELATIONS: usize = 40;
 const MIN_RECORDS_TOTAL: u64 = 400;
 
 /// Spec §5 — the pooled cascade floor, on the phenomenon EXISTING rather than
-/// on its shape. `SHAPE_SAMPLE` pools **367** cascades; pinned at 100. No
+/// on its shape. `SHAPE_SAMPLE` pools **670** cascades; pinned at 100. No
 /// ceiling is asserted on the shape anywhere in this file: the shape is the
 /// falsification (module docs), and pinning against it would freeze the very
 /// result the deferred depth/release levers are meant to break.
 const MIN_POOLED_CASCADES: u64 = 100;
 
-/// Spec §4.3d — the flight floor. `SHAPE_SAMPLE` pools **83** flights; pinned
+/// Spec §4.3d — the flight floor. `SHAPE_SAMPLE` pools **998** flights; pinned
 /// at 20. Floored because a still-geometric cascade distribution is only
 /// interpretable if the mechanisms that were supposed to move it actually
 /// fired: a null with an inert mechanism is a different (and much weaker)
@@ -302,7 +337,7 @@ const MIN_POOLED_CASCADES: u64 = 100;
 const MIN_POOLED_FLIGHTS: u64 = 20;
 
 /// Spec §4.3d/§4.3e — the revolt floor, and the campaign's preregistered
-/// prediction 1 made permanent. `SHAPE_SAMPLE` pools **16** revolts where the
+/// prediction 1 made permanent. `SHAPE_SAMPLE` pools **29** revolts where the
 /// pre-continuity build measured **0** across the same thirty worlds; pinned
 /// at 5. This is the assertion that stops the headline from silently decaying
 /// into "the mechanism did not fire".
@@ -592,7 +627,7 @@ fn no_emitted_tribute_fact_predates_either_party() {
 /// two campaigns are read off one table.
 ///
 /// **The verdict is recorded in the module docs and it is a falsification:**
-/// σ roughly doubled (0.051 → ~0.097) and the distribution stayed geometric
+/// σ roughly doubled (0.051 → ~0.106) and the distribution stayed geometric
 /// with a hard cutoff. Per measure-don't-narrate the only things asserted here
 /// are floors saying the phenomena EXIST — cascades, flights, revolts — never
 /// a ceiling on the shape. A ceiling would freeze the falsification that the
