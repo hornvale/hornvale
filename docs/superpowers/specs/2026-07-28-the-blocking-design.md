@@ -394,8 +394,17 @@ for the player and worse for parity, since arrow keys should map to the verb a
 player would actually type.
 
 Intra-chamber movement is **`FRAME`-tier**, so 0069 holds and re-walking a room
-stays byte-identical. Only chamber-to-chamber and locale-to-locale movement
-touches committed state.
+stays byte-identical.
+
+*Corrected in Task 5:* this section originally added "only chamber-to-chamber and
+locale-to-locale movement touches committed state," which reads as a statement
+about today and is not one. **Nothing commits at chamber granularity at all** —
+that is this campaign's own `room/chambers/v1` constraint (§5.1), and it is why
+bumping that label is still free. A threshold crossing is therefore no more
+`COMMIT`-tier than a cell step is; what distinguishes it is that it re-renders the
+chamber, which is a *rendering* difference, not a persistence one. The sentence was
+describing the model this program is heading toward, and saying so in the present
+tense is how the window in §5.1 gets mistaken for a debt already owed.
 
 ## 7. The checker
 
