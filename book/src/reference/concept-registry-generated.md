@@ -154,26 +154,39 @@
 | `abyssal` | climate | terrain | a biome class |
 | `alpine` | climate | terrain | a biome class |
 | `bathypelagic` | climate | terrain | a biome class |
+| `black-dragon-kind` | species | living | a black dragon |
 | `blood` | language | body | the circulating fluid of a body |
 | `blue` | language | quality | the color term for blue |
 | `bone` | language | body | the rigid frame of a body |
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
+| `carrion-crawler-kind` | species | living | a carrion crawler |
 | `child` | language | kin | one's son or daughter |
 | `cold` | climate | quality | felt, biting chill |
 | `coral-reef` | climate | terrain | a biome class |
 | `dark` | language | quality | the color term for black/dark hues |
 | `day` | language | celestial | the light half of the day-night cycle |
 | `desert` | climate | terrain | a biome class |
-| `die` | language | quality | to cease living |
+| `die` | language | act | to cease living |
+| `dire-wolf-kind` | species | living | a dire wolf |
+| `drink` | language | act | to swallow liquid |
 | `earth` | language | terrain | the ground underfoot |
-| `eat` | language | quality | to consume food |
+| `eat` | language | act | to consume food |
 | `eclipse` | astronomy | celestial | the darkening when a moon crosses the sun, or the world's shadow crosses a moon |
 | `epipelagic` | climate | terrain | a biome class |
 | `eye` | language | body | the organ of sight |
 | `fire` | language | substance | flame and heat |
 | `foot` | language | body | the walking limb-end |
+| `giant-constrictor-snake-kind` | species | living | a giant constrictor snake |
+| `giant-crocodile-kind` | species | living | a giant crocodile |
+| `giant-elk-kind` | species | living | a giant elk |
+| `giant-goat-kind` | species | living | a giant goat |
+| `giant-hyena-kind` | species | living | a giant hyena |
+| `giant-octopus-kind` | species | living | a giant octopus |
+| `giant-scorpion-kind` | species | living | a giant scorpion |
+| `giant-squid-kind` | species | living | a giant squid |
 | `gloom` | language | quality | the deepest, starless dark |
+| `gnoll-kind` | species | living | a gnoll |
 | `goblin-kind` | species | living | a goblin |
 | `god` | religion | social | a deity |
 | `green` | language | quality | the color term for green |
@@ -186,6 +199,7 @@
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `kelp-forest` | climate | terrain | a biome class |
+| `killer-whale-kind` | species | living | a killer whale |
 | `kobold-kind` | species | living | a kobold |
 | `light` | language | quality | the color term for white/light hues |
 | `many` | language | quality | an indefinitely large count |
@@ -193,20 +207,29 @@
 | `moon` | astronomy | celestial | a moon |
 | `mountain` | terrain | terrain | high ground |
 | `mouth` | language | body | the organ of eating and speech |
+| `move` | language | act | to go from one place to another |
 | `name` | language | social | a word that identifies one who bears it |
 | `night` | astronomy | celestial | the dark half of the day-night cycle |
 | `one` | language | quality | the cardinal number 1 |
+| `otyugh-kind` | species | living | an otyugh |
+| `owlbear-kind` | species | living | an owlbear |
 | `parent` | language | kin | one's father or mother |
 | `person` | language | living | a person; a member of a people (the autonym root) |
 | `rain` | climate | substance | liquid precipitation |
 | `red` | language | quality | the color term for red |
+| `red-dragon-kind` | species | living | a red dragon |
+| `reef-shark-kind` | species | living | a reef shark |
+| `rest` | language | act | to stop and recover strength |
+| `rhinoceros-kind` | species | living | a rhinoceros |
+| `rust-monster-kind` | species | living | a rust monster |
 | `savanna` | climate | terrain | a biome class |
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-ice` | climate | terrain | a biome class |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
+| `shrieker-kind` | species | living | a shrieker |
 | `shrubland` | climate | terrain | a biome class |
 | `sibling` | language | kin | one's brother or sister |
-| `sleep` | language | quality | to rest unconscious |
+| `sleep` | language | act | to rest unconscious |
 | `snow` | climate | substance | frozen precipitation |
 | `spirit` | religion | social | a lesser or unseen supernatural presence |
 | `star` | astronomy | celestial | a fixed point of light in the night sky |
@@ -218,12 +241,17 @@
 | `temperate-grassland` | climate | terrain | a biome class |
 | `temperate-rainforest` | climate | terrain | a biome class |
 | `tide` | astronomy | celestial | the rise and fall of the waters under the moons |
+| `treant-kind` | species | living | a treant |
 | `tree` | language | living | a woody plant |
 | `tropical-rainforest` | climate | terrain | a biome class |
 | `tropical-seasonal-forest` | climate | terrain | a biome class |
 | `tundra` | climate | terrain | a biome class |
+| `twig-blight-kind` | species | living | a twig blight |
 | `two` | language | quality | the cardinal number 2 |
 | `upwelling` | climate | terrain | a biome class |
 | `water` | language | substance | the drinkable liquid |
+| `white-dragon-kind` | species | living | a white dragon |
 | `wind` | language | substance | moving air |
+| `woolly-mammoth-kind` | species | living | a woolly mammoth |
+| `xorn-kind` | species | living | a xorn |
 | `yellow` | language | quality | the color term for yellow |
