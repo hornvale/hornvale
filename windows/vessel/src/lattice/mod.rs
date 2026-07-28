@@ -12,15 +12,19 @@
 //! construction rather than by policy.
 
 pub mod allocate;
+pub mod classify;
 pub mod grow;
+pub mod occupancy;
 
 pub use allocate::allocate;
+pub use classify::{freedom_of_a_chain, openings, realized_links, region_of};
 pub use grow::grow;
+pub use occupancy::Occupancy;
 
 use crate::brief::Brief;
 use crate::structure::Structure;
 use hornvale_kernel::Seed;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 // `extent_for`'s block arrangement is exhaustive only while four chambers fit a
 // 2x2 of blocks. Raising MAX_CHAMBERS past 4 without widening the arrangement
@@ -105,7 +109,7 @@ pub fn extent_for(structure: &Structure) -> Rect {
 }
 
 /// A structure embedded as one grid.
-/// type-audit: bare-ok(index: doorways)
+/// type-audit: bare-ok(index: doorways), bare-ok(index: owner), bare-ok(count: dof)
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Lattice {
     /// The whole plan's bounds.
@@ -118,6 +122,59 @@ pub struct Lattice {
     /// `(chamber a, chamber b, the cell you pass through)`, one per link in
     /// `Structure::links`.
     pub doorways: Vec<(usize, usize, Cell)>,
+    /// Which chamber owns each cell — the AUTHORITATIVE assignment.
+    ///
+    /// `regions` is a summary: for a grown lattice those rects are bounding boxes
+    /// and they OVERLAP, so `Rect::contains` is necessary but not sufficient and
+    /// scanning them answers a different question than the one asked. Consult this
+    /// map instead. Every cell of `extent` appears exactly once.
+    pub owner: BTreeMap<Cell, usize>,
+    /// How many independent choices the embedder made — one per stream draw it
+    /// consumed. **Reported, not recomputed**, because §7 rule 7 asks for a
+    /// number and a number derived by a second, independent traversal of the
+    /// result is a number that can disagree with what the embedder actually did.
+    ///
+    /// The checker compares this against what the anchor graph leaves free. If it
+    /// exceeds that, the embedder is INVENTING, which is the one thing an
+    /// embedder may not do (Amendment 1 §1a.7).
+    pub dof: u32,
+}
+
+/// Every adjacent cell pair inside the lattice that separates two differently-owned
+/// cells, minus the THRESHOLDS the doorways open.
+///
+/// One derivation, shared by both methods, over the authoritative ownership map,
+/// and it takes the thresholds as an **input**. Both embedders used to decide
+/// independently what a boundary was — walls from the geometry in one pass,
+/// doorways from a second pass over the same geometry — and two passes over one
+/// geometry is exactly how a doorway comes to open a way no link specified:
+/// exempting every pair that *touches* a door cell unwalls all four of its sides,
+/// so a door at a cell where three chambers meet lets a mover into the third.
+/// That is §7 rule 1's second direction failing, and the fix is to make the
+/// doorway an input here rather than a parallel computation.
+///
+/// A threshold is an unordered pair, normalized `(min, max)` as `walls` is.
+fn walls_around(
+    owner: &BTreeMap<Cell, usize>,
+    thresholds: &BTreeSet<(Cell, Cell)>,
+) -> BTreeSet<(Cell, Cell)> {
+    let mut walls = BTreeSet::new();
+    // `(1, 0)` and `(0, 1)` only: each unordered pair is then visited exactly
+    // once, from its lower cell.
+    for (here, &mine) in owner {
+        for (dx, dy) in [(1, 0), (0, 1)] {
+            let there = Cell(here.0 + dx, here.1 + dy);
+            if let Some(&theirs) = owner.get(&there)
+                && theirs != mine
+            {
+                let pair = (*here.min(&there), *here.max(&there));
+                if !thresholds.contains(&pair) {
+                    walls.insert(pair);
+                }
+            }
+        }
+    }
+    walls
 }
 
 /// Embed `structure`, choosing the method the brief calls for.
@@ -367,9 +424,8 @@ mod tests {
     /// Budgeted at ~16x the DEBUG median rather than a tight multiple of the
     /// release one, because this test runs in the debug commit gate and debug's
     /// p99 alone is 186 us. It is a falsification ceiling for a real regression
-    /// — an accidental quadratic in `walls_between`, say, whose cost is
-    /// currently `extent.area()` times a linear `region_of` scan — not a target
-    /// to approach.
+    /// — an accidental quadratic in `walls_around`, say, whose cost is currently
+    /// `extent.area()` `BTreeMap` probes — not a target to approach.
     /// type-audit: bare-ok(count)
     const ALLOCATE_BUDGET_MICROS: u128 = 1_000;
 
