@@ -488,29 +488,44 @@ fn seafloor_feature(boundary: Option<hornvale_terrain::CellBoundary>) -> Seafloo
 /// biome are barren (defensively — settlements never sit on open ocean, but
 /// the map must still be total).
 pub fn biome_class(biome: hornvale_climate::Biome) -> hornvale_culture::BiomeClass {
-    use hornvale_climate::Biome;
+    biome_class_of_formation(hornvale_climate::BiomeExpr::for_legacy(biome).formation)
+}
+
+/// The fertility class of a [`hornvale_climate::Formation`] — the same mapping
+/// as [`biome_class`], keyed off the taxonomy tier that actually means
+/// "community type" rather than off the pre-facet enum that mixed communities
+/// with depth strata (The Stratum §2).
+///
+/// This stays at the composition root, and must: `domains/culture` may not
+/// depend on `domains/climate`, so worldgen is what bridges them.
+///
+/// Value-preserving against the legacy `Biome` mapping across the whole
+/// catalog, asserted by
+/// `the_formation_keyed_class_matches_the_biome_keyed_one_for_every_biome` —
+/// this re-keys the source, never the result, because the class feeds
+/// `culture::fertility` and therefore subsistence and the calibration battery.
+pub fn biome_class_of_formation(
+    formation: hornvale_climate::Formation,
+) -> hornvale_culture::BiomeClass {
+    use hornvale_climate::Formation;
     use hornvale_culture::BiomeClass;
-    match biome {
-        Biome::TropicalRainforest
-        | Biome::TropicalSeasonalForest
-        | Biome::TemperateRainforest
-        | Biome::TemperateForest
-        | Biome::Taiga => BiomeClass::Forest,
-        Biome::Savanna | Biome::TemperateGrassland => BiomeClass::Grassland,
-        Biome::Desert | Biome::Shrubland => BiomeClass::Arid,
-        Biome::Tundra => BiomeClass::Cold,
-        Biome::Alpine
-        | Biome::Ice
-        | Biome::SeaIce
-        | Biome::CoralReef
-        | Biome::KelpForest
-        | Biome::HydrothermalVent
-        | Biome::HadalTrench
-        | Biome::Upwelling
-        | Biome::Epipelagic
-        | Biome::Mesopelagic
-        | Biome::Bathypelagic
-        | Biome::Abyssal => BiomeClass::Barren,
+    match formation {
+        Formation::TropicalRainforest
+        | Formation::TropicalSeasonalForest
+        | Formation::TemperateRainforest
+        | Formation::TemperateForest
+        | Formation::Taiga => BiomeClass::Forest,
+        Formation::Savanna | Formation::TemperateGrassland => BiomeClass::Grassland,
+        Formation::Desert | Formation::Shrubland => BiomeClass::Arid,
+        Formation::Tundra => BiomeClass::Cold,
+        Formation::Alpine
+        | Formation::Ice
+        | Formation::SeaIce
+        | Formation::Reef
+        | Formation::KelpForest
+        | Formation::Vent
+        | Formation::Upwelling
+        | Formation::OpenWater => BiomeClass::Barren,
     }
 }
 
@@ -6596,6 +6611,21 @@ mod tests {
             "a placeless observation must not borrow a cell's weather: {}",
             r.description
         );
+    }
+
+    #[test]
+    fn the_formation_keyed_class_matches_the_biome_keyed_one_for_every_biome() {
+        // Value-preserving by construction is not enough: fertility feeds
+        // subsistence and the calibration battery, so prove it across the
+        // whole catalog.
+        for b in hornvale_climate::Biome::catalog() {
+            let formation = hornvale_climate::BiomeExpr::for_legacy(*b).formation;
+            assert_eq!(
+                biome_class_of_formation(formation),
+                biome_class(*b),
+                "{b:?} changes fertility class under the formation mapping"
+            );
+        }
     }
 
     /// The predicate sequence committed for one species entity, in ledger order.

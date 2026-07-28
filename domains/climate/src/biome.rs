@@ -21,7 +21,9 @@ pub enum SeafloorFeature {
     Ridge,
 }
 
-/// A biome class — terrestrial or marine.
+/// A biome, as the pre-facet taxonomy knew it: community types and depth
+/// strata in one list. Retained as the **projection** of a [`crate::BiomeExpr`]
+/// so every existing consumer is unaffected — see The Stratum §3.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Biome {
     /// Permanent land ice.
