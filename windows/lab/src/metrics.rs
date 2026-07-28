@@ -15,9 +15,10 @@ use hornvale_terrain::{
 };
 use hornvale_worldgen::{
     BuildDepth, BuildError, ChorusVoice, HazardKind, Sky, SkyChoice, Valence, WorldComponents,
-    accounts_from, build_world_from_components, build_world_to, climate_from, commodity_name,
-    flagship_of, language_of_in, observed_phenomena_as_at_from, observed_phenomena_as_in_from,
-    rock_class_name, sky_of, soil_of, soil_order_name, terrain_of, vestiges_field,
+    accounts_from, build_world_from_components, build_world_to_with_artifacts, climate_from,
+    commodity_name, flagship_of, language_of_in, observed_phenomena_as_at_from,
+    observed_phenomena_as_in_from, rock_class_name, sky_of, soil_of, soil_order_name, terrain_of,
+    vestiges_field,
 };
 
 use hornvale_astronomy::SkyPins;
@@ -137,7 +138,28 @@ impl AstronomyView {
         wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<AstronomyView, BuildError> {
-        let world = build_world_to(
+        Self::build_to_with_artifacts(seed, pins, wc, depth).map(|(view, _, _)| view)
+    }
+
+    /// Build the world to `depth` ONCE and return the astronomy rung together
+    /// with the artifacts that build produced. Deeper rungs use these instead
+    /// of re-deriving with `terrain_of` / `climate_from` — the double sculpt
+    /// The Hoist removes. An artifact is `None` only when the requested depth
+    /// genuinely never built it, in which case the caller derives as before.
+    fn build_to_with_artifacts(
+        seed: Seed,
+        pins: &SkyPins,
+        wc: WorldComponents,
+        depth: BuildDepth,
+    ) -> Result<
+        (
+            AstronomyView,
+            Option<hornvale_terrain::GeneratedTerrain>,
+            Option<hornvale_climate::GeneratedClimate>,
+        ),
+        BuildError,
+    > {
+        let built = build_world_to_with_artifacts(
             seed,
             pins,
             SkyChoice::Generated,
@@ -146,19 +168,23 @@ impl AstronomyView {
             &wc,
             depth,
         )?;
-        let sky = sky_of(&world)?;
+        let sky = sky_of(&built.world)?;
         let Sky::Generated(sky) = sky else {
             return Err(BuildError::Pins(
                 "expected Generated sky, got Constant".to_string(),
             ));
         };
-        Ok(AstronomyView {
-            system: sky.system().clone(),
-            calendar: sky.calendar().clone(),
-            notes: sky.notes().to_vec(),
-            world,
-            components: wc,
-        })
+        Ok((
+            AstronomyView {
+                system: sky.system().clone(),
+                calendar: sky.calendar().clone(),
+                notes: sky.notes().to_vec(),
+                world: built.world,
+                components: wc,
+            },
+            built.terrain,
+            built.climate,
+        ))
     }
 }
 
@@ -195,14 +221,35 @@ impl TerrainView {
         wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<TerrainView, BuildError> {
-        let astronomy = AstronomyView::build_to(seed, pins, wc, depth)?;
-        let terrain = terrain_of(&astronomy.world)?;
+        Self::build_to_with_climate(seed, pins, wc, depth).map(|(view, _)| view)
+    }
+
+    /// Build the terrain rung, reusing the terrain the world build already
+    /// sculpted, and pass the build's climate artifact up to the climate rung.
+    fn build_to_with_climate(
+        seed: Seed,
+        pins: &SkyPins,
+        wc: WorldComponents,
+        depth: BuildDepth,
+    ) -> Result<(TerrainView, Option<hornvale_climate::GeneratedClimate>), BuildError> {
+        let (astronomy, hoisted_terrain, hoisted_climate) =
+            AstronomyView::build_to_with_artifacts(seed, pins, wc, depth)?;
+        // The build sculpted this at any depth >= Terrain and handed it back;
+        // re-derive only when it genuinely sculpted none (an Astronomy-depth
+        // build), which keeps this strictly not-slower on every path.
+        let terrain = match hoisted_terrain {
+            Some(terrain) => terrain,
+            None => terrain_of(&astronomy.world)?,
+        };
         let globe = hornvale_terrain::summarize(terrain.globe());
-        Ok(TerrainView {
-            astronomy,
-            globe,
-            terrain,
-        })
+        Ok((
+            TerrainView {
+                astronomy,
+                globe,
+                terrain,
+            },
+            hoisted_climate,
+        ))
     }
 }
 
@@ -246,10 +293,15 @@ impl ClimateView {
         wc: WorldComponents,
         depth: BuildDepth,
     ) -> Result<ClimateView, BuildError> {
-        let terrain = TerrainView::build_to(seed, pins, wc, depth)?;
-        // Reuse the terrain rung just built rather than re-sculpting it inside
-        // `climate_of` (The Single Sculpt, applied to the Lab view chain).
-        let climate = climate_from(&terrain.astronomy.world, &terrain.terrain)?;
+        let (terrain, hoisted_climate) = TerrainView::build_to_with_climate(seed, pins, wc, depth)?;
+        // Reuse the climate the world build already derived off this very
+        // terrain. The `climate_from` fallback is the pre-Hoist path, kept for
+        // rungs shallower than Settlements, which build no climate at all —
+        // it still avoids re-sculpting terrain (The Single Sculpt).
+        let climate = match hoisted_climate {
+            Some(climate) => climate,
+            None => climate_from(&terrain.astronomy.world, &terrain.terrain)?,
+        };
         Ok(ClimateView { terrain, climate })
     }
 
@@ -5558,16 +5610,24 @@ mod tests {
         // flagship lands back on non-coastal, temperate-forest — matching
         // neither parent's solo-tree finding on its own, since both
         // campaigns' world-byte changes compose (see `almanac`'s seed-42
-        // output and `cli/tests/branches_identity.rs`).
+        // output and `cli/tests/branches_identity.rs`). The Vacancy T9 adds
+        // a fifth competing Settled people (the gnoll), which shifts the
+        // world-wide competitive landscape settlement genesis resolves
+        // again: re-derived empirically post-merge, goblin's flagship at
+        // seed 42 now lands on COASTAL tropical-rainforest (still farming,
+        // still the 3-caste structure — the biome and coastal reading both
+        // moved together, since a new competitor claiming the interior cell
+        // the old flagship held pushed goblin's own flagship to a different
+        // cell entirely).
         assert_eq!(
             m("flagship-subsistence"),
             MetricValue::Text("farming".to_string())
         );
         assert_eq!(
             m("flagship-biome"),
-            MetricValue::Text("temperate-forest".to_string())
+            MetricValue::Text("tropical-rainforest".to_string())
         );
-        assert_eq!(m("flagship-coastal"), MetricValue::Flag(false));
+        assert_eq!(m("flagship-coastal"), MetricValue::Flag(true));
         assert_eq!(m("flagship-structure-size"), MetricValue::Number(3.0));
         assert!(
             matches!(m("endorheic-coverage"), MetricValue::Number(f) if (0.0..=1.0).contains(&f))

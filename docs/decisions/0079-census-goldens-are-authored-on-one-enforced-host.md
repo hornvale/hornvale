@@ -72,3 +72,5 @@ in review.
   census-class study named outside that convention would slip past. Gating on
   the output path alone would be safer but would refuse `the-chorus`, which
   legitimately publishes into the same tree.
+
+**Refined by [0081](0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md)** (2026-07-27): one heavy writer per box, claimed at the write seam and serialized with a bounded, legible wait. Use `scripts/census-run.sh`.

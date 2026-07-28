@@ -1,0 +1,37 @@
+# Codegen baseline for the workspace.
+#
+# `f64::floor()` has no lowering on the default `x86-64` target: that
+# baseline predates SSE4.1, so LLVM cannot emit `roundsd` and every call
+# becomes a library call instead of one instruction. The noise lattice
+# floors twice per sample (kernel/src/noise.rs), and `Fbm::sample` is the
+# innermost primitive of all world generation — so a `perf` profile of the
+# 1000-world census attributed 4.62% of self time to a bare `floor` symbol.
+# Raising the baseline to `x86-64-v2` (SSE4.1/SSE4.2/POPCNT; any CPU from
+# ~2009 on) turns those calls back into instructions.
+#
+# Measured on the canonical box, 200 seeds x all metrics, three alternating
+# rounds, timings serial:
+#
+#     baseline  44.63 s  (44.34-44.91)
+#     v2        42.58 s  (42.50-42.64)   -> 4.6% faster, sets disjoint
+#
+# The gain matches the profiled cost of `floor` almost exactly, which is the
+# evidence that this is the mechanism rather than a coincidental win. The
+# census phase of a full regen moved 6m08s -> 5m53s (-4.1%), consistent with
+# the probe. (A whole-script comparison is NOT valid across this change: the
+# flag forces a debug rebuild whose compile time lands inside the measured
+# window.)
+#
+# DETERMINISM: `roundsd` is exactly IEEE floor, so this is bit-identical, not
+# merely close. Verified twice: `rows.csv` md5 unchanged on the 200-seed probe
+# A/B, then a full `HV_CENSUS=1` regen under the flag produced a ZERO diff
+# across every committed artifact — both censuses, the almanacs, the maps, the
+# scene exports. The stop-short at `v2` is deliberate: `v3`
+# would enable AVX2/FMA and reopen the FP-contraction question, and a fixed
+# baseline stays reproducible across machines in a way `target-cpu=native`
+# would not. Do not raise this to `v3`/`native` without redoing the full
+# byte-identity A/B (decision 0033; kernel/src/math.rs).
+#
+# Scoped to x86_64: an unconditional entry would hard-fail any aarch64 build.
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-cpu=x86-64-v2"]

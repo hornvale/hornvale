@@ -68,6 +68,47 @@ Per-species phoneme inventories, phonotactic templates, and sample name transcri
 | Settlement | Vngaoshshngaoshshngoash | /vŋaoʃʃŋaoʃʃŋoaʃ/ | `[[vN'aoSSNaoSSNoaS]]` | <audio controls preload="none" src="../audio/da77967a.mp3"></audio> |
 | Deity | Vngaoshvngoosh | /vŋaoʃvŋooʃ/ | `[[vN'aoSvNooS]]` | <audio controls preload="none" src="../audio/53c72edb.mp3"></audio> |
 
+## Gnoll
+
+### Inventory
+
+| Segment | Romanization | IPA | Features |
+|---|---|---|---|
+| Labial/Stop/voiceless | `p` | `p` | voiceless labial stop |
+| Alveolar/Stop/voiceless | `t` | `t` | voiceless alveolar stop |
+| Alveolar/Stop/voiced | `d` | `d` | voiced alveolar stop |
+| Velar/Stop/voiced | `g` | `g` | voiced velar stop |
+| Uvular/Stop/voiceless | `q` | `q` | voiceless uvular stop |
+| Labial/Fricative/voiceless | `f` | `f` | voiceless labial fricative |
+| Labial/Fricative/voiced | `v` | `v` | voiced labial fricative |
+| Velar/Fricative/voiceless | `x` | `x` | voiceless velar fricative |
+| Alveolar/Sibilant/voiceless | `s` | `s` | voiceless alveolar sibilant |
+| Alveolar/Sibilant/voiced | `z` | `z` | voiced alveolar sibilant |
+| Postalveolar/Sibilant/voiceless | `sh` | `ʃ` | voiceless postalveolar sibilant |
+| Postalveolar/Sibilant/voiced | `zh` | `ʒ` | voiced postalveolar sibilant |
+| Labial/Nasal/voiced | `m` | `m` | voiced labial nasal |
+| Alveolar/Nasal/voiced | `n` | `n` | voiced alveolar nasal |
+| Velar/Nasal/voiced | `ng` | `ŋ` | voiced velar nasal |
+| Postalveolar/Approximant/voiced | `j` | `j` | voiced postalveolar approximant |
+| Labial/Approximant/voiced | `w` | `w` | voiced labial approximant |
+| Low/Central/unrounded | `a` | `a` | low central vowel |
+| Mid/Back/rounded | `o` | `o` | mid back rounded vowel |
+
+### Phonotactics
+
+- **Onsets:** stop+sibilant, nasal+sibilant
+- **Nuclei:** 2 slot(s) per syllable
+- **Codas:** stop, fricative
+
+### Sample names
+
+| Kind | Romanization | IPA | Espeak | Audio |
+|---|---|---|---|---|
+| Settlement | Nzaoxtshaaq | /nzaoxtʃaaq/ | `[[nz'aoxtSaaq]]` | <audio controls preload="none" src="../audio/420173a7.mp3"></audio> |
+| Settlement | Ngzaofpzoafpzhoap | /ŋzaofpzoafpʒoap/ | `[[Nz'aofpzoafpZoap]]` | <audio controls preload="none" src="../audio/5e4c12b1.mp3"></audio> |
+| Settlement | Dzaapgzhoognzhoot | /dzaapgʒoognʒoot/ | `[[dz'aapgZoognZoot]]` | <audio controls preload="none" src="../audio/e4b52b5d.mp3"></audio> |
+| Deity | Dshaadngzhaot | /dʃaadŋʒaot/ | `[[dS'aadNZaot]]` | <audio controls preload="none" src="../audio/d3181512.mp3"></audio> |
+
 ## Goblin
 
 ### Inventory

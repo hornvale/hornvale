@@ -32,6 +32,26 @@ if [ "${HV_CENSUS:-0}" = 1 ] && [ "${SKIP_CENSUS:-0}" != 1 ]; then
     # shellcheck source=scripts/census-canonical-host.sh
     . "$(dirname "$0")/census-canonical-host.sh"
     require_canonical_census_host || exit 1
+
+    # Serialize with any other heavy run on this box (decision 0081). This
+    # script is one of three entry points that write census goldens and was
+    # the only unguarded one a doc told you to use.
+    #
+    # RE-ENTRANCY IS NOT OPTIONAL: `flock` is per open-file-description, so if
+    # census-run.sh already holds this lock and we re-flock the same path on a
+    # fresh fd, we DEADLOCK against our own parent — and under a bounded wait
+    # that means hanging the box for the full timeout. An ancestor that says
+    # it holds the lock, and is still alive, means "already serialized".
+    if [ -z "${HV_CENSUS_LOCK_HELD:-}" ] || ! kill -0 "${HV_CENSUS_LOCK_HELD}" 2>/dev/null; then
+        exec 9>"${HV_CENSUS_LOCK:-/tmp/hv-census.lock}"
+        census_timeout_s="${HV_CENSUS_WAIT_TIMEOUT:-2700}"
+        echo "regenerate-artifacts: waiting for the census lock (up to ${census_timeout_s}s) …" >&2
+        if ! flock -w "$census_timeout_s" 9; then
+            echo "regenerate-artifacts: TIMED OUT after ${census_timeout_s}s waiting for the census lock." >&2
+            exit 75
+        fi
+        export HV_CENSUS_LOCK_HELD=$$
+    fi
 fi
 
 

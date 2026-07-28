@@ -84,6 +84,22 @@ Gathering](./chronicle/the-gathering.md)). This is a genuine promotion, not
 a full resolution — see "The standing horizon," below, for the half that
 is still ahead.
 
+*Re-scored by [The Vacancy](./chronicle/the-vacancy.md).* The self-checking
+half got sharper and the modelling half got narrower, and both belong in the
+score. Sharper: a committed readout of where each kind actually lives, plus a
+rule that no kind may have zero capacity everywhere, caught four species — the
+three chromatic dragons and the owlbear — that had zero carrying capacity on
+every cell of every world and had been in the registry, absent from creation,
+for four campaigns. A prior that can catch that about itself is doing the work
+this section credits it for. Narrower: capacity is a supply term spanning orders
+of magnitude multiplied by a condition product bounded in the unit interval, so
+an authored ecological niche can only modulate the primary-production signal,
+never select against it. A species authored for a particular climate can be
+genuinely present there and still rank below species with no affinity for it —
+measured, on a people authored for desert that has no desert at all. The
+gradient claim and the conservation guarantee are untouched; what is now known
+to be beyond the prior is *placing a species where its traits say it belongs*.
+
 **The phenomena interface generalizes.** The bet that one salience-ranked
 observation interface could serve religion, perception, and historiography
 without any consumer learning which system produced a phenomenon has held

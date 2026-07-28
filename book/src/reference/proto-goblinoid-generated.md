@@ -38,11 +38,13 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `abyssal` | a biome class | *Naanae | /naanae/ |
 | `alpine` | a biome class | *Poe | /poe/ |
 | `bathypelagic` | a biome class | *Nae | /nae/ |
+| `black-dragon-kind` | a black dragon | *Poopae | /poopae/ |
 | `blood` | the circulating fluid of a body | *Neo | /neo/ |
 | `blue` | the color term for blue | *Taoqao | /taoqao/ |
 | `bone` | the rigid frame of a body | *Kae | /kae/ |
 | `brown` | the color term for brown | *Poa | /poa/ |
 | `bugbear-kind` | a bugbear | *Kea | /kea/ |
+| `carrion-crawler-kind` | a carrion crawler | *Geakea | /geakea/ |
 | `child` | one's son or daughter | *Daekoa | /daekoa/ |
 | `cold` | felt, biting chill | *Geonoa | /geonoa/ |
 | `coral-reef` | a biome class | *Doakae | /doakae/ |
@@ -50,6 +52,8 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `day` | the light half of the day-night cycle | *Goanae | /goanae/ |
 | `desert` | a biome class | *Neadoo | /neadoo/ |
 | `die` | to cease living | *Taopaa | /taopaa/ |
+| `dire-wolf-kind` | a dire wolf | *Peenoa | /peenoa/ |
+| `drink` | to swallow liquid | *Neogea | /neogea/ |
 | `earth` | the ground underfoot | *Pee | /pee/ |
 | `eat` | to consume food | *Koo | /koo/ |
 | `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | *Noe | /noe/ |
@@ -57,7 +61,16 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `eye` | the organ of sight | *Qao | /qao/ |
 | `fire` | flame and heat | *Qea | /qea/ |
 | `foot` | the walking limb-end | *Doa | /doa/ |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | *Neotao | /neotao/ |
+| `giant-crocodile-kind` | a giant crocodile | *Daekeo | /daekeo/ |
+| `giant-elk-kind` | a giant elk | *Taa | /taa/ |
+| `giant-goat-kind` | a giant goat | *Noenea | /noenea/ |
+| `giant-hyena-kind` | a giant hyena | *Peanea | /peanea/ |
+| `giant-octopus-kind` | a giant octopus | *Peotoa | /peotoa/ |
+| `giant-scorpion-kind` | a giant scorpion | *Toodeo | /toodeo/ |
+| `giant-squid-kind` | a giant squid | *Dae | /dae/ |
 | `gloom` | the deepest, starless dark | *Noa | /noa/ |
+| `gnoll-kind` | a gnoll | *Kaenoe | /kaenoe/ |
 | `goblin-kind` | a goblin | *Nea | /nea/ |
 | `god` | a deity | *Neetaa | /neetaa/ |
 | `green` | the color term for green | *Keoqae | /keoqae/ |
@@ -70,6 +83,7 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `hydrothermal-vent` | a biome class | *Tee | /tee/ |
 | `ice` | frozen water | *Dao | /dao/ |
 | `kelp-forest` | a biome class | *Nao | /nao/ |
+| `killer-whale-kind` | a killer whale | *Noekoe | /noekoe/ |
 | `kobold-kind` | a kobold | *Dea | /dea/ |
 | `light` | the color term for white/light hues | *Toeqea | /toeqea/ |
 | `many` | an indefinitely large count | *Neodoa | /neodoa/ |
@@ -77,17 +91,26 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `moon` | a moon | *Teapae | /teapae/ |
 | `mountain` | high ground | *Teo | /teo/ |
 | `mouth` | the organ of eating and speech | *Doenoe | /doenoe/ |
+| `move` | to go from one place to another | *Toonae | /toonae/ |
 | `name` | a word that identifies one who bears it | *Deokao | /deokao/ |
 | `night` | the dark half of the day-night cycle | *Naeqaa | /naeqaa/ |
 | `one` | the cardinal number 1 | *Kaokao | /kaokao/ |
+| `otyugh-kind` | an otyugh | *Naotae | /naotae/ |
+| `owlbear-kind` | an owlbear | *Peokoo | /peokoo/ |
 | `parent` | one's father or mother | *Goatee | /goatee/ |
 | `person` | a person; a member of a people (the autonym root) | *Neekoa | /neekoa/ |
 | `rain` | liquid precipitation | *Doe | /doe/ |
 | `red` | the color term for red | *Neanao | /neanao/ |
+| `red-dragon-kind` | a red dragon | *Noo | /noo/ |
+| `reef-shark-kind` | a reef shark | *Daenee | /daenee/ |
+| `rest` | to stop and recover strength | *Kaanee | /kaanee/ |
+| `rhinoceros-kind` | a rhinoceros | *Qaatee | /qaatee/ |
+| `rust-monster-kind` | a rust monster | *Kao | /kao/ |
 | `savanna` | a biome class | *Naadae | /naadae/ |
 | `sea` | a body of salt water | *Goadeo | /goadeo/ |
 | `sea-ice` | a biome class | *Naanea | /naanea/ |
 | `shadow` | cast dark, distinct from open gloom | *Naeqae | /naeqae/ |
+| `shrieker-kind` | a shrieker | *Daa | /daa/ |
 | `shrubland` | a biome class | *Naakoa | /naakoa/ |
 | `sibling` | one's brother or sister | *Peonae | /peonae/ |
 | `sleep` | to rest unconscious | *Neepeo | /neepeo/ |
@@ -102,12 +125,17 @@ The shared ancestral language goblin, hobgoblin, and bugbear all descend from (s
 | `temperate-grassland` | a biome class | *Doanoo | /doanoo/ |
 | `temperate-rainforest` | a biome class | *Toaneo | /toaneo/ |
 | `tide` | the rise and fall of the waters under the moons | *Neoneo | /neoneo/ |
+| `treant-kind` | a treant | *Tao | /tao/ |
 | `tree` | a woody plant | *Koonee | /koonee/ |
 | `tropical-rainforest` | a biome class | *Qoa | /qoa/ |
 | `tropical-seasonal-forest` | a biome class | *Geetao | /geetao/ |
 | `tundra` | a biome class | *Kaekoa | /kaekoa/ |
+| `twig-blight-kind` | a twig blight | *Qoanoa | /qoanoa/ |
 | `two` | the cardinal number 2 | *Naanaa | /naanaa/ |
 | `upwelling` | a biome class | *Qoo | /qoo/ |
 | `water` | the drinkable liquid | *Daokaa | /daokaa/ |
+| `white-dragon-kind` | a white dragon | *Poo | /poo/ |
 | `wind` | moving air | *Noeqoo | /noeqoo/ |
+| `woolly-mammoth-kind` | a woolly mammoth | *Goe | /goe/ |
+| `xorn-kind` | a xorn | *Paa | /paa/ |
 | `yellow` | the color term for yellow | *Qaadeo | /qaadeo/ |

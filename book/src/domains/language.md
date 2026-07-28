@@ -482,8 +482,15 @@ The shared core is therefore not one list but a set of small **packs**,
 each authored and closed — enough to seed a lexicon, not an aspiration to
 completeness. A **universal stratum** holds what these two species
 actually share by being embodied, terrestrial, mortal, and social: water,
-stone, sun, night, fire, eat, sleep, die, the basic kin terms — small and
-defensible rather than universal in name only. A **color pack** carries the Berlin &
+stone, sun, night, fire, the basic kin terms, and the handful of acts a body
+performs whatever else is true of it — eat, drink, sleep, rest, move, die —
+small and defensible rather than universal in name only. Those acts are the
+vocabulary's verbs, and they are typed as such: an act is something a
+creature *does*, not a property it *has*, which is what separates `drink`
+from `red`. The separation is load-bearing rather than tidy, because the
+same roster is what a creature's planner selects from — every act the world's
+creatures can perform has a word, and the correspondence audit reconciles the
+two rosters against each other in both directions. A **color pack** carries the Berlin &
 Kay ladder — the anthropological finding that a language's color
 vocabulary grows in a fixed implicational order, dark/light before red,
 red before green-or-yellow, green-or-yellow before blue, and so on — and a

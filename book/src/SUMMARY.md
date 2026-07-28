@@ -262,6 +262,11 @@
 - [The Action Clock](./chronicle/the-action-clock.md)
 - [The Accession](./chronicle/the-accession.md)
 - [The Lintel](./chronicle/the-lintel.md)
+- [The Shelf-Mark](./chronicle/the-shelf-mark.md)
+- [The Actants](./chronicle/the-actants.md)
+- [The Vacancy](./chronicle/the-vacancy.md)
+- [The Hoist](./chronicle/the-hoist.md)
+- [The Turnstile](./chronicle/the-turnstile.md)
 
 # Appendix: The Frontier
 

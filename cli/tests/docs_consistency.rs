@@ -165,38 +165,325 @@ fn every_frontier_section_is_listed_in_the_contents() {
     );
 }
 
+/// One parsed row of the idea registry's tables. `cells` counts the pieces the
+/// line splits into on unescaped pipes — a well-formed five-column row splits
+/// into seven (an empty piece before the leading `|` and after the trailing
+/// one).
+struct RegistryRow {
+    /// 1-based line number in `idea-registry.md`, for error messages.
+    line: usize,
+    /// The ID cell (`MAP-7`, `SKY-eclipse-seasons`).
+    id: String,
+    /// The Idea cell — the prose the length cap applies to.
+    idea: String,
+    /// The Status cell.
+    status: String,
+    /// The Where cell — the pointer to where the idea is argued.
+    where_cell: String,
+    /// Pieces the line splits into on *unescaped* pipes; 7 when well-formed.
+    cells: usize,
+}
+
+/// A sentinel standing in for `\|` while splitting, so an escaped pipe (which
+/// GFM renders as a literal `|` inside a cell) never counts as a separator.
+/// Restored before any cell is returned, so lengths and text stay faithful.
+const ESCAPED_PIPE: char = '\u{1}';
+
+/// True when `cell` is a registry ID: a category prefix, a hyphen, and either a
+/// number with an optional sub-letter (`MAP-9`, `MAP-9a` — the frozen numbered
+/// era) or a lowercase slug (`SKY-eclipse-seasons` — decision
+/// `0026-slugs-not-numbers`). Anything else is a header or separator cell.
+fn looks_like_registry_id(cell: &str) -> bool {
+    cell.split_once('-').is_some_and(|(pre, post)| {
+        let numbered = post.starts_with(|c: char| c.is_ascii_digit())
+            && post
+                .trim_end_matches(|c: char| c.is_ascii_lowercase())
+                .chars()
+                .all(|c| c.is_ascii_digit());
+        let slug = post.starts_with(|c: char| c.is_ascii_lowercase())
+            && post
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+        !pre.is_empty()
+            && pre.chars().all(|c| c.is_ascii_uppercase())
+            && !post.is_empty()
+            && (numbered || slug)
+    })
+}
+
+/// Parse `text` as the idea registry, returning one entry per ID-bearing table
+/// row. Header and separator rows are skipped.
+fn parse_registry(text: &str) -> Vec<RegistryRow> {
+    let mut rows = Vec::new();
+    for (idx, line) in text.lines().enumerate() {
+        if !line.starts_with("| ") {
+            continue;
+        }
+        let masked = line.replace("\\|", &ESCAPED_PIPE.to_string());
+        let pieces: Vec<String> = masked
+            .split('|')
+            .map(|p| p.replace(ESCAPED_PIPE, "\\|").trim().to_string())
+            .collect();
+        // pieces[0] is the empty text before the leading `|`.
+        let Some(id) = pieces.get(1) else { continue };
+        if !looks_like_registry_id(id) {
+            continue;
+        }
+        let at = |i: usize| pieces.get(i).cloned().unwrap_or_default();
+        rows.push(RegistryRow {
+            line: idx + 1,
+            id: id.clone(),
+            idea: at(2),
+            status: at(3),
+            where_cell: at(5),
+            cells: pieces.len(),
+        });
+    }
+    rows
+}
+
+/// Every ID-bearing row of the idea registry.
+fn registry_rows() -> Vec<RegistryRow> {
+    parse_registry(&read(
+        &repo_root().join("book/src/frontier/idea-registry.md"),
+    ))
+}
+
+#[test]
+fn an_escaped_pipe_is_not_a_column_separator() {
+    // The trap this parser exists to avoid: a naive split on '|' counts the
+    // escaped pipes inside a code span as separators and reports a well-formed
+    // row as broken. Both rows below are five-column rows; only the second is
+    // malformed.
+    let ok = "| MAP-1 | uses `a \\| b` in prose | raw | med | [x](y.md) |";
+    let broken = "| MAP-2 | uses `a | b` unescaped | raw | med | [x](y.md) |";
+    let rows = parse_registry(&format!("{ok}\n{broken}\n"));
+    assert_eq!(rows.len(), 2, "both rows should parse as registry rows");
+    assert_eq!(rows[0].cells, 7, "escaped pipes must not split the cell");
+    assert_eq!(
+        rows[0].idea, "uses `a \\| b` in prose",
+        "the escape must survive parsing intact"
+    );
+    assert_eq!(rows[1].cells, 8, "a bare pipe must split the cell");
+}
+
+#[test]
+fn registry_rows_have_five_columns() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.cells != 7)
+        .map(|r| {
+            format!(
+                "{}:{} ({} columns, expected 5) — escape bare `|` in prose as `\\|`",
+                r.id,
+                r.line,
+                r.cells - 2
+            )
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "malformed registry rows — mdbook truncates these to five cells, \
+         shifting the columns left and DROPPING the Where pointer from the \
+         published page:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// The closed status vocabulary, per `idea-registry.md`'s "How to read a row".
+/// Unlike the category prefixes — which `registry_id_prefixes` derives from the
+/// file so a newly coined category adapts automatically — this list is
+/// deliberately hard-coded. The category vocabulary is open; the status
+/// vocabulary is closed, and leaving it open by omission is what let
+/// `registered` and three prose-filled Status cells into the file.
+const REGISTRY_STATUSES: [&str; 6] = [
+    "raw",
+    "elaborated",
+    "spec'd",
+    "shipped",
+    "ratified",
+    "rejected",
+];
+
+/// Reduce a Status cell to its bare token: strip `**` emphasis, a trailing
+/// `→ <status>` transition, and any trailing parenthetical (`ratified (0009)`,
+/// `shipped (field half)`).
+fn normalize_status(cell: &str) -> String {
+    let mut s = cell.replace('*', "");
+    if let Some((head, _)) = s.split_once('→') {
+        s = head.to_string();
+    }
+    if let Some((head, _)) = s.split_once('(') {
+        s = head.to_string();
+    }
+    s.trim().to_string()
+}
+
+#[test]
+fn status_normalization_handles_the_documented_forms() {
+    assert_eq!(normalize_status("shipped"), "shipped");
+    assert_eq!(normalize_status("**shipped**"), "shipped");
+    assert_eq!(normalize_status("ratified (0009)"), "ratified");
+    assert_eq!(normalize_status("shipped (field half)"), "shipped");
+    assert_eq!(normalize_status("rejected → ratified"), "rejected");
+    assert_eq!(normalize_status("registered"), "registered"); // not a status
+}
+
+#[test]
+fn registry_statuses_use_the_closed_vocabulary() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| !REGISTRY_STATUSES.contains(&normalize_status(&r.status).as_str()))
+        .map(|r| {
+            format!(
+                "{}:{} — status {:?}",
+                r.id,
+                r.line,
+                r.status.chars().take(60).collect::<String>()
+            )
+        })
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry rows whose Status is outside the closed vocabulary \
+         {REGISTRY_STATUSES:?}:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+/// The Idea-cell budget, in characters. A row is a shelf-mark: what the idea
+/// is, and a pointer to where it is argued. The argument lives in
+/// `frontier.md`; the campaign narrative lives in the chronicle the Where cell
+/// links. Sibling norm: `docs/decisions/README.md` — "keep each record short …
+/// if it needs a page, it is probably a spec".
+///
+/// The cap is on the Idea cell only. The Where column carries full GitHub blob
+/// URLs by mandate (`book/src/frontier/CLAUDE.md`), and taxing a row for
+/// carrying pointers is backwards.
+const REGISTRY_IDEA_CAP: usize = 600;
+
+/// Rows over `REGISTRY_IDEA_CAP` on the day the cap landed. **Append-never:**
+/// entries may be removed as rows are compacted, never added. A new row over
+/// the cap is a failure, not a fixture edit — that ratchet is the whole
+/// mechanism (the pattern is the type audit's `pending(wave-N)`, decision
+/// 0028).
+fn registry_length_waivers() -> BTreeSet<&'static str> {
+    include_str!("fixtures/registry-length-waivers.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+#[test]
+fn registry_idea_cells_are_within_budget() {
+    let waived = registry_length_waivers();
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.idea.chars().count() > REGISTRY_IDEA_CAP)
+        .filter(|r| !waived.contains(r.id.as_str()))
+        .map(|r| format!("{}:{} — {} chars", r.id, r.line, r.idea.chars().count()))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry Idea cells over {REGISTRY_IDEA_CAP} chars. A row is an index \
+         entry, not an essay — compact it (the prose is redundant with the \
+         chronicle the Where cell links), relocate it (move the argument to a \
+         frontier.md section and flip `raw` → `elaborated`), or trim it:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+#[test]
+fn the_waiver_list_only_shrinks() {
+    let waived = registry_length_waivers();
+    let rows = registry_rows();
+    let ids: BTreeSet<&str> = rows.iter().map(|r| r.id.as_str()).collect();
+
+    let unknown: Vec<&str> = waived
+        .iter()
+        .filter(|w| !ids.contains(*w))
+        .copied()
+        .collect();
+    assert!(
+        unknown.is_empty(),
+        "waived IDs absent from the registry — the waiver list is append-never \
+         and rows are permanent, so this means a typo or a renamed ID:\n  {}",
+        unknown.join("\n  ")
+    );
+
+    let compacted: Vec<&str> = waived
+        .iter()
+        .filter(|w| {
+            rows.iter()
+                .find(|r| r.id.as_str() == **w)
+                .is_some_and(|r| r.idea.chars().count() <= REGISTRY_IDEA_CAP)
+        })
+        .copied()
+        .collect();
+    assert!(
+        compacted.is_empty(),
+        "these rows are now within budget — remove them from \
+         fixtures/registry-length-waivers.txt so the ratchet holds:\n  {}",
+        compacted.join("\n  ")
+    );
+}
+
+/// The numbered registry IDs that existed when decision
+/// `0026-slugs-not-numbers`'s freeze was finally applied to registry rows.
+/// Append-never: an ID may leave this list only by leaving the registry, which
+/// never happens (rows are permanent). A *new* numbered ID fails.
+fn frozen_numbered_ids() -> BTreeSet<&'static str> {
+    include_str!("fixtures/registry-numbered-ids.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+#[test]
+fn no_new_numbered_registry_ids() {
+    let frozen = frozen_numbered_ids();
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| {
+            r.id.split_once('-')
+                .is_some_and(|(_, post)| post.starts_with(|c: char| c.is_ascii_digit()))
+        })
+        .filter(|r| !frozen.contains(r.id.as_str()))
+        .map(|r| format!("{}:{}", r.id, r.line))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "new numbered registry IDs — decision `0026-slugs-not-numbers` requires \
+         category+slug for new rows (`LANG-exonyms`, not `LANG-6`); the \
+         numbered era is frozen, not extended:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
+#[test]
+fn every_registry_row_carries_a_pointer() {
+    let offenders: Vec<String> = registry_rows()
+        .iter()
+        .filter(|r| r.where_cell.is_empty() || r.where_cell == "—")
+        .map(|r| format!("{}:{}", r.id, r.line))
+        .collect();
+    assert!(
+        offenders.is_empty(),
+        "registry rows with an empty Where cell — a row is a pointer; without \
+         one there is nothing to point at:\n  {}",
+        offenders.join("\n  ")
+    );
+}
+
 #[test]
 fn registry_ids_are_unique() {
-    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
     let mut seen = BTreeSet::new();
     let mut dupes = Vec::new();
-    for line in registry.lines() {
-        let Some(rest) = line.strip_prefix("| ") else {
-            continue;
-        };
-        let cell = rest.split('|').next().unwrap_or("").trim();
-        // An ID is a category prefix, a hyphen, and either a number with an
-        // optional sub-letter (MAP-9, MAP-9a, LANG-1 — the frozen numbered
-        // era) or a lowercase slug (SKY-eclipse-seasons — decision
-        // `0026-slugs-not-numbers`). Anything else is a header or separator
-        // cell.
-        let looks_like_id = cell.split_once('-').is_some_and(|(pre, post)| {
-            let numbered = post.starts_with(|c: char| c.is_ascii_digit())
-                && post
-                    .trim_end_matches(|c: char| c.is_ascii_lowercase())
-                    .chars()
-                    .all(|c| c.is_ascii_digit());
-            let slug = post.starts_with(|c: char| c.is_ascii_lowercase())
-                && post
-                    .chars()
-                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
-            !pre.is_empty()
-                && pre.chars().all(|c| c.is_ascii_uppercase())
-                && !post.is_empty()
-                && (numbered || slug)
-        });
-        if looks_like_id && !seen.insert(cell.to_string()) {
-            dupes.push(cell.to_string());
+    for row in registry_rows() {
+        if !seen.insert(row.id.clone()) {
+            dupes.push(format!("{}:{}", row.id, row.line));
         }
     }
     assert!(
@@ -246,22 +533,12 @@ fn the_confidence_gradient_links_resolve() {
 /// `BIO`, …), parsed from the ID column so the book lint auto-adapts when a new
 /// prefix is coined rather than hard-coding a list that rots.
 fn registry_id_prefixes() -> BTreeSet<String> {
-    let registry = read(&repo_root().join("book/src/frontier/idea-registry.md"));
-    let mut prefixes = BTreeSet::new();
-    for line in registry.lines() {
-        let Some(rest) = line.strip_prefix("| ") else {
-            continue;
-        };
-        let cell = rest.split('|').next().unwrap_or("").trim();
-        if let Some((pre, post)) = cell.split_once('-')
-            && !pre.is_empty()
-            && pre.chars().all(|c| c.is_ascii_uppercase())
-            && post.starts_with(|c: char| c.is_ascii_digit())
-        {
-            prefixes.insert(pre.to_string());
-        }
-    }
-    prefixes
+    registry_rows()
+        .iter()
+        .filter_map(|r| r.id.split_once('-'))
+        .filter(|(_, post)| post.starts_with(|c: char| c.is_ascii_digit()))
+        .map(|(pre, _)| pre.to_string())
+        .collect()
 }
 
 /// The first registry ID (`EXP-3`, `MAP-9a`) appearing in `text` as a whole

@@ -162,21 +162,33 @@ type Row = (
 /// the exact f64 the API returned (shortest-round-trip literals).
 // Re-pinned under The Living Community epoch (history is the sole
 // settlement placer, this merge): the deep-history bake seeds all four
-// peoples on every world and grows them into large, organized flagship
-// communities. Every placed culture now clears the SOC-1 gate (has
+// (then-)peoples on every world and grows them into large, organized
+// flagship communities. Every placed culture now clears the SOC-1 gate (has
 // doctrine), so every epoch-2 rung is Predictive - the prior folk-only
 // rows (seed 1 hobgoblin, seed 2 kobold, seed 5 hobgoblin) are gone, and
 // bugbear/kobold now place at every seed. The epoch-2 prediction is a
 // closed-form function of the world's ORBITAL DAY alone (not the culture),
-// so all four placed peoples on a given seed share the exact same predicted
-// day — only the witnessed COUNT differs (lunar-witnessing pair vs
-// solar-only pair). Re-pinned at the-living-community merge: the values are
-// the live `ladder_of` output (the prior table carried per-culture-varying
-// predictions, which was a mispinning — the closed form is world-global).
+// so all four (now five) placed peoples on a given seed share the exact
+// same predicted day — only the witnessed COUNT differs (lunar-witnessing
+// group vs solar-only pair). Re-pinned at the-living-community merge: the
+// values are the live `ladder_of` output (the prior table carried
+// per-culture-varying predictions, which was a mispinning — the closed form
+// is world-global). The Vacancy T9 re-pins again: the gnoll places at every
+// seed 1..=5 and its witnessed count matches bugbear/kobold's exactly at
+// every seed (measured live, not assumed — it joins the lunar-witnessing
+// group, now three members not two).
 const LADDER_TABLE: &[Row] = &[
     (
         1,
         "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        6472,
+        Some(36531.74198950235),
+    ),
+    (
+        1,
+        "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
         6472,
@@ -209,6 +221,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         2,
         "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        81,
+        Some(36337.174658835705),
+    ),
+    (
+        2,
+        "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
         81,
@@ -241,6 +261,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         3,
         "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        53,
+        Some(36125.669504115634),
+    ),
+    (
+        3,
+        "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
         53,
@@ -273,6 +301,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         4,
         "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        3785,
+        Some(36540.36159622378),
+    ),
+    (
+        4,
+        "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
         3785,
@@ -305,6 +341,14 @@ const LADDER_TABLE: &[Row] = &[
     (
         5,
         "bugbear",
+        LadderRung::Unknown,
+        LadderRung::Predictive,
+        500,
+        Some(36556.47532198732),
+    ),
+    (
+        5,
+        "gnoll",
         LadderRung::Unknown,
         LadderRung::Predictive,
         500,

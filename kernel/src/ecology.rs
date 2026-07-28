@@ -82,11 +82,59 @@ pub const MINERAL: ResourceAxis = ResourceAxis {
     kind: ResourceKind::Stock,
 };
 
-/// The v1 resource-axis basis, in ascending id order. The basis is open —
-/// later campaigns may register further axes with higher ids — so this
-/// slice is a snapshot of what's registered today, not a closed enum.
+/// Marine primary production and the prey web it supports — the sea's single
+/// trophic axis at this fidelity.
+///
+/// Deliberately conflates what the land resolves into three axes
+/// (`PHOTOSYNTHATE` → `PLANT_FORAGE` → `ANIMAL_PREY`), because one axis needs
+/// one calibration knob and three would need three. The consequence is real
+/// and worth knowing: a reef grazer and a pelagic apex predator are
+/// differentiated only by their condition-response curves, not by what they
+/// eat, so marine food-chain *length* is not yet an emergent property. Splitting
+/// it is BIO-marine-trophic-split, and costs only new ids — never a reinterpretation of this one.
+///
+/// `Stock` rather than `Field`: what a consumer eats here is standing biomass,
+/// even though its supply is derived from production.
+pub const MARINE_FORAGE: ResourceAxis = ResourceAxis {
+    id: 5,
+    label: "marine forage",
+    kind: ResourceKind::Stock,
+};
+
+/// The registered resource-axis basis, in ascending id order. The basis is
+/// open — later campaigns may register further axes with higher ids — so this
+/// slice is a snapshot of what's registered today, not a closed enum. The
+/// name is historical (`v1` predates the sea) and is kept because renaming it
+/// would churn four call sites for no behavioural gain.
+///
+/// **Append only — and the reason is positional, not arithmetic.**
+///
+/// The tempting rationale is float non-associativity, and for a zero-weight
+/// axis it is simply wrong: `x + 0.0 == x` exactly, at every position, so a
+/// mid-slice insert of an unweighted axis leaves every partial sum
+/// bit-identical. Checking ULPs will find nothing and prove nothing.
+///
+/// What actually breaks is **tie-breaking by basis position**. A niche's
+/// dominant axis is resolved by anchoring at `v1_basis()[0]` and keeping the
+/// current leader unless a later axis is *strictly* greater, so position
+/// decides every tie — including the total tie of the zero vector, which
+/// resolves to whatever sits at index 0. Insert an axis at or before an
+/// existing one and you change which axis wins those ties: prepending
+/// `MARINE_FORAGE` would make a zero-weight niche resolve marine-dominant
+/// instead of photosynthate-dominant, silently changing the trophic
+/// classification that feeds off-chain detection.
+///
+/// Pinned by `the_basis_ids_are_append_only` below, which is what makes this
+/// a rule rather than a hope.
 pub fn v1_basis() -> &'static [ResourceAxis] {
-    &[PHOTOSYNTHATE, PLANT_FORAGE, ANIMAL_PREY, DETRITUS, MINERAL]
+    &[
+        PHOTOSYNTHATE,
+        PLANT_FORAGE,
+        ANIMAL_PREY,
+        DETRITUS,
+        MINERAL,
+        MARINE_FORAGE,
+    ]
 }
 
 /// A sparse resource-utilization vector: axis id to non-negative weight.
@@ -268,6 +316,72 @@ mod tests {
     #[test]
     fn rejects_negative_weight() {
         assert!(ResourceVector::new(&[(MINERAL, -0.1)]).is_err());
+    }
+
+    #[test]
+    fn a_trailing_zero_weight_axis_does_not_perturb_a_terrestrial_niche() {
+        // The stage-2 keystone: every existing kind's niche must be numerically
+        // untouched by the basis extension. Both properties below are what make
+        // that true, and both are checked rather than assumed.
+        let terrestrial =
+            ResourceVector::new(&[(PLANT_FORAGE, 0.65), (ANIMAL_PREY, 0.35)]).unwrap();
+
+        // 1. The new axis contributes an exact zero.
+        assert_eq!(terrestrial.weight(MARINE_FORAGE), 0.0);
+
+        // 2. Summing over the extended basis is bit-identical to summing over the
+        //    five-axis prefix — the property that keeps `coexist.rs` and
+        //    `niche.rs` byte-identical.
+        let over_full: f64 = v1_basis().iter().map(|a| terrestrial.weight(*a)).sum();
+        let over_prefix: f64 = v1_basis()[..5].iter().map(|a| terrestrial.weight(*a)).sum();
+        assert_eq!(over_full.to_bits(), over_prefix.to_bits());
+
+        // 3. Overlap cannot see the basis at all: it iterates the two vectors'
+        //    own recorded keys and normalizes by their own values. Measure that
+        //    directly rather than narrating it — carrying an EXPLICIT zero
+        //    weight on the new axis must give bit-identical overlap to omitting
+        //    the axis entirely. A range check (`> 0.0 && <= 1.0`) would pass
+        //    even if the extension moved the value, and a hardcoded bit pattern
+        //    would pin the number without testing the property.
+        let other = ResourceVector::new(&[(PLANT_FORAGE, 1.0)]).unwrap();
+        let with_explicit_zero = ResourceVector::new(&[
+            (PLANT_FORAGE, 0.65),
+            (ANIMAL_PREY, 0.35),
+            (MARINE_FORAGE, 0.0),
+        ])
+        .unwrap();
+        assert_eq!(
+            terrestrial.overlap(&other).to_bits(),
+            with_explicit_zero.overlap(&other).to_bits(),
+            "a zero weight on the new axis must not move Pianka overlap"
+        );
+    }
+
+    #[test]
+    fn the_basis_ids_are_append_only() {
+        // The real guard on the append-only rule, and the reason it is a rule
+        // rather than a doc comment.
+        //
+        // The obvious pin — that a zero-weight axis contributes an exact zero —
+        // catches nothing: a mid-slice insert and even a prepend both leave
+        // every sum bit-identical, because `x + 0.0 == x` at any position
+        // (verified by mutation). What a reorder DOES change is tie-breaking,
+        // which resolves by basis position: the zero vector resolves to
+        // whatever sits at index 0, so prepending an axis silently changes a
+        // niche's dominant axis and with it the off-chain trophic
+        // classification.
+        //
+        // Pinning the id sequence catches every reorder, insert, and renumber
+        // in one assertion — and doubles as the guard on `ResourceAxis::id`
+        // being a save-format contract (an id that changes meaning
+        // reinterprets every world's stored `ResourceVector`s).
+        let ids: Vec<u16> = v1_basis().iter().map(|a| a.id).collect();
+        assert_eq!(
+            ids,
+            vec![0, 1, 2, 3, 4, 5],
+            "the basis is append-only: ids must be dense and ascending from 0, \
+             and a new axis takes the next free id at the END"
+        );
     }
 
     #[test]
