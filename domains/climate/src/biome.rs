@@ -5,6 +5,7 @@
 //! are never committed as facts (spec §3, §6) — the tier-0 `biome` fact stays
 //! with the Vale.
 
+use crate::facets::{BiomeExpr, Formation, Realm, Stratum};
 use hornvale_kernel::{ReferenceElevation, Temperature};
 
 /// A seafloor tectonic feature at an ocean cell (climate-owned; the
@@ -352,39 +353,52 @@ pub fn classify_marine(
     feature: SeafloorFeature,
     upwelling: bool,
 ) -> Biome {
+    classify_marine_expr(depth_m, sst_c, feature, upwelling).biome()
+}
+
+/// [`classify_marine`] as a faceted expression. The legacy function delegates
+/// to this, so the two cannot drift apart.
+///
+/// The precedence chain below is the legacy one, deliberately unchanged. Two
+/// arms look like bugs and are not: a deep trench is tested BEFORE a ridge (so
+/// a cell that is both is hadal open water, not a vent), and the shallow band
+/// matches reef above 20 °C and kelp below 12 °C, leaving 12–20 °C to fall
+/// through to the arms beneath. Both are current behaviour, and the seed-42
+/// world fixture will catch any tidying of either.
+///
+/// What *has* changed is that depth no longer competes with community for the
+/// single return slot: the stratum is derived independently, so a vent is a
+/// community AT a depth rather than one that displaced a depth.
+/// type-audit: bare-ok(diagnostic-value: depth_m), bare-ok(flag: upwelling)
+pub fn classify_marine_expr(
+    depth_m: f64,
+    sst_c: Temperature,
+    feature: SeafloorFeature,
+    upwelling: bool,
+) -> BiomeExpr {
+    let stratum = Stratum::at_depth_m(depth_m);
     let sea_ice_c = Temperature::new(SEA_ICE_C).expect("sea-ice threshold is finite");
-    if sst_c < sea_ice_c {
-        return Biome::SeaIce;
-    }
-    if feature == SeafloorFeature::Trench && depth_m > 6000.0 {
-        return Biome::HadalTrench;
-    }
-    if feature == SeafloorFeature::Ridge {
-        return Biome::HydrothermalVent;
-    }
-    if depth_m < 200.0 {
-        let reef_c = Temperature::new(20.0).expect("reef threshold is finite");
-        if sst_c > reef_c {
-            return Biome::CoralReef;
-        }
-        let kelp_c = Temperature::new(12.0).expect("kelp threshold is finite");
-        if sst_c < kelp_c {
-            return Biome::KelpForest;
-        }
-    }
-    if upwelling && depth_m < 1000.0 {
-        return Biome::Upwelling;
-    }
-    if depth_m < 200.0 {
-        Biome::Epipelagic
-    } else if depth_m < 1000.0 {
-        Biome::Mesopelagic
-    } else if depth_m < 4000.0 {
-        Biome::Bathypelagic
-    } else if depth_m < 6000.0 {
-        Biome::Abyssal
+    let reef_c = Temperature::new(20.0).expect("reef threshold is finite");
+    let kelp_c = Temperature::new(12.0).expect("kelp threshold is finite");
+    let formation = if sst_c < sea_ice_c {
+        Formation::SeaIce
+    } else if feature == SeafloorFeature::Trench && depth_m > 6000.0 {
+        Formation::OpenWater
+    } else if feature == SeafloorFeature::Ridge {
+        Formation::Vent
+    } else if depth_m < 200.0 && sst_c > reef_c {
+        Formation::Reef
+    } else if depth_m < 200.0 && sst_c < kelp_c {
+        Formation::KelpForest
+    } else if upwelling && depth_m < 1000.0 {
+        Formation::Upwelling
     } else {
-        Biome::HadalTrench
+        Formation::OpenWater
+    };
+    BiomeExpr {
+        realm: Realm::WATERWORLD,
+        formation,
+        stratum,
     }
 }
 
@@ -402,10 +416,43 @@ pub fn classify(
     feature: SeafloorFeature,
     upwelling: bool,
 ) -> Biome {
+    classify_expr(
+        temp_c,
+        moisture,
+        sst_c,
+        elevation_m,
+        sea_level_m,
+        latitude_deg,
+        feature,
+        upwelling,
+    )
+    .biome()
+}
+
+/// [`classify`] as a faceted expression; the legacy function delegates here.
+/// The marine/land split and the land lookup are the legacy body verbatim —
+/// only the return type changes.
+/// type-audit: bare-ok(ratio: moisture), pending(wave-2: latitude_deg), bare-ok(flag: upwelling)
+#[allow(clippy::too_many_arguments)]
+pub fn classify_expr(
+    temp_c: Temperature,
+    moisture: f64,
+    sst_c: Temperature,
+    elevation_m: ReferenceElevation,
+    sea_level_m: ReferenceElevation,
+    latitude_deg: f64,
+    feature: SeafloorFeature,
+    upwelling: bool,
+) -> BiomeExpr {
     if elevation_m < sea_level_m {
-        classify_marine(sea_level_m - elevation_m, sst_c, feature, upwelling)
+        classify_marine_expr(sea_level_m - elevation_m, sst_c, feature, upwelling)
     } else {
-        classify_land(temp_c, moisture, elevation_m, sea_level_m, latitude_deg)
+        let land = classify_land(temp_c, moisture, elevation_m, sea_level_m, latitude_deg);
+        BiomeExpr {
+            realm: Realm::OVERWORLD,
+            formation: crate::facets::land_formation(land),
+            stratum: Stratum::Surface,
+        }
     }
 }
 
@@ -563,6 +610,137 @@ mod tests {
         ] {
             let _ = b.glyph();
             let _ = b.color();
+        }
+    }
+
+    #[test]
+    fn the_expression_path_reproduces_legacy_marine_classification_exactly() {
+        // A dense sweep across every branch of the legacy precedence chain,
+        // including the 12..=20 °C shallow gap that matches neither reef nor
+        // kelp, and the trench-and-ridge overlap where the trench wins. This
+        // test is what licenses calling the campaign a pure refactor.
+        let features = [
+            SeafloorFeature::None,
+            SeafloorFeature::Trench,
+            SeafloorFeature::Ridge,
+        ];
+        let depths = [
+            0.0, 50.0, 199.0, 200.0, 500.0, 999.0, 1000.0, 3999.0, 4000.0, 5999.0, 6000.0, 6001.0,
+            9000.0,
+        ];
+        let ssts = [-5.0, 0.0, 5.0, 11.9, 12.0, 15.0, 20.0, 20.1, 30.0];
+        let mut checked = 0usize;
+        for f in features {
+            for d in depths {
+                for sc in ssts {
+                    for up in [false, true] {
+                        let sst = t(sc);
+                        let expr = classify_marine_expr(d, sst, f, up);
+                        assert_eq!(
+                            expr.biome(),
+                            legacy_classify_marine(d, sst, f, up),
+                            "depth {d} sst {sc} feature {f:?} upwelling {up}"
+                        );
+                        assert_eq!(expr.stratum, Stratum::at_depth_m(d));
+                        assert_eq!(expr.realm, Realm::WATERWORLD);
+                        checked += 1;
+                    }
+                }
+            }
+        }
+        assert!(checked > 600, "sweep must be dense; checked {checked}");
+    }
+
+    /// The pre-campaign `classify_marine`, transcribed verbatim, as the oracle
+    /// the sweep above compares against. Keeping a copy here is the only way
+    /// the equivalence claim can be tested at all — delegating to the shipped
+    /// function would compare it with itself.
+    fn legacy_classify_marine(
+        depth_m: f64,
+        sst_c: Temperature,
+        feature: SeafloorFeature,
+        upwelling: bool,
+    ) -> Biome {
+        let sea_ice_c = Temperature::new(SEA_ICE_C).expect("sea-ice threshold is finite");
+        if sst_c < sea_ice_c {
+            return Biome::SeaIce;
+        }
+        if feature == SeafloorFeature::Trench && depth_m > 6000.0 {
+            return Biome::HadalTrench;
+        }
+        if feature == SeafloorFeature::Ridge {
+            return Biome::HydrothermalVent;
+        }
+        if depth_m < 200.0 {
+            let reef_c = Temperature::new(20.0).expect("reef threshold is finite");
+            if sst_c > reef_c {
+                return Biome::CoralReef;
+            }
+            let kelp_c = Temperature::new(12.0).expect("kelp threshold is finite");
+            if sst_c < kelp_c {
+                return Biome::KelpForest;
+            }
+        }
+        if upwelling && depth_m < 1000.0 {
+            return Biome::Upwelling;
+        }
+        if depth_m < 200.0 {
+            Biome::Epipelagic
+        } else if depth_m < 1000.0 {
+            Biome::Mesopelagic
+        } else if depth_m < 4000.0 {
+            Biome::Bathypelagic
+        } else if depth_m < 6000.0 {
+            Biome::Abyssal
+        } else {
+            Biome::HadalTrench
+        }
+    }
+
+    #[test]
+    fn a_trench_outranks_a_ridge_exactly_as_it_did() {
+        // Rule 2 fires before rule 3: a deep trench that is also a ridge is
+        // hadal open water, not a vent. Preserved deliberately.
+        let deep = classify_marine_expr(9000.0, t(4.0), SeafloorFeature::Trench, false);
+        assert_eq!(deep.formation, Formation::OpenWater);
+        assert_eq!(deep.stratum, Stratum::Hadal);
+        assert_eq!(deep.biome(), Biome::HadalTrench);
+    }
+
+    #[test]
+    fn a_vent_is_now_a_community_at_a_depth() {
+        // The disentangling, made visible: the vent keeps its stratum instead
+        // of displacing it.
+        let e = classify_marine_expr(3000.0, t(4.0), SeafloorFeature::Ridge, false);
+        assert_eq!(e.formation, Formation::Vent);
+        assert_eq!(e.stratum, Stratum::Bathypelagic);
+        assert_eq!(e.biome(), Biome::HydrothermalVent);
+    }
+
+    #[test]
+    fn land_cells_are_overworld_surface_and_project_to_themselves() {
+        for (temp, moist, elev, lat) in [
+            (25.0, 0.8, 100.0, 5.0),
+            (5.0, 0.5, 200.0, 50.0),
+            (-30.0, 0.3, 300.0, 80.0),
+            (30.0, 0.05, 150.0, 20.0),
+        ] {
+            let expr = classify_expr(
+                t(temp),
+                moist,
+                t(15.0),
+                e(elev),
+                e(0.0),
+                lat,
+                SeafloorFeature::None,
+                false,
+            );
+            assert_eq!(expr.realm, Realm::OVERWORLD);
+            assert_eq!(expr.stratum, Stratum::Surface);
+            assert_eq!(
+                expr.biome(),
+                classify_land(t(temp), moist, e(elev), e(0.0), lat)
+            );
         }
     }
 }
