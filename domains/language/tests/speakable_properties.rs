@@ -94,7 +94,15 @@ fn glossed_names_audibly_contain_their_words_under_a_saturated_corpus() {
         let site = SiteConcepts {
             concepts: &["water", "fire", "moon", "shadow"],
         };
-        let morph = MorphOptions { honorifics: false };
+        // An even three-way shape profile: this battery is about
+        // phonotactic containment, not shape, so every NameShape is drawn
+        // equally often and the sweep covers one-, two- and
+        // three-morpheme compounds alike.
+        let morph = MorphOptions {
+            honorifics: false,
+            shape_weights: [1.0, 1.0, 1.0],
+            shape_beta: 1.0,
+        };
         // Every concept in every name of this culture: the maximum wear
         // pressure the mechanism can ever be under.
         let frequencies: BTreeMap<String, f64> = ["water", "fire", "moon", "shadow"]
@@ -181,7 +189,15 @@ fn glossed_names_audibly_contain_their_words_across_the_seed_sweep() {
         let site = SiteConcepts {
             concepts: &["water", "fire", "moon", "shadow"],
         };
-        let morph = MorphOptions { honorifics: false };
+        // An even three-way shape profile: this battery is about
+        // phonotactic containment, not shape, so every NameShape is drawn
+        // equally often and the sweep covers one-, two- and
+        // three-morpheme compounds alike.
+        let morph = MorphOptions {
+            honorifics: false,
+            shape_weights: [1.0, 1.0, 1.0],
+            shape_beta: 1.0,
+        };
 
         // The per-salt distinctness this loop used to assert is gone with
         // the drawn settlement stem (The Wearing, decision 0024: uniqueness

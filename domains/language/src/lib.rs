@@ -113,7 +113,7 @@ pub use morphology::{
     morph_depths, morph_forms,
 };
 pub use naming::{
-    GeneratedName, MorphOptions, NameCorpus, NameKind, Namer, SiteConcepts, render_views,
+    GeneratedName, MorphOptions, NameCorpus, NameKind, NameShape, Namer, SiteConcepts, render_views,
 };
 pub use packs::{
     PackDepths, PackEntry, body_pack, color_pack, compound_recipe, concept_domain, in_ladder,

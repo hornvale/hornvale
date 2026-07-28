@@ -6,7 +6,7 @@ use hornvale_astronomy::{
 use hornvale_climate::GeneratedClimate;
 use hornvale_kernel::{CellId, EntityId, Phenomenon, Seed, Value, World};
 use hornvale_language::{
-    GapReason, LexEntry, Manner, MorphOptions, NameKind, Namer, Phonology, Segment, concept_domain,
+    GapReason, LexEntry, Manner, NameKind, Namer, Phonology, Segment, concept_domain,
     distinctiveness, distortion, domain_distortion, recoverability, romanize,
 };
 use hornvale_religion::beliefs_of;
@@ -3791,6 +3791,15 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
     };
     let ph = language_of_in(v.world(), v.components(), species);
     let namer = Namer::new(&v.world().seed, species, &ph);
+    // Resolved through the composition root's own mapping — never a
+    // parallel definition of "this people's naming morphology".
+    let (Some((_, mind)), Some((_, society))) = (
+        v.components().psyche.iter().find(|(k, _)| k.0 == species),
+        v.components().society.iter().find(|(k, _)| k.0 == species),
+    ) else {
+        return MetricValue::Absent;
+    };
+    let species_morph = hornvale_worldgen::morph_options(mind, society);
     let carries = |(i, b): (usize, &hornvale_religion::Belief)| {
         let Some(phenomenon) = seen.get(i) else {
             // More beliefs than observed phenomena would mean the
@@ -3807,10 +3816,22 @@ fn epithet_honorific(v: &FullView, species: &str) -> MetricValue {
         // The empty corpus, matching what worldgen passes for epithets:
         // toponymic wear is settlement-only, so re-deriving the plain word
         // here must wear nothing either.
+        // The species' real naming morphology with the honorific SWITCHED
+        // OFF, which is the whole trick this metric turns: the honorific
+        // affix is drawn after the concepts are picked, so clearing that
+        // one flag yields the same name minus its prefix. Everything else
+        // — in particular the shape weights, which decide how many
+        // concepts get compounded — must match what worldgen passed, or
+        // this re-derivation names a different deity and the flag flips
+        // for a reason that has nothing to do with honorifics.
+        let morph = hornvale_language::MorphOptions {
+            honorifics: false,
+            ..species_morph
+        };
         let (plain, _) = namer.glossed_name(
             NameKind::Epithet,
             name_seed,
-            &MorphOptions { honorifics: false },
+            &morph,
             &site,
             &lexicon,
             &hornvale_language::NameCorpus::none(),

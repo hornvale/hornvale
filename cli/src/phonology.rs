@@ -43,13 +43,13 @@ pub fn render_phonology() -> String {
     // `iter()` is `KindId`-ascending, byte-identical to the old
     // registry-then-filter order.
     let speakers = hornvale_language::articulation_registry();
-    for (kind, _) in hornvale_species::psyche_registry().iter() {
+    for (kind, mind) in hornvale_species::psyche_registry().iter() {
         if speakers.get(kind).is_none() {
             continue;
         }
         let species = kind.0;
         let phonology = world_builder::language_of(&world, species);
-        // The Cloister: `sample_names_for` needs only the society vector.
+        // The Cloister: `sample_names_for` needs the mind and society vectors.
         // Since this loop covers every minded speaker (dragons included since
         // The Solitary Tongue), a Solitary carries no society row — resolve
         // the goblin baseline for it, mirroring genesis's mixed-consumer rule.
@@ -89,7 +89,7 @@ pub fn render_phonology() -> String {
 
         doc.push_str("### Sample names\n\n");
         doc.push_str("| Kind | Romanization | IPA | Espeak | Audio |\n|---|---|---|---|---|\n");
-        for (name_kind, name) in sample_names_for(&world, species, &society) {
+        for (name_kind, name) in sample_names_for(&world, species, mind, &society) {
             doc.push_str(&format!(
                 "| {} | {} | /{}/ | `{}` | <audio controls preload=\"none\" src=\"../audio/{}\"></audio> |\n",
                 name_kind,
@@ -111,11 +111,12 @@ pub fn render_phonology() -> String {
 pub(crate) fn sample_names_for(
     world: &World,
     species: &str,
+    mind: &hornvale_species::MindVector,
     society: &hornvale_species::SocietyVector,
 ) -> Vec<(&'static str, GeneratedName)> {
     let phonology = world_builder::language_of(world, species);
     let namer = Namer::new(&world.seed, species, &phonology);
-    let morph = world_builder::morph_options(society);
+    let morph = world_builder::morph_options(mind, society);
     let mut samples = Vec::new();
     for salt in 0..SETTLEMENT_SAMPLES {
         samples.push(("Settlement", namer.name(NameKind::Settlement, salt, &morph)));
@@ -253,7 +254,7 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, _) = psyche
+        let (kind, mind) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
@@ -264,7 +265,7 @@ mod tests {
             .unwrap_or(hornvale_species::SocietyVector::baseline());
         let phonology = world_builder::language_of(&world, species);
         let namer = Namer::new(&world.seed, species, &phonology);
-        let morph = world_builder::morph_options(&society);
+        let morph = world_builder::morph_options(mind, &society);
         let name = namer.name(NameKind::Settlement, 0, &morph);
         assert!(!name.roman.is_empty(), "romanization must not be empty");
         assert!(!name.ipa.is_empty(), "IPA transcription must not be empty");
@@ -288,7 +289,7 @@ mod tests {
         // A SPEAKING people: since The Eremite the psyche registry is a superset
         // (the dragons carry a mind but no speech, and sort ahead of the peoples
         // by KindId), so pick the first psyche-carrier that also speaks.
-        let (kind, _) = psyche
+        let (kind, mind) = psyche
             .iter()
             .find(|&(k, _)| articulation.contains(k))
             .expect("at least one speaking people");
@@ -296,7 +297,7 @@ mod tests {
             .get(kind)
             .copied()
             .unwrap_or(hornvale_species::SocietyVector::baseline());
-        let samples = sample_names_for(&world, kind.0, &society);
+        let samples = sample_names_for(&world, kind.0, mind, &society);
         assert_eq!(samples.len(), SETTLEMENT_SAMPLES as usize + 1);
         for (_, name) in &samples {
             assert!(

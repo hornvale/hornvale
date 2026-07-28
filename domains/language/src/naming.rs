@@ -32,20 +32,31 @@
 //! **a pin that moves a species' scatter can move every name of that
 //! species** — even for settlements whose own cell did not move.
 //!
-//! Measured by holding a world's scatter fixed and varying only the corpus:
-//! 4 of 79 names change at seed 777, 7 of 207 at seed 99, 2 of 195 at seed
-//! 1, 1 of 76 at seed 404. At seed 42 it changes **none** — every wear that
-//! culture attempts is surrendered to the survival rule (see
-//! [`Namer::worn_compound`]), so that world's glossed names happen to be
-//! corpus-invariant. The dependence is real but sparse, and seed 42 is not
-//! the seed to cite it from. This module stays pure (the corpus is an
-//! explicit, read-only argument), but the world-level isolation property is
-//! gone by design, and a pin-isolation test must not assume it.
+//! Measured by holding a world's scatter fixed and varying only the corpus
+//! (**re-measured for the drawn [`NameShape`], which changes which
+//! morphemes a name is built from and therefore which of them the corpus
+//! can wear**): 9 of 207 names change at seed 99, 2 of 195 at seed 1, and
+//! **none at all** at seeds 42, 777 and 404 — every wear those cultures
+//! attempt is surrendered to the survival rule (see
+//! [`Namer::worn_compound`]), so those worlds' glossed names happen to be
+//! corpus-invariant. The dependence is real but *sparser* than it was
+//! before the shape draw, and seed 42 is not a seed to cite it from. This
+//! module stays pure (the corpus is an explicit, read-only argument), but
+//! the world-level isolation property is gone by design, and a
+//! pin-isolation test must not assume it.
+//!
+//! A *glossed* name additionally has a **shape** ([`NameShape`]) — how many
+//! site concepts it compounds — drawn per entity from its culture's own
+//! weighted, β-sharpened distribution (`MorphOptions::shape_weights` /
+//! `shape_beta`, both keyed upstream from the species' psychology vectors).
+//! One shape dominates per people, with a real tail; the profile is what
+//! makes a people's toponymy recognizably theirs instead of every name in
+//! the world sharing one construction.
 //!
 //! [`Namer::glossed_name`] (The Words, Task 9) is a later epoch of the same
 //! `name` (v1 retired but never deleted — old saves still read it): rooted
 //! one leg deeper (`…derive(StreamLabel::dynamic(kind_label)).derive(streams::V3).derive(StreamLabel::dynamic(&salt))`),
-//! it compounds 1-2 of a [`SiteConcepts`] site's actual lexicon words
+//! it compounds 1-3 of a [`SiteConcepts`] site's actual lexicon words
 //! instead of always drawing a bare stem, so a name becomes a small true
 //! story about the entity it names, with a gloss to match. `/v2` was that
 //! epoch's first leg; The Wearing (2026-07-27) supersedes it with `/v3`,
@@ -101,16 +112,87 @@ impl NameKind {
     }
 }
 
-/// Morphology options the composition root keys from a species' status
-/// basis. Plain data — this crate is kernel-only and never imports
-/// `hornvale-species`; the mapping (e.g. `Rank` → `honorifics: true`) lives
-/// upstream.
-/// type-audit: bare-ok(flag)
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// How many morphemes a glossed name is built from — the *shape* of the
+/// name, drawn per entity from its culture's own weighted distribution
+/// (see [`MorphOptions::shape_weights`]).
+///
+/// Real toponymic systems are not uniform in shape: English is
+/// overwhelmingly specific+generic (`Oxford`, `Newcastle`) but keeps a
+/// simplex stratum (`York`, `Bath`) and a thin qualified one
+/// (`Newcastle-upon-Tyne`, `Great Yarmouth`). What reads as generated is
+/// not any individual name but a corpus in which *every* name has the same
+/// construction, so the distribution — one dominant shape with a real tail
+/// — is the thing being modelled, and it is per-culture: a people's
+/// toponymy stays recognizably theirs.
+///
+/// The variants are ordered by morpheme count, and that order is the
+/// [`MorphOptions::shape_weights`] index order. It is therefore a
+/// **save-format contract**: permuting these variants silently reassigns
+/// every culture's weights.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum NameShape {
+    /// One morpheme: the specific alone (`York`).
+    Simplex,
+    /// Two morphemes: the specific and a generic (`Oxford`) — the shape
+    /// most real systems lean on.
+    SpecificGeneric,
+    /// Three morphemes: a specific+generic core with a further qualifier
+    /// attached to the whole (`Newcastle-upon-Tyne`). The rarest shape in
+    /// every profile the composition root derives.
+    Qualified,
+}
+
+impl NameShape {
+    /// The variants in [`NameShape::morphemes`] order — the index order
+    /// [`MorphOptions::shape_weights`] is read in.
+    pub const ALL: [NameShape; 3] = [
+        NameShape::Simplex,
+        NameShape::SpecificGeneric,
+        NameShape::Qualified,
+    ];
+
+    /// How many site-concept morphemes this shape compounds. The name may
+    /// still come out shorter: a site offering fewer candidate concepts
+    /// than the drawn shape asks for clamps to what it has (see
+    /// [`Namer::choose_concepts`]).
+    /// type-audit: bare-ok(count)
+    pub fn morphemes(self) -> usize {
+        match self {
+            NameShape::Simplex => 1,
+            NameShape::SpecificGeneric => 2,
+            NameShape::Qualified => 3,
+        }
+    }
+}
+
+/// Morphology options the composition root keys from a species' psychology
+/// vectors. Plain data — this crate is kernel-only and never imports
+/// `hornvale-species`; the mapping (e.g. `Rank` → `honorifics: true`, and
+/// the whole shape profile below) lives upstream, in `hornvale-worldgen`.
+///
+/// Not `Eq`: `shape_weights` and `shape_beta` are floats. They are compared
+/// nowhere in this crate; `PartialEq` exists only for test assertions.
+/// type-audit: bare-ok(flag: honorifics), bare-ok(ratio: shape_weights), bare-ok(ratio: shape_beta)
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MorphOptions {
     /// Whether epithets are prefixed with a drawn honorific affix. Bare
     /// stems (settlement, deity) never consult this field.
     pub honorifics: bool,
+    /// This culture's relative preference for each [`NameShape`], indexed
+    /// by [`NameShape::ALL`]. Relative, not normalized — only the ratios
+    /// are read (`weighted_index` normalizes internally, and the β
+    /// sharpening below is scale-invariant: `(c·w)^β = c^β · w^β`).
+    /// Non-positive entries are excluded from the draw.
+    ///
+    /// Read only by [`Namer::glossed_name`] and [`Namer::glossed_concepts`];
+    /// the v1 [`Namer::name`] draws a bare stem and never consults it.
+    pub shape_weights: [f64; 3],
+    /// How stereotyped this people's toponymy is: the exponent each
+    /// positive weight is raised to before the draw. `1.0` leaves the
+    /// weights as written; `> 1.0` sharpens toward the heaviest (one
+    /// pattern dominates and the tail thins); `< 1.0` flattens toward
+    /// uniform (a heterogeneous, ad-hoc naming practice).
+    pub shape_beta: f64,
 }
 
 /// The concept ids an entity's own site facts resolve to, composed
@@ -118,7 +200,7 @@ pub struct MorphOptions {
 /// kernel-only and never learns where a concept came from (a settlement:
 /// its cell's biome concept plus its people's presiding-belief phenomenon
 /// concept; a deity: its phenomenon concept plus its sentiment's quality
-/// concept). [`Namer::glossed_name`] draws which 1-2 of these — of those
+/// concept). [`Namer::glossed_name`] draws which 1-3 of these — of those
 /// that actually hold a [`crate::lexicon::LexEntry::Root`] or
 /// [`crate::lexicon::LexEntry::Compound`] word in the supplied lexicon — to
 /// compound; a concept listed here with no word (a
@@ -144,8 +226,10 @@ pub struct SiteConcepts<'a> {
 /// against a corpus depends on *which other settlements that species has*,
 /// because the corpus counts them. Purity is preserved by making that
 /// dependence an explicit read-only argument rather than ambient state; it
-/// is not removed. Measured by varying only the corpus: 4 of 79 names change
-/// at seed 777, 7 of 207 at seed 99, 0 of 169 at seed 42 (see the module
+/// is not removed. Measured by varying only the corpus, on the shipped code
+/// (the drawn [`NameShape`] moved these numbers and they were re-measured
+/// for it): 9 of 207 names change at seed 99, 2 of 195 at seed 1, 0 of 169
+/// at seed 42, 0 of 79 at seed 777, 0 of 76 at seed 404 (see the module
 /// docs for why seed 42 is the degenerate case).
 ///
 /// A concept absent from `frequencies` reads as `0.0`: unattested in the
@@ -296,14 +380,70 @@ impl<'a> Namer<'a> {
             .stream()
     }
 
+    /// Draw this name's [`NameShape`] from `morph`'s per-culture weighted
+    /// distribution, β-sharpened.
+    ///
+    /// The sharpening is the same idiom [`crate::schemas::select_schema`]
+    /// uses, and it copies both of that function's safety rules verbatim
+    /// because both are load-bearing here too:
+    ///
+    /// - `powf` is [`hornvale_kernel::math::powf`], the portable libm
+    ///   route, never the inherent `f64::powf` — the platforms disagree in
+    ///   the last ULP and this value feeds a draw, so an inherent `powf`
+    ///   would make the *name* platform-dependent, not merely the last
+    ///   digit of a serialized float.
+    /// - A non-positive weight sharpens to `0.0` rather than being handed
+    ///   to `powf`, because an even β would flip a deliberately-excluded
+    ///   negative weight back to a positive one (`(-1.0).powf(2.0) == 1.0`)
+    ///   and revive a shape the culture meant to have none of.
+    ///
+    /// Consumes exactly one `next_f64` from `stream` (inside
+    /// [`Stream::weighted_index`]) whenever it is called at all — the
+    /// caller returns before reaching it when the site offers no candidate
+    /// concept.
+    ///
+    /// Falls back to [`NameShape::Simplex`] when every weight is
+    /// non-positive, which is the only shape realizable from *any*
+    /// non-empty candidate list and so can never itself be clamped. No
+    /// profile the composition root derives is degenerate; this is the
+    /// answer for a hand-built one that is.
+    fn draw_shape(stream: &mut Stream, morph: &MorphOptions) -> NameShape {
+        let sharpened: Vec<f64> = morph
+            .shape_weights
+            .iter()
+            .map(|w| {
+                if *w > 0.0 {
+                    hornvale_kernel::math::powf(*w, morph.shape_beta)
+                } else {
+                    0.0
+                }
+            })
+            .collect();
+        match stream.weighted_index(&sharpened) {
+            Some(i) => NameShape::ALL[i],
+            None => NameShape::Simplex,
+        }
+    }
+
     /// Pick which of `site`'s concepts this name is built from: those that
-    /// actually hold a word in `lexicon` (see [`SiteConcepts`]), narrowed to
-    /// 1-2 by `stream` in the order drawn. Empty when no site concept holds
-    /// a word — the fallback case, in which no draw is made at all, so the
-    /// stream is left exactly where the caller found it.
+    /// actually hold a word in `lexicon` (see [`SiteConcepts`]), narrowed by
+    /// a drawn [`NameShape`] to that shape's morpheme count, in the order
+    /// drawn. Empty when no site concept holds a word — the fallback case,
+    /// in which no draw is made at all, so the stream is left exactly where
+    /// the caller found it.
+    ///
+    /// **The shape is drawn before the pool is consulted, and unconditionally
+    /// once there is a pool at all.** That is deliberate and it is what makes
+    /// the drawn shape a per-culture statistic rather than a per-site one: a
+    /// site with only two candidate concepts still draws `Qualified` at its
+    /// culture's rate and merely *realizes* it as a two-morpheme name. (The
+    /// superseded `/v2` code drew nothing at all when the pool held one
+    /// candidate, so pool size and consumption were entangled; that is one
+    /// of the two consumption changes `/v3` covers.)
     fn choose_concepts<'c>(
         &self,
         stream: &mut Stream,
+        morph: &MorphOptions,
         site: &SiteConcepts<'c>,
         lexicon: &Lexicon,
     ) -> Vec<&'c str> {
@@ -316,11 +456,9 @@ impl<'a> Namer<'a> {
         if candidates.is_empty() {
             return Vec::new();
         }
-        let take = if candidates.len() == 1 {
-            1
-        } else {
-            stream.range_u32(1, 2) as usize
-        };
+        let take = Self::draw_shape(stream, morph)
+            .morphemes()
+            .min(candidates.len());
         let mut pool = candidates;
         let mut chosen: Vec<&'c str> = Vec::with_capacity(take);
         for _ in 0..take {
@@ -333,6 +471,12 @@ impl<'a> Namer<'a> {
     /// The site concepts [`Namer::glossed_name`] will compound for this
     /// `(kind, salt, site, lexicon)` — exactly the ones its gloss will name,
     /// in gloss order, computed without rendering anything.
+    ///
+    /// `morph` is read for its shape weights alone (the honorific flag is a
+    /// render-time embellishment applied after the concepts are picked, so
+    /// it cannot change them) — but the weights DO change them, so a caller
+    /// re-deriving a name's concepts must pass the same options the naming
+    /// pass will.
     ///
     /// This exists for the composition root's benefit: a culture's
     /// [`NameCorpus`] is *the share of its names each morpheme appears in*,
@@ -350,11 +494,12 @@ impl<'a> Namer<'a> {
         &self,
         kind: NameKind,
         salt: u64,
+        morph: &MorphOptions,
         site: &SiteConcepts<'c>,
         lexicon: &Lexicon,
     ) -> Vec<&'c str> {
         let mut stream = self.glossed_stream(kind, salt);
-        self.choose_concepts(&mut stream, site, lexicon)
+        self.choose_concepts(&mut stream, morph, site, lexicon)
     }
 
     /// Wear `segments` down when `frequency` — the share of this culture's
@@ -401,26 +546,45 @@ impl<'a> Namer<'a> {
         evolve(segments, &cascade, self.ph).modern
     }
 
-    /// Join the 1-2 already-resolved `parts` (one per chosen site concept)
-    /// into a compound: a single part unchanged, or two joined as a fresh
-    /// modifier/head pair (the first-drawn concept is the modifier, the
-    /// second-drawn is the head — an arbitrary but deterministic
-    /// convention, distinct from any recipe compounding already inside
-    /// `lexicon`) in `lexicon`'s drawn [`Headedness`] order.
-    fn join_parts(lexicon: &Lexicon, mut parts: Vec<Vec<Segment>>) -> Vec<Segment> {
+    /// Join the already-resolved `parts` (one per chosen site concept, in
+    /// draw order) into a compound, in `lexicon`'s drawn [`Headedness`]
+    /// order.
+    ///
+    /// - One part ([`NameShape::Simplex`]): returned unchanged.
+    /// - Two ([`NameShape::SpecificGeneric`]): a fresh modifier/head pair —
+    ///   the first-drawn concept is the modifier, the second-drawn is the
+    ///   head. An arbitrary but deterministic convention, distinct from any
+    ///   recipe compounding already inside `lexicon`.
+    /// - Three ([`NameShape::Qualified`]): the first two form that same
+    ///   core, and each further part is a **qualifier of the whole name
+    ///   already built** — joined as the modifier with the accumulated
+    ///   compound as the head. That bracketing is the one real qualified
+    ///   toponyms have (`[[New castle] upon Tyne]`), and it renders as
+    ///   either attested English pattern depending on the culture's drawn
+    ///   headedness: qualifier-trailing under `HeadFirst`
+    ///   (`Newcastle upon Tyne`), qualifier-leading under `HeadLast`
+    ///   (`Great Yarmouth`).
+    ///
+    /// The fold is written for any part count, but [`NameShape`] tops out
+    /// at three and the caller clamps to the candidate pool, so three is
+    /// the most it is ever handed.
+    fn join_parts(lexicon: &Lexicon, parts: Vec<Vec<Segment>>) -> Vec<Segment> {
         debug_assert!(
             !parts.is_empty(),
             "the caller filters the empty case (the bare-stem fallback) before compounding"
         );
-        if parts.len() == 1 {
-            return parts.remove(0);
+        let mut parts = parts.into_iter();
+        let mut whole = parts.next().unwrap_or_default();
+        if let Some(head) = parts.next() {
+            whole = join_by_headedness(lexicon.headedness, whole, head);
         }
-        let head_segs = parts.remove(1);
-        let modifier_segs = parts.remove(0);
-        join_by_headedness(lexicon.headedness, modifier_segs, head_segs)
+        for qualifier in parts {
+            whole = join_by_headedness(lexicon.headedness, qualifier, whole);
+        }
+        whole
     }
 
-    /// The repaired segments [`Namer::glossed_name`] surfaces for its 1-2
+    /// The repaired segments [`Namer::glossed_name`] surfaces for its 1-3
     /// `chosen` site concepts, each **worn to its own corpus frequency
     /// first** — wearing as many of them as can survive repair, and
     /// reporting how many had to give their wear up.
@@ -473,8 +637,11 @@ impl<'a> Namer<'a> {
     ///   from the worn ones), but it can be *triggered* by an unworn part's
     ///   annihilation — a pre-existing possibility with nothing to do with
     ///   wear — in which case a sibling loses perfectly good wear and the
-    ///   count over-reports. Not observed: all 30 surrenders measured on
-    ///   seed 42 accompanied a genuinely worn part.
+    ///   count over-reports. Not observed: all **39** surrenders measured
+    ///   on the shipped seed-42 pipeline had at least one genuinely worn
+    ///   part among the annihilated ones. (Was 30 before the drawn
+    ///   [`NameShape`] gave some compounds a third morpheme; re-measured
+    ///   with the same instrumentation, not carried forward.)
     ///
     /// The alternative remedy — admitting worn forms into the attested tier
     /// so repair leaves them alone — was rejected: the Lab's own
@@ -566,7 +733,8 @@ impl<'a> Namer<'a> {
     /// derive path gains a `"v3"` leg right after `kind`'s label, so this
     /// draws from a stream entirely distinct from [`Namer::name`]'s (v1
     /// stays retired, never reused) and from the superseded `/v2` epoch. The
-    /// stream picks 1-2 of `site`'s concepts that actually hold a word in
+    /// stream draws a [`NameShape`] from `morph`'s per-culture weighted
+    /// distribution and picks that many of `site`'s concepts that actually hold a word in
     /// `lexicon` (see [`SiteConcepts`]), **wears each of them against
     /// `corpus`** (see [`Namer::wear`]), compounds their worn modern-form
     /// segments in `lexicon`'s drawn [`Headedness`] order, and applies
@@ -580,10 +748,16 @@ impl<'a> Namer<'a> {
     /// still glosses to its concept, which is precisely the opacification
     /// `-ham` underwent.
     ///
-    /// The `/v3` epoch is what The Wearing (2026-07-27) owes for two changes
-    /// to what this method consumes: the wear itself, and the retirement of
+    /// The `/v3` epoch is what The Wearing (2026-07-27) owes for three
+    /// changes to what this method consumes: the wear itself, the drawn
+    /// [`NameShape`] (which replaced a bare `range_u32(1, 2)` that was
+    /// skipped entirely for a one-candidate site), and the retirement of
     /// the per-salt 2-3 syllable **drawn settlement stem** the `/v2` epoch
-    /// appended to every settlement name. That stem existed as a collision
+    /// appended to every settlement name. All three landed inside the same
+    /// campaign and `/v3` has never been in a released world — the census
+    /// and every committed fixture are regenerated once, at the campaign's
+    /// close — so they share one epoch rather than minting `/v4` and `/v5`
+    /// for save formats no save ever held. That stem existed as a collision
     /// fix; decision 0024 ratified that uniqueness is a reference-time
     /// property and that no future work fixes the collision rate by adding
     /// entropy, "which lengthens names without addressing the structural
@@ -610,7 +784,7 @@ impl<'a> Namer<'a> {
         corpus: &NameCorpus,
     ) -> (GeneratedName, String) {
         let mut stream = self.glossed_stream(kind, salt);
-        let chosen = self.choose_concepts(&mut stream, site, lexicon);
+        let chosen = self.choose_concepts(&mut stream, morph, site, lexicon);
 
         if chosen.is_empty() {
             let name = self.build_name(kind, morph, &mut stream);
@@ -1179,7 +1353,7 @@ fn contains_run(haystack: &[Segment], needle: &[Segment]) -> bool {
 /// Whether `lexicon` holds an actual word — a [`LexEntry::Root`] or
 /// [`LexEntry::Compound`], never a [`LexEntry::Gap`] or an absent entry —
 /// for `concept`. The filter [`Namer::glossed_name`] applies to a site's
-/// candidate concepts before picking which 1-2 to compound.
+/// candidate concepts before picking which 1-3 to compound.
 fn holds_word(lexicon: &Lexicon, concept: &str) -> bool {
     matches!(
         lexicon.entry(concept),
@@ -1240,6 +1414,133 @@ mod tests {
     use crate::phonology::{Envelope, ExoticSeg, draw_phonology};
     use hornvale_kernel::Seed;
     use std::collections::BTreeMap;
+
+    /// A neutral shape profile for tests that are not about shape: an even
+    /// three-way preference at β = 1, so `glossed_name` draws each
+    /// [`NameShape`] with probability 1/3. No world uses it — the
+    /// composition root derives a per-culture profile — and every test that
+    /// IS about shape states its own weights inline.
+    fn morph(honorifics: bool) -> MorphOptions {
+        MorphOptions {
+            honorifics,
+            shape_weights: [1.0, 1.0, 1.0],
+            shape_beta: 1.0,
+        }
+    }
+
+    /// The empirical [`NameShape`] distribution `draw_shape` produces for
+    /// `(weights, beta)`, one draw per salt off a distinct stream — the
+    /// same one-draw-per-entity shape production uses, not a single stream
+    /// drawn from repeatedly.
+    fn shape_distribution(weights: [f64; 3], beta: f64) -> [f64; 3] {
+        const DRAWS: u64 = 20_000;
+        let morph = MorphOptions {
+            honorifics: false,
+            shape_weights: weights,
+            shape_beta: beta,
+        };
+        let mut counts = [0u64; 3];
+        for salt in 0..DRAWS {
+            let mut stream = Seed(7)
+                .derive(StreamLabel::dynamic(&salt.to_string()))
+                .stream();
+            let shape = Namer::draw_shape(&mut stream, &morph);
+            let i = NameShape::ALL
+                .iter()
+                .position(|s| *s == shape)
+                .expect("draw_shape returns a NameShape::ALL member");
+            counts[i] += 1;
+        }
+        [
+            counts[0] as f64 / DRAWS as f64,
+            counts[1] as f64 / DRAWS as f64,
+            counts[2] as f64 / DRAWS as f64,
+        ]
+    }
+
+    /// The closed-form share `draw_shape` should produce: `wᵢ^β / Σ wⱼ^β`.
+    /// Written out independently of the implementation rather than calling
+    /// into it, so agreement between the two is evidence and not a
+    /// tautology.
+    fn expected_shares(weights: [f64; 3], beta: f64) -> [f64; 3] {
+        let p: Vec<f64> = weights
+            .iter()
+            .map(|w| hornvale_kernel::math::powf(*w, beta))
+            .collect();
+        let total: f64 = p.iter().sum();
+        [p[0] / total, p[1] / total, p[2] / total]
+    }
+
+    #[test]
+    fn the_shape_draw_follows_its_weights_and_beta_actually_sharpens_them() {
+        // Two claims, and the second is the one worth testing: that
+        // `shape_beta` is a live dial rather than a field that is read and
+        // discarded. A dial that does nothing is worse than no dial,
+        // because the composition root's per-culture story would be a
+        // comment asserting a property the code does not have.
+        //
+        // Tolerance: 20,000 draws puts the standard error on any share
+        // below 0.004, so 0.02 is ~5σ — tight enough to catch a wrong
+        // exponent, loose enough never to flake. The draw is deterministic
+        // anyway (a fixed seed, fixed salts), so "flake" here means "breaks
+        // on an unrelated change to `Seed::derive`", which is exactly what
+        // a save-format contract test elsewhere already owns.
+        let weights = [3.0, 2.0, 1.0];
+        let close = |got: [f64; 3], want: [f64; 3], beta: f64| {
+            for i in 0..3 {
+                assert!(
+                    (got[i] - want[i]).abs() < 0.02,
+                    "beta {beta}, shape {:?}: drew {:.4}, weights predict {:.4}",
+                    NameShape::ALL[i],
+                    got[i],
+                    want[i]
+                );
+            }
+        };
+
+        let flat = shape_distribution(weights, 0.4);
+        let neutral = shape_distribution(weights, 1.0);
+        let sharp = shape_distribution(weights, 2.5);
+        close(flat, expected_shares(weights, 0.4), 0.4);
+        close(neutral, expected_shares(weights, 1.0), 1.0);
+        close(sharp, expected_shares(weights, 2.5), 2.5);
+
+        // β is monotone in exactly the direction its doc comment claims:
+        // above 1 the heaviest weight takes more and the lightest takes
+        // less; below 1 both move back toward uniform. Asserted on the
+        // DRAWN shares, so a `powf` that is computed and then dropped fails
+        // here even though the `close` checks above would still pass at
+        // β = 1.
+        assert!(
+            flat[0] < neutral[0] && neutral[0] < sharp[0],
+            "the heaviest shape's share must rise with beta: {:.3} / {:.3} / {:.3}",
+            flat[0],
+            neutral[0],
+            sharp[0]
+        );
+        assert!(
+            flat[2] > neutral[2] && neutral[2] > sharp[2],
+            "the lightest shape's share must fall with beta: {:.3} / {:.3} / {:.3}",
+            flat[2],
+            neutral[2],
+            sharp[2]
+        );
+    }
+
+    #[test]
+    fn a_degenerate_shape_profile_falls_back_to_the_unclampable_shape() {
+        // No profile the composition root derives is degenerate (both
+        // workhorse weights are strictly positive over the whole
+        // `in_group_radius` domain), but a hand-built one can be, and the
+        // answer must be a shape that no candidate pool can clamp.
+        let morph = MorphOptions {
+            honorifics: false,
+            shape_weights: [0.0, -1.0, 0.0],
+            shape_beta: 2.0,
+        };
+        let mut stream = Seed(7).stream();
+        assert_eq!(Namer::draw_shape(&mut stream, &morph), NameShape::Simplex);
+    }
 
     fn kobold_ph() -> crate::phonology::Phonology {
         draw_phonology(
@@ -1419,7 +1720,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let n1 = Namer::new(&Seed(9), "test", &ph);
         let n2 = Namer::new(&Seed(9), "test", &ph);
         let a = n1.glossed_name(
@@ -1471,7 +1772,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(9), "test", &ph);
         for salt in 0..40u64 {
             let (_, gloss) = namer.glossed_name(
@@ -1501,7 +1802,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["nonexistent"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(9), "test", &ph);
         let (name, gloss) = namer.glossed_name(
             NameKind::Settlement,
@@ -1528,7 +1829,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["nonexistent"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(9), "test", &ph);
         let v1 = namer.name(NameKind::Settlement, 3, &morph);
         let (v3, _) = namer.glossed_name(
@@ -1747,7 +2048,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(9), "test", &ph);
         for salt in 0..20u64 {
             for kind in [NameKind::Settlement, NameKind::Deity] {
@@ -1784,7 +2085,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["water"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(9), "test", &ph);
 
         let attested = attested_forms(&lex);
@@ -1989,7 +2290,7 @@ mod tests {
         let site = SiteConcepts {
             concepts: &["water", "fire"],
         };
-        let morph = MorphOptions { honorifics: false };
+        let morph = morph(false);
         let namer = Namer::new(&Seed(42), "kobold", &ph);
         let mut saturated: BTreeMap<String, f64> = BTreeMap::new();
         saturated.insert("water".to_string(), 1.0);
@@ -2001,7 +2302,7 @@ mod tests {
         let mut any_worn = false;
         for salt in 0..40u64 {
             for kind in [NameKind::Settlement, NameKind::Deity] {
-                let reported = namer.glossed_concepts(kind, salt, &site, &lex);
+                let reported = namer.glossed_concepts(kind, salt, &morph, &site, &lex);
                 let (worn, gloss) = namer.glossed_name(kind, salt, &morph, &site, &lex, &corpus);
                 assert_eq!(
                     reported.join("-"),
@@ -2067,7 +2368,7 @@ mod tests {
         let with = namer.glossed_name(
             NameKind::Epithet,
             5,
-            &MorphOptions { honorifics: true },
+            &morph(true),
             &site,
             &lex,
             &NameCorpus::none(),
@@ -2075,7 +2376,7 @@ mod tests {
         let without = namer.glossed_name(
             NameKind::Epithet,
             5,
-            &MorphOptions { honorifics: false },
+            &morph(false),
             &site,
             &lex,
             &NameCorpus::none(),
@@ -2093,16 +2394,8 @@ mod tests {
         let ph = kobold_ph();
         let n1 = Namer::new(&Seed(1), "kobold", &ph);
         let n2 = Namer::new(&Seed(1), "kobold", &ph);
-        let a = n1.name(
-            NameKind::Settlement,
-            10,
-            &MorphOptions { honorifics: false },
-        );
-        let b = n2.name(
-            NameKind::Settlement,
-            10,
-            &MorphOptions { honorifics: false },
-        );
+        let a = n1.name(NameKind::Settlement, 10, &morph(false));
+        let b = n2.name(NameKind::Settlement, 10, &morph(false));
         assert_eq!(a, b);
         assert!(!a.roman.is_empty() && !a.ipa.is_empty() && !a.espeak.is_empty());
     }
@@ -2120,22 +2413,14 @@ mod tests {
         let namer = Namer::new(&Seed(2), "kobold", &ph);
         let mut first: Vec<String> = Vec::new();
         for salt in 0..50u64 {
-            let g = namer.name(
-                NameKind::Settlement,
-                salt,
-                &MorphOptions { honorifics: false },
-            );
+            let g = namer.name(NameKind::Settlement, salt, &morph(false));
             assert!(!g.roman.is_empty());
             first.push(g.roman);
         }
         // A second pass over the same salts reproduces every name exactly.
         let namer2 = Namer::new(&Seed(2), "kobold", &ph);
         for (salt, expected) in first.iter().enumerate() {
-            let g = namer2.name(
-                NameKind::Settlement,
-                salt as u64,
-                &MorphOptions { honorifics: false },
-            );
+            let g = namer2.name(NameKind::Settlement, salt as u64, &morph(false));
             assert_eq!(&g.roman, expected, "salt {salt} must redraw identically");
         }
     }
@@ -2145,9 +2430,9 @@ mod tests {
         let ph = kobold_ph();
         let namer = Namer::new(&Seed(3), "kobold", &ph);
         // Epithets with honorifics enabled must be able to differ from those without.
-        let with = namer.name(NameKind::Epithet, 5, &MorphOptions { honorifics: true });
+        let with = namer.name(NameKind::Epithet, 5, &morph(true));
         let namer2 = Namer::new(&Seed(3), "kobold", &ph);
-        let without = namer2.name(NameKind::Epithet, 5, &MorphOptions { honorifics: false });
+        let without = namer2.name(NameKind::Epithet, 5, &morph(false));
         assert_ne!(
             with.roman, without.roman,
             "status-basis keying must change epithet shape"
@@ -2168,7 +2453,7 @@ mod tests {
             (2, NameKind::Epithet, false),
             (3, NameKind::Epithet, true),
         ] {
-            let g = namer.name(kind, salt, &MorphOptions { honorifics });
+            let g = namer.name(kind, salt, &morph(honorifics));
             assert!(
                 !g.roman.contains('?'),
                 "roman {:?} contains the unrepresentable-segment glyph",
@@ -2191,7 +2476,7 @@ mod tests {
     fn a_generated_name_carries_a_wrapped_stressed_espeak_formulation() {
         let ph = kobold_ph();
         let namer = Namer::new(&Seed(1), "kobold", &ph);
-        let name = namer.name(NameKind::Settlement, 0, &MorphOptions { honorifics: false });
+        let name = namer.name(NameKind::Settlement, 0, &morph(false));
         assert!(
             name.espeak.starts_with("[[") && name.espeak.ends_with("]]"),
             "formulation {:?} must be wrapped for espeak direct phoneme input",

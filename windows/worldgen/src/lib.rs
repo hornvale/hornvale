@@ -4397,13 +4397,94 @@ pub fn voice_params(
     }
 }
 
-/// Derive a species' naming morphology from its psychology vector (spec
+/// The weight of the [`hornvale_language::NameShape::Qualified`] shape in
+/// every culture's raw profile: the same small constant everywhere, because
+/// the qualified toponym (`Newcastle-upon-Tyne`, `Great Yarmouth`) is rare
+/// in every system that has it at all. What differs per culture is how far
+/// [`shape_beta`] pushes it down (or, below 1, lets it up).
+///
+/// It sits on the same scale as the two workhorse weights rather than being
+/// an order of magnitude below them, and that is deliberate: β sharpening
+/// is a power, so a weight already tiny before sharpening is annihilated by
+/// any β > 1 and the tail stops existing at all. A calibration dial, not a
+/// derived quantity.
+/// type-audit: bare-ok(ratio)
+const QUALIFIED_WEIGHT: f64 = 0.25;
+
+/// A species' raw [`hornvale_language::NameShape`] preferences, before β
+/// sharpening — read off `in_group_radius` (insular 0 ↔ expansive 1).
+///
+/// **The story.** An insular people names places for insiders. Everyone
+/// already knows *which* ford, so the bare specific does the whole job and
+/// the simplex name (`York`, `Bath`) is enough. As "us" widens, a name has
+/// to survive being said to someone who was not there: the generic gets
+/// carried explicitly (`Ox-ford`), and the rare case needs a qualifier on
+/// top of that. So simplex weight falls and specific+generic weight rises
+/// with `in_group_radius`, crossing over at **0.6** — above the goblin
+/// baseline of 0.5, so only a people whose "us" reaches well past the
+/// baseline carries the generic explicitly as a matter of course.
+///
+/// The two slopes and the crossover are calibration dials (the Lab's
+/// name-length metrics are what move them), not derived quantities, and
+/// the crossover in particular has no empirical prior to fix it — real
+/// toponymy does not say at what social radius the flip happens. It was
+/// **measured into place**: with the crossover at 0.45 the shipped seed-42
+/// world came out at 11.56 mean name characters against a pre-shape 11.12,
+/// because the one people a wider profile pushes toward compounds (gnoll)
+/// also holds this world's longest roots. At 0.6 the same world reads
+/// 10.53. A length measurement over the real pipeline is what moved the
+/// dial, exactly as `WEAR_FLOOR`'s doc comment says such dials move.
+///
+/// The endpoints: at radius 0 the raw profile is `[1.6, 0.4, 0.25]`, at
+/// radius 1 it is `[0.6, 1.4, 0.25]`. Both workhorse weights stay strictly
+/// positive across the whole `[0, 1]` domain, so no shape is ever silently
+/// zeroed out of the draw.
+/// type-audit: bare-ok(ratio: return)
+pub fn shape_weights(society: &hornvale_species::SocietyVector) -> [f64; 3] {
+    let radius = society.in_group_radius;
+    [1.6 - radius, 0.4 + radius, QUALIFIED_WEIGHT]
+}
+
+/// How stereotyped a species' toponymy is — the β exponent
+/// [`hornvale_language::MorphOptions::shape_beta`] sharpens its weights by,
+/// read off `time_horizon` (immediate 0 ↔ generational 1).
+///
+/// **The story.** A people that plans in generations entrenches its
+/// conventions: a naming practice outlives the people who started it, gets
+/// copied, and hardens into *the* way places are named here. A
+/// short-horizon, opportunistic people never converges — each name is made
+/// for the moment, so its toponymy stays heterogeneous. So β rises with
+/// `time_horizon`: `0.5 + 2·h`, spanning `[0.5, 2.5]`, with the goblin
+/// baseline (`h = 0.5`) at 1.5. Below 1 the profile is *flattened* toward
+/// uniform, which is a real reading and not a degenerate one — it is what
+/// "this people has no single way of naming things" looks like.
+///
+/// Deliberately a different vector dimension from [`shape_weights`]', and
+/// that separation is the whole reason both dials exist. If β were read off
+/// `in_group_radius` too, one trait would have to encode both *which* shape
+/// a people prefers and *how hard* it prefers it, and β would collapse into
+/// a redeployment of the weights.
+/// type-audit: bare-ok(ratio: return)
+pub fn shape_beta(mind: &hornvale_species::MindVector) -> f64 {
+    0.5 + 2.0 * mind.time_horizon
+}
+
+/// Derive a species' naming morphology from its psychology vectors (spec
 /// §7): honorifics are drawn only for a rank-based status basis — the
 /// goblin baseline — matching `voice_params`' epithet-density reading of
-/// the same field.
-pub fn morph_options(society: &hornvale_species::SocietyVector) -> hornvale_language::MorphOptions {
+/// the same field; the glossed-name shape distribution comes from
+/// [`shape_weights`] and [`shape_beta`].
+///
+/// Takes both vectors, as `voice_params` does, because the shape profile
+/// reads one dimension from each.
+pub fn morph_options(
+    mind: &hornvale_species::MindVector,
+    society: &hornvale_species::SocietyVector,
+) -> hornvale_language::MorphOptions {
     hornvale_language::MorphOptions {
         honorifics: society.status_basis == hornvale_species::StatusBasis::Rank,
+        shape_weights: shape_weights(society),
+        shape_beta: shape_beta(mind),
     }
 }
 
@@ -5231,6 +5312,23 @@ fn build_to(
     use std::collections::BTreeMap;
     let mut used: BTreeMap<&'static str, BTreeMap<String, usize>> = BTreeMap::new();
     let mut named: BTreeMap<&'static str, usize> = BTreeMap::new();
+    // Resolved once, here, so BOTH passes below read the IDENTICAL naming
+    // morphology. Pass 1 counts the corpus from the concepts
+    // `glossed_concepts` reports; those concepts depend on the drawn
+    // `NameShape`, which depends on these options — so two passes with
+    // different options would count a corpus against names that were never
+    // drawn, and the `name-gloss` facts would stop matching the counts they
+    // were worn against.
+    let morph_for = |species: &'static str| -> hornvale_language::MorphOptions {
+        morph_options(
+            wc.psyche
+                .get(&KindId(species))
+                .expect("a placed people carries a mind vector"),
+            wc.society
+                .get(&KindId(species))
+                .expect("peopled pass over a fauna kind"),
+        )
+    };
     for s in &placements {
         let name = species_set[s.tag];
         let coord = geo.coord(s.cell);
@@ -5259,10 +5357,12 @@ fn build_to(
         // what its gloss will name, reported without rendering anything.
         // `glossed_name` replays the same picks off the same stream (wear
         // consumes nothing from it), so pass 2 names from precisely the
-        // concepts counted here.
+        // concepts counted here — including the drawn `NameShape`, which is
+        // why the same `morph_for` result must reach both passes.
         let chosen = namer.glossed_concepts(
             hornvale_language::NameKind::Settlement,
             salt,
+            &morph_for(name),
             &hornvale_language::SiteConcepts {
                 concepts: &concepts,
             },
@@ -5307,11 +5407,7 @@ fn build_to(
         let namer = namers
             .get(s.species)
             .expect("a Namer was built for every placed species");
-        let morph = morph_options(
-            wc.society
-                .get(&KindId(s.species))
-                .expect("peopled pass over a fauna kind"),
-        );
+        let morph = morph_for(s.species);
         let lexicon = lexicons
             .get(s.species)
             .expect("a lexicon was built for every placed species");
@@ -5514,7 +5610,7 @@ fn build_to(
             let namer = namers
                 .get(name)
                 .expect("a Namer was built for every placed species");
-            let morph = morph_options(society_v);
+            let morph = morph_options(psych_v, society_v);
             let lexicon = lexicons
                 .get(name)
                 .expect("a lexicon was built for every placed species");
@@ -5665,7 +5761,19 @@ fn build_to(
                     let namer = namers
                         .get(kind.0)
                         .expect("a Namer was built for every placed species");
-                    let morph = hornvale_language::MorphOptions { honorifics: false };
+                    // The species' own options. `Namer::name` is the v1
+                    // bare-stem draw and never consults the shape profile,
+                    // but there is no honest way to write a shape profile
+                    // that "is not read" — so this asks the composition
+                    // root for the real one rather than inventing a value.
+                    let morph = morph_options(
+                        wc.psyche
+                            .get(&KindId(kind.0))
+                            .expect("a placed people carries a mind vector"),
+                        wc.society
+                            .get(&KindId(kind.0))
+                            .expect("a placed people carries a society vector"),
+                    );
                     let mut salt = 0u64;
                     loop {
                         let candidate = namer
@@ -10563,6 +10671,265 @@ mod tests {
                 || dominates_a_cell("red-dragon")
                 || dominates_a_cell("black-dragon"),
             "at least one chromatic dragon (mighty apex) should hold a stronghold: {breakdown:?}"
+        );
+    }
+
+    /// How many morphemes each of `species`' settlement names was built
+    /// from, read back **out of the committed world** rather than by
+    /// re-running the namer: a `name-gloss` fact is its name's chosen site
+    /// concepts joined with `"-"`, so parsing it against the world's own
+    /// concept registry counts the morphemes the shipped pipeline actually
+    /// produced.
+    ///
+    /// Reading the ledger rather than calling `glossed_concepts` is the
+    /// point. Re-deriving the shape from the same function the naming pass
+    /// calls would confirm that the function agrees with itself; this
+    /// measures what the world came out holding, through the corpus pass,
+    /// the wear, the survival rule, and the candidate clamp.
+    ///
+    /// A settlement whose site offered no word at all commits no
+    /// `name-gloss` and is skipped: it has no shape, it fell back to a
+    /// bare stem.
+    fn settlement_shapes(world: &World) -> std::collections::BTreeMap<String, Vec<usize>> {
+        let mut out: std::collections::BTreeMap<String, Vec<usize>> = Default::default();
+        for f in world.ledger.find(hornvale_settlement::IS_SETTLEMENT) {
+            let id = f.subject;
+            let Some(gloss) = world.ledger.text_of(id, hornvale_kernel::NAME_GLOSS) else {
+                continue;
+            };
+            let Some(species) = hornvale_species::species_of(world, id) else {
+                continue;
+            };
+            out.entry(species)
+                .or_default()
+                .push(gloss_morphemes(world, gloss));
+        }
+        out
+    }
+
+    /// The number of concept ids `gloss` is the `"-"`-join of. Concept ids
+    /// contain hyphens themselves (`temperate-forest`), so this is a
+    /// greedy longest-match walk over hyphen-separated tokens against the
+    /// world's registry, and it **panics rather than guessing** if any
+    /// position admits no registered concept — a silently mis-parsed gloss
+    /// would corrupt every distribution measured from it.
+    fn gloss_morphemes(world: &World, gloss: &str) -> usize {
+        let tokens: Vec<&str> = gloss.split('-').collect();
+        let (mut i, mut morphemes) = (0usize, 0usize);
+        while i < tokens.len() {
+            let mut matched = None;
+            for j in (i + 1..=tokens.len()).rev() {
+                let candidate = tokens[i..j].join("-");
+                if world.registry.concept(&candidate).is_some() {
+                    matched = Some(j);
+                    break;
+                }
+            }
+            let Some(j) = matched else {
+                panic!("gloss {gloss:?} holds no registered concept at token {i}");
+            };
+            morphemes += 1;
+            i = j;
+        }
+        morphemes
+    }
+
+    /// The share of `shapes` taken by its most common value.
+    fn modal_share(shapes: &[usize]) -> f64 {
+        let mut counts: std::collections::BTreeMap<usize, usize> = Default::default();
+        for s in shapes {
+            *counts.entry(*s).or_insert(0) += 1;
+        }
+        let top = counts.values().copied().max().unwrap_or(0);
+        top as f64 / shapes.len() as f64
+    }
+
+    /// The share of `species`' names its own shipped shape profile predicts
+    /// for `NameShape::Simplex` — the closed form `w₀^β / Σ wⱼ^β` over
+    /// exactly the weights `morph_options` hands the namer, so this reads
+    /// the composition root's real mapping and never a copy of it.
+    fn predicted_simplex_share(wc: &WorldComponents, species: &str) -> f64 {
+        let kind = KindId(
+            wc.psyche
+                .iter()
+                .map(|(k, _)| k.0)
+                .find(|k| *k == species)
+                .expect("a placed people is in the psyche registry"),
+        );
+        let morph = morph_options(
+            wc.psyche.get(&kind).expect("mind vector"),
+            wc.society.get(&kind).expect("society vector"),
+        );
+        let sharpened: Vec<f64> = morph
+            .shape_weights
+            .iter()
+            .map(|w| hornvale_kernel::math::powf(*w, morph.shape_beta))
+            .collect();
+        sharpened[0] / sharpened.iter().sum::<f64>()
+    }
+
+    /// Peoples with enough settlement names at this seed to speak of a
+    /// distribution at all.
+    const SHAPE_SAMPLE_FLOOR: usize = 20;
+
+    #[test]
+    fn a_culture_has_a_dominant_shape_and_a_tail() {
+        // The Wearing (Task 7): a people's toponymy is recognizable as
+        // THEIRS — one shape dominates — but it has a tail. Pure
+        // per-settlement variety reads as noise; pure per-culture
+        // uniformity loses the variation real systems have (English is
+        // overwhelmingly specific+generic and still keeps `York` beside
+        // `Newcastle-upon-Tyne`).
+        let world = generated(42);
+        let shapes = settlement_shapes(&world);
+
+        // NON-VACUITY, and the assertion the pre-shape code could not have
+        // passed on any seed: three-morpheme names exist. The superseded
+        // `/v2` draw was `range_u32(1, 2)`, so `Qualified` was unreachable
+        // by construction — and the bounds below are NOT enough on their
+        // own, because a uniform 1-or-2 draw lands a modal share near 0.5
+        // and sails through them. This line is what makes the test able to
+        // fail.
+        let qualified: usize = shapes
+            .values()
+            .flat_map(|v| v.iter())
+            .filter(|n| **n >= hornvale_language::NameShape::Qualified.morphemes())
+            .count();
+        assert!(
+            qualified > 0,
+            "no settlement in the world carries a qualified (3-morpheme) name — the shape \
+             draw is not reaching production, or every culture's Qualified weight is dead"
+        );
+
+        let mut examined = 0usize;
+        for (species, counts) in &shapes {
+            if counts.len() < SHAPE_SAMPLE_FLOOR {
+                continue; // too few to speak of a distribution
+            }
+            examined += 1;
+            let dominant = modal_share(counts);
+            assert!(
+                dominant > 0.4,
+                "{species}: no dominant shape ({dominant:.2}) — this people's toponymy reads \
+                 as noise rather than as a practice of its own"
+            );
+            assert!(
+                dominant < 0.95,
+                "{species}: shape is effectively constant ({dominant:.2}) — the tail real \
+                 systems have is gone"
+            );
+            let distinct = counts
+                .iter()
+                .collect::<std::collections::BTreeSet<_>>()
+                .len();
+            assert!(
+                distinct >= 2,
+                "{species}: every name has the same shape — a dominant share below 0.95 \
+                 cannot be reached without a second shape, so this is unreachable, but it \
+                 states the property the bound above is standing in for"
+            );
+        }
+        assert!(
+            examined >= 2,
+            "fewer than two peoples at seed 42 have {SHAPE_SAMPLE_FLOOR}+ named settlements, \
+             so nothing above was actually checked"
+        );
+    }
+
+    #[test]
+    fn toponymic_shape_is_per_culture_not_one_world_wide_distribution() {
+        // Ledger #6: the shape distribution is PER CULTURE, drawn per
+        // settlement. That is the claim the bounds in the test above cannot
+        // reach — a single world-wide distribution would satisfy every one
+        // of them, since each people would then just be a sample from it.
+        //
+        // So: rank the peoples by the simplex share their OWN shipped
+        // weights predict, and require the world to reproduce that ranking.
+        // The predicted shares come from `morph_options` itself, so this
+        // cannot drift from the mapping; the observed ones come from the
+        // committed `name-gloss` facts, so it is not the draw checking
+        // itself.
+        let world = generated(42);
+        let wc = WorldComponents::assemble().expect("component assembly");
+        let shapes = settlement_shapes(&world);
+
+        let mut peoples: Vec<(String, f64, f64)> = Vec::new();
+        for (species, counts) in &shapes {
+            if counts.len() < SHAPE_SAMPLE_FLOOR {
+                continue;
+            }
+            let observed = counts
+                .iter()
+                .filter(|n| **n == hornvale_language::NameShape::Simplex.morphemes())
+                .count() as f64
+                / counts.len() as f64;
+            peoples.push((
+                species.clone(),
+                predicted_simplex_share(&wc, species),
+                observed,
+            ));
+        }
+        assert!(
+            peoples.len() >= 2,
+            "need two peoples with {SHAPE_SAMPLE_FLOOR}+ names to compare distributions at all"
+        );
+
+        // Only pairs the mapping SEPARATES are checked: a 0.15 predicted
+        // gap is several sampling standard errors at these sample sizes,
+        // so an inverted observation means the weights are not in force,
+        // not that the dice were unkind. Pairs the mapping does not
+        // separate say nothing either way and are skipped.
+        const SEPARATION: f64 = 0.15;
+        let mut compared = 0usize;
+        for (i, a) in peoples.iter().enumerate() {
+            for b in peoples.iter().skip(i + 1) {
+                if (a.1 - b.1).abs() < SEPARATION {
+                    continue;
+                }
+                compared += 1;
+                let (heavier, lighter) = if a.1 > b.1 { (a, b) } else { (b, a) };
+                assert!(
+                    heavier.2 > lighter.2,
+                    "{} is predicted to name more simply than {} ({:.3} vs {:.3}) but the \
+                     world says otherwise ({:.3} vs {:.3}) — the per-culture weights are not \
+                     reaching the draw",
+                    heavier.0,
+                    lighter.0,
+                    heavier.1,
+                    lighter.1,
+                    heavier.2,
+                    lighter.2
+                );
+            }
+        }
+        assert!(
+            compared > 0,
+            "no two peoples' predicted simplex shares differ by {SEPARATION} — the shape \
+             mapping carries no per-culture signal to test, which is itself the failure"
+        );
+
+        // And the separation has to be VISIBLE, not merely correctly
+        // ordered: the extremes must be far apart in the world, or a
+        // world-wide distribution with a lucky ordering would pass.
+        let most = peoples
+            .iter()
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .expect("non-empty");
+        let least = peoples
+            .iter()
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .expect("non-empty");
+        assert!(
+            most.2 - least.2 > 0.2,
+            "{} and {} are the extremes of the predicted profile ({:.3} vs {:.3}) yet their \
+             observed simplex shares are {:.3} and {:.3} — too close together for these to be \
+             different naming practices",
+            most.0,
+            least.0,
+            most.1,
+            least.1,
+            most.2,
+            least.2
         );
     }
 }
