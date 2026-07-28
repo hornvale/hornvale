@@ -11,18 +11,21 @@ use hornvale_worldgen::{
     observed_phenomena_as, pack_depths, placed_peoples,
 };
 
-/// The seed-42, generated-sky, default-pins (full four-people roster)
-/// world `species_worlds.rs` builds. Task A15a cut settlement genesis over
-/// onto the coexistence stack's niche-differentiated K: a settlement is
-/// `peopled-by` whichever species locally DOMINATES its attractor, so
-/// "placed" now means "dominates at least one settlement," not merely
-/// "present in the stack somewhere." At seed 42, under the frozen
-/// `BETA`/`FLOOR`, goblin and hobgoblin each dominate a share of the
-/// world's attractors and so are both "placed" in this sense; bugbear and
-/// kobold are outcompeted at every attractor (present in the coexistence
-/// stack almost everywhere, but never locally densest) and so are NOT
-/// placed, even though nothing pins them out. The coexistence test below
-/// uses goblin and hobgoblin, the two peoples this seed actually places.
+/// The seed-42, generated-sky, default-pins world `species_worlds.rs`
+/// builds. Task A15a cut settlement genesis over onto the coexistence
+/// stack's niche-differentiated K: a settlement is `peopled-by` whichever
+/// species locally DOMINATES its attractor, so "placed" now means
+/// "dominates at least one settlement," not merely "present in the stack
+/// somewhere." At seed 42, under the frozen `BETA`/`FLOOR`, this used to
+/// place only goblin and hobgoblin (bugbear and kobold were outcompeted at
+/// every attractor). Main's absorb into The Wearing (77 commits, merge
+/// `166d4ad9`: The Vacancy's fifth people `gnoll` plus new terrain and
+/// settlement placement) moved the coexistence outcome under this seed —
+/// re-measured after the absorb, ALL FIVE registered peoples (bugbear,
+/// gnoll, goblin, hobgoblin, kobold) now dominate at least one attractor
+/// and so are all "placed" at seed 42. The coexistence test below
+/// (`each_placed_species_holds_a_root_for_every_placed_species_kind`)
+/// hardcodes goblin/hobgoblin at seed 1, which this shift does not touch.
 fn world() -> hornvale_kernel::World {
     build_world(
         hornvale_kernel::Seed(42),
@@ -207,66 +210,91 @@ fn river_exposure_tracks_real_proximity() {
 /// there): at least one placed people is a real word (`Root`) for a
 /// toponymic terrain concept and at least one is a reasoned `Gap` — proof
 /// that the exposure rules discriminate by geography rather than by
-/// roster membership, for concepts this seed's four peoples' settlements
-/// actually spread across differently. Measured at seed 42 (Task 4 review
-/// round 3, the clamp-to-sea-level/full-ring gate): `hill` (a strict
-/// local elevation maximum over the full neighbor ring, ocean neighbors
-/// clamped up to sea level rather than excluded) splits 2/4 — one hit is
-/// a true interior local max (kobold, land-degree 6, zero ocean
-/// adjacency), the other a real but low-relief coastal headland
-/// (hobgoblin, land-degree 2 — a genuine claim, not the shoreline
-/// artifact the round-1/round-2 land-only version had: that version made
-/// ANY coastal promontory trivially a hill regardless of relief, and
-/// separately made `valley` fire for partial-ring coastal cells with a
-/// land-degree skew as strong as 79× between degree 3 and degree 6). The
-/// clamp fix corrects both at once: `valley` now ONLY fires at
-/// land-degree 6 (zero ocean adjacency — a true interior basin, 0.52% of
-/// land cells) and, at seed 42, NONE of the 203 settlements across all
-/// four species happen to sit at one — an honest 0/4, not tested below
-/// (see `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
-/// sweep` for its reachability proof on other seeds). `marsh` (a
-/// drainage band above ordinary dry land) splits 3/4; `spring` (a karst
-/// conduit at channelized-flow drainage, which turns out to almost always
-/// ALSO be a `river` cell — see the Task 4 report) splits 2/4. See the
-/// report for the full nine-concept spread table and the degree-by-degree
-/// measurement behind the `hill`/`valley` fix.
+/// roster membership. Measured at seed 42 (Task 4 review round 3, the
+/// clamp-to-sea-level/full-ring gate, four placed peoples): `hill` split
+/// 2/4, `marsh` split 3/4, `spring` split 2/4 — all three genuinely
+/// discriminated, so the test asserted all three together.
+///
+/// **Re-measured after The Wearing absorbed 77 commits from main (merge
+/// `166d4ad9`)**: the absorb moved both the terrain and the settlement
+/// placement, and (per `world()`'s doc comment) grew the placed-people
+/// roster from four to five (bugbear, gnoll, goblin, hobgoblin, kobold —
+/// The Vacancy's `gnoll` plus a coexistence-outcome shift that now also
+/// places bugbear and kobold). Re-measuring all three concepts against
+/// the new roster: `hill` is now 0/5 Root, 5/5 Gap — nobody's settlement
+/// sits at a strict local elevation maximum any more (see the dedicated
+/// `hill_is_a_gap_for_every_placed_people_at_seed_42` below, the same
+/// degenerate-but-real shape `valley` already had). `marsh` is now 5/5
+/// Root, 0/5 Gap — the opposite drift, now saturated like `river`/`ford`
+/// (see `marsh_is_a_root_for_every_placed_people_at_seed_42` below).
+/// `spring` alone still genuinely discriminates: 1/5 Root (kobold), 4/5
+/// Gap — so it is the only one of the original three still asserted here,
+/// which is also why this test is renamed. `hill` and `marsh` are not
+/// dropped from any requirement — reachability for both is still proven
+/// on other seeds by `every_core_toponymic_concept_wins_a_root_somewhere_
+/// in_a_seed_sweep`, and each now has its own honest, differently-shaped
+/// pin instead of being folded into a three-way "differs" claim that is
+/// no longer true for two of the three.
 #[test]
-fn hill_marsh_spring_exposure_differ_across_the_placed_peoples() {
+fn spring_exposure_differs_across_the_placed_peoples() {
     let w = world();
-    for concept in ["hill", "marsh", "spring"] {
-        let mut any_root = false;
-        let mut any_gap = false;
-        for (species, _) in placed_peoples(&w) {
-            let lex = lexicon_of(&w, species).expect("lexicon");
-            match lex.entry(concept) {
-                Some(LexEntry::Root { .. }) => any_root = true,
-                Some(LexEntry::Gap { .. }) => any_gap = true,
-                other => panic!("{species}: unexpected '{concept}' entry {other:?}"),
-            }
+    let mut any_root = false;
+    let mut any_gap = false;
+    for (species, _) in placed_peoples(&w) {
+        let lex = lexicon_of(&w, species).expect("lexicon");
+        match lex.entry("spring") {
+            Some(LexEntry::Root { .. }) => any_root = true,
+            Some(LexEntry::Gap { .. }) => any_gap = true,
+            other => panic!("{species}: unexpected 'spring' entry {other:?}"),
         }
-        assert!(
-            any_root,
-            "'{concept}' should be a Root for at least one placed people at seed 42"
-        );
-        assert!(
-            any_gap,
-            "'{concept}' should be a Gap for at least one placed people at seed 42"
-        );
+    }
+    assert!(
+        any_root,
+        "'spring' should be a Root for at least one placed people at seed 42"
+    );
+    assert!(
+        any_gap,
+        "'spring' should be a Gap for at least one placed people at seed 42"
+    );
+}
+
+/// `hill`'s honest post-absorb shape (see `spring_exposure_differs_
+/// across_the_placed_peoples`'s doc comment for the measurement history):
+/// at seed 42, under the unchanged clamp-to-sea-level/full-ring gate,
+/// `hill` is now a `Gap` for EVERY placed people — none of the five
+/// species' settlements sits at a strict local elevation maximum any
+/// more. This is the same shape `valley` already had before the absorb
+/// (see `valley_is_a_gap_for_every_placed_people_at_seed_42` immediately
+/// below) and is not evidence of a broken gate: reachability is proven on
+/// other seeds by `every_core_toponymic_concept_wins_a_root_somewhere_in_
+/// a_seed_sweep` (witnessed as early as seed 0 in the post-absorb sweep),
+/// so this is the population simply not happening to sit on one at 42,
+/// not a structurally dead rule.
+#[test]
+fn hill_is_a_gap_for_every_placed_people_at_seed_42() {
+    let w = world();
+    for (species, _) in placed_peoples(&w) {
+        let lex = lexicon_of(&w, species).expect("lexicon");
+        match lex.entry("hill") {
+            Some(LexEntry::Gap { .. }) => {}
+            other => panic!("{species}: expected 'hill' to be a Gap at seed 42, got {other:?}"),
+        }
     }
 }
 
 /// The honest counterpart to the test above: at seed 42, under the
 /// corrected (clamp-to-sea-level, full-ring) gate, `valley` is a `Gap`
-/// for EVERY placed people — none of the 203 seed-42 settlements sits at
+/// for EVERY placed people — none of this seed's settlements sits at
 /// a true interior local-elevation minimum (land-degree 6, zero ocean
 /// adjacency). This is not the same kind of degenerate result the
-/// original land-only gate produced (that 0/4 was an artifact: ANY ocean
+/// original land-only gate produced (that was an artifact: ANY ocean
 /// adjacency at all disqualified a cell, so only a fully-inland
-/// settlement could ever pass, and this seed simply had none at the
-/// STRICTER land-only threshold either) — under the current gate the
-/// mechanism is real (`every_core_toponymic_concept_wins_a_root_
-/// somewhere_in_a_seed_sweep` proves it fires on other seeds) and seed
-/// 42's population just doesn't happen to sit on one.
+/// settlement could ever pass) — under the current gate the mechanism is
+/// real (`every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep` proves it fires on other seeds) and seed 42's population just
+/// doesn't happen to sit on one. Re-measured after The Wearing's absorb
+/// of main (merge `166d4ad9`, five placed peoples now — see `world()`'s
+/// doc comment): still 0/5, unchanged in shape from the pre-absorb 0/4.
 #[test]
 fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
     let w = world();
@@ -275,6 +303,33 @@ fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
         match lex.entry("valley") {
             Some(LexEntry::Gap { .. }) => {}
             other => panic!("{species}: expected 'valley' to be a Gap at seed 42, got {other:?}"),
+        }
+    }
+}
+
+/// `marsh`'s honest post-absorb shape (see `spring_exposure_differs_
+/// across_the_placed_peoples`'s doc comment for the measurement history):
+/// pre-absorb this split 3/4 (a real per-culture discrimination); after
+/// The Wearing absorbed main's terrain/settlement drift it is now a
+/// `Root` for EVERY placed people at seed 42 — the same saturated shape
+/// `river`/`ford` already have (deep-history settlement scatter across
+/// many cells makes hitting at least one damp-but-not-riverine cell
+/// near-certain once the roster grows to five). This is a genuine
+/// behavior change, not a broken gate: the rule is unchanged
+/// (`water_kind_at(cell) == WaterKind::DryLand && drainage_at(cell) >=
+/// 5.0`, see the Task 4 report), and it still produces a real Gap for at
+/// least some species on other seeds (nothing in this campaign requires
+/// `marsh` to discriminate on every seed, only that it is reachable —
+/// which `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep` already proves).
+#[test]
+fn marsh_is_a_root_for_every_placed_people_at_seed_42() {
+    let w = world();
+    for (species, _) in placed_peoples(&w) {
+        let lex = lexicon_of(&w, species).expect("lexicon");
+        match lex.entry("marsh") {
+            Some(LexEntry::Root { .. }) => {}
+            other => panic!("{species}: expected 'marsh' to be a Root at seed 42, got {other:?}"),
         }
     }
 }
@@ -332,15 +387,36 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
 /// needs the sweep to be wide enough to find its lucky one.
 ///
 /// **There is no margin, and saying otherwise would be the third comment on
-/// this gate to claim more than it delivers.** Swept over seeds 0-7 and
-/// recorded every witness: `island` is witnessed at seed 2 ALONE, `valley`
-/// at seeds 2 and 7 only; seeds 3 and 4 contribute nothing the earlier ones
-/// did not already give. So this passes solely because seed 2 is inside the
-/// window, with zero redundancy for `island`. Since this campaign
-/// deliberately breaks byte-identity, a later terrain or settlement change
-/// can redden this test through no fault of any gate — when that happens the
-/// honest repair is to widen the window and re-record the witnesses, never
-/// to drop a concept from the requirement.
+/// this gate to claim more than it delivers.** Originally swept over seeds
+/// 0-7 (loop range `0..5`, seeds 0-4 actually exercised) and recorded every
+/// witness: `island` was witnessed at seed 2 ALONE, `valley` at seeds 2 and
+/// 7 only. Since this campaign deliberately breaks byte-identity, a later
+/// terrain or settlement change can redden this test through no fault of
+/// any gate — when that happens the honest repair is to widen the window
+/// and re-record the witnesses, never to drop a concept from the
+/// requirement.
+///
+/// **That happened.** The Wearing absorbed 77 commits from main (merge
+/// `166d4ad9`; new terrain, settlement placement, and a fifth placed
+/// people, `gnoll` — see `world()`'s doc comment), which moved `valley`'s
+/// earliest witness from seed 2 to seed 5 and reddened this test (the loop
+/// range was still only `0..5`, i.e. seeds 0-4, which no longer reached
+/// it). Re-swept seeds 0-11 on the merged tree and recorded every witness:
+/// `ford`/`hill`/`island`/`marsh`/`river`/`spring` are all witnessed
+/// starting at seed 0 (`island`'s witness widened from "seed 2 alone" to
+/// "seeds 0 and 1" — more redundant post-absorb, not less); `valley` is
+/// witnessed at seeds 5, 7, 10, and 11 — first at seed 5. The loop range
+/// below is widened to `0..8` (seeds 0-7) to comfortably cover `valley`'s
+/// new earliest witness with one seed of margin (seed 7 also witnesses it,
+/// so losing seed 5 alone would not immediately redden this again); the
+/// early-break below means a typical run still only builds seeds 0-5 (six
+/// worlds) before every concept is found. Wall-clock cost of the widened
+/// sweep, measured on this box: seeds 0-7 in isolation take ~53s to build
+/// and classify (seeds with zero placed peoples, e.g. 6 and 9 elsewhere in
+/// the swept range, are cheap — no coexistence winner means no
+/// `exposure_of` calls); the early break keeps the actual per-run cost
+/// close to ~43s (seeds 0-5), under the roughly-a-minute budget this test
+/// already implicitly accepted pre-absorb.
 ///
 /// The set is **derived** from the language crate's own `concept_domain`
 /// rather than duplicated. An earlier version of this test hardcoded the
@@ -381,7 +457,7 @@ fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
          empty requirement would make this test vacuously green"
     );
     let mut witnessed: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    for seed in 0u64..5 {
+    for seed in 0u64..8 {
         let w = match build_world(
             hornvale_kernel::Seed(seed),
             &hornvale_astronomy::SkyPins::default(),
