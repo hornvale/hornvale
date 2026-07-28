@@ -1,6 +1,6 @@
 # The Occlusion — design
 
-**Status:** spec, awaiting G3 review
+**Status:** COMPLETE — merged. See [the chronicle](../../../book/src/chronicle/the-occlusion.md).
 **Date:** 2026-07-27
 
 ## 1. Motivation
@@ -109,6 +109,18 @@ independently. One invariant, one source of truth. Two independent guards on
 one invariant is The Turnstile's documented failure mode — each layer green,
 neither able to see the other.
 
+> **Corrected at plan time (ledger #6).** This was not directly implementable:
+> `GeneratedSky::sky_at` builds its description as a monolithic `String`, so
+> there are no per-clause phenomena to render from. The shipped mechanism
+> passes an abstract `Visibility` ratio into the sky providers, and astronomy
+> decides for itself what survives — which is *truer* to this section's own
+> constraint, since a domain still never learns that weather exists, and the
+> knowledge of which bodies are bright stays where it belongs. The
+> one-source-of-truth property holds: prose and salience both derive from the
+> same weather at the same cell. The function is `occlusion(state, cloud)`,
+> returning both the lens and the visibility, not `occlusion_lens` as named
+> above.
+
 In-repo precedent for suppressing a contradictory clause at all:
 `REGIME_FLOOR_MM` (`windows/worldgen/src/lib.rs:2333`) drops the
 seasonal-regime word when rainfall would make "monsoon" read as nonsense.
@@ -147,6 +159,12 @@ god's-eye list would destroy the thing it exposes:
 - **In-world gradient** — surface strangeness on the **existing** `map` verb,
   so a walker gets a direction to follow rather than an answer. No new
   mechanic.
+
+> **Not shipped (ledger #7).** The `map` verb proved to be a substantial chart
+> renderer with its own zoom and bounds handling rather than the wiring job
+> this section assumed, so the gradient was dropped at plan time under §5's own
+> escape hatch. The verification surface shipped alone; the gradient is
+> registered as `LOC-strangeness-gradient`.
 
 ## 3. Determinism analysis
 
