@@ -3810,39 +3810,52 @@ fn exposure_of_impl(
     }
 
     // Steeped: hill/valley, a settled cell that is a STRICT local
-    // elevation extremum among its immediate LAND neighbors — "ground that
-    // rises above what surrounds it" / "low ground between heights" read
-    // as real local topography. A looser "some neighbor is higher/lower"
-    // gate would admit nearly every settlement on a non-flat world, which
-    // trivializes the word; requiring every neighbor to sit on one side
-    // keeps this a genuine local peak or basin. Land-only is load-bearing,
-    // not cosmetic: `is_ocean` is `elevation_at < sea_level`, so an ocean
-    // neighbor is BY DEFINITION lower than any land cell — comparing
-    // against all neighbors made every coastal promontory or islet a
-    // trivial "hill" (re-measuring `coast`'s own 4/4-everyone saturation
-    // rather than relief), a review finding confirmed at seed 42 (see the
-    // Task 4 report). Filtering to non-ocean neighbors, symmetrically for
-    // both `hill` and `valley`, requires the extremum to hold against
-    // actual neighboring ground.
+    // elevation extremum over its FULL neighbor ring, with any ocean
+    // neighbor's elevation clamped up to sea level rather than excluded.
+    // A looser "some neighbor is higher/lower" gate would admit nearly
+    // every settlement on a non-flat world, which trivializes the word;
+    // requiring every neighbor to sit on one side keeps this a genuine
+    // local peak or basin.
+    //
+    // History (Task 4 review, two rounds): the first version compared
+    // against ALL neighbors with real elevation, so every ocean neighbor
+    // (by definition lower than any land cell, `is_ocean` is
+    // `elevation_at < sea_level`) trivially satisfied `hill` — every
+    // coastal promontory passed regardless of relief. EXCLUDING ocean
+    // neighbors (round 1's fix) cured that but broke `valley` worse: it
+    // removed the very thing that had been disqualifying a shoreline cell
+    // (a lower ocean neighbor breaks "all neighbors higher"), so `valley`
+    // started firing for any coastal cell with few, higher, land
+    // neighbors — measured at seed 42, a land-degree-3 cell was 79× more
+    // likely to pass than a land-degree-6 one, and every settled `valley`
+    // hit was a partial-ring coastal cell, none a full interior basin.
+    // CLAMPING (this version) keeps the full ring — an ocean neighbor
+    // still counts, but at sea level rather than its true depth, so it
+    // still correctly disqualifies a coastal cell from `valley` (a
+    // shoreline cell's clamped-lower ocean neighbor breaks "all higher"
+    // exactly as it should) while still letting a genuinely elevated
+    // coastal cell — a real headland, higher than the sea AND every land
+    // neighbor it has — count as `hill`. Re-measured over all 11,066
+    // seed-42 land cells: `valley` now fires ONLY at land-degree 6 (zero
+    // ocean adjacency — a true interior basin), 48 cells, 0.52% —
+    // eliminating the coastal skew entirely (0% at every degree 0-5, where
+    // the land-only version peaked at 41% and 292 of 344 total hits sat).
+    // `hill` stays close to its round-1 rate (173 vs 167 cells, ~1.4-1.6%
+    // flat from land-degree 3 up) with a real, accepted allowance for
+    // small islets/headlands at very low land-degree (a cell almost fully
+    // ringed by ocean has little land to test relief against, but being
+    // higher than the sea AND its few neighbors is still a real claim).
+    // Full table in the Task 4 report.
+    let sea_level = terrain.sea_level().get();
     for &cell in settled {
         let here = terrain.elevation_at(cell).get();
-        let land_neighbors: Vec<hornvale_kernel::CellId> = geo
-            .neighbors(cell)
-            .iter()
-            .copied()
-            .filter(|&n| !terrain.is_ocean(n))
-            .collect();
-        if !land_neighbors.is_empty() {
-            if land_neighbors
-                .iter()
-                .all(|&n| terrain.elevation_at(n).get() < here)
-            {
+        let neighbors = geo.neighbors(cell);
+        let effective = |n: hornvale_kernel::CellId| terrain.elevation_at(n).get().max(sea_level);
+        if !neighbors.is_empty() {
+            if neighbors.iter().all(|&n| effective(n) < here) {
                 classes.insert("hill".to_string(), ExposureClass::Steeped);
             }
-            if land_neighbors
-                .iter()
-                .all(|&n| terrain.elevation_at(n).get() > here)
-            {
+            if neighbors.iter().all(|&n| effective(n) > here) {
                 classes.insert("valley".to_string(), ExposureClass::Steeped);
             }
         }
@@ -3890,8 +3903,17 @@ fn exposure_of_impl(
     // channel resurfacing through dissolved carbonate), so gating on Karst
     // cells whose `drainage_at` clears the same channelized-flow floor
     // `river` uses (`RIVER_MIN_DRAINAGE`) is "where an aquifer meets the
-    // surface with flow" read through the reachable half of the model: a
-    // wet karst outflow, not a merely damp cave mouth.
+    // surface with flow" read through the reachable half of the model.
+    // Disclosure, not just a wet karst outflow: `classify` (`water.rs`)
+    // routes ANY non-sink land cell at this drainage to `River` regardless
+    // of lithology, so a Karst cell that clears the floor is almost always
+    // ALSO a `River` cell (measured at seed 42: 137 Karst cells clear it,
+    // 132 of those are `WaterKind::River`; all 9 settled `spring` cells
+    // are). `spring` is `river` partitioned by rock type — a real,
+    // gloss-honest distinction (a karst resurgence genuinely is the head
+    // of a surface stream) but not an independent signal: three of the
+    // nine concepts (`river`, `ford`, `spring`) key off the same drainage
+    // field.
     for &cell in settled {
         if terrain.hydro_at(cell) == hornvale_terrain::Hydro::Karst
             && terrain.drainage_at(cell) >= hornvale_terrain::RIVER_MIN_DRAINAGE

@@ -208,19 +208,32 @@ fn river_exposure_tracks_real_proximity() {
 /// toponymic terrain concept and at least one is a reasoned `Gap` — proof
 /// that the exposure rules discriminate by geography rather than by
 /// roster membership, for concepts this seed's four peoples' settlements
-/// actually spread across differently. Measured at seed 42 (Task 4
-/// review round): `hill` (a strict local elevation maximum among LAND
-/// neighbors only — an ocean neighbor is lower than any land cell by
-/// definition, so including it made every coastal promontory trivially a
-/// "hill") splits 2/4; `valley` (the land-only local-minimum mirror)
-/// splits 3/4; `marsh` (a drainage band above ordinary dry land) splits
-/// 3/4; `spring` (a karst conduit at channelized-flow drainage — see the
-/// report for why `Hydro::Spring` itself is dead code) splits 2/4. See
-/// the Task 4 report for the full nine-concept spread table.
+/// actually spread across differently. Measured at seed 42 (Task 4 review
+/// round 3, the clamp-to-sea-level/full-ring gate): `hill` (a strict
+/// local elevation maximum over the full neighbor ring, ocean neighbors
+/// clamped up to sea level rather than excluded) splits 2/4 — one hit is
+/// a true interior local max (kobold, land-degree 6, zero ocean
+/// adjacency), the other a real but low-relief coastal headland
+/// (hobgoblin, land-degree 2 — a genuine claim, not the shoreline
+/// artifact the round-1/round-2 land-only version had: that version made
+/// ANY coastal promontory trivially a hill regardless of relief, and
+/// separately made `valley` fire for partial-ring coastal cells with a
+/// land-degree skew as strong as 79× between degree 3 and degree 6). The
+/// clamp fix corrects both at once: `valley` now ONLY fires at
+/// land-degree 6 (zero ocean adjacency — a true interior basin, 0.52% of
+/// land cells) and, at seed 42, NONE of the 203 settlements across all
+/// four species happen to sit at one — an honest 0/4, not tested below
+/// (see `every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_
+/// sweep` for its reachability proof on other seeds). `marsh` (a
+/// drainage band above ordinary dry land) splits 3/4; `spring` (a karst
+/// conduit at channelized-flow drainage, which turns out to almost always
+/// ALSO be a `river` cell — see the Task 4 report) splits 2/4. See the
+/// report for the full nine-concept spread table and the degree-by-degree
+/// measurement behind the `hill`/`valley` fix.
 #[test]
-fn hill_valley_marsh_spring_exposure_differ_across_the_placed_peoples() {
+fn hill_marsh_spring_exposure_differ_across_the_placed_peoples() {
     let w = world();
-    for concept in ["hill", "valley", "marsh", "spring"] {
+    for concept in ["hill", "marsh", "spring"] {
         let mut any_root = false;
         let mut any_gap = false;
         for (species, _) in placed_peoples(&w) {
@@ -239,6 +252,30 @@ fn hill_valley_marsh_spring_exposure_differ_across_the_placed_peoples() {
             any_gap,
             "'{concept}' should be a Gap for at least one placed people at seed 42"
         );
+    }
+}
+
+/// The honest counterpart to the test above: at seed 42, under the
+/// corrected (clamp-to-sea-level, full-ring) gate, `valley` is a `Gap`
+/// for EVERY placed people — none of the 203 seed-42 settlements sits at
+/// a true interior local-elevation minimum (land-degree 6, zero ocean
+/// adjacency). This is not the same kind of degenerate result the
+/// original land-only gate produced (that 0/4 was an artifact: ANY ocean
+/// adjacency at all disqualified a cell, so only a fully-inland
+/// settlement could ever pass, and this seed simply had none at the
+/// STRICTER land-only threshold either) — under the current gate the
+/// mechanism is real (`every_core_toponymic_concept_wins_a_root_
+/// somewhere_in_a_seed_sweep` proves it fires on other seeds) and seed
+/// 42's population just doesn't happen to sit on one.
+#[test]
+fn valley_is_a_gap_for_every_placed_people_at_seed_42() {
+    let w = world();
+    for (species, _) in placed_peoples(&w) {
+        let lex = lexicon_of(&w, species).expect("lexicon");
+        match lex.entry("valley") {
+            Some(LexEntry::Gap { .. }) => {}
+            other => panic!("{species}: expected 'valley' to be a Gap at seed 42, got {other:?}"),
+        }
     }
 }
 
@@ -271,6 +308,81 @@ fn an_unplaced_species_gets_a_gap_for_every_toponymic_terrain_concept() {
             exposures.get(concept)
         );
     }
+}
+
+/// The Task 4 review's Important 2 (round 2): `cli/tests/correspondence.rs`
+/// only checks that a concept declaring `Lexicalization::Expected` is
+/// listed as core (or has a compound recipe) — a purely STATIC, per-name
+/// check, blind to whether the `Steeped` rule that list-membership claims
+/// actually fires in any world. `TOPONYMIC_CORE`
+/// (`domains/language/src/packs.rs`) is a hand-maintained list asserting
+/// "this concept can win a Root"; the property it claims lives here, in
+/// `exposure_of`, which `hornvale_language` cannot depend on and so cannot
+/// enforce. That gap is exactly how `spring`'s Critical 1 shipped
+/// undetected in round 1: `Hydro::Spring` was structurally unreachable on
+/// EVERY seed, not just seed 42, and nothing caught it before review.
+///
+/// This is the guard-rail: sweep a small, fixed, deterministic set of
+/// seeds and require every core terrain concept to be `Steeped` for at
+/// least one placed species on at least one of them — existence across a
+/// real search of the reachable space, not a single seed's accident. A
+/// concept that is structurally dead (like `Hydro::Spring` actually was)
+/// fails this on every seed, so no sweep size saves it; a concept that is
+/// merely unlucky at one seed (like `island`, `valley` at seed 42) only
+/// needs the sweep to be wide enough to find its lucky one. Seeds 0-2
+/// (measured) already cover all seven; 0-4 is kept for margin without
+/// materially raising the cost (five deep-history builds).
+///
+/// `TOPONYMIC_CORE`'s exact membership is duplicated here rather than
+/// imported (`domains/language` is private about it, `cli/tests/
+/// accession.rs` does the same duplication for the same reason) — if a
+/// concept is ever added to or removed from that list without a matching
+/// update here, this test's list simply checks a different set than the
+/// crate enforces, which the accession/correspondence tests (checking the
+/// registered/core sets against each other) would still catch on their
+/// own terms.
+#[test]
+fn every_core_toponymic_concept_wins_a_root_somewhere_in_a_seed_sweep() {
+    const CORE_TOPONYMIC: &[&str] = &[
+        "hill", "river", "valley", "island", "ford", "marsh", "spring",
+    ];
+    let mut witnessed: std::collections::BTreeSet<&str> = std::collections::BTreeSet::new();
+    for seed in 0u64..5 {
+        let w = match build_world(
+            hornvale_kernel::Seed(seed),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        ) {
+            Ok(w) => w,
+            Err(_) => continue,
+        };
+        for (species, _) in placed_peoples(&w) {
+            let Ok(exposures) = exposure_of(&w, species) else {
+                continue;
+            };
+            for &concept in CORE_TOPONYMIC {
+                if matches!(exposures.get(concept), Some(ExposureClass::Steeped)) {
+                    witnessed.insert(concept);
+                }
+            }
+        }
+        if witnessed.len() == CORE_TOPONYMIC.len() {
+            break;
+        }
+    }
+    let missing: Vec<&str> = CORE_TOPONYMIC
+        .iter()
+        .copied()
+        .filter(|c| !witnessed.contains(c))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "these TOPONYMIC_CORE concepts never won a Root across seeds 0-4 on any \
+         placed species — a structurally dead gate (exactly spring's Critical 1 \
+         shape) would fail here on every seed, not just one: {missing:?}"
+    );
 }
 
 #[test]
