@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **EXECUTED 2026-07-27.** All seven tasks complete; whole-branch review addressed.
+> This plan was corrected ~18 times *during* execution — the corrections are its most
+> useful residue, and the retrospective explains why nearly all of them were plan
+> defects rather than implementation defects. Two sections are deliberately left
+> describing what was planned rather than what shipped: the `Band`/`band_of` API
+> (deleted at close as dead code) and Task 6's original aperture-naming, which the
+> review replaced with direction-naming. An executed plan is a historical record.
+
 **Goal:** Make the chamber band exist and be enterable — `enter` at a built locale reaches a human-scale chamber, `out` returns — with the world byte-identical.
 
 **Architecture:** A chamber is a deeper `RoomAddr` (walk depth + 9 refinements, ≈3.3 m), which is **identity, not shape**. Terrain reads truncate to the walk band before consulting terrain, because the settlement-territory set is keyed there. Which chambers exist is a seeded draw under a new `room/chambers/v1` label; what they contain reuses The Hearth's frozen pattern composer untouched. Nothing commits: the player's position has never been a committed datum.
