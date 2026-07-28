@@ -7,6 +7,7 @@ blue: Teenae /teenae/
 bone: Qeegoo /qeegoo/
 brown: Noo /noo/
 bugbear-kind: Noanae /noanae/
+carrion-crawler-kind: Neo /neo/
 child: Goe /goe/
 cold: Doepoa /doepoa/
 coral-reef: Nea /nea/
@@ -14,6 +15,7 @@ dark: Naadoo /naadoo/
 day: Neo /neo/
 desert: Naanao /naanao/
 die: Poa /poa/
+dire-wolf-kind: Goenoe /goenoe/
 drink: Deanee /deanee/
 earth: Deo /deo/
 eat: Nae /nae/
@@ -22,9 +24,16 @@ epipelagic: Nea /nea/
 eye: Nookoa /nookoa/
 fire: Naonao /naonao/
 foot: Doaqao /doaqao/
+giant-constrictor-snake-kind: Naa /naa/
+giant-crocodile-kind: Nae /nae/
 giant-elk-kind: Neeqae /neeqae/
 giant-goat-kind: Taapao /taapao/
+giant-hyena-kind: Nea /nea/
+giant-octopus-kind: Noanea /noanea/
+giant-scorpion-kind: Pao /pao/
+giant-squid-kind: Tae /tae/
 gloom: Neanao /neanao/
+gnoll-kind: Peapoa /peapoa/
 goblin-kind: Noe /noe/
 god: Naa /naa/
 green: Deanaa /deanaa/
@@ -37,6 +46,7 @@ home: Tao /tao/
 hydrothermal-vent: Pao /pao/
 ice: Naonoa /naonoa/
 kelp-forest: Qoa /qoa/
+killer-whale-kind: Naekea /naekea/
 kobold-kind: Naonoe /naonoe/
 light: Deo /deo/
 many: Noa /noa/
@@ -55,12 +65,15 @@ person: Nea /nea/
 rain: Kaa /kaa/
 red: Needao /needao/
 red-dragon-kind: Nao /nao/
+reef-shark-kind: Geo /geo/
 rest: Noenaa /noenaa/
+rhinoceros-kind: Goenea /goenea/
 rust-monster-kind: Qaedoe /qaedoe/
 savanna: Tee /tee/
 sea: Neatoa /neatoa/
 sea-ice: Noedeo /noedeo/
 shadow: Koapoa /koapoa/
+shrieker-kind: Teo /teo/
 shrubland: Koanaa /koanaa/
 sibling: Nae /nae/
 sleep: Qea /qea/

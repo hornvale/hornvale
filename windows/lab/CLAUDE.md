@@ -35,10 +35,15 @@ speed the suite by memoizing world construction across tests. The levers that
   the census is cheap — the all-metric per-world cost fell ~285 → ~8 CPU-s
   (the metric + genesis-naming paths stopped re-sculpting terrain) — so the
   full ~2000-world census regenerates **locally in ~7 min** on the 40-core box.
-- The sanctioned refresh is therefore `HV_CENSUS=1 bash
-  scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
-  close, keeping the census fixtures (`book/src/laboratory/generated/*/rows.csv`)
-  **current with main** — not lagging. `make regen-remote` (AWS) is retired to
+- The sanctioned refresh is therefore **`scripts/census-run.sh`**, run once
+  per campaign at the pre-merge close, keeping the census fixtures
+  (`book/src/laboratory/generated/*/rows.csv`) **current with main** — not
+  lagging. Use the wrapper, not `HV_CENSUS=1 bash
+  scripts/regenerate-artifacts.sh`: since decision
+  [0081](../../docs/decisions/0081-one-heavy-writer-per-box-claimed-at-the-write-seam.md)
+  every entry point serializes against other heavy runs on the box, but only
+  `census-run.sh` also records the run in `docs/timings.md`.
+  `scripts/census-run.sh status` says whether one is running. `make regen-remote` (AWS) is retired to
   abandoned — this box is the single canonical platform (decision 0063; AWS
   differs on ~0.1% of discrete-count metrics, so it can't be a parallel ref).
 - Calibration loads the drift-checked fixture, not a live recompute (decision

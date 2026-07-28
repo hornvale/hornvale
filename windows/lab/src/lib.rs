@@ -2,6 +2,7 @@
 #![warn(missing_docs)]
 
 pub mod blackbox;
+pub mod census_claim;
 pub mod census_guard;
 pub mod chart;
 pub mod diff;

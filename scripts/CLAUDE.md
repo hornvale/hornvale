@@ -17,8 +17,12 @@ knobs:
   skips them so the gate stays fast.
 - **`HV_CENSUS=1`** — regenerate the censuses. Since The Local Census the
   full ~2000-world census is a ~7-min LOCAL run (was ~1–2 h), so this is the
-  sanctioned pre-merge refresh — `HV_CENSUS=1 bash regenerate-artifacts.sh`,
-  once per campaign at the close, keeping the fixtures current with main
+  sanctioned pre-merge refresh — run it via **`census-run.sh`**, not
+  `regenerate-artifacts.sh` directly, once per campaign at the close, keeping
+  the fixtures current with main. Since decision 0081 all three entry points
+  serialize (one heavy writer per box, bounded 45-min wait, `census-run.sh
+  status` to ask); the wrapper additionally ledgers the run in
+  `docs/timings.md`
   (decision 0063, superseding 0046's AWS-only mandate). `make regen-remote`
   (the AWS box) is abandoned — this box is the single canonical platform
   (decision 0063; AWS differs on ~0.1% of discrete-count metrics).

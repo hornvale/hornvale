@@ -230,7 +230,7 @@ fn divergence_magnitude_loudness_ordering_holds_in_aggregate_not_per_seed() {
     // The aggregate ordering: pinned exact means.
     //
     // Census regen (2026-07-16, post-sculpting/isotherm/true-name 1000-seed
-    // regen, commit 1c954d0): re-measured (goblin 3.058 -> 3.057).
+    // regen, commit 1c954d0): re-measured (goblin 1.997 -> 3.057).
     // Census regen (The Living Community epoch, history-first placement,
     // lefford 0063): re-measured on the regenerated 1000-seed census
     // (goblin 3.057 -> 3.058).
@@ -376,13 +376,20 @@ fn homophony_count_is_measured_and_pinned() {
     // refresh surfaced the accumulated move rather than one epoch's. Bugbear
     // stays highest among the goblinoid daughters — the claim this test
     // actually guards — so these re-pin the witnesses, not the observation.
-    assert!((mg - 1.880).abs() < 1e-9, "goblin mean drifted: {mg}");
+    // The Vacancy (roster 16 -> 29 kinds + a real ANIMAL_PREY supply field;
+    // lefford regen at the merged SHA, 0063): thirteen new competitors and prey
+    // supply where a hard-coded zero stood reseat settlements, which reshapes
+    // every daughter's periphery naming draws — goblin 1.880 -> 1.997,
+    // hobgoblin 1.637 -> 1.747, bugbear 6.797 -> 7.159, kobold 1.959 -> 2.042.
+    // Bugbear stays highest among the goblinoid daughters by better than 3x,
+    // which is the claim this test guards.
+    assert!((mg - 1.997).abs() < 1e-9, "goblin mean drifted: {mg}");
     // hobgoblin 1.572 -> 1.637, bugbear 6.584 -> 6.797, kobold 1.9 -> 1.959
     // (same cause); bugbear stays highest among the goblinoid daughters, the
     // claim this test actually guards.
-    assert!((mh - 1.637).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
-    assert!((mb - 6.797).abs() < 1e-9, "bugbear mean drifted: {mb}");
-    assert!((mk - 1.959).abs() < 1e-9, "kobold mean drifted: {mk}");
+    assert!((mh - 1.747).abs() < 1e-9, "hobgoblin mean drifted: {mh}");
+    assert!((mb - 7.159).abs() < 1e-9, "bugbear mean drifted: {mb}");
+    assert!((mk - 2.042).abs() < 1e-9, "kobold mean drifted: {mk}");
     assert!(
         mb > mg && mb > mh,
         "expected bugbear's homophony mean highest among the goblinoid daughters: {mb} vs goblin {mg}, hobgoblin {mh}"

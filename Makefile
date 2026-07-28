@@ -9,13 +9,13 @@
 #   make gate-fast    # ITERATION ONLY: scope fmt/clippy/test to changed crates (make gate still gates commits)
 #   make gate-full    # full evidence: the commit gate + the cost-tagged heavy tier
 #   make prewarm      # warm a fresh worktree's target/ (start right after worktree add)
-#   make rebaseline   # regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
+#   make rebaseline   # regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 #   make rebaseline-goldens # accept drifted byte-golden test fixtures
 #   make lab-diff STUDY=<name> # report which census metrics moved vs HEAD
 #   make preflight    # GO/NO-GO before integrating a campaign branch with main
 #   make doctor       # print the repo self-map (orientation for a fresh session)
 #   make install-hooks# point git at scripts/hooks (opt-in; edits local config)
-#   make gate-remote  # run the gate on this worktree's AWS spot box (scripts/aws-gate/README.md)
+#   make gate-remote  # ABANDONED (decision 0063): the AWS path is unused; kept only as history
 #   make vessel-check  # the Casement's local gate: deno + wasm fmt/clippy + byte-identity smoke
 #   make world-check  # the world catalog's local gate: fmt/clippy + byte-identity smoke + size gate
 #
@@ -32,6 +32,7 @@ help: ## Show this help
 quick: fmt-check clippy type-audit ## Cheap half of the gate (fmt-check + clippy + type-audit)
 
 gate: fmt-check clippy type-audit test ## The commit gate (fmt + clippy + type-audit + nextest + doctests; heavy tier #[ignore]d, ~4 min)
+	@bash scripts/census-advisory.sh || true
 
 gate-fast: ## ITERATION TOOL ONLY: fmt/clippy/test scoped to changed crates (`make gate` still gates commits)
 	@bash scripts/gate-fast.sh
@@ -74,7 +75,7 @@ prewarm: ## Warm a fresh worktree's caches (start in the background right after 
 	cargo build --release -p hornvale
 	cargo build --manifest-path tools/type-audit/Cargo.toml
 
-rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (census regen is AWS-only: make regen-remote)
+rebaseline artifacts: ## Regenerate committed artifacts EXCEPT censuses (refresh those with scripts/census-run.sh)
 	@bash scripts/timed.sh rebaseline -- bash scripts/regenerate-artifacts.sh
 
 timings: ## Show the timing ledger (usage: make timings [LABEL=rebaseline])
@@ -115,7 +116,7 @@ census-history: ## Load a study's git history into census_history (usage: make c
 census-check: ## Harness gate: mount-validate + smoke + golden-pins (local; needs duckdb+python3)
 	@bash tools/census/check.sh
 
-regen-remote: ## Regenerate ALL artifacts incl. censuses on the AWS spot box (BILLABLE; the only sanctioned census-regen path)
+regen-remote: ## ABANDONED (decision 0063) — censuses regenerate LOCALLY via scripts/census-run.sh; this AWS path is unused
 	@scripts/aws-gate/regen-git.sh .
 
 preflight: ## GO/NO-GO before integrating a campaign branch with main (run from the branch)
@@ -130,7 +131,7 @@ install-hooks: ## Point git at scripts/hooks + register the regenerate-on-confli
 	@echo "git hooks path set to scripts/hooks; 'make quick' now runs pre-commit."
 	@echo "merge.hv-regenerate driver registered for generated-artifact conflicts."
 
-gate-remote: ## Run the CI gate on this worktree's AWS spot box
+gate-remote: ## ABANDONED (decision 0063) — the AWS spot box is unused; kept only as history
 	@scripts/aws-gate/gate-remote.sh
 
 gate-remote-verify: ## Local-vs-remote byte-identity acceptance test (libm go-live gate)

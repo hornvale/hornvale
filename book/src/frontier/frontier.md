@@ -874,6 +874,31 @@ narrow-inventory answer, and the one to build first.
 
 ---
 
+### Measured: the id tiebreak is the allocation policy (LANG-27)
+
+A finding banked from the abandoned *the-economy* campaign, preserved because
+the measurement outlived the approach.
+
+Proto-root assignment sorts by `(epoch, core_rank, id)`. Since the first two
+tie for most concept pairs, the `id` tiebreak — effectively **the first letter
+of the concept's English name** — decides which concept gets first pick of the
+short forms. It was chosen to make the sort deterministic and became the
+allocation policy by default.
+
+Measured on seed 42: **53 of 91 concepts collide during assignment.** The
+worst-served are `water` and `wind` at eight rejections each — the only two
+pushed into the lengthening tier, purely for beginning with `w` — while `blue`
+and `brown` take first pick at zero cost.
+
+The abandoned proposal was to make rank drive **length** rather than queue
+position: a concept's length band follows its rank, so `water` gets a
+one-syllable form by construction and `hadal-trench` a longer one, and the two
+never compete because different lengths cannot collide — Zipf structural
+rather than a hoped-for consequence of assignment order. That approach was set
+aside in favour of another; the diagnosis above is independent of which fix is
+chosen, and stands until the tiebreak stops being load-bearing.
+
+
 ## The species-psychology substrate — the layer beneath the cluster
 
 *(High potential value; verification is weaker here — flagged.)*

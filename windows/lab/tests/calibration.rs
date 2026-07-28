@@ -1,5 +1,33 @@
 //! Calibration: at tier 0, belief kind is a pure function of rotation.
 //! The instrument must reproduce known ground truth exactly (spec §2.5).
+//!
+//! ## Census regen — The Vacancy (2026-07-27, lefford, decision 0063)
+//!
+//! The roster grew 16 -> 29 kinds (thirteen fauna plus the gnoll, a fifth
+//! people) and `ANIMAL_PREY` gained a real supply field where a hard-coded zero
+//! had stood. Thirteen new competitors reseat settlements, and settlement
+//! placement is what most of the values below ultimately measure.
+//!
+//! Measured **identically before and after main's x86-64-v2 codegen bump**
+//! (3a7092c3), so the roster is the sole cause — the two censuses this campaign
+//! ran, one on each side of that commit, produced the same numbers.
+//!
+//! | recorded value | before | after |
+//! |---|---:|---:|
+//! | moonless-lunar kobold head count | 63 | 61 |
+//! | coastal / inland flagship count | 531 / 238 | 552 / 214 |
+//! | spinning-yet-eternal per-people head count | 9 | 11 |
+//! | locked head split (eternal, ambient) | (151, 40) | (149, 39) |
+//! | zero / nonzero collision worlds | 43 / 727 | 39 / 731 |
+//! | mean name-collision-rate | 0.1723 | 0.1858 |
+//! | blind-attribution correct / total | 702 / 768 | 695 / 759 |
+//! | goblin name-length rows / mean | 769 / 13.4116 | 766 / 13.3971 |
+//! | kobold name-length rows / mean | 769 / 13.0941 | 762 / 13.2118 |
+//!
+//! Every one is a RECORDED value. No guarded claim changed, and each was
+//! re-checked rather than assumed: a tidally-locked world still never heads a
+//! cyclic pantheon (that panic never fired), name-gloss is still 100%
+//! row-by-row, and every generated name is still phonotactically valid.
 use hornvale_culture::{BiomeClass, subsistence};
 use hornvale_lab::{MetricValue, RunResult, canonical_row, load_rows, load_study, run};
 use std::path::Path;
@@ -182,7 +210,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // (151, 40).
     assert_eq!(
         (locked_eternal, locked_ambient),
-        (151, 40),
+        (149, 39),
         "locked-world per-people head split (eternal, ambient) drifted"
     );
     // The Demesne (BIO-35 Stage 1) local regen, lefford 2026-07-20: 1 -> 2.
@@ -191,7 +219,7 @@ fn a_frozen_sky_never_heads_a_cyclic_pantheon() {
     // world; re-pinned to the regenerated 1000-seed census (lefford, 0063):
     // 2 -> 9.
     assert_eq!(
-        spinning_eternal, 9,
+        spinning_eternal, 11,
         "spinning-yet-eternal per-people head count drifted"
     );
 }
@@ -385,8 +413,8 @@ fn goblin_flagship_coastal_split_is_pinned() {
     // bake now resolves conflict as predation (covet a richer neighbour's
     // site, win the fight, seize it), which re-seats flagships on four
     // worlds: 535 -> 531 coastal, 234 -> 238 inland.
-    assert_eq!(coastal, 531, "coastal flagship count drifted");
-    assert_eq!(inland, 238, "inland flagship count drifted");
+    assert_eq!(coastal, 552, "coastal flagship count drifted");
+    assert_eq!(inland, 214, "inland flagship count drifted");
 }
 
 #[test]
@@ -559,7 +587,7 @@ fn goblin_heads_are_always_solar_and_mooned_kobold_heads_always_lunar() {
         "moonless-solar kobold head count drifted"
     );
     assert_eq!(
-        moonless_lunar, 63,
+        moonless_lunar, 61,
         "moonless-lunar kobold head count drifted"
     );
 }
@@ -668,8 +696,8 @@ fn blind_attribution_beats_chance_decisively() {
     // settlements, so two more attributable pairs land on the correct side
     // (700 -> 702 correct); the pool itself is unchanged at 768, so accuracy
     // rises 0.911 -> 0.914, still decisively above the 0.75 floor.
-    assert_eq!(correct, 702, "blind-attribution count drifted");
-    assert_eq!(total, 768, "attributable-pair count drifted");
+    assert_eq!(correct, 695, "blind-attribution count drifted");
+    assert_eq!(total, 759, "attributable-pair count drifted");
     // Pinned calibration row — the anti-reskin claim at the head-domain
     // calibration's own scope: restricted to SPINNING pairs on worlds with
     // at least one moon (a tidally-locked pair's domains no longer separate
@@ -991,8 +1019,8 @@ fn name_collision_rate_is_measured_and_pinned() {
     // WHICH settlements survive to be named, so five worlds that drew no
     // duplicate name now do (48 -> 43 zero-collision, 722 -> 727 nonzero);
     // the absent set (worlds with no measurable rate at all) is unmoved.
-    assert_eq!(zero, 43, "zero-collision world count drifted");
-    assert_eq!(nonzero, 727, "nonzero-collision world count drifted");
+    assert_eq!(zero, 39, "zero-collision world count drifted");
+    assert_eq!(nonzero, 731, "nonzero-collision world count drifted");
     assert_eq!(absent, 230, "absent name-collision-rate count drifted");
     let present = zero + nonzero;
     assert!(present > 0, "no worlds with a measurable collision rate");
@@ -1032,8 +1060,8 @@ fn name_collision_rate_is_measured_and_pinned() {
         // The Tumult (predation) re-pin; lefford regen, 0063: predation
         // prunes the settlement roster (losers are seized, not merely
         // displaced), so fewer names are drawn per world and the mean rate
-        // FALLS 0.183_235_100_516_883 -> 0.172_311_535_567_532_45.
-        (mean - 0.172_311_535_567_532_45).abs() < 1e-6,
+        // FALLS 0.183_235_100_516_883 -> 0.185804141557143.
+        (mean - 0.185804141557143).abs() < 1e-6,
         "mean name-collision-rate drifted: {mean:.15}"
     );
 }
@@ -1136,7 +1164,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // worlds seat a goblin one — but the surviving flagships are richer
         // sites with longer names: mean 13.382_874_198_569_583 ->
         // 13.411_552_371_911_55.
-        ("goblin", 769u32, 13.411_552_371_911_55),
+        ("goblin", 766u32, 13.397077864229757),
         // Census regen (2026-07-18, the-chorus close, regen commit
         // fe2332c): kobold re-measured (was 9.857_451_023_312_882) —
         // accumulated lexeme-space drift (the person concept (C2), the
@@ -1162,7 +1190,7 @@ fn name_length_distributions_are_measured_and_pinned() {
         // reseats kobold flagships onto materially different sites, the same
         // movement that inverts the coastal-rate ordering (see
         // kobold_flagships_are_less_coastal_than_goblin_flagships).
-        ("kobold", 769u32, 13.094_070_229_388_812),
+        ("kobold", 762u32, 13.211758902624661),
     ] {
         let (len_i,) = (idx(&format!("name-length-{species}")),);
         let (mut present, mut absent) = (0u32, 0u32);

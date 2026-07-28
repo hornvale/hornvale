@@ -17,6 +17,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Ddoagdoo | /ddoagdoo/ | Nneangneo | Nneangneo → no change → Ddoagdoo |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): black-dragon has no exposure to 'bugbear-kind' |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): black-dragon has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Gdoo | /gdoo/ | Ngnee | Ngnee → no change → Gdoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): black-dragon has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
@@ -24,6 +25,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Dzhao | /dʒao/ | Djao | Djao → no change → Dzhao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Shgaa | /ʃgaa/ | Shkaa | Shkaa → lenition → Shgaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): black-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dzhoogzhao | /dʒoogʒao/ | Djoogjae | Djoogjae → no change → Dzhoogzhao |
 | `earth` | the ground underfoot | Gzhoogdoa | /gʒoogdoa/ | Gjoegwea | Gjoegwea → no change → Gzhoogdoa |
 | `eat` | to consume food | Gzhoa | /gʒoa/ | Gjoa | Gjoa → no change → Gzhoa |
@@ -32,9 +34,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Ddaoddao | /ddaoddao/ | Mmaonnao | Mmaonnao → no change → Ddaoddao |
 | `fire` | flame and heat | Ggoasdao | /ggoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ggoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): black-dragon has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Gdooggoo | /gdooggoo/ | Gwoengngee | Gwoengngee → no change → Gdooggoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): black-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): black-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): black-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -47,6 +56,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): black-dragon has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): black-dragon has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Ggaosgoo | /ggaosgoo/ | Ngngaeskeo | Ngngaeskeo → lenition → Ggaosgoo |
 | `many` | an indefinitely large count | Ddoa | /ddoa/ | Mnoa | Mnoa → no change → Ddoa |
@@ -65,12 +75,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): black-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Sdoa | /sdoa/ | Spoa | Spoa → no change → Sdoa |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): black-dragon has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): black-dragon has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Dgooddoo | /dgooddoo/ | Mngoopwee | Mngoopwee → no change → Dgooddoo |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): black-dragon has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): black-dragon has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Ggoa | /ggoa/ | Ngngoa | Ngngoa → no change → Ggoa |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): black-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shgoasdoo | /ʃgoasdoo/ | Shkoasdoe | Shkoasdoe → lenition → Shgoasdoo |
 | `sleep` | to rest unconscious | Shdao | /ʃdao/ | Shpao | Shpao → no change → Shdao |
@@ -113,6 +126,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Kao | /kao/ | Kae | Kae → no change → Kao |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.7 |
 | `bugbear-kind` | a bugbear | Koa | /koa/ | Kea | Kea → no change → Koa |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): bugbear has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Daokoa | /daokoa/ | Daekoa | Daekoa → no change → Daokoa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): bugbear has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
@@ -120,6 +134,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Goadao | /goadao/ | Goanae | Goanae → no change → Goadao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): bugbear has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Doogoa | /doogoa/ | Neogea | Neogea → no change → Doogoa |
 | `earth` | the ground underfoot | Boo | /boo/ | Pee | Pee → no change → Boo |
 | `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
@@ -128,9 +143,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
 | `fire` | flame and heat | Qoa | /qoa/ | Qea | Qea → no change → Qoa |
 | `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): bugbear has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): bugbear has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): bugbear has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): bugbear has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): bugbear has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): bugbear has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): bugbear has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): bugbear has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Doa | /doa/ | Noa | Noa → no change → Doa |
+| `gnoll-kind` | a gnoll | Kaodoo | /kaodoo/ | Kaenoe | Kaenoe → no change → Kaodoo |
 | `goblin-kind` | a goblin | Doa | /doa/ | Nea | Nea → no change → Doa |
 | `god` | a deity | Dootaa | /dootaa/ | Neetaa | Neetaa → no change → Dootaa |
 | `green` | the color term for green | Kooqao | /kooqao/ | Keoqae | Keoqae → no change → Kooqao |
@@ -143,6 +165,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): bugbear has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Doa | /doa/ | Dea | Dea → no change → Doa |
 | `light` | the color term for white/light hues | Tooqoa | /tooqoa/ | Toeqea | Toeqea → no change → Tooqoa |
 | `many` | an indefinitely large count | Doodoa | /doodoa/ | Neodoa | Neodoa → no change → Doodoa |
@@ -161,12 +184,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): bugbear has no exposure to 'rain' |
 | `red` | the color term for red | Doadao | /doadao/ | Neanao | Neanao → no change → Doadao |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): bugbear has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): bugbear has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Kaadoo | /kaadoo/ | Kaanee | Kaanee → no change → Kaadoo |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): bugbear has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): bugbear has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Doodoadaokaa | /doodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Daoqao | /daoqao/ | Naeqae | Naeqae → no change → Daoqao |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): bugbear has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Boodao | /boodao/ | Peonae | Peonae → no change → Boodao |
 | `sleep` | to rest unconscious | Dooboo | /dooboo/ | Neepeo | Neepeo → no change → Dooboo |
@@ -196,6 +222,115 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `xorn-kind` | a xorn | — | — | — | gap (experiential): bugbear has no exposure to 'xorn-kind' |
 | `yellow` | the color term for yellow | Qaadoo | /qaadoo/ | Qaadeo | Qaadeo → no change → Qaadoo |
 
+## Gnoll
+
+| Concept | Gloss | Word | IPA | Proto | Derivation |
+|---|---|---|---|---|---|
+| `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
+| `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
+| `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): gnoll has no exposure to 'black-dragon-kind' |
+| `blood` | the circulating fluid of a body | Mzoaq | /mzoaq/ | Mzoaq | Mzoaq → no change → Mzoaq |
+| `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 3 from night-vision 0.75 |
+| `bone` | the rigid frame of a body | Ngshoog | /ŋʃoog/ | Ngshoog | Ngshoog → no change → Ngshoog |
+| `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.75 |
+| `bugbear-kind` | a bugbear | Dsoap | /dsoap/ | Dsoap | Dsoap → no change → Dsoap |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): gnoll has no exposure to 'carrion-crawler-kind' |
+| `child` | one's son or daughter | Gzhoof | /gʒoof/ | Gzhoof | Gzhoof → no change → Gzhoof |
+| `cold` | felt, biting chill | — | — | — | gap (experiential): gnoll has no exposure to 'cold' |
+| `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
+| `dark` | the color term for black/dark hues | Gsaoq | /gsaoq/ | Gsaoq | Gsaoq → no change → Gsaoq |
+| `day` | the light half of the day-night cycle | Ngshaap | /ŋʃaap/ | Ngshaap | Ngshaap → no change → Ngshaap |
+| `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
+| `die` | to cease living | Dzhaaq | /dʒaaq/ | Tzhaaq | Tzhaaq → lenition → Dzhaaq |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): gnoll has no exposure to 'dire-wolf-kind' |
+| `drink` | to swallow liquid | Qshaognzoov | /qʃaognzoov/ | Qshaognzoov | Qshaognzoov → no change → Qshaognzoov |
+| `earth` | the ground underfoot | Nsaav | /nsaav/ | Nsaav | Nsaav → no change → Nsaav |
+| `eat` | to consume food | Pshoavngshood | /pʃoavŋʃood/ | Pshoavngshood | Pshoavngshood → no change → Pshoavngshood |
+| `eclipse` | the darkening when a moon crosses the sun, or the world's shadow crosses a moon | — | — | — | gap (experiential): gnoll has no exposure to 'eclipse' |
+| `epipelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'epipelagic' |
+| `eye` | the organ of sight | Dsaog | /dsaog/ | Dsaog | Dsaog → no change → Dsaog |
+| `fire` | flame and heat | Qsaopnshoov | /qsaopnʃoov/ | Qsaopnshoov | Qsaopnshoov → no change → Qsaopnshoov |
+| `foot` | the walking limb-end | Mzoodqsaag | /mzoodqsaag/ | Mzootqsaag | Mzootqsaag → lenition → Mzoodqsaag |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): gnoll has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): gnoll has no exposure to 'giant-crocodile-kind' |
+| `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): gnoll has no exposure to 'giant-elk-kind' |
+| `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): gnoll has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): gnoll has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): gnoll has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): gnoll has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): gnoll has no exposure to 'giant-squid-kind' |
+| `gloom` | the deepest, starless dark | Gzhoov | /gʒoov/ | Gzhoov | Gzhoov → no change → Gzhoov |
+| `gnoll-kind` | a gnoll | Nshaad | /nʃaad/ | Nshaad | Nshaad → no change → Nshaad |
+| `goblin-kind` | a goblin | Msooddzhoad | /msooddʒoad/ | Msooddzhoat | Msooddzhoat → lenition → Msooddzhoad |
+| `god` | a deity | Dzhaogpzhaog | /dʒaogpʒaog/ | Dzhaogpzhaog | Dzhaogpzhaog → no change → Dzhaogpzhaog |
+| `green` | the color term for green | Gzhaod | /gʒaod/ | Gzhaot | Gzhaot → lenition → Gzhaod |
+| `hadal-trench` | a biome class | — | — | — | gap (experiential): no settlement in or beside hadal-trench |
+| `hand` | the manipulating limb-end | Nshaov | /nʃaov/ | Nshaov | Nshaov → no change → Nshaov |
+| `hearth` | the fire at the center of a home | Ngshoopqzaog | /ŋʃoopqzaog/ | Ngshoopqzaog | Ngshoopqzaog → no change → Ngshoopqzaog |
+| `heat` | felt, oppressive warmth | — | — | — | gap (experiential): gnoll has no exposure to 'heat' |
+| `hobgoblin-kind` | a hobgoblin | Ngsaaqdzhaov | /ŋsaaqdʒaov/ | Ngsaaqtzhaov | Ngsaaqtzhaov → lenition → Ngsaaqdzhaov |
+| `home` | one's dwelling | Mshoap | /mʃoap/ | Mshoap | Mshoap → no change → Mshoap |
+| `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
+| `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
+| `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): gnoll has no exposure to 'killer-whale-kind' |
+| `kobold-kind` | a kobold | Gshaov | /gʃaov/ | Gshaov | Gshaov → no change → Gshaov |
+| `light` | the color term for white/light hues | Psaopgzaoq | /psaopgzaoq/ | Psaopgzaoq | Psaopgzaoq → no change → Psaopgzaoq |
+| `many` | an indefinitely large count | Nzhoog | /nʒoog/ | Nzhoog | Nzhoog → no change → Nzhoog |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
+| `moon` | a moon | Ngsoad | /ŋsoad/ | Ngsoad | Ngsoad → no change → Ngsoad |
+| `mountain` | high ground | — | — | — | gap (experiential): gnoll has no exposure to 'mountain' |
+| `mouth` | the organ of eating and speech | Gsaad | /gsaad/ | Gsaad | Gsaad → no change → Gsaad |
+| `move` | to go from one place to another | Pzaad | /pzaad/ | Pzaat | Pzaat → lenition → Pzaad |
+| `name` | a word that identifies one who bears it | Mzhaov | /mʒaov/ | Mzhaov | Mzhaov → no change → Mzhaov |
+| `night` | the dark half of the day-night cycle | Mzhoovnzaaf | /mʒoovnzaaf/ | Mzhoovnzaaf | Mzhoovnzaaf → no change → Mzhoovnzaaf |
+| `one` | the cardinal number 1 | Psooqnzoox | /psooqnzoox/ | Psooqnzoox | Psooqnzoox → no change → Psooqnzoox |
+| `otyugh-kind` | an otyugh | — | — | — | gap (experiential): gnoll has no exposure to 'otyugh-kind' |
+| `owlbear-kind` | an owlbear | — | — | — | gap (experiential): gnoll has no exposure to 'owlbear-kind' |
+| `parent` | one's father or mother | Ngzhaoq | /ŋʒaoq/ | Ngzhaoq | Ngzhaoq → no change → Ngzhaoq |
+| `person` | a person; a member of a people (the autonym root) | Msoax | /msoax/ | Msoax | Msoax → no change → Msoax |
+| `rain` | liquid precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'rain' |
+| `red` | the color term for red | Nshaavngsaag | /nʃaavŋsaag/ | Nshaavngsaag | Nshaavngsaag → no change → Nshaavngsaag |
+| `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): gnoll has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): gnoll has no exposure to 'reef-shark-kind' |
+| `rest` | to stop and recover strength | Ngzhoodngsoaq | /ŋʒoodŋsoaq/ | Ngzhootngsoaq | Ngzhootngsoaq → lenition → Ngzhoodngsoaq |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): gnoll has no exposure to 'rhinoceros-kind' |
+| `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): gnoll has no exposure to 'rust-monster-kind' |
+| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `sea` | a body of salt water | Nshoagnzhoog | /nʃoagnʒoog/ | — | compound: `many` + `water` |
+| `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
+| `shadow` | cast dark, distinct from open gloom | Mzaaqdzhood | /mzaaqdʒood/ | Mzaaqtzhood | Mzaaqtzhood → lenition → Mzaaqdzhood |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): gnoll has no exposure to 'shrieker-kind' |
+| `shrubland` | a biome class | — | — | — | gap (experiential): no compound recipe for 'shrubland' |
+| `sibling` | one's brother or sister | Nshaaqmsaop | /nʃaaqmsaop/ | Nshaaqmsaop | Nshaaqmsaop → no change → Nshaaqmsaop |
+| `sleep` | to rest unconscious | Dzhoav | /dʒoav/ | Tzhoav | Tzhoav → lenition → Dzhoav |
+| `snow` | frozen precipitation | — | — | — | gap (experiential): gnoll has no exposure to 'snow' |
+| `spirit` | a lesser or unseen supernatural presence | Ngsooddzaav | /ŋsooddzaav/ | Ngsootdzaav | Ngsootdzaav → lenition → Ngsooddzaav |
+| `star` | a fixed point of light in the night sky | Gzaof | /gzaof/ | Gzaof | Gzaof → no change → Gzaof |
+| `starlit` | dark faintly lit by stars | Qshaafmsoof | /qʃaafmsoof/ | Qshaafmsoof | Qshaafmsoof → no change → Qshaafmsoof |
+| `stone` | rock | Ngzhoop | /ŋʒoop/ | Ngzhoop | Ngzhoop → no change → Ngzhoop |
+| `sun` | the sun | Ngshooqnzhoad | /ŋʃooqnʒoad/ | Ngshooqnzhoat | Ngshooqnzhoat → lenition → Ngshooqnzhoad |
+| `taiga` | a biome class | — | — | — | gap (experiential): no compound recipe for 'taiga' |
+| `temperate-forest` | a biome class | Gshaognshaap | /gʃaognʃaap/ | Gshaognshaap | Gshaognshaap → no change → Gshaognshaap |
+| `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
+| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): gnoll has no exposure to 'tide' |
+| `treant-kind` | a treant | — | — | — | gap (experiential): gnoll has no exposure to 'treant-kind' |
+| `tree` | a woody plant | Dshooq | /dʃooq/ | Tshooq | Tshooq → lenition → Dshooq |
+| `tropical-rainforest` | a biome class | Gzaadmzhooq | /gzaadmʒooq/ | Gzaatmzhooq | Gzaatmzhooq → lenition → Gzaadmzhooq |
+| `tropical-seasonal-forest` | a biome class | Nzhaof | /nʒaof/ | Nzhaof | Nzhaof → no change → Nzhaof |
+| `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
+| `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): gnoll has no exposure to 'twig-blight-kind' |
+| `two` | the cardinal number 2 | Qzhaoddzaof | /qʒaoddzaof/ | Qzhaottzaof | Qzhaottzaof → lenition → Qzhaoddzaof |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
+| `water` | the drinkable liquid | Nshoag | /nʃoag/ | Nshoag | Nshoag → no change → Nshoag |
+| `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): gnoll has no exposure to 'white-dragon-kind' |
+| `wind` | moving air | Gzhaoqnshood | /gʒaoqnʃood/ | Gzhaoqnshoot | Gzhaoqnshoot → lenition → Gzhaoqnshood |
+| `woolly-mammoth-kind` | a woolly mammoth | — | — | — | gap (experiential): gnoll has no exposure to 'woolly-mammoth-kind' |
+| `xorn-kind` | a xorn | — | — | — | gap (experiential): gnoll has no exposure to 'xorn-kind' |
+| `yellow` | the color term for yellow | Msood | /msood/ | Msood | Msood → no change → Msood |
+
 ## Goblin
 
 | Concept | Gloss | Word | IPA | Proto | Derivation |
@@ -209,6 +344,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Kae | /kae/ | Kae | Kae → no change → Kae |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 4 from night-vision 0.5 |
 | `bugbear-kind` | a bugbear | Kea | /kea/ | Kea | Kea → no change → Kea |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): goblin has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Daekoa | /daekoa/ | Daekoa | Daekoa → no change → Daekoa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): goblin has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
@@ -216,6 +352,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Boanae | /boanae/ | Goanae | Goanae → no change → Boanae |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → no change → Taobaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): goblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Neobea | /neobea/ | Neogea | Neogea → no change → Neobea |
 | `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → no change → Bee |
 | `eat` | to consume food | Koo | /koo/ | Koo | Koo → no change → Koo |
@@ -224,9 +361,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Tao | /tao/ | Qao | Qao → no change → Tao |
 | `fire` | flame and heat | Tea | /tea/ | Qea | Qea → no change → Tea |
 | `foot` | the walking limb-end | Doa | /doa/ | Doa | Doa → no change → Doa |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): goblin has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): goblin has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): goblin has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): goblin has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): goblin has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): goblin has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): goblin has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): goblin has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `gnoll-kind` | a gnoll | Kaenoe | /kaenoe/ | Kaenoe | Kaenoe → no change → Kaenoe |
 | `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
 | `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
 | `green` | the color term for green | Keotae | /keotae/ | Keoqae | Keoqae → no change → Keotae |
@@ -239,6 +383,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): goblin has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Dea | /dea/ | Dea | Dea → no change → Dea |
 | `light` | the color term for white/light hues | Toetea | /toetea/ | Toeqea | Toeqea → no change → Toetea |
 | `many` | an indefinitely large count | Neodoa | /neodoa/ | Neodoa | Neodoa → no change → Neodoa |
@@ -257,12 +402,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): goblin has no exposure to 'rain' |
 | `red` | the color term for red | Neanao | /neanao/ | Neanao | Neanao → no change → Neanao |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): goblin has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): goblin has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Kaanee | /kaanee/ | Kaanee | Kaanee → no change → Kaanee |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): goblin has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): goblin has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Neodoadaokaa | /neodoadaokaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.5 |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): goblin has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → no change → Beonae |
 | `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → no change → Neebeo |
@@ -275,7 +423,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Noenoa | /noenoa/ | Noenoa | Noenoa → no change → Noenoa |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
-| `temperate-rainforest` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-rainforest |
+| `temperate-rainforest` | a biome class | Toaneo | /toaneo/ | Toaneo | Toaneo → no change → Toaneo |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): goblin has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): goblin has no exposure to 'treant-kind' |
 | `tree` | a woody plant | Koonee | /koonee/ | Koonee | Koonee → no change → Koonee |
@@ -284,7 +432,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): goblin has no exposure to 'twig-blight-kind' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
-| `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
 | `water` | the drinkable liquid | Daokaa | /daokaa/ | Daokaa | Daokaa → no change → Daokaa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): goblin has no exposure to 'white-dragon-kind' |
 | `wind` | moving air | Noetoo | /noetoo/ | Noeqoo | Noeqoo → no change → Noetoo |
@@ -305,6 +453,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Gae | /gae/ | Kae | Kae → lenition → Gae |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 3 from night-vision 0.6 |
 | `bugbear-kind` | a bugbear | Gea | /gea/ | Kea | Kea → lenition → Gea |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): hobgoblin has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Baegoa | /baegoa/ | Daekoa | Daekoa → lenition → Baegoa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): hobgoblin has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
@@ -312,6 +461,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Goanae | /goanae/ | Goanae | Goanae → no change → Goanae |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Taobaa | /taobaa/ | Taopaa | Taopaa → lenition → Taobaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): hobgoblin has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Neogea | /neogea/ | Neogea | Neogea → no change → Neogea |
 | `earth` | the ground underfoot | Bee | /bee/ | Pee | Pee → lenition → Bee |
 | `eat` | to consume food | Goo | /goo/ | Koo | Koo → lenition → Goo |
@@ -320,9 +470,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Qao | /qao/ | Qao | Qao → no change → Qao |
 | `fire` | flame and heat | Qea | /qea/ | Qea | Qea → no change → Qea |
 | `foot` | the walking limb-end | Boa | /boa/ | Doa | Doa → no change → Boa |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): hobgoblin has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Noa | /noa/ | Noa | Noa → no change → Noa |
+| `gnoll-kind` | a gnoll | Gaenoe | /gaenoe/ | Kaenoe | Kaenoe → lenition → Gaenoe |
 | `goblin-kind` | a goblin | Nea | /nea/ | Nea | Nea → no change → Nea |
 | `god` | a deity | Neetaa | /neetaa/ | Neetaa | Neetaa → no change → Neetaa |
 | `green` | the color term for green | Geoqae | /geoqae/ | Keoqae | Keoqae → lenition → Geoqae |
@@ -335,6 +492,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): hobgoblin has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Bea | /bea/ | Dea | Dea → no change → Bea |
 | `light` | the color term for white/light hues | Toeqea | /toeqea/ | Toeqea | Toeqea → no change → Toeqea |
 | `many` | an indefinitely large count | Neoboa | /neoboa/ | Neodoa | Neodoa → no change → Neoboa |
@@ -353,12 +511,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): hobgoblin has no exposure to 'rain' |
 | `red` | the color term for red | Neanao | /neanao/ | Neanao | Neanao → no change → Neanao |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): hobgoblin has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Gaanee | /gaanee/ | Kaanee | Kaanee → lenition → Gaanee |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): hobgoblin has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): hobgoblin has no exposure to 'rust-monster-kind' |
-| `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
+| `savanna` | a biome class | — | — | — | gap (experiential): no compound recipe for 'savanna' |
 | `sea` | a body of salt water | Neoboabaogaa | /neoboabaogaa/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | — | — | — | gap (perceptual): luminance rank 2 exceeds depth 1 from night-vision 0.6 |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): hobgoblin has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Beonae | /beonae/ | Peonae | Peonae → lenition → Beonae |
 | `sleep` | to rest unconscious | Neebeo | /neebeo/ | Neepeo | Neepeo → lenition → Neebeo |
@@ -376,11 +537,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `treant-kind` | a treant | — | — | — | gap (experiential): hobgoblin has no exposure to 'treant-kind' |
 | `tree` | a woody plant | Goonee | /goonee/ | Koonee | Koonee → lenition → Goonee |
 | `tropical-rainforest` | a biome class | Qoa | /qoa/ | Qoa | Qoa → no change → Qoa |
-| `tropical-seasonal-forest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-seasonal-forest' |
+| `tropical-seasonal-forest` | a biome class | Geetao | /geetao/ | Geetao | Geetao → no change → Geetao |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): hobgoblin has no exposure to 'twig-blight-kind' |
 | `two` | the cardinal number 2 | Naanaa | /naanaa/ | Naanaa | Naanaa → no change → Naanaa |
-| `upwelling` | a biome class | — | — | — | gap (experiential): no compound recipe for 'upwelling' |
+| `upwelling` | a biome class | — | — | — | gap (experiential): no settlement in or beside upwelling |
 | `water` | the drinkable liquid | Baogaa | /baogaa/ | Daokaa | Daokaa → lenition → Baogaa |
 | `white-dragon-kind` | a white dragon | — | — | — | gap (experiential): hobgoblin has no exposure to 'white-dragon-kind' |
 | `wind` | moving air | Noeqoo | /noeqoo/ | Noeqoo | Noeqoo → no change → Noeqoo |
@@ -394,13 +555,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 |---|---|---|---|---|---|
 | `abyssal` | a biome class | — | — | — | gap (experiential): no settlement in or beside abyssal |
 | `alpine` | a biome class | — | — | — | gap (experiential): no settlement in or beside alpine |
-| `bathypelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside bathypelagic |
+| `bathypelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'bathypelagic' |
 | `black-dragon-kind` | a black dragon | — | — | — | gap (experiential): kobold has no exposure to 'black-dragon-kind' |
 | `blood` | the circulating fluid of a body | Ra | /ra/ | Rag | Rag → finalloss → Ra |
 | `blue` | the color term for blue | — | — | — | gap (perceptual): hue rank 4 exceeds depth 2 from night-vision 0.9 |
 | `bone` | the rigid frame of a body | Xo | /xo/ | Xo | Xo → no change → Xo |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | Roqxa | /roqxa/ | Rroqxat | Rroqxat → finalloss → clustersimplify → Roqxa |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): kobold has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Rakxa | /rakxa/ | Rrakxak | Rrakxak → finalloss → clustersimplify → Rakxa |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): kobold has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no compound recipe for 'coral-reef' |
@@ -408,6 +570,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Ro | /ro/ | Rot | Rot → finalloss → Ro |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Rogro | /rogro/ | Rogro | Rogro → no change → Rogro |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): kobold has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Rotra | /rotra/ | Rrotra | Rrotra → clustersimplify → Rotra |
 | `earth` | the ground underfoot | Rorra | /rorra/ | Rorra | Rorra → no change → Rorra |
 | `eat` | to consume food | Rokxo | /rokxo/ | Rokxot | Rokxot → finalloss → Rokxo |
@@ -416,9 +579,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Rarro | /rarro/ | Rrarroq | Rrarroq → finalloss → clustersimplify → Rarro |
 | `fire` | flame and heat | Roro | /roro/ | Rorok | Rorok → finalloss → Roro |
 | `foot` | the walking limb-end | Rogrro | /rogrro/ | Rogrrog | Rogrrog → finalloss → Rogrro |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): kobold has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): kobold has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): kobold has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): kobold has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): kobold has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): kobold has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): kobold has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): kobold has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Rara | /rara/ | Rrara | Rrara → clustersimplify → Rara |
+| `gnoll-kind` | a gnoll | Xagrro | /xagrro/ | Xagrrog | Xagrrog → finalloss → Xagrro |
 | `goblin-kind` | a goblin | Xoro | /xoro/ | Xorog | Xorog → finalloss → Xoro |
 | `god` | a deity | Roqro | /roqro/ | Rroqro | Rroqro → clustersimplify → Roqro |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -431,10 +601,11 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): kobold has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | Roro | /roro/ | Rorot | Rorot → finalloss → Roro |
 | `light` | the color term for white/light hues | Xaxo | /xaxo/ | Xaxo | Xaxo → no change → Xaxo |
 | `many` | an indefinitely large count | Rogrra | /rogrra/ | Rogrra | Rogrra → no change → Rogrra |
-| `mesopelagic` | a biome class | — | — | — | gap (experiential): no settlement in or beside mesopelagic |
+| `mesopelagic` | a biome class | — | — | — | gap (experiential): no compound recipe for 'mesopelagic' |
 | `moon` | a moon | Roqrra | /roqrra/ | Roqrrat | Roqrrat → finalloss → Roqrra |
 | `mountain` | high ground | — | — | — | gap (experiential): kobold has no exposure to 'mountain' |
 | `mouth` | the organ of eating and speech | Rakxo | /rakxo/ | Rrakxot | Rrakxot → finalloss → clustersimplify → Rakxo |
@@ -449,12 +620,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): kobold has no exposure to 'rain' |
 | `red` | the color term for red | Rara | /rara/ | Rrarag | Rrarag → finalloss → clustersimplify → Rara |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): kobold has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): kobold has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Xakxo | /xakxo/ | Xakxo | Xakxo → no change → Xakxo |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): kobold has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): kobold has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | Rarakrarogrra | /rarakrarogrra/ | — | compound: `many` + `water` |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Xogrra | /xogrra/ | Xogrra | Xogrra → no change → Xogrra |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): kobold has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Rotrra | /rotrra/ | Rrotrra | Rrotrra → clustersimplify → Rotrra |
 | `sleep` | to rest unconscious | Roqxa | /roqxa/ | Roqxa | Roqxa → no change → Roqxa |
@@ -464,14 +638,14 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `starlit` | dark faintly lit by stars | Ra | /ra/ | Rraq | Rraq → finalloss → clustersimplify → Ra |
 | `stone` | rock | Xa | /xa/ | Xaq | Xaq → finalloss → Xa |
 | `sun` | the sun | Rogxa | /rogxa/ | Rrogxa | Rrogxa → clustersimplify → Rogxa |
-| `taiga` | a biome class | Ro | /ro/ | Rog | Rog → finalloss → Ro |
+| `taiga` | a biome class | — | — | — | gap (experiential): no settlement in or beside taiga |
 | `temperate-forest` | a biome class | Xatxo | /xatxo/ | Xatxo | Xatxo → no change → Xatxo |
 | `temperate-grassland` | a biome class | — | — | — | gap (experiential): no settlement in or beside temperate-grassland |
 | `temperate-rainforest` | a biome class | Xotro | /xotro/ | Xotrot | Xotrot → finalloss → Xotro |
 | `tide` | the rise and fall of the waters under the moons | — | — | — | gap (experiential): kobold has no exposure to 'tide' |
 | `treant-kind` | a treant | — | — | — | gap (experiential): kobold has no exposure to 'treant-kind' |
 | `tree` | a woody plant | Rakrra | /rakrra/ | Rrakrra | Rrakrra → clustersimplify → Rakrra |
-| `tropical-rainforest` | a biome class | — | — | — | gap (experiential): no compound recipe for 'tropical-rainforest' |
+| `tropical-rainforest` | a biome class | Rorro | /rorro/ | Rrorrog | Rrorrog → finalloss → clustersimplify → Rorro |
 | `tropical-seasonal-forest` | a biome class | Ro | /ro/ | Ro | Ro → no change → Ro |
 | `tundra` | a biome class | — | — | — | gap (experiential): no settlement in or beside tundra |
 | `twig-blight-kind` | a twig blight | — | — | — | gap (experiential): kobold has no exposure to 'twig-blight-kind' |
@@ -497,6 +671,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Ddoaddoo | /ddoaddoo/ | Nneangneo | Nneangneo → no change → Ddoaddoo |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): red-dragon has no exposure to 'bugbear-kind' |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): red-dragon has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Ddoo | /ddoo/ | Ngnee | Ngnee → no change → Ddoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): red-dragon has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
@@ -504,6 +679,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Djao | /djao/ | Djao | Djao → no change → Djao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Shkaa | /ʃkaa/ | Shkaa | Shkaa → no change → Shkaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): red-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Djoodjao | /djoodjao/ | Djoogjae | Djoogjae → no change → Djoodjao |
 | `earth` | the ground underfoot | Djoodjoa | /djoodjoa/ | Gjoegwea | Gjoegwea → no change → Djoodjoa |
 | `eat` | to consume food | Djoa | /djoa/ | Gjoa | Gjoa → no change → Djoa |
@@ -512,9 +688,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Ddaoddao | /ddaoddao/ | Mmaonnao | Mmaonnao → no change → Ddaoddao |
 | `fire` | flame and heat | Ddoasdao | /ddoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ddoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): red-dragon has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Djooddoo | /djooddoo/ | Gwoengngee | Gwoengngee → no change → Djooddoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): red-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): red-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): red-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -527,6 +710,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): red-dragon has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): red-dragon has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Ddaoskoo | /ddaoskoo/ | Ngngaeskeo | Ngngaeskeo → no change → Ddaoskoo |
 | `many` | an indefinitely large count | Ddoa | /ddoa/ | Mnoa | Mnoa → no change → Ddoa |
@@ -545,12 +729,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): red-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Skoa | /skoa/ | Spoa | Spoa → no change → Skoa |
 | `red-dragon-kind` | a red dragon | Djoadjoo | /djoadjoo/ | Bjeadjeo | Bjeadjeo → no change → Djoadjoo |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): red-dragon has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Ddookjoo | /ddookjoo/ | Mngoopwee | Mngoopwee → no change → Ddookjoo |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): red-dragon has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): red-dragon has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Ddoa | /ddoa/ | Ngngoa | Ngngoa → no change → Ddoa |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): red-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shkoasdoo | /ʃkoasdoo/ | Shkoasdoe | Shkoasdoe → no change → Shkoasdoo |
 | `sleep` | to rest unconscious | Shkao | /ʃkao/ | Shpao | Shpao → no change → Shkao |
@@ -593,6 +780,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `bone` | the rigid frame of a body | Nnoangnoo | /nnoaŋnoo/ | Nneangneo | Nneangneo → no change → Nnoangnoo |
 | `brown` | the color term for brown | — | — | — | gap (perceptual): hue rank 5 exceeds depth 2 from night-vision 0.9 |
 | `bugbear-kind` | a bugbear | — | — | — | gap (experiential): white-dragon has no exposure to 'bugbear-kind' |
+| `carrion-crawler-kind` | a carrion crawler | — | — | — | gap (experiential): white-dragon has no exposure to 'carrion-crawler-kind' |
 | `child` | one's son or daughter | Ngnoo | /ŋnoo/ | Ngnee | Ngnee → no change → Ngnoo |
 | `cold` | felt, biting chill | — | — | — | gap (experiential): white-dragon has no exposure to 'cold' |
 | `coral-reef` | a biome class | — | — | — | gap (experiential): no settlement in or beside coral-reef |
@@ -600,6 +788,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `day` | the light half of the day-night cycle | Dzhao | /dʒao/ | Djao | Djao → no change → Dzhao |
 | `desert` | a biome class | — | — | — | gap (experiential): no settlement in or beside desert |
 | `die` | to cease living | Shkaa | /ʃkaa/ | Shkaa | Shkaa → no change → Shkaa |
+| `dire-wolf-kind` | a dire wolf | — | — | — | gap (experiential): white-dragon has no exposure to 'dire-wolf-kind' |
 | `drink` | to swallow liquid | Dzhoodzhao | /dʒoodʒao/ | Djoogjae | Djoogjae → no change → Dzhoodzhao |
 | `earth` | the ground underfoot | Dzhooddoa | /dʒooddoa/ | Gjoegwea | Gjoegwea → no change → Dzhooddoa |
 | `eat` | to consume food | Dzhoa | /dʒoa/ | Gjoa | Gjoa → no change → Dzhoa |
@@ -608,9 +797,16 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `eye` | the organ of sight | Nnaonnao | /nnaonnao/ | Mmaonnao | Mmaonnao → no change → Nnaonnao |
 | `fire` | flame and heat | Ngngoasdao | /ŋŋoasdao/ | Ngngeasbae | Ngngeasbae → no change → Ngngoasdao |
 | `foot` | the walking limb-end | Sdoo | /sdoo/ | Sbeo | Sbeo → no change → Sdoo |
+| `giant-constrictor-snake-kind` | a giant constrictor snake | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-constrictor-snake-kind' |
+| `giant-crocodile-kind` | a giant crocodile | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-crocodile-kind' |
 | `giant-elk-kind` | a giant elk | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-elk-kind' |
 | `giant-goat-kind` | a giant goat | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-goat-kind' |
+| `giant-hyena-kind` | a giant hyena | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-hyena-kind' |
+| `giant-octopus-kind` | a giant octopus | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-octopus-kind' |
+| `giant-scorpion-kind` | a giant scorpion | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-scorpion-kind' |
+| `giant-squid-kind` | a giant squid | — | — | — | gap (experiential): white-dragon has no exposure to 'giant-squid-kind' |
 | `gloom` | the deepest, starless dark | Ddoongngoo | /ddooŋŋoo/ | Gwoengngee | Gwoengngee → no change → Ddoongngoo |
+| `gnoll-kind` | a gnoll | — | — | — | gap (experiential): white-dragon has no exposure to 'gnoll-kind' |
 | `goblin-kind` | a goblin | — | — | — | gap (experiential): white-dragon has no exposure to 'goblin-kind' |
 | `god` | a deity | — | — | — | gap (experiential): white-dragon has no exposure to 'god' |
 | `green` | the color term for green | — | — | — | gap (perceptual): hue rank 3 exceeds depth 2 from night-vision 0.9 |
@@ -623,6 +819,7 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `hydrothermal-vent` | a biome class | — | — | — | gap (experiential): no settlement in or beside hydrothermal-vent |
 | `ice` | frozen water | — | — | — | gap (experiential): no settlement in or beside ice |
 | `kelp-forest` | a biome class | — | — | — | gap (experiential): no settlement in or beside kelp-forest |
+| `killer-whale-kind` | a killer whale | — | — | — | gap (experiential): white-dragon has no exposure to 'killer-whale-kind' |
 | `kobold-kind` | a kobold | — | — | — | gap (experiential): white-dragon has no exposure to 'kobold-kind' |
 | `light` | the color term for white/light hues | Ngngaoskoo | /ŋŋaoskoo/ | Ngngaeskeo | Ngngaeskeo → no change → Ngngaoskoo |
 | `many` | an indefinitely large count | Nnoa | /nnoa/ | Mnoa | Mnoa → no change → Nnoa |
@@ -641,12 +838,15 @@ Per-species vocabulary over the registered concept inventory: each concept's glo
 | `rain` | liquid precipitation | — | — | — | gap (experiential): white-dragon has no exposure to 'rain' |
 | `red` | the color term for red | Skoa | /skoa/ | Spoa | Spoa → no change → Skoa |
 | `red-dragon-kind` | a red dragon | — | — | — | gap (experiential): white-dragon has no exposure to 'red-dragon-kind' |
+| `reef-shark-kind` | a reef shark | — | — | — | gap (experiential): white-dragon has no exposure to 'reef-shark-kind' |
 | `rest` | to stop and recover strength | Nngookdoo | /nŋookdoo/ | Mngoopwee | Mngoopwee → no change → Nngookdoo |
+| `rhinoceros-kind` | a rhinoceros | — | — | — | gap (experiential): white-dragon has no exposure to 'rhinoceros-kind' |
 | `rust-monster-kind` | a rust monster | — | — | — | gap (experiential): white-dragon has no exposure to 'rust-monster-kind' |
 | `savanna` | a biome class | — | — | — | gap (experiential): no settlement in or beside savanna |
 | `sea` | a body of salt water | — | — | — | gap (experiential): no settlement in or beside sea |
 | `sea-ice` | a biome class | — | — | — | gap (experiential): no settlement in or beside sea-ice |
 | `shadow` | cast dark, distinct from open gloom | Ngngoa | /ŋŋoa/ | Ngngoa | Ngngoa → no change → Ngngoa |
+| `shrieker-kind` | a shrieker | — | — | — | gap (experiential): white-dragon has no exposure to 'shrieker-kind' |
 | `shrubland` | a biome class | — | — | — | gap (experiential): no settlement in or beside shrubland |
 | `sibling` | one's brother or sister | Shkoasdoo | /ʃkoasdoo/ | Shkoasdoe | Shkoasdoe → no change → Shkoasdoo |
 | `sleep` | to rest unconscious | Shkao | /ʃkao/ | Shpao | Shpao → no change → Shkao |
@@ -740,6 +940,7 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `fire` | flame and heat | *Qea /qea/ | Qoa /qoa/ | Tea /tea/ | Qea /qea/ | *Qea → Qoa / Tea / Qea |
 | `foot` | the walking limb-end | *Doa /doa/ | Doa /doa/ | Doa /doa/ | Boa /boa/ | *Doa → Doa / Doa / Boa |
 | `gloom` | the deepest, starless dark | *Noa /noa/ | Doa /doa/ | Noa /noa/ | Noa /noa/ | *Noa → Doa / Noa / Noa |
+| `gnoll-kind` | a gnoll | *Kaenoe /kaenoe/ | Kaodoo /kaodoo/ | Kaenoe /kaenoe/ | Gaenoe /gaenoe/ | *Kaenoe → Kaodoo / Kaenoe / Gaenoe |
 | `goblin-kind` | a goblin | *Nea /nea/ | Doa /doa/ | Nea /nea/ | Nea /nea/ | *Nea → Doa / Nea / Nea |
 | `god` | a deity | *Neetaa /neetaa/ | Dootaa /dootaa/ | Neetaa /neetaa/ | Neetaa /neetaa/ | *Neetaa → Dootaa / Neetaa / Neetaa |
 | `green` | the color term for green | *Keoqae /keoqae/ | Kooqao /kooqao/ | Keotae /keotae/ | Geoqae /geoqae/ | *Keoqae → Kooqao / Keotae / Geoqae |
@@ -767,8 +968,10 @@ A family's daughters share one proto-root per concept, drawn once at the family 
 | `stone` | rock | *Naonea /naonea/ | Daodoa /daodoa/ | Naonea /naonea/ | Naonea /naonea/ | *Naonea → Daodoa / Naonea / Naonea |
 | `sun` | the sun | *Noagoo /noagoo/ | Doagoo /doagoo/ | Noaboo /noaboo/ | Noagoo /noagoo/ | *Noagoo → Doagoo / Noaboo / Noagoo |
 | `temperate-forest` | a biome class | *Noenoa /noenoa/ | Doodoa /doodoa/ | Noenoa /noenoa/ | Noenoa /noenoa/ | *Noenoa → Doodoa / Noenoa / Noenoa |
+| `temperate-rainforest` | a biome class | *Toaneo /toaneo/ | Toadoo /toadoo/ | Toaneo /toaneo/ | Toaneo /toaneo/ | *Toaneo → Toadoo / Toaneo / Toaneo |
 | `tree` | a woody plant | *Koonee /koonee/ | Koodoo /koodoo/ | Koonee /koonee/ | Goonee /goonee/ | *Koonee → Koodoo / Koonee / Goonee |
 | `tropical-rainforest` | a biome class | *Qoa /qoa/ | Qoa /qoa/ | Toa /toa/ | Qoa /qoa/ | *Qoa → Qoa / Toa / Qoa |
+| `tropical-seasonal-forest` | a biome class | *Geetao /geetao/ | Gootao /gootao/ | Beetao /beetao/ | Geetao /geetao/ | *Geetao → Gootao / Beetao / Geetao |
 | `two` | the cardinal number 2 | *Naanaa /naanaa/ | Daadaa /daadaa/ | Naanaa /naanaa/ | Naanaa /naanaa/ | *Naanaa → Daadaa / Naanaa / Naanaa |
 | `water` | the drinkable liquid | *Daokaa /daokaa/ | Daokaa /daokaa/ | Daokaa /daokaa/ | Baogaa /baogaa/ | *Daokaa → Daokaa / Daokaa / Baogaa |
 | `wind` | moving air | *Noeqoo /noeqoo/ | Dooqoo /dooqoo/ | Noetoo /noetoo/ | Noeqoo /noeqoo/ | *Noeqoo → Dooqoo / Noetoo / Noeqoo |

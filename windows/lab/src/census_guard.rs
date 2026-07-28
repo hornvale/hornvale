@@ -38,7 +38,14 @@ pub const CANONICAL_CENSUS_HOST: &str =
 /// risk is either named `the-census` or prefixed `census-of-` (see
 /// `studies/*.study.json`); smaller, non-census studies like `the-chorus` or
 /// `branches-family` are unaffected and may run and publish anywhere.
-fn is_census_study(name: &str) -> bool {
+///
+/// Public since The Turnstile: the census CLAIM (decision 0081) reuses it for
+/// the "writes census goldens" half of its scope test. Note the two guards
+/// draw their lines differently on purpose — the HOST guard is about *which
+/// goldens* are authored, so naming is the right test; the CLAIM is about
+/// *how long a run holds the box*, so cost is.
+/// type-audit: bare-ok(identifier-text: name), bare-ok(flag: return)
+pub fn is_census_study(name: &str) -> bool {
     name == "the-census" || name.starts_with("census-of-")
 }
 

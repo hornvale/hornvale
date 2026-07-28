@@ -194,6 +194,25 @@ pub enum BuildDepth {
     Full,
 }
 
+/// What a build produced beyond the ledger: the values a consumer would
+/// otherwise re-derive with [`terrain_of`] / [`climate_from`]. Each field is
+/// `Some` exactly when the requested [`BuildDepth`] built it — `None` means
+/// "this rung never produced that artifact", NOT "rebuild it".
+///
+/// The world remains the durable representation; these are the build's
+/// byproducts, handed back so a caller that JUST built the world need not
+/// re-derive them (The Single Sculpt, extended across the API boundary).
+/// Re-derivation is unaffected and remains the supported path for a caller
+/// holding a *loaded* world.
+pub struct BuildArtifacts {
+    /// The built world — exactly what [`build_world_to`] returns.
+    pub world: World,
+    /// The sculpted terrain, `Some` iff depth >= [`BuildDepth::Terrain`].
+    pub terrain: Option<GeneratedTerrain>,
+    /// The derived climate, `Some` iff depth >= [`BuildDepth::Settlements`].
+    pub climate: Option<GeneratedClimate>,
+}
+
 /// The live astronomy provider a world uses, reconstructed from its ledger.
 pub enum Sky {
     /// Tier-0 constant sun.
@@ -679,12 +698,19 @@ pub fn species_carrying_input(
     }
 }
 
-/// **The terrestrial-supply frame (The Tumult's land mask).** Every v1
-/// resource-supply axis is *terrestrial* supply: the resource a land-dwelling
-/// forager can reach, defined on cells above the world's sea level and **zero
-/// on submerged cells**. This is a property of the supply fields, not a rule
-/// about who may live where — the roster's habitat comes out of what it eats,
-/// so nothing needs a per-species exemption.
+/// **The terrestrial-supply frame (The Tumult's land mask).** Each of the five
+/// *terrestrial* resource-supply axes carries this frame: the resource a
+/// land-dwelling forager can reach, defined on cells above the world's sea
+/// level and **zero on submerged cells**. This is a property of those supply
+/// fields, not a rule about who may live where — the roster's habitat comes out
+/// of what it eats, so nothing needs a per-species exemption.
+///
+/// It is deliberately **not** a claim about the whole basis, and has not been
+/// one since The Vacancy: [`MARINE_FORAGE`](hornvale_kernel::MARINE_FORAGE) is
+/// a sixth `v1_basis()` member whose supply is the exact mirror of this frame —
+/// zero on land, defined at sea (see [`marine_forage_supply_field`]). That the
+/// sea arrived by *adding an axis* rather than by exempting anything from a
+/// global rule is precisely what the closing paragraph below anticipated.
 ///
 /// Three of the five axes have always carried this mask implicitly:
 /// `PHOTOSYNTHATE` rides `hornvale_demography::carrying_capacity`, which
@@ -746,6 +772,33 @@ pub fn forage_supply_field(
     hornvale_kernel::CellMap::from_fn(geo, |c| base_carrying.get(c) * FORAGE_FRACTION)
 }
 
+/// Fraction of grazable forage that becomes prey biomass available to a
+/// predator — Lindeman's trophic-transfer efficiency, ~10%.
+///
+/// The campaign's second and last calibration knob. Deliberately a single
+/// constant scale of [`forage_supply_field`] rather than a population-coupled
+/// predator/prey model: this reads primary production, never predator or prey
+/// populations, so it cannot feed back on itself. A real bidirectional trophic
+/// coupling is BIO-24's campaign, not this one.
+/// type-audit: bare-ok(ratio)
+const PREY_FRACTION: f64 = 0.1;
+
+/// The `ANIMAL_PREY` supply field (The Vacancy): prey biomass as a
+/// trophic-transfer fraction of grazable forage.
+///
+/// Replaces a hard-coded `0.0` that had kept every obligate predator in the
+/// roster — the three chromatic dragons and the owlbear — out of every world
+/// ever generated. Land-masked transitively (forage is already 0 on submerged
+/// cells); marine predators eat `MARINE_FORAGE` instead. Pure, deterministic,
+/// no RNG — a direct scale of an already-computed field.
+/// type-audit: bare-ok(count: forage), bare-ok(count: return)
+pub fn prey_supply_field(
+    geo: &Geosphere,
+    forage: &hornvale_kernel::CellMap<f64>,
+) -> hornvale_kernel::CellMap<f64> {
+    hornvale_kernel::CellMap::from_fn(geo, |c| forage.get(c) * PREY_FRACTION)
+}
+
 /// The `DETRITUS` supply field (The Tumult): [`DETRITUS_AMBIENT`] on land,
 /// **0 on submerged cells** — the terrestrial-supply frame stated as a field
 /// rather than as a bare constant, so the detritus axis carries the same land
@@ -762,6 +815,52 @@ pub fn detritus_supply_field(
         } else {
             DETRITUS_AMBIENT
         }
+    })
+}
+
+/// The `MARINE_FORAGE` supply field (The Vacancy): marine primary production
+/// and the prey web it supports, **0 on every land cell** — the exact mirror
+/// of the terrestrial axes' land mask (see [`DETRITUS_AMBIENT`]'s
+/// terrestrial-supply frame), stated on the supply so no consumer needs a
+/// per-species exemption.
+///
+/// Derived from what climate already computes, never drawn: the cell's marine
+/// biome class sets a productivity multiplier (`Upwelling` highest — climate
+/// documents it as the high-productivity class — then `CoralReef` and
+/// `KelpForest`, then the sunlit `Epipelagic`, falling through the aphotic
+/// classes to near-zero at `Abyssal` and `HadalTrench`), and `SeaIce` is
+/// suppressed. `HydrothermalVent` is deliberately left near-zero rather than
+/// productive: a real vent community is CHEMOTROPHIC, which is a metabolic
+/// class the enum does not have (BIO-chemotrophy), so making it productive here would
+/// feed vent biomass to photosynthesis-based consumers.
+/// type-audit: bare-ok(ratio: scale), bare-ok(count: return)
+pub fn marine_forage_supply_field(
+    geo: &Geosphere,
+    terrain: &GeneratedTerrain,
+    climate: &GeneratedClimate,
+    scale: f64,
+) -> hornvale_kernel::CellMap<f64> {
+    let biome = climate.biome_map();
+    hornvale_kernel::CellMap::from_fn(geo, |c| {
+        if !terrain.is_ocean(c) {
+            return 0.0;
+        }
+        let productivity = match biome.get(c) {
+            hornvale_climate::Biome::Upwelling => 1.0,
+            hornvale_climate::Biome::CoralReef | hornvale_climate::Biome::KelpForest => 0.85,
+            hornvale_climate::Biome::Epipelagic => 0.45,
+            hornvale_climate::Biome::Mesopelagic => 0.15,
+            hornvale_climate::Biome::Bathypelagic => 0.05,
+            hornvale_climate::Biome::Abyssal | hornvale_climate::Biome::HadalTrench => 0.02,
+            // Chemotrophic in reality; not modellable as forage yet (BIO-chemotrophy).
+            hornvale_climate::Biome::HydrothermalVent => 0.02,
+            hornvale_climate::Biome::SeaIce => 0.05,
+            // Every land class: unreachable under the `is_ocean` guard above,
+            // but the match must be total and a wrong default here would be a
+            // silent land leak.
+            _ => 0.0,
+        };
+        productivity * scale
     })
 }
 
@@ -801,6 +900,18 @@ pub fn mineral_supply_field(
 /// test's doc comment for the measured before/after).
 /// type-audit: bare-ok(ratio)
 const MINERAL_SUPPLY_SCALE: f64 = 1.0;
+
+/// The `MARINE_FORAGE` supply amplitude — the campaign's single marine
+/// calibration knob, following The Demesne's one-knob-per-axis precedent.
+///
+/// Set so a productive shallow marine cell supplies roughly what a productive
+/// land cell supplies, making marine and terrestrial K comparable rather than
+/// one silently dominating. Fit in Task 6 Step 4 against the measured
+/// land/sea supply ratio, not chosen by taste. If one constant cannot make the
+/// two comparable, that is a finding to report (spec §11) — not an invitation
+/// to add a second knob.
+/// type-audit: bare-ok(ratio)
+const MARINE_SUPPLY_SCALE: f64 = 1.0;
 
 /// The per-axis resource supply for one niche at one cell (BIO-35 Stage 1:
 /// The Demesne, task T2): the dot product of the species' uptake vector
@@ -845,9 +956,11 @@ pub fn axis_supply(
 /// resource-supply term — BIO-35 Stage 1's rank-restored per-axis dot
 /// product: `PHOTOSYNTHATE` rides the existing NPP-based `base_carrying`
 /// (keeps its conditioning), `PLANT_FORAGE`/`MINERAL`/`DETRITUS` read their
-/// own supply fields, and `ANIMAL_PREY` is Stage 2's placeholder zero (a
-/// later stage's trophic wiring); see [`axis_supply`], Type-II-saturated so
-/// intake plateaus) multiplied by the
+/// own supply fields, `ANIMAL_PREY` reads [`prey_supply_field`] (The
+/// Vacancy: a trophic-transfer fraction of grazable forage, no longer a
+/// placeholder zero), and `MARINE_FORAGE` (The Vacancy) reads its own
+/// marine supply field though no shipped kind weights it yet; see
+/// [`axis_supply`], Type-II-saturated so intake plateaus) multiplied by the
 /// four condition-response terms (temperature/moisture/insolation/elevation),
 /// each [`hornvale_kernel::ConditionResponse::eval`]'d against that cell's
 /// [`substrate_field`] reading. Temperature/moisture/insolation are
@@ -855,13 +968,16 @@ pub fn axis_supply(
 /// [`hornvale_kernel::sovereignty_floor`]); elevation is hard (floor 0.0) —
 /// sovereignty buffers physiology but not geometry.
 ///
-/// **K is 0 on every submerged cell** (The Tumult's land mask), and by
-/// construction rather than by decree: all five supply axes are terrestrial
-/// (see [`DETRITUS_AMBIENT`]'s terrestrial-supply frame), so a species whose
-/// whole uptake vector points at land resources has no supply at sea and its
-/// saturated intake is 0 there. Nothing in this assembly special-cases water;
-/// an aquatic kind authored onto a future marine supply axis would get a
-/// non-zero K at sea from this same product, unchanged.
+/// **K is 0 on every submerged cell for the whole roster today** (The
+/// Tumult's land mask), and by construction rather than by decree: five of
+/// the six supply axes are terrestrial (see [`DETRITUS_AMBIENT`]'s
+/// terrestrial-supply frame) and the sixth, `MARINE_FORAGE` (The Vacancy),
+/// is marine and has real values at sea — but every shipped kind's uptake
+/// vector still weights it 0, so a species whose whole uptake vector points
+/// at land resources has no supply at sea and its saturated intake is 0
+/// there. Nothing in this assembly special-cases water; a marine kind
+/// authored onto the `MARINE_FORAGE` axis would get a non-zero K at sea from
+/// this same product, unchanged.
 /// type-audit: bare-ok(diagnostic-value: obliquity_deg), bare-ok(ratio: insolation_scalar), bare-ok(index: return)
 pub fn niche_per_species_k(
     geo: &Geosphere,
@@ -888,6 +1004,8 @@ pub fn niche_per_species_k(
     let mineral = mineral_supply_field(geo, terrain, MINERAL_SUPPLY_SCALE);
     let forage = forage_supply_field(geo, &base_carrying);
     let detritus = detritus_supply_field(geo, terrain);
+    let marine = marine_forage_supply_field(geo, terrain, climate, MARINE_SUPPLY_SCALE);
+    let prey = prey_supply_field(geo, &forage);
 
     species_biosphere
         .iter()
@@ -900,14 +1018,15 @@ pub fn niche_per_species_k(
                 // Rank-restored supply via the extracted helper: the axis
                 // dot product, not the old summed-uptake scalar.
                 use hornvale_kernel::{
-                    ANIMAL_PREY, DETRITUS, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
+                    ANIMAL_PREY, DETRITUS, MARINE_FORAGE, MINERAL, PHOTOSYNTHATE, PLANT_FORAGE,
                 };
                 let per_axis = [
                     (PHOTOSYNTHATE, *base_carrying.get(cell)),
                     (PLANT_FORAGE, *forage.get(cell)),
                     (MINERAL, *mineral.get(cell)),
                     (DETRITUS, *detritus.get(cell)),
-                    (ANIMAL_PREY, 0.0),
+                    (ANIMAL_PREY, *prey.get(cell)),
+                    (MARINE_FORAGE, *marine.get(cell)),
                 ];
                 let supply = axis_supply(&bio.niche, &per_axis);
                 let saturated = supply / (1.0 + supply);
@@ -1207,11 +1326,29 @@ pub fn wild_concentrations(world: &World, k: usize) -> Result<Vec<(String, [f64;
         // A mobile beast: a WILD, non-sessile, non-settling kind — `social_form`
         // is `Solitary` or `Gregarious` (not `Settled`, the peoplehood axis; not
         // `Sessile`, a rooted `Autotroph` that is placed but never agentified).
+        //
+        // …and not a SEA creature. The Vacancy opened the ocean to the habitat
+        // model, but the walk layer this feeds is a terrestrial surface game:
+        // there is no underwater locale, and every agent it mints carries a
+        // freshwater thirst drive it satisfies by pathing to drinkable water. A
+        // shark minted here is therefore permanently, unsatisfiably thirsty —
+        // measured, not theorised: agentifying the reef shark drove the health
+        // battery's null control to 0.94 thirst-caused distress and fired its
+        // bug alarm.
+        //
+        // The test is *predominantly* marine (majority uptake), not marine at
+        // all, so the amphibious kind still walks: a crocodile hauls out, and
+        // its 0.4 sea / 0.6 land vector is exactly the case the surface game
+        // can represent. A real habitat-medium axis (MAP-11) would state this
+        // properly; until then, what a creature eats is the honest proxy for
+        // where it lives, which is the same reasoning the supply mask uses.
         biosphere.get_by_label(label).is_some_and(|b| {
-            matches!(
+            let mobile = matches!(
                 b.social_form,
                 hornvale_species::SocialForm::Solitary | hornvale_species::SocialForm::Gregarious
-            )
+            );
+            let predominantly_marine = b.niche.weight(hornvale_kernel::MARINE_FORAGE) > 0.5;
+            mobile && !predominantly_marine
         })
     };
     // Each mobile beast's DENSEST home — the stack settlement where its local
@@ -4521,6 +4658,7 @@ pub fn build_world_from_components(
         wc,
         BuildDepth::Full,
     )
+    .map(|built| built.world)
 }
 
 /// Build a world only as deep as `depth` (spec §4 / MAP-25). At any depth the
@@ -4536,6 +4674,23 @@ pub fn build_world_to(
     wc: &WorldComponents,
     depth: BuildDepth,
 ) -> Result<World, BuildError> {
+    build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth).map(|built| built.world)
+}
+
+/// Build a world to `depth` and hand back the artifacts the build already
+/// constructed (see [`BuildArtifacts`]). Prefer this over [`build_world_to`]
+/// followed by [`terrain_of`]/[`climate_from`] when you are the one building
+/// the world: the terrain this returns is the same value `terrain_of(&world)`
+/// would re-sculpt, built once instead of twice.
+pub fn build_world_to_with_artifacts(
+    seed: Seed,
+    pins: &SkyPins,
+    sky: SkyChoice,
+    terrain_pins: &TerrainPins,
+    settlement_pins: &SettlementPins,
+    wc: &WorldComponents,
+    depth: BuildDepth,
+) -> Result<BuildArtifacts, BuildError> {
     build_to(seed, pins, sky, terrain_pins, settlement_pins, wc, depth)
 }
 
@@ -4644,7 +4799,7 @@ pub fn history_for(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
 ) -> Result<History, BuildError> {
-    let world = build_to(
+    let built = build_to(
         seed,
         pins,
         sky,
@@ -4653,9 +4808,17 @@ pub fn history_for(
         wc,
         BuildDepth::Terrain,
     )?;
-    let terrain = terrain_of(&world)?;
-    let climate = climate_from(&world, &terrain)?;
-    bake_history_from(seed, &world, &terrain, &climate, settlement_pins, wc)
+    // A Terrain-depth build sculpts terrain and hands it back, so this reuses
+    // it rather than re-sculpting with `terrain_of` (the same double sculpt
+    // this campaign removes from the lab view chain, here inside worldgen).
+    // Climate is `None` at this depth — the rung never builds one — so it is
+    // derived, exactly as before.
+    let terrain = match built.terrain {
+        Some(terrain) => terrain,
+        None => terrain_of(&built.world)?,
+    };
+    let climate = climate_from(&built.world, &terrain)?;
+    bake_history_from(seed, &built.world, &terrain, &climate, settlement_pins, wc)
 }
 
 /// The full pipeline, run only as deep as `depth`. `build_world_from_components`
@@ -4672,7 +4835,7 @@ fn build_to(
     settlement_pins: &SettlementPins,
     wc: &WorldComponents,
     depth: BuildDepth,
-) -> Result<World, BuildError> {
+) -> Result<BuildArtifacts, BuildError> {
     let mut world = World::new(seed);
     register_all(&mut world.registry)?;
     // ecs-c6 T3, spec §7 as a load-time gate: every functional predicate the
@@ -4714,7 +4877,11 @@ fn build_to(
     })?;
 
     if depth == BuildDepth::Astronomy {
-        return Ok(world);
+        return Ok(BuildArtifacts {
+            world,
+            terrain: None,
+            climate: None,
+        });
     }
 
     // Sculpt the terrain ONCE here and KEEP it: the same `GeneratedTerrain`
@@ -4743,7 +4910,13 @@ fn build_to(
     })?;
 
     if depth <= BuildDepth::Terrain {
-        return Ok(world);
+        // The line that used to drop the sculpt on the floor, forcing every
+        // view-chain consumer to re-derive it with `terrain_of`.
+        return Ok(BuildArtifacts {
+            world,
+            terrain: Some(terrain),
+            climate: None,
+        });
     }
 
     // Settlement pins are never reconstructed (settlements persist as their
@@ -5131,7 +5304,11 @@ fn build_to(
     })?;
 
     if depth <= BuildDepth::Settlements {
-        return Ok(world);
+        return Ok(BuildArtifacts {
+            world,
+            terrain: Some(terrain),
+            climate: Some(climate),
+        });
     }
 
     // `geo` borrows `terrain`, and `namers` borrows `phonologies` (see
@@ -5416,7 +5593,11 @@ fn build_to(
         Ok(())
     })?;
 
-    Ok(world)
+    Ok(BuildArtifacts {
+        world,
+        terrain: Some(terrain),
+        climate: Some(climate),
+    })
 }
 
 /// The entity carrying the world's planet classification (`is-a`,
@@ -6667,6 +6848,56 @@ mod tests {
     }
 
     #[test]
+    fn the_wild_never_mints_a_sea_creature() {
+        // The Vacancy: the walk layer this feeds is a terrestrial surface game.
+        // Every agent it mints carries a freshwater thirst drive satisfied by
+        // pathing to drinkable water, so a sea creature minted here is
+        // permanently, unsatisfiably thirsty. Measured before this guard
+        // existed: agentifying the reef shark drove the health battery's null
+        // control to 0.94 thirst-caused distress and fired its bug alarm.
+        //
+        // The bar is *predominantly* marine, not marine at all, so the
+        // amphibious kind still walks — which this test also pins, because a
+        // guard that swept up the crocodile too would be silently over-broad
+        // and nothing else would notice.
+        let world = build_world(
+            hornvale_kernel::Seed(42),
+            &hornvale_astronomy::SkyPins::default(),
+            SkyChoice::Generated,
+            &hornvale_terrain::TerrainPins::default(),
+            &SettlementPins::default(),
+        )
+        .unwrap();
+        let biosphere = hornvale_species::biosphere_registry();
+        // Ask for far more than the roster holds, so the guard is what excludes
+        // a sea creature rather than the `k` cutoff happening to.
+        let wild = wild_concentrations(&world, 100).unwrap();
+        for (species, _pos) in &wild {
+            let marine = biosphere
+                .get_by_label(species)
+                .unwrap_or_else(|| panic!("{species} has a biosphere entry"))
+                .niche
+                .weight(hornvale_kernel::MARINE_FORAGE);
+            assert!(
+                marine <= 0.5,
+                "{species} is predominantly marine ({marine}) and must not be \
+                 agentified by the surface walk"
+            );
+        }
+        // And the amphibious kind is genuinely eligible — it is a `Solitary`
+        // mobile beast whose marine weight sits under the bar, so nothing but
+        // its own abundance decides whether it appears.
+        let croc = biosphere
+            .get_by_label("giant-crocodile")
+            .expect("giant-crocodile has a biosphere entry");
+        assert!(
+            croc.niche.weight(hornvale_kernel::MARINE_FORAGE) <= 0.5
+                && croc.social_form == hornvale_species::SocialForm::Solitary,
+            "the amphibious kind must remain eligible for the wild"
+        );
+    }
+
+    #[test]
     fn social_form_selects_the_settled_and_wild_sets() {
         // THE EREMITE: the re-key onto `SocialForm` selects the settlement
         // roster (byte-identical to the pre-Eremite psyche key-set) and the
@@ -6675,23 +6906,26 @@ mod tests {
         // the live psyche key-set (now a superset of Settled).
         let wc = WorldComponents::assemble().expect("canonical registries are well-formed");
 
-        // The `Settled` set is exactly the four peoples.
+        // The `Settled` set is exactly the five peoples (The Vacancy T9 added
+        // the gnoll).
         let settled: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
             .filter(|(_, b)| b.social_form == hornvale_species::SocialForm::Settled)
             .map(|(k, _)| k.0)
             .collect();
-        let four_peoples: std::collections::BTreeSet<&'static str> =
-            ["bugbear", "goblin", "hobgoblin", "kobold"]
+        let five_peoples: std::collections::BTreeSet<&'static str> =
+            ["bugbear", "gnoll", "goblin", "hobgoblin", "kobold"]
                 .into_iter()
                 .collect();
-        assert_eq!(settled, four_peoples, "Settled is exactly the four peoples");
+        assert_eq!(settled, five_peoples, "Settled is exactly the five peoples");
 
-        // The wild-agentified `{Solitary, Gregarious}` set: the ten mobile,
-        // non-settled kinds — the same kinds the retired `¬psyche ∧ ¬autotroph`
-        // proxy selected before the dragons gained a mind (still agentified,
-        // now with a temperament to read). Disjoint from the settling peoples.
+        // The wild-agentified `{Solitary, Gregarious}` set: the twenty-one
+        // mobile, non-settled kinds (ten pre-Vacancy, The Vacancy T7's six,
+        // and T8's five — shrieker is `Sessile`, so it stays out of this
+        // set) — the same kinds the retired `¬psyche ∧ ¬autotroph` proxy
+        // selected before the dragons gained a mind (still agentified, now
+        // with a temperament to read). Disjoint from the settling peoples.
         let mobile_beasts: std::collections::BTreeSet<&'static str> = wc
             .biosphere
             .iter()
@@ -6706,11 +6940,22 @@ mod tests {
             .collect();
         let expected_wild: std::collections::BTreeSet<&'static str> = [
             "black-dragon",
+            "carrion-crawler",
+            "dire-wolf",
+            "giant-constrictor-snake",
+            "giant-crocodile",
             "giant-elk",
             "giant-goat",
+            "giant-hyena",
+            "giant-octopus",
+            "giant-scorpion",
+            "giant-squid",
+            "killer-whale",
             "otyugh",
             "owlbear",
             "red-dragon",
+            "reef-shark",
+            "rhinoceros",
             "rust-monster",
             "white-dragon",
             "woolly-mammoth",
@@ -6720,7 +6965,7 @@ mod tests {
         .collect();
         assert_eq!(
             mobile_beasts, expected_wild,
-            "the {{Solitary, Gregarious}} set is the ten mobile non-settled kinds"
+            "the {{Solitary, Gregarious}} set is the twenty-one mobile non-settled kinds"
         );
         assert!(
             settled.is_disjoint(&mobile_beasts),
@@ -9527,6 +9772,65 @@ mod tests {
         assert!(eq > pole, "equator {eq} > pole {pole}");
     }
 
+    #[test]
+    fn marine_forage_is_zero_on_land_and_positive_in_the_shallows() {
+        // The mirror of the land mask: this axis must not leak onto land, or
+        // the terrestrial roster silently gains a sixth food source.
+        let world = generated(42);
+        let terrain = terrain_of(&world).unwrap();
+        let climate = climate_of(&world).unwrap();
+        let geo = terrain.geosphere();
+        let marine = marine_forage_supply_field(geo, &terrain, &climate, MARINE_SUPPLY_SCALE);
+        for cell in geo.cells() {
+            if !terrain.is_ocean(cell) {
+                assert_eq!(
+                    *marine.get(cell),
+                    0.0,
+                    "land cell {cell:?} must read exactly 0.0 on MARINE_FORAGE"
+                );
+            }
+        }
+        assert!(
+            geo.cells()
+                .filter(|&c| terrain.is_ocean(c))
+                .any(|c| *marine.get(c) > 0.0),
+            "at least one ocean cell must have positive marine supply, or the \
+             sea is open in name only and Task 8's kinds would all be ghosts"
+        );
+    }
+
+    #[test]
+    fn kinds_before_the_vacancy_t8_get_no_supply_from_the_marine_axis() {
+        // Every kind that PREDATES The Vacancy T8 must have weight 0.0 on
+        // MARINE_FORAGE, so the `per_axis` entry contributes an exact zero to
+        // its dot product — this was the assertion that made Task 6's Step 6
+        // byte-identity result a property rather than a coincidence, and it
+        // stays a real regression guard for the rest of the roster now that
+        // T8 has deliberately given exactly five kinds (four marine plus the
+        // amphibious giant crocodile) a nonzero weight there. Renamed from
+        // `the_existing_sixteen_...` (its own doc comment always said "before
+        // Task 8" — this is that threshold arriving, not a workaround).
+        let marine_or_amphibious: std::collections::BTreeSet<&str> = [
+            "giant-crocodile",
+            "giant-octopus",
+            "giant-squid",
+            "killer-whale",
+            "reef-shark",
+        ]
+        .into_iter()
+        .collect();
+        for (kind, bio) in hornvale_species::biosphere_registry().iter() {
+            if marine_or_amphibious.contains(kind.0) {
+                continue;
+            }
+            assert_eq!(
+                bio.niche.weight(hornvale_kernel::MARINE_FORAGE),
+                0.0,
+                "{kind:?} must not weight the marine axis (only The Vacancy T8's five may)"
+            );
+        }
+    }
+
     /// SKY-24 guard: on a `Locked` world, `substrate_field`'s insolation
     /// rewards the substellar geometry — peaking at the substellar cell,
     /// zero at the antistellar cell (`cos_theta < 0`, floored), and
@@ -9705,10 +10009,12 @@ mod tests {
     fn land_stays_fully_occupied_after_the_gate() {
         // P5 (spec §5): "Land stays fully occupied — every one of the 11,066
         // land cells has a dominant before and after." The Tumult's land mask
-        // (all five supply axes are terrestrial) takes cells OUT of
-        // contention for kinds whose whole uptake vector finds no supply
-        // there; P5's claim is that it never empties a LAND cell of every
-        // kind — every land cell keeps at least one kind with K > 0.
+        // (five of the six supply axes are terrestrial; the sixth,
+        // MARINE_FORAGE, is marine and unweighted by every shipped kind)
+        // takes cells OUT of contention for kinds whose whole uptake vector
+        // finds no supply there; P5's claim is that it never empties a LAND
+        // cell of every kind — every land cell keeps at least one kind with
+        // K > 0.
         let world = generated(42);
         let terrain = terrain_of(&world).unwrap();
         let climate = climate_of(&world).unwrap();
@@ -9851,11 +10157,32 @@ mod tests {
     ///   made and is untouched by it. This is task 6's original finding,
     ///   confirmed still true after the-demesne; it awaits a body-mass /
     ///   sovereignty-devotion retune, not a resource-supply change.
-    /// - **Still `#[ignore]`d, Stage 2 (`ANIMAL_PREY` field)**: no
+    /// - **Still `#[ignore]`d at the time, Stage 2 (`ANIMAL_PREY` field)**: no
     ///   chromatic dragon (or `owlbear`) ever wins a cell — their pure-
     ///   `ANIMAL_PREY` niche reads Stage 1's placeholder-zero supply, so
     ///   they can never out-compete a species riding a real axis. Trophic
     ///   wiring is explicitly Stage 2's job.
+    ///
+    /// UPDATE (The Vacancy, task 6b): [`prey_supply_field`] landed —
+    /// `ANIMAL_PREY` reads a real, nonzero `PREY_FRACTION` scale of grazable
+    /// forage instead of a placeholder zero. Re-measured: the breakdown is
+    /// `[xorn: 4277, rust-monster: 3873, twig-blight: 2263, kobold: 653]` —
+    /// still 4 distinct dominants, still zero dragons, and `xorn`/`rust-
+    /// monster`/`twig-blight` counts all moved (kobold displaces `goblin` as
+    /// the 4th; every peopled kind's own K shifted too, since kobold/goblin/
+    /// hobgoblin/bugbear all carry nonzero `ANIMAL_PREY` weights — see
+    /// `confluence.rs`'s settlement-count test). The dragon bullet's
+    /// "awaits Stage 2" reasoning is now stale in the direction that
+    /// mattered least: viability was never the same bar as per-cell
+    /// dominance. Dragons ARE viable now (`non_void_roster.rs`'s allowlist
+    /// is deleted; see the occupancy readout), but still never win the
+    /// arg-max — the SAME Kleiber home-range effect that keeps `treant` from
+    /// winning against `twig-blight` applies to a 2200-2700 kg dragon just
+    /// as it does to an 1800 kg treant. This test
+    /// ([`menagerie_dragon_stronghold_awaits_animal_prey_stage_2`]) is
+    /// therefore reclassified from "awaiting Stage 2" to the SAME mass/
+    /// sovereignty-calibration bucket as `treant`'s test — see its doc
+    /// comment for the measured detail.
     ///
     /// Returns every kind's name (biosphere order, the `tag`-indexable
     /// slice), the per-kind dominant-cell count, and that count re-keyed by
@@ -9923,10 +10250,13 @@ mod tests {
     /// BIO-35): the campaign's stated ambition is `>= 6` distinct dominants
     /// incl. treant/xorn/dragon strongholds. Stage 1 (abiotic) reaches 4 —
     /// the gap to 6 is the treant mass-calibration (below, `#[ignore]`d) + the
-    /// dragon/`ANIMAL_PREY` Stage-2 field (below, `#[ignore]`d) + the still-OPEN
-    /// peoples-diversity problem (the goblinoid niches don't span the new
-    /// axes). The `>= 6` bar is DELIBERATELY NOT weakened — it stays pinned as
-    /// an ignored target-to-reach, not silently rebased to the observed value.
+    /// dragon mass-calibration (below, `#[ignore]`d; re-measured after The
+    /// Vacancy's `ANIMAL_PREY` field, task 6b — real prey supply made
+    /// dragons VIABLE but did not close this gap, since it is a body-mass
+    /// effect, not a resource-axis one) + the still-OPEN peoples-diversity
+    /// problem (the goblinoid niches don't span the new axes). The `>= 6`
+    /// bar is DELIBERATELY NOT weakened — it stays pinned as an ignored
+    /// target-to-reach, not silently rebased to the observed value.
     const PREREGISTERED_DISTINCT_DOMINANTS_TARGET: usize = 6;
 
     /// STAGE-1-REACHABLE (un-ignored, BIO-35 the-demesne T3): the per-axis
@@ -9963,16 +10293,23 @@ mod tests {
     }
 
     /// STILL `#[ignore]`d — the PREREGISTERED `>= 6` target, honestly unmet
-    /// (BIO-35 the-demesne T3, measured not faked): Stage 1 reaches
-    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4. Reaching
+    /// (re-measured after The Vacancy task 6b): Stage 1 still reaches only
+    /// [`STAGE1_DISTINCT_DOMINANTS_42`] = 4 (`xorn`, `rust-monster`,
+    /// `twig-blight`, `kobold` at seed 42 — `kobold` displaced `goblin` as
+    /// the 4th once `ANIMAL_PREY` supply went real). Reaching
     /// [`PREREGISTERED_DISTINCT_DOMINANTS_TARGET`] = 6 needs the treant
-    /// mass-calibration + the dragon/`ANIMAL_PREY` Stage-2 field + the open
-    /// peoples-diversity problem. Kept (not deleted, not weakened) so the
-    /// original ambition stands ready to re-run once those land.
+    /// mass-calibration + the dragon mass-calibration (real prey supply
+    /// landed in task 6b and made dragons viable, but did not close this
+    /// gap — see
+    /// [`menagerie_dragon_stronghold_awaits_animal_prey_stage_2`]'s doc
+    /// comment) + the open peoples-diversity problem. Kept (not deleted,
+    /// not weakened) so the original ambition stands ready to re-run once
+    /// those land.
     #[test]
-    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; \
-                the gap to 6 is treant mass-calibration + dragon/ANIMAL_PREY (Stage 2) + \
-                the open peoples-diversity problem. Not weakened — stands as the target."]
+    #[ignore = "PREREGISTERED >= 6 distinct-dominant target: Stage 1 (abiotic) reaches 4; the \
+                gap to 6 is treant mass-calibration + dragon mass-calibration (ANIMAL_PREY \
+                supply is real as of The Vacancy task 6b, but viability isn't dominance) + the \
+                open peoples-diversity problem. Not weakened — stands as the target."]
     fn menagerie_distinct_dominants_reach_the_preregistered_six() {
         let (_names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         assert!(
@@ -10014,17 +10351,34 @@ mod tests {
         );
     }
 
-    /// STILL `#[ignore]`d — Stage 2 (`ANIMAL_PREY` field), BIO-35 the-demesne
-    /// T3: no chromatic dragon (a pure-`ANIMAL_PREY` niche) ever wins a
-    /// full-roster per-cell dominance comparison, because Stage 1's
-    /// `ANIMAL_PREY` supply is a placeholder zero — a species reading it
-    /// can never out-compete one riding a real (nonzero) axis. Awaits the
-    /// trophic/prey-field wiring a later stage adds.
+    /// STILL `#[ignore]`d — mass/sovereignty calibration, NOT missing prey
+    /// supply (re-measured, The Vacancy task 6b): [`prey_supply_field`]
+    /// landed, giving `ANIMAL_PREY` a real nonzero supply (a `PREY_FRACTION`
+    /// scale of grazable forage), and the four pure-`ANIMAL_PREY` kinds are
+    /// now measurably viable — `every_kind_is_viable_somewhere`
+    /// (`non_void_roster.rs`) passes with no allowlist, and the occupancy
+    /// readout shows each dragon and the owlbear present on ~114k-143k
+    /// cells across 10 biomes. But viable is not the same bar as this test:
+    /// re-measured post-wiring, the full-roster dominant breakdown is
+    /// `[xorn: 4277, rust-monster: 3873, twig-blight: 2263, kobold: 653]` —
+    /// still zero dragons. The root cause is the SAME Kleiber home-range
+    /// effect already traced for `treant`
+    /// ([`menagerie_treant_stronghold_awaits_mass_calibration`]): a
+    /// chromatic dragon (2200-2700 kg) has a home range large enough that
+    /// its resource-share advantage never survives the per-INDIVIDUAL
+    /// density conversion `coexist::pack` applies, so a numerous
+    /// small-bodied competitor with any nonzero share on the same cell
+    /// always wins the arg-max. Prey supply fixed VIABILITY (K > 0
+    /// somewhere); it was never going to fix DOMINANCE, which is a body-mass
+    /// /sovereignty-devotion question orthogonal to which resource axis is
+    /// wired. Awaits the same mass/sovereignty retune as `treant`, not
+    /// further trophic wiring.
     #[test]
-    #[ignore = "Stage 2 (ANIMAL_PREY field): chromatic dragons' pure-ANIMAL_PREY niche reads \
-                Stage 1's placeholder-zero ANIMAL_PREY supply, so no dragon can ever win a \
-                per-cell density comparison against a species riding a real axis; awaiting the \
-                trophic/prey-field wiring (BIO-35 Stage 2)."]
+    #[ignore = "mass/sovereignty calibration (re-measured, The Vacancy task 6b): ANIMAL_PREY \
+                supply is real now (prey_supply_field) and all four pure-ANIMAL_PREY kinds are \
+                viable, but no dragon wins a per-cell dominance comparison — same Kleiber \
+                home-range effect documented for treant, a body-mass/sovereignty-devotion \
+                retune orthogonal to the resource-axis fix this task made."]
     fn menagerie_dragon_stronghold_awaits_animal_prey_stage_2() {
         let (names, dominant_counts, breakdown) = menagerie_full_roster_dominant_breakdown(42);
         let dominates_a_cell = |name: &str| {

@@ -6,6 +6,14 @@
 # Tier A — append-only lists (git's builtin union driver; no setup step,
 # no risk of dropping either side's addition, at most a cosmetic
 # ordering difference between the two sides' new lines).
+#
+# CAVEAT: union keeps BOTH sides' lines, which is right for an append and
+# WRONG for a rewrite — it duplicates the entry instead of resolving the
+# edit. A campaign that rewrites existing lines here (e.g. The Shelf-Mark
+# compacting 43 registry rows) must override this for its own merge:
+#   echo 'book/src/frontier/idea-registry.md merge' > .git/info/attributes
+# (.git/info/attributes outranks this file; delete it after the merge.)
+# See Addendum A of the PROC-12 spec below.
 book/src/SUMMARY.md merge=union
 book/src/frontier/idea-registry.md merge=union
 

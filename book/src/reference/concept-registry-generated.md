@@ -159,6 +159,7 @@
 | `bone` | language | body | the rigid frame of a body |
 | `brown` | language | quality | the color term for brown |
 | `bugbear-kind` | species | living | a bugbear |
+| `carrion-crawler-kind` | species | living | a carrion crawler |
 | `child` | language | kin | one's son or daughter |
 | `cold` | climate | quality | felt, biting chill |
 | `coral-reef` | climate | terrain | a biome class |
@@ -166,6 +167,7 @@
 | `day` | language | celestial | the light half of the day-night cycle |
 | `desert` | climate | terrain | a biome class |
 | `die` | language | act | to cease living |
+| `dire-wolf-kind` | species | living | a dire wolf |
 | `drink` | language | act | to swallow liquid |
 | `earth` | language | terrain | the ground underfoot |
 | `eat` | language | act | to consume food |
@@ -174,9 +176,16 @@
 | `eye` | language | body | the organ of sight |
 | `fire` | language | substance | flame and heat |
 | `foot` | language | body | the walking limb-end |
+| `giant-constrictor-snake-kind` | species | living | a giant constrictor snake |
+| `giant-crocodile-kind` | species | living | a giant crocodile |
 | `giant-elk-kind` | species | living | a giant elk |
 | `giant-goat-kind` | species | living | a giant goat |
+| `giant-hyena-kind` | species | living | a giant hyena |
+| `giant-octopus-kind` | species | living | a giant octopus |
+| `giant-scorpion-kind` | species | living | a giant scorpion |
+| `giant-squid-kind` | species | living | a giant squid |
 | `gloom` | language | quality | the deepest, starless dark |
+| `gnoll-kind` | species | living | a gnoll |
 | `goblin-kind` | species | living | a goblin |
 | `god` | religion | social | a deity |
 | `green` | language | quality | the color term for green |
@@ -189,6 +198,7 @@
 | `hydrothermal-vent` | climate | terrain | a biome class |
 | `ice` | climate | substance | frozen water |
 | `kelp-forest` | climate | terrain | a biome class |
+| `killer-whale-kind` | species | living | a killer whale |
 | `kobold-kind` | species | living | a kobold |
 | `light` | language | quality | the color term for white/light hues |
 | `many` | language | quality | an indefinitely large count |
@@ -207,12 +217,15 @@
 | `rain` | climate | substance | liquid precipitation |
 | `red` | language | quality | the color term for red |
 | `red-dragon-kind` | species | living | a red dragon |
+| `reef-shark-kind` | species | living | a reef shark |
 | `rest` | language | act | to stop and recover strength |
+| `rhinoceros-kind` | species | living | a rhinoceros |
 | `rust-monster-kind` | species | living | a rust monster |
 | `savanna` | climate | terrain | a biome class |
 | `sea` | terrain | terrain | a body of salt water |
 | `sea-ice` | climate | terrain | a biome class |
 | `shadow` | language | quality | cast dark, distinct from open gloom |
+| `shrieker-kind` | species | living | a shrieker |
 | `shrubland` | climate | terrain | a biome class |
 | `sibling` | language | kin | one's brother or sister |
 | `sleep` | language | act | to rest unconscious |

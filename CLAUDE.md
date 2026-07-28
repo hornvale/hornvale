@@ -68,9 +68,11 @@ cargo nextest run --workspace 2>&1 | tee /tmp/hv-test.txt   # then grep the file
 #   The Local Census campaign the census is CHEAP: the all-metric per-world
 #   cost fell ~285 → ~8 CPU-s (the metric path stopped re-sculpting terrain),
 #   so the full ~2000-world census regenerates LOCALLY in ~7 min. The
-#   sanctioned refresh is therefore local now — `HV_CENSUS=1 bash
-#   scripts/regenerate-artifacts.sh`, run once per campaign at the pre-merge
-#   close — and the census goldens (book/src/laboratory/generated/*/rows.csv)
+#   sanctioned refresh is therefore local now — `scripts/census-run.sh`, run
+#   once per campaign at the pre-merge close. Use THAT, not `HV_CENSUS=1 bash
+#   scripts/regenerate-artifacts.sh`: only census-run.sh serializes against
+#   another heavy run on the box and records the run in docs/timings.md
+#   (decision 0081). Both are guarded; only one queues — and the census goldens (book/src/laboratory/generated/*/rows.csv)
 #   are kept current with main, not left to lag. The AWS remote gate
 #   (`make regen-remote`; scripts/aws-gate/) is ABANDONED (owner decision
 #   2026-07-19; this machine is the single canonical platform — AWS differs on
