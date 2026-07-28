@@ -111,14 +111,25 @@ box**.
 ### Item 1 — the docs name the locked path
 
 `scripts/census-run.sh` becomes *the* documented way to refresh census
-goldens. Change every place that currently names the unlocked command:
+goldens. The sweep is enumerated rather than left to "everywhere
+appropriate", since the whole failure was a doc naming the wrong command.
+Every tracked file mentioning `HV_CENSUS=1`, from `git ls-files | xargs grep
+-ln "HV_CENSUS=1"`:
 
-- `CLAUDE.md:71` — "the sanctioned refresh".
-- `.claude/skills/closing-a-campaign/SKILL.md` — the DoD walk.
+- `CLAUDE.md` — line 26 (the directory-guide summary) and line 71 ("the
+  sanctioned refresh is therefore local now"). The load-bearing one.
+- `.claude/skills/closing-a-campaign/SKILL.md` — the DoD walk's regen step.
 - `.claude/skills/dispatching-hornvale-subagents/dispatch-preamble.md`.
-- `book/src/laboratory/overview.md`.
-- Decision 0063 gets a **superseding note**, not an edit (decisions are
-  superseded, never rewritten).
+- `book/src/laboratory/overview.md` — the published description.
+- `scripts/census-run.sh`, `scripts/regenerate-artifacts.sh` — comments that
+  describe the guard set; both must now describe the claim too.
+- `docs/decisions/0046` (superseded), `0063`, `0079` — decisions are
+  **superseded, never rewritten**: 0063 and 0079 get a pointer line to 0081,
+  and 0046 is left alone as already-superseded history.
+- Retrospectives and old plans mentioning the command (`the-standing-offer`,
+  `the-demesne`, `temperature`, `2026-07-12-lab-performance`, …) are
+  **historical record and are NOT edited** — they describe what was true when
+  written. Only live instructional docs change.
 
 **Also fix a stale assertion found while reading:** `Makefile:77`'s help text
 for `rebaseline` says *"census regen is AWS-only: make regen-remote"*, which
@@ -181,8 +192,37 @@ Beside the host guard in `census_guard.rs`, and invoked the same way.
   only the final write. That is what makes serialization *complete*: two
   censuses never overlap in their compute phases, which is where the
   contention actually lives.
-- **Scope:** census studies only, reusing the existing `is_census_study`
-  predicate, for parity with the host guard. (See §5.)
+- **Scope — by COST, not by name (G3, decision 0081).** A run claims the box
+  when it projects **≥ 200 world-builds** (`seeds.count × pin_sets.len()`,
+  known before the run starts — roughly 40 seconds of exclusive box time), OR
+  when it writes census goldens at any size (keeping the correctness half of
+  §1.1 independent of the threshold).
+
+  The cost rule is preferred over the existing `is_census_study` name test
+  deliberately. A name list is precise today and **rots**: every future
+  census-scale study must remember to join it, and the one that forgets is
+  exactly the one that collides. A threshold derived from the property the
+  lock actually protects — machine time — covers a new 1000-seed study on the
+  day it is written, by nobody's diligence. `is_census_study` stays for the
+  HOST guard, where naming is the right test because the hazard there is
+  about which goldens are authored, not how long a run takes.
+
+  Coverage at 200: `the-census` (1000) and `census-of-the-meeting` (2000)
+  claim; `the-chorus` (50) does not; the 200-seed perf probe does — correctly,
+  since it is a measurement, and measurements are what contention corrupts.
+
+- **Short jobs never queue behind long ones.** Below the threshold, contention
+  is a rounding error both ways: a 10-second study finishes in 20 contended
+  seconds and steals a negligible slice of a 12-minute census. Serializing two
+  LONG jobs is free in aggregate (contended, both end at ~2T; serialized, the
+  first ends at T and the second still at 2T) — that is why the queue costs
+  nothing where it applies, and why it must not apply below the line.
+
+- **`make gate` / `make gate-full` advise, never block.** They print `note: a
+  census is running (pid 1573508, 6m in) — your timings will be contended`
+  and proceed. A developer waiting twelve minutes to *start* a four-minute
+  gate is worse than the contention, and a gate is not a measurement.
+  Upgradeable to blocking later once the ledger has data.
 
 ### Item 3b — what a waiting caller is told
 
@@ -307,12 +347,16 @@ followed by its call into `regenerate-artifacts.sh`.
 
 ## 5. Flagged for review (G3)
 
-- **Scope of the Rust claim: census studies only, or every published
-  study?** The spec says census-only, mirroring the host guard. But the
-  tearing hazard is generic — any two concurrent publishes to one study
-  directory can interleave. Widening is a one-line change to the predicate
-  and would protect `the-chorus`, `branches-family`, and the smaller censuses
-  too. I lean census-only for parity and blast radius; reviewer's call.
+- **Claim scope — RESOLVED at G3: by cost, ≥200 world-builds** (or writing
+  census goldens at any size). Neither "census studies only" nor
+  "everything": the line is drawn on the axis the lock actually protects —
+  machine time — computed before the run, so it needs no maintenance as new
+  studies are added. Ratified in decision 0081.
+- **Still open — the 200-build threshold is chosen, not derived**, like the
+  45-minute timeout. It is reasoned (≈40s of exclusive box time at ~0.2s per
+  build on 38 cores, calibrated against the observed 3m13s for 1000 builds)
+  but `docs/timings.md` has never carried a census row to check it against.
+  Item 4 produces that data; revisit both constants once real rows exist.
 - **`/tmp` for claim files.** Consistent with the existing
   `/tmp/hv-census.lock`, and cleared on reboot, which is a feature for
   staleness. The alternative (a state dir under the repo) would dirty
