@@ -190,7 +190,7 @@ impl Visibility {
 /// a star dimmed to a hundredth is not a faint star, it is a star you cannot
 /// see. Applied only when the lens is non-identity, so the legacy path is
 /// untouched.
-/// type-audit: bare-ok(threshold: salience)
+/// type-audit: bare-ok(ratio)
 pub const VISIBILITY_FLOOR: f64 = 0.05;
 ```
 
@@ -318,14 +318,14 @@ In `domains/astronomy/src/provider.rs`, add these thresholds above `impl Generat
 ```rust
 /// Visibility at or above which the moons still show a face. Below it they
 /// are present but featureless — the deck glows where they stand.
-/// type-audit: bare-ok(threshold: ratio)
+/// type-audit: bare-ok(ratio)
 const MOON_PHASE_VISIBILITY: f64 = 0.6;
 /// Visibility at or above which a moon is still discernible at all.
-/// type-audit: bare-ok(threshold: ratio)
+/// type-audit: bare-ok(ratio)
 const MOON_VISIBILITY: f64 = 0.25;
 /// Visibility at or above which the fixed neighbour stars are discernible.
 /// They are the faintest things in the sky and go first.
-/// type-audit: bare-ok(threshold: ratio)
+/// type-audit: bare-ok(ratio)
 const STAR_VISIBILITY: f64 = 0.75;
 ```
 
