@@ -5,14 +5,88 @@ of every people that ever settled one cell, oldest layer deepest, and the
 derived flesh — the structures they raised, the residue in the grass
 today. Nothing here replays the deep-history bake; it is all a
 *present-as-query* over committed occupation facts, with the flesh
-(structures, residue) derived on demand and never committed. This is a
-real clearing on the world of seed 42 — cell 36918 — where a bugbear
-lineage returned five times over two centuries, smaller each time, as the
-glaciers advanced, until the ice won and a doll was left in the grass.
+(structures, residue) derived on demand and never committed.
+
+This is a real clearing on the world of seed 42 — cell 28414 — and twelve
+peoples have failed on it. Every one of them arrived the same way: fleeing
+the ice of the clearing at cell 7169, looking for kinder ground. They kept
+finding the same ground. Hobgoblins held it four times, then kobolds twice,
+then hobgoblins again, from the year 700 to the year 1575 — and you can read
+the centuries in the layers, because the steadings arrive bronze-working,
+become iron-working, and end up classical. What does not improve is the
+count: seven souls in the deepest layer, then six, then five, then three,
+and two in the last. The ice took eleven of them. The twelfth was famine.
+What is left in the grass is turf-lines, potsherds, and a worked pot,
+chipped at the lip.
 
 ```text
-The clearing at cell 36918
-=======================
+The clearing at cell 28414
+==========================
 
-Nothing ever settled here. The ground keeps no memory of a people.
+12 lives have passed over this ground, one settling atop the ruins of the last.
+
+The deepest layer — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 700, it held for 25 years, until the year 725.
+  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+
+Above it — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 750, it held for 25 years, until the year 775.
+  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+
+Higher still — a bronze-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 800, it held for 25 years, until the year 825.
+  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
+
+Above that again — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 850, it held for 25 years, until the year 875.
+  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+
+And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere seven souls.
+  Its founders fled the ice of the clearing at cell 7169, kobolds looking for kinder ground.
+  Founded in the year 900, it held for 25 years, until the year 925.
+  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+
+And later — an iron-working kobold steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
+  Its founders fled the ice of the clearing at cell 7169, kobolds looking for kinder ground.
+  Founded in the year 950, it held for 25 years, until the year 975.
+  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
+
+And later — an iron-working hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere six souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1300, it held for 25 years, until the year 1325.
+  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+
+And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere five souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1350, it held for 25 years, until the year 1375.
+  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+
+And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere four souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1400, it held for 25 years, until the year 1425.
+  The seasons shortened until the ground would no longer feed them; they moved on, as their forebears had before them.
+
+And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere three souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1450, it held for 25 years, until the year 1475.
+  In the end the cold drove them on: they migrated away, abandoning the clearing to the ice rather than starve on it.
+
+And later — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere three souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1500, it held for 25 years, until the year 1525.
+  Again the ice crept down the valley, and again they gathered what they could carry and left the clearing to the frost.
+
+The last of them — a classical hobgoblin steading, an ordinary place, neither famed nor forgotten, at its height a mere two souls.
+  Its founders fled the ice of the clearing at cell 7169, hobgoblins looking for kinder ground.
+  Founded in the year 1550, it held for 25 years, until the year 1575.
+  The ground failed them: famine emptied the site, one hungry season at a time.
+
+In the grass today
+------------------
+At its height a mere two souls, the last hobgoblins here raised two huts and a granary.
+The dwellings are long gone to grass, but the ground still keeps the shape of them: potsherds scattered where the huts once stood, the low turf-lines of the dwellings still ridging the grass, and a worked pot, chipped at the lip.
 ```

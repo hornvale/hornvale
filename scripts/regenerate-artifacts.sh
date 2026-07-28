@@ -138,12 +138,16 @@ rm -f "$possess_ot_tmp"
 
 # The legibility surface (living-community, T7): a real seed-42 site read back
 # off the ledger as prose — its stratigraphy of occupation layers plus the
-# derived flesh in the present-day grass. Cell 36918 is a genuine abandoned
-# clearing on this world: a bugbear lineage that clung to the same ground
-# across five generations, dwindling as the ice crept down, until the last few
-# walked away and left a child's doll behind. The framing line below is
-# hand-authored (the render replaces the file body, so re-emit it here); the
-# fenced block is the `history` verb's exact, drift-checked output.
+# derived flesh in the present-day grass. The framing paragraph below is
+# hand-authored; the fenced block is the `history` verb's exact, drift-checked
+# output. THE TWO MUST AGREE. `HISTORY_SITE` is the single source of the cell
+# id for both, and `cli/tests/docs_consistency.rs` asserts that the id named in
+# the prose is the one the block reports and that the block is not empty —
+# because they silently disagreed once. The moving-sea epoch (The Sundering)
+# emptied the previously-pinned cell 36918 while its hand-authored paragraph
+# went on describing a lineage that no longer existed there; the drift check
+# passed throughout, since the *generated* half was current.
+history_site=28414
 echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
 {
     printf '# An Abandoned Clearing — Seed 42\n\n'
@@ -152,12 +156,20 @@ echo "regenerate-artifacts: the legibility surface (a site's deep history)" >&2
     printf 'derived flesh — the structures they raised, the residue in the grass\n'
     printf 'today. Nothing here replays the deep-history bake; it is all a\n'
     printf '*present-as-query* over committed occupation facts, with the flesh\n'
-    printf '(structures, residue) derived on demand and never committed. This is a\n'
-    printf 'real clearing on the world of seed 42 — cell 36918 — where a bugbear\n'
-    printf 'lineage returned five times over two centuries, smaller each time, as the\n'
-    printf 'glaciers advanced, until the ice won and a doll was left in the grass.\n\n'
+    printf '(structures, residue) derived on demand and never committed.\n\n'
+    printf 'This is a real clearing on the world of seed 42 — cell %s — and twelve\n' "$history_site"
+    printf 'peoples have failed on it. Every one of them arrived the same way: fleeing\n'
+    printf 'the ice of the clearing at cell 7169, looking for kinder ground. They kept\n'
+    printf 'finding the same ground. Hobgoblins held it four times, then kobolds twice,\n'
+    printf 'then hobgoblins again, from the year 700 to the year 1575 — and you can read\n'
+    printf 'the centuries in the layers, because the steadings arrive bronze-working,\n'
+    printf 'become iron-working, and end up classical. What does not improve is the\n'
+    printf 'count: seven souls in the deepest layer, then six, then five, then three,\n'
+    printf 'and two in the last. The ice took eleven of them. The twelfth was famine.\n'
+    printf 'What is left in the grass is turf-lines, potsherds, and a worked pot,\n'
+    printf 'chipped at the lip.\n\n'
     printf '```text\n'
-    run -p hornvale -- history --world "$wsky" --site 36918
+    run -p hornvale -- history --world "$wsky" --site "$history_site"
     printf '```\n'
 } > book/src/gallery/history-seed-42.md
 
