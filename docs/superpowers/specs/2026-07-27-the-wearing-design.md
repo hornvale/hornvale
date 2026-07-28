@@ -316,7 +316,10 @@ What is given up, and what is not:
   was written against: they cause order-dependence, and a read-only parameter
   causes none.
 - **World-level pin isolation — GIVEN UP.** A pin that moves a species'
-  settlement scatter now moves every glossed name of that species. Deity and
+  settlement scatter can now move any glossed name of that species. The
+  measured magnitude is small and seed-dependent, not wholesale: swapping the
+  corpus for an empty one with the scatter held fixed changes 4 of 79 names at
+  seed 777, 7 of 207 at seed 99, and 0 of 169 at seed 42. Deity and
   epithet names are unaffected (their name spaces are one-per-belief, and the
   corpus is a settlement-only input).
 

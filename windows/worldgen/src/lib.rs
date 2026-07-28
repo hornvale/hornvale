@@ -5089,7 +5089,11 @@ fn build_to(
     // Wearing that last argument means a settlement name is NO LONGER
     // pin-isolated at the world level: its morphemes are worn against a
     // per-culture name corpus counted over the species' whole scatter, so a
-    // pin that moves that scatter moves every name of that species. Deity
+    // pin that moves that scatter CAN move any name of that species. How
+    // many actually move is small and seed-dependent — measured by swapping
+    // the corpus for an empty one with the scatter held fixed: 4 of 79 names
+    // at seed 777, 7 of 207 at seed 99, and 0 of 169 at seed 42, where every
+    // eligible morpheme surrenders to the survival rule. Deity
     // and epithet names, which pass no corpus, are unaffected. Uniqueness
     // is de-facto (measured as a calibration, spec §9), not enforced — and
     // since the drawn stem retired it is common, by design (decision 0024).
